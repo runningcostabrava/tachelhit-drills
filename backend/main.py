@@ -47,13 +47,20 @@ app = FastAPI(title="Tachelhit Drills API")
 # CORS configuration - allow frontend URL
 allowed_origins = [
     "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+    "http://localhost:5176",
     "http://localhost:3000",
-    FRONTEND_URL,
+    "https://tachelhit-drills.vercel.app",  # Production URL
+    FRONTEND_URL,  # From environment variable
 ]
+
+# Remove duplicates and None values
+allowed_origins = list(set(filter(None, allowed_origins)))
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins if FRONTEND_URL != "http://localhost:5173" else ["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
