@@ -27,7 +27,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
   const [editedDrill, setEditedDrill] = useState(drill);
   const [recording, setRecording] = useState<'audio' | 'video' | null>(null);
   const [showVideo, setShowVideo] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user');
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -81,10 +81,15 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
   const startVideoRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: 640, height: 480 },
+        video: { facingMode: cameraFacing, width: 640, height: 480 },
         audio: true
       });
       streamRef.current = stream;
+
+      // Set preview immediately
+      if (previewRef.current) {
+        previewRef.current.srcObject = stream;
+      }
 
       mediaRecorderRef.current = new MediaRecorder(stream);
       chunksRef.current = [];
@@ -118,6 +123,21 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
     }
   };
 
+  const switchCamera = async () => {
+    const newFacing = cameraFacing === 'user' ? 'environment' : 'user';
+    setCameraFacing(newFacing);
+
+    if (recording === 'video' && streamRef.current) {
+      // Stop current recording
+      stopRecording();
+      // Wait a bit for cleanup
+      setTimeout(() => {
+        // Start new recording with new camera
+        startVideoRecording();
+      }, 300);
+    }
+  };
+
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
@@ -125,31 +145,6 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
     }
   };
 
-  const generateImage = async () => {
-    if (!editedDrill.text_catalan) {
-      alert('Please add Catalan text first!');
-      return;
-    }
-
-    const searchPhrase = prompt(
-      '🔍 Edit search phrase for image:\n\n(The Catalan text will be auto-translated)',
-      editedDrill.text_catalan
-    );
-
-    if (!searchPhrase || !searchPhrase.trim()) return;
-
-    setGenerating(true);
-    try {
-      await axios.post(`${API_BASE}/generate-image/${drill.id}`, {
-        search_query: searchPhrase.trim()
-      });
-      onUpdate();
-    } catch (err: any) {
-      alert(`Image generation failed: ${err.response?.data?.detail || err.message}`);
-    } finally {
-      setGenerating(false);
-    }
-  };
 
   return (
     <>
@@ -441,174 +436,158 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
           </button>
         </div>
 
-        {/* Image */}
-        {drill.image_url && (
-          <img
-            src={`${API_BASE}${drill.image_url}`}
-            alt="Drill"
-            style={{
-              width: '100%',
-              height: '180px',
-              objectFit: 'cover',
-              borderRadius: '8px',
-              marginBottom: '12px',
-              cursor: 'pointer'
-            }}
-            onClick={() => setIsEditing(true)}
-          />
-        )}
-
-        {/* Text Fields - Display Only */}
+        {/* Text Fields - Compact Display */}
         <div
-          style={{ marginBottom: '12px', cursor: 'pointer' }}
+          style={{
+            marginBottom: '12px',
+            cursor: 'pointer',
+            padding: '12px',
+            background: '#f8f9fa',
+            borderRadius: '8px'
+          }}
           onClick={() => setIsEditing(true)}
         >
-          <div style={{ fontSize: '16px', fontWeight: 600, color: '#333', marginBottom: '6px' }}>
-            {drill.text_catalan || <span style={{ color: '#999' }}>Tap to add Catalan text</span>}
+          <div style={{ fontSize: '14px', fontWeight: 600, color: '#333', marginBottom: '4px' }}>
+            {drill.text_catalan || <span style={{ color: '#999', fontSize: '13px' }}>+ Add Catalan</span>}
           </div>
-          <div style={{ fontSize: '15px', color: '#555', marginBottom: '6px' }}>
-            {drill.text_tachelhit || <span style={{ color: '#999' }}>Tap to add Tachelhit text</span>}
+          <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>
+            {drill.text_tachelhit || <span style={{ color: '#999', fontSize: '12px' }}>+ Add Tachelhit</span>}
           </div>
-          <div style={{ fontSize: '15px', color: '#555', direction: 'rtl' }}>
-            {drill.text_arabic || <span style={{ color: '#999' }}>انقر لإضافة نص عربي</span>}
+          <div style={{ fontSize: '13px', color: '#666', direction: 'rtl' }}>
+            {drill.text_arabic || <span style={{ color: '#999', fontSize: '12px' }}>+ أضف عربي</span>}
           </div>
         </div>
 
-      {/* Media Controls */}
+      {/* Recording Controls - Prominent */}
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '8px',
+        display: 'flex',
+        gap: '10px',
         marginBottom: '12px'
       }}>
-        {/* Audio */}
-        {drill.audio_url && !recording ? (
-          <button
-            onClick={() => {
-              const audio = new Audio(`${API_BASE}${drill.audio_url}`);
-              audio.play();
-            }}
-            style={{
-              padding: '10px',
-              background: '#4CAF50',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
-          >
-            ▶️ Audio
-          </button>
-        ) : null}
-
+        {/* Audio Recording */}
         {recording === 'audio' ? (
           <button
             onClick={stopRecording}
             style={{
-              padding: '10px',
+              flex: 1,
+              padding: '16px',
               background: '#ff4444',
               color: 'white',
               border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer'
+              borderRadius: '10px',
+              fontSize: '16px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(255, 68, 68, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
             }}
           >
-            ⏹ Stop
+            <span style={{ fontSize: '20px' }}>⏹</span>
+            <span>Stop Audio</span>
           </button>
-        ) : !recording && (
+        ) : !recording ? (
           <button
             onClick={startAudioRecording}
             style={{
-              padding: '10px',
-              background: drill.audio_url ? '#2196F3' : '#4CAF50',
+              flex: 1,
+              padding: '16px',
+              background: drill.audio_url ? 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)' : 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
               color: 'white',
               border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer'
+              borderRadius: '10px',
+              fontSize: '16px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
             }}
           >
-            🎤 {drill.audio_url ? 'Re-record' : 'Record'}
-          </button>
-        )}
-
-        {/* Video */}
-        {drill.video_url && !recording ? (
-          <button
-            onClick={() => setShowVideo(true)}
-            style={{
-              padding: '10px',
-              background: '#4CAF50',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
-          >
-            ▶️ Video
+            <span style={{ fontSize: '20px' }}>🎤</span>
+            <span>{drill.audio_url ? 'Re-record' : 'Record'}</span>
           </button>
         ) : null}
 
-        {recording === 'video' ? (
-          <button
-            onClick={stopRecording}
-            style={{
-              padding: '10px',
-              background: '#ff4444',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}
-          >
-            ⏹ Stop Video
-          </button>
-        ) : !recording && (
+        {/* Video Recording */}
+        {recording === 'video' ? null : !recording ? (
           <button
             onClick={startVideoRecording}
             style={{
-              padding: '10px',
-              background: drill.video_url ? '#2196F3' : '#4CAF50',
+              flex: 1,
+              padding: '16px',
+              background: drill.video_url ? 'linear-gradient(135deg, #FF6B6B 0%, #EE5A6F 100%)' : 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
               color: 'white',
               border: 'none',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer'
+              borderRadius: '10px',
+              fontSize: '16px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
             }}
           >
-            🎥 {drill.video_url ? 'Re-record' : 'Record'}
+            <span style={{ fontSize: '20px' }}>🎥</span>
+            <span>{drill.video_url ? 'Re-record' : 'Record'}</span>
           </button>
-        )}
-
-        {/* Image Generate */}
-        <button
-          onClick={generateImage}
-          disabled={generating}
-          style={{
-            padding: '10px',
-            background: generating ? '#999' : (drill.image_url ? '#2196F3' : '#4CAF50'),
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: generating ? 'not-allowed' : 'pointer',
-            gridColumn: drill.audio_url && drill.video_url ? 'span 2' : 'span 1'
-          }}
-        >
-          {generating ? '⏳ Generating...' : (drill.image_url ? '🔄 Regenerate' : '🎨 Generate')}
-        </button>
+        ) : null}
       </div>
+
+      {/* Play Buttons (if recorded) */}
+      {(drill.audio_url || drill.video_url) && !recording && (
+        <div style={{
+          display: 'flex',
+          gap: '8px',
+          marginBottom: '12px'
+        }}>
+          {drill.audio_url && (
+            <button
+              onClick={() => {
+                const audio = new Audio(`${API_BASE}${drill.audio_url}`);
+                audio.play();
+              }}
+              style={{
+                flex: 1,
+                padding: '10px',
+                background: 'white',
+                color: '#4CAF50',
+                border: '2px solid #4CAF50',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              ▶️ Play Audio
+            </button>
+          )}
+          {drill.video_url && (
+            <button
+              onClick={() => setShowVideo(true)}
+              style={{
+                flex: 1,
+                padding: '10px',
+                background: 'white',
+                color: '#9C27B0',
+                border: '2px solid #9C27B0',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              ▶️ Play Video
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Video Recording Preview */}
       {recording === 'video' && (
@@ -618,14 +597,19 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.9)',
+          background: 'black',
           zIndex: 10000,
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px'
+          flexDirection: 'column'
         }}>
-          <div style={{ textAlign: 'center' }}>
+          {/* Video Preview */}
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative'
+          }}>
             <video
               ref={previewRef}
               autoPlay
@@ -633,9 +617,8 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
               playsInline
               style={{
                 width: '100%',
-                maxWidth: '640px',
-                borderRadius: '12px',
-                marginBottom: '20px'
+                height: '100%',
+                objectFit: 'cover'
               }}
               onLoadedMetadata={() => {
                 if (previewRef.current && streamRef.current) {
@@ -643,23 +626,86 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                 }
               }}
             />
-            <div style={{ fontSize: '18px', color: 'white', marginBottom: '20px', fontWeight: 600 }}>
-              🔴 Recording...
+
+            {/* Recording Indicator */}
+            <div style={{
+              position: 'absolute',
+              top: '20px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'rgba(255, 0, 0, 0.9)',
+              color: 'white',
+              padding: '12px 24px',
+              borderRadius: '25px',
+              fontSize: '16px',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+            }}>
+              <span style={{
+                width: '12px',
+                height: '12px',
+                background: 'white',
+                borderRadius: '50%',
+                animation: 'pulse 1.5s ease-in-out infinite'
+              }}></span>
+              Recording
             </div>
+
+            {/* Camera Switch Button */}
+            <button
+              onClick={switchCamera}
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                width: '50px',
+                height: '50px',
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.3)',
+                backdropFilter: 'blur(10px)',
+                border: '2px solid white',
+                color: 'white',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              🔄
+            </button>
+          </div>
+
+          {/* Controls */}
+          <div style={{
+            padding: '30px 20px',
+            background: 'rgba(0, 0, 0, 0.9)',
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '20px'
+          }}>
             <button
               onClick={stopRecording}
               style={{
-                padding: '16px 40px',
-                background: '#ff4444',
+                width: '80px',
+                height: '80px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #ff4444 0%, #cc0000 100%)',
                 color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                fontSize: '18px',
+                border: '4px solid white',
+                fontSize: '32px',
                 fontWeight: 700,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                boxShadow: '0 6px 20px rgba(255, 68, 68, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
-              ⏹ Stop Recording
+              ⏹
             </button>
           </div>
         </div>
