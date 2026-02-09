@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
-import DrillCard from './DrillCard';
+import { AgGridReact } from 'ag-grid-react';
+import 'ag-grid-community/styles/ag-grid.css';
+import 'ag-grid-community/styles/ag-theme-alpine.css';
+import MobileDrillEditor from './MobileDrillEditor';
 import DrillsGrid from './DrillsGrid';
 
 interface Drill {
@@ -24,7 +27,8 @@ interface DrillsResponsiveProps {
 export default function DrillsResponsive({ onViewTests, onViewShorts }: DrillsResponsiveProps) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [drills, setDrills] = useState<Drill[]>([]);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [editingDrill, setEditingDrill] = useState<Drill | null>(null);
+  const gridRef = useRef<any>(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -53,43 +57,33 @@ export default function DrillsResponsive({ onViewTests, onViewShorts }: DrillsRe
 
   const addNewDrill = async () => {
     try {
-      await axios.post(`${API_BASE}/drills/`, {});
-      fetchDrills();
+      const response = await axios.post(`${API_BASE}/drills/`, {});
+      await fetchDrills();
+      // Open the newly created drill in editor
+      if (isMobile && response.data) {
+        setEditingDrill(response.data);
+      }
     } catch (error) {
       console.error('Error creating drill:', error);
       alert('Failed to create drill');
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm(`Delete drill #${id}?`)) return;
-
-    try {
-      await axios.delete(`${API_BASE}/drills/${id}`);
-      fetchDrills();
-    } catch (error) {
-      console.error('Error deleting drill:', error);
-      alert('Failed to delete drill');
+  const handleRowClick = (event: any) => {
+    if (isMobile && event.data) {
+      setEditingDrill(event.data);
     }
   };
 
-  const toggleSelect = (id: number, selected: boolean) => {
-    const newSelected = new Set(selectedIds);
-    if (selected) {
-      newSelected.add(id);
-    } else {
-      newSelected.delete(id);
-    }
-    setSelectedIds(newSelected);
-  };
+  const handleNavigate = (direction: 'next' | 'prev') => {
+    if (!editingDrill) return;
 
-  const handleCreateTest = () => {
-    if (selectedIds.size === 0) {
-      alert('Please select at least one drill');
-      return;
+    const currentIndex = drills.findIndex(d => d.id === editingDrill.id);
+    if (direction === 'next' && currentIndex < drills.length - 1) {
+      setEditingDrill(drills[currentIndex + 1]);
+    } else if (direction === 'prev' && currentIndex > 0) {
+      setEditingDrill(drills[currentIndex - 1]);
     }
-    // TODO: Implement test creation modal
-    alert('Test creation coming soon! Selected: ' + Array.from(selectedIds).join(', '));
   };
 
   // Desktop: use existing grid
@@ -97,177 +91,108 @@ export default function DrillsResponsive({ onViewTests, onViewShorts }: DrillsRe
     return <DrillsGrid onViewTests={onViewTests} onViewShorts={onViewShorts} />;
   }
 
-  // Mobile: use card view
+  const columnDefs = [
+    { field: 'id', width: 60, headerName: '#' },
+    { field: 'text_catalan', width: 150, headerName: 'Català' },
+    { field: 'text_tachelhit', width: 150, headerName: 'Tachelhit' },
+    {
+      field: 'audio_url',
+      width: 70,
+      headerName: '🎤',
+      cellRenderer: (params: any) => params.value ? '✓' : ''
+    },
+    {
+      field: 'video_url',
+      width: 70,
+      headerName: '🎥',
+      cellRenderer: (params: any) => params.value ? '✓' : ''
+    },
+  ];
+
+  // Mobile: Excel-like grid with full-screen editor
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#f5f5f5',
-      paddingBottom: '80px' // Space for bottom nav
-    }}>
-      {/* Mobile Header */}
+    <>
       <div style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: '16px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column'
       }}>
-        <h1 style={{
-          margin: '0 0 12px 0',
-          fontSize: '22px',
-          fontWeight: 700,
-          color: 'white'
-        }}>
-          Tachelhit Drills
-        </h1>
-
-        {/* Selection Info */}
-        {selectedIds.size > 0 && (
-          <div style={{
-            background: 'rgba(255,255,255,0.2)',
-            padding: '12px',
-            borderRadius: '8px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginTop: '12px'
-          }}>
-            <span style={{ color: 'white', fontWeight: 600, fontSize: '14px' }}>
-              {selectedIds.size} selected
-            </span>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={() => setSelectedIds(new Set())}
-                style={{
-                  padding: '8px 16px',
-                  background: 'rgba(255,255,255,0.3)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                Clear
-              </button>
-              <button
-                onClick={handleCreateTest}
-                style={{
-                  padding: '8px 16px',
-                  background: '#FFD700',
-                  color: '#333',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                📝 Create Test
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Drill Cards */}
-      <div style={{ padding: '16px' }}>
-        {drills.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '40px 20px',
-            color: '#666'
-          }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>📝</div>
-            <div style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>
-              No drills yet
-            </div>
-            <div style={{ fontSize: '14px' }}>
-              Tap the + button to create your first drill
-            </div>
-          </div>
-        ) : (
-          drills.map(drill => (
-            <DrillCard
-              key={drill.id}
-              drill={drill}
-              onUpdate={fetchDrills}
-              onDelete={() => handleDelete(drill.id)}
-              onSelect={(selected) => toggleSelect(drill.id, selected)}
-              isSelected={selectedIds.has(drill.id)}
-            />
-          ))
-        )}
-      </div>
-
-      {/* Floating Action Button */}
-      <button
-        onClick={addNewDrill}
-        style={{
-          position: 'fixed',
-          bottom: '90px',
-          right: '20px',
-          width: '60px',
-          height: '60px',
-          borderRadius: '50%',
+        {/* Header */}
+        <div style={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          border: 'none',
-          fontSize: '28px',
-          fontWeight: 700,
-          cursor: 'pointer',
-          boxShadow: '0 4px 16px rgba(102, 126, 234, 0.4)',
-          zIndex: 99,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'transform 0.2s'
-        }}
-        onTouchStart={(e) => {
-          e.currentTarget.style.transform = 'scale(0.95)';
-        }}
-        onTouchEnd={(e) => {
-          e.currentTarget.style.transform = 'scale(1)';
-        }}
-      >
-        +
-      </button>
-
-      {/* Bottom Navigation */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        background: 'white',
-        borderTop: '1px solid #e0e0e0',
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr 1fr',
-        zIndex: 100,
-        boxShadow: '0 -2px 10px rgba(0,0,0,0.1)'
-      }}>
-        <button
-          style={{
-            padding: '12px',
-            background: 'white',
-            border: 'none',
-            borderRight: '1px solid #e0e0e0',
-            cursor: 'pointer',
+          padding: '16px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+        }}>
+          <div style={{
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            gap: '4px'
+            justifyContent: 'space-between',
+            marginBottom: '12px'
+          }}>
+            <h1 style={{
+              margin: 0,
+              fontSize: '20px',
+              fontWeight: 700,
+              color: 'white'
+            }}>
+              Tachelhit Drills
+            </h1>
+            <button
+              onClick={addNewDrill}
+              style={{
+                padding: '10px 20px',
+                background: 'white',
+                color: '#667eea',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '15px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              + New
+            </button>
+          </div>
+          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.9)' }}>
+            Tap any row to edit
+          </div>
+        </div>
+
+        {/* Grid */}
+        <div
+          className="ag-theme-alpine"
+          style={{
+            flex: 1,
+            width: '100%'
           }}
         >
-          <span style={{ fontSize: '24px' }}>📚</span>
-          <span style={{ fontSize: '11px', fontWeight: 600, color: '#667eea' }}>Drills</span>
-        </button>
+          <AgGridReact
+            ref={gridRef}
+            rowData={drills}
+            columnDefs={columnDefs}
+            defaultColDef={{
+              sortable: true,
+              filter: false,
+              resizable: false,
+              minWidth: 60
+            }}
+            getRowId={(params) => params.data.id.toString()}
+            onRowClicked={handleRowClick}
+            rowHeight={50}
+            suppressHorizontalScroll={false}
+            domLayout="normal"
+          />
+        </div>
 
-        {onViewTests && (
+        {/* Bottom Navigation */}
+        <div style={{
+          background: 'white',
+          borderTop: '1px solid #e0e0e0',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr 1fr',
+          boxShadow: '0 -2px 10px rgba(0,0,0,0.1)'
+        }}>
           <button
-            onClick={onViewTests}
             style={{
               padding: '12px',
               background: 'white',
@@ -280,30 +205,70 @@ export default function DrillsResponsive({ onViewTests, onViewShorts }: DrillsRe
               gap: '4px'
             }}
           >
-            <span style={{ fontSize: '24px' }}>📊</span>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: '#666' }}>Tests</span>
+            <span style={{ fontSize: '24px' }}>📚</span>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: '#667eea' }}>Drills</span>
           </button>
-        )}
 
-        {onViewShorts && (
-          <button
-            onClick={onViewShorts}
-            style={{
-              padding: '12px',
-              background: 'white',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            <span style={{ fontSize: '24px' }}>📱</span>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: '#666' }}>Shorts</span>
-          </button>
-        )}
+          {onViewTests && (
+            <button
+              onClick={onViewTests}
+              style={{
+                padding: '12px',
+                background: 'white',
+                border: 'none',
+                borderRight: '1px solid #e0e0e0',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <span style={{ fontSize: '24px' }}>📊</span>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: '#666' }}>Tests</span>
+            </button>
+          )}
+
+          {onViewShorts && (
+            <button
+              onClick={onViewShorts}
+              style={{
+                padding: '12px',
+                background: 'white',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <span style={{ fontSize: '24px' }}>📱</span>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: '#666' }}>Shorts</span>
+            </button>
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Full-screen Editor */}
+      {editingDrill && (
+        <MobileDrillEditor
+          drill={editingDrill}
+          allDrills={drills}
+          onClose={() => setEditingDrill(null)}
+          onUpdate={() => {
+            fetchDrills();
+            // Refresh the editing drill with latest data
+            if (editingDrill) {
+              axios.get(`${API_BASE}/drills/`).then(response => {
+                const updated = response.data.find((d: Drill) => d.id === editingDrill.id);
+                if (updated) setEditingDrill(updated);
+              });
+            }
+          }}
+          onNavigate={handleNavigate}
+        />
+      )}
+    </>
   );
 }
