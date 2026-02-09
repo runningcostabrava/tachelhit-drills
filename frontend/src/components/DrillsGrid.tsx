@@ -148,7 +148,7 @@ const VideoCellRenderer = (props: any) => {
     const [showPlayback, setShowPlayback] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
-    const videoRef = useRef<HTMLVideoElement | null>(null);
+    // const videoRef = useRef<HTMLVideoElement | null>(null); // Unused
     const previewRef = useRef<HTMLVideoElement | null>(null);
     const playbackRef = useRef<HTMLVideoElement | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
@@ -359,7 +359,7 @@ const VideoCellRenderer = (props: any) => {
     );
 
     const playbackModal = showPlayback && value && !recording && createPortal(
-        <div onClick={(e) => {
+        <div onClick={() => {
             console.log('🖱️ Modal background clicked');
         }} style={{
             position: 'fixed',
@@ -509,7 +509,7 @@ const ImageCellRenderer = (props: any) => {
     const { value, data, api } = props;
     const [generating, setGenerating] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [_error, setError] = useState<string | null>(null);
 
     const generate = async () => {
         console.log('🖼️ Generating image for drill:', data.id);
@@ -764,21 +764,21 @@ export default function DrillsGrid({ onViewTests, onViewShorts }: { onViewTests?
             headerName: 'Català',
             width: 200,
             editable: true,
-            cellStyle: { fontSize: '15px' }
+            cellStyle: { fontSize: '15px' } as any
         },
         {
             field: 'text_tachelhit',
             headerName: 'Tachelhit',
             width: 200,
             editable: true,
-            cellStyle: { fontSize: '15px' }
+            cellStyle: { fontSize: '15px' } as any
         },
         {
             field: 'text_arabic',
             headerName: 'العربية',
             width: 200,
             editable: true,
-            cellStyle: { fontSize: '15px', direction: 'rtl' }
+            cellStyle: { fontSize: '15px', direction: 'rtl' } as any
         },
         {
             field: 'audio_url',

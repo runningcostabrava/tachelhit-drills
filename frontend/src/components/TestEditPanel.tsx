@@ -2,18 +2,18 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
 
-interface Test {
-  id: number;
-  title: string;
-  description: string;
-  question_type: string;
-  hint_level: string;
-  hint_percentage: number;
-  hint_tries_before_reveal: number;
-  time_limit_seconds: number;
-  passing_score: number;
-  drill_ids: string;
-}
+// interface Test {
+//   id: number;
+//   title: string;
+//   description: string;
+//   question_type: string;
+//   hint_level: string;
+//   hint_percentage: number;
+//   hint_tries_before_reveal: number;
+//   time_limit_seconds: number;
+//   passing_score: number;
+//   drill_ids: string;
+// }
 
 interface TestEditPanelProps {
   testId: number;

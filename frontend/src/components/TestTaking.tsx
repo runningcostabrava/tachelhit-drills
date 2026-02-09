@@ -49,7 +49,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
   const [showCorrectAnswer, setShowCorrectAnswer] = useState(false);
   const [reviewMode, setReviewMode] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  // const videoRef = useRef<HTMLVideoElement | null>(null); // Unused
 
   useEffect(() => {
     loadTest();
@@ -118,11 +118,11 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
       const numLettersToShow = Math.ceil((correctAnswer.length * progressivePercentage) / 100);
 
       // Always reveal first letter and spaces
-      let revealed = correctAnswer.split('').map((char, i) => {
-        if (char === ' ') return ' ';
-        if (i === 0) return char;
-        return '_';
-      });
+      // let revealed = correctAnswer.split('').map((char, i) => {
+      //   if (char === ' ') return ' ';
+      //   if (i === 0) return char;
+      //   return '_';
+      // });
 
       // Reveal additional random letters
       const indices = new Set<number>([0]); // First letter already revealed
