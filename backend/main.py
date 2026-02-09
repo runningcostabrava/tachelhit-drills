@@ -58,6 +58,13 @@ allowed_origins = [
 # Remove duplicates and None values
 allowed_origins = list(set(filter(None, allowed_origins)))
 
+print("=" * 80)
+print("CORS CONFIGURATION")
+print("=" * 80)
+print(f"FRONTEND_URL from env: {FRONTEND_URL}")
+print(f"Allowed origins: {allowed_origins}")
+print("=" * 80)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -67,6 +74,21 @@ app.add_middleware(
 )
 
 app.mount("/media", StaticFiles(directory=MEDIA_ROOT), name="media")
+
+# Debug endpoint
+@app.get("/")
+def root():
+    return {
+        "status": "online",
+        "frontend_url": FRONTEND_URL,
+        "allowed_origins": allowed_origins,
+        "endpoints": [
+            "/drills/",
+            "/tests/",
+            "/test-attempts/",
+            "/shorts/"
+        ]
+    }
 
 def get_db():
     db = SessionLocal()
