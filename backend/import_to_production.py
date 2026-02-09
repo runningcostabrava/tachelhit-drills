@@ -11,10 +11,13 @@ API_URL = "https://tachelhit-drills-api.onrender.com"
 with open('data_export.json', 'r', encoding='utf-8') as f:
     data = json.load(f)
 
+# Skip test attempts due to schema mismatch
+data['test_attempts'] = []
+
 print(f"Loaded data:")
 print(f"  - {len(data['drills'])} drills")
 print(f"  - {len(data['tests'])} tests")
-print(f"  - {len(data['test_attempts'])} test attempts")
+print(f"  - {len(data['test_attempts'])} test attempts (skipped due to schema)")
 print()
 
 # Import to production

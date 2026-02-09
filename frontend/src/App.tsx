@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import DrillsGrid from './components/DrillsGrid';
+import DrillsResponsive from './components/DrillsResponsive';
 import TestsDashboard from './components/TestsDashboard';
 import YouTubeShorts from './components/YouTubeShorts';
 import './App.css'; // optional – you can remove this line
@@ -10,7 +10,7 @@ function App() {
   return (
     <div style={{ height: '100vh' }}>
       {view === 'drills' && (
-        <DrillsGrid
+        <DrillsResponsive
           onViewTests={() => setView('tests')}
           onViewShorts={() => setView('shorts')}
         />
