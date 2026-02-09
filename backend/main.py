@@ -464,3 +464,71 @@ def delete_short(short_id: int, db: Session = Depends(get_db)):
     db.delete(short)
     db.commit()
     return {"detail": "Deleted"}
+
+# ===================== DATA IMPORT =====================
+@app.post("/import-data/")
+def import_data(data: dict = Body(...), db: Session = Depends(get_db)):
+    """Import drills, tests, and test attempts from exported JSON"""
+    try:
+        imported = {
+            'drills': 0,
+            'tests': 0,
+            'test_attempts': 0,
+            'skipped': 0
+        }
+
+        # Import drills
+        if 'drills' in data:
+            for drill_data in data['drills']:
+                # Check if drill already exists
+                existing = db.query(DrillModel).filter(DrillModel.id == drill_data['id']).first()
+                if existing:
+                    imported['skipped'] += 1
+                    continue
+
+                drill = DrillModel(
+                    id=drill_data['id'],
+                    text_catalan=drill_data.get('text_catalan'),
+                    text_tachelhit=drill_data.get('text_tachelhit'),
+                    text_arabic=drill_data.get('text_arabic'),
+                    audio_url=drill_data.get('audio_url'),
+                    video_url=drill_data.get('video_url'),
+                    image_url=drill_data.get('image_url')
+                )
+                db.add(drill)
+                imported['drills'] += 1
+
+        # Import tests
+        if 'tests' in data:
+            for test_data in data['tests']:
+                existing = db.query(TestModel).filter(TestModel.id == test_data['id']).first()
+                if existing:
+                    continue
+
+                test = TestModel(**{k: v for k, v in test_data.items() if k != 'date_created'})
+                db.add(test)
+                imported['tests'] += 1
+
+        # Import test attempts
+        if 'test_attempts' in data:
+            for attempt_data in data['test_attempts']:
+                existing = db.query(TestAttemptModel).filter(TestAttemptModel.id == attempt_data['id']).first()
+                if existing:
+                    continue
+
+                attempt = TestAttemptModel(**{k: v for k, v in attempt_data.items() if k != 'date_taken'})
+                db.add(attempt)
+                imported['test_attempts'] += 1
+
+        db.commit()
+        return {
+            "status": "success",
+            "imported": imported
+        }
+
+    except Exception as e:
+        db.rollback()
+        print(f"[IMPORT] Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
