@@ -25,7 +25,6 @@ export default function DrillsResponsive({ onViewTests, onViewShorts }: DrillsRe
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [drills, setDrills] = useState<Drill[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [showCreateTest, setShowCreateTest] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -89,7 +88,8 @@ export default function DrillsResponsive({ onViewTests, onViewShorts }: DrillsRe
       alert('Please select at least one drill');
       return;
     }
-    setShowCreateTest(true);
+    // TODO: Implement test creation modal
+    alert('Test creation coming soon! Selected: ' + Array.from(selectedIds).join(', '));
   };
 
   // Desktop: use existing grid
