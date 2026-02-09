@@ -258,27 +258,27 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
       <div style={{
         flex: 1,
         overflow: 'auto',
-        padding: '20px'
+        padding: '16px'
       }}>
         {/* Tag */}
-        <div style={{ marginBottom: '20px' }}>
+        <div style={{ marginBottom: '16px' }}>
           <label style={{
             display: 'block',
-            fontSize: '14px',
+            fontSize: '12px',
             fontWeight: 600,
-            color: '#333',
-            marginBottom: '8px'
+            color: '#666',
+            marginBottom: '6px'
           }}>
             Tag (optional)
           </label>
           <input
             value={editedDrill.tag || ''}
             onChange={(e) => handleChange('tag', e.target.value)}
-            placeholder="e.g., greetings, colors..."
+            placeholder="e.g., greetings..."
             style={{
               width: '100%',
-              padding: '14px',
-              fontSize: '16px',
+              padding: '10px',
+              fontSize: '14px',
               border: '2px solid #e0e0e0',
               borderRadius: '8px',
               outline: 'none'
@@ -287,13 +287,13 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
         </div>
 
         {/* Catalan */}
-        <div style={{ marginBottom: '20px' }}>
+        <div style={{ marginBottom: '16px' }}>
           <label style={{
             display: 'block',
             fontSize: '14px',
             fontWeight: 600,
             color: '#333',
-            marginBottom: '8px'
+            marginBottom: '6px'
           }}>
             Català
           </label>
@@ -301,11 +301,11 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
             value={editedDrill.text_catalan || ''}
             onChange={(e) => handleChange('text_catalan', e.target.value)}
             placeholder="Enter Catalan text..."
-            rows={3}
+            rows={2}
             style={{
               width: '100%',
-              padding: '14px',
-              fontSize: '16px',
+              padding: '12px',
+              fontSize: '15px',
               border: '2px solid #e0e0e0',
               borderRadius: '8px',
               outline: 'none',
@@ -315,13 +315,13 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
         </div>
 
         {/* Tachelhit */}
-        <div style={{ marginBottom: '20px' }}>
+        <div style={{ marginBottom: '16px' }}>
           <label style={{
             display: 'block',
             fontSize: '14px',
             fontWeight: 600,
             color: '#333',
-            marginBottom: '8px'
+            marginBottom: '6px'
           }}>
             Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)
           </label>
@@ -329,11 +329,11 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
             value={editedDrill.text_tachelhit || ''}
             onChange={(e) => handleChange('text_tachelhit', e.target.value)}
             placeholder="Enter Tachelhit text..."
-            rows={3}
+            rows={2}
             style={{
               width: '100%',
-              padding: '14px',
-              fontSize: '16px',
+              padding: '12px',
+              fontSize: '15px',
               border: '2px solid #e0e0e0',
               borderRadius: '8px',
               outline: 'none',
@@ -342,14 +342,14 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
           />
         </div>
 
-        {/* Arabic */}
-        <div style={{ marginBottom: '20px' }}>
+        {/* Arabic - Smaller on mobile */}
+        <div style={{ marginBottom: '16px' }}>
           <label style={{
             display: 'block',
-            fontSize: '14px',
+            fontSize: '12px',
             fontWeight: 600,
-            color: '#333',
-            marginBottom: '8px',
+            color: '#666',
+            marginBottom: '6px',
             textAlign: 'right'
           }}>
             العربية
@@ -358,11 +358,11 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
             value={editedDrill.text_arabic || ''}
             onChange={(e) => handleChange('text_arabic', e.target.value)}
             placeholder="أدخل النص العربي..."
-            rows={3}
+            rows={2}
             style={{
               width: '100%',
-              padding: '14px',
-              fontSize: '16px',
+              padding: '10px',
+              fontSize: '14px',
               border: '2px solid #e0e0e0',
               borderRadius: '8px',
               outline: 'none',
@@ -375,49 +375,49 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
         {/* Recording Section */}
         <div style={{
           background: '#f8f9fa',
-          padding: '20px',
-          borderRadius: '12px',
-          marginBottom: '20px'
+          padding: '14px',
+          borderRadius: '10px',
+          marginBottom: '16px'
         }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: 700 }}>
+          <h3 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: 700 }}>
             🎙️ Recording
           </h3>
 
           {/* Audio Recording */}
-          <div style={{ marginBottom: '16px' }}>
+          <div style={{ marginBottom: '12px' }}>
             {recording === 'audio' ? (
               <button
                 onClick={stopRecording}
                 style={{
                   width: '100%',
-                  padding: '16px',
+                  padding: '14px',
                   background: '#ff4444',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '10px',
-                  fontSize: '16px',
+                  borderRadius: '8px',
+                  fontSize: '15px',
                   fontWeight: 700,
                   cursor: 'pointer'
                 }}
               >
-                ⏹ Stop Audio Recording
+                ⏹ Stop Audio
               </button>
             ) : (
               <button
                 onClick={startAudioRecording}
                 style={{
                   width: '100%',
-                  padding: '16px',
+                  padding: '14px',
                   background: drill.audio_url ? 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)' : 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '10px',
-                  fontSize: '16px',
+                  borderRadius: '8px',
+                  fontSize: '15px',
                   fontWeight: 700,
                   cursor: 'pointer'
                 }}
               >
-                🎤 {drill.audio_url ? 'Re-record Audio' : 'Record Audio'}
+                🎤 {drill.audio_url ? 'Re-record' : 'Record'} Audio
               </button>
             )}
             {drill.audio_url && !recording && (
@@ -428,8 +428,8 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
                 }}
                 style={{
                   width: '100%',
-                  padding: '12px',
-                  marginTop: '8px',
+                  padding: '10px',
+                  marginTop: '6px',
                   background: 'white',
                   color: '#4CAF50',
                   border: '2px solid #4CAF50',
@@ -451,17 +451,17 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
                 onClick={startVideoRecording}
                 style={{
                   width: '100%',
-                  padding: '16px',
+                  padding: '14px',
                   background: drill.video_url ? 'linear-gradient(135deg, #FF6B6B 0%, #EE5A6F 100%)' : 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '10px',
-                  fontSize: '16px',
+                  borderRadius: '8px',
+                  fontSize: '15px',
                   fontWeight: 700,
                   cursor: 'pointer'
                 }}
               >
-                🎥 {drill.video_url ? 'Re-record Video' : 'Record Video'}
+                🎥 {drill.video_url ? 'Re-record' : 'Record'} Video
               </button>
             )}
             {drill.video_url && !recording && (
@@ -469,8 +469,8 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
                 onClick={() => setShowVideo(true)}
                 style={{
                   width: '100%',
-                  padding: '12px',
-                  marginTop: '8px',
+                  padding: '10px',
+                  marginTop: '6px',
                   background: 'white',
                   color: '#9C27B0',
                   border: '2px solid #9C27B0',
