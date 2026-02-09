@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+backend/drills.db
+*.sqlite
+
+# Media files (opcional - comenta si vols pujar media)
+backend/media/audio/
+backend/media/video/
+backend/media/images/
+backend/media/shorts/
+
+# Environment variables
+.env
+backend/.env
+frontend/.env
+frontend/.env.local
+
+# Node
+node_modules/
+frontend/dist/
+.vite/
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
