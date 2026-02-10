@@ -8,11 +8,20 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 import requests
 from dotenv import load_dotenv
+import cloudinary
+import cloudinary.uploader
 
 from deep_translator import GoogleTranslator
 
 # Load environment variables
 load_dotenv()
+
+# Configure Cloudinary
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET")
+)
 
 from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel  # ← Alias for ORM models
 from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort  # ← Pydantic schemas
@@ -252,17 +261,34 @@ def generate_image(drill_id: int, body: dict = Body(None), db: Session = Depends
         image_response.raise_for_status()
         print(f"[IMAGE] Image downloaded: {len(image_response.content)} bytes")
 
-        # Save the image
-        filename = f"img_{drill_id}_{int(datetime.now().timestamp())}.jpg"
-        filepath = os.path.join(MEDIA_ROOT, "images", filename)
-        print(f"[IMAGE] Saving to: {filepath}")
+        # Check if Cloudinary is configured
+        use_cloudinary = bool(os.getenv("CLOUDINARY_CLOUD_NAME"))
 
-        with open(filepath, "wb") as f:
-            f.write(image_response.content)
+        if use_cloudinary:
+            # Upload to Cloudinary
+            print(f"[IMAGE] Uploading to Cloudinary")
+            result = cloudinary.uploader.upload(
+                image_response.content,
+                folder="tachelhit/images",
+                public_id=f"img_{drill_id}_{int(datetime.utcnow().timestamp())}",
+                resource_type="image"
+            )
+            drill.image_url = result['secure_url']
+            print(f"[IMAGE] Cloudinary URL: {drill.image_url}")
+        else:
+            # Save locally
+            filename = f"img_{drill_id}_{int(datetime.now().timestamp())}.jpg"
+            filepath = os.path.join(MEDIA_ROOT, "images", filename)
+            print(f"[IMAGE] Saving locally to: {filepath}")
 
-        drill.image_url = f"/media/images/{filename}"
+            with open(filepath, "wb") as f:
+                f.write(image_response.content)
+
+            drill.image_url = f"/media/images/{filename}"
+            print(f"[IMAGE] Image saved locally: {drill.image_url}")
+
         db.commit()
-        print(f"[IMAGE] Image saved and drill updated: {drill.image_url}")
+        print(f"[IMAGE] Drill updated with image URL")
         print(f"[IMAGE] Photo by {photographer} from Pexels")
 
         return {"image_url": drill.image_url, "photographer": photographer}
@@ -285,26 +311,57 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found")
 
-    ext = file.filename.split(".")[-1].lower() if "." in file.filename else "webm"
-    filename = f"{media_type}_{drill_id}_{int(datetime.utcnow().timestamp())}.{ext}"
-    dir_path = os.path.join(MEDIA_ROOT, media_type)
-    file_path = os.path.join(dir_path, filename)
+    try:
+        # Read file content
+        content = await file.read()
 
-    content = await file.read()
-    with open(file_path, "wb") as f:
-        f.write(content)
+        # Check if Cloudinary is configured
+        use_cloudinary = bool(os.getenv("CLOUDINARY_CLOUD_NAME"))
 
-    url = f"/media/{media_type}/{filename}"
+        if use_cloudinary:
+            # Upload to Cloudinary
+            print(f"[UPLOAD] Uploading {media_type} to Cloudinary for drill {drill_id}")
 
-    if media_type == "audio":
-        drill.audio_url = url
-    elif media_type == "video":
-        drill.video_url = url
-    elif media_type == "image":
-        drill.image_url = url
+            # Determine resource type
+            resource_type = "video" if media_type in ["audio", "video"] else "image"
 
-    db.commit()
-    return {"url": url}
+            # Upload to Cloudinary
+            result = cloudinary.uploader.upload(
+                content,
+                folder=f"tachelhit/{media_type}",
+                public_id=f"{media_type}_{drill_id}_{int(datetime.utcnow().timestamp())}",
+                resource_type=resource_type
+            )
+
+            url = result['secure_url']
+            print(f"[UPLOAD] Cloudinary URL: {url}")
+        else:
+            # Fallback to local storage
+            print(f"[UPLOAD] Uploading {media_type} locally for drill {drill_id}")
+            ext = file.filename.split(".")[-1].lower() if "." in file.filename else "webm"
+            filename = f"{media_type}_{drill_id}_{int(datetime.utcnow().timestamp())}.{ext}"
+            dir_path = os.path.join(MEDIA_ROOT, media_type)
+            file_path = os.path.join(dir_path, filename)
+
+            with open(file_path, "wb") as f:
+                f.write(content)
+
+            url = f"/media/{media_type}/{filename}"
+
+        # Update drill with media URL
+        if media_type == "audio":
+            drill.audio_url = url
+        elif media_type == "video":
+            drill.video_url = url
+        elif media_type == "image":
+            drill.image_url = url
+
+        db.commit()
+        return {"url": url}
+
+    except Exception as e:
+        print(f"[UPLOAD] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 # ===================== TEST CRUD =====================
 @app.get("/tests/", response_model=list[Test])
