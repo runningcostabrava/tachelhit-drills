@@ -99,16 +99,41 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     }
   };
 
-  const startVideoRecording = async () => {
+  const startVideoRecording = async (facing?: 'user' | 'environment') => {
+    const facingMode = facing || cameraFacing;
+    console.log('Starting video recording with facingMode:', facingMode);
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: cameraFacing, width: 640, height: 480 },
-        audio: true
-      });
+      // Try with exact facingMode first, fallback to non-exact if it fails
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { exact: facingMode },
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          },
+          audio: true
+        });
+      } catch (err) {
+        // Fallback: try without 'exact' constraint
+        console.log('Exact facingMode not supported, trying without exact');
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: facingMode,
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          },
+          audio: true
+        });
+      }
+
       streamRef.current = stream;
 
       if (previewRef.current) {
         previewRef.current.srcObject = stream;
+        // IMPORTANT: Call play() to show the video preview
+        await previewRef.current.play();
       }
 
       mediaRecorderRef.current = new MediaRecorder(stream);
@@ -546,7 +571,7 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
                 onClick={() => {
                   setCameraFacing('user');
                   setShowCameraChoice(false);
-                  startVideoRecording();
+                  startVideoRecording('user');  // Pass facing mode directly
                 }}
                 style={{
                   padding: '20px',
@@ -572,7 +597,7 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
                 onClick={() => {
                   setCameraFacing('environment');
                   setShowCameraChoice(false);
-                  startVideoRecording();
+                  startVideoRecording('environment');  // Pass facing mode directly
                 }}
                 style={{
                   padding: '20px',
