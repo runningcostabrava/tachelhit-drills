@@ -6,7 +6,7 @@ import 'ag-grid-community/styles/ag-theme-alpine.css';
 
 import axios from 'axios';
 import TestConfigPanel from './TestConfigPanel';
-import { API_BASE } from '../config';
+import { API_BASE, getMediaUrl } from '../config';
 
 // Audio cell renderer
 const AudioCellRenderer = (props: any) => {
@@ -75,13 +75,12 @@ const AudioCellRenderer = (props: any) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px', width: '100%' }}>
             {value && (
                 <>
-                    <audio
-                        ref={audioRef}
-                        src={`${API_BASE}${value}`}
-                        onEnded={handleAudioEnded}
-                        style={{ display: 'none' }}
-                    />
-                    <button
+                                            <audio
+                                                ref={audioRef}
+                                                src={getMediaUrl(value)}
+                                                onEnded={handleAudioEnded}
+                                                style={{ display: 'none' }}
+                                            />                    <button
                         onClick={togglePlayPause}
                         style={{
                             padding: '6px 12px',
@@ -246,7 +245,7 @@ const VideoCellRenderer = (props: any) => {
     const openPlayback = () => {
         console.log('▶️ Opening video playback for drill:', data.id);
         console.log('📹 Video URL:', value);
-        console.log('🌐 Full URL:', `${API_BASE}${value}`);
+        console.log('🌐 Full URL:', getMediaUrl(value));
         setShowPlayback(true);
         setPlaying(false);
         // Give the DOM time to render before trying to play
@@ -403,7 +402,7 @@ const VideoCellRenderer = (props: any) => {
                         </div>
                         <video
                             ref={playbackRef}
-                            src={`${API_BASE}${value}`}
+                            src={getMediaUrl(value)}
                             controls
                             onEnded={handleVideoEnded}
                             style={{
@@ -622,7 +621,7 @@ const ImageCellRenderer = (props: any) => {
                     </button>
                 </div>
                 <img
-                    src={`${API_BASE}${value}`}
+                    src={getMediaUrl(value)}
                     alt="Generated"
                     style={{
                         maxWidth: '800px',
@@ -660,7 +659,7 @@ const ImageCellRenderer = (props: any) => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px' }}>
                 {value && (
                     <img
-                        src={`${API_BASE}${value}`}
+                        src={getMediaUrl(value)}
                         alt="Generated"
                         onClick={openPreview}
                         style={{

@@ -82,6 +82,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import mimetypes
+
+# Ensure .webm is recognized as audio/webm
+mimetypes.add_type("audio/webm", ".webm")
 app.mount("/media", StaticFiles(directory=MEDIA_ROOT), name="media")
 
 # Debug endpoint
