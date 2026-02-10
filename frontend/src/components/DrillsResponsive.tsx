@@ -91,7 +91,7 @@ export default function DrillsResponsive({ onViewTests, onViewShorts }: DrillsRe
     return <DrillsGrid onViewTests={onViewTests} onViewShorts={onViewShorts} />;
   }
 
-  const columnDefs = [
+  const columnDefs: any[] = [
     { field: 'id', width: 60, headerName: '#' },
     { field: 'text_catalan', width: 150, headerName: 'Català' },
     { field: 'text_tachelhit', width: 150, headerName: 'Tachelhit' },

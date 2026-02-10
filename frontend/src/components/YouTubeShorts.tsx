@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { API_BASE } from '../config';
+import { API_BASE, getMediaUrl } from '../config';
 
 interface Short {
   id: number;
@@ -323,7 +323,7 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
                       height: '100%',
                       objectFit: 'cover'
                     }}
-                    src={`${API_BASE}${selectedVideo.video_path}`}
+                    src={getMediaUrl(selectedVideo.video_path)}
                   >
                     El teu navegador no suporta video.
                   </video>
@@ -339,7 +339,7 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
                 flexWrap: 'wrap'
               }}>
                 <a
-                  href={`${API_BASE}${selectedVideo.video_path}`}
+                  href={getMediaUrl(selectedVideo.video_path)}
                   download={`tachelhit_short_${selectedVideo.drill_id}.mp4`}
                   style={{
                     display: 'inline-flex',
@@ -361,7 +361,6 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
 
                 <button
                   onClick={() => {
-                    const videoUrl = `${API_BASE}${selectedVideo.video_path}`;
                     const title = `${selectedVideo.text_catalan} - Tachelhit`;
                     const description = `Català: ${selectedVideo.text_catalan}\nTachelhit: ${selectedVideo.text_tachelhit}\nالعربية: ${selectedVideo.text_arabic}`;
 

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { API_BASE } from '../config';
+import { API_BASE, getMediaUrl } from '../config';
 
 interface Drill {
   id: number;
@@ -424,7 +424,7 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
             {drill.audio_url && !recording && (
               <button
                 onClick={() => {
-                  const audio = new Audio(`${API_BASE}${drill.audio_url}`);
+                  const audio = new Audio(getMediaUrl(drill.audio_url));
                   audio.play();
                 }}
                 style={{
@@ -737,7 +737,7 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
           }}
         >
           <video
-            src={`${API_BASE}${drill.video_url}`}
+            src={getMediaUrl(drill.video_url)}
             controls
             autoPlay
             playsInline

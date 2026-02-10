@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { API_BASE } from '../config';
+import { API_BASE, getMediaUrl } from '../config';
 
 interface Test {
   id: number;
@@ -257,7 +257,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
 
     try {
       // Create new audio element each time for reliability
-      const audio = new Audio(`${API_BASE}${currentDrill.audio_url}`);
+      const audio = new Audio(getMediaUrl(currentDrill.audio_url));
       audioRef.current = audio;
 
       setPlaying(true);
@@ -350,7 +350,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                   {drill.image_url && (
                     <div style={{ marginBottom: '16px', textAlign: 'center' }}>
                       <img
-                        src={`${API_BASE}${drill.image_url}`}
+                        src={getMediaUrl(drill.image_url)}
                         alt="Visual"
                         style={{
                           maxWidth: '100%',
@@ -604,7 +604,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
           {currentDrill.image_url && (
             <div style={{ marginBottom: '30px', textAlign: 'center' }}>
               <img
-                src={`${API_BASE}${currentDrill.image_url}`}
+                src={getMediaUrl(currentDrill.image_url)}
                 alt="Visual hint"
                 style={{
                   maxWidth: '100%',
@@ -656,7 +656,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                 <div>
                   <video
                     key={currentDrill.id}
-                    src={`${API_BASE}${currentDrill.video_url}`}
+                    src={getMediaUrl(currentDrill.video_url)}
                     controls
                     style={{
                       width: '100%',

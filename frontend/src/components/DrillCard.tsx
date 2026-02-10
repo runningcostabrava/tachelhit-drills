@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import axios from 'axios';
-import { API_BASE } from '../config';
+import { API_BASE, getMediaUrl } from '../config';
 
 interface Drill {
   id: number;
@@ -550,7 +550,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
           {drill.audio_url && (
             <button
               onClick={() => {
-                const audio = new Audio(`${API_BASE}${drill.audio_url}`);
+                const audio = new Audio(getMediaUrl(drill.audio_url));
                 audio.play();
               }}
               style={{
@@ -731,7 +731,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
         >
           <div onClick={(e) => e.stopPropagation()}>
             <video
-              src={`${API_BASE}${drill.video_url}`}
+              src={getMediaUrl(drill.video_url)}
               controls
               autoPlay
               playsInline
