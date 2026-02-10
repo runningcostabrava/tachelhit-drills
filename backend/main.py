@@ -82,6 +82,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"], # Added this line
 )
 
 import mimetypes
@@ -119,18 +120,25 @@ def get_drills(db: Session = Depends(get_db)):
 
 @app.post("/drills/", response_model=Drill)
 def create_drill(drill: DrillCreate, db: Session = Depends(get_db)):
-    db_drill = DrillModel(**drill.dict())  # ← Use ORM model
+    try:
+        db_drill = DrillModel(**drill.model_dump())
 
-    if db_drill.text_catalan:
-        try:
-            db_drill.text_arabic = translator_ca_to_ar.translate(db_drill.text_catalan)
-        except Exception as e:
-            print("Translation error:", e)
+        if db_drill.text_catalan:
+            try:
+                db_drill.text_arabic = translator_ca_to_ar.translate(db_drill.text_catalan)
+            except Exception as e:
+                print(f"Translation error for drill: {e}") # Improved logging
 
-    db.add(db_drill)
-    db.commit()
-    db.refresh(db_drill)
-    return db_drill
+        db.add(db_drill)
+        db.commit()
+        db.refresh(db_drill)
+        return db_drill
+    except Exception as e:
+        db.rollback() # Rollback in case of error
+        print(f"Error creating drill: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to create drill: {e}")
 
 @app.put("/drills/{drill_id}", response_model=Drill)
 def update_drill(drill_id: int, update_data: DrillUpdate, db: Session = Depends(get_db)):
@@ -138,7 +146,7 @@ def update_drill(drill_id: int, update_data: DrillUpdate, db: Session = Depends(
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found")
 
-    update_dict = update_data.dict(exclude_unset=True)
+    update_dict = update_data.model_dump(exclude_unset=True)
     for key, value in update_dict.items():
         setattr(drill, key, value)
 
@@ -383,7 +391,7 @@ def get_test(test_id: int, db: Session = Depends(get_db)):
 
 @app.post("/tests/", response_model=Test)
 def create_test(test: TestCreate, db: Session = Depends(get_db)):
-    db_test = TestModel(**test.dict())
+    db_test = TestModel(**test.model_dump())
     db.add(db_test)
     db.commit()
     db.refresh(db_test)
@@ -395,7 +403,7 @@ def update_test(test_id: int, update_data: TestUpdate, db: Session = Depends(get
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
 
-    update_dict = update_data.dict(exclude_unset=True)
+    update_dict = update_data.model_dump(exclude_unset=True)
     for key, value in update_dict.items():
         setattr(test, key, value)
 
@@ -422,7 +430,7 @@ def get_test_attempts(test_id: int = None, db: Session = Depends(get_db)):
 
 @app.post("/test-attempts/", response_model=TestAttempt)
 def create_test_attempt(attempt: TestAttemptCreate, db: Session = Depends(get_db)):
-    db_attempt = TestAttemptModel(**attempt.dict())
+    db_attempt = TestAttemptModel(**attempt.model_dump())
     db.add(db_attempt)
     db.commit()
     db.refresh(db_attempt)
