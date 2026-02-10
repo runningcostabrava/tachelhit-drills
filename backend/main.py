@@ -109,12 +109,14 @@ def root():
 
 @app.get("/health")
 def health_check():
+    print(f"[HEALTH] Health check requested at {datetime.utcnow().isoformat()}")
     return {
         "status": "healthy", 
         "timestamp": datetime.utcnow().isoformat(),
         "frontend_url": FRONTEND_URL,
         "api_base": "https://tachelhit-drills-api.onrender.com",
-        "cors_allowed": allowed_origins
+        "cors_allowed": allowed_origins,
+        "service": "tachelhit-drills-backend"
     }
 
 def get_db():
