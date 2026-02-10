@@ -99,11 +99,23 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     }
   };
 
+  // Helper to stop all tracks in the current stream
+  const _stopCameraStream = () => {
+    if (streamRef.current) {
+      console.log('Stopping current camera stream tracks...');
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+  };
+
   const startVideoRecording = async (facing?: 'user' | 'environment') => {
     const facingMode = facing || cameraFacing;
     console.log('Starting video recording with facingMode:', facingMode);
 
     try {
+      // Ensure any previous stream is stopped before requesting a new one
+      _stopCameraStream(); 
+
       // Try with exact facingMode first, fallback to non-exact if it fails
       let stream;
       try {
@@ -117,7 +129,7 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
         });
       } catch (err) {
         // Fallback: try without 'exact' constraint
-        console.log('Exact facingMode not supported, trying without exact');
+        console.log('Exact facingMode not supported, trying without exact:', err);
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: facingMode,
@@ -132,8 +144,7 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
 
       if (previewRef.current) {
         previewRef.current.srcObject = stream;
-        // IMPORTANT: Call play() to show the video preview
-        await previewRef.current.play();
+        await previewRef.current.play(); // This is already present, ensures preview plays
       }
 
       mediaRecorderRef.current = new MediaRecorder(stream);
@@ -155,8 +166,7 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
           alert('Failed to upload video');
         }
 
-        stream.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
+        _stopCameraStream(); // <<< MODIFIED: Use helper to stop stream
         setRecording(null);
       };
 
@@ -165,13 +175,14 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     } catch (err) {
       console.error('Camera access denied:', err);
       alert('Please allow camera access');
+      _stopCameraStream(); // Ensure stream is stopped even if start fails
+      setRecording(null);
     }
   };
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-      setRecording(null);
+      mediaRecorderRef.current.stop(); // This will trigger onstop, which handles stream stopping and setRecording(null)
     }
   };
 
@@ -179,12 +190,16 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     const newFacing = cameraFacing === 'user' ? 'environment' : 'user';
     setCameraFacing(newFacing);
 
-    if (recording === 'video' && streamRef.current) {
-      stopRecording();
-      setTimeout(() => {
-        startVideoRecording();
-      }, 300);
+    // Stop current recording and stream first
+    if (recording === 'video') {
+      stopRecording(); // This stops MediaRecorder
     }
+    _stopCameraStream(); // <<< ADDED: Explicitly stop previous stream tracks regardless of recording state
+
+    // Then start new recording with the chosen camera
+    setTimeout(() => {
+      startVideoRecording(newFacing); // Pass newFacing directly to ensure it's used
+    }, 300);
   };
 
   const currentIndex = allDrills.findIndex(d => d.id === drill.id);
