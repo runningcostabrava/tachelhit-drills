@@ -1,6 +1,12 @@
 // Remove trailing slash if present to avoid double slashes in URLs
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE || 'http://localhost:8000';
 export const API_BASE = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+
+console.log('🔧 Config loaded:');
+console.log('   VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log('   VITE_API_BASE:', import.meta.env.VITE_API_BASE);
+console.log('   API_BASE:', API_BASE);
+console.log('   NODE_ENV:', import.meta.env.MODE);
 
 /**
  * Get the full URL for a media file

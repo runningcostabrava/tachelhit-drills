@@ -36,16 +36,20 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
 
   const handleSave = async () => {
     try {
-      await axios.put(`${API_BASE}/drills/${drill.id}`, editedDrill);
+      console.log('💾 Saving drill to:', `${API_BASE}/drills/${drill.id}`);
+      const response = await axios.put(`${API_BASE}/drills/${drill.id}`, editedDrill);
+      console.log('✅ Save response:', response.data);
       setIsEditing(false);
       onUpdate();
-    } catch (error) {
-      console.error('Error updating drill:', error);
-      alert('Failed to update drill');
+    } catch (error: any) {
+      console.error('❌ Error updating drill:', error);
+      console.error('   Error details:', error.response?.data || error.message);
+      alert(`Failed to update drill: ${error.message}`);
     }
   };
 
   const startAudioRecording = async () => {
+    console.log('🎤 Starting audio recording, API_BASE:', API_BASE);
     // Comprovar si el navegador suporta MediaRecorder
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       alert('Your browser does not support audio recording. Please use Chrome, Firefox, or Edge.');
@@ -100,14 +104,17 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
         formData.append('file', blob, `audio_${drill.id}_${Date.now()}.${extension}`);
 
         try {
-          await axios.post(`${API_BASE}/upload-media/${drill.id}/audio`, formData, {
+          console.log('📤 Uploading audio to:', `${API_BASE}/upload-media/${drill.id}/audio`);
+          const response = await axios.post(`${API_BASE}/upload-media/${drill.id}/audio`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
           });
+          console.log('✅ Audio upload response:', response.data);
           onUpdate();
           alert('Audio recorded and uploaded successfully!');
-        } catch (err) {
-          console.error('Audio upload failed:', err);
-          alert('Failed to upload audio. Please try again.');
+        } catch (err: any) {
+          console.error('❌ Audio upload failed:', err);
+          console.error('   Error details:', err.response?.data || err.message);
+          alert('Failed to upload audio. Please try again. Error: ' + err.message);
         } finally {
           stream.getTracks().forEach(track => track.stop());
         }
@@ -123,7 +130,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
       mediaRecorderRef.current.start();
       setRecording('audio');
       console.log('Audio recording started with MIME type:', mimeType);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Microphone access denied:', err);
       if (err.name === 'NotAllowedError') {
         alert('Please allow microphone access in your browser settings.');
