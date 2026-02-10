@@ -13,8 +13,19 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: PORT
+        value: 10000
+    healthCheckPath: /health
+    autoDeploy: true
 
 databases:
   - name: tachelhit-drills-db
     databaseName: tachelhit_drills
     user: tachelhit_user
+    plan: free
