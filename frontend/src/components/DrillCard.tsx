@@ -46,35 +46,92 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
   };
 
   const startAudioRecording = async () => {
+    // Comprovar si el navegador suporta MediaRecorder
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert('Your browser does not support audio recording. Please use Chrome, Firefox, or Edge.');
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100
+        }
+      });
+      
+      // Determinar el tipus MIME compatible
+      let mimeType = 'audio/webm';
+      if (!MediaRecorder.isTypeSupported('audio/webm')) {
+        mimeType = 'audio/mp4';
+      }
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'audio/ogg; codecs=opus';
+      }
+      
+      console.log('Using MIME type for recording:', mimeType);
+      
+      const options = { mimeType };
+      mediaRecorderRef.current = new MediaRecorder(stream, options);
       chunksRef.current = [];
 
-      mediaRecorderRef.current.ondataavailable = (e) => chunksRef.current.push(e.data);
+      mediaRecorderRef.current.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+      
       mediaRecorderRef.current.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        if (chunksRef.current.length === 0) {
+          console.warn('No audio data recorded');
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+        
+        const blob = new Blob(chunksRef.current, { type: mimeType });
         const formData = new FormData();
-        formData.append('file', blob, `audio_${drill.id}_${Date.now()}.webm`);
+        
+        // Utilitzar l'extensió correcta segons el tipus MIME
+        let extension = 'webm';
+        if (mimeType.includes('mp4')) extension = 'mp4';
+        if (mimeType.includes('ogg')) extension = 'ogg';
+        
+        formData.append('file', blob, `audio_${drill.id}_${Date.now()}.${extension}`);
 
         try {
           await axios.post(`${API_BASE}/upload-media/${drill.id}/audio`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
           });
           onUpdate();
+          alert('Audio recorded and uploaded successfully!');
         } catch (err) {
           console.error('Audio upload failed:', err);
-          alert('Failed to upload audio');
+          alert('Failed to upload audio. Please try again.');
+        } finally {
+          stream.getTracks().forEach(track => track.stop());
         }
+      };
 
+      mediaRecorderRef.current.onerror = (event) => {
+        console.error('MediaRecorder error:', event);
+        alert('Error during recording. Please try again.');
         stream.getTracks().forEach(track => track.stop());
+        setRecording(null);
       };
 
       mediaRecorderRef.current.start();
       setRecording('audio');
+      console.log('Audio recording started with MIME type:', mimeType);
     } catch (err) {
       console.error('Microphone access denied:', err);
-      alert('Please allow microphone access');
+      if (err.name === 'NotAllowedError') {
+        alert('Please allow microphone access in your browser settings.');
+      } else if (err.name === 'NotFoundError') {
+        alert('No microphone found. Please connect a microphone and try again.');
+      } else {
+        alert('Cannot access microphone: ' + err.message);
+      }
     }
   };
 

@@ -326,9 +326,38 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
     try:
         # Read file content
         content = await file.read()
+        
+        # Validar que el fitxer no estigui buit
+        if len(content) == 0:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
         # Check if Cloudinary is configured
         use_cloudinary = bool(os.getenv("CLOUDINARY_CLOUD_NAME"))
+
+        # Determinar l'extensió del fitxer
+        if file.filename and "." in file.filename:
+            ext = file.filename.split(".")[-1].lower()
+        else:
+            # Extensions per defecte segons el tipus de mitjà
+            if media_type == "audio":
+                ext = "webm"
+            elif media_type == "video":
+                ext = "mp4"
+            else:  # image
+                ext = "jpg"
+        
+        # Validar extensions permeses
+        allowed_extensions = {
+            "audio": ["webm", "mp4", "ogg", "wav", "m4a"],
+            "video": ["mp4", "webm", "mov", "avi"],
+            "image": ["jpg", "jpeg", "png", "gif", "webp"]
+        }
+        
+        if ext not in allowed_extensions.get(media_type, []):
+            raise HTTPException(
+                status_code=400, 
+                detail=f"File extension .{ext} not allowed for {media_type}. Allowed: {allowed_extensions[media_type]}"
+            )
 
         if use_cloudinary:
             # Upload to Cloudinary
@@ -336,6 +365,10 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
 
             # Determine resource type
             resource_type = "video" if media_type in ["audio", "video"] else "image"
+            
+            # Per a àudio, utilitzar resource_type "video" a Cloudinary (també funciona per àudio)
+            if media_type == "audio":
+                resource_type = "video"
 
             # Upload to Cloudinary
             result = cloudinary.uploader.upload(
@@ -350,9 +383,9 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
         else:
             # Fallback to local storage
             print(f"[UPLOAD] Uploading {media_type} locally for drill {drill_id}")
-            ext = file.filename.split(".")[-1].lower() if "." in file.filename else "webm"
             filename = f"{media_type}_{drill_id}_{int(datetime.utcnow().timestamp())}.{ext}"
             dir_path = os.path.join(MEDIA_ROOT, media_type)
+            os.makedirs(dir_path, exist_ok=True)  # Assegurar que el directori existeix
             file_path = os.path.join(dir_path, filename)
 
             with open(file_path, "wb") as f:
@@ -371,8 +404,12 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
         db.commit()
         return {"url": url}
 
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[UPLOAD] Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 # ===================== TEST CRUD =====================
