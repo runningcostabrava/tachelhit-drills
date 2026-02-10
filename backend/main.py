@@ -119,15 +119,13 @@ def get_drills(db: Session = Depends(get_db)):
     return db.query(DrillModel).order_by(DrillModel.date_created.desc()).all()
 
 @app.post("/drills/", response_model=Drill)
-def create_drill(drill: DrillCreate, db: Session = Depends(get_db)):
+def create_drill(db: Session = Depends(get_db)): # Removed `drill: DrillCreate` as we're creating an empty one
     try:
-        db_drill = DrillModel(**drill.model_dump())
+        # Create a new DrillModel instance without any arguments
+        # This lets the database handle default values, including the auto-incrementing ID
+        db_drill = DrillModel()
 
-        if db_drill.text_catalan:
-            try:
-                db_drill.text_arabic = translator_ca_to_ar.translate(db_drill.text_catalan)
-            except Exception as e:
-                print(f"Translation error for drill: {e}") # Improved logging
+        # Any default text processing can go here if needed, but not based on input
 
         db.add(db_drill)
         db.commit()
