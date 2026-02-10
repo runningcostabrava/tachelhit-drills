@@ -61,13 +61,12 @@ allowed_origins_base = [
     "http://localhost:5176",
     "http://localhost:4173", # Vite default preview server port
     "http://localhost:3000",
-    "https://tachelhit-drills.vercel.app",  # Production URL
+    "https://tachelhit-drills.vercel.app",  # Production URL (without trailing slash)
+    "https://tachelhit-drills.vercel.app/", # Production URL (with trailing slash)
 ]
-# Add FRONTEND_URL from environment variable if it's set
-if FRONTEND_URL:
-    allowed_origins_base.append(FRONTEND_URL)
 
 # Remove duplicates and None values
+# FRONTEND_URL environment variable is no longer explicitly added to this list for CORS
 allowed_origins = list(set(filter(None, allowed_origins_base)))
 
 print("=" * 80)
