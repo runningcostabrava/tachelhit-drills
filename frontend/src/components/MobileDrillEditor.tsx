@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import type { CSSProperties } from 'react';
 import axios from 'axios';
 import { API_BASE, getMediaUrl } from '../config';
 
@@ -29,11 +30,13 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
   const [showCameraChoice, setShowCameraChoice] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user');
   const [hasChanges, setHasChanges] = useState(false);
+  const [showImageCapture, setShowImageCapture] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const previewRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     setEditedDrill(drill);
@@ -180,6 +183,63 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     }
   };
 
+  const startImageCapture = async (facing: 'user' | 'environment') => {
+    setCameraFacing(facing);
+    try {
+      _stopCameraStream();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 } },
+      });
+      streamRef.current = stream;
+      setShowImageCapture(true);
+      if (previewRef.current) {
+        previewRef.current.srcObject = stream;
+        await previewRef.current.play();
+      }
+    } catch (err) {
+      console.error('Camera access denied for image capture:', err);
+      alert('Please allow camera access.');
+    }
+  };
+
+  const takePicture = () => {
+    if (!previewRef.current || !canvasRef.current || !streamRef.current) return;
+
+    const video = previewRef.current;
+    const canvas = canvasRef.current;
+
+    // Get video dimensions
+    const videoTrack = streamRef.current.getVideoTracks()[0];
+    const settings = videoTrack.getSettings();
+    const width = settings.width || 640;
+    const height = settings.height || 480;
+
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext('2d');
+    if (context) {
+      context.drawImage(video, 0, 0, width, height);
+      canvas.toBlob(async (blob) => {
+        if (blob) {
+          const formData = new FormData();
+          formData.append('file', blob, `image_${drill.id}_${Date.now()}.jpg`);
+          try {
+            await axios.post(`${API_BASE}/upload-media/${drill.id}/image`, formData, {
+              headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            onUpdate();
+          } catch (err) {
+            console.error('Image upload failed:', err);
+            alert('Failed to upload image');
+          }
+        }
+        setShowImageCapture(false);
+        _stopCameraStream();
+      }, 'image/jpeg', 0.9);
+    }
+  };
+
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop(); // This will trigger onstop, which handles stream stopping and setRecording(null)
@@ -301,30 +361,39 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
         overflow: 'auto',
         padding: '16px'
       }}>
-        {/* Tag */}
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{
-            display: 'block',
-            fontSize: '12px',
-            fontWeight: 600,
-            color: '#666',
-            marginBottom: '6px'
-          }}>
-            Tag (optional)
-          </label>
-          <input
-            value={editedDrill.tag || ''}
-            onChange={(e) => handleChange('tag', e.target.value)}
-            placeholder="e.g., greetings..."
-            style={{
-              width: '100%',
-              padding: '10px',
-              fontSize: '14px',
-              border: '2px solid #e0e0e0',
-              borderRadius: '8px',
-              outline: 'none'
-            }}
-          />
+
+        {/* Image Preview */}
+        {editedDrill.image_url && (
+          <div style={{ marginBottom: '16px', textAlign: 'center' }}>
+            <img 
+              src={getMediaUrl(editedDrill.image_url)} 
+              alt="Drill"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '200px',
+                borderRadius: '8px',
+                border: '1px solid #e0e0e0',
+                objectFit: 'cover'
+              }}
+            />
+          </div>
+        )}
+
+        {/* Media Actions */}
+        <div style={{
+          background: '#f8f9fa',
+          padding: '14px',
+          borderRadius: '10px',
+          marginBottom: '16px'
+        }}>
+          <h3 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: 700 }}>
+            Media
+          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-around', gap: '10px' }}>
+            <button onClick={() => startImageCapture('environment')} style={{ fontSize: '32px', background: 'none', border: 'none', cursor: 'pointer' }}>📷</button>
+            <button onClick={startAudioRecording} style={{ fontSize: '32px', background: 'none', border: 'none', cursor: 'pointer' }}>🎙️</button>
+            <button onClick={() => setShowCameraChoice(true)} style={{ fontSize: '32px', background: 'none', border: 'none', cursor: 'pointer' }}>🎬</button>
+          </div>
         </div>
 
         {/* Catalan */}
@@ -413,135 +482,21 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
           />
         </div>
 
-        {/* Recording Section */}
-        <div style={{
-          background: '#f8f9fa',
-          padding: '14px',
-          borderRadius: '10px',
-          marginBottom: '16px'
-        }}>
-          <h3 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: 700 }}>
-            🎙️ Recording
-          </h3>
-
-          {/* Audio Recording */}
-          <div style={{ marginBottom: '12px' }}>
-            {recording === 'audio' ? (
-              <button
-                onClick={stopRecording}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  background: '#ff4444',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '15px',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                ⏹ Stop Audio
-              </button>
-            ) : (
-              <button
-                onClick={startAudioRecording}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  background: drill.audio_url ? 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)' : 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '15px',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                🎤 {drill.audio_url ? 'Re-record' : 'Record'} Audio
-              </button>
-            )}
-            {drill.audio_url && !recording && (
-              <button
-                onClick={() => {
-                  const audio = new Audio(getMediaUrl(drill.audio_url));
-                  audio.play();
-                }}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  marginTop: '6px',
-                  background: 'white',
-                  color: '#4CAF50',
-                  border: '2px solid #4CAF50',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                ▶️ Play Audio
-              </button>
-            )}
-          </div>
-
-          {/* Video Recording */}
-          <div>
-            {recording === 'video' ? null : (
-              <button
-                onClick={() => setShowCameraChoice(true)}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  background: drill.video_url ? 'linear-gradient(135deg, #FF6B6B 0%, #EE5A6F 100%)' : 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '15px',
-                  fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-              >
-                🎥 {drill.video_url ? 'Re-record' : 'Record'} Video
-              </button>
-            )}
-            {drill.video_url && !recording && (
-              <button
-                onClick={() => setShowVideo(true)}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  marginTop: '6px',
-                  background: 'white',
-                  color: '#9C27B0',
-                  border: '2px solid #9C27B0',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                ▶️ Play Video
-              </button>
-            )}
-          </div>
-        </div>
-
         {/* Save Button */}
         {hasChanges && (
           <button
             onClick={handleSave}
             style={{
               width: '100%',
-              padding: '18px',
+              padding: '20px',
               background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
               color: 'white',
               border: 'none',
               borderRadius: '12px',
-              fontSize: '18px',
-              fontWeight: 700,
+              fontSize: '20px',
+              fontWeight: 'bold',
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+              boxShadow: '0 6px 20px rgba(76, 175, 80, 0.4)',
               marginBottom: '20px'
             }}
           >
@@ -550,105 +505,34 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
         )}
       </div>
 
-      {/* Camera Choice Modal */}
+      {/* Image Capture Modal */}
+      {showImageCapture && (
+        <div style={{...modalStyles.overlay}}>
+          <div style={{...modalStyles.modal}}>
+            <h3 style={{...modalStyles.title}}>Take Picture</h3>
+            <video ref={previewRef} autoPlay muted playsInline style={{ width: '100%', borderRadius: '8px' }} />
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+            <div style={{ marginTop: '15px', display: 'flex', justifyContent: 'space-around' }}>
+              <button onClick={takePicture} style={{...modalStyles.button, background: '#4CAF50'}}>Take Picture</button>
+              <button onClick={() => { setShowImageCapture(false); _stopCameraStream(); }} style={{...modalStyles.button, background: '#f44336'}}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Camera Choice Modal (for video) */}
       {showCameraChoice && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.8)',
-          zIndex: 20000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px'
-        }}>
-          <div style={{
-            background: 'white',
-            borderRadius: '16px',
-            padding: '30px',
-            maxWidth: '400px',
-            width: '100%'
-          }}>
-            <h3 style={{
-              margin: '0 0 24px 0',
-              fontSize: '20px',
-              fontWeight: 700,
-              textAlign: 'center'
-            }}>
-              Choose Camera
-            </h3>
-
+        <div style={{...modalStyles.overlay}}>
+          <div style={{...modalStyles.modal}}>
+            <h3 style={{...modalStyles.title}}>Choose Video Camera</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <button
-                onClick={() => {
-                  setCameraFacing('user');
-                  setShowCameraChoice(false);
-                  startVideoRecording('user');  // Pass facing mode directly
-                }}
-                style={{
-                  padding: '20px',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '12px',
-                  fontSize: '18px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '12px'
-                }}
-              >
-                <span style={{ fontSize: '32px' }}>🤳</span>
-                <span>Front Camera (Selfie)</span>
+              <button onClick={() => { setCameraFacing('user'); setShowCameraChoice(false); startVideoRecording('user'); }} style={{...modalStyles.button, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}}>
+                <span style={{ fontSize: '32px' }}>🤳</span> Front Camera
               </button>
-
-              <button
-                onClick={() => {
-                  setCameraFacing('environment');
-                  setShowCameraChoice(false);
-                  startVideoRecording('environment');  // Pass facing mode directly
-                }}
-                style={{
-                  padding: '20px',
-                  background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '12px',
-                  fontSize: '18px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '12px'
-                }}
-              >
-                <span style={{ fontSize: '32px' }}>📷</span>
-                <span>Back Camera</span>
+              <button onClick={() => { setCameraFacing('environment'); setShowCameraChoice(false); startVideoRecording('environment'); }} style={{...modalStyles.button, background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)'}}>
+                <span style={{ fontSize: '32px' }}>📷</span> Back Camera
               </button>
-
-              <button
-                onClick={() => setShowCameraChoice(false)}
-                style={{
-                  padding: '14px',
-                  background: '#e0e0e0',
-                  color: '#333',
-                  border: 'none',
-                  borderRadius: '10px',
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
+              <button onClick={() => setShowCameraChoice(false)} style={{...modalStyles.cancelButton}}>Cancel</button>
             </div>
           </div>
         </div>
@@ -656,140 +540,97 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
 
       {/* Video Recording Modal */}
       {recording === 'video' && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'black',
-          zIndex: 20000,
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            position: 'relative'
-          }}>
-            <video
-              ref={previewRef}
-              autoPlay
-              muted
-              playsInline
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover'
-              }}
-            />
-
-            <div style={{
-              position: 'absolute',
-              top: '20px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              background: 'rgba(255, 0, 0, 0.9)',
-              color: 'white',
-              padding: '12px 24px',
-              borderRadius: '25px',
-              fontSize: '16px',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px'
-            }}>
-              <span style={{
-                width: '12px',
-                height: '12px',
-                background: 'white',
-                borderRadius: '50%',
-                animation: 'pulse 1.5s ease-in-out infinite'
-              }}></span>
-              Recording
+        <div style={{...modalStyles.overlay, background: 'black'}}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            <video ref={previewRef} autoPlay muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
+              <button onClick={switchCamera} style={{...modalStyles.iconButton}}>🔄</button>
             </div>
-
-            <button
-              onClick={switchCamera}
-              style={{
-                position: 'absolute',
-                top: '20px',
-                right: '20px',
-                width: '50px',
-                height: '50px',
-                borderRadius: '50%',
-                background: 'rgba(255, 255, 255, 0.3)',
-                backdropFilter: 'blur(10px)',
-                border: '2px solid white',
-                color: 'white',
-                fontSize: '24px',
-                cursor: 'pointer'
-              }}
-            >
-              🔄
-            </button>
           </div>
-
-          <div style={{
-            padding: '30px 20px',
-            background: 'rgba(0, 0, 0, 0.9)',
-            display: 'flex',
-            justifyContent: 'center'
-          }}>
-            <button
-              onClick={stopRecording}
-              style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #ff4444 0%, #cc0000 100%)',
-                color: 'white',
-                border: '4px solid white',
-                fontSize: '32px',
-                cursor: 'pointer',
-                boxShadow: '0 6px 20px rgba(255, 68, 68, 0.5)'
-              }}
-            >
-              ⏹
-            </button>
+          <div style={{ padding: '30px 20px', background: 'rgba(0, 0, 0, 0.9)', display: 'flex', justifyContent: 'center' }}>
+            <button onClick={stopRecording} style={{...modalStyles.stopButton}}>⏹</button>
           </div>
         </div>
       )}
 
       {/* Video Playback Modal */}
       {showVideo && drill.video_url && (
-        <div
-          onClick={() => setShowVideo(false)}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.9)',
-            zIndex: 20000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px'
-          }}
-        >
-          <video
-            src={getMediaUrl(drill.video_url)}
-            controls
-            autoPlay
-            playsInline
-            style={{
-              width: '100%',
-              maxWidth: '640px',
-              borderRadius: '12px'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          />
+        <div onClick={() => setShowVideo(false)} style={{...modalStyles.overlay}}>
+          <video src={getMediaUrl(drill.video_url)} controls autoPlay playsInline style={{ width: '100%', maxWidth: '640px', borderRadius: '12px' }} onClick={(e) => e.stopPropagation()} />
         </div>
       )}
     </div>
   );
 }
+
+const modalStyles: { [key: string]: CSSProperties } = {
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0,0,0,0.8)',
+    zIndex: 20000,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '20px'
+  },
+  modal: {
+    background: 'white',
+    borderRadius: '16px',
+    padding: '30px',
+    maxWidth: '400px',
+    width: '100%'
+  },
+  title: {
+    margin: '0 0 24px 0',
+    fontSize: '20px',
+    fontWeight: 700,
+    textAlign: 'center'
+  },
+  button: {
+    padding: '20px',
+    color: 'white',
+    border: 'none',
+    borderRadius: '12px',
+    fontSize: '18px',
+    fontWeight: 700,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '12px'
+  },
+  cancelButton: {
+    padding: '14px',
+    background: '#e0e0e0',
+    color: '#333',
+    border: 'none',
+    borderRadius: '10px',
+    fontSize: '16px',
+    fontWeight: 600,
+    cursor: 'pointer'
+  },
+  iconButton: {
+    width: '50px',
+    height: '50px',
+    borderRadius: '50%',
+    background: 'rgba(255, 255, 255, 0.3)',
+    border: '2px solid white',
+    color: 'white',
+    fontSize: '24px',
+    cursor: 'pointer'
+  },
+  stopButton: {
+    width: '80px',
+    height: '80px',
+    borderRadius: '50%',
+    background: 'linear-gradient(135deg, #ff4444 0%, #cc0000 100%)',
+    color: 'white',
+    border: '4px solid white',
+    fontSize: '32px',
+    cursor: 'pointer'
+  }
+};
