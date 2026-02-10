@@ -107,6 +107,16 @@ def root():
         ]
     }
 
+@app.get("/health")
+def health_check():
+    return {
+        "status": "healthy", 
+        "timestamp": datetime.utcnow().isoformat(),
+        "frontend_url": FRONTEND_URL,
+        "api_base": "https://tachelhit-drills-api.onrender.com",
+        "cors_allowed": allowed_origins
+    }
+
 def get_db():
     db = SessionLocal()
     try:
