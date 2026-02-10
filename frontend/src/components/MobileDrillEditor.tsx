@@ -26,6 +26,7 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
   const [editedDrill, setEditedDrill] = useState(drill);
   const [recording, setRecording] = useState<'audio' | 'video' | null>(null);
   const [showVideo, setShowVideo] = useState(false);
+  const [showCameraChoice, setShowCameraChoice] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user');
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -448,7 +449,7 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
           <div>
             {recording === 'video' ? null : (
               <button
-                onClick={startVideoRecording}
+                onClick={() => setShowCameraChoice(true)}
                 style={{
                   width: '100%',
                   padding: '14px',
@@ -508,6 +509,110 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
           </button>
         )}
       </div>
+
+      {/* Camera Choice Modal */}
+      {showCameraChoice && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.8)',
+          zIndex: 20000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            padding: '30px',
+            maxWidth: '400px',
+            width: '100%'
+          }}>
+            <h3 style={{
+              margin: '0 0 24px 0',
+              fontSize: '20px',
+              fontWeight: 700,
+              textAlign: 'center'
+            }}>
+              Choose Camera
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <button
+                onClick={() => {
+                  setCameraFacing('user');
+                  setShowCameraChoice(false);
+                  startVideoRecording();
+                }}
+                style={{
+                  padding: '20px',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '18px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px'
+                }}
+              >
+                <span style={{ fontSize: '32px' }}>🤳</span>
+                <span>Front Camera (Selfie)</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setCameraFacing('environment');
+                  setShowCameraChoice(false);
+                  startVideoRecording();
+                }}
+                style={{
+                  padding: '20px',
+                  background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '18px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '12px'
+                }}
+              >
+                <span style={{ fontSize: '32px' }}>📷</span>
+                <span>Back Camera</span>
+              </button>
+
+              <button
+                onClick={() => setShowCameraChoice(false)}
+                style={{
+                  padding: '14px',
+                  background: '#e0e0e0',
+                  color: '#333',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Video Recording Modal */}
       {recording === 'video' && (

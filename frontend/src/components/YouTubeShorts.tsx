@@ -295,46 +295,127 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
                 </div>
               </div>
 
-              {/* Video Player */}
+              {/* Vertical Video Player (Shorts Style) */}
               <div style={{
                 display: 'flex',
                 justifyContent: 'center',
                 background: '#000',
-                borderRadius: '12px',
-                padding: '20px'
+                borderRadius: '16px',
+                padding: '20px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
               }}>
-                <video
-                  key={selectedVideo.id}
-                  controls
-                  style={{
-                    width: 'auto',
-                    height: '70vh',
-                    maxWidth: '100%',
-                    borderRadius: '8px'
-                  }}
-                  src={`${API_BASE}${selectedVideo.video_path}`}
-                >
-                  El teu navegador no suporta video.
-                </video>
+                <div style={{
+                  position: 'relative',
+                  width: '360px',
+                  maxWidth: '100%',
+                  aspectRatio: '9/16',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
+                }}>
+                  <video
+                    key={selectedVideo.id}
+                    controls
+                    loop
+                    playsInline
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover'
+                    }}
+                    src={`${API_BASE}${selectedVideo.video_path}`}
+                  >
+                    El teu navegador no suporta video.
+                  </video>
+                </div>
               </div>
 
-              <div style={{ marginTop: '20px', textAlign: 'center' }}>
+              {/* Action Buttons */}
+              <div style={{
+                marginTop: '24px',
+                display: 'flex',
+                gap: '12px',
+                justifyContent: 'center',
+                flexWrap: 'wrap'
+              }}>
                 <a
                   href={`${API_BASE}${selectedVideo.video_path}`}
-                  download={`short_${selectedVideo.drill_id}.mp4`}
+                  download={`tachelhit_short_${selectedVideo.drill_id}.mp4`}
                   style={{
-                    display: 'inline-block',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
                     padding: '12px 24px',
-                    background: '#4CAF50',
+                    background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
                     color: 'white',
                     textDecoration: 'none',
-                    borderRadius: '8px',
-                    fontWeight: 600,
-                    fontSize: '14px'
+                    borderRadius: '10px',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)'
                   }}
                 >
-                  ⬇ Descarregar Short
+                  <span style={{ fontSize: '18px' }}>⬇</span>
+                  Download Short
                 </a>
+
+                <button
+                  onClick={() => {
+                    const videoUrl = `${API_BASE}${selectedVideo.video_path}`;
+                    const title = `${selectedVideo.text_catalan} - Tachelhit`;
+                    const description = `Català: ${selectedVideo.text_catalan}\nTachelhit: ${selectedVideo.text_tachelhit}\nالعربية: ${selectedVideo.text_arabic}`;
+
+                    // Open YouTube upload page
+                    const uploadUrl = `https://www.youtube.com/upload`;
+                    window.open(uploadUrl, '_blank');
+
+                    // Copy description to clipboard
+                    navigator.clipboard.writeText(`${title}\n\n${description}\n\n#Tachelhit #LanguageLearning #Shorts`);
+                    alert('Title and description copied to clipboard! Paste them when uploading to YouTube.');
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '12px 24px',
+                    background: 'linear-gradient(135deg, #FF0000 0%, #CC0000 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(255, 0, 0, 0.3)'
+                  }}
+                >
+                  <span style={{ fontSize: '18px' }}>📤</span>
+                  Upload to YouTube
+                </button>
+
+                <button
+                  onClick={() => {
+                    const text = `${selectedVideo.text_catalan}\n${selectedVideo.text_tachelhit}`;
+                    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&hashtags=Tachelhit,LanguageLearning`;
+                    window.open(shareUrl, '_blank');
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '12px 24px',
+                    background: 'linear-gradient(135deg, #1DA1F2 0%, #0d8bd9 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(29, 161, 242, 0.3)'
+                  }}
+                >
+                  <span style={{ fontSize: '18px' }}>🐦</span>
+                  Share on X
+                </button>
               </div>
             </div>
           ) : (
