@@ -848,13 +848,26 @@ export default function DrillsGrid({ onViewTests, onViewShorts }: { onViewTests?
 
     const addNewRow = async () => {
         try {
-            await axios.post(`${API_BASE}/drills/`, {});
+            // Create empty drill on backend, which returns the newly created drill
+            const response = await axios.post(`${API_BASE}/drills/`, {});
+            const newDrill = response.data; // Get the newly created drill from the response
 
-            const response = await axios.get(`${API_BASE}/drills/`);
-            const sorted = [...(response.data || [])].sort((a, b) =>
-                new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
-            );
-            setRowData(sorted);
+            // Add the new drill to the grid using applyTransaction
+            // This is more efficient and less prone to re-render issues than setRowData
+            if (gridRef.current && gridRef.current.api) {
+                // AG Grid expects an array of rows for add
+                gridRef.current.api.applyTransaction({ add: [newDrill] });
+                // Optionally, ensure the new row is visible
+                gridRef.current.api.ensureIndexVisible(0, 'top'); // Assuming new drill is added at top after sort
+            } else {
+                // Fallback if grid API is not ready (shouldn't happen often)
+                console.warn("AG Grid API not ready, falling back to full data refresh.");
+                const allDrillsResponse = await axios.get(`${API_BASE}/drills/`);
+                const sorted = [...(allDrillsResponse.data || [])].sort((a, b) =>
+                    new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
+                );
+                setRowData(sorted);
+            }
         } catch (error) {
             console.error("Error creating drill:", error);
             alert("No se pudo crear el nuevo ejercicio.");

@@ -54,18 +54,21 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Tachelhit Drills API")
 
 # CORS configuration - allow frontend URL
-allowed_origins = [
+allowed_origins_base = [
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:5175",
     "http://localhost:5176",
+    "http://localhost:4173", # Vite default preview server port
     "http://localhost:3000",
     "https://tachelhit-drills.vercel.app",  # Production URL
-    FRONTEND_URL,  # From environment variable
 ]
+# Add FRONTEND_URL from environment variable if it's set
+if FRONTEND_URL:
+    allowed_origins_base.append(FRONTEND_URL)
 
 # Remove duplicates and None values
-allowed_origins = list(set(filter(None, allowed_origins)))
+allowed_origins = list(set(filter(None, allowed_origins_base)))
 
 print("=" * 80)
 print("CORS CONFIGURATION")
