@@ -9,13 +9,14 @@ if (import.meta.env.MODE === 'production' && !API_BASE_TMP.includes('render.com'
 
 export const API_BASE = API_BASE_TMP;
 
-console.log('🔧 Config loaded - Audio fix v2 - Redeploy trigger v2:');
+console.log('🔧 Config loaded - Audio fix v3:');
 console.log('   VITE_API_URL:', import.meta.env.VITE_API_URL);
 console.log('   VITE_API_BASE:', import.meta.env.VITE_API_BASE);
 console.log('   API_BASE:', API_BASE);
 console.log('   NODE_ENV:', import.meta.env.MODE);
 console.log('   Production forced:', import.meta.env.MODE === 'production');
 console.log('   Timestamp:', new Date().toISOString());
+console.log('   Build version: 2026-02-10-audio-fix');
 
 /**
  * Get the full URL for a media file
@@ -33,6 +34,3 @@ export function getMediaUrl(url: string | null | undefined): string {
   // Relative URL - prepend API_BASE
   return `${API_BASE}${url}`;
 }
-//
-trigger
-redeploy
