@@ -50,43 +50,80 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
 
   const startAudioRecording = async () => {
     console.log('🎤 Starting audio recording, API_BASE:', API_BASE);
+    console.log('🎤 User agent:', navigator.userAgent);
+    console.log('🎤 MediaRecorder supported:', typeof MediaRecorder !== 'undefined');
+    if (typeof MediaRecorder !== 'undefined') {
+      console.log('🎤 MediaRecorder.isTypeSupported audio/webm:', MediaRecorder.isTypeSupported('audio/webm'));
+      console.log('🎤 MediaRecorder.isTypeSupported audio/mp4:', MediaRecorder.isTypeSupported('audio/mp4'));
+      console.log('🎤 MediaRecorder.isTypeSupported audio/ogg:', MediaRecorder.isTypeSupported('audio/ogg; codecs=opus'));
+    }
+    
     // Comprovar si el navegador suporta MediaRecorder
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       alert('Your browser does not support audio recording. Please use Chrome, Firefox, or Edge.');
       return;
     }
 
+    // Detectar iOS/Safari
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    
+    console.log('🎤 isIOS:', isIOS, 'isSafari:', isSafari);
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      const constraints: MediaStreamConstraints = { 
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           sampleRate: 44100
         }
-      });
+      };
+      
+      console.log('🎤 Requesting media with constraints:', constraints);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('🎤 Got stream:', stream.id, 'active:', stream.active);
       
       // Determinar el tipus MIME compatible
       let mimeType = 'audio/webm';
-      if (!MediaRecorder.isTypeSupported('audio/webm')) {
-        mimeType = 'audio/mp4';
+      let extension = 'webm';
+      
+      if (typeof MediaRecorder === 'undefined') {
+        alert('MediaRecorder not supported in this browser. Try Chrome or Firefox on Android.');
+        stream.getTracks().forEach(track => track.stop());
+        return;
       }
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'audio/ogg; codecs=opus';
+
+      // iOS/Safari normalmente solo soporta AAC en MP4
+      if (isIOS || isSafari) {
+        mimeType = 'audio/mp4';
+        extension = 'm4a';
+        console.log('🎤 iOS/Safari detected, using MP4/AAC');
+      } else {
+        if (!MediaRecorder.isTypeSupported('audio/webm')) {
+          mimeType = 'audio/mp4';
+          extension = 'mp4';
+        }
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'audio/ogg; codecs=opus';
+          extension = 'ogg';
+        }
       }
       
-      console.log('Using MIME type for recording:', mimeType);
+      console.log('🎤 Using MIME type for recording:', mimeType);
       
       const options = { mimeType };
       mediaRecorderRef.current = new MediaRecorder(stream, options);
       chunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = (e) => {
+        console.log('🎤 Data available, size:', e.data.size);
         if (e.data.size > 0) {
           chunksRef.current.push(e.data);
         }
       };
       
       mediaRecorderRef.current.onstop = async () => {
+        console.log('🎤 Recording stopped, chunks:', chunksRef.current.length);
         if (chunksRef.current.length === 0) {
           console.warn('No audio data recorded');
           stream.getTracks().forEach(track => track.stop());
@@ -94,13 +131,9 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
         }
         
         const blob = new Blob(chunksRef.current, { type: mimeType });
+        console.log('🎤 Blob created, size:', blob.size, 'type:', blob.type);
+        
         const formData = new FormData();
-        
-        // Utilitzar l'extensió correcta segons el tipus MIME
-        let extension = 'webm';
-        if (mimeType.includes('mp4')) extension = 'mp4';
-        if (mimeType.includes('ogg')) extension = 'ogg';
-        
         formData.append('file', blob, `audio_${drill.id}_${Date.now()}.${extension}`);
 
         try {
@@ -129,7 +162,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
 
       mediaRecorderRef.current.start();
       setRecording('audio');
-      console.log('Audio recording started with MIME type:', mimeType);
+      console.log('🎤 Audio recording started with MIME type:', mimeType);
     } catch (err: any) {
       console.error('Microphone access denied:', err);
       if (err.name === 'NotAllowedError') {

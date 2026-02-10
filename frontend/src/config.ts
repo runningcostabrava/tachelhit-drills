@@ -1,16 +1,20 @@
 // Remove trailing slash if present to avoid double slashes in URLs
 const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE || 'http://localhost:8000';
-export const API_BASE = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+let API_BASE_TMP = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
 
-// Override for production if needed
-// export const API_BASE = 'https://tachelhit-drills-api.onrender.com';
+// Force production backend if we are in production (vercel)
+if (import.meta.env.MODE === 'production' && !API_BASE_TMP.includes('render.com')) {
+  API_BASE_TMP = 'https://tachelhit-drills-api.onrender.com';
+}
+
+export const API_BASE = API_BASE_TMP;
 
 console.log('🔧 Config loaded:');
 console.log('   VITE_API_URL:', import.meta.env.VITE_API_URL);
 console.log('   VITE_API_BASE:', import.meta.env.VITE_API_BASE);
 console.log('   API_BASE:', API_BASE);
 console.log('   NODE_ENV:', import.meta.env.MODE);
-console.log('   Override available for production');
+console.log('   Production forced:', import.meta.env.MODE === 'production');
 
 /**
  * Get the full URL for a media file

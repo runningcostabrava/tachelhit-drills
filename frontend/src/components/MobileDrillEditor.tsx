@@ -70,43 +70,75 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
   };
 
   const startAudioRecording = async () => {
+    console.log('🎤 [Mobile] Starting audio recording, API_BASE:', API_BASE);
+    console.log('🎤 [Mobile] User agent:', navigator.userAgent);
+    
     // Comprovar si el navegador suporta MediaRecorder
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       alert('El teu navegador no suporta la gravació d\'àudio. Si us plau, utilitza Chrome, Firefox o Edge.');
       return;
     }
 
+    // Detectar iOS/Safari
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    
+    console.log('🎤 [Mobile] isIOS:', isIOS, 'isSafari:', isSafari);
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      const constraints: MediaStreamConstraints = { 
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           sampleRate: 44100
         }
-      });
+      };
+      
+      console.log('🎤 [Mobile] Requesting media with constraints:', constraints);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('🎤 [Mobile] Got stream:', stream.id, 'active:', stream.active);
       
       // Determinar el tipus MIME compatible
       let mimeType = 'audio/webm';
-      if (!MediaRecorder.isTypeSupported('audio/webm')) {
-        mimeType = 'audio/mp4';
+      let extension = 'webm';
+      
+      if (typeof MediaRecorder === 'undefined') {
+        alert('MediaRecorder no suportat en aquest navegador. Prova Chrome o Firefox a Android.');
+        stream.getTracks().forEach(track => track.stop());
+        return;
       }
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'audio/ogg; codecs=opus';
+
+      // iOS/Safari normalmente solo soporta AAC en MP4
+      if (isIOS || isSafari) {
+        mimeType = 'audio/mp4';
+        extension = 'm4a';
+        console.log('🎤 [Mobile] iOS/Safari detectat, utilitzant MP4/AAC');
+      } else {
+        if (!MediaRecorder.isTypeSupported('audio/webm')) {
+          mimeType = 'audio/mp4';
+          extension = 'mp4';
+        }
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'audio/ogg; codecs=opus';
+          extension = 'ogg';
+        }
       }
       
-      console.log('Utilitzant tipus MIME per a gravació:', mimeType);
+      console.log('🎤 [Mobile] Utilitzant tipus MIME per a gravació:', mimeType);
       
       const options = { mimeType };
       mediaRecorderRef.current = new MediaRecorder(stream, options);
       chunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = (e) => {
+        console.log('🎤 [Mobile] Dades disponibles, mida:', e.data.size);
         if (e.data.size > 0) {
           chunksRef.current.push(e.data);
         }
       };
       
       mediaRecorderRef.current.onstop = async () => {
+        console.log('🎤 [Mobile] Gravació aturada, chunks:', chunksRef.current.length);
         if (chunksRef.current.length === 0) {
           console.warn('No hi ha dades d\'àudio gravades');
           stream.getTracks().forEach(track => track.stop());
@@ -114,24 +146,22 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
         }
         
         const blob = new Blob(chunksRef.current, { type: mimeType });
+        console.log('🎤 [Mobile] Blob creat, mida:', blob.size, 'tipus:', blob.type);
+        
         const formData = new FormData();
-        
-        // Utilitzar l'extensió correcta segons el tipus MIME
-        let extension = 'webm';
-        if (mimeType.includes('mp4')) extension = 'mp4';
-        if (mimeType.includes('ogg')) extension = 'ogg';
-        
         formData.append('file', blob, `audio_${drill.id}_${Date.now()}.${extension}`);
 
         try {
+          console.log('📤 [Mobile] Pujant àudio a:', `${API_BASE}/upload-media/${drill.id}/audio`);
           await axios.post(`${API_BASE}/upload-media/${drill.id}/audio`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
           });
           onUpdate();
           alert('Àudio gravat i pujat correctament!');
-        } catch (err) {
-          console.error('Error en pujar l\'àudio:', err);
-          alert('No s\'ha pogut pujar l\'àudio. Si us plau, torna-ho a provar.');
+        } catch (err: any) {
+          console.error('❌ [Mobile] Error en pujar l\'àudio:', err);
+          console.error('   Detalls:', err.response?.data || err.message);
+          alert('No s\'ha pogut pujar l\'àudio. Si us plau, torna-ho a provar. Error: ' + err.message);
         } finally {
           stream.getTracks().forEach(track => track.stop());
         }
@@ -146,8 +176,8 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
 
       mediaRecorderRef.current.start();
       setRecording('audio');
-      console.log('Gravació d\'àudio iniciada amb tipus MIME:', mimeType);
-    } catch (err) {
+      console.log('🎤 [Mobile] Gravació d\'àudio iniciada amb tipus MIME:', mimeType);
+    } catch (err: any) {
       console.error('Accés al micròfon denegat:', err);
       if (err.name === 'NotAllowedError') {
         alert('Si us plau, permet l\'accés al micròfon a la configuració del teu navegador.');
