@@ -23,6 +23,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   const [playCount, setPlayCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const currentDrill = drills[currentIndex];
 
@@ -34,47 +35,22 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
       audioRef.current.pause();
       audioRef.current = null;
     }
+    // Cancel any ongoing speech synthesis
+    if (speechSynthRef.current) {
+      speechSynthesis.cancel();
+      speechSynthRef.current = null;
+    }
   }, [currentIndex]);
 
   useEffect(() => {
-    if (currentDrill?.audio_url && playCount < 2) {
-      const playAudio = () => {
-        const audio = new Audio(getMediaUrl(currentDrill.audio_url));
-        audioRef.current = audio;
-        setIsPlaying(true);
-        audio.play();
-        audio.onended = () => {
-          setIsPlaying(false);
-          setPlayCount(prev => {
-            const newCount = prev + 1;
-            if (newCount >= 2) {
-              // Move to next drill after 2 plays
-              setTimeout(() => {
-                if (currentIndex < drills.length - 1) {
-                  setCurrentIndex(currentIndex + 1);
-                } else {
-                  // End of drills
-                  onExit();
-                }
-              }, 1000);
-            } else {
-              // Play again after a short delay
-              setTimeout(() => {
-                playAudio();
-              }, 500);
-            }
-            return newCount;
-          });
-        };
-        audio.onerror = () => {
-          setIsPlaying(false);
-          // If audio fails, still count as played
-          setPlayCount(prev => prev + 1);
-        };
-      };
-      playAudio();
-    } else if (!currentDrill?.audio_url) {
-      // If no audio, wait 2 seconds then move on
+    // Cleanup previous audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    // If no audio URL, move on after a delay
+    if (!currentDrill?.audio_url) {
       const timer = setTimeout(() => {
         if (currentIndex < drills.length - 1) {
           setCurrentIndex(currentIndex + 1);
@@ -83,6 +59,77 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         }
       }, 2000);
       return () => clearTimeout(timer);
+    }
+
+    // If we have audio and haven't played twice yet
+    if (currentDrill?.audio_url && playCount < 2) {
+      const playSequence = async () => {
+        // Step 1: Speech synthesis for Catalan text (if available)
+        if (currentDrill.text_catalan && 'speechSynthesis' in window) {
+          const utterance = new SpeechSynthesisUtterance(currentDrill.text_catalan);
+          utterance.lang = 'ca-ES'; // Catalan
+          utterance.rate = 1.2; // Slightly faster
+          utterance.volume = 0.8;
+          
+          await new Promise<void>((resolve) => {
+            utterance.onend = () => resolve();
+            speechSynthesis.speak(utterance);
+          });
+          // Small pause between speech and audio
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+
+        // Step 2: Play recorded audio
+        const audio = new Audio(getMediaUrl(currentDrill.audio_url));
+        audioRef.current = audio;
+        setIsPlaying(true);
+        
+        await new Promise<void>((resolve) => {
+          audio.onended = () => {
+            setIsPlaying(false);
+            resolve();
+          };
+          audio.onerror = () => {
+            setIsPlaying(false);
+            resolve();
+          };
+          audio.play();
+        });
+
+        // Update play count
+        setPlayCount(prev => {
+          const newCount = prev + 1;
+          if (newCount >= 2) {
+            // Move to next drill after 2 plays
+            setTimeout(() => {
+              if (currentIndex < drills.length - 1) {
+                setCurrentIndex(currentIndex + 1);
+              } else {
+                onExit();
+              }
+            }, 1000);
+          } else {
+            // Play again after a short delay (without speech synthesis)
+            setTimeout(() => {
+              const audio2 = new Audio(getMediaUrl(currentDrill.audio_url));
+              audioRef.current = audio2;
+              setIsPlaying(true);
+              audio2.play();
+              audio2.onended = () => {
+                setIsPlaying(false);
+                setPlayCount(prev => prev + 1);
+              };
+              audio2.onerror = () => {
+                setIsPlaying(false);
+                setPlayCount(prev => prev + 1);
+              };
+            }, 500);
+          }
+          return newCount;
+        });
+      };
+
+      playSequence();
     }
   }, [currentDrill, playCount, currentIndex, drills.length, onExit]);
 
@@ -217,10 +264,12 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             marginBottom: '30px'
           }}>
             <div style={{ fontSize: '16px', fontWeight: 600, color: isPlaying ? '#2e7d32' : '#856404' }}>
-              {isPlaying ? '🔊 Playing audio...' : '⏸ Audio ready'}
+              {isPlaying ? '🔊 Playing audio...' : '⏸ Ready'}
             </div>
             <div style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
-              {currentDrill.audio_url ? `Playing ${playCount + 1} of 2 times` : 'No audio available'}
+              {currentDrill.audio_url ? 
+                (playCount === 0 ? 'First: Catalan speech + audio' : `Second: audio only (${playCount}/2)`) 
+                : 'No audio available'}
             </div>
           </div>
 
