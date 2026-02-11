@@ -47,7 +47,7 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
   const [takingTestId, setTakingTestId] = useState<number | null>(null);
   const [editingTestId, setEditingTestId] = useState<number | null>(null);
   const [playingDrills, setPlayingDrills] = useState<any[] | null>(null);
-  const [showTestList, setShowTestList] = useState(isMobile ? false : true);
+  const [showTestList, setShowTestList] = useState(isMobile ? true : true);
 
   useEffect(() => {
     fetchTests();
@@ -288,8 +288,8 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
           </div>
         )}
 
-        {/* Test Details */}
-        {(!isMobile || !showTestList) && selectedTest && (
+        {/* Test Details - Show only when a test is selected on mobile */}
+        {(!isMobile || selectedTest) && selectedTest && (
           <div style={{ 
             flex: 1, 
             padding: isMobile ? '16px' : '30px', 
@@ -297,9 +297,12 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
             background: 'white'
           }}>
             {/* Mobile back button */}
-            {isMobile && (
+            {isMobile && selectedTest && (
               <button
-                onClick={() => setShowTestList(true)}
+                onClick={() => {
+                  setSelectedTest(null);
+                  setShowTestList(true);
+                }}
                 style={{
                   marginBottom: '20px',
                   padding: '10px 16px',
@@ -511,6 +514,30 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
           <div style={{ flex: 1, padding: '30px', overflowY: 'auto' }}>
             <div style={{ textAlign: 'center', padding: '60px', color: '#999' }}>
               <p style={{ fontSize: '18px' }}>Select a test to view details</p>
+            </div>
+          </div>
+        )}
+        {/* No test selected (mobile) - Show message if list is hidden */}
+        {isMobile && !selectedTest && !showTestList && (
+          <div style={{ flex: 1, padding: '30px', overflowY: 'auto', background: 'white' }}>
+            <div style={{ textAlign: 'center', padding: '60px', color: '#999' }}>
+              <p style={{ fontSize: '18px' }}>No test selected</p>
+              <button
+                onClick={() => setShowTestList(true)}
+                style={{
+                  marginTop: '20px',
+                  padding: '12px 24px',
+                  background: '#667eea',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Show Tests List
+              </button>
             </div>
           </div>
         )}
