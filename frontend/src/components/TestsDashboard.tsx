@@ -5,6 +5,17 @@ import TestEditPanel from './TestEditPanel';
 import DrillPlayer from './DrillPlayer';
 import { API_BASE } from '../config';
 
+// Hook para detectar móvil
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  return isMobile;
+};
+
 interface Test {
   id: number;
   title: string;
@@ -28,6 +39,7 @@ interface TestStats {
 }
 
 export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () => void }) {
+  const isMobile = useIsMobile();
   const [tests, setTests] = useState<Test[]>([]);
   const [selectedTest, setSelectedTest] = useState<Test | null>(null);
   const [stats, setStats] = useState<TestStats | null>(null);
@@ -35,6 +47,7 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
   const [takingTestId, setTakingTestId] = useState<number | null>(null);
   const [editingTestId, setEditingTestId] = useState<number | null>(null);
   const [playingDrills, setPlayingDrills] = useState<any[] | null>(null);
+  const [showTestList, setShowTestList] = useState(isMobile ? false : true);
 
   useEffect(() => {
     fetchTests();
@@ -63,6 +76,9 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
   const handleViewTest = (test: Test) => {
     setSelectedTest(test);
     fetchStats(test.id);
+    if (isMobile) {
+      setShowTestList(false);
+    }
   };
 
   const handleDeleteTest = async (testId: number) => {
@@ -173,223 +189,331 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* Tests List */}
-        <div style={{
-          width: '400px',
-          borderRight: '1px solid #e0e0e0',
-          overflowY: 'auto',
-          padding: '20px'
-        }}>
-          {tests.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
-              <p style={{ fontSize: '18px', marginBottom: '10px' }}>No tests created yet</p>
-              <p style={{ fontSize: '14px' }}>Go back to drills and select some to create a test</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {tests.map(test => (
-                <div
-                  key={test.id}
-                  onClick={() => handleViewTest(test)}
+      <div style={{ 
+        flex: 1, 
+        display: 'flex', 
+        overflow: 'hidden',
+        flexDirection: isMobile ? 'column' : 'row'
+      }}>
+        {/* Tests List - hidden on mobile when a test is selected */}
+        {(showTestList || !isMobile) && (
+          <div style={{
+            width: isMobile ? '100%' : '400px',
+            borderRight: isMobile ? 'none' : '1px solid #e0e0e0',
+            overflowY: 'auto',
+            padding: isMobile ? '16px' : '20px',
+            background: isMobile ? '#f8f9fa' : 'white'
+          }}>
+            {isMobile && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h2 style={{ margin: 0, fontSize: '20px', color: '#333' }}>Tests</h2>
+                <button
+                  onClick={() => setShowTestList(false)}
                   style={{
-                    padding: '16px',
-                    border: selectedTest?.id === test.id ? '2px solid #667eea' : '1px solid #e0e0e0',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    backgroundColor: selectedTest?.id === test.id ? '#f0f4ff' : 'white',
-                    transition: 'all 0.2s'
+                    padding: '8px 16px',
+                    background: '#667eea',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                    <div style={{ flex: 1 }}>
-                      <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', color: '#333' }}>
-                        {test.title}
-                      </h3>
-                      <p style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#666' }}>
-                        {test.description || 'No description'}
-                      </p>
-                      <div style={{ fontSize: '12px', color: '#999' }}>
-                        <div>{test.drill_ids.split(',').length} drills</div>
-                        <div>{new Date(test.date_created).toLocaleDateString()}</div>
+                  Close
+                </button>
+              </div>
+            )}
+            {tests.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+                <p style={{ fontSize: '18px', marginBottom: '10px' }}>No tests created yet</p>
+                <p style={{ fontSize: '14px' }}>Go back to drills and select some to create a test</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {tests.map(test => (
+                  <div
+                    key={test.id}
+                    onClick={() => handleViewTest(test)}
+                    style={{
+                      padding: isMobile ? '20px' : '16px',
+                      border: selectedTest?.id === test.id ? '2px solid #667eea' : '1px solid #e0e0e0',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      backgroundColor: selectedTest?.id === test.id ? '#f0f4ff' : 'white',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                      <div style={{ flex: 1 }}>
+                        <h3 style={{ 
+                          margin: '0 0 8px 0', 
+                          fontSize: isMobile ? '18px' : '16px', 
+                          color: '#333',
+                          fontWeight: 600 
+                        }}>
+                          {test.title}
+                        </h3>
+                        <p style={{ margin: '0 0 8px 0', fontSize: isMobile ? '14px' : '13px', color: '#666' }}>
+                          {test.description || 'No description'}
+                        </p>
+                        <div style={{ fontSize: isMobile ? '13px' : '12px', color: '#999' }}>
+                          <div>{test.drill_ids.split(',').length} drills</div>
+                          <div>{new Date(test.date_created).toLocaleDateString()}</div>
+                        </div>
                       </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteTest(test.id);
+                        }}
+                        style={{
+                          padding: isMobile ? '8px 12px' : '4px 8px',
+                          fontSize: isMobile ? '14px' : '12px',
+                          background: '#ff4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: 600
+                        }}
+                      >
+                        Delete
+                      </button>
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteTest(test.id);
-                      }}
-                      style={{
-                        padding: '4px 8px',
-                        fontSize: '12px',
-                        background: '#ff4444',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Delete
-                    </button>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Test Details */}
-        <div style={{ flex: 1, padding: '30px', overflowY: 'auto' }}>
-          {selectedTest ? (
-            <div>
-              <h2 style={{ marginTop: 0, marginBottom: '20px', color: '#333' }}>
-                {selectedTest.title}
-              </h2>
+        {(!isMobile || !showTestList) && selectedTest && (
+          <div style={{ 
+            flex: 1, 
+            padding: isMobile ? '16px' : '30px', 
+            overflowY: 'auto',
+            background: 'white'
+          }}>
+            {/* Mobile back button */}
+            {isMobile && (
+              <button
+                onClick={() => setShowTestList(true)}
+                style={{
+                  marginBottom: '20px',
+                  padding: '10px 16px',
+                  background: '#667eea',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                ← Back to Tests
+              </button>
+            )}
+            <h2 style={{ 
+              marginTop: 0, 
+              marginBottom: '20px', 
+              color: '#333',
+              fontSize: isMobile ? '24px' : '28px'
+            }}>
+              {selectedTest.title}
+            </h2>
 
-              {selectedTest.description && (
-                <p style={{ marginBottom: '30px', color: '#666', fontSize: '15px' }}>
-                  {selectedTest.description}
-                </p>
-              )}
-
-              {/* Configuration */}
-              <div style={{
-                padding: '20px',
-                background: '#f8f9fa',
-                borderRadius: '8px',
-                marginBottom: '30px'
+            {selectedTest.description && (
+              <p style={{ 
+                marginBottom: '30px', 
+                color: '#666', 
+                fontSize: isMobile ? '16px' : '15px',
+                lineHeight: 1.5
               }}>
-                <h3 style={{ marginTop: 0, marginBottom: '15px', fontSize: '16px' }}>
-                  Test Configuration
-                </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <strong>Question Type:</strong><br />
-                    {getQuestionTypeLabel(selectedTest.question_type)}
-                  </div>
-                  <div>
-                    <strong>Hint Level:</strong><br />
+                {selectedTest.description}
+              </p>
+            )}
+
+            {/* Configuration */}
+            <div style={{
+              padding: isMobile ? '16px' : '20px',
+              background: '#f8f9fa',
+              borderRadius: '12px',
+              marginBottom: '20px'
+            }}>
+              <h3 style={{ 
+                marginTop: 0, 
+                marginBottom: '15px', 
+                fontSize: isMobile ? '18px' : '16px',
+                fontWeight: 600
+              }}>
+                Test Configuration
+              </h3>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
+                gap: isMobile ? '16px' : '12px'
+              }}>
+                <div style={{ padding: isMobile ? '12px' : '8px' }}>
+                  <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Question Type:</strong><br />
+                  <span style={{ fontSize: isMobile ? '16px' : '14px' }}>{getQuestionTypeLabel(selectedTest.question_type)}</span>
+                </div>
+                <div style={{ padding: isMobile ? '12px' : '8px' }}>
+                  <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Hint Level:</strong><br />
+                  <span style={{ fontSize: isMobile ? '16px' : '14px' }}>
                     {getHintLevelLabel(selectedTest.hint_level)}
                     {selectedTest.hint_level === 'partial' && ` (${selectedTest.hint_percentage}%)`}
                     {selectedTest.hint_level === 'full_after_tries' && ` (${selectedTest.hint_tries_before_reveal} tries)`}
-                  </div>
-                  <div>
-                    <strong>Time Limit:</strong><br />
+                  </span>
+                </div>
+                <div style={{ padding: isMobile ? '12px' : '8px' }}>
+                  <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Time Limit:</strong><br />
+                  <span style={{ fontSize: isMobile ? '16px' : '14px' }}>
                     {selectedTest.time_limit_seconds > 0 ? `${selectedTest.time_limit_seconds}s` : 'No limit'}
-                  </div>
-                  <div>
-                    <strong>Passing Score:</strong><br />
-                    {selectedTest.passing_score}%
-                  </div>
-                  <div>
-                    <strong>Number of Drills:</strong><br />
-                    {selectedTest.drill_ids.split(',').length}
-                  </div>
+                  </span>
                 </div>
-              </div>
-
-              {/* Statistics */}
-              {stats && (
-                <div style={{
-                  padding: '20px',
-                  background: '#e8f5e9',
-                  borderRadius: '8px',
-                  marginBottom: '20px'
-                }}>
-                  <h3 style={{ marginTop: 0, marginBottom: '15px', fontSize: '16px' }}>
-                    Statistics
-                  </h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                    <div>
-                      <strong>Total Attempts:</strong><br />
-                      {stats.total_attempts}
-                    </div>
-                    <div>
-                      <strong>Average Score:</strong><br />
-                      {stats.average_score}%
-                    </div>
-                    <div>
-                      <strong>Completion Rate:</strong><br />
-                      {stats.completion_rate}%
-                    </div>
-                    <div>
-                      <strong>Passed:</strong><br />
-                      {stats.passed_attempts} / {stats.total_attempts}
-                    </div>
-                    <div>
-                      <strong>Avg Time:</strong><br />
-                      {stats.average_time}s
-                    </div>
-                  </div>
+                <div style={{ padding: isMobile ? '12px' : '8px' }}>
+                  <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Passing Score:</strong><br />
+                  <span style={{ fontSize: isMobile ? '16px' : '14px' }}>{selectedTest.passing_score}%</span>
                 </div>
-              )}
-
-              {/* Action Buttons */}
-              <div style={{ marginTop: '30px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => setTakingTestId(selectedTest.id)}
-                  style={{
-                    padding: '12px 24px',
-                    fontSize: '15px',
-                    background: '#4CAF50',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                  }}
-                >
-                  🎯 Take Test
-                </button>
-                <button
-                  onClick={() => setEditingTestId(selectedTest.id)}
-                  style={{
-                    padding: '12px 24px',
-                    fontSize: '15px',
-                    background: '#2196F3',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                  }}
-                >
-                  ✏️ Edit Test
-                </button>
-                <button
-                  onClick={async () => {
-                    // Load drills for this test
-                    const drillIds = selectedTest.drill_ids.split(',').map((id: string) => parseInt(id));
-                    try {
-                      const drillsResponse = await axios.get(`${API_BASE}/drills/`);
-                      const testDrills = drillsResponse.data.filter((d: any) => drillIds.includes(d.id));
-                      setPlayingDrills(testDrills);
-                    } catch (error) {
-                      console.error('Error loading drills:', error);
-                      alert('Failed to load drills');
-                    }
-                  }}
-                  style={{
-                    padding: '12px 24px',
-                    fontSize: '15px',
-                    background: '#9C27B0',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                  }}
-                >
-                  ▶️ Play Drills
-                </button>
+                <div style={{ padding: isMobile ? '12px' : '8px' }}>
+                  <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Number of Drills:</strong><br />
+                  <span style={{ fontSize: isMobile ? '16px' : '14px' }}>{selectedTest.drill_ids.split(',').length}</span>
+                </div>
               </div>
             </div>
-          ) : (
+
+            {/* Statistics */}
+            {stats && (
+              <div style={{
+                padding: isMobile ? '16px' : '20px',
+                background: '#e8f5e9',
+                borderRadius: '12px',
+                marginBottom: '20px'
+              }}>
+                <h3 style={{ 
+                  marginTop: 0, 
+                  marginBottom: '15px', 
+                  fontSize: isMobile ? '18px' : '16px',
+                  fontWeight: 600
+                }}>
+                  Statistics
+                </h3>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', 
+                  gap: isMobile ? '16px' : '12px'
+                }}>
+                  <div style={{ padding: isMobile ? '12px' : '8px' }}>
+                    <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Total Attempts:</strong><br />
+                    <span style={{ fontSize: isMobile ? '16px' : '14px' }}>{stats.total_attempts}</span>
+                  </div>
+                  <div style={{ padding: isMobile ? '12px' : '8px' }}>
+                    <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Average Score:</strong><br />
+                    <span style={{ fontSize: isMobile ? '16px' : '14px' }}>{stats.average_score}%</span>
+                  </div>
+                  <div style={{ padding: isMobile ? '12px' : '8px' }}>
+                    <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Completion Rate:</strong><br />
+                    <span style={{ fontSize: isMobile ? '16px' : '14px' }}>{stats.completion_rate}%</span>
+                  </div>
+                  <div style={{ padding: isMobile ? '12px' : '8px' }}>
+                    <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Passed:</strong><br />
+                    <span style={{ fontSize: isMobile ? '16px' : '14px' }}>{stats.passed_attempts} / {stats.total_attempts}</span>
+                  </div>
+                  <div style={{ padding: isMobile ? '12px' : '8px' }}>
+                    <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Avg Time:</strong><br />
+                    <span style={{ fontSize: isMobile ? '16px' : '14px' }}>{stats.average_time}s</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div style={{ 
+              marginTop: '30px', 
+              display: 'flex', 
+              gap: '12px', 
+              flexWrap: 'wrap',
+              justifyContent: isMobile ? 'center' : 'flex-start'
+            }}>
+              <button
+                onClick={() => setTakingTestId(selectedTest.id)}
+                style={{
+                  padding: isMobile ? '16px 24px' : '12px 24px',
+                  fontSize: isMobile ? '16px' : '15px',
+                  background: '#4CAF50',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  flex: isMobile ? '1 1 100%' : 'none',
+                  minWidth: isMobile ? '100%' : 'auto'
+                }}
+              >
+                🎯 Take Test
+              </button>
+              <button
+                onClick={() => setEditingTestId(selectedTest.id)}
+                style={{
+                  padding: isMobile ? '16px 24px' : '12px 24px',
+                  fontSize: isMobile ? '16px' : '15px',
+                  background: '#2196F3',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  flex: isMobile ? '1 1 100%' : 'none',
+                  minWidth: isMobile ? '100%' : 'auto'
+                }}
+              >
+                ✏️ Edit Test
+              </button>
+              <button
+                onClick={async () => {
+                  // Load drills for this test
+                  const drillIds = selectedTest.drill_ids.split(',').map((id: string) => parseInt(id));
+                  try {
+                    const drillsResponse = await axios.get(`${API_BASE}/drills/`);
+                    const testDrills = drillsResponse.data.filter((d: any) => drillIds.includes(d.id));
+                    setPlayingDrills(testDrills);
+                  } catch (error) {
+                    console.error('Error loading drills:', error);
+                    alert('Failed to load drills');
+                  }
+                }}
+                style={{
+                  padding: isMobile ? '16px 24px' : '12px 24px',
+                  fontSize: isMobile ? '16px' : '15px',
+                  background: '#9C27B0',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  flex: isMobile ? '1 1 100%' : 'none',
+                  minWidth: isMobile ? '100%' : 'auto'
+                }}
+              >
+                ▶️ Play Drills
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* No test selected (desktop) */}
+        {!isMobile && !selectedTest && (
+          <div style={{ flex: 1, padding: '30px', overflowY: 'auto' }}>
             <div style={{ textAlign: 'center', padding: '60px', color: '#999' }}>
               <p style={{ fontSize: '18px' }}>Select a test to view details</p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Test Edit Panel */}
