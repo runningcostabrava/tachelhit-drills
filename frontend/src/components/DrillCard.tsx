@@ -217,6 +217,10 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
       mediaRecorderRef.current.start();
       setRecording('audio');
       console.log('🎤 [DEBUG] Audio recording started with MIME type:', mimeType, 'state:', mediaRecorderRef.current.state);
+      // Force UI update
+      setTimeout(() => {
+        console.log('🎤 [DEBUG] Current recording state after start:', recording);
+      }, 100);
     } catch (err: any) {
       console.error('🎤 [DEBUG] Microphone access denied:', err);
       console.error('🎤 [DEBUG] Error name:', err.name);
@@ -306,15 +310,30 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
   };
 
   const stopRecording = () => {
+    console.log('🛑 [DEBUG] stopRecording called, current recording state:', recording);
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      console.log('🛑 [DEBUG] Stopping MediaRecorder, state:', mediaRecorderRef.current.state);
       mediaRecorderRef.current.stop();
       setRecording(null);
+      console.log('🛑 [DEBUG] Recording state set to null');
+    } else {
+      console.log('🛑 [DEBUG] No active MediaRecorder found');
     }
   };
 
 
+  // Add CSS for pulse animation
+  const pulseStyle = `
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+  `;
+
   return (
     <>
+      <style>{pulseStyle}</style>
       {/* Edit Modal */}
       {isEditing && (
         <div style={{
@@ -649,11 +668,12 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px'
+              gap: '8px',
+              animation: 'pulse 1.5s ease-in-out infinite'
             }}
           >
             <span style={{ fontSize: '20px' }}>⏹</span>
-            <span>Stop Audio</span>
+            <span>Stop Audio Recording</span>
           </button>
         ) : !recording ? (
           <button
@@ -676,12 +696,36 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
             }}
           >
             <span style={{ fontSize: '20px' }}>🎤</span>
-            <span>{drill.audio_url ? 'Re-record' : 'Record'}</span>
+            <span>{drill.audio_url ? 'Re-record Audio' : 'Record Audio'}</span>
           </button>
         ) : null}
 
         {/* Video Recording */}
-        {recording === 'video' ? null : !recording ? (
+        {recording === 'video' ? (
+          <button
+            onClick={stopRecording}
+            style={{
+              flex: 1,
+              padding: '16px',
+              background: '#ff4444',
+              color: 'white',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: '16px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(255, 68, 68, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              animation: 'pulse 1.5s ease-in-out infinite'
+            }}
+          >
+            <span style={{ fontSize: '20px' }}>⏹</span>
+            <span>Stop Video Recording</span>
+          </button>
+        ) : !recording ? (
           <button
             onClick={startVideoRecording}
             style={{
@@ -702,7 +746,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
             }}
           >
             <span style={{ fontSize: '20px' }}>🎥</span>
-            <span>{drill.video_url ? 'Re-record' : 'Record'}</span>
+            <span>{drill.video_url ? 'Re-record Video' : 'Record Video'}</span>
           </button>
         ) : null}
       </div>
