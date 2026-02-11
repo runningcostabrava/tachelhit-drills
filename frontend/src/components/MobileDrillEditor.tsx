@@ -396,6 +396,13 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
         setRecording(null);
       };
 
+      mediaRecorderRef.current.onerror = (event) => {
+        console.error('Error de MediaRecorder (video):', event);
+        alert('Error durante la grabación de video. Por favor, inténtalo de nuevo.');
+        _stopCameraStream();
+        setRecording(null);
+      };
+
       mediaRecorderRef.current.start();
       setRecording('video');
     } catch (err: any) {
@@ -441,21 +448,23 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
       streamRef.current = stream;
       setShowImageCapture(true);
       
-      // Esperar a que el elemento video esté listo
-      setTimeout(() => {
-        if (previewRef.current) {
-          previewRef.current.srcObject = stream;
-          previewRef.current.play().catch(e => {
-            console.error('Error playing video:', e);
-            // Intentar de nuevo
-            setTimeout(() => {
-              if (previewRef.current) {
-                previewRef.current.play();
-              }
-            }, 100);
-          });
+      // Esperar a que el elemento video esté listo y empiece a reproducirse
+      if (previewRef.current) {
+        previewRef.current.srcObject = stream;
+        try {
+          await previewRef.current.play();
+          // Añadir un pequeño retraso adicional para que el video empiece a renderizar fotogramas
+          await new Promise(resolve => setTimeout(resolve, 500)); 
+          setShowImageCapture(true);
+        } catch (e) {
+          console.error('Error playing video:', e);
+          alert('No se pudo iniciar la vista previa de la cámara. Asegúrate de que no esté en uso por otra aplicación.');
+          _stopCameraStream();
         }
-      }, 100);
+      } else {
+        console.error('previewRef.current is null when trying to set srcObject and play.');
+        _stopCameraStream();
+      }
     } catch (err: any) {
       console.error('Camera access denied for image capture:', err);
       if (err.name === 'NotAllowedError') {
@@ -477,7 +486,7 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     // Esperar a que el video esté listo
     if (video.readyState !== video.HAVE_ENOUGH_DATA) {
       console.log('Video not ready, waiting...');
-      setTimeout(takePicture, 200);
+      setTimeout(takePicture, 500);
       return;
     }
 
