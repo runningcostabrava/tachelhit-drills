@@ -150,18 +150,51 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
 
         try {
           console.log('📤 [DEBUG] Uploading audio to:', `${API_BASE}/upload-media/${drill.id}/audio`);
+          console.log('📤 [DEBUG] FormData entries:');
+          for (const pair of formData.entries()) {
+            console.log('   ', pair[0], pair[1]);
+          }
+          
+          // Test if endpoint is reachable first
+          console.log('📤 [DEBUG] Testing endpoint reachability...');
+          try {
+            const testResponse = await axios.get(`${API_BASE}/health`);
+            console.log('✅ [DEBUG] Health check OK:', testResponse.data);
+          } catch (testErr: any) {
+            console.error('❌ [DEBUG] Health check failed:', testErr.message);
+          }
+
           const response = await axios.post(`${API_BASE}/upload-media/${drill.id}/audio`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: 30000, // 30 seconds timeout
           });
           console.log('✅ [DEBUG] Audio upload response:', response.data);
           onUpdate();
           alert('Audio recorded and uploaded successfully!');
         } catch (err: any) {
           console.error('❌ [DEBUG] Audio upload failed:', err);
-          console.error('   [DEBUG] Error details:', err.response?.data || err.message);
-          console.error('   [DEBUG] Error status:', err.response?.status);
-          console.error('   [DEBUG] Error headers:', err.response?.headers);
-          alert('Failed to upload audio. Please try again. Error: ' + err.message);
+          console.error('   [DEBUG] Error name:', err.name);
+          console.error('   [DEBUG] Error code:', err.code);
+          console.error('   [DEBUG] Error message:', err.message);
+          console.error('   [DEBUG] Error response data:', err.response?.data);
+          console.error('   [DEBUG] Error response status:', err.response?.status);
+          console.error('   [DEBUG] Error response headers:', err.response?.headers);
+          
+          let errorMsg = 'Failed to upload audio. ';
+          if (err.code === 'ECONNABORTED') {
+            errorMsg += 'Request timed out.';
+          } else if (err.response?.status === 413) {
+            errorMsg += 'File too large.';
+          } else if (err.response?.status === 415) {
+            errorMsg += 'Unsupported media type.';
+          } else if (err.response?.status) {
+            errorMsg += `Server error: ${err.response.status}`;
+          } else if (err.message.includes('Network Error')) {
+            errorMsg += 'Network error. Check your connection.';
+          } else {
+            errorMsg += err.message;
+          }
+          alert(errorMsg);
         } finally {
           stream.getTracks().forEach(track => track.stop());
         }
