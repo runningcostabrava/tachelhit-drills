@@ -24,6 +24,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(false);
+  const [showDemoVideo, setShowDemoVideo] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
 
@@ -221,86 +222,28 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     setIsPlaying(false);
   };
 
-  // Si la sesión no ha comenzado, mostrar pantalla de inicio
+  // Iniciar sesión automáticamente al cargar (excepto en iOS)
+  useEffect(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (!isIOS) {
+      setSessionStarted(true);
+      setAutoPlayEnabled(true);
+      // Reproducir el primer audio después de un breve retraso
+      const timer = setTimeout(() => {
+        if (currentDrill?.audio_url) {
+          playCurrentAudio();
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    } else {
+      setSessionStarted(true);
+      setAutoPlayEnabled(false);
+    }
+  }, []);
+
+  // Si la sesión no ha comenzado, mostrar solo el reproductor normal
   if (!sessionStarted) {
-    return (
-      <div style={{
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        overflow: 'hidden',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px',
-        textAlign: 'center'
-      }}>
-        <div style={{
-          background: 'white',
-          padding: '30px',
-          borderRadius: '16px',
-          maxWidth: '500px',
-          width: '100%',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
-        }}>
-          <h2 style={{ color: '#333', marginBottom: '15px' }}>Sesión de Práctica</h2>
-          <p style={{ color: '#666', marginBottom: '25px' }}>
-            Esta sesión reproducirá cada drill dos veces y pasará automáticamente al siguiente.
-            Para iOS, es posible que necesites permitir la reproducción de audio al hacer clic en "Iniciar Sesión Automática".
-            Si la reproducción automática no funciona, usa el "Control Manual".
-          </p>
-          <button
-            onClick={handleStartSession}
-            style={{
-              padding: '15px 30px',
-              fontSize: '18px',
-              background: '#4CAF50',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 600,
-              marginBottom: '15px',
-              width: '100%'
-            }}
-          >
-            🎵 Iniciar Sesión Automática
-          </button>
-          <button
-            onClick={() => setSessionStarted(true)}
-            style={{
-              padding: '12px 24px',
-              fontSize: '16px',
-              background: '#2196F3',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 600,
-              width: '100%'
-            }}
-          >
-            ▶️ Control Manual
-          </button>
-          <button
-            onClick={onExit}
-            style={{
-              padding: '10px 20px',
-              fontSize: '14px',
-              background: 'transparent',
-              color: '#666',
-              border: '1px solid #ccc',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              marginTop: '15px',
-              width: '100%'
-            }}
-          >
-            Volver
-          </button>
-        </div>
-      </div>
-    );
+    return null; // O un loader breve
   }
 
   // Resto del componente (igual que antes pero con los nuevos estados)
@@ -424,6 +367,22 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             🔄 Activar Auto
           </button>
         )}
+        <button
+          onClick={() => setShowDemoVideo(true)}
+          style={{
+            padding: isMobile ? '6px 10px' : '8px 16px',
+            fontSize: isMobile ? '12px' : '14px',
+            background: '#FF5722',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontWeight: 600,
+            flexShrink: 0
+          }}
+        >
+          🎬 Ver Demo
+        </button>
       </div>
 
       {/* Contenido principal */}
@@ -637,6 +596,93 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
           </div>
         </div>
       </div>
+      {/* Modal para video de demostración */}
+      {showDemoVideo && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '20px',
+            borderRadius: '12px',
+            maxWidth: '800px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '15px'
+            }}>
+              <h3 style={{ margin: 0 }}>Demo: Reproducción Automática</h3>
+              <button
+                onClick={() => setShowDemoVideo(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#666'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <p style={{ marginBottom: '15px' }}>
+              Este video muestra cómo funciona la reproducción automática en dispositivos no iOS.
+              Cada drill se reproduce dos veces y luego pasa automáticamente al siguiente.
+            </p>
+            <div style={{
+              position: 'relative',
+              paddingBottom: '56.25%', // 16:9 aspect ratio
+              height: 0,
+              overflow: 'hidden'
+            }}>
+              <iframe 
+                src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
+                title="Demo de reproducción automática"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  border: 'none'
+                }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+            <div style={{ marginTop: '15px', textAlign: 'center' }}>
+              <button
+                onClick={() => setShowDemoVideo(false)}
+                style={{
+                  padding: '10px 20px',
+                  background: '#4CAF50',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '16px'
+                }}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
