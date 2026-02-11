@@ -20,3 +20,4 @@ google-cloud-speech==2.27.0
 google-cloud-translate==3.11.0
 pydantic-settings==2.3.4
 alembic==1.13.2
+gtts==2.5.0
