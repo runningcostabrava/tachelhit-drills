@@ -651,7 +651,26 @@ def generate_short(drill_id: int, db: Session = Depends(get_db)):
         filename = f"short_{drill_id}_{int(datetime.now().timestamp())}.mp4"
 
         # Generate the short
-        output_path = generate_youtube_short(drill_data, filename)
+        try:
+            from shorts_generator import generate_youtube_short
+        except ImportError as e:
+            print(f"[API] ImportError: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail="MoviePy library not installed. Please install moviepy and opencv-python-headless: pip install moviepy opencv-python-headless"
+            )
+        
+        try:
+            output_path = generate_youtube_short(drill_data, filename)
+        except Exception as e:
+            # Capturar errores específicos de moviepy
+            if "MoviePy" in str(e) or "moviepy" in str(e).lower():
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"MoviePy error: {str(e)}. Please ensure moviepy and its dependencies are installed."
+                )
+            else:
+                raise
 
         # Save to database
         short = YouTubeShortModel(
@@ -668,6 +687,8 @@ def generate_short(drill_id: int, db: Session = Depends(get_db)):
         print(f"[API] Short generated and saved: {short.id}")
         return {"id": short.id, "video_path": short.video_path}
 
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[API] Error generating short: {type(e).__name__}: {str(e)}")
         import traceback
@@ -709,8 +730,26 @@ def generate_drillplayer_demo(test_id: int, db: Session = Depends(get_db)):
         filename = f"demo_test_{test_id}_{int(datetime.now().timestamp())}.mp4"
 
         # Generate the demo video
-        from shorts_generator import generate_drillplayer_demo as generate_demo
-        output_path = generate_demo(test_id, drills_data, filename)
+        try:
+            from shorts_generator import generate_drillplayer_demo as generate_demo
+        except ImportError as e:
+            print(f"[API] ImportError: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail="MoviePy library not installed. Please install moviepy and opencv-python-headless: pip install moviepy opencv-python-headless"
+            )
+        
+        try:
+            output_path = generate_demo(test_id, drills_data, filename)
+        except Exception as e:
+            # Capturar errores específicos de moviepy
+            if "MoviePy" in str(e) or "moviepy" in str(e).lower():
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"MoviePy error: {str(e)}. Please ensure moviepy and its dependencies are installed."
+                )
+            else:
+                raise
 
         # Return the video path (not saved in database)
         video_path = f"/media/shorts/{filename}"
@@ -721,6 +760,8 @@ def generate_drillplayer_demo(test_id: int, db: Session = Depends(get_db)):
             "message": "Demo video generated successfully"
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[API] Error generating demo video: {type(e).__name__}: {str(e)}")
         import traceback
