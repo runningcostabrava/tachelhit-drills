@@ -86,25 +86,38 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     audioRef.current = audio;
     setIsPlaying(true);
     
-    audio.play().catch(error => {
-      console.error('Error al reproducir audio:', error);
-      setIsPlaying(false);
-      // Si falla, desactivar autoPlay y pedir interacción manual
-      setAutoPlayEnabled(false);
-      if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-        alert('La reproducción automática no está disponible en iOS. Usa los botones manuales.');
-      }
-    });
-    
-    audio.onended = () => {
+    // Configurar eventos antes de reproducir
+    const handleEnded = () => {
       setIsPlaying(false);
       setPlayCount(prev => prev + 1);
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('error', handleError);
     };
     
-    audio.onerror = () => {
+    const handleError = () => {
       setIsPlaying(false);
       setPlayCount(prev => prev + 1);
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('error', handleError);
     };
+    
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('error', handleError);
+    
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(error => {
+        console.error('Error al reproducir audio:', error);
+        setIsPlaying(false);
+        // Si falla, desactivar autoPlay y pedir interacción manual
+        setAutoPlayEnabled(false);
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+          alert('La reproducción automática no está disponible en iOS. Usa los botones manuales.');
+        }
+        // Aún así, contar como reproducido para no bloquear el flujo
+        setPlayCount(prev => prev + 1);
+      });
+    }
   };
 
   const goToNextDrill = () => {
@@ -125,12 +138,31 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   };
 
   const handleStartSession = () => {
-    setSessionStarted(true);
-    setAutoPlayEnabled(true);
-    // Reproducir el primer audio inmediatamente
-    if (currentDrill?.audio_url) {
-      playCurrentAudio();
-    }
+    // En iOS, necesitamos una interacción de usuario para activar el audio
+    // Creamos un audio silencioso y lo reproducimos para desbloquear la API de audio
+    const unlockAudio = () => {
+      const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAZGF0YQQ=');
+      silentAudio.volume = 0.01;
+      silentAudio.play().then(() => {
+        silentAudio.pause();
+        silentAudio.remove();
+        // Ahora iniciamos la sesión
+        setSessionStarted(true);
+        setAutoPlayEnabled(true);
+        // Reproducir el primer audio inmediatamente
+        if (currentDrill?.audio_url) {
+          playCurrentAudio();
+        }
+      }).catch(error => {
+        console.error('No se pudo desbloquear audio:', error);
+        // Si falla, iniciamos de todos modos pero con autoPlay desactivado
+        setSessionStarted(true);
+        setAutoPlayEnabled(false);
+        alert('No se pudo activar la reproducción automática. Usa los botones manuales.');
+      });
+    };
+    
+    unlockAudio();
   };
 
   const handlePlayAudio = () => {
@@ -214,7 +246,8 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
           <h2 style={{ color: '#333', marginBottom: '15px' }}>Sesión de Práctica</h2>
           <p style={{ color: '#666', marginBottom: '25px' }}>
             Esta sesión reproducirá cada drill dos veces y pasará automáticamente al siguiente.
-            Para iOS, es posible que necesites interactuar manualmente con los botones de audio.
+            Para iOS, es posible que necesites permitir la reproducción de audio al hacer clic en "Iniciar Sesión Automática".
+            Si la reproducción automática no funciona, usa el "Control Manual".
           </p>
           <button
             onClick={handleStartSession}
