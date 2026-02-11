@@ -31,6 +31,7 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
   const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user');
   const [hasChanges, setHasChanges] = useState(false);
   const [showImageCapture, setShowImageCapture] = useState(false);
+  const [permissionDenied, setPermissionDenied] = useState<{audio: boolean; video: boolean}>({audio: false, video: false});
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -73,6 +74,12 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     console.log('🎤 [Mobile] Starting audio recording, API_BASE:', API_BASE);
     console.log('🎤 [Mobile] User agent:', navigator.userAgent);
     
+    // Check if permission was previously denied
+    if (permissionDenied.audio) {
+      alert('El accés al micròfon ha estat denegat anteriorment. Si us plau, habilita\'l a la configuració del navegador i refresca la pàgina.');
+      return;
+    }
+
     // Comprovar si el navegador suporta MediaRecorder
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       alert('El teu navegador no suporta la gravació d\'àudio. Si us plau, utilitza Chrome, Firefox o Edge.');
@@ -180,7 +187,8 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     } catch (err: any) {
       console.error('Accés al micròfon denegat:', err);
       if (err.name === 'NotAllowedError') {
-        alert('Si us plau, permet l\'accés al micròfon a la configuració del teu navegador.');
+        setPermissionDenied(prev => ({...prev, audio: true}));
+        alert('Accés al micròfon denegat. Per habilitar-lo:\n1. Fes clic a l\'icona del cadenat a la barra d\'adreces.\n2. Canvia "Micròfon" a "Permetre".\n3. Refresca la pàgina i torna-ho a provar.');
       } else if (err.name === 'NotFoundError') {
         alert('No s\'ha trobat cap micròfon. Connecta un micròfon i torna-ho a provar.');
       } else {
@@ -199,6 +207,12 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
   };
 
   const startVideoRecording = async (facing?: 'user' | 'environment') => {
+    // Check if permission was previously denied
+    if (permissionDenied.video) {
+      alert('El accés a la càmera ha estat denegat anteriorment. Si us plau, habilita\'l a la configuració del navegador i refresca la pàgina.');
+      return;
+    }
+
     const facingMode = facing || cameraFacing;
     console.log('Starting video recording with facingMode:', facingMode);
 
@@ -262,9 +276,14 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
 
       mediaRecorderRef.current.start();
       setRecording('video');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Camera access denied:', err);
-      alert('Please allow camera access');
+      if (err.name === 'NotAllowedError') {
+        setPermissionDenied(prev => ({...prev, video: true}));
+        alert('Accés a la càmera denegat. Per habilitar-lo:\n1. Fes clic a l\'icona del cadenat a la barra d\'adreces.\n2. Canvia "Càmera" a "Permetre".\n3. Refresca la pàgina i torna-ho a provar.');
+      } else {
+        alert('Please allow camera access');
+      }
       _stopCameraStream(); // Ensure stream is stopped even if start fails
       setRecording(null);
     }

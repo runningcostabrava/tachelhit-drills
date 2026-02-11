@@ -28,6 +28,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
   const [recording, setRecording] = useState<'audio' | 'video' | null>(null);
   const [showVideo, setShowVideo] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user');
+  const [permissionDenied, setPermissionDenied] = useState<{audio: boolean; video: boolean}>({audio: false, video: false});
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -215,7 +216,8 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
       console.error('🎤 [DEBUG] Error name:', err.name);
       console.error('🎤 [DEBUG] Error message:', err.message);
       if (err.name === 'NotAllowedError') {
-        alert('Please allow microphone access in your browser settings.');
+        setPermissionDenied(prev => ({...prev, audio: true}));
+        alert('Microphone access denied. To enable it:\n1. Click the lock icon in your browser\'s address bar.\n2. Change "Microphone" to "Allow".\n3. Refresh this page and try again.');
       } else if (err.name === 'NotFoundError') {
         alert('No microphone found. Please connect a microphone and try again.');
       } else if (err.name === 'NotReadableError') {
@@ -227,6 +229,12 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
   };
 
   const startVideoRecording = async () => {
+    // Check if permission was previously denied
+    if (permissionDenied.video) {
+      alert('Camera access was previously denied. Please enable it in your browser settings and refresh the page.');
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: cameraFacing, width: 640, height: 480 },
@@ -265,9 +273,14 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
 
       mediaRecorderRef.current.start();
       setRecording('video');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Camera access denied:', err);
-      alert('Please allow camera access');
+      if (err.name === 'NotAllowedError') {
+        setPermissionDenied(prev => ({...prev, video: true}));
+        alert('Camera access denied. To enable it:\n1. Click the lock icon in your browser\'s address bar.\n2. Change "Camera" to "Allow".\n3. Refresh this page and try again.');
+      } else {
+        alert('Please allow camera access');
+      }
     }
   };
 
