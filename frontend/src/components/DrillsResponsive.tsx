@@ -199,8 +199,7 @@ export default function DrillsResponsive({ onViewTests, onViewShorts }: DrillsRe
             suppressHorizontalScroll={false}
             domLayout="normal"
             // Configurar tema legacy para evitar conflictos
-            theme="legacy"
-          />
+            theme="legacy"          />
         </div>
 
         {/* Bottom Navigation */}
