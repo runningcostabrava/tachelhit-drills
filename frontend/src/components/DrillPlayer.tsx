@@ -22,166 +22,92 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [playCount, setPlayCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [sessionStarted, setSessionStarted] = useState(false);
+  const [autoPlayEnabled, setAutoPlayEnabled] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const currentDrill = drills[currentIndex];
+  const isMobile = window.innerWidth < 768;
 
+  // Limpiar al cambiar de drill
   useEffect(() => {
-    // Reset play count when drill changes
     setPlayCount(0);
     setIsPlaying(false);
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
-    // Cancel any ongoing speech synthesis
     if (speechSynthRef.current) {
       speechSynthesis.cancel();
       speechSynthRef.current = null;
     }
   }, [currentIndex]);
 
-  // Effect to handle second play
+  // Efecto para reproducción automática cuando autoPlayEnabled es true
   useEffect(() => {
-    // If playCount is 1 and we haven't played twice yet, play again
-    if (playCount === 1 && currentDrill?.audio_url) {
+    if (!autoPlayEnabled || !sessionStarted) return;
+    if (!currentDrill?.audio_url) {
+      // Si no hay audio, avanzar después de un tiempo
       const timer = setTimeout(() => {
-        const audio = new Audio(getMediaUrl(currentDrill.audio_url));
-        audioRef.current = audio;
-        setIsPlaying(true);
-        
-        audio.play().catch(error => {
-          console.error('Error playing second audio:', error);
-          setIsPlaying(false);
-          // Still count as played
-          setPlayCount(2);
-        });
-
-        audio.onended = () => {
-          setIsPlaying(false);
-          setPlayCount(2);
-        };
-        audio.onerror = () => {
-          setIsPlaying(false);
-          setPlayCount(2);
-        };
-      }, 500); // Wait 500ms before second play
+        goToNextDrill();
+      }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [playCount, currentDrill]);
-
-  // Effect to move to next drill when playCount reaches 2
-  useEffect(() => {
-    if (playCount >= 2) {
+    
+    if (playCount < 2) {
+      // Esperar un momento antes de reproducir
       const timer = setTimeout(() => {
-        if (currentIndex < drills.length - 1) {
-          setCurrentIndex(currentIndex + 1);
-        } else {
-          onExit();
-        }
-      }, 1000);
+        playCurrentAudio();
+      }, 300);
+      return () => clearTimeout(timer);
+    } else if (playCount >= 2) {
+      // Después de 2 reproducciones, avanzar
+      const timer = setTimeout(() => {
+        goToNextDrill();
+      }, 800);
       return () => clearTimeout(timer);
     }
-  }, [playCount, currentIndex, drills.length, onExit]);
+  }, [currentIndex, playCount, autoPlayEnabled, sessionStarted, currentDrill]);
 
-  useEffect(() => {
-    // Cleanup previous audio and speech
+  const playCurrentAudio = () => {
+    if (!currentDrill?.audio_url) {
+      setPlayCount(2);
+      return;
+    }
+    
+    // Limpiar audio anterior
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
     }
-    if (speechSynthRef.current) {
-      speechSynthesis.cancel();
-      speechSynthRef.current = null;
-    }
+    
+    const audio = new Audio(getMediaUrl(currentDrill.audio_url));
+    audioRef.current = audio;
+    setIsPlaying(true);
+    
+    audio.play().catch(error => {
+      console.error('Error al reproducir audio:', error);
+      setIsPlaying(false);
+      // Si falla, desactivar autoPlay y pedir interacción manual
+      setAutoPlayEnabled(false);
+      if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+        alert('La reproducción automática no está disponible en iOS. Usa los botones manuales.');
+      }
+    });
+    
+    audio.onended = () => {
+      setIsPlaying(false);
+      setPlayCount(prev => prev + 1);
+    };
+    
+    audio.onerror = () => {
+      setIsPlaying(false);
+      setPlayCount(prev => prev + 1);
+    };
+  };
 
-    // If no audio URL, move on after a delay
-    if (!currentDrill?.audio_url) {
-      const timer = setTimeout(() => {
-        if (currentIndex < drills.length - 1) {
-          setCurrentIndex(currentIndex + 1);
-        } else {
-          onExit();
-        }
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-
-    // If we have audio and haven't played twice yet
-    if (currentDrill?.audio_url && playCount < 2) {
-      const playAudio = () => {
-        const audio = new Audio(getMediaUrl(currentDrill.audio_url));
-        audioRef.current = audio;
-        setIsPlaying(true);
-        
-        // Set up event listeners before playing
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            console.error('Error playing audio:', error);
-            setIsPlaying(false);
-            // If audio fails, still count as played
-            setPlayCount(prev => {
-              const newCount = prev + 1;
-              // Move to next after a short delay
-              setTimeout(() => {
-                if (newCount >= 2) {
-                  if (currentIndex < drills.length - 1) {
-                    setCurrentIndex(currentIndex + 1);
-                  } else {
-                    onExit();
-                  }
-                }
-              }, 1000);
-              return newCount;
-            });
-          });
-        }
-
-        audio.onended = () => {
-          setIsPlaying(false);
-          setPlayCount(prev => {
-            const newCount = prev + 1;
-            // If we've played twice, move to next drill
-            if (newCount >= 2) {
-              setTimeout(() => {
-                if (currentIndex < drills.length - 1) {
-                  setCurrentIndex(currentIndex + 1);
-                } else {
-                  onExit();
-                }
-              }, 1000);
-            }
-            return newCount;
-          });
-        };
-        audio.onerror = () => {
-          setIsPlaying(false);
-          setPlayCount(prev => {
-            const newCount = prev + 1;
-            // If we've played twice, move to next drill
-            if (newCount >= 2) {
-              setTimeout(() => {
-                if (currentIndex < drills.length - 1) {
-                  setCurrentIndex(currentIndex + 1);
-                } else {
-                  onExit();
-                }
-              }, 1000);
-            }
-            return newCount;
-          });
-        };
-      };
-
-      // Play audio
-      playAudio();
-    }
-  }, [currentDrill, playCount, currentIndex, drills.length, onExit]);
-
-  const handleNext = () => {
-    // Clean up current audio
+  const goToNextDrill = () => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -198,8 +124,44 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     }
   };
 
+  const handleStartSession = () => {
+    setSessionStarted(true);
+    setAutoPlayEnabled(true);
+    // Reproducir el primer audio inmediatamente
+    if (currentDrill?.audio_url) {
+      playCurrentAudio();
+    }
+  };
+
+  const handlePlayAudio = () => {
+    playCurrentAudio();
+  };
+
+  const handleSpeakCatalan = () => {
+    if (!currentDrill?.text_catalan) return;
+    
+    if ('speechSynthesis' in window) {
+      speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(currentDrill.text_catalan);
+      utterance.lang = 'ca-ES';
+      utterance.rate = 1.0;
+      utterance.volume = 1.0;
+      speechSynthRef.current = utterance;
+      speechSynthesis.speak(utterance);
+      
+      utterance.onend = () => {
+        speechSynthRef.current = null;
+      };
+    } else {
+      alert('La síntesis de voz no está disponible en este dispositivo.');
+    }
+  };
+
+  const handleNext = () => {
+    goToNextDrill();
+  };
+
   const handlePrev = () => {
-    // Clean up current audio
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -215,7 +177,6 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   };
 
   const handleReplay = () => {
-    // Clean up current audio
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -225,8 +186,91 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
       speechSynthRef.current = null;
     }
     setPlayCount(0);
+    setIsPlaying(false);
   };
 
+  // Si la sesión no ha comenzado, mostrar pantalla de inicio
+  if (!sessionStarted) {
+    return (
+      <div style={{
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        overflow: 'hidden',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        textAlign: 'center'
+      }}>
+        <div style={{
+          background: 'white',
+          padding: '30px',
+          borderRadius: '16px',
+          maxWidth: '500px',
+          width: '100%',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+        }}>
+          <h2 style={{ color: '#333', marginBottom: '15px' }}>Sesión de Práctica</h2>
+          <p style={{ color: '#666', marginBottom: '25px' }}>
+            Esta sesión reproducirá cada drill dos veces y pasará automáticamente al siguiente.
+            Para iOS, es posible que necesites interactuar manualmente con los botones de audio.
+          </p>
+          <button
+            onClick={handleStartSession}
+            style={{
+              padding: '15px 30px',
+              fontSize: '18px',
+              background: '#4CAF50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              marginBottom: '15px',
+              width: '100%'
+            }}
+          >
+            🎵 Iniciar Sesión Automática
+          </button>
+          <button
+            onClick={() => setSessionStarted(true)}
+            style={{
+              padding: '12px 24px',
+              fontSize: '16px',
+              background: '#2196F3',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              width: '100%'
+            }}
+          >
+            ▶️ Control Manual
+          </button>
+          <button
+            onClick={onExit}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              background: 'transparent',
+              color: '#666',
+              border: '1px solid #ccc',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              marginTop: '15px',
+              width: '100%'
+            }}
+          >
+            Volver
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Resto del componente (igual que antes pero con los nuevos estados)
   return (
     <div style={{
       height: '100vh',
@@ -248,7 +292,8 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         <div>
           <h2 style={{ margin: 0, fontSize: '20px' }}>Drill Player</h2>
           <p style={{ margin: '5px 0 0 0', fontSize: '14px', opacity: 0.9 }}>
-            {currentIndex + 1} of {drills.length} • Play {playCount}/2
+            {currentIndex + 1} de {drills.length} • Reproducciones {playCount}/2
+            {autoPlayEnabled && ' • Auto'}
           </p>
         </div>
         <button
@@ -263,18 +308,18 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             fontSize: '14px'
           }}
         >
-          Exit
+          Salir
         </button>
       </div>
 
-      {/* Top Buttons - Small and in one line */}
+      {/* Controles de navegación */}
       <div style={{
-        padding: window.innerWidth < 768 ? '8px 12px' : '12px 20px',
+        padding: isMobile ? '8px 12px' : '12px 20px',
         background: 'rgba(255,255,255,0.1)',
         backdropFilter: 'blur(10px)',
         display: 'flex',
         justifyContent: 'center',
-        gap: window.innerWidth < 768 ? '6px' : '10px',
+        gap: isMobile ? '6px' : '10px',
         flexWrap: 'nowrap',
         overflowX: 'auto',
         whiteSpace: 'nowrap'
@@ -283,8 +328,8 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
           onClick={handlePrev}
           disabled={currentIndex === 0}
           style={{
-            padding: window.innerWidth < 768 ? '6px 10px' : '8px 16px',
-            fontSize: window.innerWidth < 768 ? '12px' : '14px',
+            padding: isMobile ? '6px 10px' : '8px 16px',
+            fontSize: isMobile ? '12px' : '14px',
             background: currentIndex === 0 ? '#ccc' : '#2196F3',
             color: 'white',
             border: 'none',
@@ -294,13 +339,13 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             flexShrink: 0
           }}
         >
-          ← Prev
+          ← Anterior
         </button>
         <button
           onClick={handleReplay}
           style={{
-            padding: window.innerWidth < 768 ? '6px 10px' : '8px 16px',
-            fontSize: window.innerWidth < 768 ? '12px' : '14px',
+            padding: isMobile ? '6px 10px' : '8px 16px',
+            fontSize: isMobile ? '12px' : '14px',
             background: '#FFC107',
             color: '#333',
             border: 'none',
@@ -310,13 +355,13 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             flexShrink: 0
           }}
         >
-          🔄 Replay
+          🔄 Reiniciar
         </button>
         <button
           onClick={handleNext}
           style={{
-            padding: window.innerWidth < 768 ? '6px 10px' : '8px 16px',
-            fontSize: window.innerWidth < 768 ? '12px' : '14px',
+            padding: isMobile ? '6px 10px' : '8px 16px',
+            fontSize: isMobile ? '12px' : '14px',
             background: '#4CAF50',
             color: 'white',
             border: 'none',
@@ -326,38 +371,40 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             flexShrink: 0
           }}
         >
-          {currentIndex < drills.length - 1 ? 'Next →' : 'Finish'}
+          {currentIndex < drills.length - 1 ? 'Siguiente →' : 'Finalizar'}
         </button>
-        <button
-          onClick={onExit}
-          style={{
-            padding: window.innerWidth < 768 ? '6px 10px' : '8px 16px',
-            fontSize: window.innerWidth < 768 ? '12px' : '14px',
-            background: '#9C27B0',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontWeight: 600,
-            flexShrink: 0
-          }}
-        >
-          Exit
-        </button>
+        {!autoPlayEnabled && (
+          <button
+            onClick={() => setAutoPlayEnabled(true)}
+            style={{
+              padding: isMobile ? '6px 10px' : '8px 16px',
+              fontSize: isMobile ? '12px' : '14px',
+              background: '#9C27B0',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              flexShrink: 0
+            }}
+          >
+            🔄 Activar Auto
+          </button>
+        )}
       </div>
 
-      {/* Content - Scrollable */}
+      {/* Contenido principal */}
       <div style={{
         flex: 1,
         overflowY: 'auto',
-        padding: window.innerWidth < 768 ? '10px' : '20px',
+        padding: isMobile ? '10px' : '20px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center'
       }}>
         <div style={{
           background: 'white',
-          padding: window.innerWidth < 768 ? '16px' : '30px',
+          padding: isMobile ? '16px' : '30px',
           borderRadius: '16px',
           maxWidth: '600px',
           width: '100%',
@@ -365,15 +412,15 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
           textAlign: 'center',
           marginBottom: '20px'
         }}>
-          {/* Image */}
+          {/* Imagen */}
           {currentDrill.image_url && (
-            <div style={{ marginBottom: window.innerWidth < 768 ? '20px' : '30px' }}>
+            <div style={{ marginBottom: isMobile ? '20px' : '30px' }}>
               <img
                 src={getMediaUrl(currentDrill.image_url)}
-                alt="Drill visual"
+                alt="Visual del drill"
                 style={{
                   maxWidth: '100%',
-                  maxHeight: window.innerWidth < 768 ? '150px' : '200px',
+                  maxHeight: isMobile ? '150px' : '200px',
                   borderRadius: '12px',
                   objectFit: 'contain'
                 }}
@@ -381,10 +428,10 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             </div>
           )}
 
-          {/* Catalan - Much smaller */}
-          <div style={{ marginBottom: window.innerWidth < 768 ? '12px' : '16px' }}>
+          {/* Català */}
+          <div style={{ marginBottom: isMobile ? '12px' : '16px' }}>
             <div style={{ 
-              fontSize: window.innerWidth < 768 ? '10px' : '12px', 
+              fontSize: isMobile ? '10px' : '12px', 
               color: '#667eea', 
               fontWeight: 600, 
               marginBottom: '4px',
@@ -393,19 +440,19 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
               Català
             </div>
             <div style={{ 
-              fontSize: window.innerWidth < 768 ? '16px' : '20px', 
+              fontSize: isMobile ? '16px' : '20px', 
               fontWeight: 600, 
               color: '#333',
               lineHeight: 1.3
             }}>
-              {currentDrill.text_catalan || 'No text'}
+              {currentDrill.text_catalan || 'Sin texto'}
             </div>
           </div>
 
           {/* Tachelhit */}
-          <div style={{ marginBottom: window.innerWidth < 768 ? '16px' : '20px' }}>
+          <div style={{ marginBottom: isMobile ? '16px' : '20px' }}>
             <div style={{ 
-              fontSize: window.innerWidth < 768 ? '12px' : '14px', 
+              fontSize: isMobile ? '12px' : '14px', 
               color: '#4CAF50', 
               fontWeight: 600, 
               marginBottom: '6px' 
@@ -413,25 +460,25 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
               Tachelhit
             </div>
             <div style={{ 
-              fontSize: window.innerWidth < 768 ? '18px' : '22px', 
+              fontSize: isMobile ? '18px' : '22px', 
               fontWeight: 600, 
               color: '#2e7d32',
               lineHeight: 1.3
             }}>
-              {currentDrill.text_tachelhit || 'No text'}
+              {currentDrill.text_tachelhit || 'Sin texto'}
             </div>
           </div>
 
           {/* Arabic - Smaller and less prominent */}
           {currentDrill.text_arabic && (
             <div style={{ 
-              marginBottom: window.innerWidth < 768 ? '12px' : '20px',
-              padding: window.innerWidth < 768 ? '8px' : '12px',
+              marginBottom: isMobile ? '12px' : '20px',
+              padding: isMobile ? '8px' : '12px',
               background: '#f8f9fa',
               borderRadius: '8px'
             }}>
               <div style={{ 
-                fontSize: window.innerWidth < 768 ? '10px' : '12px', 
+                fontSize: isMobile ? '10px' : '12px', 
                 color: '#9C27B0', 
                 fontWeight: 600, 
                 marginBottom: '4px',
@@ -440,7 +487,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                 العربية
               </div>
               <div style={{ 
-                fontSize: window.innerWidth < 768 ? '14px' : '18px', 
+                fontSize: isMobile ? '14px' : '18px', 
                 fontWeight: 500, 
                 color: '#7b1fa2', 
                 direction: 'rtl',
@@ -453,14 +500,14 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
 
           {/* Audio Status - Clearer */}
           <div style={{
-            padding: window.innerWidth < 768 ? '14px' : '16px',
+            padding: isMobile ? '14px' : '16px',
             background: isPlaying ? '#e8f5e9' : '#fff3cd',
             border: `2px solid ${isPlaying ? '#4CAF50' : '#FFC107'}`,
             borderRadius: '12px',
-            marginBottom: window.innerWidth < 768 ? '16px' : '24px'
+            marginBottom: isMobile ? '16px' : '24px'
           }}>
             <div style={{ 
-              fontSize: window.innerWidth < 768 ? '15px' : '16px', 
+              fontSize: isMobile ? '15px' : '16px', 
               fontWeight: 700, 
               color: isPlaying ? '#2e7d32' : '#856404',
               display: 'flex',
@@ -470,45 +517,33 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
               marginBottom: '8px'
             }}>
               <span style={{ fontSize: '20px' }}>{isPlaying ? '🔊' : '⏸'}</span>
-              <span>{isPlaying ? 'Playing audio...' : 'Ready to play'}</span>
+              <span>{isPlaying ? 'Reproduciendo audio...' : 'Listo para reproducir'}</span>
             </div>
             <div style={{ 
-              fontSize: window.innerWidth < 768 ? '13px' : '14px', 
+              fontSize: isMobile ? '13px' : '14px', 
               color: '#666', 
               marginBottom: '10px'
             }}>
               {currentDrill.audio_url ? 
-                (playCount === 0 ? `Play ${playCount + 1} of 2` : `Play ${playCount + 1} of 2`) 
-                : 'No audio available'}
+                `Reproducción ${playCount + 1} de 2` 
+                : 'No hay audio disponible'}
             </div>
-            {/* Manual controls for audio */}
+            
+            {/* Botones de control */}
             <div style={{ 
               display: 'flex', 
               gap: '10px', 
               marginTop: '10px',
-              flexDirection: window.innerWidth < 768 ? 'column' : 'row'
+              flexDirection: isMobile ? 'column' : 'row'
             }}>
-              {/* Manual speech synthesis button - Always show if there's Catalan text */}
+              {/* Síntesis de voz para catalán */}
               {currentDrill.text_catalan && (
                 <button
-                  onClick={() => {
-                    if ('speechSynthesis' in window) {
-                      // Cancel any ongoing speech
-                      speechSynthesis.cancel();
-                      const utterance = new SpeechSynthesisUtterance(currentDrill.text_catalan);
-                      utterance.lang = 'ca-ES';
-                      utterance.rate = 1.0; // Normal speed for clarity
-                      utterance.volume = 1.0;
-                      // For iOS, we need to ensure this is triggered by user gesture
-                      speechSynthesis.speak(utterance);
-                    } else {
-                      alert('La síntesis de voz no está disponible en este dispositivo.');
-                    }
-                  }}
+                  onClick={handleSpeakCatalan}
                   style={{
                     flex: 1,
-                    padding: window.innerWidth < 768 ? '12px' : '10px 16px',
-                    fontSize: window.innerWidth < 768 ? '15px' : '14px',
+                    padding: isMobile ? '12px' : '10px 16px',
+                    fontSize: isMobile ? '15px' : '14px',
                     background: '#9C27B0',
                     color: 'white',
                     border: 'none',
@@ -525,42 +560,15 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                   <span>Escuchar Català</span>
                 </button>
               )}
-              {/* Manual audio play button - For iOS and other devices */}
+              
+              {/* Reproducir audio original */}
               {currentDrill.audio_url && (
                 <button
-                  onClick={() => {
-                    // Clean up any existing audio
-                    if (audioRef.current) {
-                      audioRef.current.pause();
-                      audioRef.current = null;
-                    }
-                    const audio = new Audio(getMediaUrl(currentDrill.audio_url));
-                    audioRef.current = audio;
-                    setIsPlaying(true);
-                    audio.play().catch(error => {
-                      console.error('Error playing audio manually:', error);
-                      setIsPlaying(false);
-                      // For iOS, show a specific message
-                      if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-                        alert('Para reproducir audio en iOS, asegúrate de que el modo silencio esté desactivado y el volumen esté alto.');
-                      } else {
-                        alert('No se pudo reproducir el audio. Verifica el volumen o intenta de nuevo.');
-                      }
-                    });
-                    audio.onended = () => {
-                      setIsPlaying(false);
-                      // Count as played
-                      setPlayCount(prev => prev + 1);
-                    };
-                    audio.onerror = () => {
-                      setIsPlaying(false);
-                      setPlayCount(prev => prev + 1);
-                    };
-                  }}
+                  onClick={handlePlayAudio}
                   style={{
                     flex: 1,
-                    padding: window.innerWidth < 768 ? '12px' : '10px 16px',
-                    fontSize: window.innerWidth < 768 ? '15px' : '14px',
+                    padding: isMobile ? '12px' : '10px 16px',
+                    fontSize: isMobile ? '15px' : '14px',
                     background: '#4CAF50',
                     color: 'white',
                     border: 'none',
@@ -578,8 +586,22 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                 </button>
               )}
             </div>
+            
+            {/* Indicador de progreso */}
+            {playCount > 0 && (
+              <div style={{ 
+                marginTop: '15px', 
+                padding: '8px',
+                background: '#e3f2fd',
+                borderRadius: '8px',
+                fontSize: isMobile ? '13px' : '14px',
+                color: '#1976d2'
+              }}>
+                {playCount === 1 ? 'Una reproducción completada. Reproduce de nuevo para continuar.' :
+                 playCount >= 2 ? 'Dos reproducciones completadas. Pasando al siguiente drill...' : ''}
+              </div>
+            )}
           </div>
-
         </div>
       </div>
     </div>
