@@ -323,139 +323,154 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
             )}
             <h2 style={{ 
               marginTop: 0, 
-              marginBottom: '20px', 
+              marginBottom: '16px', 
               color: '#333',
-              fontSize: isMobile ? '24px' : '28px'
+              fontSize: isMobile ? '22px' : '28px'
             }}>
               {selectedTest.title}
             </h2>
 
+
             {selectedTest.description && (
               <p style={{ 
-                marginBottom: '30px', 
+                marginBottom: '20px', 
                 color: '#666', 
-                fontSize: isMobile ? '16px' : '15px',
-                lineHeight: 1.5
+                fontSize: isMobile ? '15px' : '15px',
+                lineHeight: 1.5,
+                padding: isMobile ? '12px' : '16px',
+                background: '#f8f9fa',
+                borderRadius: '8px'
               }}>
                 {selectedTest.description}
               </p>
             )}
 
-            {/* Configuration */}
+            {/* Configuration - Compact */}
             <div style={{
-              padding: isMobile ? '16px' : '20px',
+              padding: isMobile ? '12px' : '16px',
               background: '#f8f9fa',
-              borderRadius: '12px',
-              marginBottom: '20px'
+              borderRadius: '10px',
+              marginBottom: '16px',
+              borderLeft: '4px solid #667eea'
             }}>
               <h3 style={{ 
                 marginTop: 0, 
-                marginBottom: '15px', 
-                fontSize: isMobile ? '18px' : '16px',
-                fontWeight: 600
+                marginBottom: '12px', 
+                fontSize: isMobile ? '16px' : '16px',
+                fontWeight: 600,
+                color: '#333',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}>
-                Test Configuration
+                <span>⚙️</span> Test Configuration
               </h3>
               <div style={{ 
                 display: 'grid', 
-                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', 
-                gap: isMobile ? '16px' : '12px'
+                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(2, 1fr)', 
+                gap: isMobile ? '10px' : '12px',
+                fontSize: isMobile ? '13px' : '14px'
               }}>
-                <div style={{ padding: isMobile ? '12px' : '8px' }}>
-                  <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Question Type:</strong><br />
-                  <span style={{ fontSize: isMobile ? '16px' : '14px' }}>{getQuestionTypeLabel(selectedTest.question_type)}</span>
+                <div style={{ padding: '8px', background: 'white', borderRadius: '6px' }}>
+                  <div style={{ fontWeight: 600, color: '#667eea', marginBottom: '4px' }}>Type</div>
+                  <div>{getQuestionTypeLabel(selectedTest.question_type)}</div>
                 </div>
-                <div style={{ padding: isMobile ? '12px' : '8px' }}>
-                  <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Hint Level:</strong><br />
-                  <span style={{ fontSize: isMobile ? '16px' : '14px' }}>
+                <div style={{ padding: '8px', background: 'white', borderRadius: '6px' }}>
+                  <div style={{ fontWeight: 600, color: '#667eea', marginBottom: '4px' }}>Hints</div>
+                  <div>
                     {getHintLevelLabel(selectedTest.hint_level)}
                     {selectedTest.hint_level === 'partial' && ` (${selectedTest.hint_percentage}%)`}
-                    {selectedTest.hint_level === 'full_after_tries' && ` (${selectedTest.hint_tries_before_reveal} tries)`}
-                  </span>
+                    {selectedTest.hint_level === 'full_after_tries' && ` (${selectedTest.hint_tries_before_reveal})`}
+                  </div>
                 </div>
-                <div style={{ padding: isMobile ? '12px' : '8px' }}>
-                  <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Time Limit:</strong><br />
-                  <span style={{ fontSize: isMobile ? '16px' : '14px' }}>
-                    {selectedTest.time_limit_seconds > 0 ? `${selectedTest.time_limit_seconds}s` : 'No limit'}
-                  </span>
+                <div style={{ padding: '8px', background: 'white', borderRadius: '6px' }}>
+                  <div style={{ fontWeight: 600, color: '#667eea', marginBottom: '4px' }}>Time</div>
+                  <div>{selectedTest.time_limit_seconds > 0 ? `${selectedTest.time_limit_seconds}s` : 'No limit'}</div>
                 </div>
-                <div style={{ padding: isMobile ? '12px' : '8px' }}>
-                  <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Passing Score:</strong><br />
-                  <span style={{ fontSize: isMobile ? '16px' : '14px' }}>{selectedTest.passing_score}%</span>
+                <div style={{ padding: '8px', background: 'white', borderRadius: '6px' }}>
+                  <div style={{ fontWeight: 600, color: '#667eea', marginBottom: '4px' }}>Passing</div>
+                  <div>{selectedTest.passing_score}%</div>
                 </div>
-                <div style={{ padding: isMobile ? '12px' : '8px' }}>
-                  <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Number of Drills:</strong><br />
-                  <span style={{ fontSize: isMobile ? '16px' : '14px' }}>{selectedTest.drill_ids.split(',').length}</span>
+                <div style={{ padding: '8px', background: 'white', borderRadius: '6px', gridColumn: isMobile ? 'span 2' : 'span 1' }}>
+                  <div style={{ fontWeight: 600, color: '#667eea', marginBottom: '4px' }}>Drills</div>
+                  <div>{selectedTest.drill_ids.split(',').length} drills</div>
                 </div>
               </div>
             </div>
 
-            {/* Statistics */}
-            {stats && (
+            {/* Statistics - Compact */}
+            {stats && stats.total_attempts > 0 && (
               <div style={{
-                padding: isMobile ? '16px' : '20px',
+                padding: isMobile ? '12px' : '16px',
                 background: '#e8f5e9',
-                borderRadius: '12px',
-                marginBottom: '20px'
+                borderRadius: '10px',
+                marginBottom: '16px',
+                borderLeft: '4px solid #4CAF50'
               }}>
                 <h3 style={{ 
                   marginTop: 0, 
-                  marginBottom: '15px', 
-                  fontSize: isMobile ? '18px' : '16px',
-                  fontWeight: 600
+                  marginBottom: '12px', 
+                  fontSize: isMobile ? '16px' : '16px',
+                  fontWeight: 600,
+                  color: '#2e7d32',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
                 }}>
-                  Statistics
+                  <span>📊</span> Statistics
                 </h3>
                 <div style={{ 
                   display: 'grid', 
-                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', 
-                  gap: isMobile ? '16px' : '12px'
+                  gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
+                  gap: isMobile ? '10px' : '12px',
+                  fontSize: isMobile ? '13px' : '14px'
                 }}>
-                  <div style={{ padding: isMobile ? '12px' : '8px' }}>
-                    <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Total Attempts:</strong><br />
-                    <span style={{ fontSize: isMobile ? '16px' : '14px' }}>{stats.total_attempts}</span>
+                  <div style={{ padding: '8px', background: 'rgba(255,255,255,0.7)', borderRadius: '6px' }}>
+                    <div style={{ fontWeight: 600, color: '#2e7d32', marginBottom: '4px' }}>Attempts</div>
+                    <div>{stats.total_attempts}</div>
                   </div>
-                  <div style={{ padding: isMobile ? '12px' : '8px' }}>
-                    <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Average Score:</strong><br />
-                    <span style={{ fontSize: isMobile ? '16px' : '14px' }}>{stats.average_score}%</span>
+                  <div style={{ padding: '8px', background: 'rgba(255,255,255,0.7)', borderRadius: '6px' }}>
+                    <div style={{ fontWeight: 600, color: '#2e7d32', marginBottom: '4px' }}>Avg Score</div>
+                    <div>{stats.average_score}%</div>
                   </div>
-                  <div style={{ padding: isMobile ? '12px' : '8px' }}>
-                    <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Completion Rate:</strong><br />
-                    <span style={{ fontSize: isMobile ? '16px' : '14px' }}>{stats.completion_rate}%</span>
+                  <div style={{ padding: '8px', background: 'rgba(255,255,255,0.7)', borderRadius: '6px' }}>
+                    <div style={{ fontWeight: 600, color: '#2e7d32', marginBottom: '4px' }}>Completion</div>
+                    <div>{stats.completion_rate}%</div>
                   </div>
-                  <div style={{ padding: isMobile ? '12px' : '8px' }}>
-                    <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Passed:</strong><br />
-                    <span style={{ fontSize: isMobile ? '16px' : '14px' }}>{stats.passed_attempts} / {stats.total_attempts}</span>
+                  <div style={{ padding: '8px', background: 'rgba(255,255,255,0.7)', borderRadius: '6px' }}>
+                    <div style={{ fontWeight: 600, color: '#2e7d32', marginBottom: '4px' }}>Passed</div>
+                    <div>{stats.passed_attempts}/{stats.total_attempts}</div>
                   </div>
-                  <div style={{ padding: isMobile ? '12px' : '8px' }}>
-                    <strong style={{ fontSize: isMobile ? '15px' : '14px' }}>Avg Time:</strong><br />
-                    <span style={{ fontSize: isMobile ? '16px' : '14px' }}>{stats.average_time}s</span>
+                  <div style={{ padding: '8px', background: 'rgba(255,255,255,0.7)', borderRadius: '6px', gridColumn: isMobile ? 'span 2' : 'span 1' }}>
+                    <div style={{ fontWeight: 600, color: '#2e7d32', marginBottom: '4px' }}>Avg Time</div>
+                    <div>{stats.average_time}s</div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Action Buttons */}
+            {/* Action Buttons - Moved to top */}
             <div style={{ 
-              marginTop: '30px', 
+              marginBottom: '20px', 
               display: 'flex', 
-              gap: '12px', 
+              gap: '10px', 
               flexWrap: 'wrap',
               justifyContent: isMobile ? 'center' : 'flex-start'
             }}>
               <button
                 onClick={() => setTakingTestId(selectedTest.id)}
                 style={{
-                  padding: isMobile ? '16px 24px' : '12px 24px',
-                  fontSize: isMobile ? '16px' : '15px',
+                  padding: isMobile ? '14px 20px' : '12px 24px',
+                  fontSize: isMobile ? '15px' : '15px',
                   background: '#4CAF50',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '10px',
+                  borderRadius: '8px',
                   cursor: 'pointer',
                   fontWeight: 600,
-                  flex: isMobile ? '1 1 100%' : 'none',
-                  minWidth: isMobile ? '100%' : 'auto'
+                  flex: isMobile ? '1 1 calc(50% - 5px)' : 'none',
+                  minWidth: isMobile ? 'calc(50% - 5px)' : 'auto',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                 }}
               >
                 🎯 Take Test
@@ -463,16 +478,17 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
               <button
                 onClick={() => setEditingTestId(selectedTest.id)}
                 style={{
-                  padding: isMobile ? '16px 24px' : '12px 24px',
-                  fontSize: isMobile ? '16px' : '15px',
+                  padding: isMobile ? '14px 20px' : '12px 24px',
+                  fontSize: isMobile ? '15px' : '15px',
                   background: '#2196F3',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '10px',
+                  borderRadius: '8px',
                   cursor: 'pointer',
                   fontWeight: 600,
-                  flex: isMobile ? '1 1 100%' : 'none',
-                  minWidth: isMobile ? '100%' : 'auto'
+                  flex: isMobile ? '1 1 calc(50% - 5px)' : 'none',
+                  minWidth: isMobile ? 'calc(50% - 5px)' : 'auto',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                 }}
               >
                 ✏️ Edit Test
@@ -491,16 +507,18 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
                   }
                 }}
                 style={{
-                  padding: isMobile ? '16px 24px' : '12px 24px',
-                  fontSize: isMobile ? '16px' : '15px',
+                  padding: isMobile ? '14px 20px' : '12px 24px',
+                  fontSize: isMobile ? '15px' : '15px',
                   background: '#9C27B0',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '10px',
+                  borderRadius: '8px',
                   cursor: 'pointer',
                   fontWeight: 600,
                   flex: isMobile ? '1 1 100%' : 'none',
-                  minWidth: isMobile ? '100%' : 'auto'
+                  minWidth: isMobile ? '100%' : 'auto',
+                  marginTop: isMobile ? '0' : '0',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                 }}
               >
                 ▶️ Play Drills
