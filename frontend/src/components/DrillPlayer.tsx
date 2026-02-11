@@ -180,7 +180,8 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
       height: '100vh',
       display: 'flex',
       flexDirection: 'column',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      overflow: 'hidden'
     }}>
       {/* Header */}
       <div style={{
@@ -214,14 +215,93 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         </button>
       </div>
 
-      {/* Content - Better mobile layout */}
+      {/* Top Buttons - Small and in one line */}
+      <div style={{
+        padding: window.innerWidth < 768 ? '8px 12px' : '12px 20px',
+        background: 'rgba(255,255,255,0.1)',
+        backdropFilter: 'blur(10px)',
+        display: 'flex',
+        justifyContent: 'center',
+        gap: window.innerWidth < 768 ? '6px' : '10px',
+        flexWrap: 'nowrap',
+        overflowX: 'auto',
+        whiteSpace: 'nowrap'
+      }}>
+        <button
+          onClick={handlePrev}
+          disabled={currentIndex === 0}
+          style={{
+            padding: window.innerWidth < 768 ? '6px 10px' : '8px 16px',
+            fontSize: window.innerWidth < 768 ? '12px' : '14px',
+            background: currentIndex === 0 ? '#ccc' : '#2196F3',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
+            fontWeight: 600,
+            flexShrink: 0
+          }}
+        >
+          ← Prev
+        </button>
+        <button
+          onClick={handleReplay}
+          style={{
+            padding: window.innerWidth < 768 ? '6px 10px' : '8px 16px',
+            fontSize: window.innerWidth < 768 ? '12px' : '14px',
+            background: '#FFC107',
+            color: '#333',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontWeight: 600,
+            flexShrink: 0
+          }}
+        >
+          🔄 Replay
+        </button>
+        <button
+          onClick={handleNext}
+          style={{
+            padding: window.innerWidth < 768 ? '6px 10px' : '8px 16px',
+            fontSize: window.innerWidth < 768 ? '12px' : '14px',
+            background: '#4CAF50',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontWeight: 600,
+            flexShrink: 0
+          }}
+        >
+          {currentIndex < drills.length - 1 ? 'Next →' : 'Finish'}
+        </button>
+        <button
+          onClick={onExit}
+          style={{
+            padding: window.innerWidth < 768 ? '6px 10px' : '8px 16px',
+            fontSize: window.innerWidth < 768 ? '12px' : '14px',
+            background: '#9C27B0',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontWeight: 600,
+            flexShrink: 0
+          }}
+        >
+          Exit
+        </button>
+      </div>
+
+      {/* Content - Scrollable */}
       <div style={{
         flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        overflowY: 'auto',
         padding: window.innerWidth < 768 ? '10px' : '20px',
-        overflowY: 'auto'
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center'
       }}>
         <div style={{
           background: 'white',
@@ -231,7 +311,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
           width: '100%',
           boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
           textAlign: 'center',
-          margin: window.innerWidth < 768 ? '10px 0' : '0'
+          marginBottom: '20px'
         }}>
           {/* Image */}
           {currentDrill.image_url && (
@@ -249,19 +329,20 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             </div>
           )}
 
-          {/* Catalan */}
-          <div style={{ marginBottom: window.innerWidth < 768 ? '16px' : '20px' }}>
+          {/* Catalan - Much smaller */}
+          <div style={{ marginBottom: window.innerWidth < 768 ? '12px' : '16px' }}>
             <div style={{ 
-              fontSize: window.innerWidth < 768 ? '12px' : '14px', 
+              fontSize: window.innerWidth < 768 ? '10px' : '12px', 
               color: '#667eea', 
               fontWeight: 600, 
-              marginBottom: '6px' 
+              marginBottom: '4px',
+              opacity: 0.8
             }}>
               Català
             </div>
             <div style={{ 
-              fontSize: window.innerWidth < 768 ? '20px' : '24px', 
-              fontWeight: 700, 
+              fontSize: window.innerWidth < 768 ? '16px' : '20px', 
+              fontWeight: 600, 
               color: '#333',
               lineHeight: 1.3
             }}>
@@ -384,90 +465,6 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             )}
           </div>
 
-          {/* Controls - Improved for mobile */}
-          <div style={{ 
-            display: 'flex', 
-            gap: window.innerWidth < 768 ? '10px' : '12px', 
-            justifyContent: 'center',
-            flexWrap: window.innerWidth < 768 ? 'wrap' : 'nowrap',
-            marginTop: window.innerWidth < 768 ? '20px' : '0'
-          }}>
-            <button
-              onClick={handlePrev}
-              disabled={currentIndex === 0}
-              style={{
-                padding: window.innerWidth < 768 ? '14px 20px' : '12px 24px',
-                fontSize: window.innerWidth < 768 ? '16px' : '16px',
-                background: currentIndex === 0 ? '#ccc' : '#2196F3',
-                color: 'white',
-                border: 'none',
-                borderRadius: '10px',
-                cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
-                fontWeight: 700,
-                flex: window.innerWidth < 768 ? '1 1 100%' : 'none',
-                minWidth: window.innerWidth < 768 ? '100%' : 'auto',
-                boxShadow: '0 4px 8px rgba(33, 150, 243, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}
-            >
-              <span>←</span>
-              <span>Previous</span>
-            </button>
-            <div style={{
-              display: 'flex',
-              gap: window.innerWidth < 768 ? '10px' : '12px',
-              width: window.innerWidth < 768 ? '100%' : 'auto',
-              flex: window.innerWidth < 768 ? '1 1 100%' : 'none'
-            }}>
-              <button
-                onClick={handleReplay}
-                style={{
-                  padding: window.innerWidth < 768 ? '14px 20px' : '12px 24px',
-                  fontSize: window.innerWidth < 768 ? '16px' : '16px',
-                  background: '#FFC107',
-                  color: '#333',
-                  border: 'none',
-                  borderRadius: '10px',
-                  cursor: 'pointer',
-                  fontWeight: 700,
-                  flex: 1,
-                  boxShadow: '0 4px 8px rgba(255, 193, 7, 0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px'
-                }}
-              >
-                <span>🔄</span>
-                <span>Replay</span>
-              </button>
-              <button
-                onClick={handleNext}
-                style={{
-                  padding: window.innerWidth < 768 ? '14px 20px' : '12px 24px',
-                  fontSize: window.innerWidth < 768 ? '16px' : '16px',
-                  background: '#4CAF50',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '10px',
-                  cursor: 'pointer',
-                  fontWeight: 700,
-                  flex: 1,
-                  boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px'
-                }}
-              >
-                <span>{currentIndex < drills.length - 1 ? 'Next' : 'Finish'}</span>
-                <span>→</span>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
