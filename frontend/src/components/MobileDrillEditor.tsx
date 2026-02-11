@@ -24,6 +24,14 @@ interface MobileDrillEditorProps {
 }
 
 export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate, onNavigate }: MobileDrillEditorProps) {
+  // Estilos CSS para la animación de pulso
+  const pulseStyle = `
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+  `;
   const [editedDrill, setEditedDrill] = useState(drill);
   const [recording, setRecording] = useState<'audio' | 'video' | null>(null);
   const [showVideo, setShowVideo] = useState(false);
@@ -52,6 +60,8 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
       }
+      // Limpiar cualquier timer pendiente
+      // Los timers se limpian en sus respectivos handlers
     };
   }, [drill]);
 
@@ -240,20 +250,35 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
       console.log('🎤 [Mobile] Gravació d\'àudio iniciada amb tipus MIME:', mimeType);
       
       // Configurar un temporizador para detener automáticamente después de 60 segundos
-      setTimeout(() => {
+      const autoStopTimer = setTimeout(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
           console.log('⏱️ Deteniendo grabación automáticamente después de 60 segundos');
-          stopRecording();
+          mediaRecorderRef.current.stop();
         }
       }, 60000);
+      
+      // Guardar referencia del timer para limpiarlo si es necesario
+      const timerRef = { current: autoStopTimer };
+      
+      // Limpiar el timer cuando se detenga la grabación
+      const originalOnStop = mediaRecorderRef.current.onstop;
+      mediaRecorderRef.current.onstop = async (...args) => {
+        clearTimeout(timerRef.current);
+        if (originalOnStop) {
+          // @ts-ignore
+          return originalOnStop.apply(mediaRecorderRef.current, args);
+        }
+      };
     } catch (err: any) {
       console.error('Accés al micròfon denegat:', err);
       if (err.name === 'NotAllowedError') {
-        alert('Accés al micròfon denegat. Per habilitar-lo:\n1. Fes clic a l\'icona del cadenat a la barra d\'adreces.\n2. Canvia "Micròfon" a "Permetre".\n3. Refresca la pàgina i torna-ho a provar.');
+        alert('Accés al micròfon denegat. Per habilitar-lo:\n1. Fes clic a l\'icona del cadenat a la barra d\'adreces.\n2. Canvia "Micròfon" a "Permetre".\n3. Refresca la pàgina i torna-ho a provar.\n\nEn iOS/Safari, asegúrate de que la configuración de privacidad del sitio web permita el micrófono.');
       } else if (err.name === 'NotFoundError') {
         alert('No s\'ha trobat cap micròfon. Connecta un micròfon i torna-ho a provar.');
       } else if (err.name === 'NotReadableError') {
         alert('El micrófono está en uso por otra aplicación. Cierra otras aplicaciones que puedan estar usando el micrófono.');
+      } else if (err.name === 'OverconstrainedError') {
+        alert('El micrófono solicitado no está disponible. Intenta con otro dispositivo o navegador.');
       } else {
         alert('No es pot accedir al micròfon: ' + err.message);
       }
@@ -411,8 +436,20 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
   };
 
   const stopRecording = () => {
+    console.log('🛑 Deteniendo grabación, tipo:', recording);
+    
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop(); // This will trigger onstop, which handles stream stopping and setRecording(null)
+      console.log('🛑 MediaRecorder está activo, llamando stop()');
+      mediaRecorderRef.current.stop();
+    } else {
+      console.log('🛑 MediaRecorder no está activo o no existe');
+      // Si no hay MediaRecorder activo, pero hay un stream, detenerlo
+      if (streamRef.current) {
+        console.log('🛑 Deteniendo stream directamente');
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      setRecording(null);
     }
   };
 
@@ -437,17 +474,19 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
   const hasPrev = currentIndex > 0;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'white',
-      zIndex: 10000,
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
+    <>
+      <style>{pulseStyle}</style>
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'white',
+        zIndex: 10000,
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
       {/* Header */}
       <div style={{
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -569,7 +608,23 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
             <button onClick={() => setShowCameraChoice(true)} style={{ fontSize: '32px', background: 'none', border: 'none', cursor: 'pointer' }}>🎬</button>
           </div>
           {recording === 'audio' && (
-            <div style={{ textAlign: 'center', marginTop: '8px', color: '#ff4444', fontSize: '12px' }}>
+            <div style={{ 
+              textAlign: 'center', 
+              marginTop: '8px', 
+              color: '#ff4444', 
+              fontSize: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}>
+              <div style={{
+                width: '10px',
+                height: '10px',
+                borderRadius: '50%',
+                backgroundColor: '#ff4444',
+                animation: 'pulse 1s infinite'
+              }}></div>
               Grabando audio... Toca ⏹️ para detener
             </div>
           )}
@@ -738,7 +793,8 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
           <video src={getMediaUrl(drill.video_url)} controls autoPlay playsInline style={{ width: '100%', maxWidth: '640px', borderRadius: '12px' }} onClick={(e) => e.stopPropagation()} />
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 
