@@ -119,6 +119,16 @@ def health_check():
         "service": "tachelhit-drills-backend"
     }
 
+@app.get("/test-connection")
+def test_connection():
+    """Simple endpoint to test frontend-backend connection"""
+    return {
+        "message": "Backend is reachable",
+        "timestamp": datetime.utcnow().isoformat(),
+        "frontend_url": FRONTEND_URL,
+        "cors_origin": "https://tachelhit-drills.vercel.app"
+    }
+
 def get_db():
     db = SessionLocal()
     try:
