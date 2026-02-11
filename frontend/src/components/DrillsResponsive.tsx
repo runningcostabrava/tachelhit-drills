@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
 import { AgGridReact } from 'ag-grid-react';
+// Importar solo el tema Alpine CSS (versión legacy)
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 import MobileDrillEditor from './MobileDrillEditor';
@@ -197,6 +198,8 @@ export default function DrillsResponsive({ onViewTests, onViewShorts }: DrillsRe
             rowHeight={50}
             suppressHorizontalScroll={false}
             domLayout="normal"
+            // Configurar tema legacy para evitar conflictos
+            theme="legacy"
           />
         </div>
 

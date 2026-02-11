@@ -301,10 +301,17 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
         alert('El micrófono está en uso por otra aplicación. Cierra otras aplicaciones que puedan estar usando el micrófono.');
       } else if (err.name === 'OverconstrainedError') {
         alert('El micrófono solicitado no está disponible. Intenta con otro dispositivo o navegador.');
+      } else if (err.name === 'TypeError') {
+        alert('Error de tipo: El navegador no soporta alguna función de grabación. Prueba con Chrome o Firefox.');
       } else {
-        alert('No es pot accedir al micròfon: ' + err.message);
+        alert('No es pot accedir al micròfon: ' + (err.message || 'Error desconocido'));
       }
       setRecording(null);
+      // Limpiar stream si existe
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
     }
   };
 
@@ -425,6 +432,13 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     const video = previewRef.current;
     const canvas = canvasRef.current;
 
+    // Esperar a que el video tenga datos
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+      console.log('Video not ready, waiting...');
+      setTimeout(takePicture, 100);
+      return;
+    }
+
     // Get video dimensions
     const videoTrack = streamRef.current.getVideoTracks()[0];
     const settings = videoTrack.getSettings();
@@ -436,7 +450,18 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
 
     const context = canvas.getContext('2d');
     if (context) {
+      // Limpiar canvas y dibujar
+      context.clearRect(0, 0, width, height);
       context.drawImage(video, 0, 0, width, height);
+      
+      // Verificar que el canvas no esté vacío
+      const imageData = context.getImageData(0, 0, 1, 1).data;
+      if (imageData[0] === 0 && imageData[1] === 0 && imageData[2] === 0) {
+        console.warn('Canvas appears to be black, retrying...');
+        setTimeout(takePicture, 100);
+        return;
+      }
+      
       canvas.toBlob(async (blob) => {
         if (blob) {
           const formData = new FormData();
@@ -446,6 +471,7 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
               headers: { 'Content-Type': 'multipart/form-data' },
             });
             onUpdate();
+            alert('Foto guardada correctamente!');
           } catch (err) {
             console.error('Image upload failed:', err);
             alert('Failed to upload image');
@@ -620,6 +646,61 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
           <h3 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: 700 }}>
             Media
           </h3>
+          
+          {/* Media Playback - Audio y Video existentes */}
+          {(editedDrill.audio_url || editedDrill.video_url) && (
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              gap: '10px', 
+              marginBottom: '12px',
+              flexWrap: 'wrap'
+            }}>
+              {editedDrill.audio_url && (
+                <button 
+                  onClick={() => {
+                    const audio = new Audio(getMediaUrl(editedDrill.audio_url));
+                    audio.play();
+                  }}
+                  style={{ 
+                    fontSize: '14px', 
+                    padding: '8px 12px',
+                    background: '#4CAF50',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>▶️</span> Reproducir Audio
+                </button>
+              )}
+              {editedDrill.video_url && (
+                <button 
+                  onClick={() => setShowVideo(true)}
+                  style={{ 
+                    fontSize: '14px', 
+                    padding: '8px 12px',
+                    background: '#2196F3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>🎥</span> Ver Video
+                </button>
+              )}
+            </div>
+          )}
+          
+          {/* Media Recording Controls */}
           <div style={{ display: 'flex', justifyContent: 'space-around', gap: '10px' }}>
             <button onClick={() => startImageCapture('environment')} style={{ fontSize: '32px', background: 'none', border: 'none', cursor: 'pointer' }}>📷</button>
             {recording === 'audio' ? (
