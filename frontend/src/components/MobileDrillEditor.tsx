@@ -254,7 +254,23 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
         } catch (err: any) {
           console.error('❌ [Mobile] Error en pujar l\'àudio:', err);
           console.error('   Detalls:', err.response?.data || err.message);
-          // No mostrar alerta de error
+          console.error('   Status:', err.response?.status);
+          
+          // Si es error 405, probar con un endpoint alternativo
+          if (err.response?.status === 405) {
+            console.log('⚠️ 405 Method Not Allowed, intentando endpoint alternativo...');
+            try {
+              // Intentar con un endpoint diferente
+              const altResponse = await axios.post(`${API_BASE}/drills/${drill.id}/audio`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                timeout: 30000
+              });
+              console.log('✅ Audio subido mediante endpoint alternativo:', altResponse.data);
+              onUpdate();
+            } catch (altErr: any) {
+              console.error('❌ Error también en endpoint alternativo:', altErr);
+            }
+          }
         } finally {
           // Asegurar que el estado de grabación se restablece
           setRecording(null);
@@ -317,20 +333,14 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
   };
 
   const startVideoRecording = async (facing?: 'user' | 'environment') => {
-    // Check if permission was previously denied
-    if (permissionDenied.video) {
-      alert('El accés a la càmera ha estat denegat anteriorment. Si us plau, habilita\'l a la configuració del navegador i refresca la pàgina.');
-      return;
-    }
-
     const facingMode = facing || cameraFacing;
     console.log('Starting video recording with facingMode:', facingMode);
 
     try {
-      // Ensure any previous stream is stopped before requesting a new one
-      _stopCameraStream(); 
+      // Detener cualquier stream existente
+      _stopCameraStream();
 
-      // Try with exact facingMode first, fallback to non-exact if it fails
+      // Intentar con facingMode exacto primero
       let stream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -342,7 +352,7 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
           audio: true
         });
       } catch (err) {
-        // Fallback: try without 'exact' constraint
+        // Fallback: intentar sin 'exact'
         console.log('Exact facingMode not supported, trying without exact:', err);
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -356,15 +366,35 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
 
       streamRef.current = stream;
 
-      if (previewRef.current) {
-        previewRef.current.srcObject = stream;
-        await previewRef.current.play(); // This is already present, ensures preview plays
-      }
+      // Asegurar que el elemento video esté disponible antes de asignar srcObject
+      // Esperar un momento para que el DOM se actualice
+      setTimeout(() => {
+        if (previewRef.current) {
+          previewRef.current.srcObject = stream;
+          previewRef.current.play().catch(e => {
+            console.error('Error playing video preview:', e);
+          });
+        } else {
+          console.warn('previewRef.current is null, retrying...');
+          // Intentar de nuevo después de un breve retraso
+          setTimeout(() => {
+            if (previewRef.current) {
+              previewRef.current.srcObject = stream;
+              previewRef.current.play();
+            }
+          }, 100);
+        }
+      }, 50);
 
       mediaRecorderRef.current = new MediaRecorder(stream);
       chunksRef.current = [];
 
-      mediaRecorderRef.current.ondataavailable = (e) => chunksRef.current.push(e.data);
+      mediaRecorderRef.current.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+      
       mediaRecorderRef.current.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: 'video/webm' });
         const formData = new FormData();
@@ -377,16 +407,16 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
           onUpdate();
         } catch (err) {
           console.error('Video upload failed:', err);
-          alert('Failed to upload video');
+          // No mostrar alerta
         }
 
-        _stopCameraStream(); // <<< MODIFIED: Use helper to stop stream
+        _stopCameraStream();
         setRecording(null);
       };
 
       mediaRecorderRef.current.onerror = (event) => {
         console.error('Error de MediaRecorder (video):', event);
-        alert('Error durante la grabación de video. Por favor, inténtalo de nuevo.');
+        // No mostrar alerta
         _stopCameraStream();
         setRecording(null);
       };
@@ -395,13 +425,8 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
       setRecording('video');
     } catch (err: any) {
       console.error('Camera access denied:', err);
-      if (err.name === 'NotAllowedError') {
-        setPermissionDenied(prev => ({...prev, video: true}));
-        alert('Accés a la càmera denegat. Per habilitar-lo:\n1. Fes clic a l\'icona del cadenat a la barra d\'adreces.\n2. Canvia "Càmera" a "Permetre".\n3. Refresca la pàgina i torna-ho a provar.');
-      } else {
-        alert('Please allow camera access');
-      }
-      _stopCameraStream(); // Ensure stream is stopped even if start fails
+      // No mostrar alerta
+      _stopCameraStream();
       setRecording(null);
     }
   };
@@ -520,7 +545,7 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
                 headers: { 'Content-Type': 'multipart/form-data' },
               });
               onUpdate();
-              alert('Foto guardada correctamente!');
+              // No mostrar mensaje de confirmación
             } catch (err) {
               console.error('Image upload failed:', err);
               alert('Failed to upload image');

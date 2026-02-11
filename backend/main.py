@@ -337,9 +337,27 @@ def generate_image(drill_id: int, body: dict = Body(None), db: Session = Depends
         raise HTTPException(status_code=500, detail=str(e))
 
 # ===================== Media Upload =====================
+@app.get("/upload-media/{drill_id}/{media_type}")
+async def test_upload_endpoint(drill_id: int, media_type: str):
+    print(f"[UPLOAD TEST] GET request for drill {drill_id}, media_type {media_type}")
+    return {
+        "message": "Upload endpoint is reachable",
+        "method": "GET",
+        "drill_id": drill_id,
+        "media_type": media_type,
+        "supported_methods": ["POST"]
+    }
+
 @app.post("/upload-media/{drill_id}/{media_type}")
 async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
-    print(f"[UPLOAD] Received upload request for drill {drill_id}, media_type {media_type}")
+    print(f"[UPLOAD] Received POST upload request for drill {drill_id}, media_type {media_type}")
+    print(f"[UPLOAD] Request method: POST")
+    print(f"[UPLOAD] File name: {file.filename}")
+    print(f"[UPLOAD] Content type: {file.content_type}")
+    
+    # Verificar que el método sea POST
+    import inspect
+    print(f"[UPLOAD] Current function: {inspect.currentframe().f_code.co_name}")
     if media_type not in ["audio", "video", "image"]:
         raise HTTPException(status_code=400, detail="Invalid media type")
 
