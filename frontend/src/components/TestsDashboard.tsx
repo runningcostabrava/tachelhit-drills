@@ -452,9 +452,9 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
             {/* Action Buttons - Moved to top */}
             <div style={{ 
               marginBottom: '20px', 
-              display: 'flex', 
-              gap: '10px', 
-              flexWrap: 'wrap',
+              display: 'grid',
+              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+              gap: '10px',
               justifyContent: isMobile ? 'center' : 'flex-start'
             }}>
               <button
@@ -468,8 +468,7 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontWeight: 600,
-                  flex: isMobile ? '1 1 calc(50% - 5px)' : 'none',
-                  minWidth: isMobile ? 'calc(50% - 5px)' : 'auto',
+                  width: '100%',
                   boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                 }}
               >
@@ -486,8 +485,7 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontWeight: 600,
-                  flex: isMobile ? '1 1 calc(50% - 5px)' : 'none',
-                  minWidth: isMobile ? 'calc(50% - 5px)' : 'auto',
+                  width: '100%',
                   boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                 }}
               >
@@ -515,13 +513,43 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontWeight: 600,
-                  flex: isMobile ? '1 1 100%' : 'none',
-                  minWidth: isMobile ? '100%' : 'auto',
-                  marginTop: isMobile ? '0' : '0',
+                  width: '100%',
                   boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                 }}
               >
                 ▶️ Play Drills
+              </button>
+              <button
+                onClick={async () => {
+                  if (!selectedTest) return;
+                  if (!confirm('This will generate a demo video showing the Drill Player interface for this test. It may take a few seconds. Continue?')) {
+                    return;
+                  }
+                  try {
+                    const response = await axios.post(`${API_BASE}/generate-drillplayer-demo/${selectedTest.id}`);
+                    alert(`Demo video generated! You can download it from: ${response.data.video_path}`);
+                    // Optionally open the video in a new tab
+                    const videoUrl = `${API_BASE}${response.data.video_path}`;
+                    window.open(videoUrl, '_blank');
+                  } catch (error: any) {
+                    console.error('Error generating demo video:', error);
+                    alert(`Failed to generate demo video: ${error.response?.data?.detail || error.message}`);
+                  }
+                }}
+                style={{
+                  padding: isMobile ? '14px 20px' : '12px 24px',
+                  fontSize: isMobile ? '15px' : '15px',
+                  background: '#FF9800',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  width: '100%',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                }}
+              >
+                🎬 Generate Demo Video
               </button>
             </div>
           </div>
