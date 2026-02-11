@@ -8,6 +8,7 @@ try:
     from moviepy.video.io.VideoFileClip import VideoFileClip
     from moviepy.audio.io.AudioFileClip import AudioFileClip
     from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
+    from moviepy.video.compositing.concatenate import concatenate_videoclips
     MOVIEPY_AVAILABLE = True
 except ImportError as e:
     print(f"MoviePy not fully available: {e}")

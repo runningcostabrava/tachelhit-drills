@@ -1,7 +1,8 @@
 import os
 from datetime import datetime
 from urllib.parse import quote
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Body
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Body, BackgroundTasks
+from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine
@@ -31,6 +32,57 @@ from shorts_generator import generate_youtube_short
 translator_ca_to_ar = GoogleTranslator(source='ca', target='ar')
 translator_ca_to_en = GoogleTranslator(source='ca', target='en')
 
+# TTS function
+def generate_catalan_tts(text: str, drill_id: int) -> str:
+    """
+    Generate Catalan TTS audio file and return the URL path.
+    """
+    try:
+        from gtts import gTTS
+        import tempfile
+        import shutil
+        
+        # Create TTS object
+        tts = gTTS(text=text, lang='ca', slow=False)
+        
+        # Create a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp:
+            temp_path = tmp.name
+            tts.save(temp_path)
+        
+        # Determine final filename and path
+        timestamp = int(datetime.utcnow().timestamp())
+        filename = f"tts_{drill_id}_{timestamp}.mp3"
+        
+        # Check if Cloudinary is configured
+        use_cloudinary = bool(os.getenv("CLOUDINARY_CLOUD_NAME"))
+        
+        if use_cloudinary:
+            # Upload to Cloudinary
+            result = cloudinary.uploader.upload(
+                temp_path,
+                folder="tachelhit/tts",
+                public_id=f"tts_{drill_id}_{timestamp}",
+                resource_type="video"  # Cloudinary treats audio as video
+            )
+            url = result['secure_url']
+        else:
+            # Save locally
+            dir_path = os.path.join(MEDIA_ROOT, "tts")
+            os.makedirs(dir_path, exist_ok=True)
+            final_path = os.path.join(dir_path, filename)
+            shutil.move(temp_path, final_path)
+            url = f"/media/tts/{filename}"
+        
+        # Clean up temp file if it still exists
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)
+            
+        return url
+    except Exception as e:
+        print(f"[TTS] Error generating TTS: {e}")
+        raise
+
 # Config
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "dX9JkRJYfaRQUZdi6tKsF1TfJT44HnZMAPu2RyA4vt0JyRbzmdiVYGgW")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
@@ -40,6 +92,7 @@ MEDIA_ROOT = "media"
 os.makedirs(f"{MEDIA_ROOT}/audio", exist_ok=True)
 os.makedirs(f"{MEDIA_ROOT}/video", exist_ok=True)
 os.makedirs(f"{MEDIA_ROOT}/images", exist_ok=True)
+os.makedirs(f"{MEDIA_ROOT}/tts", exist_ok=True)
 
 # Database configuration - handle both SQLite and PostgreSQL
 if DATABASE_URL.startswith("sqlite"):
@@ -105,7 +158,6 @@ def root():
             "/test-attempts/",
             "/shorts/"
         ]
-    }
 
 @app.get("/health")
 def health_check():
@@ -168,14 +220,29 @@ def update_drill(drill_id: int, update_data: DrillUpdate, db: Session = Depends(
         raise HTTPException(status_code=404, detail="Drill not found")
 
     update_dict = update_data.model_dump(exclude_unset=True)
+    
+    # Check if text_catalan is being updated and is not empty
+    text_catalan_updated = "text_catalan" in update_dict and update_dict["text_catalan"]
+    previous_text_catalan = drill.text_catalan
+    
     for key, value in update_dict.items():
         setattr(drill, key, value)
 
-    if "text_catalan" in update_dict and update_dict["text_catalan"]:
+    if text_catalan_updated:
         try:
+            # Update Arabic translation
             drill.text_arabic = translator_ca_to_ar.translate(update_dict["text_catalan"])
         except Exception as e:
             print("Translation error:", e)
+        
+        # Generate TTS audio for Catalan text
+        try:
+            tts_url = generate_catalan_tts(update_dict["text_catalan"], drill_id)
+            drill.audio_tts_url = tts_url
+            print(f"[TTS] Generated TTS audio for drill {drill_id}: {tts_url}")
+        except Exception as e:
+            print(f"[TTS] Failed to generate TTS: {e}")
+            # Don't raise exception to avoid breaking the update
 
     db.commit()
     db.refresh(drill)
@@ -587,6 +654,59 @@ def generate_short(drill_id: int, db: Session = Depends(get_db)):
 
     except Exception as e:
         print(f"[API] Error generating short: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ===================== DRILL PLAYER DEMO VIDEO =====================
+@app.post("/generate-drillplayer-demo/{test_id}")
+def generate_drillplayer_demo(test_id: int, db: Session = Depends(get_db)):
+    test = db.query(TestModel).filter(TestModel.id == test_id).first()
+    if not test:
+        raise HTTPException(status_code=404, detail="Test not found")
+
+    try:
+        print(f"[API] Generating Drill Player demo for test {test_id}")
+
+        # Get drill IDs from test
+        drill_ids = [int(id.strip()) for id in test.drill_ids.split(',') if id.strip()]
+        drills = db.query(DrillModel).filter(DrillModel.id.in_(drill_ids)).all()
+        
+        if not drills:
+            raise HTTPException(status_code=400, detail="Test has no drills")
+
+        # Prepare drill data
+        drills_data = []
+        for drill in drills:
+            drills_data.append({
+                'id': drill.id,
+                'text_catalan': drill.text_catalan,
+                'text_tachelhit': drill.text_tachelhit,
+                'text_arabic': drill.text_arabic,
+                'image_url': drill.image_url,
+                'audio_url': drill.audio_url,
+                'audio_tts_url': drill.audio_tts_url,
+                'video_url': drill.video_url
+            })
+
+        # Generate filename
+        filename = f"demo_test_{test_id}_{int(datetime.now().timestamp())}.mp4"
+
+        # Generate the demo video
+        from shorts_generator import generate_drillplayer_demo as generate_demo
+        output_path = generate_demo(test_id, drills_data, filename)
+
+        # Return the video path (not saved in database)
+        video_path = f"/media/shorts/{filename}"
+        return {
+            "test_id": test_id,
+            "video_path": video_path,
+            "drill_count": len(drills_data),
+            "message": "Demo video generated successfully"
+        }
+
+    except Exception as e:
+        print(f"[API] Error generating demo video: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))

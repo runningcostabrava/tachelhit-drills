@@ -15,6 +15,7 @@ class Drill(Base):
     text_tachelhit = Column(String, nullable=True)
     text_arabic = Column(String, nullable=True)
     audio_url = Column(String, nullable=True)
+    audio_tts_url = Column(String, nullable=True)  # Generated TTS for Catalan text
     video_url = Column(String, nullable=True)
     image_url = Column(String, nullable=True)
 

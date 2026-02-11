@@ -8,6 +8,7 @@ class DrillBase(BaseModel):
     text_tachelhit: Optional[str] = None
     text_arabic: Optional[str] = None
     audio_url: Optional[str] = None
+    audio_tts_url: Optional[str] = None  # Generated TTS for Catalan text
     video_url: Optional[str] = None
     image_url: Optional[str] = None
 
