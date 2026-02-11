@@ -107,9 +107,15 @@ SessionLocal = sessionmaker(bind=engine)
 # Set CHECK_SCHEMA environment variable to "1" to enable
 if os.getenv("CHECK_SCHEMA") == "1":
     print("[SCHEMA] Checking and fixing schema...")
-    from check_and_fix_schema import check_and_fix
-    check_and_fix()
-    print("[SCHEMA] Schema check complete.")
+    try:
+        from check_and_fix_schema import check_and_fix
+        check_and_fix()
+        print("[SCHEMA] Schema check complete.")
+    except Exception as e:
+        print(f"[SCHEMA] ERROR during schema check: {e}")
+        import traceback
+        traceback.print_exc()
+        # Continue anyway; don't crash the app
 
 Base.metadata.create_all(bind=engine)
 
