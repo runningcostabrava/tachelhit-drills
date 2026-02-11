@@ -43,10 +43,14 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   }, [currentIndex]);
 
   useEffect(() => {
-    // Cleanup previous audio
+    // Cleanup previous audio and speech
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
+    }
+    if (speechSynthRef.current) {
+      speechSynthesis.cancel();
+      speechSynthRef.current = null;
     }
 
     // If no audio URL, move on after a delay
@@ -63,16 +67,18 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
 
     // If we have audio and haven't played twice yet
     if (currentDrill?.audio_url && playCount < 2) {
-      const playSequence = async () => {
-        // Step 1: Speech synthesis for Catalan text (if available)
-        if (currentDrill.text_catalan && 'speechSynthesis' in window) {
+      const playAudio = async (isFirstPlay: boolean) => {
+        // Step 1: Speech synthesis for Catalan text (only on first play)
+        if (isFirstPlay && currentDrill.text_catalan && 'speechSynthesis' in window) {
           const utterance = new SpeechSynthesisUtterance(currentDrill.text_catalan);
           utterance.lang = 'ca-ES'; // Catalan
           utterance.rate = 1.2; // Slightly faster
           utterance.volume = 0.8;
+          speechSynthRef.current = utterance;
           
           await new Promise<void>((resolve) => {
             utterance.onend = () => resolve();
+            utterance.onerror = () => resolve();
             speechSynthesis.speak(utterance);
           });
           // Small pause between speech and audio
@@ -96,42 +102,30 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
           audio.play();
         });
 
-        // Update play count
-        setPlayCount(prev => {
-          const newCount = prev + 1;
-          if (newCount >= 2) {
-            // Move to next drill after 2 plays
-            setTimeout(() => {
-              if (currentIndex < drills.length - 1) {
-                setCurrentIndex(currentIndex + 1);
-              } else {
-                onExit();
-              }
-            }, 1000);
-          } else {
-            // Play again after a short delay (without speech synthesis)
-            setTimeout(() => {
-              const audio2 = new Audio(getMediaUrl(currentDrill.audio_url));
-              audioRef.current = audio2;
-              setIsPlaying(true);
-              audio2.play();
-              audio2.onended = () => {
-                setIsPlaying(false);
-                setPlayCount(prev => prev + 1);
-              };
-              audio2.onerror = () => {
-                setIsPlaying(false);
-                setPlayCount(prev => prev + 1);
-              };
-            }, 500);
-          }
-          return newCount;
-        });
+        // Update play count after audio finishes
+        setPlayCount(prev => prev + 1);
       };
 
-      playSequence();
+      // Determine if this is the first play for this drill
+      const isFirstPlay = playCount === 0;
+      playAudio(isFirstPlay);
     }
   }, [currentDrill, playCount, currentIndex, drills.length, onExit]);
+
+  // Effect to handle moving to next drill after 2 plays
+  useEffect(() => {
+    if (playCount >= 2) {
+      // Move to next drill after a short delay
+      const timer = setTimeout(() => {
+        if (currentIndex < drills.length - 1) {
+          setCurrentIndex(currentIndex + 1);
+        } else {
+          onExit();
+        }
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [playCount, currentIndex, drills.length, onExit]);
 
   const handleNext = () => {
     if (currentIndex < drills.length - 1) {
@@ -268,7 +262,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             </div>
             <div style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
               {currentDrill.audio_url ? 
-                (playCount === 0 ? 'First: Catalan speech + audio' : `Second: audio only (${playCount}/2)`) 
+                (playCount === 0 ? 'First: Catalan speech + audio' : `Second: audio only (${playCount + 1}/2)`) 
                 : 'No audio available'}
             </div>
           </div>
