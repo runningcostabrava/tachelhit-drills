@@ -65,16 +65,19 @@ export default function DrillsResponsive({ onViewTests, onViewShorts }: DrillsRe
         // Asegurarse de que el drill tiene todos los campos necesarios
         const newDrill = {
           ...response.data,
-          text_catalan: '',
-          text_tachelhit: '',
-          text_arabic: '',
-          audio_url: '',
-          video_url: '',
-          image_url: '',
-          tag: '',
-          date_created: new Date().toISOString()
+          text_catalan: response.data.text_catalan || '',
+          text_tachelhit: response.data.text_tachelhit || '',
+          text_arabic: response.data.text_arabic || '',
+          audio_url: response.data.audio_url || '',
+          video_url: response.data.video_url || '',
+          image_url: response.data.image_url || '',
+          tag: response.data.tag || '',
+          date_created: response.data.date_created || new Date().toISOString()
         };
-        setEditingDrill(newDrill);
+        // Esperar un momento para asegurar que el drill está completamente creado
+        setTimeout(() => {
+          setEditingDrill(newDrill);
+        }, 100);
       }
     } catch (error) {
       console.error('Error creating drill:', error);

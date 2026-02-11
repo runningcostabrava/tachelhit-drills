@@ -371,8 +371,8 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
         
         # Validar extensions permeses
         allowed_extensions = {
-            "audio": ["webm", "mp4", "ogg", "wav", "m4a"],
-            "video": ["mp4", "webm", "mov", "avi"],
+            "audio": ["webm", "mp4", "ogg", "wav", "m4a", "mp3", "aac"],
+            "video": ["mp4", "webm", "mov", "avi", "m4v"],
             "image": ["jpg", "jpeg", "png", "gif", "webp"]
         }
         

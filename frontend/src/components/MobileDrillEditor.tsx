@@ -100,8 +100,9 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     // Detectar iOS/Safari
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    const isAndroid = /Android/.test(navigator.userAgent);
     
-    console.log('🎤 [Mobile] isIOS:', isIOS, 'isSafari:', isSafari);
+    console.log('🎤 [Mobile] isIOS:', isIOS, 'isSafari:', isSafari, 'isAndroid:', isAndroid);
 
     try {
       // Primero, detener cualquier stream existente
@@ -140,8 +141,21 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
         mimeType = 'audio/mp4';
         extension = 'm4a';
         console.log('🎤 [Mobile] iOS/Safari detectat, utilitzant MP4/AAC');
+      } else if (isAndroid) {
+        // Android: preferir webm con opus
+        if (MediaRecorder.isTypeSupported('audio/webm; codecs=opus')) {
+          mimeType = 'audio/webm; codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+          mimeType = 'audio/webm';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4';
+          extension = 'mp4';
+        } else {
+          mimeType = 'audio/ogg; codecs=opus';
+          extension = 'ogg';
+        }
       } else {
-        // Probar diferentes codecs
+        // Otros navegadores
         if (MediaRecorder.isTypeSupported('audio/webm; codecs=opus')) {
           mimeType = 'audio/webm; codecs=opus';
         } else if (MediaRecorder.isTypeSupported('audio/webm')) {
@@ -179,26 +193,35 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
         
         if (chunksRef.current.length === 0) {
           console.warn('No hi ha dades d\'àudio gravades');
+          alert('No se grabó ningún audio. Intenta de nuevo.');
           return;
         }
         
         const blob = new Blob(chunksRef.current, { type: mimeType });
         console.log('🎤 [Mobile] Blob creat, mida:', blob.size, 'tipus:', blob.type);
         
+        // Verificar que el blob no esté vacío
+        if (blob.size < 1024) {
+          alert('El audio grabado es demasiado corto o está vacío. Intenta grabar durante más tiempo.');
+          return;
+        }
+        
         const formData = new FormData();
         formData.append('file', blob, `audio_${drill.id}_${Date.now()}.${extension}`);
 
         try {
           console.log('📤 [Mobile] Pujant àudio a:', `${API_BASE}/upload-media/${drill.id}/audio`);
-          await axios.post(`${API_BASE}/upload-media/${drill.id}/audio`, formData, {
+          const response = await axios.post(`${API_BASE}/upload-media/${drill.id}/audio`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: 30000 // 30 segundos para móviles lentos
           });
+          console.log('✅ Audio subido:', response.data);
           onUpdate();
           alert('Àudio gravat i pujat correctament!');
         } catch (err: any) {
           console.error('❌ [Mobile] Error en pujar l\'àudio:', err);
           console.error('   Detalls:', err.response?.data || err.message);
-          alert('No s\'ha pogut pujar l\'àudio. Si us plau, torna-ho a provar. Error: ' + err.message);
+          alert('No s\'ha pogut pujar l\'àudio. Si us plau, torna-ho a provar. Error: ' + (err.response?.data?.detail || err.message));
         }
       };
 
@@ -215,12 +238,22 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
       mediaRecorderRef.current.start();
       setRecording('audio');
       console.log('🎤 [Mobile] Gravació d\'àudio iniciada amb tipus MIME:', mimeType);
+      
+      // Configurar un temporizador para detener automáticamente después de 60 segundos
+      setTimeout(() => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          console.log('⏱️ Deteniendo grabación automáticamente después de 60 segundos');
+          stopRecording();
+        }
+      }, 60000);
     } catch (err: any) {
       console.error('Accés al micròfon denegat:', err);
       if (err.name === 'NotAllowedError') {
         alert('Accés al micròfon denegat. Per habilitar-lo:\n1. Fes clic a l\'icona del cadenat a la barra d\'adreces.\n2. Canvia "Micròfon" a "Permetre".\n3. Refresca la pàgina i torna-ho a provar.');
       } else if (err.name === 'NotFoundError') {
         alert('No s\'ha trobat cap micròfon. Connecta un micròfon i torna-ho a provar.');
+      } else if (err.name === 'NotReadableError') {
+        alert('El micrófono está en uso por otra aplicación. Cierra otras aplicaciones que puedan estar usando el micrófono.');
       } else {
         alert('No es pot accedir al micròfon: ' + err.message);
       }
