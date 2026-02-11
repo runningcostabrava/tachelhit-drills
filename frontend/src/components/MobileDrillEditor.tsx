@@ -293,19 +293,23 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
       };
     } catch (err: any) {
       console.error('Accés al micròfon denegat:', err);
+      let errorMessage = 'No es pot accedir al micròfon: ' + (err.message || 'Error desconocido');
+        
       if (err.name === 'NotAllowedError') {
-        alert('Accés al micròfon denegat. Per habilitar-lo:\n1. Fes clic a l\'icona del cadenat a la barra d\'adreces.\n2. Canvia "Micròfon" a "Permetre".\n3. Refresca la pàgina i torna-ho a provar.\n\nEn iOS/Safari, asegúrate de que la configuración de privacidad del sitio web permita el micrófono.');
+        errorMessage = 'Accés al micròfon denegat. Per habilitar-lo:\n1. Fes clic a l\'icona del cadenat a la barra d\'adreces.\n2. Canvia "Micròfon" a "Permetre".\n3. Refresca la pàgina i torna-ho a provar.\n\nEn iOS/Safari, asegúrate de que la configuración de privacidad del sitio web permita el micrófono.';
       } else if (err.name === 'NotFoundError') {
-        alert('No s\'ha trobat cap micròfon. Connecta un micròfon i torna-ho a provar.');
+        errorMessage = 'No s\'ha trobat cap micròfon. Connecta un micròfon i torna-ho a provar.';
       } else if (err.name === 'NotReadableError') {
-        alert('El micrófono está en uso por otra aplicación. Cierra otras aplicaciones que puedan estar usando el micrófono.');
+        errorMessage = 'El micrófono está en uso por otra aplicación. Cierra otras aplicaciones que puedan estar usando el micrófono.';
       } else if (err.name === 'OverconstrainedError') {
-        alert('El micrófono solicitado no está disponible. Intenta con otro dispositivo o navegador.');
+        errorMessage = 'El micrófono solicitado no está disponible. Intenta con otro dispositivo o navegador.';
       } else if (err.name === 'TypeError') {
-        alert('Error de tipo: El navegador no soporta alguna función de grabación. Prueba con Chrome o Firefox.');
-      } else {
-        alert('No es pot accedir al micròfon: ' + (err.message || 'Error desconocido'));
+        errorMessage = 'Error de tipo: El navegador no soporta alguna función de grabación. Prueba con Chrome o Firefox.';
+      } else if (err.name === 'SecurityError') {
+        errorMessage = 'Error de seguridad: La página no está cargada a través de HTTPS o el contexto no es seguro.';
       }
+        
+      alert(errorMessage);
       setRecording(null);
       // Limpiar stream si existe
       if (streamRef.current) {
@@ -411,18 +415,56 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     setCameraFacing(facing);
     try {
       _stopCameraStream();
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 } },
-      });
+      
+      // Intentar con facingMode exacto primero
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            facingMode: { exact: facing },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+        });
+      } catch (exactErr) {
+        console.log('Exact facing mode not supported, trying without exact:', exactErr);
+        // Fallback sin 'exact'
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            facingMode: facing,
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+        });
+      }
+      
       streamRef.current = stream;
       setShowImageCapture(true);
-      if (previewRef.current) {
-        previewRef.current.srcObject = stream;
-        await previewRef.current.play();
-      }
-    } catch (err) {
+      
+      // Esperar a que el elemento video esté listo
+      setTimeout(() => {
+        if (previewRef.current) {
+          previewRef.current.srcObject = stream;
+          previewRef.current.play().catch(e => {
+            console.error('Error playing video:', e);
+            // Intentar de nuevo
+            setTimeout(() => {
+              if (previewRef.current) {
+                previewRef.current.play();
+              }
+            }, 100);
+          });
+        }
+      }, 100);
+    } catch (err: any) {
       console.error('Camera access denied for image capture:', err);
-      alert('Please allow camera access.');
+      if (err.name === 'NotAllowedError') {
+        alert('Acceso a la cámara denegado. Por favor, permite el acceso a la cámara en la configuración del navegador.');
+      } else if (err.name === 'NotFoundError') {
+        alert('No se encontró ninguna cámara. Conecta una cámara e intenta de nuevo.');
+      } else {
+        alert('Error al acceder a la cámara: ' + err.message);
+      }
     }
   };
 
@@ -432,55 +474,76 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     const video = previewRef.current;
     const canvas = canvasRef.current;
 
-    // Esperar a que el video tenga datos
+    // Esperar a que el video esté listo
     if (video.readyState !== video.HAVE_ENOUGH_DATA) {
       console.log('Video not ready, waiting...');
-      setTimeout(takePicture, 100);
+      setTimeout(takePicture, 200);
       return;
     }
 
-    // Get video dimensions
-    const videoTrack = streamRef.current.getVideoTracks()[0];
-    const settings = videoTrack.getSettings();
-    const width = settings.width || 640;
-    const height = settings.height || 480;
-
-    canvas.width = width;
-    canvas.height = height;
-
-    const context = canvas.getContext('2d');
-    if (context) {
-      // Limpiar canvas y dibujar
-      context.clearRect(0, 0, width, height);
-      context.drawImage(video, 0, 0, width, height);
-      
-      // Verificar que el canvas no esté vacío
-      const imageData = context.getImageData(0, 0, 1, 1).data;
-      if (imageData[0] === 0 && imageData[1] === 0 && imageData[2] === 0) {
-        console.warn('Canvas appears to be black, retrying...');
-        setTimeout(takePicture, 100);
+    // Esperar un poco más para asegurar que el video tenga fotogramas
+    setTimeout(() => {
+      // Get video dimensions
+      const videoTrack = streamRef.current?.getVideoTracks()[0];
+      if (!videoTrack) {
+        console.error('No video track available');
         return;
       }
       
-      canvas.toBlob(async (blob) => {
-        if (blob) {
-          const formData = new FormData();
-          formData.append('file', blob, `image_${drill.id}_${Date.now()}.jpg`);
-          try {
-            await axios.post(`${API_BASE}/upload-media/${drill.id}/image`, formData, {
-              headers: { 'Content-Type': 'multipart/form-data' },
-            });
-            onUpdate();
-            alert('Foto guardada correctamente!');
-          } catch (err) {
-            console.error('Image upload failed:', err);
-            alert('Failed to upload image');
-          }
+      const settings = videoTrack.getSettings();
+      const width = settings.width || 640;
+      const height = settings.height || 480;
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const context = canvas.getContext('2d');
+      if (context) {
+        // Limpiar canvas con color blanco primero
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, width, height);
+        
+        // Dibujar el video
+        context.drawImage(video, 0, 0, width, height);
+        
+        // Verificar que el canvas no esté vacío o negro
+        const imageData = context.getImageData(0, 0, 1, 1).data;
+        console.log('Pixel sample:', imageData[0], imageData[1], imageData[2]);
+        
+        // Si el pixel es completamente negro (0,0,0), podría ser un problema
+        if (imageData[0] === 0 && imageData[1] === 0 && imageData[2] === 0) {
+          console.warn('Canvas appears to be black, trying alternative approach...');
+          // Intentar de nuevo con un pequeño retraso
+          setTimeout(() => {
+            context.drawImage(video, 0, 0, width, height);
+            takePicture();
+          }, 300);
+          return;
         }
-        setShowImageCapture(false);
-        _stopCameraStream();
-      }, 'image/jpeg', 0.9);
-    }
+        
+        canvas.toBlob(async (blob) => {
+          if (blob && blob.size > 1024) {
+            const formData = new FormData();
+            formData.append('file', blob, `image_${drill.id}_${Date.now()}.jpg`);
+            try {
+              await axios.post(`${API_BASE}/upload-media/${drill.id}/image`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+              });
+              onUpdate();
+              alert('Foto guardada correctamente!');
+            } catch (err) {
+              console.error('Image upload failed:', err);
+              alert('Failed to upload image');
+            }
+          } else {
+            console.error('Blob is too small or empty:', blob?.size);
+            alert('La foto no se pudo capturar correctamente. Intenta de nuevo.');
+          }
+          setShowImageCapture(false);
+          _stopCameraStream();
+        }, 'image/jpeg', 0.9);
+      }
+    }, 300); // Esperar 300ms adicionales para asegurar que el video esté listo
   };
 
   const stopRecording = () => {
@@ -701,14 +764,76 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
           )}
           
           {/* Media Recording Controls */}
-          <div style={{ display: 'flex', justifyContent: 'space-around', gap: '10px' }}>
-            <button onClick={() => startImageCapture('environment')} style={{ fontSize: '32px', background: 'none', border: 'none', cursor: 'pointer' }}>📷</button>
+          <div style={{ display: 'flex', justifyContent: 'space-around', gap: '10px', flexWrap: 'wrap' }}>
+            <button 
+              onClick={() => startImageCapture('environment')} 
+              style={{ 
+                fontSize: '32px', 
+                background: 'none', 
+                border: 'none', 
+                cursor: 'pointer',
+                padding: '5px'
+              }}
+              title="Tomar foto"
+            >
+              📷
+            </button>
             {recording === 'audio' ? (
-              <button onClick={stopRecording} style={{ fontSize: '32px', background: 'none', border: 'none', cursor: 'pointer', color: '#ff4444' }}>⏹️</button>
+              <button 
+                onClick={stopRecording} 
+                style={{ 
+                  fontSize: '32px', 
+                  background: 'none', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  color: '#ff4444',
+                  padding: '5px'
+                }}
+                title="Detener grabación de audio"
+              >
+                ⏹️
+              </button>
             ) : (
-              <button onClick={startAudioRecording} style={{ fontSize: '32px', background: 'none', border: 'none', cursor: 'pointer' }}>🎙️</button>
+              <button 
+                onClick={startAudioRecording} 
+                style={{ 
+                  fontSize: '32px', 
+                  background: 'none', 
+                  border: 'none', 
+                  cursor: 'pointer',
+                  padding: '5px'
+                }}
+                title="Grabar audio"
+              >
+                🎙️
+              </button>
             )}
-            <button onClick={() => setShowCameraChoice(true)} style={{ fontSize: '32px', background: 'none', border: 'none', cursor: 'pointer' }}>🎬</button>
+            <button 
+              onClick={() => setShowCameraChoice(true)} 
+              style={{ 
+                fontSize: '32px', 
+                background: 'none', 
+                border: 'none', 
+                cursor: 'pointer',
+                padding: '5px'
+              }}
+              title="Grabar video"
+            >
+              🎬
+            </button>
+            <button 
+              onClick={() => startImageCapture('user')} 
+              style={{ 
+                fontSize: '32px', 
+                background: 'none', 
+                border: 'none', 
+                cursor: 'pointer',
+                padding: '5px'
+              }}
+              title="Probar cámara frontal"
+            >
+              🤳
+            </button>
           </div>
           {recording === 'audio' && (
             <div style={{ 
@@ -846,12 +971,85 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
       {showImageCapture && (
         <div style={{...modalStyles.overlay}}>
           <div style={{...modalStyles.modal}}>
-            <h3 style={{...modalStyles.title}}>Take Picture</h3>
-            <video ref={previewRef} autoPlay muted playsInline style={{ width: '100%', borderRadius: '8px' }} />
+            <h3 style={{...modalStyles.title}}>Tomar Foto</h3>
+            <div style={{ position: 'relative', marginBottom: '15px' }}>
+              <video 
+                ref={previewRef} 
+                autoPlay 
+                muted 
+                playsInline 
+                style={{ 
+                  width: '100%', 
+                  borderRadius: '8px',
+                  transform: cameraFacing === 'user' ? 'scaleX(-1)' : 'none'
+                }} 
+              />
+              <div style={{
+                position: 'absolute',
+                bottom: '10px',
+                left: '10px',
+                background: 'rgba(0,0,0,0.7)',
+                color: 'white',
+                padding: '5px 10px',
+                borderRadius: '5px',
+                fontSize: '12px'
+              }}>
+                Cámara {cameraFacing === 'user' ? 'frontal' : 'trasera'}
+              </div>
+            </div>
             <canvas ref={canvasRef} style={{ display: 'none' }} />
-            <div style={{ marginTop: '15px', display: 'flex', justifyContent: 'space-around' }}>
-              <button onClick={takePicture} style={{...modalStyles.button, background: '#4CAF50'}}>Take Picture</button>
-              <button onClick={() => { setShowImageCapture(false); _stopCameraStream(); }} style={{...modalStyles.button, background: '#f44336'}}>Cancel</button>
+            <div style={{ marginTop: '15px', display: 'flex', justifyContent: 'space-around', gap: '10px' }}>
+              <button 
+                onClick={() => {
+                  const newFacing = cameraFacing === 'user' ? 'environment' : 'user';
+                  startImageCapture(newFacing);
+                }}
+                style={{
+                  padding: '10px 15px',
+                  background: '#2196F3',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                🔄 Cambiar Cámara
+              </button>
+              <button 
+                onClick={takePicture} 
+                style={{
+                  padding: '10px 20px',
+                  background: '#4CAF50',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: 'bold'
+                }}
+              >
+                📸 Tomar Foto
+              </button>
+            </div>
+            <div style={{ marginTop: '15px', display: 'flex', justifyContent: 'center' }}>
+              <button 
+                onClick={() => { 
+                  setShowImageCapture(false); 
+                  _stopCameraStream(); 
+                }} 
+                style={{
+                  padding: '8px 16px',
+                  background: '#f44336',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Cancelar
+              </button>
             </div>
           </div>
         </div>
