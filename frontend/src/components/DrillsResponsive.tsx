@@ -175,33 +175,6 @@ export default function DrillsResponsive({ onViewTests, onViewShorts }: DrillsRe
           </div>
         </div>
 
-        {/* Grid */}
-        <div
-          className="ag-theme-alpine"
-          style={{
-            flex: 1,
-            width: '100%'
-          }}
-        >
-          <AgGridReact
-            ref={gridRef}
-            rowData={drills}
-            columnDefs={columnDefs}
-            defaultColDef={{
-              sortable: true,
-              filter: false,
-              resizable: false,
-              minWidth: 60
-            }}
-            getRowId={(params) => params.data.id.toString()}
-            onRowClicked={handleRowClick}
-            rowHeight={50}
-            suppressHorizontalScroll={false}
-            domLayout="normal"
-            // Configurar tema legacy para evitar conflictos
-            theme="legacy"          />
-        </div>
-
         {/* Top Navigation */}
         <div style={{
           background: 'white',
@@ -265,6 +238,34 @@ export default function DrillsResponsive({ onViewTests, onViewShorts }: DrillsRe
               <span style={{ fontSize: '11px', fontWeight: 600, color: '#666' }}>Shorts</span>
             </button>
           )}
+        </div>
+
+        {/* Grid */}
+        <div
+          className="ag-theme-alpine"
+          style={{
+            flex: 1,
+            width: '100%',
+            overflow: 'auto'
+          }}
+        >
+          <AgGridReact
+            ref={gridRef}
+            rowData={drills}
+            columnDefs={columnDefs}
+            defaultColDef={{
+              sortable: true,
+              filter: false,
+              resizable: false,
+              minWidth: 60
+            }}
+            getRowId={(params) => params.data.id.toString()}
+            onRowClicked={handleRowClick}
+            rowHeight={50}
+            suppressHorizontalScroll={false}
+            domLayout="normal"
+            // Configurar tema legacy para evitar conflictos
+            theme="legacy"          />
         </div>
       </div>
 
