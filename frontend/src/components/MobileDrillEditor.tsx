@@ -113,6 +113,8 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     const isAndroid = /Android/.test(navigator.userAgent);
     
     console.log('🎤 [Mobile] isIOS:', isIOS, 'isSafari:', isSafari, 'isAndroid:', isAndroid);
+    console.log('🎤 [Mobile] UserAgent completo:', navigator.userAgent);
+    console.log('🎤 [Mobile] Plataforma:', navigator.platform);
 
     try {
       // Primero, detener cualquier stream existente
@@ -146,6 +148,9 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
         return;
       }
 
+      // Detectar Chrome en Windows (según tu diagnóstico)
+      const isChromeWindows = /Chrome/.test(navigator.userAgent) && /Windows/.test(navigator.userAgent);
+      
       // iOS/Safari normalmente solo soporta AAC en MP4
       if (isIOS || isSafari) {
         mimeType = 'audio/mp4';
@@ -164,8 +169,25 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
           mimeType = 'audio/ogg; codecs=opus';
           extension = 'ogg';
         }
+      } else if (isChromeWindows) {
+        // Chrome en Windows: usar webm con opus (según diagnóstico)
+        if (MediaRecorder.isTypeSupported('audio/webm; codecs=opus')) {
+          mimeType = 'audio/webm; codecs=opus';
+          console.log('🎤 [Desktop] Chrome/Windows detectado, usando audio/webm; codecs=opus');
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+          mimeType = 'audio/webm';
+          console.log('🎤 [Desktop] Chrome/Windows detectado, usando audio/webm');
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4';
+          extension = 'mp4';
+          console.log('🎤 [Desktop] Chrome/Windows detectado, usando audio/mp4');
+        } else {
+          mimeType = 'audio/ogg; codecs=opus';
+          extension = 'ogg';
+          console.log('🎤 [Desktop] Chrome/Windows detectado, usando audio/ogg');
+        }
       } else {
-        // Otros navegadores
+        // Otros navegadores/plataformas
         if (MediaRecorder.isTypeSupported('audio/webm; codecs=opus')) {
           mimeType = 'audio/webm; codecs=opus';
         } else if (MediaRecorder.isTypeSupported('audio/webm')) {
