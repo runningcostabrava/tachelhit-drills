@@ -40,6 +40,39 @@ class Test(Base):
     # Relationships
     attempts = relationship("TestAttempt", back_populates="test")
 
+class VideoProcessingJob(Base):
+    __tablename__ = "video_processing_jobs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    date_submitted = Column(DateTime, default=datetime.utcnow, nullable=False)
+    source_url = Column(String, nullable=True)  # Original YouTube URL or similar
+    source_filepath = Column(String, nullable=True) # Path to uploaded file if applicable
+    status = Column(String, default="PENDING", nullable=False) # PENDING, IN_PROGRESS, COMPLETED, FAILED
+    error_message = Column(Text, nullable=True)
+    processing_log = Column(Text, nullable=True) # Store detailed log if needed
+
+    # One-to-many relationship with VideoSegment
+    segments = relationship("VideoSegment", back_populates="job")
+
+class VideoSegment(Base):
+    __tablename__ = "video_segments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(Integer, ForeignKey("video_processing_jobs.id"), nullable=False)
+    segment_start_time = Column(Float, nullable=False) # in seconds
+    segment_end_time = Column(Float, nullable=False)   # in seconds
+    original_transcription = Column(Text, nullable=True)
+    original_language = Column(String, nullable=True) # e.g., "en", "fr"
+    translated_arabic = Column(Text, nullable=True)
+    translated_catalan = Column(Text, nullable=True)
+    translated_tachelhit = Column(Text, nullable=True) # For manual input
+    video_url = Column(String, nullable=True) # URL to the clipped video segment
+    audio_url = Column(String, nullable=True) # URL to the extracted audio segment
+
+    # Many-to-one relationship with VideoProcessingJob
+    job = relationship("VideoProcessingJob", back_populates="segments")
+
+
 class TestAttempt(Base):
     __tablename__ = "test_attempts"
 

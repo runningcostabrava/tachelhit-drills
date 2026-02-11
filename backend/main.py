@@ -23,8 +23,8 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
 
-from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel  # ← Alias for ORM models
-from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort  # ← Pydantic schemas
+from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel  # ← Alias for ORM models
+from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort, VideoProcessingJobCreate, VideoProcessingJob, VideoSegmentCreate, VideoSegment  # ← Pydantic schemas
 from shorts_generator import generate_youtube_short
 
 # Translators
@@ -612,6 +612,98 @@ def delete_short(short_id: int, db: Session = Depends(get_db)):
     db.delete(short)
     db.commit()
     return {"detail": "Deleted"}
+
+# ===================== VIDEO PROCESSING =====================
+
+# Placeholder for background task that would offload to external service
+async def process_video_background_task(job_id: int, source_url: Optional[str], source_filepath: Optional[str], db_session: Session):
+    # In a real scenario, this function would:
+    # 1. Update job status to IN_PROGRESS
+    # 2. Call external services (serverless functions) for:
+    #    a. Video download (if YouTube URL)
+    #    b. Speech-to-Text & Segmentation
+    #    c. Translation (Arabic, Catalan)
+    #    d. Video Clipping & Audio Extraction (using FFmpeg)
+    #    e. Upload results to Cloudinary
+    # 3. Store VideoSegments in DB
+    # 4. Update job status to COMPLETED or FAILED
+
+    print(f"[VIDEO_PROCESSOR] Started background task for Job ID: {job_id}")
+    print(f"[VIDEO_PROCESSOR] Source URL: {source_url}, Source Filepath: {source_filepath}")
+
+    job = db_session.query(VideoProcessingJobModel).filter(VideoProcessingJobModel.id == job_id).first()
+    if job:
+        job.status = "IN_PROGRESS"
+        db_session.add(job)
+        db_session.commit()
+        db_session.refresh(job)
+
+    # Simulate work
+    # await asyncio.sleep(10) # Removed asyncio.sleep for simplicity in current context
+
+    # For now, immediately mark as completed for demonstration
+    if job:
+        job.status = "COMPLETED"
+        job.processing_log = "Simulated successful processing."
+        db_session.add(job)
+        db_session.commit()
+        db_session.refresh(job)
+        print(f"[VIDEO_PROCESSOR] Job {job_id} simulated completion.")
+
+
+@app.post("/video-processing/submit", response_model=VideoProcessingJob)
+async def submit_video_for_processing(
+    background_tasks: BackgroundTasks,
+    source_url: Optional[str] = None,
+    file: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db)
+):
+    if not source_url and not file:
+        raise HTTPException(status_code=400, detail="Either source_url or a file must be provided.")
+    if source_url and file:
+        raise HTTPException(status_code=400, detail="Cannot provide both source_url and a file.")
+
+    source_filepath = None
+    if file:
+        # In a real scenario, upload file to temporary storage (e.g., S3)
+        # For this demo, just note the filename
+        source_filepath = os.path.join("temp_uploads", file.filename) # Conceptual path
+        # You'd save the file content here for later processing if it were local
+        # with open(source_filepath, "wb") as buffer:
+        #     shutil.copyfileobj(file.file, buffer)
+        print(f"[VIDEO_PROCESSING] File uploaded conceptually: {source_filepath}")
+
+    # Create initial job entry
+    job = VideoProcessingJobModel(
+        source_url=source_url,
+        source_filepath=source_filepath,
+        status="PENDING",
+        date_submitted=datetime.utcnow()
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+
+    # Add the processing task to background
+    # Pass a new session to the background task to avoid session conflicts
+    background_tasks.add_task(process_video_background_task, job.id, job.source_url, job.source_filepath, SessionLocal())
+
+    return job
+
+@app.get("/video-processing/{job_id}/status", response_model=VideoProcessingJob)
+def get_video_processing_status(job_id: int, db: Session = Depends(get_db)):
+    job = db.query(VideoProcessingJobModel).filter(VideoProcessingJobModel.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Video processing job not found.")
+    return job
+
+@app.get("/video-processing/{job_id}/segments", response_model=List[VideoSegment])
+def get_video_segments_for_job(job_id: int, db: Session = Depends(get_db)):
+    job = db.query(VideoProcessingJobModel).filter(VideoProcessingJobModel.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Video processing job not found.")
+    return job.segments
+
 
 # ===================== DATA IMPORT =====================
 @app.post("/import-data/")

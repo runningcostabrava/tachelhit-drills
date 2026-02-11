@@ -86,3 +86,42 @@ class YouTubeShort(YouTubeShortBase):
 
     class Config:
         from_attributes = True
+
+# Video Processing Schemas
+class VideoProcessingJobBase(BaseModel):
+    source_url: Optional[str] = None
+    source_filepath: Optional[str] = None
+    status: str = "PENDING"
+    error_message: Optional[str] = None
+    processing_log: Optional[str] = None
+
+class VideoProcessingJobCreate(VideoProcessingJobBase):
+    pass
+
+class VideoProcessingJob(VideoProcessingJobBase):
+    id: int
+    date_submitted: datetime
+    
+    class Config:
+        from_attributes = True
+
+class VideoSegmentBase(BaseModel):
+    job_id: int
+    segment_start_time: float
+    segment_end_time: float
+    original_transcription: Optional[str] = None
+    original_language: Optional[str] = None
+    translated_arabic: Optional[str] = None
+    translated_catalan: Optional[str] = None
+    translated_tachelhit: Optional[str] = None
+    video_url: Optional[str] = None
+    audio_url: Optional[str] = None
+
+class VideoSegmentCreate(VideoSegmentBase):
+    pass
+
+class VideoSegment(VideoSegmentBase):
+    id: int
+    
+    class Config:
+        from_attributes = True
