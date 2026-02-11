@@ -171,22 +171,48 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   };
 
   const handleSpeakCatalan = () => {
-    if (!currentDrill?.text_catalan) return;
+    if (!currentDrill?.text_catalan) {
+      console.log('No hay texto en catalán para sintetizar');
+      return;
+    }
     
     if ('speechSynthesis' in window) {
+      // Cancelar cualquier síntesis en curso
       speechSynthesis.cancel();
+      
+      // Crear una nueva utterance
       const utterance = new SpeechSynthesisUtterance(currentDrill.text_catalan);
       utterance.lang = 'ca-ES';
-      utterance.rate = 1.0;
+      utterance.rate = 0.9; // Un poco más lento para mejor claridad
       utterance.volume = 1.0;
+      utterance.pitch = 1.0;
+      
+      // Configurar eventos
+      utterance.onstart = () => {
+        console.log('Síntesis de voz iniciada');
+      };
+      
+      utterance.onend = () => {
+        console.log('Síntesis de voz finalizada');
+        speechSynthRef.current = null;
+      };
+      
+      utterance.onerror = (event) => {
+        console.error('Error en síntesis de voz:', event);
+        alert('Error al reproducir la voz. Asegúrate de que el volumen esté activado.');
+      };
+      
+      // Guardar referencia y hablar
       speechSynthRef.current = utterance;
       speechSynthesis.speak(utterance);
       
-      utterance.onend = () => {
-        speechSynthRef.current = null;
-      };
+      // En iOS, a veces se necesita un gesto del usuario explícito
+      if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+        console.log('iOS detectado - usando síntesis de voz con gesto del usuario');
+      }
     } else {
-      alert('La síntesis de voz no está disponible en este dispositivo.');
+      console.warn('La síntesis de voz no está disponible en este navegador');
+      alert('La síntesis de voz no está disponible en este dispositivo. Prueba con otro navegador.');
     }
   };
 
@@ -225,18 +251,26 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   // Iniciar sesión automáticamente al cargar (excepto en iOS)
   useEffect(() => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    console.log('Detectado iOS:', isIOS);
+    
+    // Siempre iniciar sesión
+    setSessionStarted(true);
+    
     if (!isIOS) {
-      setSessionStarted(true);
+      console.log('Activando reproducción automática para no iOS');
       setAutoPlayEnabled(true);
-      // Reproducir el primer audio después de un breve retraso
+      // Esperar un poco más para asegurar que el DOM esté listo
       const timer = setTimeout(() => {
+        console.log('Intentando reproducir primer audio');
         if (currentDrill?.audio_url) {
           playCurrentAudio();
+        } else {
+          console.log('No hay URL de audio para el primer drill');
         }
-      }, 500);
+      }, 800);
       return () => clearTimeout(timer);
     } else {
-      setSessionStarted(true);
+      console.log('iOS detectado - desactivando reproducción automática');
       setAutoPlayEnabled(false);
     }
   }, []);
@@ -518,7 +552,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             }}>
               {currentDrill.audio_url ? 
                 `Reproducción ${playCount + 1} de 2` 
-                : 'No hay audio disponible'}
+                : 'No hay audio disponible para este drill'}
             </div>
             
             {/* Botones de control */}
