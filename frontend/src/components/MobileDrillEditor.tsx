@@ -41,7 +41,7 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
   const [showImageCapture, setShowImageCapture] = useState(false);
   // Variables para permisos (mantenidas para futuras expansiones)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [permissionDenied, _setPermissionDenied] = useState<{audio: boolean; video: boolean}>({audio: false, video: false});
+  const [_permissionDenied, _setPermissionDenied] = useState<{audio: boolean; video: boolean}>({audio: false, video: false});
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
