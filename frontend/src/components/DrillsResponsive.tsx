@@ -202,13 +202,13 @@ export default function DrillsResponsive({ onViewTests, onViewShorts }: DrillsRe
             theme="legacy"          />
         </div>
 
-        {/* Bottom Navigation */}
+        {/* Top Navigation */}
         <div style={{
           background: 'white',
-          borderTop: '1px solid #e0e0e0',
+          borderBottom: '1px solid #e0e0e0',
           display: 'grid',
           gridTemplateColumns: '1fr 1fr 1fr',
-          boxShadow: '0 -2px 10px rgba(0,0,0,0.1)'
+          boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
         }}>
           <button
             style={{

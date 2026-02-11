@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import TestTaking from './TestTaking';
 import TestEditPanel from './TestEditPanel';
+import DrillPlayer from './DrillPlayer';
 import { API_BASE } from '../config';
 
 interface Test {
@@ -33,6 +34,7 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
   const [loading, setLoading] = useState(true);
   const [takingTestId, setTakingTestId] = useState<number | null>(null);
   const [editingTestId, setEditingTestId] = useState<number | null>(null);
+  const [playingDrills, setPlayingDrills] = useState<any[] | null>(null);
 
   useEffect(() => {
     fetchTests();
@@ -113,6 +115,18 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
           if (selectedTest) {
             fetchStats(selectedTest.id); // Refresh stats for current test
           }
+        }}
+      />
+    );
+  }
+
+  // If playing drills, show the drill player
+  if (playingDrills !== null) {
+    return (
+      <DrillPlayer
+        drills={playingDrills}
+        onExit={() => {
+          setPlayingDrills(null);
         }}
       />
     );
@@ -311,7 +325,7 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
               )}
 
               {/* Action Buttons */}
-              <div style={{ marginTop: '30px', display: 'flex', gap: '12px' }}>
+              <div style={{ marginTop: '30px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 <button
                   onClick={() => setTakingTestId(selectedTest.id)}
                   style={{
@@ -341,6 +355,32 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
                   }}
                 >
                   ✏️ Edit Test
+                </button>
+                <button
+                  onClick={async () => {
+                    // Load drills for this test
+                    const drillIds = selectedTest.drill_ids.split(',').map((id: string) => parseInt(id));
+                    try {
+                      const drillsResponse = await axios.get(`${API_BASE}/drills/`);
+                      const testDrills = drillsResponse.data.filter((d: any) => drillIds.includes(d.id));
+                      setPlayingDrills(testDrills);
+                    } catch (error) {
+                      console.error('Error loading drills:', error);
+                      alert('Failed to load drills');
+                    }
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    fontSize: '15px',
+                    background: '#9C27B0',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  ▶️ Play Drills
                 </button>
               </div>
             </div>
