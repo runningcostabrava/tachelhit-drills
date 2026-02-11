@@ -103,23 +103,25 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         });
 
         // Update play count after audio finishes
-        setPlayCount(prev => {
-          const newCount = prev + 1;
-          // If we've played twice, move to next drill after a delay
-          if (newCount >= 2) {
-            setTimeout(() => {
-              if (currentIndex < drills.length - 1) {
-                setCurrentIndex(currentIndex + 1);
-              } else {
-                onExit();
-              }
-            }, 1000);
-          } else {
-            // If we've only played once, play again without speech synthesis
-            // This will trigger the effect again because playCount changes
-          }
-          return newCount;
-        });
+        const newCount = playCount + 1;
+        setPlayCount(newCount);
+        
+        // If we've played twice, move to next drill after a delay
+        if (newCount >= 2) {
+          setTimeout(() => {
+            if (currentIndex < drills.length - 1) {
+              setCurrentIndex(currentIndex + 1);
+            } else {
+              onExit();
+            }
+          }, 1000);
+        } else {
+          // If we've only played once, play again without speech synthesis
+          // We'll trigger another play by using a timeout to allow state to update
+          setTimeout(() => {
+            // This will cause the effect to run again because playCount changed
+          }, 100);
+        }
       };
 
       playSequence();
@@ -218,11 +220,11 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '20px'
+        padding: window.innerWidth < 768 ? '10px' : '20px'
       }}>
         <div style={{
           background: 'white',
-          padding: '30px',
+          padding: window.innerWidth < 768 ? '20px' : '30px',
           borderRadius: '16px',
           maxWidth: '600px',
           width: '100%',
@@ -231,13 +233,13 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         }}>
           {/* Image */}
           {currentDrill.image_url && (
-            <div style={{ marginBottom: '30px' }}>
+            <div style={{ marginBottom: window.innerWidth < 768 ? '20px' : '30px' }}>
               <img
                 src={getMediaUrl(currentDrill.image_url)}
                 alt="Drill visual"
                 style={{
                   maxWidth: '100%',
-                  maxHeight: '200px',
+                  maxHeight: window.innerWidth < 768 ? '150px' : '200px',
                   borderRadius: '12px',
                   objectFit: 'contain'
                 }}
@@ -246,32 +248,63 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
           )}
 
           {/* Catalan */}
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ fontSize: '14px', color: '#667eea', fontWeight: 600, marginBottom: '8px' }}>
+          <div style={{ marginBottom: window.innerWidth < 768 ? '16px' : '20px' }}>
+            <div style={{ 
+              fontSize: window.innerWidth < 768 ? '12px' : '14px', 
+              color: '#667eea', 
+              fontWeight: 600, 
+              marginBottom: '6px' 
+            }}>
               Català
             </div>
-            <div style={{ fontSize: '24px', fontWeight: 700, color: '#333' }}>
+            <div style={{ 
+              fontSize: window.innerWidth < 768 ? '20px' : '24px', 
+              fontWeight: 700, 
+              color: '#333',
+              lineHeight: 1.3
+            }}>
               {currentDrill.text_catalan || 'No text'}
             </div>
           </div>
 
           {/* Tachelhit */}
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ fontSize: '14px', color: '#4CAF50', fontWeight: 600, marginBottom: '8px' }}>
+          <div style={{ marginBottom: window.innerWidth < 768 ? '16px' : '20px' }}>
+            <div style={{ 
+              fontSize: window.innerWidth < 768 ? '12px' : '14px', 
+              color: '#4CAF50', 
+              fontWeight: 600, 
+              marginBottom: '6px' 
+            }}>
               Tachelhit
             </div>
-            <div style={{ fontSize: '22px', fontWeight: 600, color: '#2e7d32' }}>
+            <div style={{ 
+              fontSize: window.innerWidth < 768 ? '18px' : '22px', 
+              fontWeight: 600, 
+              color: '#2e7d32',
+              lineHeight: 1.3
+            }}>
               {currentDrill.text_tachelhit || 'No text'}
             </div>
           </div>
 
           {/* Arabic */}
           {currentDrill.text_arabic && (
-            <div style={{ marginBottom: '30px' }}>
-              <div style={{ fontSize: '14px', color: '#9C27B0', fontWeight: 600, marginBottom: '8px' }}>
+            <div style={{ marginBottom: window.innerWidth < 768 ? '20px' : '30px' }}>
+              <div style={{ 
+                fontSize: window.innerWidth < 768 ? '11px' : '14px', 
+                color: '#9C27B0', 
+                fontWeight: 600, 
+                marginBottom: '6px' 
+              }}>
                 العربية
               </div>
-              <div style={{ fontSize: '22px', fontWeight: 600, color: '#7b1fa2', direction: 'rtl' }}>
+              <div style={{ 
+                fontSize: window.innerWidth < 768 ? '16px' : '22px', 
+                fontWeight: 600, 
+                color: '#7b1fa2', 
+                direction: 'rtl',
+                lineHeight: 1.4
+              }}>
                 {currentDrill.text_arabic}
               </div>
             </div>
@@ -279,51 +312,101 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
 
           {/* Audio Status */}
           <div style={{
-            padding: '16px',
+            padding: window.innerWidth < 768 ? '12px' : '16px',
             background: isPlaying ? '#e8f5e9' : '#fff3cd',
             border: `2px solid ${isPlaying ? '#4CAF50' : '#FFC107'}`,
             borderRadius: '12px',
-            marginBottom: '30px'
+            marginBottom: window.innerWidth < 768 ? '20px' : '30px'
           }}>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: isPlaying ? '#2e7d32' : '#856404' }}>
-              {isPlaying ? '🔊 Playing audio...' : '⏸ Ready'}
+            <div style={{ 
+              fontSize: window.innerWidth < 768 ? '14px' : '16px', 
+              fontWeight: 600, 
+              color: isPlaying ? '#2e7d32' : '#856404',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}>
+              <span>{isPlaying ? '🔊' : '⏸'}</span>
+              <span>{isPlaying ? 'Playing audio...' : 'Ready'}</span>
             </div>
-            <div style={{ fontSize: '14px', color: '#666', marginTop: '8px' }}>
+            <div style={{ 
+              fontSize: window.innerWidth < 768 ? '12px' : '14px', 
+              color: '#666', 
+              marginTop: '6px' 
+            }}>
               {currentDrill.audio_url ? 
                 (playCount === 0 ? 'First: Catalan speech + audio' : `Second: audio only (${playCount}/2)`) 
                 : 'No audio available'}
             </div>
+            {/* Manual speech synthesis button for mobile */}
+            {playCount === 0 && currentDrill.text_catalan && window.innerWidth < 768 && (
+              <button
+                onClick={() => {
+                  if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance(currentDrill.text_catalan);
+                    utterance.lang = 'ca-ES';
+                    utterance.rate = 1.2;
+                    utterance.volume = 0.8;
+                    speechSynthesis.speak(utterance);
+                  } else {
+                    alert('Speech synthesis not supported on this device');
+                  }
+                }}
+                style={{
+                  marginTop: '10px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  background: '#667eea',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                🔊 Speak Catalan Text
+              </button>
+            )}
           </div>
 
           {/* Controls */}
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+          <div style={{ 
+            display: 'flex', 
+            gap: window.innerWidth < 768 ? '8px' : '12px', 
+            justifyContent: 'center',
+            flexWrap: window.innerWidth < 768 ? 'wrap' : 'nowrap'
+          }}>
             <button
               onClick={handlePrev}
               disabled={currentIndex === 0}
               style={{
-                padding: '12px 24px',
-                fontSize: '16px',
+                padding: window.innerWidth < 768 ? '10px 16px' : '12px 24px',
+                fontSize: window.innerWidth < 768 ? '14px' : '16px',
                 background: currentIndex === 0 ? '#ccc' : '#2196F3',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
                 cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
                 fontWeight: 600,
+                flex: window.innerWidth < 768 ? '1 1 calc(33% - 6px)' : 'none',
+                minWidth: window.innerWidth < 768 ? 'calc(33% - 6px)' : 'auto'
               }}
             >
-              ← Previous
+              ← Prev
             </button>
             <button
               onClick={handleReplay}
               style={{
-                padding: '12px 24px',
-                fontSize: '16px',
+                padding: window.innerWidth < 768 ? '10px 16px' : '12px 24px',
+                fontSize: window.innerWidth < 768 ? '14px' : '16px',
                 background: '#FFC107',
                 color: '#333',
                 border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 fontWeight: 600,
+                flex: window.innerWidth < 768 ? '1 1 calc(34% - 6px)' : 'none',
+                minWidth: window.innerWidth < 768 ? 'calc(34% - 6px)' : 'auto'
               }}
             >
               🔄 Replay
@@ -331,14 +414,16 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             <button
               onClick={handleNext}
               style={{
-                padding: '12px 24px',
-                fontSize: '16px',
+                padding: window.innerWidth < 768 ? '10px 16px' : '12px 24px',
+                fontSize: window.innerWidth < 768 ? '14px' : '16px',
                 background: '#4CAF50',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 fontWeight: 600,
+                flex: window.innerWidth < 768 ? '1 1 calc(33% - 6px)' : 'none',
+                minWidth: window.innerWidth < 768 ? 'calc(33% - 6px)' : 'auto'
               }}
             >
               {currentIndex < drills.length - 1 ? 'Next →' : 'Finish'}
