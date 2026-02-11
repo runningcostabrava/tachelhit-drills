@@ -616,85 +616,145 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
             </div>
           )}
 
-          {/* Question */}
-          <h1 style={{
-            fontSize: '36px',
-            textAlign: 'center',
-            marginBottom: '40px',
-            color: '#333'
-          }}>
-            {currentDrill.text_catalan}
-          </h1>
+          {/* Question - Smaller on mobile */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{
+              fontSize: window.innerWidth < 768 ? '24px' : '36px',
+              textAlign: 'center',
+              color: '#333',
+              fontWeight: 600,
+              lineHeight: 1.3
+            }}>
+              {currentDrill.text_catalan}
+            </div>
+            {/* Arabic text - very small, no title */}
+            {currentDrill.text_arabic && (
+              <div style={{
+                fontSize: window.innerWidth < 768 ? '14px' : '16px',
+                textAlign: 'center',
+                color: '#666',
+                direction: 'rtl',
+                marginTop: '8px',
+                padding: '8px',
+                background: '#f8f9fa',
+                borderRadius: '6px'
+              }}>
+                {currentDrill.text_arabic}
+              </div>
+            )}
+          </div>
 
-          {/* Media Section */}
+          {/* Media Section - Compact */}
           {(test.question_type === 'audio' || test.question_type === 'video' || test.question_type === 'combined') && (
-            <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+            <div style={{ 
+              textAlign: 'center', 
+              marginBottom: window.innerWidth < 768 ? '20px' : '30px',
+              display: 'flex',
+              flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+              gap: '10px',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}>
               {/* Audio playback */}
               {currentDrill.audio_url && (test.question_type === 'audio' || test.question_type === 'combined') && (
-                <div style={{ marginBottom: '16px' }}>
-                  <button
-                    onClick={handlePlayMedia}
-                    disabled={playing}
-                    style={{
-                      padding: '12px 24px',
-                      fontSize: '16px',
-                      background: playing ? '#ccc' : '#4CAF50',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: playing ? 'not-allowed' : 'pointer',
-                      fontWeight: 600,
-                    }}
-                  >
-                    {playing ? '🔊 Playing...' : '🔊 Play Audio'}
-                  </button>
-                </div>
+                <button
+                  onClick={handlePlayMedia}
+                  disabled={playing}
+                  style={{
+                    padding: window.innerWidth < 768 ? '10px 16px' : '12px 24px',
+                    fontSize: window.innerWidth < 768 ? '14px' : '16px',
+                    background: playing ? '#ccc' : '#4CAF50',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: playing ? 'not-allowed' : 'pointer',
+                    fontWeight: 600,
+                    flex: window.innerWidth < 768 ? '1' : 'none',
+                    width: window.innerWidth < 768 ? '100%' : 'auto',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <span>{playing ? '🔊' : '🔊'}</span>
+                  <span>{playing ? 'Playing...' : 'Play Audio'}</span>
+                </button>
               )}
 
               {/* Video playback */}
               {currentDrill.video_url && (test.question_type === 'video' || test.question_type === 'combined') && (
-                <div>
-                  <video
-                    key={currentDrill.id}
-                    src={getMediaUrl(currentDrill.video_url)}
-                    controls
-                    style={{
-                      width: '100%',
-                      maxWidth: '600px',
-                      maxHeight: '300px',
-                      borderRadius: '8px',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                    }}
-                  />
-                </div>
+                <button
+                  onClick={() => {
+                    const videoUrl = getMediaUrl(currentDrill.video_url);
+                    window.open(videoUrl, '_blank');
+                  }}
+                  style={{
+                    padding: window.innerWidth < 768 ? '10px 16px' : '12px 24px',
+                    fontSize: window.innerWidth < 768 ? '14px' : '16px',
+                    background: '#2196F3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    flex: window.innerWidth < 768 ? '1' : 'none',
+                    width: window.innerWidth < 768 ? '100%' : 'auto',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <span>🎥</span>
+                  <span>Open Video</span>
+                </button>
               )}
 
               {/* Fallback message if no media available in combined mode */}
               {test.question_type === 'combined' && !currentDrill.audio_url && !currentDrill.video_url && (
                 <div style={{
-                  padding: '12px',
+                  padding: '10px',
                   background: '#fff3cd',
                   borderRadius: '8px',
-                  fontSize: '14px',
-                  color: '#856404'
+                  fontSize: window.innerWidth < 768 ? '12px' : '14px',
+                  color: '#856404',
+                  width: '100%'
                 }}>
-                  💡 No audio/video available for this question
+                  💡 No audio/video available
                 </div>
               )}
             </div>
           )}
 
-          {/* Answer Input */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: '10px',
-              fontSize: '16px',
-              fontWeight: 600,
-              color: '#555'
+          {/* Answer Input - Compact */}
+          <div style={{ marginBottom: window.innerWidth < 768 ? '16px' : '20px' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '8px'
             }}>
-              Your answer in Tachelhit:
-            </label>
+              <label style={{
+                fontSize: window.innerWidth < 768 ? '14px' : '16px',
+                fontWeight: 600,
+                color: '#555'
+              }}>
+                Your answer in Tachelhit:
+              </label>
+              {timeRemaining !== null && (
+                <div style={{
+                  fontSize: window.innerWidth < 768 ? '14px' : '16px',
+                  fontWeight: 'bold',
+                  color: timeRemaining < 10 ? '#ff4444' : '#667eea',
+                  background: '#f0f4ff',
+                  padding: '4px 10px',
+                  borderRadius: '12px'
+                }}>
+                  ⏱ {timeRemaining}s
+                </div>
+              )}
+            </div>
             <input
               type="text"
               value={userAnswer}
@@ -704,12 +764,12 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                   handleSubmitAnswer();
                 }
               }}
-              placeholder="Type your answer here..."
+              placeholder="Type here..."
               autoFocus
               style={{
                 width: '100%',
-                padding: '16px',
-                fontSize: '18px',
+                padding: window.innerWidth < 768 ? '12px' : '16px',
+                fontSize: window.innerWidth < 768 ? '16px' : '18px',
                 border: '2px solid #ddd',
                 borderRadius: '8px',
                 outline: 'none',
@@ -720,98 +780,127 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
             />
           </div>
 
-          {/* Hint Display */}
+          {/* Hint Display - Compact */}
           {showHint && hintText && (
             <div style={{
-              padding: '16px',
+              padding: window.innerWidth < 768 ? '12px' : '16px',
               background: '#fff3cd',
               border: '1px solid #ffc107',
               borderRadius: '8px',
-              marginBottom: '20px'
+              marginBottom: window.innerWidth < 768 ? '16px' : '20px',
+              fontSize: window.innerWidth < 768 ? '14px' : '15px'
             }}>
               <strong>💡 Hint:</strong> {hintText}
             </div>
           )}
 
-          {/* Correct Answer Display */}
+          {/* Correct Answer Display - Compact */}
           {showCorrectAnswer && currentDrill && (
             <div style={{
-              padding: '16px',
+              padding: window.innerWidth < 768 ? '12px' : '16px',
               background: '#e8f5e9',
               border: '2px solid #4CAF50',
               borderRadius: '8px',
-              marginBottom: '20px'
+              marginBottom: window.innerWidth < 768 ? '16px' : '20px'
             }}>
-              <strong style={{ color: '#2e7d32' }}>✓ Correct Answer:</strong>
-              <p style={{ margin: '8px 0 0 0', fontSize: '18px', fontWeight: 600, color: '#2e7d32' }}>
+              <div style={{ 
+                fontSize: window.innerWidth < 768 ? '14px' : '16px',
+                fontWeight: 600,
+                color: '#2e7d32',
+                marginBottom: '6px'
+              }}>
+                ✓ Correct Answer:
+              </div>
+              <div style={{ 
+                fontSize: window.innerWidth < 768 ? '16px' : '18px',
+                fontWeight: 600,
+                color: '#2e7d32'
+              }}>
                 {currentDrill.text_tachelhit}
-              </p>
+              </div>
             </div>
           )}
 
-          {/* Feedback after wrong answer */}
+          {/* Feedback after wrong answer - Compact */}
           {attempts > 0 && !showCorrectAnswer && (
             <div style={{
-              padding: '16px',
+              padding: window.innerWidth < 768 ? '12px' : '16px',
               background: '#ffebee',
               border: '1px solid #ff4444',
               borderRadius: '8px',
-              marginBottom: '20px'
+              marginBottom: window.innerWidth < 768 ? '16px' : '20px'
             }}>
-              <div style={{ marginBottom: '8px', color: '#c62828', fontSize: '15px', fontWeight: 600 }}>
+              <div style={{ 
+                color: '#c62828', 
+                fontSize: window.innerWidth < 768 ? '14px' : '15px', 
+                fontWeight: 600,
+                marginBottom: '8px'
+              }}>
                 ✗ Not quite right. Attempts: {attempts}
               </div>
-              <button
-                onClick={() => setShowCorrectAnswer(true)}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '14px',
-                  background: '#4CAF50',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  marginRight: '8px'
-                }}
-              >
-                👁 Show Answer
-              </button>
-              <button
-                onClick={handleNextQuestion}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '14px',
-                  background: '#2196F3',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                }}
-              >
-                Next Question →
-              </button>
+              <div style={{
+                display: 'flex',
+                gap: '8px',
+                flexWrap: window.innerWidth < 768 ? 'wrap' : 'nowrap'
+              }}>
+                <button
+                  onClick={() => setShowCorrectAnswer(true)}
+                  style={{
+                    flex: window.innerWidth < 768 ? '1 1 calc(50% - 4px)' : 'none',
+                    padding: window.innerWidth < 768 ? '8px 12px' : '8px 16px',
+                    fontSize: window.innerWidth < 768 ? '13px' : '14px',
+                    background: '#4CAF50',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  👁 Show Answer
+                </button>
+                <button
+                  onClick={handleNextQuestion}
+                  style={{
+                    flex: window.innerWidth < 768 ? '1 1 calc(50% - 4px)' : 'none',
+                    padding: window.innerWidth < 768 ? '8px 12px' : '8px 16px',
+                    fontSize: window.innerWidth < 768 ? '13px' : '14px',
+                    background: '#2196F3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  Next →
+                </button>
+              </div>
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '12px' }}>
+          {/* Action Buttons - Always visible and responsive */}
+          <div style={{ 
+            display: 'flex', 
+            gap: window.innerWidth < 768 ? '8px' : '12px',
+            flexWrap: 'wrap'
+          }}>
             {!showCorrectAnswer ? (
               <>
                 <button
                   onClick={() => handleSubmitAnswer()}
                   disabled={!userAnswer.trim()}
                   style={{
-                    flex: 1,
-                    padding: '16px',
-                    fontSize: '16px',
+                    flex: window.innerWidth < 768 ? '1 1 100%' : 1,
+                    padding: window.innerWidth < 768 ? '14px' : '16px',
+                    fontSize: window.innerWidth < 768 ? '15px' : '16px',
                     background: userAnswer.trim() ? '#4CAF50' : '#ccc',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
                     cursor: userAnswer.trim() ? 'pointer' : 'not-allowed',
                     fontWeight: 600,
+                    minWidth: window.innerWidth < 768 ? '100%' : 'auto'
                   }}
                 >
                   ✓ Submit Answer
@@ -821,14 +910,16 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                   <button
                     onClick={handleRequestHint}
                     style={{
-                      padding: '16px 24px',
-                      fontSize: '16px',
+                      flex: window.innerWidth < 768 ? '1 1 calc(50% - 4px)' : 'none',
+                      padding: window.innerWidth < 768 ? '12px' : '16px 24px',
+                      fontSize: window.innerWidth < 768 ? '14px' : '16px',
                       background: '#FFC107',
                       color: '#333',
                       border: 'none',
                       borderRadius: '8px',
                       cursor: 'pointer',
                       fontWeight: 600,
+                      minWidth: window.innerWidth < 768 ? 'calc(50% - 4px)' : 'auto'
                     }}
                   >
                     💡 Hint
@@ -839,17 +930,60 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                   <button
                     onClick={handleRequestHint}
                     style={{
-                      padding: '16px 24px',
-                      fontSize: '16px',
+                      flex: window.innerWidth < 768 ? '1 1 calc(50% - 4px)' : 'none',
+                      padding: window.innerWidth < 768 ? '12px' : '16px 24px',
+                      fontSize: window.innerWidth < 768 ? '14px' : '16px',
                       background: '#FFC107',
                       color: '#333',
                       border: 'none',
                       borderRadius: '8px',
                       cursor: 'pointer',
                       fontWeight: 600,
+                      minWidth: window.innerWidth < 768 ? 'calc(50% - 4px)' : 'auto'
                     }}
                   >
                     💡 More Hint
+                  </button>
+                )}
+
+                {/* Show Answer button for wrong attempts */}
+                {attempts > 0 && !showCorrectAnswer && (
+                  <button
+                    onClick={() => setShowCorrectAnswer(true)}
+                    style={{
+                      flex: window.innerWidth < 768 ? '1 1 calc(50% - 4px)' : 'none',
+                      padding: window.innerWidth < 768 ? '12px' : '8px 16px',
+                      fontSize: window.innerWidth < 768 ? '14px' : '14px',
+                      background: '#9C27B0',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      minWidth: window.innerWidth < 768 ? 'calc(50% - 4px)' : 'auto'
+                    }}
+                  >
+                    👁 Show Answer
+                  </button>
+                )}
+
+                {/* Skip button for mobile */}
+                {window.innerWidth < 768 && (
+                  <button
+                    onClick={handleNextQuestion}
+                    style={{
+                      flex: '1 1 calc(50% - 4px)',
+                      padding: '12px',
+                      fontSize: '14px',
+                      background: '#666',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Skip →
                   </button>
                 )}
               </>
@@ -858,14 +992,15 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                 onClick={handleNextQuestion}
                 style={{
                   flex: 1,
-                  padding: '16px',
-                  fontSize: '16px',
+                  padding: window.innerWidth < 768 ? '14px' : '16px',
+                  fontSize: window.innerWidth < 768 ? '15px' : '16px',
                   background: '#2196F3',
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontWeight: 600,
+                  minWidth: window.innerWidth < 768 ? '100%' : 'auto'
                 }}
               >
                 Continue to Next Question →
