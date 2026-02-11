@@ -214,22 +214,24 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         </button>
       </div>
 
-      {/* Content */}
+      {/* Content - Better mobile layout */}
       <div style={{
         flex: 1,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: window.innerWidth < 768 ? '10px' : '20px'
+        padding: window.innerWidth < 768 ? '10px' : '20px',
+        overflowY: 'auto'
       }}>
         <div style={{
           background: 'white',
-          padding: window.innerWidth < 768 ? '20px' : '30px',
+          padding: window.innerWidth < 768 ? '16px' : '30px',
           borderRadius: '16px',
           maxWidth: '600px',
           width: '100%',
           boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
-          textAlign: 'center'
+          textAlign: 'center',
+          margin: window.innerWidth < 768 ? '10px 0' : '0'
         }}>
           {/* Image */}
           {currentDrill.image_url && (
@@ -287,20 +289,26 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             </div>
           </div>
 
-          {/* Arabic */}
+          {/* Arabic - Smaller and less prominent */}
           {currentDrill.text_arabic && (
-            <div style={{ marginBottom: window.innerWidth < 768 ? '20px' : '30px' }}>
+            <div style={{ 
+              marginBottom: window.innerWidth < 768 ? '12px' : '20px',
+              padding: window.innerWidth < 768 ? '8px' : '12px',
+              background: '#f8f9fa',
+              borderRadius: '8px'
+            }}>
               <div style={{ 
-                fontSize: window.innerWidth < 768 ? '11px' : '14px', 
+                fontSize: window.innerWidth < 768 ? '10px' : '12px', 
                 color: '#9C27B0', 
                 fontWeight: 600, 
-                marginBottom: '6px' 
+                marginBottom: '4px',
+                opacity: 0.8
               }}>
                 العربية
               </div>
               <div style={{ 
-                fontSize: window.innerWidth < 768 ? '16px' : '22px', 
-                fontWeight: 600, 
+                fontSize: window.innerWidth < 768 ? '14px' : '18px', 
+                fontWeight: 500, 
                 color: '#7b1fa2', 
                 direction: 'rtl',
                 lineHeight: 1.4
@@ -310,37 +318,38 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             </div>
           )}
 
-          {/* Audio Status */}
+          {/* Audio Status - Clearer */}
           <div style={{
-            padding: window.innerWidth < 768 ? '12px' : '16px',
+            padding: window.innerWidth < 768 ? '14px' : '16px',
             background: isPlaying ? '#e8f5e9' : '#fff3cd',
             border: `2px solid ${isPlaying ? '#4CAF50' : '#FFC107'}`,
             borderRadius: '12px',
-            marginBottom: window.innerWidth < 768 ? '20px' : '30px'
+            marginBottom: window.innerWidth < 768 ? '16px' : '24px'
           }}>
             <div style={{ 
-              fontSize: window.innerWidth < 768 ? '14px' : '16px', 
-              fontWeight: 600, 
+              fontSize: window.innerWidth < 768 ? '15px' : '16px', 
+              fontWeight: 700, 
               color: isPlaying ? '#2e7d32' : '#856404',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px'
+              gap: '10px',
+              marginBottom: '8px'
             }}>
-              <span>{isPlaying ? '🔊' : '⏸'}</span>
-              <span>{isPlaying ? 'Playing audio...' : 'Ready'}</span>
+              <span style={{ fontSize: '20px' }}>{isPlaying ? '🔊' : '⏸'}</span>
+              <span>{isPlaying ? 'Playing audio...' : 'Ready to play'}</span>
             </div>
             <div style={{ 
-              fontSize: window.innerWidth < 768 ? '12px' : '14px', 
+              fontSize: window.innerWidth < 768 ? '13px' : '14px', 
               color: '#666', 
-              marginTop: '6px' 
+              marginBottom: '10px'
             }}>
               {currentDrill.audio_url ? 
-                (playCount === 0 ? 'First: Catalan speech + audio' : `Second: audio only (${playCount}/2)`) 
+                (playCount === 0 ? 'Step 1: Catalan speech + audio' : `Step 2: audio only (${playCount}/2)`) 
                 : 'No audio available'}
             </div>
-            {/* Manual speech synthesis button for mobile */}
-            {playCount === 0 && currentDrill.text_catalan && window.innerWidth < 768 && (
+            {/* Manual speech synthesis button - Always visible if needed */}
+            {playCount === 0 && currentDrill.text_catalan && (
               <button
                 onClick={() => {
                   if ('speechSynthesis' in window) {
@@ -354,80 +363,110 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                   }
                 }}
                 style={{
-                  marginTop: '10px',
-                  padding: '6px 12px',
-                  fontSize: '12px',
+                  width: '100%',
+                  padding: window.innerWidth < 768 ? '10px' : '8px 12px',
+                  fontSize: window.innerWidth < 768 ? '14px' : '13px',
                   background: '#667eea',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
                 }}
               >
-                🔊 Speak Catalan Text
+                <span>🔊</span>
+                <span>Speak Catalan Text</span>
               </button>
             )}
           </div>
 
-          {/* Controls */}
+          {/* Controls - Improved for mobile */}
           <div style={{ 
             display: 'flex', 
-            gap: window.innerWidth < 768 ? '8px' : '12px', 
+            gap: window.innerWidth < 768 ? '10px' : '12px', 
             justifyContent: 'center',
-            flexWrap: window.innerWidth < 768 ? 'wrap' : 'nowrap'
+            flexWrap: window.innerWidth < 768 ? 'wrap' : 'nowrap',
+            marginTop: window.innerWidth < 768 ? '20px' : '0'
           }}>
             <button
               onClick={handlePrev}
               disabled={currentIndex === 0}
               style={{
-                padding: window.innerWidth < 768 ? '10px 16px' : '12px 24px',
-                fontSize: window.innerWidth < 768 ? '14px' : '16px',
+                padding: window.innerWidth < 768 ? '14px 20px' : '12px 24px',
+                fontSize: window.innerWidth < 768 ? '16px' : '16px',
                 background: currentIndex === 0 ? '#ccc' : '#2196F3',
                 color: 'white',
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: '10px',
                 cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
-                fontWeight: 600,
-                flex: window.innerWidth < 768 ? '1 1 calc(33% - 6px)' : 'none',
-                minWidth: window.innerWidth < 768 ? 'calc(33% - 6px)' : 'auto'
+                fontWeight: 700,
+                flex: window.innerWidth < 768 ? '1 1 100%' : 'none',
+                minWidth: window.innerWidth < 768 ? '100%' : 'auto',
+                boxShadow: '0 4px 8px rgba(33, 150, 243, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
               }}
             >
-              ← Prev
+              <span>←</span>
+              <span>Previous</span>
             </button>
-            <button
-              onClick={handleReplay}
-              style={{
-                padding: window.innerWidth < 768 ? '10px 16px' : '12px 24px',
-                fontSize: window.innerWidth < 768 ? '14px' : '16px',
-                background: '#FFC107',
-                color: '#333',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 600,
-                flex: window.innerWidth < 768 ? '1 1 calc(34% - 6px)' : 'none',
-                minWidth: window.innerWidth < 768 ? 'calc(34% - 6px)' : 'auto'
-              }}
-            >
-              🔄 Replay
-            </button>
-            <button
-              onClick={handleNext}
-              style={{
-                padding: window.innerWidth < 768 ? '10px 16px' : '12px 24px',
-                fontSize: window.innerWidth < 768 ? '14px' : '16px',
-                background: '#4CAF50',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 600,
-                flex: window.innerWidth < 768 ? '1 1 calc(33% - 6px)' : 'none',
-                minWidth: window.innerWidth < 768 ? 'calc(33% - 6px)' : 'auto'
-              }}
-            >
-              {currentIndex < drills.length - 1 ? 'Next →' : 'Finish'}
-            </button>
+            <div style={{
+              display: 'flex',
+              gap: window.innerWidth < 768 ? '10px' : '12px',
+              width: window.innerWidth < 768 ? '100%' : 'auto',
+              flex: window.innerWidth < 768 ? '1 1 100%' : 'none'
+            }}>
+              <button
+                onClick={handleReplay}
+                style={{
+                  padding: window.innerWidth < 768 ? '14px 20px' : '12px 24px',
+                  fontSize: window.innerWidth < 768 ? '16px' : '16px',
+                  background: '#FFC107',
+                  color: '#333',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  flex: 1,
+                  boxShadow: '0 4px 8px rgba(255, 193, 7, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                <span>🔄</span>
+                <span>Replay</span>
+              </button>
+              <button
+                onClick={handleNext}
+                style={{
+                  padding: window.innerWidth < 768 ? '14px 20px' : '12px 24px',
+                  fontSize: window.innerWidth < 768 ? '16px' : '16px',
+                  background: '#4CAF50',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  flex: 1,
+                  boxShadow: '0 4px 8px rgba(76, 175, 80, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                <span>{currentIndex < drills.length - 1 ? 'Next' : 'Finish'}</span>
+                <span>→</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
