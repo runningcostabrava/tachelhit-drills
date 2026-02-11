@@ -4,20 +4,45 @@ from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 
-# Try to import moviepy components
+# Try to import moviepy components and configure ffmpeg
 MOVIEPY_AVAILABLE = False
 try:
+    # Attempt to set FFMPEG binary from imageio-ffmpeg before importing moviepy
+    import imageio_ffmpeg
+    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+    if ffmpeg_path and os.path.exists(ffmpeg_path):
+        # Set environment variable for moviepy to use this ffmpeg
+        os.environ["FFMPEG_BINARY"] = ffmpeg_path
+        print(f"[SHORTS] Found ffmpeg at: {ffmpeg_path}")
+    else:
+        print("[SHORTS] imageio-ffmpeg did not return a valid ffmpeg path")
+except Exception as e:
+    print(f"[SHORTS] Could not configure ffmpeg via imageio-ffmpeg: {e}")
+
+try:
+    # Now import moviepy components
     from moviepy.video.VideoClip import ImageClip
     from moviepy.video.io.VideoFileClip import VideoFileClip
     from moviepy.audio.io.AudioFileClip import AudioFileClip
     from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
     from moviepy.video.compositing.concatenate import concatenate_videoclips
+    
+    # Additionally, try to set moviepy's config
+    import moviepy.config
+    if 'FFMPEG_BINARY' in os.environ:
+        moviepy.config.FFMPEG_BINARY = os.environ["FFMPEG_BINARY"]
+        print(f"[SHORTS] Set moviepy FFMPEG_BINARY to: {moviepy.config.FFMPEG_BINARY}")
+    
     MOVIEPY_AVAILABLE = True
+    print("[SHORTS] MoviePy imported successfully")
 except ImportError as e:
     print(f"[SHORTS] MoviePy import error: {e}")
     # Check if it's a missing dependency
     if "ffmpeg" in str(e).lower():
         print("[SHORTS] FFmpeg may not be installed. On Render, add 'imageio-ffmpeg' to requirements.txt")
+    MOVIEPY_AVAILABLE = False
+except Exception as e:
+    print(f"[SHORTS] Other error during MoviePy setup: {e}")
     MOVIEPY_AVAILABLE = False
 
 SHORTS_DIR = "media/shorts"
@@ -30,10 +55,11 @@ SHORT_HEIGHT = 1920
 def check_moviepy():
     """Helper to check if moviepy is available and raise informative error."""
     if not MOVIEPY_AVAILABLE:
-        raise ImportError(
-            "MoviePy not available. Please install: pip install moviepy imageio-ffmpeg opencv-python-headless\n"
-            "If on Render, ensure these are in requirements.txt."
-        )
+        # Provide more detailed diagnostics
+        missing_msg = "MoviePy not available. Please install: pip install moviepy imageio-ffmpeg opencv-python-headless\n"
+        missing_msg += "If on Render, ensure these are in requirements.txt.\n"
+        missing_msg += "Also ensure ffmpeg system binary is available (apt-get install ffmpeg)."
+        raise ImportError(missing_msg)
 
 def generate_youtube_short(drill_data, output_filename):
     """

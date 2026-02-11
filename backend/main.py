@@ -882,6 +882,44 @@ def get_video_segments_for_job(job_id: int, db: Session = Depends(get_db)):
     return job.segments
 
 
+# ===================== DEBUG ENDPOINTS =====================
+@app.get("/debug/moviepy")
+def debug_moviepy():
+    """Check if moviepy and ffmpeg are working."""
+    try:
+        from shorts_generator import MOVIEPY_AVAILABLE
+        status = {
+            "moviepy_available": MOVIEPY_AVAILABLE,
+            "requirements_installed": True,
+        }
+        
+        # Try to import imageio_ffmpeg
+        try:
+            import imageio_ffmpeg
+            ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+            status["imageio_ffmpeg"] = {
+                "version": imageio_ffmpeg.__version__,
+                "ffmpeg_path": ffmpeg_path,
+                "path_exists": os.path.exists(ffmpeg_path) if ffmpeg_path else False
+            }
+        except Exception as e:
+            status["imageio_ffmpeg_error"] = str(e)
+        
+        # Try to import moviepy components
+        if MOVIEPY_AVAILABLE:
+            try:
+                from moviepy.video.VideoClip import ImageClip
+                from moviepy.video.io.VideoFileClip import VideoFileClip
+                status["moviepy_import"] = "success"
+            except Exception as e:
+                status["moviepy_import_error"] = str(e)
+        else:
+            status["moviepy_import"] = "failed"
+        
+        return status
+    except Exception as e:
+        return {"error": str(e), "traceback": str(__import__("traceback").format_exc())}
+
 # ===================== DATA IMPORT =====================
 @app.post("/import-data/")
 def import_data(data: dict = Body(...), db: Session = Depends(get_db)):
