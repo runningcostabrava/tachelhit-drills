@@ -102,6 +102,15 @@ else:
     engine = create_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(bind=engine)
+
+# Optionally check and fix schema before creating tables
+# Set CHECK_SCHEMA environment variable to "1" to enable
+if os.getenv("CHECK_SCHEMA") == "1":
+    print("[SCHEMA] Checking and fixing schema...")
+    from check_and_fix_schema import check_and_fix
+    check_and_fix()
+    print("[SCHEMA] Schema check complete.")
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Tachelhit Drills API")
