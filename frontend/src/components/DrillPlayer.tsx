@@ -67,25 +67,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
 
     // If we have audio and haven't played twice yet
     if (currentDrill?.audio_url && playCount < 2) {
-      const playSequence = async () => {
-        // Step 1: Speech synthesis for Catalan text (only on first play)
-        if (playCount === 0 && currentDrill.text_catalan && 'speechSynthesis' in window) {
-          const utterance = new SpeechSynthesisUtterance(currentDrill.text_catalan);
-          utterance.lang = 'ca-ES'; // Catalan
-          utterance.rate = 1.2; // Slightly faster
-          utterance.volume = 0.8;
-          speechSynthRef.current = utterance;
-          
-          await new Promise<void>((resolve) => {
-            utterance.onend = () => resolve();
-            utterance.onerror = () => resolve();
-            speechSynthesis.speak(utterance);
-          });
-          // Small pause between speech and audio
-          await new Promise(resolve => setTimeout(resolve, 300));
-        }
-
-        // Step 2: Play recorded audio
+      const playAudio = () => {
         const audio = new Audio(getMediaUrl(currentDrill.audio_url));
         audioRef.current = audio;
         setIsPlaying(true);
@@ -123,7 +105,9 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         };
       };
 
-      playSequence();
+      // On iOS, we need to play audio immediately without speech synthesis
+      // because speech synthesis requires user interaction
+      playAudio();
     }
   }, [currentDrill, playCount, currentIndex, drills.length, onExit]);
 
@@ -138,7 +122,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         }
       }, 1000);
     } else {
-      // If we've only played once, play again without speech synthesis
+      // If we've only played once, play again
       // Use a timeout to allow state to update
       setTimeout(() => {
         // This will cause the effect to run again because playCount changed
@@ -444,7 +428,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
               marginBottom: '10px'
             }}>
               {currentDrill.audio_url ? 
-                (playCount === 0 ? 'Step 1: Catalan speech + audio' : `Step 2: audio only (${playCount}/2)`) 
+                (playCount === 0 ? `Play ${playCount + 1} of 2` : `Play ${playCount + 1} of 2`) 
                 : 'No audio available'}
             </div>
             {/* Manual controls for audio */}
@@ -454,25 +438,28 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
               marginTop: '10px',
               flexDirection: window.innerWidth < 768 ? 'column' : 'row'
             }}>
-              {/* Manual speech synthesis button */}
-              {playCount === 0 && currentDrill.text_catalan && (
+              {/* Manual speech synthesis button - Always show if there's Catalan text */}
+              {currentDrill.text_catalan && (
                 <button
                   onClick={() => {
                     if ('speechSynthesis' in window) {
+                      // Cancel any ongoing speech
+                      speechSynthesis.cancel();
                       const utterance = new SpeechSynthesisUtterance(currentDrill.text_catalan);
                       utterance.lang = 'ca-ES';
-                      utterance.rate = 1.2;
-                      utterance.volume = 0.8;
+                      utterance.rate = 1.0; // Normal speed for clarity
+                      utterance.volume = 1.0;
+                      // For iOS, we need to ensure this is triggered by user gesture
                       speechSynthesis.speak(utterance);
                     } else {
-                      alert('Speech synthesis not supported on this device');
+                      alert('La síntesis de voz no está disponible en este dispositivo.');
                     }
                   }}
                   style={{
                     flex: 1,
-                    padding: window.innerWidth < 768 ? '10px' : '8px 12px',
-                    fontSize: window.innerWidth < 768 ? '14px' : '13px',
-                    background: '#667eea',
+                    padding: window.innerWidth < 768 ? '12px' : '10px 16px',
+                    fontSize: window.innerWidth < 768 ? '15px' : '14px',
+                    background: '#9C27B0',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
@@ -484,24 +471,54 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                     gap: '8px'
                   }}
                 >
-                  <span>🔊</span>
-                  <span>Speak Catalan Text</span>
+                  <span>🗣️</span>
+                  <span>Escuchar Català</span>
                 </button>
               )}
-              {/* Manual audio play button */}
+              {/* Manual audio play button - For iOS and other devices */}
               {currentDrill.audio_url && (
                 <button
                   onClick={() => {
+                    // Clean up any existing audio
+                    if (audioRef.current) {
+                      audioRef.current.pause();
+                      audioRef.current = null;
+                    }
                     const audio = new Audio(getMediaUrl(currentDrill.audio_url));
+                    audioRef.current = audio;
+                    setIsPlaying(true);
                     audio.play().catch(error => {
                       console.error('Error playing audio manually:', error);
-                      alert('Could not play audio. Please check your device volume or try again.');
+                      setIsPlaying(false);
+                      // For iOS, show a specific message
+                      if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                        alert('Para reproducir audio en iOS, asegúrate de que el modo silencio esté desactivado y el volumen esté alto.');
+                      } else {
+                        alert('No se pudo reproducir el audio. Verifica el volumen o intenta de nuevo.');
+                      }
                     });
+                    audio.onended = () => {
+                      setIsPlaying(false);
+                      // Count as played
+                      setPlayCount(prev => {
+                        const newCount = prev + 1;
+                        handleNextAfterPlay(newCount);
+                        return newCount;
+                      });
+                    };
+                    audio.onerror = () => {
+                      setIsPlaying(false);
+                      setPlayCount(prev => {
+                        const newCount = prev + 1;
+                        handleNextAfterPlay(newCount);
+                        return newCount;
+                      });
+                    };
                   }}
                   style={{
                     flex: 1,
-                    padding: window.innerWidth < 768 ? '10px' : '8px 12px',
-                    fontSize: window.innerWidth < 768 ? '14px' : '13px',
+                    padding: window.innerWidth < 768 ? '12px' : '10px 16px',
+                    fontSize: window.innerWidth < 768 ? '15px' : '14px',
                     background: '#4CAF50',
                     color: 'white',
                     border: 'none',
@@ -515,7 +532,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                   }}
                 >
                   <span>▶️</span>
-                  <span>Play Audio Manually</span>
+                  <span>Reproducir Audio</span>
                 </button>
               )}
             </div>
