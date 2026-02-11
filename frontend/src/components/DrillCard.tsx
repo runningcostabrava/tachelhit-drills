@@ -57,6 +57,12 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
     console.log('🎤 [DEBUG] navigator.mediaDevices:', navigator.mediaDevices);
     console.log('🎤 [DEBUG] navigator.mediaDevices.getUserMedia:', navigator.mediaDevices?.getUserMedia);
     
+    // Check if permission was previously denied
+    if (permissionDenied.audio) {
+      alert('Microphone access was previously denied. Please enable it in your browser settings and refresh the page.');
+      return;
+    }
+    
     if (typeof MediaRecorder !== 'undefined') {
       console.log('🎤 [DEBUG] MediaRecorder.isTypeSupported audio/webm:', MediaRecorder.isTypeSupported('audio/webm'));
       console.log('🎤 [DEBUG] MediaRecorder.isTypeSupported audio/mp4:', MediaRecorder.isTypeSupported('audio/mp4'));
