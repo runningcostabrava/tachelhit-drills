@@ -1,8 +1,11 @@
 import os
+import sys
 from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 
+# Try to import moviepy components
+MOVIEPY_AVAILABLE = False
 try:
     from moviepy.video.VideoClip import ImageClip
     from moviepy.video.io.VideoFileClip import VideoFileClip
@@ -11,7 +14,10 @@ try:
     from moviepy.video.compositing.concatenate import concatenate_videoclips
     MOVIEPY_AVAILABLE = True
 except ImportError as e:
-    print(f"MoviePy not fully available: {e}")
+    print(f"[SHORTS] MoviePy import error: {e}")
+    # Check if it's a missing dependency
+    if "ffmpeg" in str(e).lower():
+        print("[SHORTS] FFmpeg may not be installed. On Render, add 'imageio-ffmpeg' to requirements.txt")
     MOVIEPY_AVAILABLE = False
 
 SHORTS_DIR = "media/shorts"
@@ -21,13 +27,20 @@ os.makedirs(SHORTS_DIR, exist_ok=True)
 SHORT_WIDTH = 1080
 SHORT_HEIGHT = 1920
 
+def check_moviepy():
+    """Helper to check if moviepy is available and raise informative error."""
+    if not MOVIEPY_AVAILABLE:
+        raise ImportError(
+            "MoviePy not available. Please install: pip install moviepy imageio-ffmpeg opencv-python-headless\n"
+            "If on Render, ensure these are in requirements.txt."
+        )
+
 def generate_youtube_short(drill_data, output_filename):
     """
     Generate a YouTube Short video from drill data
     """
-    if not MOVIEPY_AVAILABLE:
-        raise Exception("MoviePy not available. Please install: pip install moviepy")
-
+    check_moviepy()
+    
     print(f"[SHORTS] Generating short: {output_filename}")
 
     # Create background image with text overlay
@@ -126,14 +139,23 @@ def generate_youtube_short(drill_data, output_filename):
     output_path = os.path.join(SHORTS_DIR, output_filename)
     print(f"[SHORTS] Writing video to: {output_path}")
 
-    video_clip.write_videofile(
-        output_path,
-        fps=24,
-        codec='libx264',
-        audio_codec='aac' if audio_clip else None,
-        preset='medium',
-        logger=None  # Suppress verbose output
-    )
+    try:
+        video_clip.write_videofile(
+            output_path,
+            fps=24,
+            codec='libx264',
+            audio_codec='aac' if audio_clip else None,
+            preset='medium',
+            logger=None  # Suppress verbose output
+        )
+    except Exception as e:
+        # Clean up before raising
+        if os.path.exists(temp_img_path):
+            os.remove(temp_img_path)
+        video_clip.close()
+        if audio_clip:
+            audio_clip.close()
+        raise RuntimeError(f"Failed to write video file: {e}")
 
     # Clean up
     video_clip.close()
@@ -150,9 +172,8 @@ def generate_drillplayer_demo(test_id, drills_data, output_filename):
     Generate a demo video of the Drill Player for a test.
     Shows each drill with its text and simulates the player interface.
     """
-    if not MOVIEPY_AVAILABLE:
-        raise Exception("MoviePy not available. Please install: pip install moviepy")
-
+    check_moviepy()
+    
     print(f"[DEMO] Generating Drill Player demo for test {test_id}")
 
     # Dimensions for desktop simulation (16:9 aspect ratio)
@@ -319,19 +340,20 @@ def generate_drillplayer_demo(test_id, drills_data, output_filename):
     output_path = os.path.join(SHORTS_DIR, output_filename)
     print(f"[DEMO] Writing demo video to: {output_path}")
     
-    final_clip.write_videofile(
-        output_path,
-        fps=24,
-        codec='libx264',
-        audio_codec='aac',
-        preset='medium',
-        logger=None
-    )
-    
-    # Clean up
-    final_clip.close()
-    intro_clip.close()
-    outro_clip.close()
+    try:
+        final_clip.write_videofile(
+            output_path,
+            fps=24,
+            codec='libx264',
+            audio_codec='aac',
+            preset='medium',
+            logger=None
+        )
+    finally:
+        # Clean up
+        final_clip.close()
+        intro_clip.close()
+        outro_clip.close()
     
     print(f"[DEMO] Demo video generated successfully: {output_path}")
     return output_path
