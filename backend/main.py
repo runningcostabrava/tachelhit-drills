@@ -339,6 +339,7 @@ def generate_image(drill_id: int, body: dict = Body(None), db: Session = Depends
 # ===================== Media Upload =====================
 @app.post("/upload-media/{drill_id}/{media_type}")
 async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    print(f"[UPLOAD] Received upload request for drill {drill_id}, media_type {media_type}")
     if media_type not in ["audio", "video", "image"]:
         raise HTTPException(status_code=400, detail="Invalid media type")
 

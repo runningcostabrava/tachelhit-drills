@@ -225,7 +225,8 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
         
         if (chunksRef.current.length === 0) {
           console.warn('No hi ha dades d\'àudio gravades');
-          alert('No se grabó ningún audio. Intenta de nuevo.');
+          // No mostrar alerta
+          setRecording(null);
           return;
         }
         
@@ -234,7 +235,8 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
         
         // Verificar que el blob no esté vacío
         if (blob.size < 1024) {
-          alert('El audio grabado es demasiado corto o está vacío. Intenta grabar durante más tiempo.');
+          // No mostrar alerta
+          setRecording(null);
           return;
         }
         
@@ -249,11 +251,13 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
           });
           console.log('✅ Audio subido:', response.data);
           onUpdate();
-          alert('Àudio gravat i pujat correctament!');
         } catch (err: any) {
           console.error('❌ [Mobile] Error en pujar l\'àudio:', err);
           console.error('   Detalls:', err.response?.data || err.message);
-          alert('No s\'ha pogut pujar l\'àudio. Si us plau, torna-ho a provar. Error: ' + (err.response?.data?.detail || err.message));
+          // No mostrar alerta de error
+        } finally {
+          // Asegurar que el estado de grabación se restablece
+          setRecording(null);
         }
       };
 
@@ -293,23 +297,7 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
       };
     } catch (err: any) {
       console.error('Accés al micròfon denegat:', err);
-      let errorMessage = 'No es pot accedir al micròfon: ' + (err.message || 'Error desconocido');
-        
-      if (err.name === 'NotAllowedError') {
-        errorMessage = 'Accés al micròfon denegat. Per habilitar-lo:\n1. Fes clic a l\'icona del cadenat a la barra d\'adreces.\n2. Canvia "Micròfon" a "Permetre".\n3. Refresca la pàgina i torna-ho a provar.\n\nEn iOS/Safari, asegúrate de que la configuración de privacidad del sitio web permita el micrófono.';
-      } else if (err.name === 'NotFoundError') {
-        errorMessage = 'No s\'ha trobat cap micròfon. Connecta un micròfon i torna-ho a provar.';
-      } else if (err.name === 'NotReadableError') {
-        errorMessage = 'El micrófono está en uso por otra aplicación. Cierra otras aplicaciones que puedan estar usando el micrófono.';
-      } else if (err.name === 'OverconstrainedError') {
-        errorMessage = 'El micrófono solicitado no está disponible. Intenta con otro dispositivo o navegador.';
-      } else if (err.name === 'TypeError') {
-        errorMessage = 'Error de tipo: El navegador no soporta alguna función de grabación. Prueba con Chrome o Firefox.';
-      } else if (err.name === 'SecurityError') {
-        errorMessage = 'Error de seguridad: La página no está cargada a través de HTTPS o el contexto no es seguro.';
-      }
-        
-      alert(errorMessage);
+      // No mostrar alerta de error como solicitaste
       setRecording(null);
       // Limpiar stream si existe
       if (streamRef.current) {
@@ -423,56 +411,49 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     try {
       _stopCameraStream();
       
-      // Intentar con facingMode exacto primero
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            facingMode: { exact: facing },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-        });
-      } catch (exactErr) {
-        console.log('Exact facing mode not supported, trying without exact:', exactErr);
-        // Fallback sin 'exact'
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            facingMode: facing,
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-        });
-      }
+      // Para la cámara trasera, usar 'environment', para frontal 'user'
+      // No usar 'exact' porque algunos navegadores no lo soportan
+      const constraints = {
+        video: { 
+          facingMode: facing,
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      };
+      
+      console.log('📸 Solicitando cámara con constraints:', constraints);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
       streamRef.current = stream;
-      setShowImageCapture(true);
       
-      // Esperar a que el elemento video esté listo y empiece a reproducirse
-      if (previewRef.current) {
-        previewRef.current.srcObject = stream;
-        try {
-          await previewRef.current.play();
-          // Añadir un pequeño retraso adicional para que el video empiece a renderizar fotogramas
-          await new Promise(resolve => setTimeout(resolve, 500)); 
-          setShowImageCapture(true);
-        } catch (e) {
-          console.error('Error playing video:', e);
-          alert('No se pudo iniciar la vista previa de la cámara. Asegúrate de que no esté en uso por otra aplicación.');
-          _stopCameraStream();
+      // Esperar un momento para que el elemento video esté disponible
+      setTimeout(() => {
+        if (previewRef.current) {
+          previewRef.current.srcObject = stream;
+          previewRef.current.play().catch(e => {
+            console.error('Error playing video:', e);
+          });
+        } else {
+          console.warn('previewRef.current aún no está disponible');
+          // Intentar de nuevo en 100ms
+          setTimeout(() => {
+            if (previewRef.current) {
+              previewRef.current.srcObject = stream;
+              previewRef.current.play();
+            }
+          }, 100);
         }
-      } else {
-        console.error('previewRef.current is null when trying to set srcObject and play.');
-        _stopCameraStream();
-      }
+      }, 100);
+      
+      setShowImageCapture(true);
     } catch (err: any) {
       console.error('Camera access denied for image capture:', err);
+      // No mostrar alerta automática
+      // Solo mostrar alerta si es un error de permiso
       if (err.name === 'NotAllowedError') {
-        alert('Acceso a la cámara denegado. Por favor, permite el acceso a la cámara en la configuración del navegador.');
+        // No mostrar alerta como solicitaste
       } else if (err.name === 'NotFoundError') {
-        alert('No se encontró ninguna cámara. Conecta una cámara e intenta de nuevo.');
-      } else {
-        alert('Error al acceder a la cámara: ' + err.message);
+        // No mostrar alerta
       }
     }
   };
@@ -561,6 +542,7 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       console.log('🛑 MediaRecorder está activo, llamando stop()');
       mediaRecorderRef.current.stop();
+      // El estado se establecerá en null en onstop
     } else {
       console.log('🛑 MediaRecorder no está activo o no existe');
       // Si no hay MediaRecorder activo, pero hay un stream, detenerlo
@@ -569,6 +551,7 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
+      // Restablecer inmediatamente el estado de grabación
       setRecording(null);
     }
   };
