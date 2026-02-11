@@ -19,6 +19,7 @@ interface Drill {
   id: number;
   text_catalan: string;
   text_tachelhit: string;
+  text_arabic?: string;
   audio_url: string;
   video_url: string;
   image_url: string;
