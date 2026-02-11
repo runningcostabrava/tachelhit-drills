@@ -32,6 +32,17 @@ from shorts_generator import generate_youtube_short
 translator_ca_to_ar = GoogleTranslator(source='ca', target='ar')
 translator_ca_to_en = GoogleTranslator(source='ca', target='en')
 
+# Config
+PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "dX9JkRJYfaRQUZdi6tKsF1TfJT44HnZMAPu2RyA4vt0JyRbzmdiVYGgW")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///drills.db")
+
+MEDIA_ROOT = "media"
+os.makedirs(f"{MEDIA_ROOT}/audio", exist_ok=True)
+os.makedirs(f"{MEDIA_ROOT}/video", exist_ok=True)
+os.makedirs(f"{MEDIA_ROOT}/images", exist_ok=True)
+os.makedirs(f"{MEDIA_ROOT}/tts", exist_ok=True)
+
 # TTS function
 def generate_catalan_tts(text: str, drill_id: int) -> str:
     """
@@ -82,17 +93,6 @@ def generate_catalan_tts(text: str, drill_id: int) -> str:
     except Exception as e:
         print(f"[TTS] Error generating TTS: {e}")
         raise
-
-# Config
-PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "dX9JkRJYfaRQUZdi6tKsF1TfJT44HnZMAPu2RyA4vt0JyRbzmdiVYGgW")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///drills.db")
-
-MEDIA_ROOT = "media"
-os.makedirs(f"{MEDIA_ROOT}/audio", exist_ok=True)
-os.makedirs(f"{MEDIA_ROOT}/video", exist_ok=True)
-os.makedirs(f"{MEDIA_ROOT}/images", exist_ok=True)
-os.makedirs(f"{MEDIA_ROOT}/tts", exist_ok=True)
 
 # Database configuration - handle both SQLite and PostgreSQL
 if DATABASE_URL.startswith("sqlite"):
@@ -158,6 +158,7 @@ def root():
             "/test-attempts/",
             "/shorts/"
         ]
+    }
 
 @app.get("/health")
 def health_check():
