@@ -90,43 +90,61 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         audioRef.current = audio;
         setIsPlaying(true);
         
-        await new Promise<void>((resolve) => {
-          audio.onended = () => {
+        // Set up event listeners before playing
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.error('Error playing audio:', error);
             setIsPlaying(false);
-            resolve();
-          };
-          audio.onerror = () => {
-            setIsPlaying(false);
-            resolve();
-          };
-          audio.play();
-        });
-
-        // Update play count after audio finishes
-        const newCount = playCount + 1;
-        setPlayCount(newCount);
-        
-        // If we've played twice, move to next drill after a delay
-        if (newCount >= 2) {
-          setTimeout(() => {
-            if (currentIndex < drills.length - 1) {
-              setCurrentIndex(currentIndex + 1);
-            } else {
-              onExit();
-            }
-          }, 1000);
-        } else {
-          // If we've only played once, play again without speech synthesis
-          // We'll trigger another play by using a timeout to allow state to update
-          setTimeout(() => {
-            // This will cause the effect to run again because playCount changed
-          }, 100);
+            // If audio fails, still count as played
+            setPlayCount(prev => {
+              const newCount = prev + 1;
+              handleNextAfterPlay(newCount);
+              return newCount;
+            });
+          });
         }
+
+        audio.onended = () => {
+          setIsPlaying(false);
+          setPlayCount(prev => {
+            const newCount = prev + 1;
+            handleNextAfterPlay(newCount);
+            return newCount;
+          });
+        };
+        audio.onerror = () => {
+          setIsPlaying(false);
+          setPlayCount(prev => {
+            const newCount = prev + 1;
+            handleNextAfterPlay(newCount);
+            return newCount;
+          });
+        };
       };
 
       playSequence();
     }
   }, [currentDrill, playCount, currentIndex, drills.length, onExit]);
+
+  const handleNextAfterPlay = (newCount: number) => {
+    if (newCount >= 2) {
+      // Move to next drill after a delay
+      setTimeout(() => {
+        if (currentIndex < drills.length - 1) {
+          setCurrentIndex(currentIndex + 1);
+        } else {
+          onExit();
+        }
+      }, 1000);
+    } else {
+      // If we've only played once, play again without speech synthesis
+      // Use a timeout to allow state to update
+      setTimeout(() => {
+        // This will cause the effect to run again because playCount changed
+      }, 500);
+    }
+  };
 
   const handleNext = () => {
     // Clean up current audio
@@ -429,40 +447,78 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                 (playCount === 0 ? 'Step 1: Catalan speech + audio' : `Step 2: audio only (${playCount}/2)`) 
                 : 'No audio available'}
             </div>
-            {/* Manual speech synthesis button - Always visible if needed */}
-            {playCount === 0 && currentDrill.text_catalan && (
-              <button
-                onClick={() => {
-                  if ('speechSynthesis' in window) {
-                    const utterance = new SpeechSynthesisUtterance(currentDrill.text_catalan);
-                    utterance.lang = 'ca-ES';
-                    utterance.rate = 1.2;
-                    utterance.volume = 0.8;
-                    speechSynthesis.speak(utterance);
-                  } else {
-                    alert('Speech synthesis not supported on this device');
-                  }
-                }}
-                style={{
-                  width: '100%',
-                  padding: window.innerWidth < 768 ? '10px' : '8px 12px',
-                  fontSize: window.innerWidth < 768 ? '14px' : '13px',
-                  background: '#667eea',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px'
-                }}
-              >
-                <span>🔊</span>
-                <span>Speak Catalan Text</span>
-              </button>
-            )}
+            {/* Manual controls for audio */}
+            <div style={{ 
+              display: 'flex', 
+              gap: '10px', 
+              marginTop: '10px',
+              flexDirection: window.innerWidth < 768 ? 'column' : 'row'
+            }}>
+              {/* Manual speech synthesis button */}
+              {playCount === 0 && currentDrill.text_catalan && (
+                <button
+                  onClick={() => {
+                    if ('speechSynthesis' in window) {
+                      const utterance = new SpeechSynthesisUtterance(currentDrill.text_catalan);
+                      utterance.lang = 'ca-ES';
+                      utterance.rate = 1.2;
+                      utterance.volume = 0.8;
+                      speechSynthesis.speak(utterance);
+                    } else {
+                      alert('Speech synthesis not supported on this device');
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: window.innerWidth < 768 ? '10px' : '8px 12px',
+                    fontSize: window.innerWidth < 768 ? '14px' : '13px',
+                    background: '#667eea',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <span>🔊</span>
+                  <span>Speak Catalan Text</span>
+                </button>
+              )}
+              {/* Manual audio play button */}
+              {currentDrill.audio_url && (
+                <button
+                  onClick={() => {
+                    const audio = new Audio(getMediaUrl(currentDrill.audio_url));
+                    audio.play().catch(error => {
+                      console.error('Error playing audio manually:', error);
+                      alert('Could not play audio. Please check your device volume or try again.');
+                    });
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: window.innerWidth < 768 ? '10px' : '8px 12px',
+                    fontSize: window.innerWidth < 768 ? '14px' : '13px',
+                    background: '#4CAF50',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <span>▶️</span>
+                  <span>Play Audio Manually</span>
+                </button>
+              )}
+            </div>
           </div>
 
         </div>
