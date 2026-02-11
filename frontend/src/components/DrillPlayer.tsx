@@ -22,7 +22,6 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [playCount, setPlayCount] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [sessionStarted, setSessionStarted] = useState(false);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(false);
   const [showDemoVideo, setShowDemoVideo] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -47,7 +46,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
 
   // Efecto para reproducción automática cuando autoPlayEnabled es true
   useEffect(() => {
-    if (!autoPlayEnabled || !sessionStarted) return;
+    if (!autoPlayEnabled) return;
     if (!currentDrill?.audio_url) {
       // Si no hay audio, avanzar después de un tiempo
       const timer = setTimeout(() => {
@@ -69,7 +68,25 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
       }, 800);
       return () => clearTimeout(timer);
     }
-  }, [currentIndex, playCount, autoPlayEnabled, sessionStarted, currentDrill]);
+  }, [currentIndex, playCount, autoPlayEnabled, currentDrill]);
+
+  // Iniciar sesión automáticamente al cargar (excepto en iOS)
+  useEffect(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    
+    if (!isIOS) {
+      setAutoPlayEnabled(true);
+      // Esperar un poco más para asegurar que el DOM esté listo
+      const timer = setTimeout(() => {
+        if (currentDrill?.audio_url) {
+          playCurrentAudio();
+        }
+      }, 800);
+      return () => clearTimeout(timer);
+    } else {
+      setAutoPlayEnabled(false);
+    }
+  }, []);
 
   const playCurrentAudio = () => {
     if (!currentDrill?.audio_url) {
@@ -138,81 +155,31 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     }
   };
 
-  const handleStartSession = () => {
-    // En iOS, necesitamos una interacción de usuario para activar el audio
-    // Creamos un audio silencioso y lo reproducimos para desbloquear la API de audio
-    const unlockAudio = () => {
-      const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAZGF0YQQ=');
-      silentAudio.volume = 0.01;
-      silentAudio.play().then(() => {
-        silentAudio.pause();
-        silentAudio.remove();
-        // Ahora iniciamos la sesión
-        setSessionStarted(true);
-        setAutoPlayEnabled(true);
-        // Reproducir el primer audio inmediatamente
-        if (currentDrill?.audio_url) {
-          playCurrentAudio();
-        }
-      }).catch(error => {
-        console.error('No se pudo desbloquear audio:', error);
-        // Si falla, iniciamos de todos modos pero con autoPlay desactivado
-        setSessionStarted(true);
-        setAutoPlayEnabled(false);
-        alert('No se pudo activar la reproducción automática. Usa los botones manuales.');
-      });
-    };
-    
-    unlockAudio();
-  };
-
   const handlePlayAudio = () => {
     playCurrentAudio();
   };
 
   const handleSpeakCatalan = () => {
-    if (!currentDrill?.text_catalan) {
-      console.log('No hay texto en catalán para sintetizar');
-      return;
-    }
+    if (!currentDrill?.text_catalan) return;
     
     if ('speechSynthesis' in window) {
-      // Cancelar cualquier síntesis en curso
       speechSynthesis.cancel();
-      
-      // Crear una nueva utterance
       const utterance = new SpeechSynthesisUtterance(currentDrill.text_catalan);
       utterance.lang = 'ca-ES';
-      utterance.rate = 0.9; // Un poco más lento para mejor claridad
+      utterance.rate = 0.9;
       utterance.volume = 1.0;
-      utterance.pitch = 1.0;
-      
-      // Configurar eventos
-      utterance.onstart = () => {
-        console.log('Síntesis de voz iniciada');
-      };
-      
-      utterance.onend = () => {
-        console.log('Síntesis de voz finalizada');
-        speechSynthRef.current = null;
-      };
-      
-      utterance.onerror = (event) => {
-        console.error('Error en síntesis de voz:', event);
-        alert('Error al reproducir la voz. Asegúrate de que el volumen esté activado.');
-      };
-      
-      // Guardar referencia y hablar
       speechSynthRef.current = utterance;
       speechSynthesis.speak(utterance);
       
-      // En iOS, a veces se necesita un gesto del usuario explícito
-      if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-        console.log('iOS detectado - usando síntesis de voz con gesto del usuario');
-      }
+      utterance.onend = () => {
+        speechSynthRef.current = null;
+      };
+      
+      utterance.onerror = () => {
+        alert('Error al reproducir la voz. Asegúrate de que el volumen esté activado.');
+      };
     } else {
-      console.warn('La síntesis de voz no está disponible en este navegador');
-      alert('La síntesis de voz no está disponible en este dispositivo. Prueba con otro navegador.');
+      alert('La síntesis de voz no está disponible en este dispositivo.');
     }
   };
 
@@ -248,39 +215,6 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     setIsPlaying(false);
   };
 
-  // Iniciar sesión automáticamente al cargar (excepto en iOS)
-  useEffect(() => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    console.log('Detectado iOS:', isIOS);
-    
-    // Siempre iniciar sesión
-    setSessionStarted(true);
-    
-    if (!isIOS) {
-      console.log('Activando reproducción automática para no iOS');
-      setAutoPlayEnabled(true);
-      // Esperar un poco más para asegurar que el DOM esté listo
-      const timer = setTimeout(() => {
-        console.log('Intentando reproducir primer audio');
-        if (currentDrill?.audio_url) {
-          playCurrentAudio();
-        } else {
-          console.log('No hay URL de audio para el primer drill');
-        }
-      }, 800);
-      return () => clearTimeout(timer);
-    } else {
-      console.log('iOS detectado - desactivando reproducción automática');
-      setAutoPlayEnabled(false);
-    }
-  }, []);
-
-  // Si la sesión no ha comenzado, mostrar solo el reproductor normal
-  if (!sessionStarted) {
-    return null; // O un loader breve
-  }
-
-  // Resto del componente (igual que antes pero con los nuevos estados)
   return (
     <div style={{
       height: '100vh',
@@ -495,7 +429,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             </div>
           </div>
 
-          {/* Arabic - Smaller and less prominent */}
+          {/* Árabe */}
           {currentDrill.text_arabic && (
             <div style={{ 
               marginBottom: isMobile ? '12px' : '20px',
@@ -524,7 +458,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             </div>
           )}
 
-          {/* Audio Status - Clearer */}
+          {/* Panel de control de audio */}
           <div style={{
             padding: isMobile ? '14px' : '16px',
             background: isPlaying ? '#e8f5e9' : '#fff3cd',
@@ -630,6 +564,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
           </div>
         </div>
       </div>
+      
       {/* Modal para video de demostración */}
       {showDemoVideo && (
         <div style={{
