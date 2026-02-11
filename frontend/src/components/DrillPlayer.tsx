@@ -42,6 +42,49 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     }
   }, [currentIndex]);
 
+  // Effect to handle second play
+  useEffect(() => {
+    // If playCount is 1 and we haven't played twice yet, play again
+    if (playCount === 1 && currentDrill?.audio_url) {
+      const timer = setTimeout(() => {
+        const audio = new Audio(getMediaUrl(currentDrill.audio_url));
+        audioRef.current = audio;
+        setIsPlaying(true);
+        
+        audio.play().catch(error => {
+          console.error('Error playing second audio:', error);
+          setIsPlaying(false);
+          // Still count as played
+          setPlayCount(2);
+        });
+
+        audio.onended = () => {
+          setIsPlaying(false);
+          setPlayCount(2);
+        };
+        audio.onerror = () => {
+          setIsPlaying(false);
+          setPlayCount(2);
+        };
+      }, 500); // Wait 500ms before second play
+      return () => clearTimeout(timer);
+    }
+  }, [playCount, currentDrill]);
+
+  // Effect to move to next drill when playCount reaches 2
+  useEffect(() => {
+    if (playCount >= 2) {
+      const timer = setTimeout(() => {
+        if (currentIndex < drills.length - 1) {
+          setCurrentIndex(currentIndex + 1);
+        } else {
+          onExit();
+        }
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [playCount, currentIndex, drills.length, onExit]);
+
   useEffect(() => {
     // Cleanup previous audio and speech
     if (audioRef.current) {
@@ -81,7 +124,16 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             // If audio fails, still count as played
             setPlayCount(prev => {
               const newCount = prev + 1;
-              handleNextAfterPlay(newCount);
+              // Move to next after a short delay
+              setTimeout(() => {
+                if (newCount >= 2) {
+                  if (currentIndex < drills.length - 1) {
+                    setCurrentIndex(currentIndex + 1);
+                  } else {
+                    onExit();
+                  }
+                }
+              }, 1000);
               return newCount;
             });
           });
@@ -91,7 +143,16 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
           setIsPlaying(false);
           setPlayCount(prev => {
             const newCount = prev + 1;
-            handleNextAfterPlay(newCount);
+            // If we've played twice, move to next drill
+            if (newCount >= 2) {
+              setTimeout(() => {
+                if (currentIndex < drills.length - 1) {
+                  setCurrentIndex(currentIndex + 1);
+                } else {
+                  onExit();
+                }
+              }, 1000);
+            }
             return newCount;
           });
         };
@@ -99,36 +160,25 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
           setIsPlaying(false);
           setPlayCount(prev => {
             const newCount = prev + 1;
-            handleNextAfterPlay(newCount);
+            // If we've played twice, move to next drill
+            if (newCount >= 2) {
+              setTimeout(() => {
+                if (currentIndex < drills.length - 1) {
+                  setCurrentIndex(currentIndex + 1);
+                } else {
+                  onExit();
+                }
+              }, 1000);
+            }
             return newCount;
           });
         };
       };
 
-      // On iOS, we need to play audio immediately without speech synthesis
-      // because speech synthesis requires user interaction
+      // Play audio
       playAudio();
     }
   }, [currentDrill, playCount, currentIndex, drills.length, onExit]);
-
-  const handleNextAfterPlay = (newCount: number) => {
-    if (newCount >= 2) {
-      // Move to next drill after a delay
-      setTimeout(() => {
-        if (currentIndex < drills.length - 1) {
-          setCurrentIndex(currentIndex + 1);
-        } else {
-          onExit();
-        }
-      }, 1000);
-    } else {
-      // If we've only played once, play again
-      // Use a timeout to allow state to update
-      setTimeout(() => {
-        // This will cause the effect to run again because playCount changed
-      }, 500);
-    }
-  };
 
   const handleNext = () => {
     // Clean up current audio
@@ -500,19 +550,11 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                     audio.onended = () => {
                       setIsPlaying(false);
                       // Count as played
-                      setPlayCount(prev => {
-                        const newCount = prev + 1;
-                        handleNextAfterPlay(newCount);
-                        return newCount;
-                      });
+                      setPlayCount(prev => prev + 1);
                     };
                     audio.onerror = () => {
                       setIsPlaying(false);
-                      setPlayCount(prev => {
-                        const newCount = prev + 1;
-                        handleNextAfterPlay(newCount);
-                        return newCount;
-                      });
+                      setPlayCount(prev => prev + 1);
                     };
                   }}
                   style={{
