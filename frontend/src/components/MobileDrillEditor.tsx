@@ -42,6 +42,17 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
   useEffect(() => {
     setEditedDrill(drill);
     setHasChanges(false);
+    
+    // Limpiar streams al desmontar
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+    };
   }, [drill]);
 
   const handleChange = (field: string, value: string) => {
@@ -74,9 +85,9 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     console.log('🎤 [Mobile] Starting audio recording, API_BASE:', API_BASE);
     console.log('🎤 [Mobile] User agent:', navigator.userAgent);
     
-    // Check if permission was previously denied
-    if (permissionDenied.audio) {
-      alert('El accés al micròfon ha estat denegat anteriorment. Si us plau, habilita\'l a la configuració del navegador i refresca la pàgina.');
+    // Verificar que el drill tenga un ID válido
+    if (!drill || !drill.id) {
+      alert('No se puede grabar audio: el drill no tiene un ID válido. Por favor, guarda el drill primero.');
       return;
     }
 
@@ -93,6 +104,12 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     console.log('🎤 [Mobile] isIOS:', isIOS, 'isSafari:', isSafari);
 
     try {
+      // Primero, detener cualquier stream existente
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+
       const constraints: MediaStreamConstraints = { 
         audio: {
           echoCancellation: true,
@@ -104,6 +121,9 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
       console.log('🎤 [Mobile] Requesting media with constraints:', constraints);
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       console.log('🎤 [Mobile] Got stream:', stream.id, 'active:', stream.active);
+      
+      // Guardar la referencia del stream
+      streamRef.current = stream;
       
       // Determinar el tipus MIME compatible
       let mimeType = 'audio/webm';
@@ -121,11 +141,15 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
         extension = 'm4a';
         console.log('🎤 [Mobile] iOS/Safari detectat, utilitzant MP4/AAC');
       } else {
-        if (!MediaRecorder.isTypeSupported('audio/webm')) {
+        // Probar diferentes codecs
+        if (MediaRecorder.isTypeSupported('audio/webm; codecs=opus')) {
+          mimeType = 'audio/webm; codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+          mimeType = 'audio/webm';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
           mimeType = 'audio/mp4';
           extension = 'mp4';
-        }
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
+        } else {
           mimeType = 'audio/ogg; codecs=opus';
           extension = 'ogg';
         }
@@ -146,9 +170,15 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
       
       mediaRecorderRef.current.onstop = async () => {
         console.log('🎤 [Mobile] Gravació aturada, chunks:', chunksRef.current.length);
+        
+        // Detener el stream
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
+        }
+        
         if (chunksRef.current.length === 0) {
           console.warn('No hi ha dades d\'àudio gravades');
-          stream.getTracks().forEach(track => track.stop());
           return;
         }
         
@@ -169,15 +199,16 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
           console.error('❌ [Mobile] Error en pujar l\'àudio:', err);
           console.error('   Detalls:', err.response?.data || err.message);
           alert('No s\'ha pogut pujar l\'àudio. Si us plau, torna-ho a provar. Error: ' + err.message);
-        } finally {
-          stream.getTracks().forEach(track => track.stop());
         }
       };
 
       mediaRecorderRef.current.onerror = (event) => {
         console.error('Error de MediaRecorder:', event);
         alert('Error durant la gravació. Si us plau, torna-ho a provar.');
-        stream.getTracks().forEach(track => track.stop());
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
+        }
         setRecording(null);
       };
 
@@ -187,13 +218,13 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     } catch (err: any) {
       console.error('Accés al micròfon denegat:', err);
       if (err.name === 'NotAllowedError') {
-        setPermissionDenied(prev => ({...prev, audio: true}));
         alert('Accés al micròfon denegat. Per habilitar-lo:\n1. Fes clic a l\'icona del cadenat a la barra d\'adreces.\n2. Canvia "Micròfon" a "Permetre".\n3. Refresca la pàgina i torna-ho a provar.');
       } else if (err.name === 'NotFoundError') {
         alert('No s\'ha trobat cap micròfon. Connecta un micròfon i torna-ho a provar.');
       } else {
         alert('No es pot accedir al micròfon: ' + err.message);
       }
+      setRecording(null);
     }
   };
 
@@ -497,9 +528,18 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
           </h3>
           <div style={{ display: 'flex', justifyContent: 'space-around', gap: '10px' }}>
             <button onClick={() => startImageCapture('environment')} style={{ fontSize: '32px', background: 'none', border: 'none', cursor: 'pointer' }}>📷</button>
-            <button onClick={startAudioRecording} style={{ fontSize: '32px', background: 'none', border: 'none', cursor: 'pointer' }}>🎙️</button>
+            {recording === 'audio' ? (
+              <button onClick={stopRecording} style={{ fontSize: '32px', background: 'none', border: 'none', cursor: 'pointer', color: '#ff4444' }}>⏹️</button>
+            ) : (
+              <button onClick={startAudioRecording} style={{ fontSize: '32px', background: 'none', border: 'none', cursor: 'pointer' }}>🎙️</button>
+            )}
             <button onClick={() => setShowCameraChoice(true)} style={{ fontSize: '32px', background: 'none', border: 'none', cursor: 'pointer' }}>🎬</button>
           </div>
+          {recording === 'audio' && (
+            <div style={{ textAlign: 'center', marginTop: '8px', color: '#ff4444', fontSize: '12px' }}>
+              Grabando audio... Toca ⏹️ para detener
+            </div>
+          )}
         </div>
 
         {/* Catalan */}

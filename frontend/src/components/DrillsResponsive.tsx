@@ -58,10 +58,23 @@ export default function DrillsResponsive({ onViewTests, onViewShorts }: DrillsRe
   const addNewDrill = async () => {
     try {
       const response = await axios.post(`${API_BASE}/drills/`, {});
+      // Actualizar la lista de drills
       await fetchDrills();
       // Open the newly created drill in editor
       if (isMobile && response.data) {
-        setEditingDrill(response.data);
+        // Asegurarse de que el drill tiene todos los campos necesarios
+        const newDrill = {
+          ...response.data,
+          text_catalan: '',
+          text_tachelhit: '',
+          text_arabic: '',
+          audio_url: '',
+          video_url: '',
+          image_url: '',
+          tag: '',
+          date_created: new Date().toISOString()
+        };
+        setEditingDrill(newDrill);
       }
     } catch (error) {
       console.error('Error creating drill:', error);
