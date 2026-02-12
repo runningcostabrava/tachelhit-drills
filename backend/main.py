@@ -632,6 +632,62 @@ def get_test_stats(test_id: int, db: Session = Depends(get_db)):
 
 def call_huggingface_space(endpoint: str, payload: dict):
     """
+    Debug-enhanced request to Hugging Face Space.
+    Prints full URL, payload structure, and raw response details.
+    """
+    try:
+        import requests
+        import re
+        import json
+
+        space_url = HUGGINGFACE_SPACE_URL
+
+        # 1. URL Correction Logic
+        match = re.search(r"huggingface\.co/spaces/([^/]+)/([^/]+)", space_url)
+        if match:
+            username = match.group(1)
+            space_name = match.group(2)
+            space_url = f"https://{username}-{space_name}.hf.space"
+
+        # Ensure no double slashes
+        base_url = space_url.rstrip("/")
+
+        # !!! CRITICAL DEBUG !!!
+        # Check if we are accidentally calling 'predict' when we defined 'generate' in app.py
+        target_url = f"{base_url}/api/{endpoint}"
+
+        print("\n" + "="*60)
+        print(f"[HF DEBUG] 🚀 Initiating Request")
+        print(f"[HF DEBUG] Target URL: {target_url}")
+        print(f"[HF DEBUG] Payload Keys: {list(payload.keys())}")
+        if "data" in payload:
+             # Print first 2 items of data to verify order without dumping huge strings
+            print(f"[HF DEBUG] Data Array (First 2 items): {payload['data'][:2]}")
+        print("="*60 + "\n")
+
+        response = requests.post(target_url, json=payload, timeout=60)
+
+        print(f"[HF DEBUG] 📡 Response Status: {response.status_code}")
+
+        # Print first 200 chars of response to catch HTML 404 pages or error messages
+        response_text = response.text
+        print(f"[HF DEBUG] Response Body Preview: {response_text[:200]}...")
+
+        response.raise_for_status()
+        return response.json()
+
+    except requests.exceptions.HTTPError as e:
+        print(f"\n[HF DEBUG] ❌ HTTP Error: {e}")
+        # If it's a 404, it means the URL is wrong
+        if response.status_code == 404:
+            print(f"[HF DEBUG] ⚠️  404 NOT FOUND. This means '{target_url}' does not exist.")
+            print(f"[HF DEBUG] Check if app.py has api_name='{endpoint}' or @app.post('/api/{endpoint}')")
+        raise HTTPException(status_code=500, detail=f"HF Error: {str(e)}")
+    except Exception as e:
+        print(f"[HF DEBUG] 💥 Unexpected Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Request failed: {str(e)}")
+
+    """
     Send a request to Hugging Face Space API, automatically correcting the URL format if needed.
     """
     try:
