@@ -631,12 +631,25 @@ def get_test_stats(test_id: int, db: Session = Depends(get_db)):
 
 def call_huggingface_space(endpoint: str, payload: dict):
     """
-    Send a request to Hugging Face Space API.
+    Send a request to Hugging Face Space API, automatically correcting the URL format if needed.
     """
     try:
         import requests
-        # Gradio expone endpoints en /api/{endpoint}/
-        url = f"{HUGGINGFACE_SPACE_URL}/api/{endpoint}/"
+        import re
+
+        space_url = HUGGINGFACE_SPACE_URL
+
+        # Check if the URL is in the 'huggingface.co/spaces/' format and convert it
+        match = re.search(r"huggingface\.co/spaces/([^/]+)/([^/]+)", space_url)
+        if match:
+            username = match.group(1)
+            space_name = match.group(2)
+            correct_url = f"https://{username}-{space_name}.hf.space"
+            print(f"[HF SPACE] Corrected URL from {space_url} to {correct_url}")
+            space_url = correct_url
+
+        # Gradio exposes endpoints at /api/{endpoint}/
+        url = f"{space_url}/api/{endpoint}/"
         print(f"[HF SPACE] Calling {url} with payload: {payload}")
         response = requests.post(url, json=payload, timeout=60)
         response.raise_for_status()
