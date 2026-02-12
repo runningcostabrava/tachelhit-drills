@@ -1,11 +1,10 @@
 import gradio as gr
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Optional, List
 import os
 import sys
 import json
 import tempfile
+from typing import Optional, List
+import traceback
 
 # Añadir el directorio actual al path para importar shorts_generator
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -16,46 +15,35 @@ from shorts_generator import generate_youtube_short, generate_drillplayer_demo
 SHORTS_DIR = "media/shorts"
 os.makedirs(SHORTS_DIR, exist_ok=True)
 
-# FastAPI app
-app = FastAPI(title="Tachelhit Video Generator API")
-
-# Pydantic models for API
-class GenerateRequest(BaseModel):
-    drill_id: Optional[int] = None
-    test_id: Optional[int] = None
-    drill_data: Optional[dict] = None
-    drills_data: Optional[List[dict]] = None
-    filename: str
-    type: str  # 'short' or 'demo'
-
-@app.post("/generate")
-async def api_generate(request: GenerateRequest):
+# Función para manejar solicitudes POST de API
+def api_generate(type: str, drill_data: Optional[dict] = None, drills_data: Optional[List[dict]] = None, 
+                 filename: str = "output.mp4", test_id: Optional[int] = None):
+    """
+    Endpoint de API para generación de videos.
+    Compatible con las llamadas del backend.
+    """
     try:
-        if request.type == 'short':
-            if not request.drill_data:
-                raise HTTPException(status_code=400, detail="Missing drill_data for short")
-            output_path = generate_youtube_short(request.drill_data, request.filename)
-        elif request.type == 'demo':
-            if not request.drills_data:
-                raise HTTPException(status_code=400, detail="Missing drills_data for demo")
-            output_path = generate_drillplayer_demo(request.test_id or 0, request.drills_data, request.filename)
+        if type == 'short':
+            if not drill_data:
+                return {"error": "Missing drill_data for short"}
+            output_path = generate_youtube_short(drill_data, filename)
+        elif type == 'demo':
+            if not drills_data:
+                return {"error": "Missing drills_data for demo"}
+            output_path = generate_drillplayer_demo(test_id or 0, drills_data, filename)
         else:
-            raise HTTPException(status_code=400, detail="Invalid type")
+            return {"error": "Invalid type"}
 
-        # Devolver la ruta del video
         return {
-            "video_path": f"/media/shorts/{request.filename}",
+            "video_path": f"/media/shorts/{filename}",
             "output_path": output_path,
             "status": "success"
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        traceback.print_exc()
+        return {"error": str(e)}
 
-@app.get("/health")
-async def health():
-    return {"status": "healthy"}
-
-# Gradio functions
+# Funciones para la interfaz de Gradio
 def generate_short(drill_data_json: str, filename: str):
     """Genera un YouTube Short a partir de JSON de datos del drill."""
     try:
@@ -63,7 +51,6 @@ def generate_short(drill_data_json: str, filename: str):
         if not filename.endswith('.mp4'):
             filename += '.mp4'
         output_path = generate_youtube_short(drill_data, filename)
-        # Devolver el archivo de video para descargar
         return output_path
     except Exception as e:
         raise gr.Error(f"Error generando short: {str(e)}")
@@ -84,6 +71,24 @@ def generate_demo(test_id_str: str, drills_data_json: str, filename: str):
 with gr.Blocks(title="Tachelhit Video Generator") as demo:
     gr.Markdown("# 🎬 Generador de Videos Tachelhit")
     gr.Markdown("Genera YouTube Shorts o videos demo del Drill Player.")
+    
+    # API endpoint para POST /generate
+    # Usamos un componente oculto para exponer la función como API
+    gr.Interface(
+        fn=api_generate,
+        inputs=[
+            gr.Dropdown(["short", "demo"], label="type", value="short"),
+            gr.Textbox(label="drill_data (JSON)", placeholder='{"text_catalan": "..."}'),
+            gr.Textbox(label="drills_data (JSON array)", placeholder='[{"text_catalan": "..."}]'),
+            gr.Textbox(label="filename", value="output.mp4"),
+            gr.Number(label="test_id (optional)", value=0)
+        ],
+        outputs=gr.JSON(label="API Response"),
+        api_name="generate",
+        title="API Endpoint",
+        description="Endpoint para llamadas del backend. Usa POST /api/generate/",
+        allow_flagging="never"
+    ).queue()
     
     with gr.Tab("YouTube Short"):
         gr.Markdown("### Generar un YouTube Short")
@@ -169,9 +174,6 @@ with gr.Blocks(title="Tachelhit Video Generator") as demo:
     gr.Markdown("### 🔍 Estado del sistema")
     status = gr.Textbox(label="Estado", value="✅ Listo", interactive=False)
 
-# Montar Gradio en FastAPI
-app = gr.mount_gradio_app(app, demo, path="/")
-
+# Configurar la aplicación para Hugging Face Spaces
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+    demo.launch(server_name="0.0.0.0", server_port=7860)

@@ -635,7 +635,8 @@ def call_huggingface_space(endpoint: str, payload: dict):
     """
     try:
         import requests
-        url = f"{HUGGINGFACE_SPACE_URL}/{endpoint}"
+        # Gradio expone endpoints en /api/{endpoint}/
+        url = f"{HUGGINGFACE_SPACE_URL}/api/{endpoint}/"
         print(f"[HF SPACE] Calling {url} with payload: {payload}")
         response = requests.post(url, json=payload, timeout=60)
         response.raise_for_status()
