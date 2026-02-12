@@ -1,7 +1,7 @@
 fastapi==0.115.6
 uvicorn==0.34.0
 sqlalchemy==2.0.36
-pydantic==1.10.15
+pydantic==2.10.5
 python-multipart==0.0.20
 requests==2.32.3
 deep-translator==1.11.4
@@ -13,6 +13,8 @@ numpy==2.4.2
 moviepy==2.1.2
 imageio==2.37.2
 imageio-ffmpeg==0.6.0
+opencv-python-headless==4.10.0.84
+gtts==2.5.0
 yt-dlp
 pydantic-settings==2.3.4
 alembic==1.13.2
