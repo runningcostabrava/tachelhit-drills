@@ -3,6 +3,7 @@ import DrillsResponsive from './components/DrillsResponsive';
 import TestsDashboard from './components/TestsDashboard';
 import YouTubeShorts from './components/YouTubeShorts';
 import DrillPlayer from './components/DrillPlayer';
+import MediaRecorderTest from './components/MediaRecorderTest';
 import './App.css'; // optional – you can remove this line
 
 // Datos de ejemplo para drills
@@ -43,7 +44,7 @@ const sampleDrills = [
 ];
 
 function App() {
-  const [view, setView] = useState<'drills' | 'tests' | 'shorts' | 'player'>('drills');
+  const [view, setView] = useState<'drills' | 'tests' | 'shorts' | 'player' | 'mediaTest'>('drills');
 
   // Si estamos en la vista de drills, mostrar un botón para abrir el DrillPlayer
   const renderDrillsView = () => {
@@ -103,6 +104,20 @@ function App() {
           >
             🎬 Shorts
           </button>
+          <button
+            onClick={() => setView('mediaTest')}
+            style={{
+              padding: '10px 20px',
+              background: '#f44336',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '16px'
+            }}
+          >
+            🎤 Media Test
+          </button>
         </div>
       </div>
     );
@@ -122,6 +137,9 @@ function App() {
           drills={sampleDrills} 
           onExit={() => setView('drills')} 
         />
+      )}
+      {view === 'mediaTest' && (
+        <MediaRecorderTest />
       )}
     </div>
   );

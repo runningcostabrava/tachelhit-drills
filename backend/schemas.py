@@ -110,11 +110,6 @@ class VideoSegmentBase(BaseModel):
     job_id: int
     segment_start_time: float
     segment_end_time: float
-    original_transcription: Optional[str] = None
-    original_language: Optional[str] = None
-    translated_arabic: Optional[str] = None
-    translated_catalan: Optional[str] = None
-    translated_tachelhit: Optional[str] = None
     video_url: Optional[str] = None
     audio_url: Optional[str] = None
 
