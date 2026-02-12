@@ -96,22 +96,47 @@ def generate_youtube_short(drill_data, output_filename):
     img = Image.new('RGB', (SHORT_WIDTH, SHORT_HEIGHT), color=(30, 30, 50))
     draw = ImageDraw.Draw(img)
 
-    # Load fonts
-    try:
-        font_large_bold = ImageFont.truetype("arialbd.ttf", 70)
-        font_medium = ImageFont.truetype("arial.ttf", 50)
-    except:
+    # Load fonts - try multiple system fonts
+    font_paths = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf",
+        "arialbd.ttf",
+        "Arial Bold.ttf"
+    ]
+    font_large_bold = None
+    font_medium = None
+    for fp in font_paths:
+        try:
+            if font_large_bold is None:
+                font_large_bold = ImageFont.truetype(fp, 70)
+            if font_medium is None:
+                font_medium = ImageFont.truetype(fp, 50)
+        except:
+            continue
+    if font_large_bold is None:
         font_large_bold = ImageFont.load_default()
+    if font_medium is None:
         font_medium = ImageFont.load_default()
 
     # Add drill image if available (centered)
     if drill_data.get('image_url'):
         try:
-            image_path = f"media/{drill_data['image_url'].replace('/media/', '')}"
-            if os.path.exists(image_path):
-                print(f"[SHORTS] Loading image: {image_path}")
-                drill_img = Image.open(image_path)
-
+            image_url = drill_data['image_url']
+            # Si es una URL relativa (empieza con /media/), no la podemos cargar en el Space.
+            # En su lugar, intentamos descargar si es una URL absoluta.
+            if image_url.startswith('http'):
+                import requests
+                from io import BytesIO
+                print(f"[SHORTS] Downloading image from URL: {image_url}")
+                response = requests.get(image_url, timeout=10)
+                response.raise_for_status()
+                drill_img = Image.open(BytesIO(response.content))
+            else:
+                # Ruta local (no esperada en Space)
+                print(f"[SHORTS] Local image path not supported in Space: {image_url}")
+                drill_img = None
+            if drill_img:
                 # Resize to fit in middle section
                 max_size = (SHORT_WIDTH - 200, SHORT_HEIGHT - 800)
                 drill_img.thumbnail(max_size, Image.Resampling.LANCZOS)
@@ -169,11 +194,21 @@ def generate_youtube_short(drill_data, output_filename):
     audio_clip = None
     if drill_data.get('audio_url'):
         try:
-            audio_path = f"media/{drill_data['audio_url'].replace('/media/', '')}"
-            if os.path.exists(audio_path):
-                print(f"[SHORTS] Adding audio: {audio_path}")
-                audio_clip = AudioFileClip(audio_path)
+            audio_url = drill_data['audio_url']
+            if audio_url.startswith('http'):
+                import requests
+                import tempfile
+                print(f"[SHORTS] Downloading audio from URL: {audio_url}")
+                response = requests.get(audio_url, timeout=15)
+                response.raise_for_status()
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp:
+                    tmp.write(response.content)
+                    tmp_path = tmp.name
+                audio_clip = AudioFileClip(tmp_path)
                 duration = max(duration, audio_clip.duration + 0.5)
+                # El archivo temporal se eliminará después de cerrar el clip
+            else:
+                print(f"[SHORTS] Local audio path not supported in Space: {audio_url}")
         except Exception as e:
             print(f"[SHORTS] Error loading audio: {e}")
 
