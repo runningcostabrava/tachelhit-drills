@@ -36,6 +36,7 @@ translator_ca_to_en = GoogleTranslator(source='ca', target='en')
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "dX9JkRJYfaRQUZdi6tKsF1TfJT44HnZMAPu2RyA4vt0JyRbzmdiVYGgW")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///drills.db")
+HUGGINGFACE_SPACE_URL = os.getenv("HUGGINGFACE_SPACE_URL", "https://josepabloucr-catalan-drill.hf.space")
 
 MEDIA_ROOT = "media"
 os.makedirs(f"{MEDIA_ROOT}/audio", exist_ok=True)
@@ -627,6 +628,24 @@ def get_test_stats(test_id: int, db: Session = Depends(get_db)):
         "passed_attempts": passed_attempts
     }
 
+def call_huggingface_space(endpoint: str, payload: dict):
+    """
+    Send a request to Hugging Face Space API.
+    """
+    try:
+        import requests
+        url = f"{HUGGINGFACE_SPACE_URL}/{endpoint}"
+        print(f"[HF SPACE] Calling {url} with payload: {payload}")
+        response = requests.post(url, json=payload, timeout=60)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        print(f"[HF SPACE] Error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Hugging Face Space request failed: {str(e)}"
+        )
+
 # ===================== YOUTUBE SHORTS =====================
 @app.post("/generate-short/{drill_id}")
 def generate_short(drill_id: int, db: Session = Depends(get_db)):
@@ -635,7 +654,7 @@ def generate_short(drill_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Drill not found")
 
     try:
-        print(f"[API] Generating short for drill {drill_id}")
+        print(f"[API] Generating short for drill {drill_id} via Hugging Face Space")
 
         # Prepare drill data
         drill_data = {
@@ -650,32 +669,19 @@ def generate_short(drill_id: int, db: Session = Depends(get_db)):
         # Generate filename
         filename = f"short_{drill_id}_{int(datetime.now().timestamp())}.mp4"
 
-        # Generate the short
-        try:
-            from shorts_generator import generate_youtube_short
-        except ImportError as e:
-            print(f"[API] ImportError: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail="MoviePy library not installed. Please install moviepy and opencv-python-headless: pip install moviepy opencv-python-headless"
-            )
-        
-        try:
-            output_path = generate_youtube_short(drill_data, filename)
-        except Exception as e:
-            # Capturar errores específicos de moviepy
-            if "MoviePy" in str(e) or "moviepy" in str(e).lower():
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"MoviePy error: {str(e)}. Please ensure moviepy and its dependencies are installed."
-                )
-            else:
-                raise
+        # Call Hugging Face Space
+        payload = {
+            'drill_id': drill_id,
+            'drill_data': drill_data,
+            'filename': filename,
+            'type': 'short'
+        }
+        result = call_huggingface_space("generate", payload)
 
         # Save to database
         short = YouTubeShortModel(
             drill_id=drill_id,
-            video_path=f"/media/shorts/{filename}",
+            video_path=result.get('video_path', f"/media/shorts/{filename}"),
             text_catalan=drill.text_catalan,
             text_tachelhit=drill.text_tachelhit,
             text_arabic=drill.text_arabic
@@ -703,7 +709,7 @@ def generate_drillplayer_demo(test_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Test not found")
 
     try:
-        print(f"[API] Generating Drill Player demo for test {test_id}")
+        print(f"[API] Generating Drill Player demo for test {test_id} via Hugging Face Space")
 
         # Get drill IDs from test
         drill_ids = [int(id.strip()) for id in test.drill_ids.split(',') if id.strip()]
@@ -729,30 +735,17 @@ def generate_drillplayer_demo(test_id: int, db: Session = Depends(get_db)):
         # Generate filename
         filename = f"demo_test_{test_id}_{int(datetime.now().timestamp())}.mp4"
 
-        # Generate the demo video
-        try:
-            from shorts_generator import generate_drillplayer_demo as generate_demo
-        except ImportError as e:
-            print(f"[API] ImportError: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail="MoviePy library not installed. Please install moviepy and opencv-python-headless: pip install moviepy opencv-python-headless"
-            )
-        
-        try:
-            output_path = generate_demo(test_id, drills_data, filename)
-        except Exception as e:
-            # Capturar errores específicos de moviepy
-            if "MoviePy" in str(e) or "moviepy" in str(e).lower():
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"MoviePy error: {str(e)}. Please ensure moviepy and its dependencies are installed."
-                )
-            else:
-                raise
+        # Call Hugging Face Space
+        payload = {
+            'test_id': test_id,
+            'drills_data': drills_data,
+            'filename': filename,
+            'type': 'demo'
+        }
+        result = call_huggingface_space("generate", payload)
 
         # Return the video path (not saved in database)
-        video_path = f"/media/shorts/{filename}"
+        video_path = result.get('video_path', f"/media/shorts/{filename}")
         return {
             "test_id": test_id,
             "video_path": video_path,
