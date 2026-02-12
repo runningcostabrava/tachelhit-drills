@@ -933,9 +933,10 @@ async def clip_video_segment(
 def debug_moviepy():
     """Check if moviepy and ffmpeg are working."""
     try:
-        from shorts_generator import MOVIEPY_AVAILABLE
+        from shorts_generator import MOVIEPY_AVAILABLE, MOVIEPY_ERROR
         status = {
             "moviepy_available": MOVIEPY_AVAILABLE,
+            "moviepy_error": MOVIEPY_ERROR,
             "requirements_installed": True,
         }
         
@@ -961,6 +962,14 @@ def debug_moviepy():
                 status["moviepy_import_error"] = str(e)
         else:
             status["moviepy_import"] = "failed"
+        
+        # Check ffmpeg in PATH
+        import shutil
+        ffmpeg_path_sys = shutil.which('ffmpeg')
+        status["system_ffmpeg"] = ffmpeg_path_sys
+        
+        # Check environment variable
+        status["env_ffmpeg_binary"] = os.environ.get("FFMPEG_BINARY")
         
         return status
     except Exception as e:
