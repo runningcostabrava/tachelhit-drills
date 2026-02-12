@@ -797,13 +797,9 @@ async def process_video_background_task(job_id: int, source_url: Optional[str], 
     # In a real scenario, this function would:
     # 1. Update job status to IN_PROGRESS
     # 2. Call external services (serverless functions) for:
-    #    a. Video download (if YouTube URL)
-    #    b. Speech-to-Text & Segmentation
-    #    c. Translation (Arabic, Catalan)
-    #    d. Video Clipping & Audio Extraction (using FFmpeg)
-    #    e. Upload results to Cloudinary
-    # 3. Store VideoSegments in DB
-    # 4. Update job status to COMPLETED or FAILED
+    #    a. Video download (if YouTube URL) from source_url
+    #    b. Storing the video in a temporary location.
+    # 3. Update job status to COMPLETED (ready for clipping) or FAILED
 
     print(f"[VIDEO_PROCESSOR] Started background task for Job ID: {job_id}")
     print(f"[VIDEO_PROCESSOR] Source URL: {source_url}, Source Filepath: {source_filepath}")
@@ -815,17 +811,14 @@ async def process_video_background_task(job_id: int, source_url: Optional[str], 
         db_session.commit()
         db_session.refresh(job)
 
-    # Simulate work
-    # await asyncio.sleep(10) # Removed asyncio.sleep for simplicity in current context
-
     # For now, immediately mark as completed for demonstration
     if job:
         job.status = "COMPLETED"
-        job.processing_log = "Simulated successful processing."
+        job.processing_log = "Simulated successful video download."
         db_session.add(job)
         db_session.commit()
         db_session.refresh(job)
-        print(f"[VIDEO_PROCESSOR] Job {job_id} simulated completion.")
+        print(f"[VIDEO_PROCESSOR] Job {job_id} simulated completion (ready for clipping).")
 
 
 @app.post("/video-processing/submit", response_model=VideoProcessingJob)
@@ -845,9 +838,6 @@ async def submit_video_for_processing(
         # In a real scenario, upload file to temporary storage (e.g., S3)
         # For this demo, just note the filename
         source_filepath = os.path.join("temp_uploads", file.filename) # Conceptual path
-        # You'd save the file content here for later processing if it were local
-        # with open(source_filepath, "wb") as buffer:
-        #     shutil.copyfileobj(file.file, buffer)
         print(f"[VIDEO_PROCESSING] File uploaded conceptually: {source_filepath}")
 
     # Create initial job entry
@@ -880,6 +870,62 @@ def get_video_segments_for_job(job_id: int, db: Session = Depends(get_db)):
     if not job:
         raise HTTPException(status_code=404, detail="Video processing job not found.")
     return job.segments
+
+@app.post("/video-processing/clip", response_model=VideoSegment)
+async def clip_video_segment(
+    job_id: int = Body(...),
+    start_time: float = Body(...),
+    end_time: float = Body(...),
+    drill_id: int = Body(...),
+    output_type: str = Body("both"), # 'video', 'audio', or 'both'
+    db: Session = Depends(get_db)
+):
+    job = db.query(VideoProcessingJobModel).filter(VideoProcessingJobModel.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Video processing job not found.")
+    
+    drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+    if not drill:
+        raise HTTPException(status_code=404, detail="Drill not found.")
+
+    if output_type not in ["video", "audio", "both"]:
+        raise HTTPException(status_code=400, detail="Invalid output_type. Must be 'video', 'audio', or 'both'.")
+
+    # Create segment entry in DB
+    segment = VideoSegmentModel(
+        job_id=job.id,
+        segment_start_time=start_time,
+        segment_end_time=end_time
+    )
+    db.add(segment)
+    db.commit()
+    db.refresh(segment)
+
+    # In a real scenario, this would trigger an external worker
+    # that uses FFmpeg to clip the video and/or extract audio.
+    # The worker would then update the segment and drill with the new URLs.
+    
+    # Simulate the clipping and update for now
+    print(f"[CLIPPER] Simulating clipping for segment {segment.id} and updating drill {drill.id}")
+    
+    # Placeholder URLs
+    clipped_video_url = f"https://res.cloudinary.com/demo/video/upload/sample_clipped_{segment.id}.mp4"
+    extracted_audio_url = f"https://res.cloudinary.com/demo/video/upload/sample_audio_{segment.id}.mp3"
+    
+    segment.video_url = clipped_video_url if output_type in ["video", "both"] else None
+    segment.audio_url = extracted_audio_url if output_type in ["audio", "both"] else None
+    
+    if output_type in ["video", "both"]:
+        drill.video_url = clipped_video_url
+    if output_type in ["audio", "both"]:
+        drill.audio_url = extracted_audio_url
+        
+    db.add(segment)
+    db.add(drill)
+    db.commit()
+    db.refresh(segment)
+    
+    return segment
 
 
 # ===================== DEBUG ENDPOINTS =====================

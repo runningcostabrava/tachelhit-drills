@@ -1,7 +1,7 @@
 fastapi==0.115.6
 uvicorn==0.34.0
 sqlalchemy==2.0.36
-pydantic==2.10.5
+pydantic==1.10.15
 python-multipart==0.0.20
 requests==2.32.3
 deep-translator==1.11.4
