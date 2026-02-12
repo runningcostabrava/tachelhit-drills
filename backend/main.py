@@ -686,10 +686,10 @@ def generate_short(drill_id: int, db: Session = Depends(get_db)):
 
         # Call Hugging Face Space
         payload = {
+            'video_type': 'short',
             'drill_id': drill_id,
-            'drill_data': drill_data,
-            'filename': filename,
-            'type': 'short'
+            'drill_data_str': json.dumps(drill_data),
+            'output_filename': filename,
         }
         result = call_huggingface_space("generate", payload)
 
@@ -717,6 +717,10 @@ def generate_short(drill_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 # ===================== DRILL PLAYER DEMO VIDEO =====================
+import json
+
+# ... (other imports)
+
 @app.post("/generate-drillplayer-demo/{test_id}")
 def generate_drillplayer_demo(test_id: int, db: Session = Depends(get_db)):
     test = db.query(TestModel).filter(TestModel.id == test_id).first()
@@ -752,10 +756,10 @@ def generate_drillplayer_demo(test_id: int, db: Session = Depends(get_db)):
 
         # Call Hugging Face Space
         payload = {
+            'video_type': 'demo',
             'test_id': test_id,
-            'drills_data': drills_data,
-            'filename': filename,
-            'type': 'demo'
+            'drills_data_str': json.dumps(drills_data),
+            'output_filename': filename,
         }
         result = call_huggingface_space("generate", payload)
 
