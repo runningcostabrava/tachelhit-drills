@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime
 from urllib.parse import quote
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Body, BackgroundTasks
@@ -54,22 +55,22 @@ def generate_catalan_tts(text: str, drill_id: int) -> str:
         from gtts import gTTS
         import tempfile
         import shutil
-        
+
         # Create TTS object
         tts = gTTS(text=text, lang='ca', slow=False)
-        
+
         # Create a temporary file
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp:
             temp_path = tmp.name
             tts.save(temp_path)
-        
+
         # Determine final filename and path
         timestamp = int(datetime.utcnow().timestamp())
         filename = f"tts_{drill_id}_{timestamp}.mp3"
-        
+
         # Check if Cloudinary is configured
         use_cloudinary = bool(os.getenv("CLOUDINARY_CLOUD_NAME"))
-        
+
         if use_cloudinary:
             # Upload to Cloudinary
             result = cloudinary.uploader.upload(
@@ -86,11 +87,11 @@ def generate_catalan_tts(text: str, drill_id: int) -> str:
             final_path = os.path.join(dir_path, filename)
             shutil.move(temp_path, final_path)
             url = f"/media/tts/{filename}"
-        
+
         # Clean up temp file if it still exists
         if os.path.exists(temp_path):
             os.unlink(temp_path)
-            
+
         return url
     except Exception as e:
         print(f"[TTS] Error generating TTS: {e}")
@@ -181,7 +182,7 @@ def root():
 def health_check():
     print(f"[HEALTH] Health check requested at {datetime.utcnow().isoformat()}")
     return {
-        "status": "healthy", 
+        "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
         "frontend_url": FRONTEND_URL,
         "api_base": "https://tachelhit-drills-api.onrender.com",
@@ -238,11 +239,11 @@ def update_drill(drill_id: int, update_data: DrillUpdate, db: Session = Depends(
         raise HTTPException(status_code=404, detail="Drill not found")
 
     update_dict = update_data.model_dump(exclude_unset=True)
-    
+
     # Check if text_catalan is being updated and is not empty
     text_catalan_updated = "text_catalan" in update_dict and update_dict["text_catalan"]
     previous_text_catalan = drill.text_catalan
-    
+
     for key, value in update_dict.items():
         setattr(drill, key, value)
 
@@ -252,7 +253,7 @@ def update_drill(drill_id: int, update_data: DrillUpdate, db: Session = Depends(
             drill.text_arabic = translator_ca_to_ar.translate(update_dict["text_catalan"])
         except Exception as e:
             print("Translation error:", e)
-        
+
         # Generate TTS audio for Catalan text
         try:
             tts_url = generate_catalan_tts(update_dict["text_catalan"], drill_id)
@@ -439,7 +440,7 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
     print(f"[UPLOAD] Request method: POST")
     print(f"[UPLOAD] File name: {file.filename}")
     print(f"[UPLOAD] Content type: {file.content_type}")
-    
+
     # Verificar que el método sea POST
     import inspect
     print(f"[UPLOAD] Current function: {inspect.currentframe().f_code.co_name}")
@@ -453,7 +454,7 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
     try:
         # Read file content
         content = await file.read()
-        
+
         # Validar que el fitxer no estigui buit
         if len(content) == 0:
             raise HTTPException(status_code=400, detail="Uploaded file is empty")
@@ -472,17 +473,17 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
                 ext = "mp4"
             else:  # image
                 ext = "jpg"
-        
+
         # Validar extensions permeses
         allowed_extensions = {
             "audio": ["webm", "mp4", "ogg", "wav", "m4a", "mp3", "aac"],
             "video": ["mp4", "webm", "mov", "avi", "m4v"],
             "image": ["jpg", "jpeg", "png", "gif", "webp"]
         }
-        
+
         if ext not in allowed_extensions.get(media_type, []):
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail=f"File extension .{ext} not allowed for {media_type}. Allowed: {allowed_extensions[media_type]}"
             )
 
@@ -492,7 +493,7 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
 
             # Determine resource type
             resource_type = "video" if media_type in ["audio", "video"] else "image"
-            
+
             # Per a àudio, utilitzar resource_type "video" a Cloudinary (també funciona per àudio)
             if media_type == "audio":
                 resource_type = "video"
@@ -672,6 +673,7 @@ def generate_short(drill_id: int, db: Session = Depends(get_db)):
         print(f"[API] Generating short for drill {drill_id} via Hugging Face Space")
 
         # Prepare drill data
+# Prepare drill data
         drill_data = {
             'text_catalan': drill.text_catalan,
             'text_tachelhit': drill.text_tachelhit,
@@ -684,18 +686,17 @@ def generate_short(drill_id: int, db: Session = Depends(get_db)):
         # Generate filename
         filename = f"short_{drill_id}_{int(datetime.now().timestamp())}.mp4"
 
-        # Call Hugging Face Space with the correct payload format
+        # CORRECT PAYLOAD FOR SHORTS
         payload = {
             "data": [
-                "short",  # video_type
-                drill_id,  # drill_id
-                None,  # test_id
-                json.dumps(drill_data),  # drill_data_str
-                None,  # drills_data_str
-                filename,  # output_filename
+                "short",                    # Type is SHORT
+                json.dumps(drill_data),     # Send SINGLE drill data
+                None,                       # No list data
+                filename,
+                0
             ]
         }
-        result = call_huggingface_space("predict", payload) # Use 'predict' for Gradio API
+        result = call_huggingface_space("predict", payload)
 
         # Save to database
         short = YouTubeShortModel(
@@ -721,10 +722,6 @@ def generate_short(drill_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 # ===================== DRILL PLAYER DEMO VIDEO =====================
-import json
-
-# ... (other imports)
-
 @app.post("/generate-drillplayer-demo/{test_id}")
 def generate_drillplayer_demo(test_id: int, db: Session = Depends(get_db)):
     test = db.query(TestModel).filter(TestModel.id == test_id).first()
@@ -737,11 +734,12 @@ def generate_drillplayer_demo(test_id: int, db: Session = Depends(get_db)):
         # Get drill IDs from test
         drill_ids = [int(id.strip()) for id in test.drill_ids.split(',') if id.strip()]
         drills = db.query(DrillModel).filter(DrillModel.id.in_(drill_ids)).all()
-        
+
         if not drills:
             raise HTTPException(status_code=400, detail="Test has no drills")
 
         # Prepare drill data
+# Prepare drill data
         drills_data = []
         for drill in drills:
             drills_data.append({
@@ -758,18 +756,19 @@ def generate_drillplayer_demo(test_id: int, db: Session = Depends(get_db)):
         # Generate filename
         filename = f"demo_test_{test_id}_{int(datetime.now().timestamp())}.mp4"
 
-        # Call Hugging Face Space with the correct payload format
+        # CORRECT PAYLOAD FOR DEMO
         payload = {
             "data": [
-                "demo",  # video_type
-                None,  # drill_id
-                test_id,  # test_id
-                None,  # drill_data_str
-                json.dumps(drills_data),  # drills_data_str
-                filename,  # output_filename
+                "demo",                     # Type is DEMO
+                None,                       # No single data
+                json.dumps(drills_data),    # Send LIST of drills
+                filename,
+                test_id
             ]
         }
-        result = call_huggingface_space("predict", payload) # Use 'predict' for Gradio API
+        result = call_huggingface_space("predict", payload)
+
+
 
         # Return the video path (not saved in database)
         video_path = result.get('video_path', f"/media/shorts/{filename}")
@@ -903,7 +902,7 @@ async def clip_video_segment(
     job = db.query(VideoProcessingJobModel).filter(VideoProcessingJobModel.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Video processing job not found.")
-    
+
     drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found.")
@@ -924,27 +923,27 @@ async def clip_video_segment(
     # In a real scenario, this would trigger an external worker
     # that uses FFmpeg to clip the video and/or extract audio.
     # The worker would then update the segment and drill with the new URLs.
-    
+
     # Simulate the clipping and update for now
     print(f"[CLIPPER] Simulating clipping for segment {segment.id} and updating drill {drill.id}")
-    
+
     # Placeholder URLs
     clipped_video_url = f"https://res.cloudinary.com/demo/video/upload/sample_clipped_{segment.id}.mp4"
     extracted_audio_url = f"https://res.cloudinary.com/demo/video/upload/sample_audio_{segment.id}.mp3"
-    
+
     segment.video_url = clipped_video_url if output_type in ["video", "both"] else None
     segment.audio_url = extracted_audio_url if output_type in ["audio", "both"] else None
-    
+
     if output_type in ["video", "both"]:
         drill.video_url = clipped_video_url
     if output_type in ["audio", "both"]:
         drill.audio_url = extracted_audio_url
-        
+
     db.add(segment)
     db.add(drill)
     db.commit()
     db.refresh(segment)
-    
+
     return segment
 
 
@@ -959,7 +958,7 @@ def debug_moviepy():
             "moviepy_error": MOVIEPY_ERROR,
             "requirements_installed": True,
         }
-        
+
         # Try to import imageio_ffmpeg
         try:
             import imageio_ffmpeg
@@ -971,7 +970,7 @@ def debug_moviepy():
             }
         except Exception as e:
             status["imageio_ffmpeg_error"] = str(e)
-        
+
         # Try to import moviepy components
         if MOVIEPY_AVAILABLE:
             try:
@@ -982,15 +981,15 @@ def debug_moviepy():
                 status["moviepy_import_error"] = str(e)
         else:
             status["moviepy_import"] = "failed"
-        
+
         # Check ffmpeg in PATH
         import shutil
         ffmpeg_path_sys = shutil.which('ffmpeg')
         status["system_ffmpeg"] = ffmpeg_path_sys
-        
+
         # Check environment variable
         status["env_ffmpeg_binary"] = os.environ.get("FFMPEG_BINARY")
-        
+
         return status
     except Exception as e:
         return {"error": str(e), "traceback": str(__import__("traceback").format_exc())}
