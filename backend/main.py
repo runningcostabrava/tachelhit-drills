@@ -36,7 +36,8 @@ translator_ca_to_en = GoogleTranslator(source='ca', target='en')
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "dX9JkRJYfaRQUZdi6tKsF1TfJT44HnZMAPu2RyA4vt0JyRbzmdiVYGgW")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///drills.db")
-HUGGINGFACE_SPACE_URL = os.getenv("HUGGINGFACE_SPACE_URL", "https://josepabloucr-catalan-drill.hf.space")
+# Usar el nuevo Space tachelhit-video-generator
+HUGGINGFACE_SPACE_URL = os.getenv("HUGGINGFACE_SPACE_URL", "https://josepabloucr-tachelhit-video-generator.hf.space")
 
 MEDIA_ROOT = "media"
 os.makedirs(f"{MEDIA_ROOT}/audio", exist_ok=True)
