@@ -684,14 +684,18 @@ def generate_short(drill_id: int, db: Session = Depends(get_db)):
         # Generate filename
         filename = f"short_{drill_id}_{int(datetime.now().timestamp())}.mp4"
 
-        # Call Hugging Face Space
+        # Call Hugging Face Space with the correct payload format
         payload = {
-            'video_type': 'short',
-            'drill_id': drill_id,
-            'drill_data_str': json.dumps(drill_data),
-            'output_filename': filename,
+            "data": [
+                "short",  # video_type
+                drill_id,  # drill_id
+                None,  # test_id
+                json.dumps(drill_data),  # drill_data_str
+                None,  # drills_data_str
+                filename,  # output_filename
+            ]
         }
-        result = call_huggingface_space("generate", payload)
+        result = call_huggingface_space("predict", payload) # Use 'predict' for Gradio API
 
         # Save to database
         short = YouTubeShortModel(
@@ -754,14 +758,18 @@ def generate_drillplayer_demo(test_id: int, db: Session = Depends(get_db)):
         # Generate filename
         filename = f"demo_test_{test_id}_{int(datetime.now().timestamp())}.mp4"
 
-        # Call Hugging Face Space
+        # Call Hugging Face Space with the correct payload format
         payload = {
-            'video_type': 'demo',
-            'test_id': test_id,
-            'drills_data_str': json.dumps(drills_data),
-            'output_filename': filename,
+            "data": [
+                "demo",  # video_type
+                None,  # drill_id
+                test_id,  # test_id
+                None,  # drill_data_str
+                json.dumps(drills_data),  # drills_data_str
+                filename,  # output_filename
+            ]
         }
-        result = call_huggingface_space("generate", payload)
+        result = call_huggingface_space("predict", payload) # Use 'predict' for Gradio API
 
         # Return the video path (not saved in database)
         video_path = result.get('video_path', f"/media/shorts/{filename}")
