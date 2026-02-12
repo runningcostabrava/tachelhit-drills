@@ -632,6 +632,40 @@ def get_test_stats(test_id: int, db: Session = Depends(get_db)):
 
 def call_huggingface_space(endpoint: str, payload: dict):
     """
+    Calls the Dockerized FastAPI Space.
+    Handles the standard JSON response without needing a Gradio client.
+    """
+    try:
+        import requests
+
+        # Ensure we use the exact Space URL
+        space_url = "https://josepabloucr-tachelhit-video-generator.hf.space"
+        url = f"{space_url}/api/{endpoint}"
+
+        print(f"[HF SPACE] 🚀 Requesting video: {url}")
+
+        # Direct POST request
+        response = requests.post(url, json=payload, timeout=120)
+        response.raise_for_status()
+
+        result = response.json()
+
+        # Check if the Space returned an internal error
+        if result.get("status") == "failed" or "error" in result:
+            error_msg = result.get("error", "Unknown Space error")
+            print(f"[HF SPACE] ❌ Space Error: {error_msg}")
+            raise Exception(error_msg)
+
+        print(f"[HF SPACE] ✅ Video generated: {result.get('video_path')}")
+        return result
+
+    except Exception as e:
+        print(f"[HF SPACE] 💥 Connection Error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Video Generation failed: {str(e)}"
+        )
+    """
     Debug-enhanced request to Hugging Face Space.
     Prints full URL, payload structure, and raw response details.
     """
@@ -686,6 +720,7 @@ def call_huggingface_space(endpoint: str, payload: dict):
     except Exception as e:
         print(f"[HF DEBUG] 💥 Unexpected Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Request failed: {str(e)}")
+
 
     """
     Send a request to Hugging Face Space API, automatically correcting the URL format if needed.
