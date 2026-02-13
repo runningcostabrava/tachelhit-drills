@@ -36,6 +36,7 @@ class TestBase(BaseModel):
     time_limit_seconds: Optional[int] = None
     passing_score: float = 70.0
     drill_ids: str  # comma-separated IDs
+    video_url: Optional[str] = None # New field for demo video URL
 
 class TestCreate(TestBase):
     pass
