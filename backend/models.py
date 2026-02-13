@@ -37,6 +37,7 @@ class Test(Base):
 
     # Selected drills (stored as comma-separated IDs)
     drill_ids = Column(Text, nullable=False)
+    video_url = Column(String, nullable=True) # New field for demo video URL
 
     # Relationships
     attempts = relationship("TestAttempt", back_populates="test")

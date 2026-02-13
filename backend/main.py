@@ -710,8 +710,9 @@ def background_video_vault(job_type: str, item_id: int, payload: dict):
                 db.add(new_short)
         
         elif job_type == "demo":
-            # For demos, we just log the completion in console 
-            # as it's typically requested on-the-fly for tests
+            test = db.query(TestModel).filter(TestModel.id == item_id).first()
+            if test:
+                test.video_url = cloudinary_url
             print(f"[WORKER] Demo for Test {item_id} ready at: {cloudinary_url}")
 
         db.commit()

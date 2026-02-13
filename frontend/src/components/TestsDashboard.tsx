@@ -47,21 +47,67 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
   const [takingTestId, setTakingTestId] = useState<number | null>(null);
   const [editingTestId, setEditingTestId] = useState<number | null>(null);
   const [playingDrills, setPlayingDrills] = useState<any[] | null>(null);
+  const [generatingDemoVideoId, setGeneratingDemoVideoId] = useState<number | null>(null);
   const [showTestList, setShowTestList] = useState(isMobile ? true : true);
 
   useEffect(() => {
     fetchTests();
   }, []);
 
-  const fetchTests = async () => {
+  const fetchTests = async (testIdToRefresh?: number) => {
     try {
-      const response = await axios.get(`${API_BASE}/tests/`);
-      setTests(response.data);
-      setLoading(false);
+      if (testIdToRefresh) {
+        const response = await axios.get(`${API_BASE}/tests/${testIdToRefresh}`);
+        setTests(prevTests => 
+          prevTests.map(test => (test.id === testIdToRefresh ? response.data : test))
+        );
+        if (selectedTest?.id === testIdToRefresh) {
+          setSelectedTest(response.data);
+        }
+      } else {
+        const response = await axios.get(`${API_BASE}/tests/`);
+        setTests(response.data);
+      }
+      setLoading(false); // Only set to false for initial load
     } catch (error) {
       console.error('Error fetching tests:', error);
-      setLoading(false);
+      setLoading(false); // Only set to false for initial load
     }
+  };
+
+  const startPollingForDemoVideo = (testId: number) => {
+    setGeneratingDemoVideoId(testId);
+    const interval = setInterval(async () => {
+      try {
+        const response = await axios.get(`${API_BASE}/tests/${testId}`);
+        const updatedTest = response.data;
+        if (updatedTest.video_url) {
+          clearInterval(interval);
+          setGeneratingDemoVideoId(null);
+          setTests(prevTests =>
+            prevTests.map(test => (test.id === testId ? updatedTest : test))
+          );
+          setSelectedTest(updatedTest);
+          alert(`Demo video is ready! You can watch it here: ${updatedTest.video_url}`);
+          // Optionally open the video in a new tab
+          window.open(updatedTest.video_url, '_blank');
+        }
+      } catch (error) {
+        console.error('Error polling for demo video:', error);
+        clearInterval(interval);
+        setGeneratingDemoVideoId(null);
+        alert('Failed to get demo video status. Please try again or check logs.');
+      }
+    }, 10000); // Poll every 10 seconds
+
+    // Optional: Add a timeout to stop polling after a certain period (e.g., 5 minutes)
+    setTimeout(() => {
+      if (generatingDemoVideoId === testId) {
+        clearInterval(interval);
+        setGeneratingDemoVideoId(null);
+        alert('Demo video generation is taking longer than expected. Please check back later.');
+      }
+    }, 5 * 60 * 1000); // 5 minutes timeout
   };
 
   const fetchStats = async (testId: number) => {
@@ -522,15 +568,18 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
               <button
                 onClick={async () => {
                   if (!selectedTest) return;
-                  if (!confirm('This will generate a demo video showing the Drill Player interface for this test. It may take a few minutes. Continue?')) {
+                  if (!confirm('This will generate a demo video showing the Drill Player interface for this test. It may take a a few minutes. Continue?')) {
                     return;
                   }
+                  // Start the background generation
                   try {
+                    setGeneratingDemoVideoId(selectedTest.id); // Set state to show loading
                     const response = await axios.post(`${API_BASE}/generate-drillplayer-demo/${selectedTest.id}`);
-                    // Handle new background processing response
-                    alert(response.data.message || 'Video generation started. It will appear in Cloudinary shortly.');
+                    alert(response.data.message || 'Video generation started. Polling for completion...');
+                    startPollingForDemoVideo(selectedTest.id); // Start polling
                   } catch (error: any) {
                     console.error('Error generating demo video:', error);
+                    setGeneratingDemoVideoId(null); // Clear loading state on error
                     alert(`Failed to generate demo video: ${error.response?.data?.detail || error.message}`);
                   }
                 }}
@@ -550,6 +599,53 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
                 🎬 Generate Demo Video
               </button>
             </div>
+
+            {selectedTest.video_url && (
+              <div style={{
+                marginTop: '20px',
+                padding: '16px',
+                background: '#e6ffed',
+                borderLeft: '4px solid #4CAF50',
+                borderRadius: '8px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                alignItems: 'flex-start'
+              }}>
+                <h3 style={{ margin: 0, color: '#2e7d32', fontSize: '18px' }}>✅ Demo Video Ready!</h3>
+                <a 
+                  href={selectedTest.video_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ color: '#1976D2', textDecoration: 'underline', fontSize: '16px' }}
+                >
+                  Watch Demo Video
+                </a>
+                <video controls src={selectedTest.video_url} style={{ maxWidth: '100%', borderRadius: '8px' }} />
+              </div>
+            )}
+
+            {generatingDemoVideoId === selectedTest.id && (
+              <div style={{
+                marginTop: '20px',
+                padding: '16px',
+                background: '#fff3e0',
+                borderLeft: '4px solid #FF9800',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                <div className="spinner" style={{ border: '4px solid rgba(0, 0, 0, 0.1)', width: '24px', height: '24px', borderRadius: '50%', borderLeftColor: '#FF9800', animation: 'spin 1s ease infinite' }}></div>
+                <p style={{ margin: 0, color: '#E65100', fontSize: '16px' }}>Generating demo video... This may take a few minutes. Please keep this page open.</p>
+                <style>{`
+                  @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                  }
+                `}</style>
+              </div>
+            )}
           </div>
         )}
 
