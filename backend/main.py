@@ -757,6 +757,7 @@ async def generate_drillplayer_demo(test_id: int, background_tasks: BackgroundTa
     
     drills_data = [{
         'id': d.id, 'text_catalan': d.text_catalan, 'text_tachelhit': d.text_tachelhit,
+        'text_arabic': d.text_arabic,
         'image_url': d.image_url, 'audio_url': d.audio_url, 'audio_tts_url': d.audio_tts_url
     } for d in drills]
 
