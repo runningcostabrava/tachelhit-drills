@@ -522,15 +522,13 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
               <button
                 onClick={async () => {
                   if (!selectedTest) return;
-                  if (!confirm('This will generate a demo video showing the Drill Player interface for this test. It may take a few seconds. Continue?')) {
+                  if (!confirm('This will generate a demo video showing the Drill Player interface for this test. It may take a few minutes. Continue?')) {
                     return;
                   }
                   try {
                     const response = await axios.post(`${API_BASE}/generate-drillplayer-demo/${selectedTest.id}`);
-                    alert(`Demo video generated! You can download it from: ${response.data.video_path}`);
-                    // Optionally open the video in a new tab
-                    const videoUrl = `${API_BASE}${response.data.video_path}`;
-                    window.open(videoUrl, '_blank');
+                    // Handle new background processing response
+                    alert(response.data.message || 'Video generation started. It will appear in Cloudinary shortly.');
                   } catch (error: any) {
                     console.error('Error generating demo video:', error);
                     alert(`Failed to generate demo video: ${error.response?.data?.detail || error.message}`);
