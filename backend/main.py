@@ -27,7 +27,7 @@ cloudinary.config(
 
 from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel  # ← Alias for ORM models
 from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort, VideoProcessingJobCreate, VideoProcessingJob, VideoSegmentCreate, VideoSegment  # ← Pydantic schemas
-from shorts_generator import generate_youtube_short
+
 
 # Translators
 translator_ca_to_ar = GoogleTranslator(source='ca', target='ar')
