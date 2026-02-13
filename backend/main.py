@@ -644,8 +644,8 @@ def call_huggingface_space(endpoint: str, payload: dict):
 
         print(f"[HF SPACE] 🚀 Requesting video: {url}")
 
-        # Direct POST request
-        response = requests.post(url, json=payload, timeout=120)
+        # Direct POST request with a longer timeout
+        response = requests.post(url, json=payload, timeout=300) # 5 minutes timeout
         response.raise_for_status()
 
         result = response.json()
@@ -659,226 +659,113 @@ def call_huggingface_space(endpoint: str, payload: dict):
         print(f"[HF SPACE] ✅ Video generated: {result.get('video_path')}")
         return result
 
+    except requests.exceptions.Timeout:
+        print(f"[HF SPACE] 💥 Connection Timeout Error after 300 seconds.")
+        raise HTTPException(
+            status_code=504, # Gateway Timeout
+            detail="Video Generation timed out. The process is too long."
+        )
     except Exception as e:
         print(f"[HF SPACE] 💥 Connection Error: {e}")
         raise HTTPException(
             status_code=500,
             detail=f"Video Generation failed: {str(e)}"
         )
+
+def background_video_vault(job_type: str, item_id: int, payload: dict):
     """
-    Debug-enhanced request to Hugging Face Space.
-    Prints full URL, payload structure, and raw response details.
+    Background worker to handle long-running video generation and Cloudinary vaulting.
+    Discards the local HF path and saves the permanent Cloudinary URL.
     """
+    # Create a fresh database session for the background thread
+    db = SessionLocal()
     try:
-        import requests
-        import re
-        import json
+        # Step A: Call Hugging Face (Takes 1-5 minutes)
+        result = call_huggingface_space("predict", payload)
+        hf_video_path = result.get('video_path')
+        hf_full_url = f"https://josepabloucr-tachelhit-video-generator.hf.space{hf_video_path}"
 
-        space_url = HUGGINGFACE_SPACE_URL
-
-        # 1. URL Correction Logic
-        match = re.search(r"huggingface\.co/spaces/([^/]+)/([^/]+)", space_url)
-        if match:
-            username = match.group(1)
-            space_name = match.group(2)
-            space_url = f"https://{username}-{space_name}.hf.space"
-
-        # Ensure no double slashes
-        base_url = space_url.rstrip("/")
-
-        # !!! CRITICAL DEBUG !!!
-        # Check if we are accidentally calling 'predict' when we defined 'generate' in app.py
-        target_url = f"{base_url}/api/{endpoint}"
-
-        print("\n" + "="*60)
-        print(f"[HF DEBUG] 🚀 Initiating Request")
-        print(f"[HF DEBUG] Target URL: {target_url}")
-        print(f"[HF DEBUG] Payload Keys: {list(payload.keys())}")
-        if "data" in payload:
-             # Print first 2 items of data to verify order without dumping huge strings
-            print(f"[HF DEBUG] Data Array (First 2 items): {payload['data'][:2]}")
-        print("="*60 + "\n")
-
-        response = requests.post(target_url, json=payload, timeout=60)
-
-        print(f"[HF DEBUG] 📡 Response Status: {response.status_code}")
-
-        # Print first 200 chars of response to catch HTML 404 pages or error messages
-        response_text = response.text
-        print(f"[HF DEBUG] Response Body Preview: {response_text[:200]}...")
-
-        response.raise_for_status()
-        return response.json()
-
-    except requests.exceptions.HTTPError as e:
-        print(f"\n[HF DEBUG] ❌ HTTP Error: {e}")
-        # If it's a 404, it means the URL is wrong
-        if response.status_code == 404:
-            print(f"[HF DEBUG] ⚠️  404 NOT FOUND. This means '{target_url}' does not exist.")
-            print(f"[HF DEBUG] Check if app.py has api_name='{endpoint}' or @app.post('/api/{endpoint}')")
-        raise HTTPException(status_code=500, detail=f"HF Error: {str(e)}")
-    except Exception as e:
-        print(f"[HF DEBUG] 💥 Unexpected Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Request failed: {str(e)}")
-
-
-    """
-    Send a request to Hugging Face Space API, automatically correcting the URL format if needed.
-    """
-    try:
-        import requests
-        import re
-
-        space_url = HUGGINGFACE_SPACE_URL
-
-        # Check if the URL is in the 'huggingface.co/spaces/' format and convert it
-        match = re.search(r"huggingface\.co/spaces/([^/]+)/([^/]+)", space_url)
-        if match:
-            username = match.group(1)
-            space_name = match.group(2)
-            correct_url = f"https://{username}-{space_name}.hf.space"
-            print(f"[HF SPACE] Corrected URL from {space_url} to {correct_url}")
-            space_url = correct_url
-
-        # Gradio exposes endpoints at /api/{endpoint}/
-        # Ensure no double slashes
-        base_url = space_url.rstrip("/")
-        url = f"{base_url}/api/{endpoint}"
-        print(f"[HF SPACE] Calling {url} with payload: {payload}")
-        response = requests.post(url, json=payload, timeout=60)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        print(f"[HF SPACE] Error: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Hugging Face Space request failed: {str(e)}"
+        # Step B: Vault to Cloudinary directly from the HF URL
+        print(f"[WORKER] ☁️ Vaulting {job_type} to Cloudinary: {hf_full_url}")
+        upload_result = cloudinary.uploader.upload(
+            hf_full_url,
+            folder=f"tachelhit/{job_type}s",
+            resource_type="video",
+            public_id=f"{job_type}_{item_id}_{int(datetime.utcnow().timestamp())}"
         )
+        cloudinary_url = upload_result['secure_url']
+
+        # Step C: Update Database based on type
+        if job_type == "short":
+            drill = db.query(DrillModel).filter(DrillModel.id == item_id).first()
+            if drill:
+                drill.video_url = cloudinary_url
+                # Also log in YouTubeShorts table
+                new_short = YouTubeShortModel(
+                    drill_id=item_id,
+                    video_path=cloudinary_url,
+                    text_catalan=drill.text_catalan,
+                    text_tachelhit=drill.text_tachelhit
+                )
+                db.add(new_short)
+        
+        elif job_type == "demo":
+            # For demos, we just log the completion in console 
+            # as it's typically requested on-the-fly for tests
+            print(f"[WORKER] Demo for Test {item_id} ready at: {cloudinary_url}")
+
+        db.commit()
+        print(f"[WORKER] ✅ Successfully vaulted {job_type} for ID {item_id}")
+
+    except Exception as e:
+        print(f"[WORKER] ❌ Task Failed: {str(e)}")
+    finally:
+        db.close()
 
 # ===================== YOUTUBE SHORTS =====================
 @app.post("/generate-short/{drill_id}")
-def generate_short(drill_id: int, db: Session = Depends(get_db)):
+async def generate_short(drill_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found")
 
-    try:
-        print(f"[API] Generating short for drill {drill_id} via Hugging Face Space")
+    # Prepare Payload
+    drill_data = {
+        'text_catalan': drill.text_catalan,
+        'text_tachelhit': drill.text_tachelhit,
+        'text_arabic': drill.text_arabic,
+        'image_url': drill.image_url,
+        'audio_url': drill.audio_url
+    }
+    filename = f"short_{drill_id}_{int(datetime.now().timestamp())}.mp4"
+    payload = {"data": ["short", json.dumps(drill_data), None, filename, 0]}
 
-        # Prepare drill data
-# Prepare drill data
-        drill_data = {
-            'text_catalan': drill.text_catalan,
-            'text_tachelhit': drill.text_tachelhit,
-            'text_arabic': drill.text_arabic,
-            'image_url': drill.image_url,
-            'audio_url': drill.audio_url,
-            'video_url': drill.video_url
-        }
-
-        # Generate filename
-        filename = f"short_{drill_id}_{int(datetime.now().timestamp())}.mp4"
-
-        # CORRECT PAYLOAD FOR SHORTS
-        payload = {
-            "data": [
-                "short",                    # Type is SHORT
-                json.dumps(drill_data),     # Send SINGLE drill data
-                None,                       # No list data
-                filename,
-                0
-            ]
-        }
-        result = call_huggingface_space("predict", payload)
-
-        # Save to database
-        short = YouTubeShortModel(
-            drill_id=drill_id,
-            video_path=result.get('video_path', f"/media/shorts/{filename}"),
-            text_catalan=drill.text_catalan,
-            text_tachelhit=drill.text_tachelhit,
-            text_arabic=drill.text_arabic
-        )
-        db.add(short)
-        db.commit()
-        db.refresh(short)
-
-        print(f"[API] Short generated and saved: {short.id}")
-        return {"id": short.id, "video_path": short.video_path}
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"[API] Error generating short: {type(e).__name__}: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
-
+    # 🚀 Start background task and return immediately
+    background_tasks.add_task(background_video_vault, "short", drill_id, payload)
+    
+    return {"status": "processing", "message": "Video generation started. It will appear in Cloudinary shortly."}
 # ===================== DRILL PLAYER DEMO VIDEO =====================
 @app.post("/generate-drillplayer-demo/{test_id}")
-def generate_drillplayer_demo(test_id: int, db: Session = Depends(get_db)):
+async def generate_drillplayer_demo(test_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     test = db.query(TestModel).filter(TestModel.id == test_id).first()
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
 
-    try:
-        print(f"[API] Generating Drill Player demo for test {test_id} via Hugging Face Space")
+    drill_ids = [int(id.strip()) for id in test.drill_ids.split(',') if id.strip()]
+    drills = db.query(DrillModel).filter(DrillModel.id.in_(drill_ids)).all()
+    
+    drills_data = [{
+        'id': d.id, 'text_catalan': d.text_catalan, 'text_tachelhit': d.text_tachelhit,
+        'image_url': d.image_url, 'audio_url': d.audio_url, 'audio_tts_url': d.audio_tts_url
+    } for d in drills]
 
-        # Get drill IDs from test
-        drill_ids = [int(id.strip()) for id in test.drill_ids.split(',') if id.strip()]
-        drills = db.query(DrillModel).filter(DrillModel.id.in_(drill_ids)).all()
+    filename = f"demo_test_{test_id}_{int(datetime.now().timestamp())}.mp4"
+    payload = {"data": ["demo", None, json.dumps(drills_data), filename, test_id]}
 
-        if not drills:
-            raise HTTPException(status_code=400, detail="Test has no drills")
-
-        # Prepare drill data
-# Prepare drill data
-        drills_data = []
-        for drill in drills:
-            drills_data.append({
-                'id': drill.id,
-                'text_catalan': drill.text_catalan,
-                'text_tachelhit': drill.text_tachelhit,
-                'text_arabic': drill.text_arabic,
-                'image_url': drill.image_url,
-                'audio_url': drill.audio_url,
-                'audio_tts_url': drill.audio_tts_url,
-                'video_url': drill.video_url
-            })
-
-        # Generate filename
-        filename = f"demo_test_{test_id}_{int(datetime.now().timestamp())}.mp4"
-
-        # CORRECT PAYLOAD FOR DEMO
-        payload = {
-            "data": [
-                "demo",                     # Type is DEMO
-                None,                       # No single data
-                json.dumps(drills_data),    # Send LIST of drills
-                filename,
-                test_id
-            ]
-        }
-        result = call_huggingface_space("predict", payload)
-
-
-
-        # Return the video path (not saved in database)
-        video_path = result.get('video_path', f"/media/shorts/{filename}")
-        return {
-            "test_id": test_id,
-            "video_path": video_path,
-            "drill_count": len(drills_data),
-            "message": "Demo video generated successfully"
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"[API] Error generating demo video: {type(e).__name__}: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+    # 🚀 Offload the heavy demo rendering to background
+    background_tasks.add_task(background_video_vault, "demo", test_id, payload)
+    
+    return {"status": "processing", "message": "Demo video is being generated. This may take a few minutes."}
 
 @app.get("/shorts/", response_model=list[YouTubeShort])
 def get_shorts(db: Session = Depends(get_db)):
