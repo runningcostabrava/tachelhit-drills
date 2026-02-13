@@ -40,58 +40,134 @@ def check_and_fix():
         table_names = inspector.get_table_names()
     except Exception as e:
         print(f"[SCHEMA] Error listing tables: {e}")
-        # If we can't list tables, assume table doesn't exist
         table_names = []
     
+    # --- Start checking 'drills' table ---
     if 'drills' not in table_names:
         print("[SCHEMA] Table 'drills' does not exist yet. It will be created by ORM. Skipping column check.")
-        return
-    
-    # Check if column exists in drills table
-    try:
-        columns = [col['name'] for col in inspector.get_columns('drills')]
-    except Exception as e:
-        print(f"[SCHEMA] Error inspecting table 'drills': {e}")
-        # Table might have been deleted concurrently; skip
-        return
-    
-    print(f"[SCHEMA] Existing columns in drills: {columns}")
-    
-    if 'audio_tts_url' not in columns:
-        print("[SCHEMA] Column 'audio_tts_url' missing. Adding...")
-        try:
-            with engine.connect() as conn:
-                if DATABASE_URL.startswith('sqlite'):
-                    # SQLite doesn't support ADD COLUMN IF NOT EXISTS directly
-                    # We'll attempt to add and ignore error if already exists
-                    try:
-                        conn.execute(text("ALTER TABLE drills ADD COLUMN audio_tts_url VARCHAR"))
-                        conn.commit()
-                        print("[SCHEMA] Column added successfully (SQLite).")
-                    except Exception as e:
-                        if 'duplicate column name' in str(e).lower():
-                            print("[SCHEMA] Column already exists (SQLite).")
-                        else:
-                            raise
-                else:
-                    # PostgreSQL / other
-                    # Use IF NOT EXISTS to avoid errors
-                    conn.execute(text("ALTER TABLE drills ADD COLUMN IF NOT EXISTS audio_tts_url VARCHAR"))
-                    conn.commit()
-                    print("[SCHEMA] Column added successfully (PostgreSQL).")
-        except Exception as e:
-            print(f"[SCHEMA] Error adding column: {e}")
-            # Don't exit with error; just log
-            return
     else:
-        print("[SCHEMA] Column 'audio_tts_url' already exists.")
-    
-    # Verify
-    try:
-        columns = [col['name'] for col in inspector.get_columns('drills')]
-        print(f"[SCHEMA] Updated columns in drills: {columns}")
-    except Exception as e:
-        print(f"[SCHEMA] Could not verify columns: {e}")
+        # Check if column exists in drills table
+        try:
+            columns = [col['name'] for col in inspector.get_columns('drills')]
+        except Exception as e:
+            print(f"[SCHEMA] Error inspecting table 'drills': {e}")
+            columns = [] # Treat as empty if inspection fails
+        
+        print(f"[SCHEMA] Existing columns in drills: {columns}")
+        
+        if 'audio_tts_url' not in columns:
+            print("[SCHEMA] Column 'audio_tts_url' missing. Adding...")
+            try:
+                with engine.connect() as conn:
+                    if DATABASE_URL.startswith('sqlite'):
+                        try:
+                            conn.execute(text("ALTER TABLE drills ADD COLUMN audio_tts_url VARCHAR"))
+                            conn.commit()
+                            print("[SCHEMA] Column added successfully (SQLite).")
+                        except Exception as e:
+                            if 'duplicate column name' in str(e).lower():
+                                print("[SCHEMA] Column already exists (SQLite).")
+                            else:
+                                raise
+                    else:
+                        conn.execute(text("ALTER TABLE drills ADD COLUMN IF NOT EXISTS audio_tts_url VARCHAR"))
+                        conn.commit()
+                        print("[SCHEMA] Column added successfully (PostgreSQL).")
+            except Exception as e:
+                print(f"[SCHEMA] Error adding column: {e}")
+        else:
+            print("[SCHEMA] Column 'audio_tts_url' already exists.")
+        
+        # Verify drills table columns
+        try:
+            columns = [col['name'] for col in inspector.get_columns('drills')]
+            print(f"[SCHEMA] Updated columns in drills: {columns}")
+        except Exception as e:
+            print(f"[SCHEMA] Could not verify columns: {e}")
+
+    # --- Start checking 'tests' table ---
+    if 'tests' not in table_names:
+        print("[SCHEMA] Table 'tests' does not exist yet. It will be created by ORM. Skipping column check.")
+    else:
+        try:
+            test_columns = [col['name'] for col in inspector.get_columns('tests')]
+        except Exception as e:
+            print(f"[SCHEMA] Error inspecting table 'tests': {e}")
+            test_columns = [] # Treat as empty if inspection fails
+
+        print(f"[SCHEMA] Existing columns in tests: {test_columns}")
+
+        if 'video_url' not in test_columns:
+            print("[SCHEMA] Column 'video_url' missing in 'tests' table. Adding...")
+            try:
+                with engine.connect() as conn:
+                    if DATABASE_URL.startswith('sqlite'):
+                        try:
+                            conn.execute(text("ALTER TABLE tests ADD COLUMN video_url VARCHAR"))
+                            conn.commit()
+                            print("[SCHEMA] Column 'video_url' added successfully to 'tests' (SQLite).")
+                        except Exception as e:
+                            if 'duplicate column name' in str(e).lower():
+                                print("[SCHEMA] Column 'video_url' already exists in 'tests' (SQLite).")
+                            else:
+                                raise
+                    else:
+                        conn.execute(text("ALTER TABLE tests ADD COLUMN IF NOT EXISTS video_url VARCHAR"))
+                        conn.commit()
+                        print("[SCHEMA] Column 'video_url' added successfully to 'tests' (PostgreSQL).")
+            except Exception as e:
+                print(f"[SCHEMA] Error adding 'video_url' column to 'tests': {e}")
+        else:
+            print("[SCHEMA] Column 'video_url' already exists in 'tests'.")
+
+        # Verify tests table columns
+        try:
+            test_columns = [col['name'] for col in inspector.get_columns('tests')]
+            print(f"[SCHEMA] Updated columns in tests: {test_columns}")
+        except Exception as e:
+            print(f"[SCHEMA] Could not verify tests columns: {e}")
+
+    # Check if table 'tests' exists and add 'video_url' column if missing
+    if 'tests' not in table_names:
+        print("[SCHEMA] Table 'tests' does not exist yet. It will be created by ORM. Skipping column check.")
+    else:
+        try:
+            test_columns = [col['name'] for col in inspector.get_columns('tests')]
+        except Exception as e:
+            print(f"[SCHEMA] Error inspecting table 'tests': {e}")
+            return
+
+        print(f"[SCHEMA] Existing columns in tests: {test_columns}")
+
+        if 'video_url' not in test_columns:
+            print("[SCHEMA] Column 'video_url' missing in 'tests' table. Adding...")
+            try:
+                with engine.connect() as conn:
+                    if DATABASE_URL.startswith('sqlite'):
+                        try:
+                            conn.execute(text("ALTER TABLE tests ADD COLUMN video_url VARCHAR"))
+                            conn.commit()
+                            print("[SCHEMA] Column 'video_url' added successfully to 'tests' (SQLite).")
+                        except Exception as e:
+                            if 'duplicate column name' in str(e).lower():
+                                print("[SCHEMA] Column 'video_url' already exists in 'tests' (SQLite).")
+                            else:
+                                raise
+                    else:
+                        conn.execute(text("ALTER TABLE tests ADD COLUMN IF NOT EXISTS video_url VARCHAR"))
+                        conn.commit()
+                        print("[SCHEMA] Column 'video_url' added successfully to 'tests' (PostgreSQL).")
+            except Exception as e:
+                print(f"[SCHEMA] Error adding 'video_url' column to 'tests': {e}")
+                return
+        else:
+            print("[SCHEMA] Column 'video_url' already exists in 'tests'.")
+
+        try:
+            test_columns = [col['name'] for col in inspector.get_columns('tests')]
+            print(f"[SCHEMA] Updated columns in tests: {test_columns}")
+        except Exception as e:
+            print(f"[SCHEMA] Could not verify tests columns: {e}")
 
 if __name__ == "__main__":
     check_and_fix()
