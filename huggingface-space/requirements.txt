@@ -1,0 +1,12 @@
+gradio
+fastapi
+uvicorn
+Pillow
+numpy
+moviepy==1.0.3
+imageio
+imageio-ffmpeg
+opencv-python-headless
+requests
+pydub
+huggingface_hub

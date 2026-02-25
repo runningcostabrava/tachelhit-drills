@@ -1,0 +1,392 @@
+{
+  "export_date": "2026-02-09T20:07:52.569057",
+  "drills": [
+    {
+      "id": 1,
+      "text_catalan": "Esta tancada la porta?",
+      "text_tachelhit": "Is trjiL TFLUT?",
+      "text_arabic": "هل الباب مغلق؟",
+      "audio_url": "/media/audio/audio_1_1770645429.webm",
+      "video_url": null,
+      "image_url": "/media/images/img_1_1770649041.jpg",
+      "date_created": "2026-02-09T10:24:15.926533"
+    },
+    {
+      "id": 7,
+      "text_catalan": "De quin color es aquesta poma?",
+      "text_tachelhit": "mana lon tja tatfahti",
+      "text_arabic": "ما لون هذه التفاحة؟",
+      "audio_url": "/media/audio/audio_7_1770645419.webm",
+      "video_url": null,
+      "image_url": "/media/images/img_7_1770649062.jpg",
+      "date_created": "2026-02-09T10:41:23.307492"
+    },
+    {
+      "id": 8,
+      "text_catalan": "Quan de temps et quedes?",
+      "text_tachelhit": "Mshta as trit at tkt da?",
+      "text_arabic": "إلى متى أنت مقيم؟",
+      "audio_url": "/media/audio/audio_8_1770645349.webm",
+      "video_url": null,
+      "image_url": "/media/images/img_8_1770642608.jpg",
+      "date_created": "2026-02-09T10:52:20.161172"
+    },
+    {
+      "id": 9,
+      "text_catalan": "Tinc gana",
+      "text_tachelhit": "Inghayi  Laz",
+      "text_arabic": "أنا جائع",
+      "audio_url": "/media/audio/audio_9_1770645286.webm",
+      "video_url": "/media/video/video_9_1770636321.webm",
+      "image_url": "/media/images/img_9_1770642596.jpg",
+      "date_created": "2026-02-09T10:52:22.658951"
+    },
+    {
+      "id": 10,
+      "text_catalan": "Tens gana? (dona)",
+      "text_tachelhit": "Iskm ingha Laz",
+      "text_arabic": "هل أنت جائعة (امرأة)",
+      "audio_url": "/media/audio/audio_10_1770645277.webm",
+      "video_url": "/media/video/video_10_1770636264.webm",
+      "image_url": "/media/images/img_10_1770642553.jpg",
+      "date_created": "2026-02-09T10:53:01.350295"
+    },
+    {
+      "id": 11,
+      "text_catalan": "Tens gana? (home)",
+      "text_tachelhit": "Isk ingha Laz",
+      "text_arabic": "هل أنت جائع (رجل)",
+      "audio_url": "/media/audio/audio_11_1770645271.webm",
+      "video_url": "/media/video/video_11_1770638323.webm",
+      "image_url": "/media/images/img_11_1770642565.jpg",
+      "date_created": "2026-02-09T10:53:11.050702"
+    },
+    {
+      "id": 12,
+      "text_catalan": "Com t'ha anat amb la bici?",
+      "text_tachelhit": "Mahim shida n tjit d Bkshlt",
+      "text_arabic": "كيف ذهبت الدراجة؟",
+      "audio_url": "/media/audio/audio_12_1770645261.webm",
+      "video_url": "/media/video/video_12_1770639095.webm",
+      "image_url": "/media/images/img_12_1770642516.jpg",
+      "date_created": "2026-02-09T12:26:06.614302"
+    },
+    {
+      "id": 13,
+      "text_catalan": "On viu la teva amiga?",
+      "text_tachelhit": "Manij Tzdagh tmtkult nnem",
+      "text_arabic": "أين يعيش صديقك",
+      "audio_url": "/media/audio/audio_13_1770645245.webm",
+      "video_url": "/media/video/video_13_1770641335.webm",
+      "image_url": "/media/images/img_13_1770643847.jpg",
+      "date_created": "2026-02-09T13:27:11.129321"
+    },
+    {
+      "id": 14,
+      "text_catalan": "On visc jo?",
+      "text_tachelhit": "Manij zdagh",
+      "text_arabic": "أين أعيش",
+      "audio_url": "/media/audio/audio_14_1770645234.webm",
+      "video_url": "/media/video/video_14_1770643546.webm",
+      "image_url": "/media/images/img_14_1770643853.jpg",
+      "date_created": "2026-02-09T13:27:30.122577"
+    },
+    {
+      "id": 15,
+      "text_catalan": "Saps on viu el prof de Català?",
+      "text_tachelhit": "Is tsnt Manij isdagh uselmad n tcatalanit?",
+      "text_arabic": "هل تعرف أين يعيش أستاذ اللغة الكاتالونية؟",
+      "audio_url": "/media/audio/audio_15_1770645205.webm",
+      "video_url": null,
+      "image_url": "/media/images/img_15_1770643857.jpg",
+      "date_created": "2026-02-09T13:27:40.928498"
+    },
+    {
+      "id": 16,
+      "text_catalan": "Com puc anar a Girona?",
+      "text_tachelhit": "Mahimch ida skargh ad dogh s girona",
+      "text_arabic": "كيف يمكنني الذهاب إلى جيرونا؟",
+      "audio_url": "/media/audio/audio_16_1770645145.webm",
+      "video_url": null,
+      "image_url": "/media/images/img_16_1770643862.jpg",
+      "date_created": "2026-02-09T13:27:46.884164"
+    },
+    {
+      "id": 17,
+      "text_catalan": "Cada dia camino dues hores",
+      "text_tachelhit": "kjuias da nsagh snat taswaye3in",
+      "text_arabic": "أمشي ساعتين كل يوم",
+      "audio_url": "/media/audio/audio_17_1770643858.webm",
+      "video_url": null,
+      "image_url": "/media/images/img_17_1770647485.jpg",
+      "date_created": "2026-02-09T14:25:57.190093"
+    },
+    {
+      "id": 18,
+      "text_catalan": "per anar a la feina",
+      "text_tachelhit": "basha ad dogh s Lkhdmt",
+      "text_arabic": "للذهاب إلى العمل",
+      "audio_url": "/media/audio/audio_18_1770644112.webm",
+      "video_url": null,
+      "image_url": null,
+      "date_created": "2026-02-09T14:32:08.046842"
+    },
+    {
+      "id": 19,
+      "text_catalan": "Vas a la feina a peu?",
+      "text_tachelhit": "Is da tdot s Lkhdmt su tar",
+      "text_arabic": "هل تمشي إلى العمل؟",
+      "audio_url": "/media/audio/audio_19_1770644226.webm",
+      "video_url": null,
+      "image_url": null,
+      "date_created": "2026-02-09T14:35:15.426999"
+    },
+    {
+      "id": 20,
+      "text_catalan": "Si, camino molt",
+      "text_tachelhit": "eh, dansagh bzf",
+      "text_arabic": "نعم، أمشي كثيراً",
+      "audio_url": "/media/audio/audio_20_1770644277.webm",
+      "video_url": null,
+      "image_url": "/media/images/img_20_1770660568.jpg",
+      "date_created": "2026-02-09T14:37:25.283622"
+    },
+    {
+      "id": 21,
+      "text_catalan": "Vas sovint amb cotxe ?",
+      "text_tachelhit": "Is da tdot s'tmobil itsnt tikal?",
+      "text_arabic": "هل تذهب في كثير من الأحيان بالسيارة؟",
+      "audio_url": "/media/audio/audio_21_1770644502.webm",
+      "video_url": null,
+      "image_url": "/media/images/img_21_1770660613.jpg",
+      "date_created": "2026-02-09T14:38:02.281518"
+    },
+    {
+      "id": 22,
+      "text_catalan": "No,no tinc carnet. Normalment viatjo en moto",
+      "text_tachelhit": "oh ordari ili lpirmi.dima datdogh slmotor ",
+      "text_arabic": "لا، ليس لدي بطاقة. أسافر عادةً بالدراجة النارية",
+      "audio_url": "/media/audio/audio_22_1770644790.webm",
+      "video_url": null,
+      "image_url": "/media/images/img_22_1770660627.jpg",
+      "date_created": "2026-02-09T14:41:45.873234"
+    },
+    {
+      "id": 23,
+      "text_catalan": "Vols venir a fer una volta en bicicleta amb mi?",
+      "text_tachelhit": "Is trit ad tdot an nny bichklit nikin idch",
+      "text_arabic": "هل تريد أن تأتي لركوب الدراجة معي؟",
+      "audio_url": "/media/audio/audio_23_1770645011.webm",
+      "video_url": null,
+      "image_url": "/media/images/img_23_1770660660.jpg",
+      "date_created": "2026-02-09T14:46:42.476506"
+    },
+    {
+      "id": 24,
+      "text_catalan": "I tant que si!",
+      "text_tachelhit": "safi waha imchnagh",
+      "text_arabic": "وهكذا نعم!",
+      "audio_url": "/media/audio/audio_24_1770645163.webm",
+      "video_url": null,
+      "image_url": "/media/images/img_24_1770660669.jpg",
+      "date_created": "2026-02-09T14:50:18.483880"
+    },
+    {
+      "id": 25,
+      "text_catalan": "Com es diu el teu pare(home)",
+      "text_tachelhit": "Manism n pash - Manism n pam",
+      "text_arabic": "ما هو اسم والدك (رجل)",
+      "audio_url": "/media/audio/audio_25_1770645803.webm",
+      "video_url": null,
+      "image_url": "/media/images/img_25_1770660683.jpg",
+      "date_created": "2026-02-09T14:50:51.840905"
+    },
+    {
+      "id": 26,
+      "text_catalan": "El meu pare es diu Joan",
+      "text_tachelhit": "Pa ismns Joan",
+      "text_arabic": "اسم والدي هو جون",
+      "audio_url": "/media/audio/audio_26_1770645809.webm",
+      "video_url": null,
+      "image_url": "/media/images/img_26_1770660697.jpg",
+      "date_created": "2026-02-09T14:58:31.364542"
+    },
+    {
+      "id": 27,
+      "text_catalan": "I la teva mare?",
+      "text_tachelhit": "Manism n Maysh - Manism n Maim",
+      "text_arabic": "وأمك؟",
+      "audio_url": "/media/audio/audio_27_1770645818.webm",
+      "video_url": null,
+      "image_url": "/media/images/img_27_1770660706.jpg",
+      "date_created": "2026-02-09T14:58:55.493537"
+    },
+    {
+      "id": 28,
+      "text_catalan": "Tens germans?",
+      "text_tachelhit": "Is ghorsh lan ait mash? Is ghorom lan aitmam ",
+      "text_arabic": "هل لديك أشقاء",
+      "audio_url": "/media/audio/audio_28_1770645826.webm",
+      "video_url": null,
+      "image_url": "/media/images/img_28_1770662258.jpg",
+      "date_created": "2026-02-09T14:59:05.969713"
+    },
+    {
+      "id": 29,
+      "text_catalan": "Si, tinc dos germans i una germana",
+      "text_tachelhit": "eh, lan ghori sin ait ma d iet utma",
+      "text_arabic": "نعم، لدي شقيقان وأخت",
+      "audio_url": "/media/audio/audio_29_1770645846.webm",
+      "video_url": null,
+      "image_url": null,
+      "date_created": "2026-02-09T14:59:23.076967"
+    },
+    {
+      "id": 30,
+      "text_catalan": "Com es diu el home alt de la foto?",
+      "text_tachelhit": "Manism noriaz aghzaf tkh ilan jtswira",
+      "text_arabic": "ما اسم الرجل الطويل في الصورة؟",
+      "audio_url": "/media/audio/audio_30_1770646694.webm",
+      "video_url": null,
+      "image_url": null,
+      "date_created": "2026-02-09T15:04:22.481708"
+    },
+    {
+      "id": 31,
+      "text_catalan": "Es el meu oncle Jaume, un germà dee la meva mere.",
+      "text_tachelhit": "nta ija khali Jaume , yan oymas n ma",
+      "text_arabic": "إنه عمي جاومي، شقيق والدتي.",
+      "audio_url": "/media/audio/audio_31_1770646708.webm",
+      "video_url": null,
+      "image_url": null,
+      "date_created": "2026-02-09T15:06:44.997589"
+    },
+    {
+      "id": 32,
+      "text_catalan": "i l'altre home?",
+      "text_tachelhit": "ima aryaz tkh atnin",
+      "text_arabic": "والرجل الآخر؟",
+      "audio_url": "/media/audio/audio_32_1770646728.webm",
+      "video_url": null,
+      "image_url": null,
+      "date_created": "2026-02-09T15:08:59.912255"
+    },
+    {
+      "id": 33,
+      "text_catalan": "El el meu oncle, el germa del meu pare",
+      "text_tachelhit": "nta ija 3ami ino, yan oymas n pa",
+      "text_arabic": "عمي، شقيق والدي",
+      "audio_url": "/media/audio/audio_33_1770646813.webm",
+      "video_url": null,
+      "image_url": "/media/images/img_33_1770662544.jpg",
+      "date_created": "2026-02-09T15:10:42.752451"
+    },
+    {
+      "id": 34,
+      "text_catalan": "Qui es?",
+      "text_tachelhit": "Mana wa?",
+      "text_arabic": "من هو",
+      "audio_url": "/media/audio/audio_34_1770646822.webm",
+      "video_url": null,
+      "image_url": null,
+      "date_created": "2026-02-09T15:11:20.281846"
+    },
+    {
+      "id": 35,
+      "text_catalan": "Es el meu avi",
+      "text_tachelhit": "nta ija pa hLo ino",
+      "text_arabic": "هو جدي",
+      "audio_url": "/media/audio/audio_35_1770646834.webm",
+      "video_url": null,
+      "image_url": null,
+      "date_created": "2026-02-09T15:12:24.816641"
+    },
+    {
+      "id": 36,
+      "text_catalan": "Qui es?, Es la meva avia",
+      "text_tachelhit": "Mana ta? ntat tja Ma hLo ino",
+      "text_arabic": "من هذا؟ إنها جدتي",
+      "audio_url": "/media/audio/audio_36_1770646841.webm",
+      "video_url": null,
+      "image_url": null,
+      "date_created": "2026-02-09T15:12:51.407861"
+    },
+    {
+      "id": 37,
+      "text_catalan": "Qui son?Son els meus sogres",
+      "text_tachelhit": "Mana wi? nitni jan i tolan ino",
+      "text_arabic": "من هم؟ إنهم أهل زوجي",
+      "audio_url": "/media/audio/audio_37_1770646855.webm",
+      "video_url": null,
+      "image_url": null,
+      "date_created": "2026-02-09T15:13:55.102336"
+    },
+    {
+      "id": 38,
+      "text_catalan": "Qui son? son el meu cunyat i la meva germana petita",
+      "text_tachelhit": "Mana wi? yan ija aryaz notma d uyma amzan ",
+      "text_arabic": "من هم، إنهم صهري وأختي الصغيرة",
+      "audio_url": "/media/audio/audio_38_1770647014.webm",
+      "video_url": null,
+      "image_url": null,
+      "date_created": "2026-02-09T15:15:39.250059"
+    }
+  ],
+  "tests": [
+    {
+      "id": 1,
+      "title": "test1",
+      "description": "",
+      "question_type": "text_input",
+      "hint_level": "none",
+      "hint_percentage": 30,
+      "hint_tries_before_reveal": 3,
+      "time_limit_seconds": null,
+      "passing_score": 70.0,
+      "drill_ids": "10,11",
+      "date_created": "2026-02-09T13:14:26.174573"
+    },
+    {
+      "id": 2,
+      "title": "test 2",
+      "description": "",
+      "question_type": "combined",
+      "hint_level": "none",
+      "hint_percentage": 30,
+      "hint_tries_before_reveal": 3,
+      "time_limit_seconds": null,
+      "passing_score": 70.0,
+      "drill_ids": "16,12,11,10,9",
+      "date_created": "2026-02-09T13:34:58.218522"
+    },
+    {
+      "id": 3,
+      "title": "test3",
+      "description": "",
+      "question_type": "combined",
+      "hint_level": "none",
+      "hint_percentage": 30,
+      "hint_tries_before_reveal": 3,
+      "time_limit_seconds": null,
+      "passing_score": 70.0,
+      "drill_ids": "12",
+      "date_created": "2026-02-09T13:36:51.921567"
+    }
+  ],
+  "test_attempts": [
+    {
+      "id": 1,
+      "test_id": 1,
+      "score": 25.0,
+      "time_taken_seconds": 58,
+      "date_taken": "2026-02-09T13:21:03.650965"
+    },
+    {
+      "id": 2,
+      "test_id": 1,
+      "score": 100.0,
+      "time_taken_seconds": 40,
+      "date_taken": "2026-02-09T13:29:11.938117"
+    }
+  ]
+}

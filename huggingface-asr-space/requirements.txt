@@ -1,0 +1,12 @@
+transformers
+torch
+torchaudio
+librosa
+fastapi
+uvicorn
+requests
+openai
+pydantic
+openai
+numpy
+python-multipart
