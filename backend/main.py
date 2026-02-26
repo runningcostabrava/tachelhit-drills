@@ -98,84 +98,63 @@ LANGUAGE_CODE_MAP = {
 
 def translate_with_hf(text: str, src_lang: str = "cat_Latn", tgt_lang: str = "ber_Tfng") -> str:
     """
-    Translate text using either our own Hugging Face Space (if URL configured)
-    or the Hugging Face Inference API for the fine-tuned NLLB model.
-    Returns translated text, or raises exception.
+    Translate text using our Gradio Hugging Face Space.
     """
+    from gradio_client import Client
+    
     # If custom space URL is provided, use it
     if HUGGINGFACE_TRANSLATION_SPACE_URL:
-        space_url = HUGGINGFACE_TRANSLATION_SPACE_URL.rstrip("/") + "/translate"
-        headers = {"Content-Type": "application/json"}
-        payload = {
-            "text": text,
-            "src_lang": src_lang,
-            "tgt_lang": tgt_lang
-        }
         try:
-            response = requests.post(
-                space_url,
-                headers=headers,
-                json=payload,
-                timeout=30
+            # Use the official Gradio Client for robust communication
+            # Remove /translate suffix if present as Client expects the base URL
+            space_url = HUGGINGFACE_TRANSLATION_SPACE_URL.split('/translate')[0].rstrip('/')
+            print(f"[TRANSLATE] Connecting to Gradio Space: {space_url}")
+            
+            client = Client(space_url)
+            # The app.py has fn=translate_text with inputs [text, src_lang, tgt_lang]
+            result = client.predict(
+                text=text,
+                src_lang=src_lang,
+                tgt_lang=tgt_lang,
+                api_name="/predict"
             )
-            response.raise_for_status()
-            result = response.json()
-            translation = result.get("translation", text)
-            if translation == text and text.strip():
-                print(f"[TRANSLATE] Warning: translation unchanged for '{text}'")
-            else:
-                print(f"[TRANSLATE] Success (Space): '{text[:50]}' -> '{translation[:50]}'")
+            
+            # The Space returns "Tifinagh: ...\nLatín: ..." for ber_Tfng
+            translation = str(result)
+            print(f"[TRANSLATE] Success (Gradio Space): '{text[:30]}...' -> '{translation[:30]}...'")
             return translation
-        except requests.exceptions.RequestException as e:
-            print(f"[TRANSLATE] Space request error: {e}. Falling back to Inference API.")
-            # Fall through to Inference API
+            
         except Exception as e:
-            print(f"[TRANSLATE] Space error: {e}. Falling back to Inference API.")
-            # Fall through to Inference API
+            print(f"[TRANSLATE] Gradio Space error: {e}. Falling back to Inference API.")
 
     # Fallback to Inference API
     api_token = os.getenv("HUGGINGFACE_API_KEY")
     if not api_token:
-        raise ValueError("HUGGINGFACE_API_KEY not set")
-    headers = {"Authorization": f"Bearer {api_token}"}
-    payload = {
-        "inputs": text,
-        "parameters": {
-            "src_lang": src_lang,
-            "tgt_lang": tgt_lang
-        }
-    }
+        print("[TRANSLATE] No HF API key for fallback. Returning original text.")
+        return text
+
     try:
-        response = requests.post(
-            f"https://api-inference.huggingface.co/models/{HF_TRANSLATION_MODEL}",
-            headers=headers,
-            json=payload,
-            timeout=30
-        )
-        response.raise_for_status()
-        result = response.json()
-        # Expect format: [{"translation_text": "..."}]
-        if isinstance(result, list) and len(result) > 0:
-            translation = result[0].get("translation_text", text)
-            if translation == text and text.strip():
-                print(f"[TRANSLATE] Warning: translation unchanged for '{text}'")
-            else:
-                print(f"[TRANSLATE] Success (Inference API): '{text[:50]}' -> '{translation[:50]}'")
-            return translation
-        elif isinstance(result, dict) and "translation_text" in result:
-            translation = result["translation_text"]
-            print(f"[TRANSLATE] Success (dict): '{text[:50]}' -> '{translation[:50]}'")
-            return translation
-        else:
-            # If unexpected format, return original but log
-            print(f"[TRANSLATE] Unexpected response format: {result}")
-            return text
-    except requests.exceptions.RequestException as e:
-        print(f"[TRANSLATE] Request error: {e}")
-        raise HTTPException(status_code=503, detail="Translation service unavailable")
+        # Using a reliable fallback model if the custom one is down
+        model_id = "facebook/nllb-200-distilled-600M"
+        api_url = f"https://api-inference.huggingface.co/models/{model_id}"
+        headers = {"Authorization": f"Bearer {api_token}"}
+        payload = {
+            "inputs": text,
+            "parameters": {"src_lang": src_lang, "tgt_lang": tgt_lang}
+        }
+        
+        response = requests.post(api_url, headers=headers, json=payload, timeout=20)
+        # NLLB inference API can be slow or return 503 while loading
+        if response.status_code == 200:
+            result = response.json()
+            if isinstance(result, list) and len(result) > 0:
+                return result[0].get("translation_text", text)
+        
+        print(f"[TRANSLATE] Inference API returned {response.status_code}. Returning original.")
+        return text
     except Exception as e:
-        print(f"[TRANSLATE] Error: {e}")
-        raise
+        print(f"[TRANSLATE] Fallback error: {e}")
+        return text
 
 # Config
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "dX9JkRJYfaRQUZdi6tKsF1TfJT44HnZMAPu2RyA4vt0JyRbzmdiVYGgW")
