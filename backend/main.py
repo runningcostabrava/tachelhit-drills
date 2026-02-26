@@ -1,4 +1,4 @@
-# INFO: Estado actual guardado para recuperación en caso de apagado. Transcripción funcionando.
+# INFO: Project: Tachelhit Drills. Feature: ASR, Correction, Translation, Video Processing. Status: Active.
 import asyncio
 import os
 import json
