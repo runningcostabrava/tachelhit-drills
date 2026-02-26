@@ -590,7 +590,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                   onClick={async () => {
                     if (!editedDrill.text_arabic) return;
                     try {
-                      const res = await axios.post(`${API_BASE}/translate/`, {
+                      const res = await axios.post(`${API_BASE}/translate`, {
                         text: editedDrill.text_arabic,
                         source_lang: 'ar',
                         target_lang: 'ca'
@@ -654,7 +654,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                     onClick={async () => {
                       if (!editedDrill.text_catalan) return;
                       try {
-                        const res = await axios.post(`${API_BASE}/translate/`, {
+                        const res = await axios.post(`${API_BASE}/translate`, {
                           text: editedDrill.text_catalan,
                           source_lang: 'ca',
                           target_lang: 'shi'
@@ -683,7 +683,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                     onClick={async () => {
                       if (!editedDrill.text_catalan) return;
                       try {
-                        const res = await axios.post(`${API_BASE}/translate/`, {
+                        const res = await axios.post(`${API_BASE}/translate`, {
                           text: editedDrill.text_catalan,
                           source_lang: 'ca',
                           target_lang: 'ar'
@@ -812,7 +812,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                                       onClick={async () => {
                                         if (!editedDrill.text_tachelhit) return;
                                         try {
-                                          const res = await axios.post(`${API_BASE}/translate/`, {
+                                          const res = await axios.post(`${API_BASE}/translate`, {
                                             text: editedDrill.text_tachelhit,
                                             source_lang: 'shi',
                                             target_lang: 'ca'

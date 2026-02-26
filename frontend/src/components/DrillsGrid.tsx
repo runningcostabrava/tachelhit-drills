@@ -778,7 +778,7 @@ const TranslateCellRenderer = (props: any) => {
 
         setTranslating(true);
         try {
-            const res = await axios.post(`${API_BASE}/translate/`, {
+            const res = await axios.post(`${API_BASE}/translate`, {
                 text: text,
                 source_lang: source,
                 target_lang: target
