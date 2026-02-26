@@ -492,6 +492,29 @@ def test_connection():
         "cors_origin": "https://tachelhit-drills.vercel.app"
     }
 
+@app.post("/translate")
+@app.post("/translate/")
+async def translate_text_endpoint(request: TranslateRequest):
+    """
+    Translate text between supported languages (Catalan, Tachelhit, Arabic, etc.)
+    """
+    code_map = {
+        "ca": "cat_Latn", "cat": "cat_Latn",
+        "shi": "ber_Tfng", "ber": "ber_Tfng", "tam": "ber_Tfng", "zgh": "ber_Tfng",
+        "ar": "arb_Arab", "arb": "arb_Arab",
+        "en": "eng_Latn", "eng": "eng_Latn",
+        "fr": "fra_Latn", "fra": "fra_Latn",
+        "es": "spa_Latn", "spa": "spa_Latn",
+    }
+    src_code = code_map.get(request.source_lang, request.source_lang)
+    tgt_code = code_map.get(request.target_lang, request.target_lang)
+    try:
+        translation = await asyncio.to_thread(translate_with_hf, request.text, src_code, tgt_code)
+        return TranslateResponse(translated_text=translation)
+    except Exception as e:
+        print(f"[TRANSLATE ENDPOINT ERROR] {e}")
+        raise HTTPException(status_code=500, detail=f"Translation failed: {str(e)}")
+
 def get_db():
     db = SessionLocal()
     try:
@@ -2281,42 +2304,6 @@ class ASRService:
 
 def get_asr_service():
     return ASRService()
-
-@app.post("/translate/")
-async def translate_text_endpoint(
-    request: TranslateRequest,
-):
-    """
-    Translate text between supported languages (Catalan, Tachelhit, Arabic, English, etc.)
-    using the fine‑tuned NLLB model via Hugging Face.
-    """
-    # Supports JSON request body (TranslateRequest) for frontend compatibility.
-    # Map common language codes to NLLB language codes
-    code_map = {
-        "ca": "cat_Latn",
-        "cat": "cat_Latn",
-        "shi": "ber_Tfng",
-        "ber": "ber_Tfng",
-        "tam": "ber_Tfng",
-        "zgh": "ber_Tfng",
-        "ar": "arb_Arab",
-        "arb": "arb_Arab",
-        "en": "eng_Latn",
-        "eng": "eng_Latn",
-        "fr": "fra_Latn",
-        "fra": "fra_Latn",
-        "es": "spa_Latn",
-        "spa": "spa_Latn",
-    }
-    src_code = code_map.get(request.source_lang, request.source_lang)
-    tgt_code = code_map.get(request.target_lang, request.target_lang)
-    try:
-        translation = await asyncio.to_thread(translate_with_hf, request.text, src_code, tgt_code)
-        return TranslateResponse(translated_text=translation)
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Translation failed: {str(e)}")
 
 @app.post("/evaluate-dataset/")
 async def evaluate_dataset(
