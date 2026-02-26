@@ -215,7 +215,7 @@ export default function DrillsResponsive({}: DrillsResponsiveProps) {
         height: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        paddingBottom: '60px' // Space for bottom nav
+        paddingBottom: '60px'
       }}>
         {/* Header */}
         <div style={{
@@ -310,7 +310,7 @@ export default function DrillsResponsive({}: DrillsResponsiveProps) {
                   }}>
                     <button
                       onClick={() => {
-                        addNewDrill(); // Creates an empty drill
+                        addNewDrill();
                         setShowNewDrillOptions(false);
                       }}
                       style={{
@@ -379,8 +379,6 @@ export default function DrillsResponsive({}: DrillsResponsiveProps) {
           </div>
         </div>
 
-
-
         {/* Grid */}
         <div
           className="ag-theme-alpine"
@@ -420,7 +418,6 @@ export default function DrillsResponsive({}: DrillsResponsiveProps) {
           onClose={() => setEditingDrill(null)}
           onUpdate={() => {
             fetchDrills();
-            // Refresh the editing drill with latest data
             if (editingDrill) {
               axios.get(`${API_BASE}/drills/`).then(response => {
                 const updated = response.data.find((d: Drill) => d.id === editingDrill.id);
@@ -463,12 +460,8 @@ export default function DrillsResponsive({}: DrillsResponsiveProps) {
               Use speech‑to‑text to quickly create a drill in Catalan, then add translations and media.
             </p>
             <VoiceDrillCreator
-              onClose={() => {
-                console.log('Cerrando VoiceDrillCreator (Mobile)');
-                setShowVoiceCreator(false);
-              }}
+              onClose={() => setShowVoiceCreator(false)}
               onDrillCreated={() => {
-                console.log('Drill creado, refrescando lista (Mobile)');
                 fetchDrills();
                 setShowVoiceCreator(false);
               }}
