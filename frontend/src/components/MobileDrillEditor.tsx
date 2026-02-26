@@ -89,6 +89,33 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
     }
   };
 
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  const handleTranslate = async (source: string, target: string) => {
+    const text = source === 'ca' ? editedDrill.text_catalan : editedDrill.text_tachelhit;
+    if (!text) {
+      alert(`Please enter ${source === 'ca' ? 'Catalan' : 'Tachelhit'} text first.`);
+      return;
+    }
+
+    setIsTranslating(true);
+    try {
+      const res = await axios.post(`${API_BASE}/translate/`, {
+        text: text,
+        source_lang: source,
+        target_lang: target
+      });
+      const field = target === 'shi' ? 'text_tachelhit' : 'text_catalan';
+      setEditedDrill(prev => ({ ...prev, [field]: res.data.translated_text }));
+      setHasChanges(true);
+    } catch (err) {
+      console.error('Translation failed:', err);
+      alert('Translation failed. Please check your connection.');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   const toggleCorrectionDataset = async () => {
     const newValue = !editedDrill.is_correction_dataset;
     try {
@@ -943,15 +970,31 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
 
         {/* Catalan */}
         <div style={{ marginBottom: '16px' }}>
-          <label style={{
-            display: 'block',
-            fontSize: '14px',
-            fontWeight: 600,
-            color: '#333',
-            marginBottom: '6px'
-          }}>
-            Català
-          </label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+            <label style={{
+              fontSize: '14px',
+              fontWeight: 600,
+              color: '#333'
+            }}>
+              Català
+            </label>
+            <button
+              onClick={() => handleTranslate('ca', 'shi')}
+              disabled={isTranslating || !editedDrill.text_catalan}
+              style={{
+                background: '#4CAF50',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '4px 8px',
+                fontSize: '12px',
+                cursor: (isTranslating || !editedDrill.text_catalan) ? 'not-allowed' : 'pointer',
+                opacity: (isTranslating || !editedDrill.text_catalan) ? 0.6 : 1
+              }}
+            >
+              {isTranslating ? '⏳...' : '→ Tachelhit'}
+            </button>
+          </div>
           <textarea
             value={editedDrill.text_catalan || ''}
             onChange={(e) => handleChange('text_catalan', e.target.value)}
@@ -980,6 +1023,22 @@ export default function MobileDrillEditor({ drill, allDrills, onClose, onUpdate,
               Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)
             </label>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+               <button
+                onClick={() => handleTranslate('shi', 'ca')}
+                disabled={isTranslating || !editedDrill.text_tachelhit}
+                style={{
+                  background: '#2196F3',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '4px 8px',
+                  fontSize: '12px',
+                  cursor: (isTranslating || !editedDrill.text_tachelhit) ? 'not-allowed' : 'pointer',
+                  opacity: (isTranslating || !editedDrill.text_tachelhit) ? 0.6 : 1
+                }}
+              >
+                {isTranslating ? '⏳...' : '→ Catalan'}
+              </button>
                <button
                 onClick={handleAutoTranscribe}
                 disabled={isTranscribing || !editedDrill.audio_url}

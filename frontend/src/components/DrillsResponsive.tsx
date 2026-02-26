@@ -94,6 +94,77 @@ interface DrillsResponsiveProps {
   // onViewShorts?: () => void;
 }
 
+// Translate cell renderer for mobile grid
+const TranslateCellRenderer = (props: any) => {
+    const { data, api } = props;
+    const [translating, setTranslating] = useState(false);
+
+    const handleTranslate = async (source: string, target: string) => {
+        const text = source === 'ca' ? data.text_catalan : data.text_tachelhit;
+        if (!text) {
+            alert(`Please enter ${source === 'ca' ? 'Catalan' : 'Tachelhit'} text first.`);
+            return;
+        }
+
+        setTranslating(true);
+        try {
+            const res = await axios.post(`${API_BASE}/translate/`, {
+                text: text,
+                source_lang: source,
+                target_lang: target
+            });
+            const field = target === 'shi' ? 'text_tachelhit' : 'text_catalan';
+            api.applyTransaction({ update: [{ ...data, [field]: res.data.translated_text }] });
+            // Also save to backend
+            await axios.put(`${API_BASE}/drills/${data.id}`, { [field]: res.data.translated_text });
+        } catch (err) {
+            console.error('Translation failed:', err);
+            alert('Translation failed.');
+        } finally {
+            setTranslating(false);
+        }
+    };
+
+    return (
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', height: '100%' }}>
+            <button
+                onClick={(e) => { e.stopPropagation(); handleTranslate('ca', 'shi'); }}
+                disabled={translating || !data.text_catalan}
+                style={{
+                    padding: '2px 6px',
+                    background: '#4CAF50',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: translating ? 'not-allowed' : 'pointer',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    opacity: !data.text_catalan ? 0.5 : 1
+                }}
+            >
+                {translating ? '...' : 'CA→SHI'}
+            </button>
+            <button
+                onClick={(e) => { e.stopPropagation(); handleTranslate('shi', 'ca'); }}
+                disabled={translating || !data.text_tachelhit}
+                style={{
+                    padding: '2px 6px',
+                    background: '#2196F3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: translating ? 'not-allowed' : 'pointer',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    opacity: !data.text_tachelhit ? 0.5 : 1
+                }}
+            >
+                {translating ? '...' : 'SHI→CA'}
+            </button>
+        </div>
+    );
+};
+
 export default function DrillsResponsive({}: DrillsResponsiveProps) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [drills, setDrills] = useState<Drill[]>([]);
@@ -192,11 +263,18 @@ export default function DrillsResponsive({}: DrillsResponsiveProps) {
 
   const columnDefs: any[] = [
     { field: 'id', width: 60, headerName: '#' },
-    { field: 'text_catalan', width: 150, headerName: 'Català' },
-    { field: 'text_tachelhit', width: 150, headerName: 'Tachelhit' },
+    { field: 'text_catalan', width: 120, headerName: 'Català' },
+    { field: 'text_tachelhit', width: 120, headerName: 'Tachelhit' },
+    {
+      headerName: 'TR',
+      width: 100,
+      cellRenderer: TranslateCellRenderer,
+      sortable: false,
+      filter: false
+    },
     {
       field: 'audio_url',
-      width: 70,
+      width: 50,
       headerName: '🎤',
       cellRenderer: (params: any) => params.value ? '✓' : ''
     },
