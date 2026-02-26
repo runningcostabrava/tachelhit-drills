@@ -294,85 +294,87 @@ export default function DrillsResponsive({}: DrillsResponsiveProps) {
                 >
                   + New ▼
                 </button>
-              {showNewDrillOptions && (
-                <div style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 10px)',
-                  right: 0,
-                  backgroundColor: 'white',
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                  zIndex: 1000,
-                  minWidth: '220px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  overflow: 'hidden',
-                }}>
-                  <button
-                    onClick={() => {
-                      addNewDrill(); // Creates an empty drill
-                      setShowNewDrillOptions(false);
-                    }}
-                    style={{
-                      padding: '10px 15px',
-                      fontSize: '15px',
-                      background: 'none',
-                      border: 'none',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      color: '#333',
-                      fontWeight: 500,
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    ➕ Create Empty Drill
-                  </button>
-                                      <button
-                                      onClick={() => {
-                                        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-                                        if (!SpeechRecognition) {
-                                          alert('Speech recognition is not supported in your browser. Please use Chrome or Edge for voice features. You can still create a drill manually.');
-                                        }
-                                        setShowVoiceCreator(true);
-                                        setShowNewDrillOptions(false);
-                                      }}
-                                      style={{
-                                        padding: '10px 15px',
-                                        fontSize: '15px',
-                                        background: 'none',
-                                        border: 'none',
-                                        textAlign: 'left',
-                                        cursor: 'pointer',
-                                        color: '#333',
-                                        fontWeight: 500,
-                                        whiteSpace: 'nowrap'
-                                      }}
-                                    >
-                                      🎤 Create Drill with Voice
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        navigate('/video-creator');
-                                        setShowNewDrillOptions(false);
-                                      }}
-                                      style={{
-                                        padding: '10px 15px',
-                                        fontSize: '15px',
-                                        background: 'none',
-                                        border: 'none',
-                                        textAlign: 'left',
-                                        cursor: 'pointer',
-                                        color: '#333',
-                                        fontWeight: 500,
-                                        whiteSpace: 'nowrap'
-                                      }}
-                                    >
-                                      🎬 Create from Video (YouTube)
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.9)' }}>
+                {showNewDrillOptions && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 10px)',
+                    right: 0,
+                    backgroundColor: 'white',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    zIndex: 1000,
+                    minWidth: '220px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                  }}>
+                    <button
+                      onClick={() => {
+                        addNewDrill(); // Creates an empty drill
+                        setShowNewDrillOptions(false);
+                      }}
+                      style={{
+                        padding: '10px 15px',
+                        fontSize: '15px',
+                        background: 'none',
+                        border: 'none',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        color: '#333',
+                        fontWeight: 500,
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      ➕ Create Empty Drill
+                    </button>
+                    <button
+                      onClick={() => {
+                        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+                        if (!SpeechRecognition) {
+                          alert('Speech recognition is not supported in your browser. Please use Chrome or Edge for voice features. You can still create a drill manually.');
+                        }
+                        setShowVoiceCreator(true);
+                        setShowNewDrillOptions(false);
+                      }}
+                      style={{
+                        padding: '10px 15px',
+                        fontSize: '15px',
+                        background: 'none',
+                        border: 'none',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        color: '#333',
+                        fontWeight: 500,
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      🎤 Create Drill with Voice
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigate('/video-creator');
+                        setShowNewDrillOptions(false);
+                      }}
+                      style={{
+                        padding: '10px 15px',
+                        fontSize: '15px',
+                        background: 'none',
+                        border: 'none',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        color: '#333',
+                        fontWeight: 500,
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      🎬 Create from Video (YouTube)
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.9)' }}>
             Tap any row to edit
           </div>
         </div>
