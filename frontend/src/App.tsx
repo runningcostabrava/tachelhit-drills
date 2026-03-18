@@ -1,12 +1,12 @@
-import { Routes, Route, useNavigate } from 'react-router-dom'; // Added imports
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import DrillsResponsive from './components/DrillsResponsive';
 import TestsDashboard from './components/TestsDashboard';
 import YouTubeShorts from './components/YouTubeShorts';
-import DrillPlayer from './components/DrillPlayer'; // Assuming this is used for a specific drill player route
-import PublicTestView from './components/PublicTestView'; // Added import
+import DrillPlayer from './components/DrillPlayer';
+import PublicTestView from './components/PublicTestView';
 import MediaRecorderTest from './components/MediaRecorderTest';
-import VideoDrillCreator from './components/VideoDrillCreator'; // Added import
-import './App.css'; // optional – you can remove this line
+import VideoDrillCreator from './components/VideoDrillCreator';
+import './App.css';
 
 // Placeholder component for /demo-videos
 const DemoVideosPage = () => (
@@ -18,20 +18,16 @@ const DemoVideosPage = () => (
 );
 
 function App() {
-  const navigate = useNavigate(); // Initialize useNavigate hook
+  const navigate = useNavigate();
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}> {/* minHeight here too */}
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Routes>
         <Route path="/" element={<DrillsResponsive />} />
         <Route path="/tests" element={<TestsDashboard onBackToDrills={() => navigate('/')} />} />
-        <Route path="/tests/:testId" element={<PublicTestView />} /> {/* Updated route */}
+        <Route path="/tests/:testId" element={<PublicTestView />} />
         <Route path="/shorts" element={<YouTubeShorts onBackToDrills={() => navigate('/')} />} />
-        <Route path="/video-creator" element={<VideoDrillCreator />} /> {/* New route for video creator */}
-        {/*
-          TODO: This DrillPlayer needs to be updated to take drill data dynamically,
-          or a test ID. For now, it's a placeholder.
-        */}
+        <Route path="/video-creator" element={<VideoDrillCreator />} />
         <Route path="/player" element={
           <DrillPlayer
             drills={[]} // Needs dynamic data
@@ -39,7 +35,7 @@ function App() {
           />
         } />
         <Route path="/media-test" element={<MediaRecorderTest />} />
-        <Route path="/demo-videos" element={<DemoVideosPage />} /> {/* New route for demo videos */}
+        <Route path="/demo-videos" element={<DemoVideosPage />} />
       </Routes>
     </div>
   );
