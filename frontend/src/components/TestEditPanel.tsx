@@ -146,8 +146,8 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
     (drill.text_catalan.toLowerCase().includes(drillSearchTerm.toLowerCase()) ||
      drill.text_tachelhit.toLowerCase().includes(drillSearchTerm.toLowerCase()) ||
      (drill.text_arabic && drill.text_arabic.toLowerCase().includes(drillSearchTerm.toLowerCase())) ||
-     drill.id.toString().includes(drillSearchTerm))
-  );
+     drill.id.toString().includes(drillSearchTerm)))
+  ;
 
   if (loading) {
     return (
@@ -468,19 +468,19 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
             Cancel
           </button>
           <button
-            onClick={handleCreate}
+            onClick={handleUpdate}
             style={{
               padding: '10px 20px',
               fontSize: '14px',
               border: 'none',
               borderRadius: '4px',
-              backgroundColor: '#4CAF50',
+              backgroundColor: '#2196F3',
               color: 'white',
               cursor: 'pointer',
               fontWeight: 'bold',
             }}
           >
-            Create Test
+            Update Test
           </button>
         </div>
       </div>
