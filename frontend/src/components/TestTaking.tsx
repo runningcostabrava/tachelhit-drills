@@ -103,14 +103,10 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
 
   // Determine question and answer fields based on playback_direction
   const getQuestionAndAnswerFields = () => {
-    if (!test || !currentDrill) return { questionText: 
-ull, correctAnswer: 
-ull };
+    if (!test || !currentDrill) return { questionText: null, correctAnswer: null };
 
-    let questionText = 
-ull;
-    let correctAnswer = 
-ull;
+    let questionText = null;
+    let correctAnswer = null;
 
     switch (test.playback_direction) {
       case 'cat-tash':
@@ -496,87 +492,7 @@ ull;
       );
     }
 
-    return (
-      <div style={{
-        height: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-      }}>
-        <div style={{
-          background: 'white',
-          padding: '40px',
-          borderRadius: '16px',
-          maxWidth: '600px',
-          textAlign: 'center',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
-        }}>
-          <h1 style={{
-            fontSize: '48px',
-            margin: '0 0 20px 0',
-            color: passed ? '#4CAF50' : '#ff4444'
-          }}>
-            {passed ? '🎉 Passed!' : '📚 Keep Practicing'}
-          </h1>
-
-          <h2 style={{ fontSize: '64px', margin: '20px 0', color: '#333' }}>
-            {Math.round(score)}%
-          </h2>
-
-          <p style={{ fontSize: '18px', color: '#666', marginBottom: '30px' }}>
-            {correctAnswers} out of {questionResults.length} correct
-          </p>
-
-          <div style={{
-            background: '#f8f9fa',
-            padding: '20px',
-            borderRadius: '8px',
-            marginBottom: '30px'
-          }}>
-            <div style={{ marginBottom: '10px' }}>
-              <strong>Time Taken:</strong> {Math.floor((Date.now() - testStartTime) / 1000)}s
-            </div>
-            <div>
-              <strong>Passing Score:</strong> {test.passing_score}%
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-            <button
-              onClick={() => setReviewMode(true)}
-              style={{
-                padding: '14px 32px',
-                fontSize: '16px',
-                background: '#4CAF50',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 600,
-              }}
-            >
-              📝 Review Answers
-            </button>
-            <button
-              onClick={onExit}
-              style={{
-                padding: '14px 32px',
-                fontSize: '16px',
-                background: '#667eea',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 600,
-              }}
-            >
-              Back to Tests
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+    return ()
   }
 
   if (!currentDrill || !questionText || !correctAnswer) {
