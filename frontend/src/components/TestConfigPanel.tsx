@@ -88,7 +88,7 @@ export default function TestConfigPanel({ onClose, onTestCreated, initialSelecte
   const handleAddDrill = (drill: Drill) => {
     if (!selectedDrills.some(d => d.id === drill.id)) {
       setSelectedDrills(prev => [...prev, drill]);
-    }
+    } 
     setDrillSearchTerm(''); // Clear search after adding
   };
 
@@ -280,7 +280,7 @@ export default function TestConfigPanel({ onClose, onTestCreated, initialSelecte
             <option value='partial'>Partial Letters (%)</option>
             <option value='full_after_tries'>Full Reveal After X Tries</option>
           </select>
-        }
+        </div>
 
         {config.hint_level === 'partial' && (
           <div style={{ marginBottom: '15px', marginLeft: '20px' }}>
