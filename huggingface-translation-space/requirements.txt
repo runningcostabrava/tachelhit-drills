@@ -1,7 +1,7 @@
+gradio
 torch
 transformers
-fastapi
-uvicorn
-pydantic
-huggingface_hub
-gradio
+sentencepiece
+sacremoses
+protobuf
+accelerate

@@ -13,6 +13,7 @@ interface Test {
   time_limit_seconds: number;
   passing_score: number;
   drill_ids: string;
+  playback_direction: string; // New field
 }
 
 interface Drill {
@@ -78,11 +79,11 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
       // Load drills
       const drillIds = testResponse.data.drill_ids.split(',').map((id: string) => parseInt(id));
       const drillsResponse = await axios.get(`${API_BASE}/drills/`);
-      const testDrills = drillsResponse.data.filter((d: Drill) => drillIds.includes(d.id));
-
-      // Shuffle drills for random order
-      const shuffled = [...testDrills].sort(() => Math.random() - 0.5);
-      setDrills(shuffled);
+      // Filter drills based on IDs and maintain order
+      const testDrills = drillIds.map((id: number) => drillsResponse.data.find((d: Drill) => d.id === id)).filter((d: Drill | undefined): d is Drill => d !== undefined);
+      
+      // Removed shuffling to respect the order from drill_ids
+      setDrills(testDrills);
 
       // Initialize timer if needed
       if (testResponse.data.time_limit_seconds > 0) {
@@ -100,10 +101,46 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
 
   const currentDrill = drills[currentQuestionIndex];
 
-  const getHintText = () => {
-    if (!currentDrill || !test) return '';
+  // Determine question and answer fields based on playback_direction
+  const getQuestionAndAnswerFields = () => {
+    if (!test || !currentDrill) return { questionText: 
+ull, correctAnswer: 
+ull };
 
-    const correctAnswer = currentDrill.text_tachelhit || '';
+    let questionText = 
+ull;
+    let correctAnswer = 
+ull;
+
+    switch (test.playback_direction) {
+      case 'cat-tash':
+        questionText = currentDrill.text_catalan;
+        correctAnswer = currentDrill.text_tachelhit;
+        break;
+      case 'tash-cat':
+        questionText = currentDrill.text_tachelhit;
+        correctAnswer = currentDrill.text_catalan;
+        break;
+      case 'ar-tash':
+        questionText = currentDrill.text_arabic;
+        correctAnswer = currentDrill.text_tachelhit;
+        break;
+      case 'tash-ar':
+        questionText = currentDrill.text_tachelhit;
+        correctAnswer = currentDrill.text_arabic;
+        break;
+      default:
+        questionText = currentDrill.text_catalan; // Default to Catalan to Tachelhit
+        correctAnswer = currentDrill.text_tachelhit;
+        break;
+    }
+    return { questionText, correctAnswer };
+  };
+
+  const { questionText, correctAnswer } = getQuestionAndAnswerFields();
+
+  const getHintText = () => {
+    if (!correctAnswer || !test) return '';
 
     if (test.hint_level === 'none') {
       return '';
@@ -113,19 +150,10 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
       }
       return '';
     } else if (test.hint_level === 'partial') {
-      // Progressive hints: show more letters with each hint request
       const basePercentage = test.hint_percentage || 30;
       const progressivePercentage = Math.min(basePercentage + (hintsUsed * 15), 80);
       const numLettersToShow = Math.ceil((correctAnswer.length * progressivePercentage) / 100);
 
-      // Always reveal first letter and spaces
-      // let revealed = correctAnswer.split('').map((char, i) => {
-      //   if (char === ' ') return ' ';
-      //   if (i === 0) return char;
-      //   return '_';
-      // });
-
-      // Reveal additional random letters
       const indices = new Set<number>([0]); // First letter already revealed
       while (indices.size < numLettersToShow && indices.size < correctAnswer.length) {
         const randomIndex = Math.floor(Math.random() * correctAnswer.length);
@@ -147,14 +175,14 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
   };
 
   const checkAnswer = () => {
-    if (!currentDrill) return false;
-    const correct = normalizeAnswer(currentDrill.text_tachelhit || '');
+    if (!correctAnswer) return false;
+    const correct = normalizeAnswer(correctAnswer);
     const user = normalizeAnswer(userAnswer);
     return correct === user;
   };
 
   const handleSubmitAnswer = async (timeUp: boolean = false, skipQuestion: boolean = false) => {
-    if (!currentDrill || !test) return;
+    if (!currentDrill || !test || !correctAnswer) return;
 
     const isCorrect = checkAnswer();
     const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000);
@@ -322,6 +350,33 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
               const drill = drills.find(d => d.id === result.drill_id);
               if (!drill) return null;
 
+              // Determine question and answer text for review mode based on playback_direction
+              let reviewQuestionText = '';
+              let reviewCorrectAnswerText = '';
+
+              switch (test.playback_direction) {
+                case 'cat-tash':
+                  reviewQuestionText = drill.text_catalan;
+                  reviewCorrectAnswerText = drill.text_tachelhit;
+                  break;
+                case 'tash-cat':
+                  reviewQuestionText = drill.text_tachelhit;
+                  reviewCorrectAnswerText = drill.text_catalan;
+                  break;
+                case 'ar-tash':
+                  reviewQuestionText = drill.text_arabic || '';
+                  reviewCorrectAnswerText = drill.text_tachelhit;
+                  break;
+                case 'tash-ar':
+                  reviewQuestionText = drill.text_tachelhit;
+                  reviewCorrectAnswerText = drill.text_arabic || '';
+                  break;
+                default:
+                  reviewQuestionText = drill.text_catalan;
+                  reviewCorrectAnswerText = drill.text_tachelhit;
+                  break;
+              }
+
               return (
                 <div key={index} style={{
                   background: 'white',
@@ -364,8 +419,8 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                   )}
 
                   <div style={{ marginBottom: '12px' }}>
-                    <strong style={{ color: '#667eea' }}>Catalan:</strong>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '16px' }}>{drill.text_catalan}</p>
+                    <strong style={{ color: '#667eea' }}>Question:</strong>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '16px' }}>{reviewQuestionText}</p>
                   </div>
 
                   <div style={{ marginBottom: '12px' }}>
@@ -384,7 +439,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                     }}>
                       <strong style={{ color: '#2e7d32' }}>Correct Answer:</strong>
                       <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 500, color: '#2e7d32' }}>
-                        {drill.text_tachelhit}
+                        {reviewCorrectAnswerText}
                       </p>
                     </div>
                   )}
@@ -524,11 +579,40 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
     );
   }
 
-  if (!currentDrill) {
+  if (!currentDrill || !questionText || !correctAnswer) {
     return <div>Loading question...</div>;
   }
 
   const hintText = getHintText();
+
+  // Determine question and secondary text display based on playback_direction
+  let mainQuestionDisplay = questionText;
+  let secondaryQuestionDisplay = '';
+  let isArabicQuestion = false;
+
+  switch (test.playback_direction) {
+    case 'cat-tash':
+      mainQuestionDisplay = currentDrill.text_catalan;
+      secondaryQuestionDisplay = currentDrill.text_arabic || '';
+      break;
+    case 'tash-cat':
+      mainQuestionDisplay = currentDrill.text_tachelhit;
+      secondaryQuestionDisplay = currentDrill.text_arabic || ''; // Still show Arabic if available
+      break;
+    case 'ar-tash':
+      mainQuestionDisplay = currentDrill.text_arabic || '';
+      secondaryQuestionDisplay = currentDrill.text_catalan;
+      isArabicQuestion = true;
+      break;
+    case 'tash-ar':
+      mainQuestionDisplay = currentDrill.text_tachelhit;
+      secondaryQuestionDisplay = currentDrill.text_catalan; // Show Catalan as secondary
+      break;
+    default:
+      mainQuestionDisplay = currentDrill.text_catalan;
+      secondaryQuestionDisplay = currentDrill.text_arabic || '';
+      break;
+  }
 
   return (
     <div style={{
@@ -617,38 +701,38 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
             </div>
           )}
 
-          {/* Question - Smaller on mobile */}
+          {/* Question */}
           <div style={{ marginBottom: '20px' }}>
             <div style={{
               fontSize: window.innerWidth < 768 ? '24px' : '36px',
               textAlign: 'center',
               color: '#333',
               fontWeight: 600,
-              lineHeight: 1.3
+              lineHeight: 1.3,
+              direction: isArabicQuestion ? 'rtl' : 'ltr'
             }}>
-              {currentDrill.text_catalan}
+              {mainQuestionDisplay}
             </div>
-            {/* Arabic text - very small, no title */}
-            {currentDrill.text_arabic && (
+            {secondaryQuestionDisplay && (
               <div style={{
                 fontSize: window.innerWidth < 768 ? '14px' : '16px',
                 textAlign: 'center',
                 color: '#666',
-                direction: 'rtl',
                 marginTop: '8px',
                 padding: '8px',
                 background: '#f8f9fa',
-                borderRadius: '6px'
+                borderRadius: '6px',
+                direction: secondaryQuestionDisplay === currentDrill.text_arabic ? 'rtl' : 'ltr'
               }}>
-                {currentDrill.text_arabic}
+                {secondaryQuestionDisplay}
               </div>
             )}
           </div>
 
           {/* Media Section - Compact */}
           {(test.question_type === 'audio' || test.question_type === 'video' || test.question_type === 'combined') && (
-            <div style={{ 
-              textAlign: 'center', 
+            <div style={{
+              textAlign: 'center',
               marginBottom: window.innerWidth < 768 ? '20px' : '30px',
               display: 'flex',
               flexDirection: window.innerWidth < 768 ? 'column' : 'row',
@@ -739,9 +823,10 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
               <label style={{
                 fontSize: window.innerWidth < 768 ? '14px' : '16px',
                 fontWeight: 600,
-                color: '#555'
+                color: '#555',
+                direction: (test.playback_direction === 'ar-tash' || test.playback_direction === 'tash-ar') ? 'rtl' : 'ltr' // Apply direction to label
               }}>
-                Your answer in Tachelhit:
+                Your answer in {correctAnswer === currentDrill.text_tachelhit ? 'Tachelhit' : correctAnswer === currentDrill.text_catalan ? 'Catalan' : 'Arabic'}:
               </label>
               {timeRemaining !== null && (
                 <div style={{
@@ -757,7 +842,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
               )}
             </div>
             <input
-              type="text"
+              type='text'
               value={userAnswer}
               onChange={(e) => setUserAnswer(e.target.value)}
               onKeyPress={(e) => {
@@ -765,7 +850,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                   handleSubmitAnswer();
                 }
               }}
-              placeholder="Type here..."
+              placeholder='Type here...'
               autoFocus
               style={{
                 width: '100%',
@@ -774,7 +859,8 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                 border: '2px solid #ddd',
                 borderRadius: '8px',
                 outline: 'none',
-                transition: 'border-color 0.2s'
+                transition: 'border-color 0.2s',
+                direction: (test.playback_direction === 'ar-tash' || test.playback_direction === 'tash-ar') ? 'rtl' : 'ltr' // Apply direction to input
               }}
               onFocus={(e) => e.target.style.borderColor = '#667eea'}
               onBlur={(e) => e.target.style.borderColor = '#ddd'}
@@ -804,7 +890,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
               borderRadius: '8px',
               marginBottom: window.innerWidth < 768 ? '16px' : '20px'
             }}>
-              <div style={{ 
+              <div style={{
                 fontSize: window.innerWidth < 768 ? '14px' : '16px',
                 fontWeight: 600,
                 color: '#2e7d32',
@@ -812,12 +898,13 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
               }}>
                 ✓ Correct Answer:
               </div>
-              <div style={{ 
+              <div style={{
                 fontSize: window.innerWidth < 768 ? '16px' : '18px',
                 fontWeight: 600,
-                color: '#2e7d32'
+                color: '#2e7d32',
+                direction: (correctAnswer === currentDrill.text_arabic) ? 'rtl' : 'ltr'
               }}>
-                {currentDrill.text_tachelhit}
+                {correctAnswer}
               </div>
             </div>
           )}
@@ -831,9 +918,9 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
               borderRadius: '8px',
               marginBottom: window.innerWidth < 768 ? '16px' : '20px'
             }}>
-              <div style={{ 
-                color: '#c62828', 
-                fontSize: window.innerWidth < 768 ? '14px' : '15px', 
+              <div style={{
+                color: '#c62828',
+                fontSize: window.innerWidth < 768 ? '14px' : '15px',
                 fontWeight: 600,
                 marginBottom: '8px'
               }}>
@@ -881,8 +968,8 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
           )}
 
           {/* Action Buttons - Always visible and responsive */}
-          <div style={{ 
-            display: 'flex', 
+          <div style={{
+            display: 'flex',
             gap: window.innerWidth < 768 ? '8px' : '12px',
             flexWrap: 'wrap'
           }}>

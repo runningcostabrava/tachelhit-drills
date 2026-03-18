@@ -1,19 +1,30 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 
-// interface Test {
-//   id: number;
-//   title: string;
-//   description: string;
-//   question_type: string;
-//   hint_level: string;
-//   hint_percentage: number;
-//   hint_tries_before_reveal: number;
-//   time_limit_seconds: number;
-//   passing_score: number;
-//   drill_ids: string;
-// }
+// Define Test and Drill interfaces for better typing
+interface Test {
+  id: number;
+  title: string;
+  description: string;
+  question_type: string;
+  hint_level: string;
+  hint_percentage: number;
+  hint_tries_before_reveal: number;
+  time_limit_seconds: number;
+  passing_score: number;
+  drill_ids: string;
+  playback_direction: string; // New field
+}
+
+interface Drill {
+  id: number;
+  text_catalan: string;
+  text_tachelhit: string;
+  text_arabic?: string;
+  // Include other fields if needed for display or filtering
+}
 
 interface TestEditPanelProps {
   testId: number;
@@ -22,7 +33,8 @@ interface TestEditPanelProps {
 }
 
 export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEditPanelProps) {
-  const [config, setConfig] = useState({
+  const [config, setConfig] = useState<Test>({
+    id: 0, // Placeholder
     title: '',
     description: '',
     question_type: 'text_input',
@@ -32,31 +44,54 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
     time_limit_seconds: 0,
     passing_score: 70,
     drill_ids: '',
+    playback_direction: 'cat-tash', // Default value
   });
   const [loading, setLoading] = useState(true);
+  const [allDrills, setAllDrills] = useState<Drill[]>([]);
+  const [selectedDrills, setSelectedDrills] = useState<Drill[]>([]);
+  const [drillSearchTerm, setDrillSearchTerm] = useState('');
 
   useEffect(() => {
-    loadTest();
+    loadTestAndDrills();
   }, [testId]);
 
-  const loadTest = async () => {
+  const loadTestAndDrills = async () => {
+    setLoading(true);
     try {
-      const response = await axios.get(`${API_BASE}/tests/${testId}`);
+      const [testResponse, drillsResponse] = await Promise.all([
+        axios.get(`${API_BASE}/tests/${testId}`),
+        axios.get(`${API_BASE}/drills/`)
+      ]);
+
+      const testData = testResponse.data;
+      const allDrillsData: Drill[] = drillsResponse.data;
+
       setConfig({
-        title: response.data.title,
-        description: response.data.description || '',
-        question_type: response.data.question_type,
-        hint_level: response.data.hint_level,
-        hint_percentage: response.data.hint_percentage || 30,
-        hint_tries_before_reveal: response.data.hint_tries_before_reveal || 3,
-        time_limit_seconds: response.data.time_limit_seconds || 0,
-        passing_score: response.data.passing_score,
-        drill_ids: response.data.drill_ids,
+        id: testData.id,
+        title: testData.title,
+        description: testData.description || '',
+        question_type: testData.question_type,
+        hint_level: testData.hint_level,
+        hint_percentage: testData.hint_percentage || 30,
+        hint_tries_before_reveal: testData.hint_tries_before_reveal || 3,
+        time_limit_seconds: testData.time_limit_seconds || 0,
+        passing_score: testData.passing_score,
+        drill_ids: testData.drill_ids,
+        playback_direction: testData.playback_direction || 'cat-tash',
       });
+      setAllDrills(allDrillsData);
+
+      if (testData.drill_ids) {
+        const ids = testData.drill_ids.split(',').map(Number);
+        const currentSelected = ids.map(id => allDrillsData.find(drill => drill.id === id)).filter((d): d is Drill => d !== undefined);
+        setSelectedDrills(currentSelected);
+      } else {
+        setSelectedDrills([]);
+      }
       setLoading(false);
     } catch (error) {
-      console.error('Error loading test:', error);
-      alert('Failed to load test');
+      console.error('Error loading test or drills:', error);
+      alert('Failed to load test or drills');
       onClose();
     }
   };
@@ -70,6 +105,7 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
     try {
       await axios.put(`${API_BASE}/tests/${testId}`, {
         ...config,
+        drill_ids: selectedDrills.map(d => d.id).join(','), // Update drill_ids from state
         time_limit_seconds: config.time_limit_seconds || null,
       });
 
@@ -81,6 +117,37 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
       alert('Failed to update test');
     }
   };
+
+  const handleRemoveDrill = (drillId: number) => {
+    setSelectedDrills(prev => prev.filter(d => d.id !== drillId));
+  };
+
+  const handleAddDrill = (drill: Drill) => {
+    if (!selectedDrills.some(d => d.id === drill.id)) {
+      setSelectedDrills(prev => [...prev, drill]);
+    }
+    setDrillSearchTerm(''); // Clear search after adding
+  };
+
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) {
+      return;
+    }
+
+    const reorderedDrills = Array.from(selectedDrills);
+    const [movedDrill] = reorderedDrills.splice(result.source.index, 1);
+    reorderedDrills.splice(result.destination.index, 0, movedDrill);
+
+    setSelectedDrills(reorderedDrills);
+  };
+
+  const filteredAvailableDrills = allDrills.filter(drill =>
+    !selectedDrills.some(sd => sd.id === drill.id) &&
+    (drill.text_catalan.toLowerCase().includes(drillSearchTerm.toLowerCase()) ||
+     drill.text_tachelhit.toLowerCase().includes(drillSearchTerm.toLowerCase()) ||
+     (drill.text_arabic && drill.text_arabic.toLowerCase().includes(drillSearchTerm.toLowerCase())) ||
+     drill.id.toString().includes(drillSearchTerm))
+  );
 
   if (loading) {
     return (
@@ -101,8 +168,6 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
     );
   }
 
-  const drillCount = config.drill_ids ? config.drill_ids.split(',').length : 0;
-
   return (
     <div style={{
       position: 'fixed',
@@ -120,29 +185,21 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
         backgroundColor: 'white',
         padding: '30px',
         borderRadius: '12px',
-        width: '600px',
+        width: '700px', // Increased width
         maxHeight: '90vh',
         overflow: 'auto',
       }}>
         <h2 style={{ marginTop: 0, marginBottom: '20px' }}>Edit Test Configuration</h2>
-
-        <p style={{ marginBottom: '20px', color: '#666' }}>
-          Number of drills: <strong>{drillCount}</strong>
-          <br />
-          <span style={{ fontSize: '12px', color: '#999' }}>
-            (To change drills, create a new test)
-          </span>
-        </p>
 
         <div style={{ marginBottom: '15px' }}>
           <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
             Test Title *
           </label>
           <input
-            type="text"
+            type='text'
             value={config.title}
             onChange={(e) => setConfig({ ...config, title: e.target.value })}
-            placeholder="e.g., Basic Greetings Test"
+            placeholder='e.g., Basic Greetings Test'
             style={{
               width: '100%',
               padding: '8px',
@@ -160,7 +217,7 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
           <textarea
             value={config.description}
             onChange={(e) => setConfig({ ...config, description: e.target.value })}
-            placeholder="Optional description"
+            placeholder='Optional description'
             rows={3}
             style={{
               width: '100%',
@@ -187,10 +244,33 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
               borderRadius: '4px',
             }}
           >
-            <option value="text_input">Text Input - Student writes Tachelhit</option>
-            <option value="audio">Audio Recognition - Listen and write</option>
-            <option value="video">Video - Watch and write</option>
-            <option value="combined">Combined - Mix of all types (uses available media)</option>
+            <option value='text_input'>Text Input - Student writes Tachelhit</option>
+            <option value='audio'>Audio Recognition - Listen and write</option>
+            <option value='video'>Video - Watch and write</option>
+            <option value='combined'>Combined - Mix of all types (uses available media)</option>
+          </select>
+        </div>
+
+        {/* New Playback Direction Field */}
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+            Playback Direction
+          </label>
+          <select
+            value={config.playback_direction}
+            onChange={(e) => setConfig({ ...config, playback_direction: e.target.value })}
+            style={{
+              width: '100%',
+              padding: '8px',
+              fontSize: '14px',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+            }}
+          >
+            <option value='cat-tash'>Catalan (Question) → Tachelhit (Answer)</option>
+            <option value='tash-cat'>Tachelhit (Question) → Catalan (Answer)</option>
+            <option value='ar-tash'>Arabic (Question) → Tachelhit (Answer)</option>
+            <option value='tash-ar'>Tachelhit (Question) → Arabic (Answer)</option>
           </select>
         </div>
 
@@ -209,9 +289,9 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
               borderRadius: '4px',
             }}
           >
-            <option value="none">No Hints</option>
-            <option value="partial">Partial Letters (%)</option>
-            <option value="full_after_tries">Full Reveal After X Tries</option>
+            <option value='none'>No Hints</option>
+            <option value='partial'>Partial Letters (%)</option>
+            <option value='full_after_tries'>Full Reveal After X Tries</option>
           </select>
         </div>
 
@@ -221,9 +301,9 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
               Percentage of letters to reveal: {config.hint_percentage}%
             </label>
             <input
-              type="range"
-              min="10"
-              max="80"
+              type='range'
+              min='10'
+              max='80'
               value={config.hint_percentage}
               onChange={(e) => setConfig({ ...config, hint_percentage: parseInt(e.target.value) })}
               style={{ width: '100%' }}
@@ -237,9 +317,9 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
               Number of tries before revealing:
             </label>
             <input
-              type="number"
-              min="1"
-              max="10"
+              type='number'
+              min='1'
+              max='10'
               value={config.hint_tries_before_reveal}
               onChange={(e) => setConfig({ ...config, hint_tries_before_reveal: parseInt(e.target.value) })}
               style={{
@@ -258,8 +338,8 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
             Time Limit (seconds per question, 0 = no limit)
           </label>
           <input
-            type="number"
-            min="0"
+            type='number'
+            min='0'
             value={config.time_limit_seconds}
             onChange={(e) => setConfig({ ...config, time_limit_seconds: parseInt(e.target.value) })}
             style={{
@@ -277,13 +357,100 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
             Passing Score (%): {config.passing_score}%
           </label>
           <input
-            type="range"
-            min="0"
-            max="100"
+            type='range'
+            min='0'
+            max='100'
             value={config.passing_score}
             onChange={(e) => setConfig({ ...config, passing_score: parseInt(e.target.value) })}
             style={{ width: '100%' }}
           />
+        </div>
+
+        {/* Drill Management Section - Updated */}
+        <div style={{ marginBottom: '20px', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '15px' }}>
+          <h3 style={{ marginTop: '0', marginBottom: '15px', fontSize: '18px' }}>Manage Drills ({selectedDrills.length})</h3>
+
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId='selectedDrills'>
+              {(provided) => (
+                <div
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
+                  style={{ marginBottom: '15px', maxHeight: '250px', overflowY: 'auto', border: '1px solid #f0f0f0', borderRadius: '4px', padding: '10px' }}
+                >
+                  {selectedDrills.length === 0 ? (
+                    <p style={{ color: '#888', textAlign: 'center', padding: '20px' }}>No drills selected for this test.</p>
+                  ) : (
+                    selectedDrills.map((drill, index) => (
+                      <Draggable key={drill.id} draggableId={String(drill.id)} index={index}>
+                        {(provided) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            style={{
+                              userSelect: 'none',
+                              padding: '8px',
+                              margin: '0 0 8px 0',
+                              minHeight: '30px',
+                              backgroundColor: 'white',
+                              border: '1px solid #ddd',
+                              borderRadius: '4px',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                              ...provided.draggableProps.style,
+                            }}
+                          >
+                            <span>{index + 1}. {drill.text_catalan} ({drill.id})</span>
+                            <button
+                              onClick={() => handleRemoveDrill(drill.id)}
+                              style={{ background: '#ff4444', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))
+                  )}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
+
+          {/* Add new drills section */}
+          <div style={{ marginBottom: '10px', paddingTop: '10px', borderTop: '1px dashed #e0e0e0' }}>
+            <h4 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>Add Drills:</h4>
+            <input
+              type='text' // Changed to text for search
+              placeholder='Search by ID or text...'
+              value={drillSearchTerm}
+              onChange={(e) => setDrillSearchTerm(e.target.value)}
+              style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px', width: 'calc(100% - 80px)' }}
+            />
+            <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #f0f0f0', borderRadius: '4px', marginTop: '10px', padding: '5px' }}>
+              {drillSearchTerm.length > 0 && filteredAvailableDrills.length > 0 ? (
+                filteredAvailableDrills.map(drill => (
+                  <div key={drill.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px dotted #eee' }}>
+                    <span>{drill.id}. {drill.text_catalan}</span>
+                    <button
+                      onClick={() => handleAddDrill(drill)}
+                      style={{ background: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                ))
+              ) : drillSearchTerm.length > 0 ? (
+                <p style={{ color: '#888', textAlign: 'center', padding: '10px' }}>No matching drills found.</p>
+              ) : (
+                <p style={{ color: '#888', textAlign: 'center', padding: '10px' }}>Type to search available drills.</p>
+              )}
+            </div>
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
