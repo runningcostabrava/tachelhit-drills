@@ -167,8 +167,10 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
   };
 
   const normalizeAnswer = (text: string) => {
-    return text.toLowerCase().trim().replace(/
-+/g, ' ');
+    let normalized = text.toLowerCase();
+    normalized = normalized.trim();
+    normalized = normalized.split(' ').filter(s => s !== '').join(' ');
+    return normalized;
   };
 
   const checkAnswer = () => {
@@ -317,7 +319,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
 
   if (testCompleted) {
     const correctAnswers = questionResults.filter(r => r.correct).length;
-    const score = (correctAnswers / questionResults.length) * 100;
+    const score = (correctAnswers / results.length) * 100;
     const passed = score >= test.passing_score;
 
     if (reviewMode) {
@@ -374,7 +376,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                   break;
               }
 
-              return (
+              return ( 
                 <div key={index} style={{
                   background: 'white',
                   padding: '24px',
@@ -392,7 +394,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                       borderRadius: '12px',
                       fontSize: '14px',
                       fontWeight: 'bold',
-                      background: result.correct ? '#4CAF50' : '#ff4444', 
+                      background: result.correct ? '#4CAF50' : '#ff4444',
                       color: 'white'
                     }}>
                       {result.correct ? '✓ Correct' : '✗ Incorrect'}
@@ -654,7 +656,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
               marginTop: '10px',
               padding: '6px 12px',
               background: 'rgba(255,255,255,0.2)',
-              color: 'white',
+              color: 'white', 
               border: '1px solid white',
               borderRadius: '4px',
               cursor: 'pointer',
@@ -784,7 +786,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                     width: window.innerWidth < 768 ? '100%' : 'auto',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
+                    justifyContent: 'center', 
                     gap: '8px'
                   }}
                 >
@@ -973,7 +975,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
             {!showCorrectAnswer ? (
               <>
                 <button
-                  onClick={() => handleSubmitAnswer()}
+                  onClick={() => handleSubmitAnswer()} 
                   disabled={!userAnswer.trim()}
                   style={{
                     flex: window.innerWidth < 768 ? '1 1 100%' : 1,
@@ -1038,7 +1040,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                     style={{
                       flex: window.innerWidth < 768 ? '1 1 calc(50% - 4px)' : 'none',
                       padding: window.innerWidth < 768 ? '12px' : '8px 16px',
-                      fontSize: window.innerWidth < 768 ? '14px' : '14px',
+                      fontSize: window.innerWidth < 768 ? '13px' : '14px',
                       background: '#9C27B0',
                       color: 'white',
                       border: 'none',
