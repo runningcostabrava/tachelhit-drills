@@ -88,7 +88,7 @@ export default function TestConfigPanel({ onClose, onTestCreated, initialSelecte
   const handleAddDrill = (drill: Drill) => {
     if (!selectedDrills.some(d => d.id === drill.id)) {
       setSelectedDrills(prev => [...prev, drill]);
-    } 
+    }
     setDrillSearchTerm(''); // Clear search after adding
   };
 
@@ -97,8 +97,8 @@ export default function TestConfigPanel({ onClose, onTestCreated, initialSelecte
     (drill.text_catalan.toLowerCase().includes(drillSearchTerm.toLowerCase()) ||
      drill.text_tachelhit.toLowerCase().includes(drillSearchTerm.toLowerCase()) ||
      (drill.text_arabic && drill.text_arabic.toLowerCase().includes(drillSearchTerm.toLowerCase())) ||
-     drill.id.toString().includes(drillSearchTerm))
-  );
+     drill.id.toString().includes(drillSearchTerm)))
+  ;
 
   return (
     <div style={{
@@ -125,7 +125,7 @@ export default function TestConfigPanel({ onClose, onTestCreated, initialSelecte
 
         {/* Drill Management Section for New Test */}
         <div style={{ marginBottom: '20px', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '15px' }}>
-          <h3 style={{ marginTop: '0', marginBottom: '15px', fontSize: '18px' }}>Select Drills ({selectedDrills.length})</h3>
+          <h3 style={{ marginTop: 0, marginBottom: '15px', fontSize: '18px' }}>Select Drills ({selectedDrills.length})</h3>
 
           {/* Currently selected drills (for display, no reorder for creation) */}
           <div style={{ marginBottom: '15px', maxHeight: '150px', overflowY: 'auto', border: '1px solid #f0f0f0', borderRadius: '4px', padding: '10px' }}>
@@ -148,7 +148,7 @@ export default function TestConfigPanel({ onClose, onTestCreated, initialSelecte
 
           {/* Add new drills search */}
           <div style={{ marginBottom: '10px', paddingTop: '10px', borderTop: '1px dashed #e0e0e0' }}>
-            <h4 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>Available Drills:</h4>
+            <h4 style={{ margin: 0, marginBottom: '10px', fontSize: '16px' }}>Available Drills:</h4>
             <input
               type='text'
               placeholder='Search by ID or text...'
@@ -309,7 +309,7 @@ export default function TestConfigPanel({ onClose, onTestCreated, initialSelecte
               max='10'
               value={config.hint_tries_before_reveal}
               onChange={(e) => setConfig({ ...config, hint_tries_before_reveal: parseInt(e.target.value) })}
-              style={{
+              style={{ 
                 padding: '8px',
                 fontSize: '14px',
                 border: '1px solid #ccc',
