@@ -468,19 +468,19 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
             Cancel
           </button>
           <button
-            onClick={handleUpdate}
+            onClick={handleCreate}
             style={{
               padding: '10px 20px',
               fontSize: '14px',
               border: 'none',
               borderRadius: '4px',
-              backgroundColor: '#2196F3',
+              backgroundColor: '#4CAF50',
               color: 'white',
               cursor: 'pointer',
               fontWeight: 'bold',
             }}
           >
-            Update Test
+            Create Test
           </button>
         </div>
       </div>
