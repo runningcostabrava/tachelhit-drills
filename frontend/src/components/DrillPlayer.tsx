@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getMediaUrl } from '../config';
-import { getMediaWithOfflineFallback, offlineManager } from '../utils/offlineCache';
+import { getMediaWithOfflineFallback } from '../utils/offlineCache';
 
 interface Drill {
   id: number;
