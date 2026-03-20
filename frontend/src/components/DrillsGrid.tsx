@@ -864,57 +864,61 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
         if (!searchQuery.trim()) {
             // Clear all filters if search is empty
             gridRef.current.api.setFilterModel(null);
+            gridRef.current.api.setQuickFilter(null);
             return;
         }
 
-        const filterModel: any = {};
         const searchTerm = searchQuery.toLowerCase();
 
-        switch (searchCategory) {
-            case 'catalan':
-                filterModel.text_catalan = {
-                    filterType: 'text',
-                    type: 'contains',
-                    filter: searchTerm
-                };
-                break;
-            case 'tachelhit':
-                filterModel.text_tachelhit = {
-                    filterType: 'text',
-                    type: 'contains',
-                    filter: searchTerm
-                };
-                break;
-            case 'arabic':
-                filterModel.text_arabic = {
-                    filterType: 'text',
-                    type: 'contains',
-                    filter: searchTerm
-                };
-                break;
-            case 'tag':
-                filterModel.tag = {
-                    filterType: 'text',
-                    type: 'contains',
-                    filter: searchTerm
-                };
-                break;
-            case 'author':
-                filterModel.author = {
-                    filterType: 'text',
-                    type: 'contains',
-                    filter: searchTerm
-                };
-                break;
-            case 'all':
-            default:
-                // Search across multiple fields
-                const quickFilterText = searchTerm;
-                gridRef.current.api.setQuickFilter(quickFilterText);
-                return; // Quick filter is applied, no need for filter model
-        }
+        if (searchCategory === 'all') {
+            // Search across multiple fields using quick filter
+            gridRef.current.api.setQuickFilter(searchTerm);
+            // Clear any specific column filters
+            gridRef.current.api.setFilterModel(null);
+        } else {
+            // Clear quick filter when using specific column filter
+            gridRef.current.api.setQuickFilter(null);
 
-        gridRef.current.api.setFilterModel(filterModel);
+            const filterModel: any = {};
+            switch (searchCategory) {
+                case 'catalan':
+                    filterModel.text_catalan = {
+                        filterType: 'text',
+                        type: 'contains',
+                        filter: searchTerm
+                    };
+                    break;
+                case 'tachelhit':
+                    filterModel.text_tachelhit = {
+                        filterType: 'text',
+                        type: 'contains',
+                        filter: searchTerm
+                    };
+                    break;
+                case 'arabic':
+                    filterModel.text_arabic = {
+                        filterType: 'text',
+                        type: 'contains',
+                        filter: searchTerm
+                    };
+                    break;
+                case 'tag':
+                    filterModel.tag = {
+                        filterType: 'text',
+                        type: 'contains',
+                        filter: searchTerm
+                    };
+                    break;
+                case 'author':
+                    filterModel.author = {
+                        filterType: 'text',
+                        type: 'contains',
+                        filter: searchTerm
+                    };
+                    break;
+            }
+            gridRef.current.api.setFilterModel(filterModel);
+        }
     }, [searchQuery, searchCategory]);
 
     const CopyCellRenderer = (props: any) => {
