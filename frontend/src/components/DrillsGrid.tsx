@@ -78,12 +78,12 @@ const AudioCellRenderer = (props: any) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px', width: '100%' }}>
             {value && (
                 <>
-                                            <audio
-                                                ref={audioRef}
-                                                src={getMediaUrl(value)}
-                                                onEnded={handleAudioEnded}
-                                                style={{ display: 'none' }}
-                                            />                    <button
+                    <audio
+                        ref={audioRef}
+                        src={getMediaUrl(value)}
+                        onEnded={handleAudioEnded}
+                        style={{ display: 'none' }}
+                    />                    <button
                         onClick={togglePlayPause}
                         style={{
                             padding: '6px 12px',
@@ -310,53 +310,53 @@ const VideoCellRenderer = (props: any) => {
             justifyContent: 'center',
             zIndex: 10000
         }}>
-                    <div style={{
-                        background: 'white',
-                        padding: '20px',
-                        borderRadius: '12px',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-                        maxWidth: '95vw',
-                        maxHeight: '95vh',
-                        display: 'flex',
-                        flexDirection: 'column'
-                    }}>
-                        <h3 style={{ margin: '0 0 15px 0', textAlign: 'center', color: '#333' }}>
-                            {recording ? '🔴 Recording...' : 'Camera Preview'}
-                        </h3>
-                        <video
-                            ref={previewRef}
-                            autoPlay
-                            muted
-                            style={{
-                                width: '640px',
-                                height: '480px',
-                                maxWidth: '90vw',
-                                maxHeight: '70vh',
-                                backgroundColor: '#000',
-                                borderRadius: '8px',
-                                display: 'block',
-                                objectFit: 'contain'
-                            }}
-                        />
-                        <div style={{ marginTop: '15px', textAlign: 'center' }}>
-                            <button
-                                onClick={stopRecording}
-                                style={{
-                                    padding: '12px 30px',
-                                    background: '#ff4444',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    fontSize: '16px',
-                                    fontWeight: 600
-                                }}
-                            >
-                                ⏹ Stop Recording
-                            </button>
-                        </div>
-                    </div>
-                </div>,
+            <div style={{
+                background: 'white',
+                padding: '20px',
+                borderRadius: '12px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                maxWidth: '95vw',
+                maxHeight: '95vh',
+                display: 'flex',
+                flexDirection: 'column'
+            }}>
+                <h3 style={{ margin: '0 0 15px 0', textAlign: 'center', color: '#333' }}>
+                    {recording ? '🔴 Recording...' : 'Camera Preview'}
+                </h3>
+                <video
+                    ref={previewRef}
+                    autoPlay
+                    muted
+                    style={{
+                        width: '640px',
+                        height: '480px',
+                        maxWidth: '90vw',
+                        maxHeight: '70vh',
+                        backgroundColor: '#000',
+                        borderRadius: '8px',
+                        display: 'block',
+                        objectFit: 'contain'
+                    }}
+                />
+                <div style={{ marginTop: '15px', textAlign: 'center' }}>
+                    <button
+                        onClick={stopRecording}
+                        style={{
+                            padding: '12px 30px',
+                            background: '#ff4444',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontSize: '16px',
+                            fontWeight: 600
+                        }}
+                    >
+                        ⏹ Stop Recording
+                    </button>
+                </div>
+            </div>
+        </div>,
         document.body
     );
 
@@ -376,83 +376,83 @@ const VideoCellRenderer = (props: any) => {
             justifyContent: 'center',
             zIndex: 10000
         }}>
-                    <div style={{
-                        background: 'white',
-                        padding: '20px',
-                        borderRadius: '12px',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-                        maxWidth: '90vw'
-                    }}>
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginBottom: '15px'
-                        }}>
-                            <h3 style={{ margin: 0, color: '#333' }}>Video Playback</h3>
-                            <button
-                                onClick={closePlayback}
-                                style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    fontSize: '24px',
-                                    cursor: 'pointer',
-                                    padding: '0 10px'
-                                }}
-                            >
-                                ✕
-                            </button>
-                        </div>
-                        <video
-                            ref={playbackRef}
-                            src={getMediaUrl(value)}
-                            controls
-                            onEnded={handleVideoEnded}
-                            style={{
-                                width: '640px',
-                                height: '480px',
-                                maxWidth: '90vw',
-                                maxHeight: '70vh',
-                                backgroundColor: '#000',
-                                borderRadius: '8px',
-                                display: 'block',
-                                objectFit: 'contain'
-                            }}
-                        />
-                        <div style={{ marginTop: '15px', textAlign: 'center', display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                            <button
-                                onClick={togglePlayPause}
-                                style={{
-                                    padding: '10px 24px',
-                                    background: '#4CAF50',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    fontSize: '15px',
-                                    fontWeight: 600
-                                }}
-                            >
-                                {playing ? '⏸ Pause' : '▶ Play'}
-                            </button>
-                            <button
-                                onClick={closePlayback}
-                                style={{
-                                    padding: '10px 24px',
-                                    background: '#666',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    fontSize: '15px',
-                                    fontWeight: 600
-                                }}
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>,
+            <div style={{
+                background: 'white',
+                padding: '20px',
+                borderRadius: '12px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                maxWidth: '90vw'
+            }}>
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '15px'
+                }}>
+                    <h3 style={{ margin: 0, color: '#333' }}>Video Playback</h3>
+                    <button
+                        onClick={closePlayback}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            fontSize: '24px',
+                            cursor: 'pointer',
+                            padding: '0 10px'
+                        }}
+                    >
+                        ✕
+                    </button>
+                </div>
+                <video
+                    ref={playbackRef}
+                    src={getMediaUrl(value)}
+                    controls
+                    onEnded={handleVideoEnded}
+                    style={{
+                        width: '640px',
+                        height: '480px',
+                        maxWidth: '90vw',
+                        maxHeight: '70vh',
+                        backgroundColor: '#000',
+                        borderRadius: '8px',
+                        display: 'block',
+                        objectFit: 'contain'
+                    }}
+                />
+                <div style={{ marginTop: '15px', textAlign: 'center', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                    <button
+                        onClick={togglePlayPause}
+                        style={{
+                            padding: '10px 24px',
+                            background: '#4CAF50',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontSize: '15px',
+                            fontWeight: 600
+                        }}
+                    >
+                        {playing ? '⏸ Pause' : '▶ Play'}
+                    </button>
+                    <button
+                        onClick={closePlayback}
+                        style={{
+                            padding: '10px 24px',
+                            background: '#666',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontSize: '15px',
+                            fontWeight: 600
+                        }}
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>,
         document.body
     );
 
@@ -728,13 +728,13 @@ const GlossaryModal = ({ onClose }: { onClose: () => void }) => {
     const columnDefs: any[] = [
         { field: 'word_sound', headerName: 'Sound', flex: 1 },
         { field: 'correct_spelling', headerName: 'Spelling', flex: 1 },
-        { 
-            field: 'id', 
-            headerName: '', 
-            width: 100, 
+        {
+            field: 'id',
+            headerName: '',
+            width: 100,
             cellRenderer: (p: any) => (
-                <button 
-                    onClick={() => handleDelete(p.value)} 
+                <button
+                    onClick={() => handleDelete(p.value)}
                     style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}
                 >
                     Delete
@@ -748,13 +748,13 @@ const GlossaryModal = ({ onClose }: { onClose: () => void }) => {
             <div style={{ background: 'white', padding: '20px', borderRadius: '12px', width: '600px', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 <h3 style={{ marginTop: 0 }}>📖 Personal Dictionary (AI Learning)</h3>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                    <input placeholder="Sound (e.g. anayr)" value={newWord.sound} onChange={e => setNewWord({...newWord, sound: e.target.value})} style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
-                    <input placeholder="Correct Spelling" value={newWord.spelling} onChange={e => setNewWord({...newWord, spelling: e.target.value})} style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
+                    <input placeholder="Sound (e.g. anayr)" value={newWord.sound} onChange={e => setNewWord({ ...newWord, sound: e.target.value })} style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
+                    <input placeholder="Correct Spelling" value={newWord.spelling} onChange={e => setNewWord({ ...newWord, spelling: e.target.value })} style={{ flex: 1, padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }} />
                     <button onClick={handleAdd} style={{ padding: '8px 16px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Add</button>
                 </div>
                 <div className="ag-theme-alpine" style={{ flex: 1, width: '100%' }}>
-                    <AgGridReact 
-                        rowData={rowData} 
+                    <AgGridReact
+                        rowData={rowData}
                         columnDefs={columnDefs}
                     />
                 </div>
@@ -876,7 +876,7 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                 // Create a new drill with the same data
                 const response = await axios.post(`${API_BASE}/drills/`, copyData);
                 console.log('Drill copied successfully:', response.data);
-            
+
                 // Refresh the grid using context function
                 if (props.context && props.context.refreshData) {
                     props.context.refreshData();
@@ -890,7 +890,7 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                         props.api.setRowData(sorted);
                     }
                 }
-            
+
                 alert(`Drill #${drillToCopy.id} copied successfully! New drill ID: ${response.data.id}`);
             } catch (error) {
                 console.error('Error copying drill:', error);
@@ -1004,10 +1004,10 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
             valueFormatter: (p: any) => new Date(p.value).toLocaleDateString('es-ES')
         },
         { field: 'tag', headerName: 'Tag', width: 120, editable: true },
-        { 
-            field: 'author', 
-            headerName: 'Author', 
-            width: 120, 
+        {
+            field: 'author',
+            headerName: 'Author',
+            width: 120,
             editable: true,
             cellEditor: 'agTextCellEditor',
             cellEditorParams: {
@@ -1049,9 +1049,9 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
             width: 100,
             editable: true,
             cellRenderer: (params: any) => (
-                <input 
-                    type="checkbox" 
-                    checked={params.value} 
+                <input
+                    type="checkbox"
+                    checked={params.value}
                     onChange={async (e) => {
                         const val = e.target.checked;
                         try {
@@ -1125,7 +1125,7 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
 
             // Refresh the grid using the passed refreshData function
             refreshData();
-            
+
             // Optionally, ensure the new row is visible (if gridRef.current exists)
             if (gridRef.current && gridRef.current.api) {
                 gridRef.current.api.ensureIndexVisible(0, 'top');
@@ -1516,7 +1516,7 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                         const urlParams = new URLSearchParams(window.location.search);
                         const tag = urlParams.get('tag');
                         const author = urlParams.get('author');
-                        
+
                         if (tag || author) {
                             const filterModel: any = {};
                             if (tag) {
@@ -1540,21 +1540,21 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                         // Extract filters from grid and update URL
                         const filterModel = params.api.getFilterModel();
                         const newUrl = new URL(window.location.href);
-                        
+
                         // Handle 'tag' filter
                         if (filterModel.tag && filterModel.tag.filter) {
                             newUrl.searchParams.set('tag', filterModel.tag.filter);
                         } else {
                             newUrl.searchParams.delete('tag');
                         }
-                        
+
                         // Handle 'author' filter
                         if (filterModel.author && filterModel.author.filter) {
                             newUrl.searchParams.set('author', filterModel.author.filter);
                         } else {
                             newUrl.searchParams.delete('author');
                         }
-                        
+
                         // Update the browser URL without reloading
                         window.history.replaceState({}, '', newUrl.toString());
                     }}
@@ -1570,7 +1570,7 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
             {/* Test Configuration Panel */}
             {showTestConfig && (
                 <TestConfigPanel
-                    selectedDrillIds={selectedDrillIds}
+                    initialSelectedDrillIds={selectedDrillIds}
                     onClose={() => setShowTestConfig(false)}
                     onTestCreated={handleTestCreated}
                 />
@@ -1776,7 +1776,7 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                         position: 'relative',
                         boxShadow: '0 20px 60px rgba(0,0,0,0.5)'
                     }}>
-                        <button 
+                        <button
                             onClick={() => setEditingDrill(null)}
                             style={{
                                 position: 'absolute',
@@ -1793,7 +1793,7 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                             }}
                         >✕</button>
                         <div style={{ padding: '20px' }}>
-                            <DrillCard 
+                            <DrillCard
                                 drill={editingDrill}
                                 onUpdate={() => {
                                     refreshData();

@@ -80,8 +80,8 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
       const drillIds = testResponse.data.drill_ids.split(',').map((id: string) => parseInt(id));
       const drillsResponse = await axios.get(`${API_BASE}/drills/`);
       // Filter drills based on IDs and maintain order
-      const testDrills = drillIds.map((id: number) => drillsResponse.data.find((d: Drill) => d.id === id)).filter((d): d is Drill => d !== undefined);
-      
+      const testDrills = drillIds.map((id: number) => drillsResponse.data.find((d: Drill) => d.id === id)).filter((d: Drill | undefined): d is Drill => d !== undefined);
+
       // Removed shuffling to respect the order from drill_ids
       setDrills(testDrills);
 
@@ -319,7 +319,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
 
   if (testCompleted) {
     const correctAnswers = questionResults.filter(r => r.correct).length;
-    const score = (correctAnswers / results.length) * 100;
+    const score = (correctAnswers / questionResults.length) * 100;
     const passed = score >= test.passing_score;
 
     if (reviewMode) {
@@ -376,7 +376,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                   break;
               }
 
-              return ( 
+              return (
                 <div key={index} style={{
                   background: 'white',
                   padding: '24px',
@@ -656,7 +656,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
               marginTop: '10px',
               padding: '6px 12px',
               background: 'rgba(255,255,255,0.2)',
-              color: 'white', 
+              color: 'white',
               border: '1px solid white',
               borderRadius: '4px',
               cursor: 'pointer',
@@ -786,7 +786,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                     width: window.innerWidth < 768 ? '100%' : 'auto',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center', 
+                    justifyContent: 'center',
                     gap: '8px'
                   }}
                 >
@@ -795,7 +795,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                 </button>
               )}
 
-              {/* Fallback message if no media available in combined mode */} 
+              {/* Fallback message if no media available in combined mode */}
               {test.question_type === 'combined' && !currentDrill.audio_url && !currentDrill.video_url && (
                 <div style={{
                   padding: '10px',
@@ -975,7 +975,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
             {!showCorrectAnswer ? (
               <>
                 <button
-                  onClick={() => handleSubmitAnswer()} 
+                  onClick={() => handleSubmitAnswer()}
                   disabled={!userAnswer.trim()}
                   style={{
                     flex: window.innerWidth < 768 ? '1 1 100%' : 1,

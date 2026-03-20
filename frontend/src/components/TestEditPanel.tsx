@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import type { DropResult, DroppableProvided, DraggableProvided } from 'react-beautiful-dnd';
 
 // Define Test and Drill interfaces for better typing
 interface Test {
@@ -83,7 +84,7 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
 
       if (testData.drill_ids) {
         const ids = testData.drill_ids.split(',').map(Number);
-        const currentSelected = ids.map(id => allDrillsData.find(drill => drill.id === id)).filter((d): d is Drill => d !== undefined);
+        const currentSelected = ids.map((id: number) => allDrillsData.find((d: Drill) => d.id === id)).filter((d: Drill | undefined): d is Drill => d !== undefined);
         setSelectedDrills(currentSelected);
       } else {
         setSelectedDrills([]);
@@ -144,10 +145,10 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
   const filteredAvailableDrills = allDrills.filter(drill =>
     !selectedDrills.some(sd => sd.id === drill.id) &&
     (drill.text_catalan.toLowerCase().includes(drillSearchTerm.toLowerCase()) ||
-     drill.text_tachelhit.toLowerCase().includes(drillSearchTerm.toLowerCase()) ||
-     (drill.text_arabic && drill.text_arabic.toLowerCase().includes(drillSearchTerm.toLowerCase())) ||
-     drill.id.toString().includes(drillSearchTerm)))
-  ;
+      drill.text_tachelhit.toLowerCase().includes(drillSearchTerm.toLowerCase()) ||
+      (drill.text_arabic && drill.text_arabic.toLowerCase().includes(drillSearchTerm.toLowerCase())) ||
+      drill.id.toString().includes(drillSearchTerm)))
+    ;
 
   if (loading) {
     return (
@@ -372,7 +373,7 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
 
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId='selectedDrills'>
-              {(provided) => (
+              {(provided: DroppableProvided) => (
                 <div
                   {...provided.droppableProps}
                   ref={provided.innerRef}
@@ -383,7 +384,7 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
                   ) : (
                     selectedDrills.map((drill, index) => (
                       <Draggable key={drill.id} draggableId={String(drill.id)} index={index}>
-                        {(provided) => (
+                        {(provided: DraggableProvided) => (
                           <div
                             ref={provided.innerRef}
                             {...provided.draggableProps}
