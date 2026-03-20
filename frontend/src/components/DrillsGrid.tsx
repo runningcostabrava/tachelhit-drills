@@ -847,6 +847,8 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
     const [showNewDrillOptions, setShowNewDrillOptions] = useState(false); // New state for dropdown
     const [editingDrill, setEditingDrill] = useState<any>(null); // State for modal editing
     const [showGlossary, setShowGlossary] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchCategory, setSearchCategory] = useState('all'); // 'all', 'catalan', 'tachelhit', 'arabic', 'tag', 'author'
     const gridRef = useRef<any>(null);
     const navigate = useNavigate(); // Initialize useNavigate
 
@@ -854,6 +856,66 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
     useEffect(() => {
         console.log('🔄 showVoiceCreator cambió a:', showVoiceCreator);
     }, [showVoiceCreator]);
+
+    // Apply search filter when search query or category changes
+    useEffect(() => {
+        if (!gridRef.current || !gridRef.current.api) return;
+
+        if (!searchQuery.trim()) {
+            // Clear all filters if search is empty
+            gridRef.current.api.setFilterModel(null);
+            return;
+        }
+
+        const filterModel: any = {};
+        const searchTerm = searchQuery.toLowerCase();
+
+        switch (searchCategory) {
+            case 'catalan':
+                filterModel.text_catalan = {
+                    filterType: 'text',
+                    type: 'contains',
+                    filter: searchTerm
+                };
+                break;
+            case 'tachelhit':
+                filterModel.text_tachelhit = {
+                    filterType: 'text',
+                    type: 'contains',
+                    filter: searchTerm
+                };
+                break;
+            case 'arabic':
+                filterModel.text_arabic = {
+                    filterType: 'text',
+                    type: 'contains',
+                    filter: searchTerm
+                };
+                break;
+            case 'tag':
+                filterModel.tag = {
+                    filterType: 'text',
+                    type: 'contains',
+                    filter: searchTerm
+                };
+                break;
+            case 'author':
+                filterModel.author = {
+                    filterType: 'text',
+                    type: 'contains',
+                    filter: searchTerm
+                };
+                break;
+            case 'all':
+            default:
+                // Search across multiple fields
+                const quickFilterText = searchTerm;
+                gridRef.current.api.setQuickFilter(quickFilterText);
+                return; // Quick filter is applied, no need for filter model
+        }
+
+        gridRef.current.api.setFilterModel(filterModel);
+    }, [searchQuery, searchCategory]);
 
     const CopyCellRenderer = (props: any) => {
         const handleCopy = async () => {
@@ -1171,319 +1233,390 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 borderBottom: '2px solid #5a67d8',
                 display: 'flex',
-                alignItems: 'center',
-                gap: '16px'
+                flexDirection: 'column',
+                gap: '12px'
             }}>
-                <div>
-                    <h1 style={{
-                        margin: 0,
-                        fontSize: '24px',
-                        fontWeight: 700,
-                        color: 'white',
-                        letterSpacing: '0.5px'
-                    }}>
-                        Tachelhit Language Drills
-                    </h1>
-                    <h2 style={{
-                        margin: '4px 0 0 0',
-                        fontSize: '18px',
-                        fontWeight: 600,
-                        color: '#FFD700',
-                        letterSpacing: '0.3px'
-                    }}>
-                        y10
-                    </h2>
-                </div>
-                <div style={{ position: 'relative' }}>
-                    <button
-                        onClick={() => setShowNewDrillOptions(!showNewDrillOptions)}
-                        style={{
-                            padding: '10px 20px',
-                            fontSize: '15px',
-                            background: 'white',
-                            color: '#667eea',
-                            border: 'none',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            fontWeight: 600,
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                            transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                    >
-                        + New Drill ▼
-                    </button>
-                    {showNewDrillOptions && (
-                        <div style={{
-                            position: 'absolute',
-                            top: 'calc(100% + 10px)', // Position below the button
-                            right: 0,
-                            backgroundColor: 'white',
-                            borderRadius: '8px',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                            zIndex: 1000,
-                            minWidth: '220px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            overflow: 'hidden',
+                {/* Top row: Title and main buttons */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '16px',
+                    flexWrap: 'wrap'
+                }}>
+                    <div>
+                        <h1 style={{
+                            margin: 0,
+                            fontSize: '24px',
+                            fontWeight: 700,
+                            color: 'white',
+                            letterSpacing: '0.5px'
                         }}>
+                            Tachelhit Language Drills
+                        </h1>
+                        <h2 style={{
+                            margin: '4px 0 0 0',
+                            fontSize: '18px',
+                            fontWeight: 600,
+                            color: '#FFD700',
+                            letterSpacing: '0.3px'
+                        }}>
+                            y10
+                        </h2>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <div style={{ position: 'relative' }}>
                             <button
-                                onClick={() => {
-                                    addNewRow();
-                                    setShowNewDrillOptions(false);
-                                }}
+                                onClick={() => setShowNewDrillOptions(!showNewDrillOptions)}
                                 style={{
-                                    padding: '10px 15px',
+                                    padding: '10px 20px',
                                     fontSize: '15px',
-                                    background: 'none',
+                                    background: 'white',
+                                    color: '#667eea',
                                     border: 'none',
-                                    textAlign: 'left',
+                                    borderRadius: '8px',
                                     cursor: 'pointer',
-                                    color: '#333',
-                                    fontWeight: 500,
-                                    whiteSpace: 'nowrap'
+                                    fontWeight: 600,
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                    transition: 'all 0.2s'
                                 }}
+                                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                             >
-                                ➕ Create Empty Drill
+                                + New Drill ▼
                             </button>
-                            <button
-                                onClick={() => {
-                                    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-                                    if (!SpeechRecognition) {
-                                        alert('Speech recognition is not supported in your browser. Please use Chrome or Edge for voice features. You can still create a drill manually.');
-                                    }
-                                    setShowVoiceCreator(true);
-                                    setShowNewDrillOptions(false);
-                                }}
-                                style={{
-                                    padding: '10px 15px',
-                                    fontSize: '15px',
-                                    background: 'none',
-                                    border: 'none',
-                                    textAlign: 'left',
-                                    cursor: 'pointer',
-                                    color: '#333',
-                                    fontWeight: 500,
-                                    whiteSpace: 'nowrap'
-                                }}
-                            >
-                                🎤 Create Drill with Voice
-                            </button>
-                            <button
-                                onClick={() => {
-                                    navigate('/video-creator');
-                                    setShowNewDrillOptions(false);
-                                }}
-                                style={{
-                                    padding: '10px 15px',
-                                    fontSize: '15px',
-                                    background: 'none',
-                                    border: 'none',
-                                    textAlign: 'left',
-                                    cursor: 'pointer',
-                                    color: '#333',
-                                    fontWeight: 500,
-                                    whiteSpace: 'nowrap'
-                                }}
-                            >
-                                🎬 Create from Video (YouTube)
-                            </button>
+                            {showNewDrillOptions && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: 'calc(100% + 10px)', // Position below the button
+                                    right: 0,
+                                    backgroundColor: 'white',
+                                    borderRadius: '8px',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                    zIndex: 1000,
+                                    minWidth: '220px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    overflow: 'hidden',
+                                }}>
+                                    <button
+                                        onClick={() => {
+                                            addNewRow();
+                                            setShowNewDrillOptions(false);
+                                        }}
+                                        style={{
+                                            padding: '10px 15px',
+                                            fontSize: '15px',
+                                            background: 'none',
+                                            border: 'none',
+                                            textAlign: 'left',
+                                            cursor: 'pointer',
+                                            color: '#333',
+                                            fontWeight: 500,
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                    >
+                                        ➕ Create Empty Drill
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+                                            if (!SpeechRecognition) {
+                                                alert('Speech recognition is not supported in your browser. Please use Chrome or Edge for voice features. You can still create a drill manually.');
+                                            }
+                                            setShowVoiceCreator(true);
+                                            setShowNewDrillOptions(false);
+                                        }}
+                                        style={{
+                                            padding: '10px 15px',
+                                            fontSize: '15px',
+                                            background: 'none',
+                                            border: 'none',
+                                            textAlign: 'left',
+                                            cursor: 'pointer',
+                                            color: '#333',
+                                            fontWeight: 500,
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                    >
+                                        🎤 Create Drill with Voice
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            navigate('/video-creator');
+                                            setShowNewDrillOptions(false);
+                                        }}
+                                        style={{
+                                            padding: '10px 15px',
+                                            fontSize: '15px',
+                                            background: 'none',
+                                            border: 'none',
+                                            textAlign: 'left',
+                                            cursor: 'pointer',
+                                            color: '#333',
+                                            fontWeight: 500,
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                    >
+                                        🎬 Create from Video (YouTube)
+                                    </button>
+                                </div>
+                            )}
                         </div>
+
+                        <button
+                            onClick={() => setShowGlossary(true)}
+                            style={{
+                                padding: '10px 20px',
+                                fontSize: '15px',
+                                background: 'white',
+                                color: '#333',
+                                border: '1px solid #ccc',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.1) ',
+                                transition: 'all 0.2s',
+                            }}
+                        >
+                            📖 Glossary
+                        </button>
+                    </div>
+                </div>
+
+                {/* Search Box - Now more prominent and responsive */}
+                <div style={{
+                    width: '100%',
+                    display: 'flex',
+                    gap: '8px',
+                    alignItems: 'center',
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)'
+                }}>
+                    <div style={{ color: 'white', fontSize: '18px', flexShrink: 0 }}>🔍</div>
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search drills by text, tag, author..."
+                        style={{
+                            flex: 1,
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'white',
+                            fontSize: '16px',
+                            outline: 'none',
+                            minWidth: '0'
+                        }}
+                    />
+                    <select
+                        value={searchCategory}
+                        onChange={(e) => setSearchCategory(e.target.value)}
+                        style={{
+                            background: 'rgba(255, 255, 255, 0.2)',
+                            border: '1px solid rgba(255, 255, 255, 0.3)',
+                            color: 'white',
+                            borderRadius: '6px',
+                            padding: '6px 10px',
+                            fontSize: '14px',
+                            outline: 'none',
+                            cursor: 'pointer',
+                            flexShrink: 0
+                        }}
+                    >
+                        <option value="all">All fields</option>
+                        <option value="catalan">Català</option>
+                        <option value="tachelhit">Tachelhit</option>
+                        <option value="arabic">Arabic</option>
+                        <option value="tag">Tag</option>
+                        <option value="author">Author</option>
+                    </select>
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery('')}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'white',
+                                fontSize: '18px',
+                                cursor: 'pointer',
+                                padding: '0 6px',
+                                flexShrink: 0
+                            }}
+                            title="Clear search"
+                        >
+                            ✕
+                        </button>
                     )}
                 </div>
 
-                <button
-                    onClick={() => setShowBulkEdit(true)}
-                    style={{
-                        padding: '10px 20px',
-                        fontSize: '15px',
-                        background: selectedDrillIds.length > 0 ? '#9C27B0' : '#e0e0e0',
-                        color: selectedDrillIds.length > 0 ? 'white' : '#999',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: selectedDrillIds.length > 0 ? 'pointer' : 'not-allowed',
-                        fontWeight: 600,
-                        boxShadow: selectedDrillIds.length > 0 ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
-                        transition: 'all 0.2s',
-                        marginRight: '8px'
-                    }}
-                    onMouseEnter={(e) => {
-                        if (selectedDrillIds.length > 0) {
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                        }
-                    }}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                    disabled={selectedDrillIds.length === 0}
-                    title="Edit Tag and Author for selected drills"
-                >
-                    🏷️ Bulk Edit ({selectedDrillIds.length})
-                </button>
-                <button
-                    onClick={handleCreateTest}
-                    style={{
-                        padding: '10px 20px',
-                        fontSize: '15px',
-                        background: selectedDrillIds.length > 0 ? '#FFD700' : '#e0e0e0',
-                        color: selectedDrillIds.length > 0 ? '#333' : '#999',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: selectedDrillIds.length > 0 ? 'pointer' : 'not-allowed',
-                        fontWeight: 600,
-                        boxShadow: selectedDrillIds.length > 0 ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
-                        transition: 'all 0.2s',
-                        marginRight: '8px'
-                    }}
-                    onMouseEnter={(e) => {
-                        if (selectedDrillIds.length > 0) {
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                        }
-                    }}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                    disabled={selectedDrillIds.length === 0}
-                >
-                    📝 Create Test ({selectedDrillIds.length})
-                </button>
-                <button
-                    onClick={async () => {
-                        if (selectedDrillIds.length === 0) return;
-                        if (!confirm(`Transcribe ${selectedDrillIds.length} drills? This will use ASR credits.`)) return;
-                        for (const id of selectedDrillIds) {
-                            try {
-                                const drill = rowData.find(d => d.id === id);
-                                if (!drill?.audio_url) continue;
-                                await axios.post(`${API_BASE}/transcribe/`, { audio_url: drill.audio_url });
-                            } catch (err) {
-                                console.error(`Failed to transcribe ${id}:`, err);
+                {/* Action buttons row */}
+                <div style={{
+                    display: 'flex',
+                    gap: '8px',
+                    flexWrap: 'wrap',
+                    justifyContent: 'center'
+                }}>
+                    <button
+                        onClick={() => setShowBulkEdit(true)}
+                        style={{
+                            padding: '10px 16px',
+                            fontSize: '14px',
+                            background: selectedDrillIds.length > 0 ? '#9C27B0' : '#e0e0e0',
+                            color: selectedDrillIds.length > 0 ? 'white' : '#999',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: selectedDrillIds.length > 0 ? 'pointer' : 'not-allowed',
+                            fontWeight: 600,
+                            boxShadow: selectedDrillIds.length > 0 ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
+                            transition: 'all 0.2s',
+                        }}
+                        disabled={selectedDrillIds.length === 0}
+                        title="Edit Tag and Author for selected drills"
+                    >
+                        🏷️ Bulk Edit ({selectedDrillIds.length})
+                    </button>
+                    <button
+                        onClick={handleCreateTest}
+                        style={{
+                            padding: '10px 16px',
+                            fontSize: '14px',
+                            background: selectedDrillIds.length > 0 ? '#FFD700' : '#e0e0e0',
+                            color: selectedDrillIds.length > 0 ? '#333' : '#999',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: selectedDrillIds.length > 0 ? 'pointer' : 'not-allowed',
+                            fontWeight: 600,
+                            boxShadow: selectedDrillIds.length > 0 ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
+                            transition: 'all 0.2s',
+                        }}
+                        disabled={selectedDrillIds.length === 0}
+                    >
+                        📝 Create Test ({selectedDrillIds.length})
+                    </button>
+                    <button
+                        onClick={async () => {
+                            if (selectedDrillIds.length === 0) return;
+                            if (!confirm(`Transcribe ${selectedDrillIds.length} drills? This will use ASR credits.`)) return;
+                            for (const id of selectedDrillIds) {
+                                try {
+                                    const drill = rowData.find(d => d.id === id);
+                                    if (!drill?.audio_url) continue;
+                                    await axios.post(`${API_BASE}/transcribe/`, { audio_url: drill.audio_url });
+                                } catch (err) {
+                                    console.error(`Failed to transcribe ${id}:`, err);
+                                }
                             }
-                        }
-                        alert('Bulk transcription complete');
-                        refreshData();
-                    }}
-                    style={{
-                        padding: '10px 20px',
-                        fontSize: '15px',
-                        background: selectedDrillIds.length > 0 ? '#667eea' : '#e0e0e0',
-                        color: selectedDrillIds.length > 0 ? 'white' : '#999',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: selectedDrillIds.length > 0 ? 'pointer' : 'not-allowed',
-                        fontWeight: 600,
-                        boxShadow: selectedDrillIds.length > 0 ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
-                        transition: 'all 0.2s',
-                        marginRight: '8px'
-                    }}
-                    disabled={selectedDrillIds.length === 0}
-                >
-                    🪄 Bulk Transcribe
-                </button>
-                <button
-                    onClick={() => setShowGlossary(true)}
-                    style={{
-                        padding: '10px 20px',
-                        fontSize: '15px',
-                        background: 'white',
-                        color: '#333',
-                        border: '1px solid #ccc',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontWeight: 600,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1) ',
-                        transition: 'all 0.2s',
-                        marginRight: '8px'
-                    }}
-                >
-                    📖 Glossary
-                </button>
-
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
-                    <button
-                        onClick={() => {
-                            const url = window.location.href;
-                            navigator.clipboard.writeText(url);
-                            alert(`Filtered link copied to clipboard!\n${url}`);
+                            alert('Bulk transcription complete');
+                            refreshData();
                         }}
                         style={{
-                            padding: '10px 20px',
-                            fontSize: '15px',
-                            background: 'white',
-                            color: '#007BFF',
+                            padding: '10px 16px',
+                            fontSize: '14px',
+                            background: selectedDrillIds.length > 0 ? '#667eea' : '#e0e0e0',
+                            color: selectedDrillIds.length > 0 ? 'white' : '#999',
                             border: 'none',
                             borderRadius: '8px',
-                            cursor: 'pointer',
+                            cursor: selectedDrillIds.length > 0 ? 'pointer' : 'not-allowed',
                             fontWeight: 600,
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                            boxShadow: selectedDrillIds.length > 0 ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
                             transition: 'all 0.2s',
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                        title="Copy link to current filtered view"
+                        disabled={selectedDrillIds.length === 0}
                     >
-                        🔗 Copy Filtered Link
+                        🪄 Bulk Transcribe
                     </button>
 
+                    <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+                        <button
+                            onClick={() => {
+                                const url = window.location.href;
+                                navigator.clipboard.writeText(url);
+                                alert(`Filtered link copied to clipboard!\n${url}`);
+                            }}
+                            style={{
+                                padding: '10px 16px',
+                                fontSize: '14px',
+                                background: 'white',
+                                color: '#007BFF',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                            title="Copy link to current filtered view"
+                        >
+                            🔗 Copy Link
+                        </button>
 
-                    <button
-                        onClick={() => navigate('/tests')}
-                        style={{
-                            padding: '10px 20px',
-                            fontSize: '15px',
-                            background: 'white',
-                            color: '#667eea',
-                            border: 'none',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            fontWeight: 600,
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                            transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                    >
-                        📊 View Tests
-                    </button>
-                    <button
-                        onClick={() => navigate('/shorts')}
-                        style={{
-                            padding: '10px 20px',
-                            fontSize: '15px',
-                            background: 'white',
-                            color: '#FF0080',
-                            border: 'none',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            fontWeight: 600,
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                            transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                    >
-                        📱 YouTube Shorts
-                    </button>
-                    <button
-                        onClick={() => {
-                            // Navegar a la página de demo videos
-                            navigate('/demo-videos');
-                        }}
-                        style={{
-                            padding: '10px 20px',
-                            fontSize: '15px',
-                            background: 'white',
-                            color: '#9C27B0',
-                            border: 'none',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            fontWeight: 600,
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                            transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                    >
-                        🎬 Demo Videos
-                    </button>
-
+                        <button
+                            onClick={() => navigate('/tests')}
+                            style={{
+                                padding: '10px 16px',
+                                fontSize: '14px',
+                                background: 'white',
+                                color: '#667eea',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                        >
+                            📊 Tests
+                        </button>
+                        <button
+                            onClick={() => navigate('/shorts')}
+                            style={{
+                                padding: '10px 16px',
+                                fontSize: '14px',
+                                background: 'white',
+                                color: '#FF0080',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                        >
+                            📱 Shorts
+                        </button>
+                        <button
+                            onClick={() => {
+                                navigate('/demo-videos');
+                            }}
+                            style={{
+                                padding: '10px 16px',
+                                fontSize: '14px',
+                                background: 'white',
+                                color: '#9C27B0',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                        >
+                            🎬 Demos
+                        </button>
+                    </div>
                 </div>
             </div>
 

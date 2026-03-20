@@ -37,7 +37,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   // Track progress of whichever audio is playing
   useEffect(() => {
     if (progressIntervalRef.current) window.clearInterval(progressIntervalRef.current);
-    
+
     if (isPlaying) {
       progressIntervalRef.current = window.setInterval(() => {
         const activeAudio = audioRef.current || ttsAudioRef.current;
@@ -84,7 +84,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   useEffect(() => {
     if (!autoPlayEnabled || !currentDrill) return;
     const timer = setTimeout(() => {
-        playCurrentAudio();
+      playCurrentAudio();
     }, 500);
     return () => clearTimeout(timer);
   }, [currentIndex, autoPlayEnabled]);
@@ -104,13 +104,13 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     try {
       // 1. Catalan (1x)
       await handleSpeakCatalan();
-      
+
       // 2. Tachelhit (2x)
-      await playTachelhitAudio(); 
+      await playTachelhitAudio();
     } catch (error) {
       console.error('Playback sequence error:', error);
-      setIsPlaying(false); 
-      if (autoPlayEnabled) goToNextDrill(); 
+      setIsPlaying(false);
+      if (autoPlayEnabled) goToNextDrill();
     }
   };
 
@@ -123,14 +123,14 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   const playTachelhitAudio = (): Promise<void> => {
     return new Promise((resolve, reject) => {
       if (!currentDrill?.audio_url) {
-        if (autoPlayEnabled) goToNextDrill(); 
+        if (autoPlayEnabled) goToNextDrill();
         resolve();
         return;
       }
-      
+
       const audio = new Audio(getMediaUrl(currentDrill.audio_url));
       audioRef.current = audio;
-      let internalCount = 0; 
+      let internalCount = 0;
 
       const playInstance = () => {
         internalCount++;
@@ -139,13 +139,13 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         const handleEnded = () => {
           audio.removeEventListener('ended', handleEnded);
           audio.removeEventListener('error', handleError);
-          
+
           if (internalCount < 2) {
-            setTimeout(playInstance, 600); 
+            setTimeout(playInstance, 600);
           } else {
             setIsPlaying(false);
             setTimeout(() => {
-              if (autoPlayEnabled) goToNextDrill(); 
+              if (autoPlayEnabled) goToNextDrill();
               resolve();
             }, 1000);
           }
@@ -155,7 +155,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
           audio.removeEventListener('ended', handleEnded);
           audio.removeEventListener('error', handleError);
           setIsPlaying(false);
-          if (autoPlayEnabled) goToNextDrill(); 
+          if (autoPlayEnabled) goToNextDrill();
           reject(error);
         };
 
@@ -163,7 +163,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         audio.addEventListener('error', handleError);
         audio.play().catch(handleError);
       };
-      playInstance(); 
+      playInstance();
     });
   };
 
@@ -185,7 +185,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     return new Promise((resolve) => {
       if (!currentDrill?.text_catalan) return resolve();
       if (!('speechSynthesis' in window)) return resolve();
-      
+
       speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(currentDrill.text_catalan);
       utterance.lang = 'ca-ES';
@@ -237,7 +237,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
           <button onClick={onExit} style={cleanButtonStyle}>✕</button>
           <span style={{ fontWeight: 700 }}>{currentIndex + 1} / {drills.length}</span>
         </div>
-        
+
         <div style={{ display: 'flex', gap: '6px' }}>
           <button
             onClick={() => setAutoPlayEnabled(!autoPlayEnabled)}
@@ -263,7 +263,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         alignItems: 'center'
       }}>
         <div style={{ width: '100%', maxWidth: '500px', display: 'flex', flexDirection: 'column' }}>
-          
+
           {/* 1. Tachelhit (Prominent) */}
           <div style={{ padding: '20px 16px', textAlign: 'center' }}>
             <div style={{ fontSize: isMobile ? '26px' : '32px', fontWeight: 800, color: '#2e7d32', lineHeight: 1.2 }}>
@@ -290,78 +290,232 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         </div>
       </div>
 
-      {/* Navigation Footer */}
+      {/* Navigation Footer - Enhanced for mobile */}
       <div style={{
-        padding: '8px 12px',
+        padding: isMobile ? '12px 16px' : '8px 12px',
         background: 'white',
         borderTop: '1px solid #eee',
         display: 'flex',
         flexDirection: 'column',
-        gap: '4px',
-        paddingBottom: isMobile ? '20px' : '8px',
+        gap: isMobile ? '12px' : '4px',
+        paddingBottom: isMobile ? 'calc(20px + env(safe-area-inset-bottom, 0px))' : '8px',
         flexShrink: 0
       }}>
         {/* Progress Slider */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 4px' }}>
-          <span style={{ fontSize: '10px', color: '#999', minWidth: '25px', textAlign: 'right' }}>
+          <span style={{ fontSize: isMobile ? '12px' : '10px', color: '#999', minWidth: '30px', textAlign: 'right' }}>
             {Math.floor(audioProgress / 60)}:{(audioProgress % 60).toFixed(0).padStart(2, '0')}
           </span>
-          <input 
-            type="range" 
-            min="0" 
-            max={audioDuration || 100} 
+          <input
+            type="range"
+            min="0"
+            max={audioDuration || 100}
             step="0.1"
             value={audioProgress}
             onChange={(e) => handleSeek(parseFloat(e.target.value))}
-            style={{ 
-              flex: 1, 
-              cursor: 'pointer', 
+            style={{
+              flex: 1,
+              cursor: 'pointer',
               accentColor: '#667eea',
-              height: '3px',
-              borderRadius: '2px'
+              height: isMobile ? '6px' : '3px',
+              borderRadius: '3px'
             }}
           />
-          <span style={{ fontSize: '10px', color: '#999', minWidth: '25px' }}>
+          <span style={{ fontSize: isMobile ? '12px' : '10px', color: '#999', minWidth: '30px' }}>
             {Math.floor(audioDuration / 60)}:{(audioDuration % 60).toFixed(0).padStart(2, '0')}
           </span>
         </div>
 
+        {/* Main Controls - Enhanced for mobile */}
         <div style={{
           display: 'flex',
-          justifyContent: 'space-around',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          width: '100%'
+          width: '100%',
+          gap: isMobile ? '8px' : '4px'
         }}>
-          <button onClick={handlePrev} disabled={currentIndex === 0} style={iconButtonStyle}>
-            <span style={{ fontSize: '18px' }}>⏮️</span>
-          </button>
-          
-          <button onClick={() => handleSpeakCatalan()} style={iconButtonStyle}>
-            <span style={{ fontSize: '18px' }}>🗣️</span>
-          </button>
-
-          <button 
-            onClick={() => playCurrentAudio()} 
+          {/* Previous Button */}
+          <button
+            onClick={handlePrev}
+            disabled={currentIndex === 0}
             style={{
               ...iconButtonStyle,
-              background: isPlaying ? '#e8f5e9' : '#f5f5f5',
-              borderRadius: '50%',
-              width: '44px',
-              height: '44px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              background: currentIndex === 0 ? '#f5f5f5' : '#667eea',
+              color: currentIndex === 0 ? '#999' : 'white',
+              borderRadius: isMobile ? '12px' : '8px',
+              width: isMobile ? '60px' : '44px',
+              height: isMobile ? '60px' : '44px',
+              fontSize: isMobile ? '24px' : '18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: currentIndex === 0 ? 0.5 : 1
             }}
+            title="Previous drill"
           >
-            <span style={{ fontSize: '22px' }}>{isPlaying ? '🔊' : '▶️'}</span>
+            ⏮️
           </button>
 
-          <button onClick={() => playTachelhitAudio()} style={iconButtonStyle}>
-            <span style={{ fontSize: '18px' }}>🎙️</span>
+          {/* Catalan Speak Button */}
+          <button
+            onClick={() => handleSpeakCatalan()}
+            style={{
+              ...iconButtonStyle,
+              background: '#4CAF50',
+              color: 'white',
+              borderRadius: isMobile ? '12px' : '8px',
+              width: isMobile ? '60px' : '44px',
+              height: isMobile ? '60px' : '44px',
+              fontSize: isMobile ? '24px' : '18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            title="Speak Catalan"
+          >
+            🗣️
           </button>
 
-          <button onClick={goToNextDrill} style={iconButtonStyle}>
-            <span style={{ fontSize: '18px' }}>{currentIndex < drills.length - 1 ? '⏭️' : '🏁'}</span>
+          {/* Main Play Button - More prominent on mobile */}
+          <button
+            onClick={() => playCurrentAudio()}
+            style={{
+              ...iconButtonStyle,
+              background: isPlaying ? '#ff4444' : '#667eea',
+              color: 'white',
+              borderRadius: '50%',
+              width: isMobile ? '80px' : '60px',
+              height: isMobile ? '80px' : '60px',
+              fontSize: isMobile ? '32px' : '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+              border: isMobile ? '3px solid white' : '2px solid white'
+            }}
+            title={isPlaying ? 'Stop' : 'Play'}
+          >
+            {isPlaying ? '⏸️' : '▶️'}
+          </button>
+
+          {/* Tachelhit Audio Button */}
+          <button
+            onClick={() => playTachelhitAudio()}
+            style={{
+              ...iconButtonStyle,
+              background: '#9C27B0',
+              color: 'white',
+              borderRadius: isMobile ? '12px' : '8px',
+              width: isMobile ? '60px' : '44px',
+              height: isMobile ? '60px' : '44px',
+              fontSize: isMobile ? '24px' : '18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            title="Play Tachelhit audio"
+          >
+            🎙️
+          </button>
+
+          {/* Next Button */}
+          <button
+            onClick={goToNextDrill}
+            style={{
+              ...iconButtonStyle,
+              background: currentIndex < drills.length - 1 ? '#667eea' : (loopEnabled ? '#4CAF50' : '#FFD700'),
+              color: 'white',
+              borderRadius: isMobile ? '12px' : '8px',
+              width: isMobile ? '60px' : '44px',
+              height: isMobile ? '60px' : '44px',
+              fontSize: isMobile ? '24px' : '18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            title={currentIndex < drills.length - 1 ? 'Next drill' : (loopEnabled ? 'Restart from beginning' : 'Finish')}
+          >
+            {currentIndex < drills.length - 1 ? '⏭️' : (loopEnabled ? '🔄' : '🏁')}
           </button>
         </div>
+
+        {/* Drill Preview Section - Shows upcoming drills */}
+        {isMobile && drills.length > 1 && (
+          <div style={{
+            marginTop: '12px',
+            padding: '8px',
+            background: '#f8f9fa',
+            borderRadius: '8px',
+            border: '1px solid #e9ecef'
+          }}>
+            <div style={{
+              fontSize: '12px',
+              fontWeight: 600,
+              color: '#666',
+              marginBottom: '6px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span>Upcoming Drills ({drills.length - currentIndex - 1} remaining)</span>
+              <span style={{ fontSize: '11px', color: '#999' }}>
+                {currentIndex + 1}/{drills.length}
+              </span>
+            </div>
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              overflowX: 'auto',
+              paddingBottom: '4px'
+            }}>
+              {drills.slice(currentIndex + 1, Math.min(currentIndex + 4, drills.length)).map((drill, idx) => (
+                <div
+                  key={drill.id}
+                  style={{
+                    minWidth: '80px',
+                    padding: '6px',
+                    background: 'white',
+                    borderRadius: '6px',
+                    border: '1px solid #dee2e6',
+                    fontSize: '11px',
+                    color: '#495057',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  onClick={() => setCurrentIndex(currentIndex + idx + 1)}
+                  title={`Jump to drill ${currentIndex + idx + 2}: ${drill.text_catalan || 'No text'}`}
+                >
+                  <div style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    background: '#667eea',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '10px',
+                    fontWeight: 'bold'
+                  }}>
+                    {currentIndex + idx + 2}
+                  </div>
+                  <div style={{
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    maxWidth: '70px'
+                  }}>
+                    {drill.text_catalan ? (drill.text_catalan.length > 10 ? drill.text_catalan.substring(0, 10) + '...' : drill.text_catalan) : '---'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
