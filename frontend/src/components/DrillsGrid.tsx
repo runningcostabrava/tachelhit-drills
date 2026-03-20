@@ -860,79 +860,103 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
 
     // Apply search filter when search query or category changes
     useEffect(() => {
-        if (!gridRef.current || !gridRef.current.api) return;
+        console.log('🔍 Search effect triggered:', { searchQuery, searchCategory });
+
+        if (!gridRef.current) {
+            console.warn('🔍 gridRef.current is null');
+            return;
+        }
+
+        if (!gridRef.current.api) {
+            console.warn('🔍 gridRef.current.api is null');
+            return;
+        }
 
         const api = gridRef.current.api;
+        console.log('🔍 AG Grid API available:', !!api);
 
         // Check if API methods exist
-        if (!api.setFilterModel || !api.setQuickFilter) {
-            console.warn('AG Grid API methods not available yet');
+        if (typeof api.setFilterModel !== 'function') {
+            console.warn('🔍 api.setFilterModel is not a function:', api.setFilterModel);
+            return;
+        }
+
+        if (typeof api.setQuickFilter !== 'function') {
+            console.warn('🔍 api.setQuickFilter is not a function:', api.setQuickFilter);
             return;
         }
 
         if (!searchQuery.trim()) {
+            console.log('🔍 Clearing filters (empty search)');
             // Clear all filters if search is empty
-            api.setFilterModel(null);
-            if (api.setQuickFilter) {
+            try {
+                api.setFilterModel(null);
                 api.setQuickFilter(null);
+            } catch (error) {
+                console.error('🔍 Error clearing filters:', error);
             }
             return;
         }
 
         const searchTerm = searchQuery.toLowerCase();
+        console.log('🔍 Applying search:', { searchTerm, searchCategory });
 
-        if (searchCategory === 'all') {
-            // Search across multiple fields using quick filter
-            if (api.setQuickFilter) {
+        try {
+            if (searchCategory === 'all') {
+                // Search across multiple fields using quick filter
+                console.log('🔍 Using quick filter for "all" search');
                 api.setQuickFilter(searchTerm);
-            }
-            // Clear any specific column filters
-            api.setFilterModel(null);
-        } else {
-            // Clear quick filter when using specific column filter
-            if (api.setQuickFilter) {
+                // Clear any specific column filters
+                api.setFilterModel(null);
+            } else {
+                // Clear quick filter when using specific column filter
+                console.log('🔍 Clearing quick filter for specific column search');
                 api.setQuickFilter(null);
-            }
 
-            const filterModel: any = {};
-            switch (searchCategory) {
-                case 'catalan':
-                    filterModel.text_catalan = {
-                        filterType: 'text',
-                        type: 'contains',
-                        filter: searchTerm
-                    };
-                    break;
-                case 'tachelhit':
-                    filterModel.text_tachelhit = {
-                        filterType: 'text',
-                        type: 'contains',
-                        filter: searchTerm
-                    };
-                    break;
-                case 'arabic':
-                    filterModel.text_arabic = {
-                        filterType: 'text',
-                        type: 'contains',
-                        filter: searchTerm
-                    };
-                    break;
-                case 'tag':
-                    filterModel.tag = {
-                        filterType: 'text',
-                        type: 'contains',
-                        filter: searchTerm
-                    };
-                    break;
-                case 'author':
-                    filterModel.author = {
-                        filterType: 'text',
-                        type: 'contains',
-                        filter: searchTerm
-                    };
-                    break;
+                const filterModel: any = {};
+                switch (searchCategory) {
+                    case 'catalan':
+                        filterModel.text_catalan = {
+                            filterType: 'text',
+                            type: 'contains',
+                            filter: searchTerm
+                        };
+                        break;
+                    case 'tachelhit':
+                        filterModel.text_tachelhit = {
+                            filterType: 'text',
+                            type: 'contains',
+                            filter: searchTerm
+                        };
+                        break;
+                    case 'arabic':
+                        filterModel.text_arabic = {
+                            filterType: 'text',
+                            type: 'contains',
+                            filter: searchTerm
+                        };
+                        break;
+                    case 'tag':
+                        filterModel.tag = {
+                            filterType: 'text',
+                            type: 'contains',
+                            filter: searchTerm
+                        };
+                        break;
+                    case 'author':
+                        filterModel.author = {
+                            filterType: 'text',
+                            type: 'contains',
+                            filter: searchTerm
+                        };
+                        break;
+                }
+                console.log('🔍 Setting filter model:', filterModel);
+                api.setFilterModel(filterModel);
             }
-            api.setFilterModel(filterModel);
+            console.log('🔍 Search applied successfully');
+        } catch (error) {
+            console.error('🔍 Error applying search filter:', error);
         }
     }, [searchQuery, searchCategory]);
 
