@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getMediaUrl } from '../config';
+import { getMediaWithOfflineFallback, offlineManager } from '../utils/offlineCache';
 
 interface Drill {
   id: number;
@@ -26,6 +27,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   const [loopEnabled, setLoopEnabled] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
+  const [imageUrl, setImageUrl] = useState<string>('');
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
   const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -62,6 +64,24 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
       setAudioProgress(time);
     }
   };
+
+  // Update image URL when drill changes
+  useEffect(() => {
+    const updateImageUrl = async () => {
+      if (currentDrill?.image_url) {
+        try {
+          const url = await getMediaWithOfflineFallback(currentDrill.image_url, getMediaUrl);
+          setImageUrl(url);
+        } catch (error) {
+          console.error('Failed to load image:', error);
+          setImageUrl(getMediaUrl(currentDrill.image_url));
+        }
+      } else {
+        setImageUrl('');
+      }
+    };
+    updateImageUrl();
+  }, [currentDrill]);
 
   // Cleanup on drill change
   useEffect(() => {
@@ -120,65 +140,83 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     if (speechSynthRef.current) { speechSynthesis.cancel(); speechSynthRef.current = null; }
   };
 
-  const playTachelhitAudio = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if (!currentDrill?.audio_url) {
-        if (autoPlayEnabled) goToNextDrill();
-        resolve();
-        return;
-      }
+  const playTachelhitAudio = async (): Promise<void> => {
+    if (!currentDrill?.audio_url) {
+      if (autoPlayEnabled) goToNextDrill();
+      return;
+    }
 
-      const audio = new Audio(getMediaUrl(currentDrill.audio_url));
+    try {
+      // Get audio URL with offline fallback
+      const audioUrl = await getMediaWithOfflineFallback(currentDrill.audio_url, getMediaUrl);
+      const audio = new Audio(audioUrl);
       audioRef.current = audio;
       let internalCount = 0;
 
-      const playInstance = () => {
-        internalCount++;
-        setIsPlaying(true);
+      return new Promise((resolve, reject) => {
+        const playInstance = () => {
+          internalCount++;
+          setIsPlaying(true);
 
-        const handleEnded = () => {
-          audio.removeEventListener('ended', handleEnded);
-          audio.removeEventListener('error', handleError);
+          const handleEnded = () => {
+            audio.removeEventListener('ended', handleEnded);
+            audio.removeEventListener('error', handleError);
 
-          if (internalCount < 2) {
-            setTimeout(playInstance, 600);
-          } else {
+            if (internalCount < 2) {
+              setTimeout(playInstance, 600);
+            } else {
+              setIsPlaying(false);
+              setTimeout(() => {
+                if (autoPlayEnabled) goToNextDrill();
+                resolve();
+              }, 1000);
+            }
+          };
+
+          const handleError = (error: any) => {
+            audio.removeEventListener('ended', handleEnded);
+            audio.removeEventListener('error', handleError);
             setIsPlaying(false);
-            setTimeout(() => {
-              if (autoPlayEnabled) goToNextDrill();
-              resolve();
-            }, 1000);
-          }
-        };
+            if (autoPlayEnabled) goToNextDrill();
+            reject(error);
+          };
 
-        const handleError = (error: any) => {
-          audio.removeEventListener('ended', handleEnded);
-          audio.removeEventListener('error', handleError);
-          setIsPlaying(false);
-          if (autoPlayEnabled) goToNextDrill();
-          reject(error);
+          audio.addEventListener('ended', handleEnded);
+          audio.addEventListener('error', handleError);
+          audio.play().catch(handleError);
         };
-
-        audio.addEventListener('ended', handleEnded);
-        audio.addEventListener('error', handleError);
-        audio.play().catch(handleError);
-      };
-      playInstance();
-    });
+        playInstance();
+      });
+    } catch (error) {
+      console.error('Failed to load audio:', error);
+      setIsPlaying(false);
+      if (autoPlayEnabled) goToNextDrill();
+      throw error;
+    }
   };
 
-  const handleSpeakCatalan = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if (currentDrill?.audio_tts_url) {
-        const audio = new Audio(getMediaUrl(currentDrill.audio_tts_url));
+  const handleSpeakCatalan = async (): Promise<void> => {
+    if (currentDrill?.audio_tts_url) {
+      try {
+        const audioUrl = await getMediaWithOfflineFallback(currentDrill.audio_tts_url, getMediaUrl);
+        const audio = new Audio(audioUrl);
         ttsAudioRef.current = audio;
-        audio.onended = () => { ttsAudioRef.current = null; resolve(); };
-        audio.onerror = () => handleSpeechSynthesis().then(resolve).catch(reject);
-        audio.play().catch(() => handleSpeechSynthesis().then(resolve).catch(reject));
-      } else {
-        handleSpeechSynthesis().then(resolve).catch(reject);
+
+        return new Promise((resolve, reject) => {
+          audio.onended = () => { ttsAudioRef.current = null; resolve(); };
+          audio.onerror = () => {
+            ttsAudioRef.current = null;
+            handleSpeechSynthesis().then(resolve).catch(reject);
+          };
+          audio.play().catch(() => handleSpeechSynthesis().then(resolve).catch(reject));
+        });
+      } catch (error) {
+        console.error('Failed to load TTS audio:', error);
+        return handleSpeechSynthesis();
       }
-    });
+    } else {
+      return handleSpeechSynthesis();
+    }
   };
 
   const handleSpeechSynthesis = (): Promise<void> => {
@@ -273,7 +311,9 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
 
           {/* 2. Image (Full Width Square) */}
           <div style={{ width: '100%', aspectRatio: '1/1', background: '#f0f0f0', overflow: 'hidden' }}>
-            {currentDrill.image_url ? (
+            {imageUrl ? (
+              <img src={imageUrl} alt="Visual" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : currentDrill.image_url ? (
               <img src={getMediaUrl(currentDrill.image_url)} alt="Visual" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
               <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', opacity: 0.1 }}>📷</div>

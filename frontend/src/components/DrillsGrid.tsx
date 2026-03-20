@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AgGridReact } from 'ag-grid-react';
@@ -10,6 +11,7 @@ import axios from 'axios';
 import TestConfigPanel from './TestConfigPanel';
 import { API_BASE, getMediaUrl } from '../config';
 import DrillCard from './DrillCard';
+import { offlineManager } from '../utils/offlineCache';
 
 // Audio cell renderer
 const AudioCellRenderer = (props: any) => {
@@ -1578,6 +1580,42 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                         disabled={selectedDrillIds.length === 0}
                     >
                         🪄 Bulk Transcribe
+                    </button>
+
+                    <button
+                        onClick={async () => {
+                            if (selectedDrillIds.length === 0) return;
+                            const selectedDrills = rowData.filter(d => selectedDrillIds.includes(d.id));
+                            if (!confirm(`Download ${selectedDrills.length} drills for offline use? This will cache all media files.`)) return;
+
+                            try {
+                                const result = await offlineManager.cacheDrillsForOffline(selectedDrills, getMediaUrl);
+                                if (result.success) {
+                                    alert(`✅ Successfully cached ${selectedDrills.length} drills and ${result.cachedMedia} media files for offline use!`);
+                                } else {
+                                    alert(`⚠️ Cached ${selectedDrills.length} drills and ${result.cachedMedia} media files, but encountered ${result.errors.length} errors. Check console for details.`);
+                                }
+                            } catch (error) {
+                                console.error('Failed to cache drills:', error);
+                                alert('❌ Failed to cache drills for offline use. Check console for details.');
+                            }
+                        }}
+                        style={{
+                            padding: '10px 16px',
+                            fontSize: '14px',
+                            background: selectedDrillIds.length > 0 ? '#4CAF50' : '#e0e0e0',
+                            color: selectedDrillIds.length > 0 ? 'white' : '#999',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: selectedDrillIds.length > 0 ? 'pointer' : 'not-allowed',
+                            fontWeight: 600,
+                            boxShadow: selectedDrillIds.length > 0 ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
+                            transition: 'all 0.2s',
+                        }}
+                        disabled={selectedDrillIds.length === 0}
+                        title="Download selected drills for offline use"
+                    >
+                        📥 Download Offline ({selectedDrillIds.length})
                     </button>
 
                     <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
