@@ -850,6 +850,7 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
     const [showGlossary, setShowGlossary] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchCategory, setSearchCategory] = useState('all'); // 'all', 'catalan', 'tachelhit', 'arabic', 'tag', 'author'
+    const [isGridReady, setIsGridReady] = useState(false); // Track if grid is ready
     const gridRef = useRef<any>(null);
     const navigate = useNavigate(); // Initialize useNavigate
 
@@ -860,7 +861,12 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
 
     // Apply search filter when search query or category changes
     useEffect(() => {
-        console.log('🔍 Search effect triggered:', { searchQuery, searchCategory });
+        console.log('🔍 Search effect triggered:', { searchQuery, searchCategory, isGridReady });
+
+        if (!isGridReady) {
+            console.warn('🔍 Grid is not ready yet, skipping search');
+            return;
+        }
 
         if (!gridRef.current) {
             console.warn('🔍 gridRef.current is null');
@@ -958,7 +964,7 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
         } catch (error) {
             console.error('🔍 Error applying search filter:', error);
         }
-    }, [searchQuery, searchCategory]);
+    }, [searchQuery, searchCategory, isGridReady]);
 
     const CopyCellRenderer = (props: any) => {
         const handleCopy = async () => {
@@ -1689,6 +1695,9 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                     onCellValueChanged={onCellValueChanged}
                     onSelectionChanged={onSelectionChanged}
                     onGridReady={(params: any) => {
+                        console.log('✅ AG Grid is ready');
+                        setIsGridReady(true);
+
                         // Apply filters from URL on load
                         const urlParams = new URLSearchParams(window.location.search);
                         const tag = urlParams.get('tag');
