@@ -1,8 +1,23 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import type { DropResult, DroppableProvided, DraggableProvided } from 'react-beautiful-dnd';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // Define Test and Drill interfaces for better typing
 interface Test {
@@ -33,6 +48,58 @@ interface TestEditPanelProps {
   onTestUpdated: () => void;
 }
 
+// SortableItem component for drag and drop
+function SortableItem({ drill, index, onRemove }: { drill: Drill; index: number; onRemove: (id: number) => void }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: drill.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        ...style,
+        userSelect: 'none',
+        padding: '8px',
+        margin: '0 0 8px 0',
+        minHeight: '30px',
+        backgroundColor: 'white',
+        border: '1px solid #ddd',
+        borderRadius: '4px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+        cursor: 'grab',
+      }}
+      {...attributes}
+      {...listeners}
+    >
+      <span>{index + 1}. {drill.text_catalan} ({drill.id})</span>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove(drill.id);
+        }}
+        style={{ background: '#ff4444', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}
+      >
+        Remove
+      </button>
+    </div>
+  );
+}
+
 export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEditPanelProps) {
   const [config, setConfig] = useState<Test>({
     id: 0, // Placeholder
@@ -51,6 +118,14 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
   const [allDrills, setAllDrills] = useState<Drill[]>([]);
   const [selectedDrills, setSelectedDrills] = useState<Drill[]>([]);
   const [drillSearchTerm, setDrillSearchTerm] = useState('');
+
+  // Set up sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     loadTestAndDrills();
@@ -130,16 +205,17 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
     setDrillSearchTerm(''); // Clear search after adding
   };
 
-  const onDragEnd = (result: DropResult) => {
-    if (!result.destination) {
-      return;
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      setSelectedDrills((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over?.id);
+
+        return arrayMove(items, oldIndex, newIndex);
+      });
     }
-
-    const reorderedDrills = Array.from(selectedDrills);
-    const [movedDrill] = reorderedDrills.splice(result.source.index, 1);
-    reorderedDrills.splice(result.destination.index, 0, movedDrill);
-
-    setSelectedDrills(reorderedDrills);
   };
 
   const filteredAvailableDrills = allDrills.filter(drill =>
@@ -371,56 +447,31 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
         <div style={{ marginBottom: '20px', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '15px' }}>
           <h3 style={{ marginTop: '0', marginBottom: '15px', fontSize: '18px' }}>Manage Drills ({selectedDrills.length})</h3>
 
-          <DragDropContext onDragEnd={onDragEnd}>
-            <Droppable droppableId='selectedDrills'>
-              {(provided: DroppableProvided) => (
-                <div
-                  {...provided.droppableProps}
-                  ref={provided.innerRef}
-                  style={{ marginBottom: '15px', maxHeight: '250px', overflowY: 'auto', border: '1px solid #f0f0f0', borderRadius: '4px', padding: '10px' }}
-                >
-                  {selectedDrills.length === 0 ? (
-                    <p style={{ color: '#888', textAlign: 'center', padding: '20px' }}>No drills selected for this test.</p>
-                  ) : (
-                    selectedDrills.map((drill, index) => (
-                      <Draggable key={drill.id} draggableId={String(drill.id)} index={index}>
-                        {(provided: DraggableProvided) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            style={{
-                              userSelect: 'none',
-                              padding: '8px',
-                              margin: '0 0 8px 0',
-                              minHeight: '30px',
-                              backgroundColor: 'white',
-                              border: '1px solid #ddd',
-                              borderRadius: '4px',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                              ...provided.draggableProps.style,
-                            }}
-                          >
-                            <span>{index + 1}. {drill.text_catalan} ({drill.id})</span>
-                            <button
-                              onClick={() => handleRemoveDrill(drill.id)}
-                              style={{ background: '#ff4444', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))
-                  )}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={selectedDrills.map(d => d.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div style={{ marginBottom: '15px', maxHeight: '250px', overflowY: 'auto', border: '1px solid #f0f0f0', borderRadius: '4px', padding: '10px' }}>
+                {selectedDrills.length === 0 ? (
+                  <p style={{ color: '#888', textAlign: 'center', padding: '20px' }}>No drills selected for this test.</p>
+                ) : (
+                  selectedDrills.map((drill, index) => (
+                    <SortableItem
+                      key={drill.id}
+                      drill={drill}
+                      index={index}
+                      onRemove={handleRemoveDrill}
+                    />
+                  ))
+                )}
+              </div>
+            </SortableContext>
+          </DndContext>
 
           {/* Add new drills section */}
           <div style={{ marginBottom: '10px', paddingTop: '10px', borderTop: '1px dashed #e0e0e0' }}>
