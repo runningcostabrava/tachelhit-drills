@@ -756,6 +756,7 @@ const GlossaryModal = ({ onClose }: { onClose: () => void }) => {
                     <AgGridReact
                         rowData={rowData}
                         columnDefs={columnDefs}
+                        theme="legacy"
                     />
                 </div>
                 <button onClick={onClose} style={{ marginTop: '16px', padding: '12px', background: '#f5f5f5', border: '1px solid #ccc', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>Close</button>
@@ -861,10 +862,20 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
     useEffect(() => {
         if (!gridRef.current || !gridRef.current.api) return;
 
+        const api = gridRef.current.api;
+
+        // Check if API methods exist
+        if (!api.setFilterModel || !api.setQuickFilter) {
+            console.warn('AG Grid API methods not available yet');
+            return;
+        }
+
         if (!searchQuery.trim()) {
             // Clear all filters if search is empty
-            gridRef.current.api.setFilterModel(null);
-            gridRef.current.api.setQuickFilter(null);
+            api.setFilterModel(null);
+            if (api.setQuickFilter) {
+                api.setQuickFilter(null);
+            }
             return;
         }
 
@@ -872,12 +883,16 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
 
         if (searchCategory === 'all') {
             // Search across multiple fields using quick filter
-            gridRef.current.api.setQuickFilter(searchTerm);
+            if (api.setQuickFilter) {
+                api.setQuickFilter(searchTerm);
+            }
             // Clear any specific column filters
-            gridRef.current.api.setFilterModel(null);
+            api.setFilterModel(null);
         } else {
             // Clear quick filter when using specific column filter
-            gridRef.current.api.setQuickFilter(null);
+            if (api.setQuickFilter) {
+                api.setQuickFilter(null);
+            }
 
             const filterModel: any = {};
             switch (searchCategory) {
@@ -917,7 +932,7 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                     };
                     break;
             }
-            gridRef.current.api.setFilterModel(filterModel);
+            api.setFilterModel(filterModel);
         }
     }, [searchQuery, searchCategory]);
 
@@ -1635,6 +1650,7 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                     ref={gridRef}
                     rowData={rowData} // Use prop rowData
                     columnDefs={columnDefs}
+                    theme="legacy"
                     defaultColDef={{
                         editable: true,
                         sortable: true,
