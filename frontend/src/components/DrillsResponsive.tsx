@@ -168,6 +168,9 @@ const TranslateCellRenderer = (props: any) => {
 };
 
 export default function DrillsResponsive({ }: DrillsResponsiveProps) {
+  const location = useLocation(); // Initialize useLocation
+  const navigate = useNavigate(); // Initialize useNavigate
+
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [drills, setDrills] = useState<Drill[]>([]);
   const [editingDrill, setEditingDrill] = useState<Drill | null>(null);
@@ -179,135 +182,60 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
   const [searchCategory, setSearchCategory] = useState('all'); // 'all', 'catalan', 'tachelhit', 'arabic', 'tag', 'author'
   const gridRef = useRef<any>(null); // This ref is for DrillsGrid when in mobile view.
 
-  // Apply search filter when search query or category changes
+  // State for filtered drills (combines URL filters and search box)
+  const [filteredDrills, setFilteredDrills] = useState<Drill[]>([]);
+
+  // Apply both URL filters and search box filters
   useEffect(() => {
-    console.log('🔍 Mobile search effect triggered:', { searchQuery, searchCategory });
+    console.log('🔍 Applying filters:', {
+      searchQuery,
+      searchCategory,
+      locationSearch: location.search,
+      totalDrills: drills.length
+    });
 
-    if (!gridRef.current) {
-      console.warn('🔍 gridRef.current is null');
-      return;
-    }
+    let result = [...drills];
 
-    if (!gridRef.current.api) {
-      console.warn('🔍 gridRef.current.api is null');
-      return;
-    }
+    // Apply search box filter if search query is not empty
+    if (searchQuery.trim()) {
+      const searchTerm = searchQuery.toLowerCase();
+      console.log(`🔍 Applying search box filter: "${searchTerm}" in category "${searchCategory}"`);
 
-    const api = gridRef.current.api;
-    console.log('🔍 AG Grid API available:', !!api);
-
-    // Check if API methods exist
-    if (typeof api.setFilterModel !== 'function') {
-      console.warn('🔍 api.setFilterModel is not a function:', api.setFilterModel);
-      return;
-    }
-
-    if (!searchQuery.trim()) {
-      console.log('🔍 Clearing filters (empty search)');
-      // Clear all filters if search is empty
-      try {
-        api.setFilterModel(null);
-        // Try to clear quick filter if it exists
-        if (typeof api.setQuickFilter === 'function') {
-          api.setQuickFilter(null);
-        }
-      } catch (error) {
-        console.error('🔍 Error clearing filters:', error);
-      }
-      return;
-    }
-
-    const searchTerm = searchQuery.toLowerCase();
-    console.log('🔍 Applying search:', { searchTerm, searchCategory });
-
-    try {
-      if (searchCategory === 'all') {
-        // For "all" search, we need to implement OR logic across multiple fields
-        // We'll use a custom approach: filter the data manually and set row data
-        console.log('🔍 Implementing OR search across all fields');
-
-        // First, get all row data
-        const allRows: any[] = [];
-        api.forEachNode((node: any) => {
-          allRows.push(node.data);
-        });
-
-        // Filter rows where ANY of the searchable fields contains the search term
-        const filteredRows = allRows.filter(row => {
+      result = result.filter((drill: Drill) => {
+        if (searchCategory === 'all') {
+          // Search across all fields with OR logic
           const fieldsToSearch = [
-            row.text_catalan?.toLowerCase() || '',
-            row.text_tachelhit?.toLowerCase() || '',
-            row.text_arabic?.toLowerCase() || '',
-            row.tag?.toLowerCase() || '',
-            row.author?.toLowerCase() || ''
+            drill.text_catalan?.toLowerCase() || '',
+            drill.text_tachelhit?.toLowerCase() || '',
+            drill.text_arabic?.toLowerCase() || '',
+            drill.tag?.toLowerCase() || '',
+            drill.author?.toLowerCase() || ''
           ];
-
           return fieldsToSearch.some(field => field.includes(searchTerm));
-        });
-
-        console.log(`🔍 Found ${filteredRows.length} rows matching "${searchTerm}"`);
-
-        // Clear any existing filters
-        api.setFilterModel(null);
-
-        // Set the filtered rows
-        api.setRowData(filteredRows);
-      } else {
-        // For specific field searches, use normal filter model
-        // Clear any existing quick filter
-        if (typeof api.setQuickFilter === 'function') {
-          api.setQuickFilter(null);
+        } else {
+          // Search in specific field
+          switch (searchCategory) {
+            case 'catalan':
+              return (drill.text_catalan?.toLowerCase() || '').includes(searchTerm);
+            case 'tachelhit':
+              return (drill.text_tachelhit?.toLowerCase() || '').includes(searchTerm);
+            case 'arabic':
+              return (drill.text_arabic?.toLowerCase() || '').includes(searchTerm);
+            case 'tag':
+              return (drill.tag?.toLowerCase() || '').includes(searchTerm);
+            case 'author':
+              return (drill.author?.toLowerCase() || '').includes(searchTerm);
+            default:
+              return true;
+          }
         }
+      });
 
-        const filterModel: any = {};
-        switch (searchCategory) {
-          case 'catalan':
-            filterModel.text_catalan = {
-              filterType: 'text',
-              type: 'contains',
-              filter: searchTerm
-            };
-            break;
-          case 'tachelhit':
-            filterModel.text_tachelhit = {
-              filterType: 'text',
-              type: 'contains',
-              filter: searchTerm
-            };
-            break;
-          case 'arabic':
-            filterModel.text_arabic = {
-              filterType: 'text',
-              type: 'contains',
-              filter: searchTerm
-            };
-            break;
-          case 'tag':
-            filterModel.tag = {
-              filterType: 'text',
-              type: 'contains',
-              filter: searchTerm
-            };
-            break;
-          case 'author':
-            filterModel.author = {
-              filterType: 'text',
-              type: 'contains',
-              filter: searchTerm
-            };
-            break;
-        }
-        console.log('🔍 Setting filter model:', filterModel);
-        api.setFilterModel(filterModel);
-      }
-      console.log('🔍 Search applied successfully');
-    } catch (error) {
-      console.error('🔍 Error applying search filter:', error);
+      console.log(`🔍 After search box filter: ${result.length} drills`);
     }
-  }, [searchQuery, searchCategory]);
 
-  const location = useLocation(); // Initialize useLocation
-  const navigate = useNavigate(); // Initialize useNavigate
+    setFilteredDrills(result);
+  }, [drills, searchQuery, searchCategory, location.search]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -331,6 +259,9 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
       const text = queryParams.get('text');
 
       if (tag || author || text) {
+        console.log(`🔍 Mobile URL filter checking: tag="${tag}", author="${author}", text="${text}"`);
+        console.log(`🔍 Total drills before filtering: ${allDrills.length}`);
+
         allDrills = allDrills.filter((drill: Drill) => {
           const tagMatch = tag ? (drill.tag?.toLowerCase() || '').includes(tag.toLowerCase()) : false;
           const authorMatch = author ? (drill.author?.toLowerCase() || '').includes(author.toLowerCase()) : false;
@@ -347,11 +278,25 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
           if (text) matches.push(textMatch);
 
           // Return true if any of the provided parameters match
-          return matches.some(match => match === true);
+          const result = matches.some(match => match === true);
+
+          // Debug logging for first few drills
+          if (drill.id <= 3) {
+            console.log(`🔍 Drill ${drill.id}: tag="${drill.tag}", author="${drill.author}", tagMatch=${tagMatch}, authorMatch=${authorMatch}, textMatch=${textMatch}, result=${result}`);
+          }
+
+          return result;
         });
 
         console.log(`🔍 Mobile URL filter applied: tag="${tag}", author="${author}", text="${text}"`);
         console.log(`🔍 Found ${allDrills.length} drills matching OR logic`);
+
+        // Log first few filtered drills for debugging
+        if (allDrills.length > 0) {
+          console.log(`🔍 First filtered drill: id=${allDrills[0].id}, tag="${allDrills[0].tag}", author="${allDrills[0].author}"`);
+        } else {
+          console.log(`🔍 No drills matched the filter`);
+        }
       }
 
       const sorted = allDrills.sort((a: Drill, b: Drill) =>
@@ -717,7 +662,7 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
         >
           <AgGridReact
             ref={gridRef}
-            rowData={drills}
+            rowData={filteredDrills}
             columnDefs={columnDefs}
             defaultColDef={{
               sortable: true,
