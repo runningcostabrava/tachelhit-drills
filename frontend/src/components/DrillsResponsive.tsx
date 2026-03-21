@@ -9,6 +9,7 @@ import MobileDrillEditor from './MobileDrillEditor';
 import DrillsGrid from './DrillsGrid';
 import MobileBottomNav from './MobileBottomNav'; // Added import
 import VoiceDrillCreator from './VoiceDrillCreator'; // Added missing import
+import MobileDrillCreator from './MobileDrillCreator'; // Added import for new component
 import { useLocation, useNavigate } from 'react-router-dom'; // Added imports
 
 interface Drill {
@@ -25,67 +26,67 @@ interface Drill {
 }
 
 const GlossaryModal = ({ onClose }: { onClose: () => void }) => {
-    const [rowData, setRowData] = useState<any[]>([]);
-    const [newWord, setNewWord] = useState({ sound: '', spelling: '' });
+  const [rowData, setRowData] = useState<any[]>([]);
+  const [newWord, setNewWord] = useState({ sound: '', spelling: '' });
 
-    const fetchGlossary = async () => {
-        const res = await axios.get(`${API_BASE}/glossary/`);
-        setRowData(res.data);
-    };
+  const fetchGlossary = async () => {
+    const res = await axios.get(`${API_BASE}/glossary/`);
+    setRowData(res.data);
+  };
 
-    useEffect(() => { fetchGlossary(); }, []);
+  useEffect(() => { fetchGlossary(); }, []);
 
-    const handleAdd = async () => {
-        if (!newWord.sound || !newWord.spelling) return;
-        await axios.post(`${API_BASE}/glossary/`, { word_sound: newWord.sound, correct_spelling: newWord.spelling });
-        setNewWord({ sound: '', spelling: '' });
-        fetchGlossary();
-    };
+  const handleAdd = async () => {
+    if (!newWord.sound || !newWord.spelling) return;
+    await axios.post(`${API_BASE}/glossary/`, { word_sound: newWord.sound, correct_spelling: newWord.spelling });
+    setNewWord({ sound: '', spelling: '' });
+    fetchGlossary();
+  };
 
-    const handleDelete = async (id: number) => {
-        await axios.delete(`${API_BASE}/glossary/${id}`);
-        fetchGlossary();
-    };
+  const handleDelete = async (id: number) => {
+    await axios.delete(`${API_BASE}/glossary/${id}`);
+    fetchGlossary();
+  };
 
-    const columnDefs: any[] = [
-        { field: 'word_sound', headerName: 'Sound', flex: 1 },
-        { field: 'correct_spelling', headerName: 'Spelling', flex: 1 },
-        { 
-            field: 'id', 
-            headerName: '', 
-            width: 80, 
-            cellRenderer: (p: any) => (
-                <button 
-                    onClick={() => handleDelete(p.value)} 
-                    style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}
-                >
-                    ✕
-                </button>
-            )
-        }
-    ];
+  const columnDefs: any[] = [
+    { field: 'word_sound', headerName: 'Sound', flex: 1 },
+    { field: 'correct_spelling', headerName: 'Spelling', flex: 1 },
+    {
+      field: 'id',
+      headerName: '',
+      width: 80,
+      cellRenderer: (p: any) => (
+        <button
+          onClick={() => handleDelete(p.value)}
+          style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer', fontWeight: 'bold' }}
+        >
+          ✕
+        </button>
+      )
+    }
+  ];
 
-    return (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 30000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px' }}>
-            <div style={{ background: 'white', padding: '16px', borderRadius: '12px', width: '100%', maxWidth: '500px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ marginTop: 0, fontSize: '16px' }}>📖 Glossary (AI Learning)</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-                    <input placeholder="Sound (e.g. anayr)" value={newWord.sound} onChange={e => setNewWord({...newWord, sound: e.target.value})} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '14px' }} />
-                    <input placeholder="Correct Spelling" value={newWord.spelling} onChange={e => setNewWord({...newWord, spelling: e.target.value})} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '14px' }} />
-                    <button onClick={handleAdd} style={{ padding: '10px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Add to AI</button>
-                </div>
-                <div className="ag-theme-alpine" style={{ flex: 1, width: '100%', minHeight: '200px' }}>
-                    <AgGridReact 
-                        rowData={rowData} 
-                        columnDefs={columnDefs}
-                        headerHeight={40}
-                        rowHeight={45}
-                    />
-                </div>
-                <button onClick={onClose} style={{ marginTop: '16px', padding: '12px', background: '#f5f5f5', border: '1px solid #ccc', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>Close</button>
-            </div>
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 30000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px' }}>
+      <div style={{ background: 'white', padding: '16px', borderRadius: '12px', width: '100%', maxWidth: '500px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <h3 style={{ marginTop: 0, fontSize: '16px' }}>📖 Glossary (AI Learning)</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+          <input placeholder="Sound (e.g. anayr)" value={newWord.sound} onChange={e => setNewWord({ ...newWord, sound: e.target.value })} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '14px' }} />
+          <input placeholder="Correct Spelling" value={newWord.spelling} onChange={e => setNewWord({ ...newWord, spelling: e.target.value })} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '14px' }} />
+          <button onClick={handleAdd} style={{ padding: '10px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>Add to AI</button>
         </div>
-    );
+        <div className="ag-theme-alpine" style={{ flex: 1, width: '100%', minHeight: '200px' }}>
+          <AgGridReact
+            rowData={rowData}
+            columnDefs={columnDefs}
+            headerHeight={40}
+            rowHeight={45}
+          />
+        </div>
+        <button onClick={onClose} style={{ marginTop: '16px', padding: '12px', background: '#f5f5f5', border: '1px solid #ccc', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>Close</button>
+      </div>
+    </div>
+  );
 };
 
 // Remove onViewTests and onViewShorts props from here
@@ -96,84 +97,85 @@ interface DrillsResponsiveProps {
 
 // Translate cell renderer for mobile grid
 const TranslateCellRenderer = (props: any) => {
-    const { data, api } = props;
-    const [translating, setTranslating] = useState(false);
+  const { data, api } = props;
+  const [translating, setTranslating] = useState(false);
 
-    const handleTranslate = async (source: string, target: string) => {
-        const text = source === 'ca' ? data.text_catalan : data.text_tachelhit;
-        if (!text) {
-            alert(`Please enter ${source === 'ca' ? 'Catalan' : 'Tachelhit'} text first.`);
-            return;
-        }
+  const handleTranslate = async (source: string, target: string) => {
+    const text = source === 'ca' ? data.text_catalan : data.text_tachelhit;
+    if (!text) {
+      alert(`Please enter ${source === 'ca' ? 'Catalan' : 'Tachelhit'} text first.`);
+      return;
+    }
 
-        setTranslating(true);
-        try {
-            const res = await axios.post(`${API_BASE}/translate`, {
-                text: text,
-                source_lang: source,
-                target_lang: target
-            });
-            const field = target === 'shi' ? 'text_tachelhit' : 'text_catalan';
-            api.applyTransaction({ update: [{ ...data, [field]: res.data.translated_text }] });
-            // Also save to backend
-            await axios.put(`${API_BASE}/drills/${data.id}`, { [field]: res.data.translated_text });
-        } catch (err) {
-            console.error('Translation failed:', err);
-            alert('Translation failed.');
-        } finally {
-            setTranslating(false);
-        }
-    };
+    setTranslating(true);
+    try {
+      const res = await axios.post(`${API_BASE}/translate`, {
+        text: text,
+        source_lang: source,
+        target_lang: target
+      });
+      const field = target === 'shi' ? 'text_tachelhit' : 'text_catalan';
+      api.applyTransaction({ update: [{ ...data, [field]: res.data.translated_text }] });
+      // Also save to backend
+      await axios.put(`${API_BASE}/drills/${data.id}`, { [field]: res.data.translated_text });
+    } catch (err) {
+      console.error('Translation failed:', err);
+      alert('Translation failed.');
+    } finally {
+      setTranslating(false);
+    }
+  };
 
-    return (
-        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', height: '100%' }}>
-            <button
-                onClick={(e) => { e.stopPropagation(); handleTranslate('ca', 'shi'); }}
-                disabled={translating || !data.text_catalan}
-                style={{
-                    padding: '2px 6px',
-                    background: '#4CAF50',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: translating ? 'not-allowed' : 'pointer',
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    opacity: !data.text_catalan ? 0.5 : 1
-                }}
-            >
-                {translating ? '...' : 'CA→SHI'}
-            </button>
-            <button
-                onClick={(e) => { e.stopPropagation(); handleTranslate('shi', 'ca'); }}
-                disabled={translating || !data.text_tachelhit}
-                style={{
-                    padding: '2px 6px',
-                    background: '#2196F3',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: translating ? 'not-allowed' : 'pointer',
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    opacity: !data.text_tachelhit ? 0.5 : 1
-                }}
-            >
-                {translating ? '...' : 'SHI→CA'}
-            </button>
-        </div>
-    );
+  return (
+    <div style={{ display: 'flex', gap: '4px', alignItems: 'center', height: '100%' }}>
+      <button
+        onClick={(e) => { e.stopPropagation(); handleTranslate('ca', 'shi'); }}
+        disabled={translating || !data.text_catalan}
+        style={{
+          padding: '2px 6px',
+          background: '#4CAF50',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: translating ? 'not-allowed' : 'pointer',
+          fontSize: '10px',
+          fontWeight: 600,
+          opacity: !data.text_catalan ? 0.5 : 1
+        }}
+      >
+        {translating ? '...' : 'CA→SHI'}
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); handleTranslate('shi', 'ca'); }}
+        disabled={translating || !data.text_tachelhit}
+        style={{
+          padding: '2px 6px',
+          background: '#2196F3',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: translating ? 'not-allowed' : 'pointer',
+          fontSize: '10px',
+          fontWeight: 600,
+          opacity: !data.text_tachelhit ? 0.5 : 1
+        }}
+      >
+        {translating ? '...' : 'SHI→CA'}
+      </button>
+    </div>
+  );
 };
 
-export default function DrillsResponsive({}: DrillsResponsiveProps) {
+export default function DrillsResponsive({ }: DrillsResponsiveProps) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [drills, setDrills] = useState<Drill[]>([]);
   const [editingDrill, setEditingDrill] = useState<Drill | null>(null);
   const [showVoiceCreator, setShowVoiceCreator] = useState(false); // New state for VoiceDrillCreator modal
+  const [showMobileDrillCreator, setShowMobileDrillCreator] = useState(false); // New state for MobileDrillCreator modal
   const [showNewDrillOptions, setShowNewDrillOptions] = useState(false); // New state for dropdown
   const [showGlossary, setShowGlossary] = useState(false);
   const gridRef = useRef<any>(null); // This ref is for DrillsGrid when in mobile view.
-  
+
   const location = useLocation(); // Initialize useLocation
   const navigate = useNavigate(); // Initialize useNavigate
 
@@ -192,7 +194,7 @@ export default function DrillsResponsive({}: DrillsResponsiveProps) {
       const queryParams = new URLSearchParams(location.search);
       let apiUrl = `${API_BASE}/drills/`;
       if (queryParams.toString()) {
-          apiUrl += `?${queryParams.toString()}`;
+        apiUrl += `?${queryParams.toString()}`;
       }
 
       const response = await axios.get(apiUrl);
@@ -316,46 +318,46 @@ export default function DrillsResponsive({}: DrillsResponsiveProps) {
               Tachelhit Drills
             </h1>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-               <button
-                  onClick={() => {
-                    const url = window.location.href;
-                    navigator.clipboard.writeText(url);
-                    alert(`Filtered link copied to clipboard!\n${url}`);
-                  }}
-                  style={{
-                    padding: '8px',
-                    background: 'rgba(255,255,255,0.2)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '18px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                  title="Copy link"
-                >
-                  🔗
-                </button>
-               <button
-                  onClick={() => setShowGlossary(true)}
-                  style={{
-                    padding: '8px',
-                    background: 'rgba(255,255,255,0.2)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '18px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                  title="Glossary"
-                >
-                  📖
-                </button>
+              <button
+                onClick={() => {
+                  const url = window.location.href;
+                  navigator.clipboard.writeText(url);
+                  alert(`Filtered link copied to clipboard!\n${url}`);
+                }}
+                style={{
+                  padding: '8px',
+                  background: 'rgba(255,255,255,0.2)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="Copy link"
+              >
+                🔗
+              </button>
+              <button
+                onClick={() => setShowGlossary(true)}
+                style={{
+                  padding: '8px',
+                  background: 'rgba(255,255,255,0.2)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="Glossary"
+              >
+                📖
+              </button>
               <div style={{ position: 'relative' }}>
                 <button
                   onClick={() => setShowNewDrillOptions(!showNewDrillOptions)}
@@ -404,6 +406,25 @@ export default function DrillsResponsive({}: DrillsResponsiveProps) {
                       }}
                     >
                       ➕ Create Empty Drill
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMobileDrillCreator(true);
+                        setShowNewDrillOptions(false);
+                      }}
+                      style={{
+                        padding: '10px 15px',
+                        fontSize: '15px',
+                        background: 'none',
+                        border: 'none',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        color: '#333',
+                        fontWeight: 500,
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      📱 Mobile Drill Creator
                     </button>
                     <button
                       onClick={() => {
@@ -549,6 +570,17 @@ export default function DrillsResponsive({}: DrillsResponsiveProps) {
       )}
 
       {showGlossary && <GlossaryModal onClose={() => setShowGlossary(false)} />}
+
+      {/* MobileDrillCreator Modal for Mobile View */}
+      {showMobileDrillCreator && (
+        <MobileDrillCreator
+          onClose={() => setShowMobileDrillCreator(false)}
+          onDrillCreated={() => {
+            fetchDrills();
+            setShowMobileDrillCreator(false);
+          }}
+        />
+      )}
     </>
   );
 }
