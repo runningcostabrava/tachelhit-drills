@@ -909,39 +909,38 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
 
         try {
             if (searchCategory === 'all') {
-                // Search across multiple fields - we need to create a filter model that searches all text fields
-                console.log('🔍 Creating comprehensive filter model for "all" search');
-                const filterModel: any = {
-                    text_catalan: {
-                        filterType: 'text',
-                        type: 'contains',
-                        filter: searchTerm
-                    },
-                    text_tachelhit: {
-                        filterType: 'text',
-                        type: 'contains',
-                        filter: searchTerm
-                    },
-                    text_arabic: {
-                        filterType: 'text',
-                        type: 'contains',
-                        filter: searchTerm
-                    },
-                    tag: {
-                        filterType: 'text',
-                        type: 'contains',
-                        filter: searchTerm
-                    },
-                    author: {
-                        filterType: 'text',
-                        type: 'contains',
-                        filter: searchTerm
-                    }
-                };
+                // For "all" search, we need to implement OR logic across multiple fields
+                // We'll use a custom approach: filter the data manually and set row data
+                console.log('🔍 Implementing OR search across all fields');
 
-                // Set the filter model with OR logic (search across all fields)
-                api.setFilterModel(filterModel);
+                // First, get all row data
+                const allRows: any[] = [];
+                api.forEachNode((node: any) => {
+                    allRows.push(node.data);
+                });
+
+                // Filter rows where ANY of the searchable fields contains the search term
+                const filteredRows = allRows.filter(row => {
+                    const fieldsToSearch = [
+                        row.text_catalan?.toLowerCase() || '',
+                        row.text_tachelhit?.toLowerCase() || '',
+                        row.text_arabic?.toLowerCase() || '',
+                        row.tag?.toLowerCase() || '',
+                        row.author?.toLowerCase() || ''
+                    ];
+
+                    return fieldsToSearch.some(field => field.includes(searchTerm));
+                });
+
+                console.log(`🔍 Found ${filteredRows.length} rows matching "${searchTerm}"`);
+
+                // Clear any existing filters
+                api.setFilterModel(null);
+
+                // Set the filtered rows
+                api.setRowData(filteredRows);
             } else {
+                // For specific field searches, use normal filter model
                 // Clear any existing quick filter
                 if (typeof api.setQuickFilter === 'function') {
                     api.setQuickFilter(null);
@@ -1766,24 +1765,44 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                         const urlParams = new URLSearchParams(window.location.search);
                         const tag = urlParams.get('tag');
                         const author = urlParams.get('author');
+                        const text = urlParams.get('text');
 
-                        if (tag || author) {
-                            const filterModel: any = {};
-                            if (tag) {
-                                filterModel.tag = {
-                                    filterType: 'text',
-                                    type: 'contains',
-                                    filter: tag
-                                };
-                            }
-                            if (author) {
-                                filterModel.author = {
-                                    filterType: 'text',
-                                    type: 'contains',
-                                    filter: author
-                                };
-                            }
-                            params.api.setFilterModel(filterModel);
+                        if (tag || author || text) {
+                            // For OR logic (tag OR author OR text), we need to use a custom approach
+                            // since AG Grid's filter model uses AND logic by default
+                            const allRows: any[] = [];
+                            params.api.forEachNode((node: any) => {
+                                allRows.push(node.data);
+                            });
+
+                            // Filter rows where tag contains tag OR author contains author OR text contains text
+                            const filteredRows = allRows.filter(row => {
+                                const tagMatch = tag ? (row.tag?.toLowerCase() || '').includes(tag.toLowerCase()) : false;
+                                const authorMatch = author ? (row.author?.toLowerCase() || '').includes(author.toLowerCase()) : false;
+                                const textMatch = text ? (
+                                    (row.text_catalan?.toLowerCase() || '').includes(text.toLowerCase()) ||
+                                    (row.text_tachelhit?.toLowerCase() || '').includes(text.toLowerCase()) ||
+                                    (row.text_arabic?.toLowerCase() || '').includes(text.toLowerCase())
+                                ) : false;
+
+                                // OR logic: match tag OR author OR text (if multiple provided, match any)
+                                const matches = [];
+                                if (tag) matches.push(tagMatch);
+                                if (author) matches.push(authorMatch);
+                                if (text) matches.push(textMatch);
+
+                                // Return true if any of the provided parameters match
+                                return matches.some(match => match === true);
+                            });
+
+                            console.log(`🔍 URL filter applied: tag="${tag}", author="${author}", text="${text}"`);
+                            console.log(`🔍 Found ${filteredRows.length} rows matching OR logic`);
+
+                            // Clear any existing filters
+                            params.api.setFilterModel(null);
+
+                            // Set the filtered rows
+                            params.api.setRowData(filteredRows);
                         }
                     }}
                     onFilterChanged={(params: any) => {

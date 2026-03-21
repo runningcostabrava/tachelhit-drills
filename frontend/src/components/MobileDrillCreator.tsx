@@ -541,13 +541,41 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
             alert('Drill saved successfully!');
             onDrillCreated();
-            onClose();
+            // Don't close the modal - keep it open for further editing
         } catch (error) {
             console.error('Error saving drill:', error);
             alert('Failed to save drill');
         } finally {
             setSaving(false);
         }
+    };
+
+    // Handle create new drill
+    const handleCreateNew = () => {
+        // Reset drill state
+        setDrill({
+            text_catalan: '',
+            text_tachelhit: '',
+            text_arabic: '',
+            tag: '',
+            author: ''
+        });
+
+        // Reset media states
+        setCapturedImage(null);
+        setCapturedVideo(null);
+        setUploadedFile(null);
+        setPastedImage(null);
+        setTranscriptionResult(null);
+        setLastSaved(null);
+
+        // Clear auto-save timer
+        if (autoSaveTimer) {
+            clearTimeout(autoSaveTimer);
+            setAutoSaveTimer(null);
+        }
+
+        alert('New drill form ready!');
     };
 
     // Handle auto-transcribe
@@ -604,24 +632,45 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 justifyContent: 'space-between',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
             }}>
-                <button
-                    onClick={onClose}
-                    style={{
-                        background: 'rgba(255,255,255,0.2)',
-                        border: 'none',
-                        color: 'white',
-                        fontSize: '24px',
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '50%',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                    }}
-                >
-                    ✕
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            background: 'rgba(255,255,255,0.2)',
+                            border: 'none',
+                            color: 'white',
+                            fontSize: '24px',
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        ✕
+                    </button>
+
+                    <button
+                        onClick={handleCreateNew}
+                        style={{
+                            background: '#FF9800',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '8px 12px',
+                            fontSize: '14px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                        }}
+                    >
+                        ➕ New
+                    </button>
+                </div>
 
                 <div style={{
                     color: 'white',

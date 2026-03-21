@@ -21,6 +21,7 @@ interface Drill {
   video_url?: string;
   image_url?: string;
   tag?: string;
+  author?: string;
   is_correction_dataset?: boolean;
   date_created: string;
 }
@@ -221,39 +222,38 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
 
     try {
       if (searchCategory === 'all') {
-        // Search across multiple fields - we need to create a filter model that searches all text fields
-        console.log('🔍 Creating comprehensive filter model for "all" search');
-        const filterModel: any = {
-          text_catalan: {
-            filterType: 'text',
-            type: 'contains',
-            filter: searchTerm
-          },
-          text_tachelhit: {
-            filterType: 'text',
-            type: 'contains',
-            filter: searchTerm
-          },
-          text_arabic: {
-            filterType: 'text',
-            type: 'contains',
-            filter: searchTerm
-          },
-          tag: {
-            filterType: 'text',
-            type: 'contains',
-            filter: searchTerm
-          },
-          author: {
-            filterType: 'text',
-            type: 'contains',
-            filter: searchTerm
-          }
-        };
+        // For "all" search, we need to implement OR logic across multiple fields
+        // We'll use a custom approach: filter the data manually and set row data
+        console.log('🔍 Implementing OR search across all fields');
 
-        // Set the filter model with OR logic (search across all fields)
-        api.setFilterModel(filterModel);
+        // First, get all row data
+        const allRows: any[] = [];
+        api.forEachNode((node: any) => {
+          allRows.push(node.data);
+        });
+
+        // Filter rows where ANY of the searchable fields contains the search term
+        const filteredRows = allRows.filter(row => {
+          const fieldsToSearch = [
+            row.text_catalan?.toLowerCase() || '',
+            row.text_tachelhit?.toLowerCase() || '',
+            row.text_arabic?.toLowerCase() || '',
+            row.tag?.toLowerCase() || '',
+            row.author?.toLowerCase() || ''
+          ];
+
+          return fieldsToSearch.some(field => field.includes(searchTerm));
+        });
+
+        console.log(`🔍 Found ${filteredRows.length} rows matching "${searchTerm}"`);
+
+        // Clear any existing filters
+        api.setFilterModel(null);
+
+        // Set the filtered rows
+        api.setRowData(filteredRows);
       } else {
+        // For specific field searches, use normal filter model
         // Clear any existing quick filter
         if (typeof api.setQuickFilter === 'function') {
           api.setQuickFilter(null);
@@ -320,15 +320,41 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
 
   const fetchDrills = async () => {
     try {
-      // Construct API URL with query parameters from the URL
+      // Always fetch all drills, then filter client-side for OR logic
+      const response = await axios.get(`${API_BASE}/drills/`);
+      let allDrills = response.data || [];
+
+      // Apply URL filter with OR logic (tag OR author OR text)
       const queryParams = new URLSearchParams(location.search);
-      let apiUrl = `${API_BASE}/drills/`;
-      if (queryParams.toString()) {
-        apiUrl += `?${queryParams.toString()}`;
+      const tag = queryParams.get('tag');
+      const author = queryParams.get('author');
+      const text = queryParams.get('text');
+
+      if (tag || author || text) {
+        allDrills = allDrills.filter((drill: Drill) => {
+          const tagMatch = tag ? (drill.tag?.toLowerCase() || '').includes(tag.toLowerCase()) : false;
+          const authorMatch = author ? (drill.author?.toLowerCase() || '').includes(author.toLowerCase()) : false;
+          const textMatch = text ? (
+            (drill.text_catalan?.toLowerCase() || '').includes(text.toLowerCase()) ||
+            (drill.text_tachelhit?.toLowerCase() || '').includes(text.toLowerCase()) ||
+            (drill.text_arabic?.toLowerCase() || '').includes(text.toLowerCase())
+          ) : false;
+
+          // OR logic: match tag OR author OR text (if multiple provided, match any)
+          const matches = [];
+          if (tag) matches.push(tagMatch);
+          if (author) matches.push(authorMatch);
+          if (text) matches.push(textMatch);
+
+          // Return true if any of the provided parameters match
+          return matches.some(match => match === true);
+        });
+
+        console.log(`🔍 Mobile URL filter applied: tag="${tag}", author="${author}", text="${text}"`);
+        console.log(`🔍 Found ${allDrills.length} drills matching OR logic`);
       }
 
-      const response = await axios.get(apiUrl);
-      const sorted = [...(response.data || [])].sort((a: Drill, b: Drill) =>
+      const sorted = allDrills.sort((a: Drill, b: Drill) =>
         new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
       );
       setDrills(sorted);
@@ -448,6 +474,28 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
               Tachelhit Drills
             </h1>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {/* Standalone Mobile Drill Creator Button */}
+              <button
+                onClick={() => setShowMobileDrillCreator(true)}
+                style={{
+                  padding: '10px 16px',
+                  background: '#FFD700',
+                  color: '#333',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                }}
+                title="Create drill with big buttons for fast capture"
+              >
+                📱 New Drill
+              </button>
+
               <button
                 onClick={() => {
                   const url = window.location.href;
@@ -502,7 +550,7 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
                     cursor: 'pointer'
                   }}
                 >
-                  + New ▼
+                  + More ▼
                 </button>
                 {showNewDrillOptions && (
                   <div style={{
@@ -536,25 +584,6 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
                       }}
                     >
                       ➕ Create Empty Drill
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowMobileDrillCreator(true);
-                        setShowNewDrillOptions(false);
-                      }}
-                      style={{
-                        padding: '10px 15px',
-                        fontSize: '15px',
-                        background: 'none',
-                        border: 'none',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        color: '#333',
-                        fontWeight: 500,
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      📱 Mobile Drill Creator
                     </button>
                     <button
                       onClick={() => {
