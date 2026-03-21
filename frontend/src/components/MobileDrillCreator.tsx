@@ -45,7 +45,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('environment');
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [transcriptionResult, setTranscriptionResult] = useState<{ rough: string, score: number } | null>(null);
-    const [autoSaveTimer, setAutoSaveTimer] = useState<NodeJS.Timeout | null>(null);
+    const [autoSaveTimer, setAutoSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
     const [lastSaved, setLastSaved] = useState<string | null>(null);
 
     // Refs
@@ -996,7 +996,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                             Image Preview
                         </h3>
                         <img
-                            src={drill.image_url ? getMediaUrl(drill.image_url || '') : capturedImage || pastedImage}
+                            src={drill.image_url ? getMediaUrl(drill.image_url) : capturedImage || pastedImage || ''}
                             alt="Drill"
                             style={{
                                 width: '100%',
