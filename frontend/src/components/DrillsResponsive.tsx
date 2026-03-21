@@ -174,7 +174,111 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
   const [showMobileDrillCreator, setShowMobileDrillCreator] = useState(false); // New state for MobileDrillCreator modal
   const [showNewDrillOptions, setShowNewDrillOptions] = useState(false); // New state for dropdown
   const [showGlossary, setShowGlossary] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(''); // Search state
+  const [searchCategory, setSearchCategory] = useState('all'); // 'all', 'catalan', 'tachelhit', 'arabic', 'tag', 'author'
   const gridRef = useRef<any>(null); // This ref is for DrillsGrid when in mobile view.
+
+  // Apply search filter when search query or category changes
+  useEffect(() => {
+    console.log('🔍 Mobile search effect triggered:', { searchQuery, searchCategory });
+
+    if (!gridRef.current) {
+      console.warn('🔍 gridRef.current is null');
+      return;
+    }
+
+    if (!gridRef.current.api) {
+      console.warn('🔍 gridRef.current.api is null');
+      return;
+    }
+
+    const api = gridRef.current.api;
+    console.log('🔍 AG Grid API available:', !!api);
+
+    // Check if API methods exist
+    if (typeof api.setFilterModel !== 'function') {
+      console.warn('🔍 api.setFilterModel is not a function:', api.setFilterModel);
+      return;
+    }
+
+    if (typeof api.setQuickFilter !== 'function') {
+      console.warn('🔍 api.setQuickFilter is not a function:', api.setQuickFilter);
+      return;
+    }
+
+    if (!searchQuery.trim()) {
+      console.log('🔍 Clearing filters (empty search)');
+      // Clear all filters if search is empty
+      try {
+        api.setFilterModel(null);
+        api.setQuickFilter(null);
+      } catch (error) {
+        console.error('🔍 Error clearing filters:', error);
+      }
+      return;
+    }
+
+    const searchTerm = searchQuery.toLowerCase();
+    console.log('🔍 Applying search:', { searchTerm, searchCategory });
+
+    try {
+      if (searchCategory === 'all') {
+        // Search across multiple fields using quick filter
+        console.log('🔍 Using quick filter for "all" search');
+        api.setQuickFilter(searchTerm);
+        // Clear any specific column filters
+        api.setFilterModel(null);
+      } else {
+        // Clear quick filter when using specific column filter
+        console.log('🔍 Clearing quick filter for specific column search');
+        api.setQuickFilter(null);
+
+        const filterModel: any = {};
+        switch (searchCategory) {
+          case 'catalan':
+            filterModel.text_catalan = {
+              filterType: 'text',
+              type: 'contains',
+              filter: searchTerm
+            };
+            break;
+          case 'tachelhit':
+            filterModel.text_tachelhit = {
+              filterType: 'text',
+              type: 'contains',
+              filter: searchTerm
+            };
+            break;
+          case 'arabic':
+            filterModel.text_arabic = {
+              filterType: 'text',
+              type: 'contains',
+              filter: searchTerm
+            };
+            break;
+          case 'tag':
+            filterModel.tag = {
+              filterType: 'text',
+              type: 'contains',
+              filter: searchTerm
+            };
+            break;
+          case 'author':
+            filterModel.author = {
+              filterType: 'text',
+              type: 'contains',
+              filter: searchTerm
+            };
+            break;
+        }
+        console.log('🔍 Setting filter model:', filterModel);
+        api.setFilterModel(filterModel);
+      }
+      console.log('🔍 Search applied successfully');
+    } catch (error) {
+      console.error('🔍 Error applying search filter:', error);
+    }
+  }, [searchQuery, searchCategory]);
 
   const location = useLocation(); // Initialize useLocation
   const navigate = useNavigate(); // Initialize useNavigate
@@ -473,7 +577,76 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
               </div>
             </div>
           </div>
-          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.9)' }}>
+          {/* Search Box for Mobile */}
+          <div style={{
+            width: '100%',
+            display: 'flex',
+            gap: '8px',
+            alignItems: 'center',
+            background: 'rgba(255, 255, 255, 0.15)',
+            borderRadius: '8px',
+            padding: '8px 12px',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            marginTop: '12px'
+          }}>
+            <div style={{ color: 'white', fontSize: '16px', flexShrink: 0 }}>🔍</div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search drills..."
+              style={{
+                flex: 1,
+                background: 'transparent',
+                border: 'none',
+                color: 'white',
+                fontSize: '14px',
+                outline: 'none',
+                minWidth: '0'
+              }}
+            />
+            <select
+              value={searchCategory}
+              onChange={(e) => setSearchCategory(e.target.value)}
+              style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                color: 'white',
+                borderRadius: '6px',
+                padding: '6px 8px',
+                fontSize: '12px',
+                outline: 'none',
+                cursor: 'pointer',
+                flexShrink: 0
+              }}
+            >
+              <option value="all">All</option>
+              <option value="catalan">Català</option>
+              <option value="tachelhit">Tachelhit</option>
+              <option value="arabic">Arabic</option>
+              <option value="tag">Tag</option>
+              <option value="author">Author</option>
+            </select>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'white',
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  padding: '0 6px',
+                  flexShrink: 0
+                }}
+                title="Clear search"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginTop: '8px' }}>
             Tap any row to edit
           </div>
         </div>
