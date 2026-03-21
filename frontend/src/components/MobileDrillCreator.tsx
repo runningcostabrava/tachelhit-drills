@@ -177,7 +177,28 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 }
             };
 
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            // Check if we already have permission by trying to get the stream
+            // without showing the permission dialog if possible
+            let stream;
+            try {
+                // Try to get existing permissions first
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const hasAudioPermission = devices.some(device => device.kind === 'audioinput' && device.deviceId !== '');
+
+                if (hasAudioPermission) {
+                    // We have permission, get the stream
+                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                } else {
+                    // No permission yet, ask for it
+                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                }
+            } catch (err) {
+                console.error('Failed to get audio stream:', err);
+                alert('Microphone access is required for audio recording. Please allow microphone access.');
+                setRecording(null);
+                return;
+            }
+
             streamRef.current = stream;
 
             // Determine MIME type
@@ -1150,20 +1171,16 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                     </div>
                 )}
 
-                {/* Camera Preview Modal */}
+                {/* Camera Preview - Inline, not full screen */}
                 {cameraMode && (
                     <div style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'black',
-                        zIndex: 20000,
-                        display: 'flex',
-                        flexDirection: 'column'
+                        background: '#000',
+                        borderRadius: '16px',
+                        marginBottom: '20px',
+                        overflow: 'hidden',
+                        position: 'relative'
                     }}>
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                        <div style={{ position: 'relative', height: '300px' }}>
                             <video
                                 ref={previewRef}
                                 autoPlay
@@ -1176,7 +1193,13 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                                     transform: cameraFacing === 'user' ? 'scaleX(-1)' : 'none'
                                 }}
                             />
-                            <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
+                            <div style={{
+                                position: 'absolute',
+                                top: '10px',
+                                right: '10px',
+                                display: 'flex',
+                                gap: '8px'
+                            }}>
                                 <button
                                     onClick={() => {
                                         const newFacing = cameraFacing === 'user' ? 'environment' : 'user';
@@ -1187,53 +1210,145 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                                         }
                                     }}
                                     style={{
-                                        width: '50px',
-                                        height: '50px',
+                                        width: '40px',
+                                        height: '40px',
                                         borderRadius: '50%',
                                         background: 'rgba(255, 255, 255, 0.3)',
-                                        border: '2px solid white',
+                                        border: '1px solid white',
                                         color: 'white',
-                                        fontSize: '24px',
-                                        cursor: 'pointer'
+                                        fontSize: '18px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
                                     }}
+                                    title="Switch camera"
                                 >
                                     🔄
                                 </button>
+                                <button
+                                    onClick={stopCamera}
+                                    style={{
+                                        width: '40px',
+                                        height: '40px',
+                                        borderRadius: '50%',
+                                        background: 'rgba(255, 0, 0, 0.7)',
+                                        border: '1px solid white',
+                                        color: 'white',
+                                        fontSize: '18px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                    title="Close camera"
+                                >
+                                    ✕
+                                </button>
                             </div>
                         </div>
-                        <div style={{ padding: '30px 20px', background: 'rgba(0, 0, 0, 0.9)', display: 'flex', justifyContent: 'center' }}>
+                        <div style={{
+                            padding: '20px',
+                            background: 'rgba(0, 0, 0, 0.8)',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            gap: '20px'
+                        }}>
                             {cameraMode === 'photo' ? (
                                 <button
                                     onClick={takePicture}
                                     style={{
-                                        width: '80px',
-                                        height: '80px',
+                                        width: '70px',
+                                        height: '70px',
                                         borderRadius: '50%',
                                         background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
                                         color: 'white',
-                                        border: '4px solid white',
-                                        fontSize: '32px',
-                                        cursor: 'pointer'
+                                        border: '3px solid white',
+                                        fontSize: '28px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
                                     }}
+                                    title="Take picture"
                                 >
                                     📸
                                 </button>
                             ) : (
                                 <button
-                                    onClick={stopRecording}
-                                    style={{
-                                        width: '80px',
-                                        height: '80px',
-                                        borderRadius: '50%',
-                                        background: 'linear-gradient(135deg, #ff4444 0%, #cc0000 100%)',
-                                        color: 'white',
-                                        border: '4px solid white',
-                                        fontSize: '32px',
-                                        cursor: 'pointer'
+                                    onClick={recording === 'video' ? stopRecording : () => {
+                                        // Start video recording with current facing mode
+                                        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+                                            stopRecording();
+                                        } else {
+                                            // The recording should already be started when cameraMode was set to 'video'
+                                            // But if not, we need to start it
+                                            if (streamRef.current && !mediaRecorderRef.current) {
+                                                mediaRecorderRef.current = new MediaRecorder(streamRef.current);
+                                                chunksRef.current = [];
+
+                                                mediaRecorderRef.current.ondataavailable = (e) => {
+                                                    if (e.data.size > 0) {
+                                                        chunksRef.current.push(e.data);
+                                                    }
+                                                };
+
+                                                mediaRecorderRef.current.onstop = async () => {
+                                                    const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+                                                    const formData = new FormData();
+                                                    formData.append('file', blob, `video_${drill.id}_${Date.now()}.webm`);
+
+                                                    try {
+                                                        await axios.post(`${API_BASE}/upload-media/${drill.id}/video`, formData, {
+                                                            headers: { 'Content-Type': 'multipart/form-data' },
+                                                        });
+                                                        // Refresh drill data
+                                                        const response = await axios.get(`${API_BASE}/drills/${drill.id}`);
+                                                        setDrill(response.data);
+                                                        triggerAutoSave();
+                                                    } catch (err) {
+                                                        console.error('Video upload failed:', err);
+                                                    }
+
+                                                    stopCamera();
+                                                    setRecording(null);
+                                                };
+
+                                                mediaRecorderRef.current.start();
+                                                setRecording('video');
+                                            }
+                                        }
                                     }}
+                                    style={{
+                                        width: '70px',
+                                        height: '70px',
+                                        borderRadius: '50%',
+                                        background: recording === 'video'
+                                            ? 'linear-gradient(135deg, #ff4444 0%, #cc0000 100%)'
+                                            : 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
+                                        color: 'white',
+                                        border: '3px solid white',
+                                        fontSize: '28px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                    title={recording === 'video' ? 'Stop recording' : 'Start recording'}
                                 >
-                                    ⏹
+                                    {recording === 'video' ? '⏹' : '🎬'}
                                 </button>
+                            )}
+                            {cameraMode === 'video' && recording !== 'video' && (
+                                <div style={{ color: 'white', fontSize: '14px', textAlign: 'center' }}>
+                                    Tap the button to start recording
+                                </div>
+                            )}
+                            {cameraMode === 'video' && recording === 'video' && (
+                                <div style={{ color: '#ff4444', fontSize: '16px', fontWeight: 'bold', textAlign: 'center' }}>
+                                    ● RECORDING
+                                </div>
                             )}
                         </div>
                         <canvas ref={canvasRef} style={{ display: 'none' }} />

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { API_BASE } from '../config';
+import { API_BASE, getMediaUrl } from '../config';
 import { AgGridReact } from 'ag-grid-react';
 // Importar solo el tema Alpine CSS (versión legacy)
 import 'ag-grid-community/styles/ag-grid.css';
@@ -372,6 +372,55 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
       headerName: 'TR',
       width: 100,
       cellRenderer: TranslateCellRenderer,
+      sortable: false,
+      filter: false
+    },
+    {
+      headerName: '▶️',
+      width: 60,
+      cellRenderer: (params: any) => {
+        const hasAudio = params.data.audio_url;
+        const hasVideo = params.data.video_url;
+
+        if (!hasAudio && !hasVideo) return '';
+
+        const handlePlay = () => {
+          if (hasVideo) {
+            // Open video in new tab or play inline
+            window.open(getMediaUrl(params.data.video_url), '_blank');
+          } else if (hasAudio) {
+            // Play audio
+            const audio = new Audio(getMediaUrl(params.data.audio_url));
+            audio.play().catch(e => console.error('Error playing audio:', e));
+          }
+        };
+
+        return (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handlePlay();
+            }}
+            style={{
+              background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              width: '40px',
+              height: '30px',
+              fontSize: '16px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 0
+            }}
+            title={hasVideo ? 'Play video' : 'Play audio'}
+          >
+            ▶️
+          </button>
+        );
+      },
       sortable: false,
       filter: false
     },
