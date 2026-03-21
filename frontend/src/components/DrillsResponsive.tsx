@@ -201,17 +201,15 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
       return;
     }
 
-    if (typeof api.setQuickFilter !== 'function') {
-      console.warn('🔍 api.setQuickFilter is not a function:', api.setQuickFilter);
-      return;
-    }
-
     if (!searchQuery.trim()) {
       console.log('🔍 Clearing filters (empty search)');
       // Clear all filters if search is empty
       try {
         api.setFilterModel(null);
-        api.setQuickFilter(null);
+        // Try to clear quick filter if it exists
+        if (typeof api.setQuickFilter === 'function') {
+          api.setQuickFilter(null);
+        }
       } catch (error) {
         console.error('🔍 Error clearing filters:', error);
       }
@@ -223,15 +221,43 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
 
     try {
       if (searchCategory === 'all') {
-        // Search across multiple fields using quick filter
-        console.log('🔍 Using quick filter for "all" search');
-        api.setQuickFilter(searchTerm);
-        // Clear any specific column filters
-        api.setFilterModel(null);
+        // Search across multiple fields - we need to create a filter model that searches all text fields
+        console.log('🔍 Creating comprehensive filter model for "all" search');
+        const filterModel: any = {
+          text_catalan: {
+            filterType: 'text',
+            type: 'contains',
+            filter: searchTerm
+          },
+          text_tachelhit: {
+            filterType: 'text',
+            type: 'contains',
+            filter: searchTerm
+          },
+          text_arabic: {
+            filterType: 'text',
+            type: 'contains',
+            filter: searchTerm
+          },
+          tag: {
+            filterType: 'text',
+            type: 'contains',
+            filter: searchTerm
+          },
+          author: {
+            filterType: 'text',
+            type: 'contains',
+            filter: searchTerm
+          }
+        };
+
+        // Set the filter model with OR logic (search across all fields)
+        api.setFilterModel(filterModel);
       } else {
-        // Clear quick filter when using specific column filter
-        console.log('🔍 Clearing quick filter for specific column search');
-        api.setQuickFilter(null);
+        // Clear any existing quick filter
+        if (typeof api.setQuickFilter === 'function') {
+          api.setQuickFilter(null);
+        }
 
         const filterModel: any = {};
         switch (searchCategory) {
