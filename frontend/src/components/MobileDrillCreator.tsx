@@ -1079,6 +1079,58 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                     </div>
                 )}
 
+                {/* Audio Playback */}
+                {drill.audio_url && (
+                    <div style={{ marginBottom: '20px' }}>
+                        <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 700 }}>
+                            Audio Playback
+                        </h3>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '16px',
+                            background: '#f8f9fa',
+                            borderRadius: '12px',
+                            border: '1px solid #e0e0e0'
+                        }}>
+                            <button
+                                onClick={() => {
+                                    const audio = new Audio(getMediaUrl(drill.audio_url!));
+                                    audio.play().catch(e => console.error('Error playing audio:', e));
+                                }}
+                                style={{
+                                    width: '50px',
+                                    height: '50px',
+                                    borderRadius: '50%',
+                                    background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
+                                    color: 'white',
+                                    border: 'none',
+                                    fontSize: '24px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                                title="Play audio"
+                            >
+                                ▶️
+                            </button>
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: '14px', fontWeight: 600, color: '#333' }}>
+                                    Audio Recording
+                                </div>
+                                <div style={{ fontSize: '12px', color: '#666' }}>
+                                    Click play to listen
+                                </div>
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#999' }}>
+                                {drill.audio_url.split('/').pop()}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Camera Choice Modal */}
                 {showCameraChoice && (
                     <div style={{
