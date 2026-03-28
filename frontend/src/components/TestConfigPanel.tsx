@@ -94,11 +94,11 @@ export default function TestConfigPanel({ onClose, onTestCreated, initialSelecte
 
   const filteredAvailableDrills = allDrills.filter(drill =>
     !selectedDrills.some(sd => sd.id === drill.id) &&
-    (drill.text_catalan.toLowerCase().includes(drillSearchTerm.toLowerCase()) ||
-     drill.text_tachelhit.toLowerCase().includes(drillSearchTerm.toLowerCase()) ||
-     (drill.text_arabic && drill.text_arabic.toLowerCase().includes(drillSearchTerm.toLowerCase())) ||
-     drill.id.toString().includes(drillSearchTerm)))
-  ;
+    ((drill.text_catalan?.toLowerCase() || '').includes(drillSearchTerm.toLowerCase()) ||
+      (drill.text_tachelhit?.toLowerCase() || '').includes(drillSearchTerm.toLowerCase()) ||
+      (drill.text_arabic?.toLowerCase() || '').includes(drillSearchTerm.toLowerCase()) ||
+      drill.id.toString().includes(drillSearchTerm)))
+    ;
 
   return (
     <div style={{
@@ -309,7 +309,7 @@ export default function TestConfigPanel({ onClose, onTestCreated, initialSelecte
               max='10'
               value={config.hint_tries_before_reveal}
               onChange={(e) => setConfig({ ...config, hint_tries_before_reveal: parseInt(e.target.value) })}
-              style={{ 
+              style={{
                 padding: '8px',
                 fontSize: '14px',
                 border: '1px solid #ccc',

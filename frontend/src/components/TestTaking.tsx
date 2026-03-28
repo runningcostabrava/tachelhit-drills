@@ -167,6 +167,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
   };
 
   const normalizeAnswer = (text: string) => {
+    if (!text) return '';
     let normalized = text.toLowerCase();
     normalized = normalized.trim();
     normalized = normalized.split(' ').filter(s => s !== '').join(' ');

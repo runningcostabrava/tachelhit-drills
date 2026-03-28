@@ -220,9 +220,9 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
 
   const filteredAvailableDrills = allDrills.filter(drill =>
     !selectedDrills.some(sd => sd.id === drill.id) &&
-    (drill.text_catalan?.toLowerCase().includes(drillSearchTerm.toLowerCase()) ||
-      drill.text_tachelhit?.toLowerCase().includes(drillSearchTerm.toLowerCase()) ||
-      (drill.text_arabic && drill.text_arabic.toLowerCase().includes(drillSearchTerm.toLowerCase())) ||
+    ((drill.text_catalan?.toLowerCase() || '').includes(drillSearchTerm.toLowerCase()) ||
+      (drill.text_tachelhit?.toLowerCase() || '').includes(drillSearchTerm.toLowerCase()) ||
+      (drill.text_arabic?.toLowerCase() || '').includes(drillSearchTerm.toLowerCase()) ||
       drill.id.toString().includes(drillSearchTerm)))
     ;
 

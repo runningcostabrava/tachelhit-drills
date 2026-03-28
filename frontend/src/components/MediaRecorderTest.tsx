@@ -14,7 +14,7 @@ export default function MediaRecorderTest() {
       setSupportedVoices(voices);
       console.log('Available voices:', voices);
       // Check for Tachelhit specific voices
-      const tachelhitVoices = voices.filter(voice => voice.lang.startsWith('shi') || voice.name.toLowerCase().includes('tachelhit'));
+      const tachelhitVoices = voices.filter(voice => voice.lang.startsWith('shi') || (voice.name?.toLowerCase() || '').includes('tachelhit'));
       console.log('Tachelhit-like voices found:', tachelhitVoices);
     };
 
@@ -67,19 +67,19 @@ export default function MediaRecorderTest() {
       utterance.lang = lang;
       utterance.rate = rate;
       utterance.volume = 1.0;
-      
+
       // Try to find a specific voice if needed, otherwise use default
-      const voice = supportedVoices.find(v => v.lang === lang) || supportedVoices.find(v => v.lang.startsWith(lang.substring(0,2)));
+      const voice = supportedVoices.find(v => v.lang === lang) || supportedVoices.find(v => v.lang.startsWith(lang.substring(0, 2)));
       if (voice) {
         utterance.voice = voice;
       }
 
       speechSynthesis.speak(utterance);
-      
+
       utterance.onend = () => {
         console.log('Speech finished for:', text);
       };
-      
+
       utterance.onerror = (event) => {
         console.error('Error speaking:', event);
         alert(`Error al reproducir la voz para "${text}". Asegúrate de que el volumen esté activado y el idioma (${lang}) sea compatible.`);
