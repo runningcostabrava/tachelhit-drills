@@ -78,7 +78,7 @@ translator_ca_to_en = GoogleTranslator(source='ca', target='en')
 
 # HF Translation
 HF_TRANSLATION_MODEL = os.getenv("HF_TRANSLATION_MODEL", "facebook/nllb-200-distilled-600M")
-HUGGINGFACE_TRANSLATION_SPACE_URL = os.getenv("HUGGINGFACE_TRANSLATION_SPACE_URL", "https://huggingface.co/spaces/Tamazight-NLP/Finetuned-Quantized-NLLB")
+HUGGINGFACE_TRANSLATION_SPACE_URL = os.getenv("HUGGINGFACE_TRANSLATION_SPACE_URL", "https://huggingface.co/spaces/josepabloucr/Finetuned-Quantized-NLLB")
 LANGUAGE_CODE_MAP = {
     "ca": "Catalan",
     "cat": "Catalan",
