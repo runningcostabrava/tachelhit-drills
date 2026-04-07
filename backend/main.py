@@ -78,25 +78,25 @@ translator_ca_to_en = GoogleTranslator(source='ca', target='en')
 
 # HF Translation
 HF_TRANSLATION_MODEL = os.getenv("HF_TRANSLATION_MODEL", "facebook/nllb-200-distilled-600M")
-HUGGINGFACE_TRANSLATION_SPACE_URL = os.getenv("HUGGINGFACE_TRANSLATION_SPACE_URL", "https://huggingface.co/spaces/josepabloucr/tamazight-translation-space")
+HUGGINGFACE_TRANSLATION_SPACE_URL = os.getenv("HUGGINGFACE_TRANSLATION_SPACE_URL", "https://huggingface.co/spaces/Tamazight-NLP/Finetuned-Quantized-NLLB")
 LANGUAGE_CODE_MAP = {
-    "ca": "cat_Latn",       # Catalan
-    "cat": "cat_Latn",
-    "shi": "ber_Tfng",      # Tachelhit (Shilha)
-    "ber": "ber_Tfng",      # Berber (generic)
-    "tam": "ber_Tfng",      # Tamazight
-    "zgh": "ber_Tfng",      # Standard Moroccan Tamazight
-    "ar": "arb_Arab",       # Arabic (Modern Standard)
-    "arb": "arb_Arab",
-    "en": "eng_Latn",       # English
-    "eng": "eng_Latn",
-    "fr": "fra_Latn",       # French
-    "fra": "fra_Latn",
-    "es": "spa_Latn",       # Spanish
-    "spa": "spa_Latn",
+    "ca": "Catalan",
+    "cat": "Catalan",
+    "shi": "Tachelhit/Central Atlas Tamazight",
+    "ber": "Tachelhit/Central Atlas Tamazight",
+    "tam": "Standard Moroccan Tamazight",
+    "zgh": "Standard Moroccan Tamazight",
+    "ar": "Modern Standard Arabic",
+    "arb": "Modern Standard Arabic",
+    "en": "English",
+    "eng": "English",
+    "fr": "French",
+    "fra": "French",
+    "es": "Spanish",
+    "spa": "Spanish",
 }
 
-def translate_with_hf(text: str, src_lang: str = "cat_Latn", tgt_lang: str = "ber_Tfng") -> str:
+def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tachelhit/Central Atlas Tamazight") -> str:
     """
     Translate text using our Gradio Hugging Face Space.
     """
@@ -108,14 +108,23 @@ def translate_with_hf(text: str, src_lang: str = "cat_Latn", tgt_lang: str = "be
             # Use the official Gradio Client for robust communication
             # Remove /translate suffix if present as Client expects the base URL
             space_url = HUGGINGFACE_TRANSLATION_SPACE_URL.split('/translate')[0].rstrip('/')
-            print(f"[TRANSLATE] Connecting to Gradio Space: {space_url}")
             
-            client = Client(space_url)
+            # Extract just the repository ID if it's a full huggingface.co URL
+            client_id = space_url
+            if "huggingface.co/spaces/" in space_url:
+                client_id = space_url.split("huggingface.co/spaces/")[-1]
+                
+            print(f"[TRANSLATE] Connecting to Gradio Space: {client_id}")
+            
+            client = Client(client_id)
             # The app.py has fn=translate_text with inputs [text, src_lang, tgt_lang]
             result = client.predict(
                 text=text,
-                src_lang=src_lang,
-                tgt_lang=tgt_lang,
+                source_lang=src_lang,
+                target_lang=tgt_lang,
+                max_length=237,
+                num_beams=4,
+                repetition_penalty=1.0,
                 api_name="/predict"
             )
             
@@ -2204,13 +2213,17 @@ async def transcribe_audio(
     ]
 
     # Call HF Space
-    asr_space_url = os.getenv("HUGGINGFACE_ASR_SPACE_URL")
+    asr_space_url = os.getenv("HUGGINGFACE_ASR_SPACE_URL", "https://huggingface.co/spaces/Tamazight-NLP/ASR")
     if not asr_space_url:
         raise HTTPException(status_code=500, detail="HUGGINGFACE_ASR_SPACE_URL not configured in environment")
     
     try:
-        print(f"[API] Calling ASR Space at {asr_space_url}")
-        client = Client(asr_space_url)
+        client_id = asr_space_url
+        if "huggingface.co/spaces/" in asr_space_url:
+            client_id = asr_space_url.split("huggingface.co/spaces/")[-1]
+            
+        print(f"[API] Calling ASR Space at {client_id}")
+        client = Client(client_id)
         
         # For Tamazight-NLP/ASR, we use /predict which takes the audio URL using handle_file
         # Note: If it's a URL, handle_file might work or we can pass the URL string directly if the space accepts it
@@ -2268,7 +2281,10 @@ class ASRService:
             return rough
         except Exception as e:
             try:
-                client = Client(asr_space_url)
+                client_id = asr_space_url
+                if "huggingface.co/spaces/" in asr_space_url:
+                    client_id = asr_space_url.split("huggingface.co/spaces/")[-1]
+                client = Client(client_id)
                 rough = client.predict(
                     audio_url,
                     api_name="/predict"
