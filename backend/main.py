@@ -2019,7 +2019,7 @@ def debug_spaces():
     return {
         "huggingface_space_url": os.getenv("HUGGINGFACE_SPACE_URL"),
         "huggingface_image_space_url": os.getenv("HUGGINGFACE_IMAGE_SPACE_URL"),
-        "huggingface_asr_space_url": os.getenv("HUGGINGFACE_ASR_SPACE_URL"),
+        "huggingface_asr_space_url": os.getenv("HUGGINGFACE_ASR_SPACE_URL", "https://huggingface.co/spaces/Tamazight-NLP/ASR"),
         "huggingface_translation_space_url": HUGGINGFACE_TRANSLATION_SPACE_URL,
         "message": "These are the configured Hugging Face Spaces"
     }
@@ -2033,7 +2033,7 @@ async def debug_spaces_status():
     spaces = {
         "huggingface_space_url": os.getenv("HUGGINGFACE_SPACE_URL"),
         "huggingface_image_space_url": os.getenv("HUGGINGFACE_IMAGE_SPACE_URL"),
-        "huggingface_asr_space_url": os.getenv("HUGGINGFACE_ASR_SPACE_URL"),
+        "huggingface_asr_space_url": os.getenv("HUGGINGFACE_ASR_SPACE_URL", "https://huggingface.co/spaces/Tamazight-NLP/ASR"),
         "huggingface_translation_space_url": HUGGINGFACE_TRANSLATION_SPACE_URL,
     }
     results = {}
