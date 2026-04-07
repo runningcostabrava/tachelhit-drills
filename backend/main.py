@@ -116,15 +116,16 @@ def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tac
                 
             print(f"[TRANSLATE] Connecting to Gradio Space: {client_id}")
             
-            client = Client(client_id)
+            api_token = os.getenv("HUGGINGFACE_API_KEY")
+            client = Client(client_id, hf_token=api_token)
             # The app.py has fn=translate_text with inputs [text, src_lang, tgt_lang]
             result = client.predict(
-                text=text,
-                source_lang=src_lang,
-                target_lang=tgt_lang,
-                max_length=237,
-                num_beams=4,
-                repetition_penalty=1.0,
+                text,
+                src_lang,
+                tgt_lang,
+                237,
+                4,
+                1.0,
                 api_name="/predict"
             )
             
@@ -134,7 +135,10 @@ def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tac
             return translation
             
         except Exception as e:
-            print(f"[TRANSLATE] Gradio Space error: {e}. Falling back to Inference API.")
+            print(f"[TRANSLATE] Gradio Space error details: {e}")
+            import traceback
+            traceback.print_exc()
+            print(f"[TRANSLATE] Falling back to Inference API.")
 
     # Fallback to Inference API
     api_token = os.getenv("HUGGINGFACE_API_KEY")
@@ -143,26 +147,44 @@ def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tac
         return text
 
     try:
+        # Map friendly names to NLLB BCP-47 codes
+        nllb_code_map = {
+            "Catalan": "cat_Latn",
+            "Tachelhit/Central Atlas Tamazight": "zgh_Tfng",
+            "Standard Moroccan Tamazight": "zgh_Tfng",
+            "Modern Standard Arabic": "arb_Arab",
+            "English": "eng_Latn",
+            "French": "fra_Latn",
+            "Spanish": "spa_Latn",
+        }
+        nllb_src = nllb_code_map.get(src_lang, src_lang)
+        nllb_tgt = nllb_code_map.get(tgt_lang, tgt_lang)
+
         # Using a reliable fallback model if the custom one is down
         model_id = "facebook/nllb-200-distilled-600M"
         api_url = f"https://api-inference.huggingface.co/models/{model_id}"
         headers = {"Authorization": f"Bearer {api_token}"}
         payload = {
             "inputs": text,
-            "parameters": {"src_lang": src_lang, "tgt_lang": tgt_lang}
+            "parameters": {"src_lang": nllb_src, "tgt_lang": nllb_tgt}
         }
         
+        print(f"[TRANSLATE] Calling Inference API: {api_url}")
         response = requests.post(api_url, headers=headers, json=payload, timeout=20)
         # NLLB inference API can be slow or return 503 while loading
         if response.status_code == 200:
             result = response.json()
             if isinstance(result, list) and len(result) > 0:
-                return result[0].get("translation_text", text)
+                translated = result[0].get("translation_text", text)
+                print(f"[TRANSLATE] Inference API Success: {translated}")
+                return translated
         
-        print(f"[TRANSLATE] Inference API returned {response.status_code}. Returning original.")
+        print(f"[TRANSLATE] Inference API returned {response.status_code}: {response.text}. Returning original.")
         return text
     except Exception as e:
         print(f"[TRANSLATE] Fallback error: {e}")
+        import traceback
+        traceback.print_exc()
         return text
 
 # Config
@@ -486,13 +508,18 @@ async def translate_text_endpoint(request: TranslateRequest):
     """
     Translate text between supported languages (Catalan, Tachelhit, Arabic, etc.)
     """
+    print(f"[TRANSLATE ENDPOINT] Received request: text='{request.text}', source_lang='{request.source_lang}', target_lang='{request.target_lang}'")
     src_code = LANGUAGE_CODE_MAP.get(request.source_lang, request.source_lang)
     tgt_code = LANGUAGE_CODE_MAP.get(request.target_lang, request.target_lang)
+    print(f"[TRANSLATE ENDPOINT] Mapped codes: src_code='{src_code}', tgt_code='{tgt_code}'")
     try:
         translation = await asyncio.to_thread(translate_with_hf, request.text, src_code, tgt_code)
+        print(f"[TRANSLATE ENDPOINT] Result translation: '{translation}'")
         return TranslateResponse(translated_text=translation)
     except Exception as e:
         print(f"[TRANSLATE ENDPOINT ERROR] {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Translation failed: {str(e)}")
 
 def get_db():
