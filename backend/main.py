@@ -33,8 +33,9 @@ cloudinary.config(
 )
 
 from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel  # ← Alias for ORM models
-from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort, VideoProcessingJobCreate, VideoProcessingJob, VideoSegmentCreate, VideoSegment, TranscribeRequest, TranscribeResponse, TranslateRequest, TranslateResponse, DrillPairInfo, GlossaryItem, GlossaryItemCreate  # ← Pydantic schemas
+from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort, VideoProcessingJobCreate, VideoProcessingJob, VideoSegmentCreate, VideoSegment, TranscribeRequest, TranscribeResponse, TranslateRequest, TranslateResponse, DrillPairInfo, GlossaryItem, GlossaryItemCreate, SrtImportRequest, SrtImportResponse, SrtSegment  # ← Pydantic schemas
 from correction_service import get_correction_service
+from srt_parser import parse_srt_content, create_youtube_url_with_timestamp
 
 def normalize_media_url(url: str) -> str:
     """
@@ -2409,6 +2410,103 @@ async def trim_drill_audio(
         print(f"[TRIM] Error: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+# ===================== SRT IMPORT =====================
+@app.post("/srt/import", response_model=SrtImportResponse)
+def import_srt_content(request: SrtImportRequest, db: Session = Depends(get_db)):
+    """
+    Import SRT subtitle content and create drills for each segment.
+    Each drill will have a video URL with timestamp for the specific segment.
+    """
+    try:
+        print(f"[SRT IMPORT] Importing SRT content for video: {request.video_url}")
+        print(f"[SRT IMPORT] SRT content length: {len(request.srt_content)} characters")
+        
+        # Parse SRT content
+        segments = parse_srt_content(request.srt_content)
+        print(f"[SRT IMPORT] Parsed {len(segments)} segments")
+        
+        drill_ids = []
+        created_drills = []
+        
+        # Create a drill for each segment
+        for i, segment in enumerate(segments):
+            try:
+                # Create YouTube URL with timestamp
+                youtube_url = create_youtube_url_with_timestamp(request.video_url, segment["start_time"])
+                
+                # Create drill with the segment text as Catalan text
+                # The SRT content is in Catalan (from the YouTube Catalan translator)
+                db_drill = DrillModel(
+                    text_catalan=segment["text"],
+                    tag=request.tag,
+                    author=request.author,
+                    video_url=youtube_url
+                )
+                
+                db.add(db_drill)
+                db.flush()  # Get the ID without committing
+                
+                # Generate Arabic translation
+                try:
+                    db_drill.text_arabic = translator_ca_to_ar.translate(segment["text"])
+                except Exception as trans_e:
+                    print(f"[SRT IMPORT] Translation error for segment {i+1}: {trans_e}")
+                
+                # Generate TTS audio
+                try:
+                    tts_url = generate_catalan_tts(segment["text"], db_drill.id)
+                    db_drill.audio_tts_url = tts_url
+                except Exception as tts_e:
+                    print(f"[SRT IMPORT] TTS error for segment {i+1}: {tts_e}")
+                
+                drill_ids.append(db_drill.id)
+                created_drills.append(db_drill)
+                
+                print(f"[SRT IMPORT] Created drill {db_drill.id} for segment {i+1}: '{segment['text'][:50]}...'")
+                
+            except Exception as segment_e:
+                print(f"[SRT IMPORT] Error creating drill for segment {i+1}: {segment_e}")
+                continue
+        
+        # Commit all drills
+        db.commit()
+        
+        # Create test if requested
+        test_id = None
+        if request.create_test and drill_ids:
+            try:
+                test_title = request.test_title or f"SRT Import - {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}"
+                test_description = request.test_description or f"Test created from SRT import with {len(drill_ids)} segments"
+                
+                db_test = TestModel(
+                    title=test_title,
+                    description=test_description,
+                    drill_ids=",".join(str(did) for did in drill_ids)
+                )
+                db.add(db_test)
+                db.commit()
+                db.refresh(db_test)
+                test_id = db_test.id
+                
+                print(f"[SRT IMPORT] Created test {test_id} with {len(drill_ids)} drills")
+            except Exception as test_e:
+                print(f"[SRT IMPORT] Error creating test: {test_e}")
+        
+        return SrtImportResponse(
+            success=True,
+            message=f"Successfully imported {len(drill_ids)} segments from SRT",
+            drill_count=len(drill_ids),
+            drill_ids=drill_ids,
+            test_id=test_id,
+            segments=segments
+        )
+        
+    except Exception as e:
+        db.rollback()
+        print(f"[SRT IMPORT] Error: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"SRT import failed: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

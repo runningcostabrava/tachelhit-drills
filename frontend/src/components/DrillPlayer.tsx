@@ -28,6 +28,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   const [audioProgress, setAudioProgress] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const [imageUrl, setImageUrl] = useState<string>('');
+  const [showVideo, setShowVideo] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
   const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -458,6 +459,28 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             🎙️
           </button>
 
+          {/* Video Play Button */}
+          {currentDrill.video_url && (
+            <button
+              onClick={() => setShowVideo(true)}
+              style={{
+                ...iconButtonStyle,
+                background: '#FF6B6B',
+                color: 'white',
+                borderRadius: isMobile ? '12px' : '8px',
+                width: isMobile ? '60px' : '44px',
+                height: isMobile ? '60px' : '44px',
+                fontSize: isMobile ? '24px' : '18px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              title="Play video"
+            >
+              🎥
+            </button>
+          )}
+
           {/* Next Button */}
           <button
             onClick={goToNextDrill}
@@ -557,6 +580,114 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
           </div>
         )}
       </div>
+
+      {/* Video Player Modal */}
+      {showVideo && currentDrill.video_url && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            zIndex: 2000,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          onClick={() => setShowVideo(false)}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '800px',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setShowVideo(false)}
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: 'none',
+                color: 'white',
+                fontSize: '24px',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2001
+              }}
+            >
+              ✕
+            </button>
+
+            {/* Video player */}
+            <div style={{ width: '100%', aspectRatio: '16/9', position: 'relative' }}>
+              {currentDrill.video_url.includes('youtube.com') || currentDrill.video_url.includes('youtu.be') ? (
+                // YouTube embed
+                <iframe
+                  src={currentDrill.video_url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    border: 'none',
+                    borderRadius: '8px'
+                  }}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  title="YouTube video player"
+                />
+              ) : (
+                // Regular video player for non-YouTube URLs
+                <video
+                  src={getMediaUrl(currentDrill.video_url)}
+                  controls
+                  autoPlay
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    borderRadius: '8px'
+                  }}
+                />
+              )}
+            </div>
+
+            {/* Video caption */}
+            <div style={{
+              marginTop: '16px',
+              padding: '12px',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: '8px',
+              maxWidth: '600px',
+              textAlign: 'center'
+            }}>
+              <div style={{ color: 'white', fontSize: '16px', fontWeight: 'bold', marginBottom: '4px' }}>
+                {currentDrill.text_tachelhit || currentDrill.text_catalan || 'Video'}
+              </div>
+              {currentDrill.text_catalan && (
+                <div style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '14px' }}>
+                  {currentDrill.text_catalan}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

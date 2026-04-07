@@ -1,0 +1,24 @@
+warning: in the working copy of 'backend/main.py', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/backend/main.py b/backend/main.py[m
+[1mindex b792239..a3f440a 100644[m
+[1m--- a/backend/main.py[m
+[1m+++ b/backend/main.py[m
+[36m@@ -486,16 +486,8 @@[m [masync def translate_text_endpoint(request: TranslateRequest):[m
+     """[m
+     Translate text between supported languages (Catalan, Tachelhit, Arabic, etc.)[m
+     """[m
+[31m-    code_map = {[m
+[31m-        "ca": "cat_Latn", "cat": "cat_Latn",[m
+[31m-        "shi": "ber_Tfng", "ber": "ber_Tfng", "tam": "ber_Tfng", "zgh": "ber_Tfng",[m
+[31m-        "ar": "arb_Arab", "arb": "arb_Arab",[m
+[31m-        "en": "eng_Latn", "eng": "eng_Latn",[m
+[31m-        "fr": "fra_Latn", "fra": "fra_Latn",[m
+[31m-        "es": "spa_Latn", "spa": "spa_Latn",[m
+[31m-    }[m
+[31m-    src_code = code_map.get(request.source_lang, request.source_lang)[m
+[31m-    tgt_code = code_map.get(request.target_lang, request.target_lang)[m
+[32m+[m[32m    src_code = LANGUAGE_CODE_MAP.get(request.source_lang, request.source_lang)[m
+[32m+[m[32m    tgt_code = LANGUAGE_CODE_MAP.get(request.target_lang, request.target_lang)[m
+     try:[m
+         translation = await asyncio.to_thread(translate_with_hf, request.text, src_code, tgt_code)[m
+         return TranslateResponse(translated_text=translation)[m

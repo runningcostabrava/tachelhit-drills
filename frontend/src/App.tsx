@@ -6,6 +6,7 @@ import DrillPlayer from './components/DrillPlayer';
 import PublicTestView from './components/PublicTestView';
 import MediaRecorderTest from './components/MediaRecorderTest';
 import VideoDrillCreator from './components/VideoDrillCreator';
+import SrtImport from './components/SrtImport';
 import './App.css';
 
 // Placeholder component for /demo-videos
@@ -28,6 +29,7 @@ function App() {
         <Route path="/tests/:testId" element={<PublicTestView />} />
         <Route path="/shorts" element={<YouTubeShorts onBackToDrills={() => navigate('/')} />} />
         <Route path="/video-creator" element={<VideoDrillCreator />} />
+        <Route path="/srt-import" element={<SrtImport />} />
         <Route path="/player" element={
           <DrillPlayer
             drills={[]} // Needs dynamic data

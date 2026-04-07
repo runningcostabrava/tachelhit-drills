@@ -622,6 +622,25 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
                     >
                       🎬 Create from Video (YouTube)
                     </button>
+                    <button
+                      onClick={() => {
+                        navigate('/srt-import');
+                        setShowNewDrillOptions(false);
+                      }}
+                      style={{
+                        padding: '10px 15px',
+                        fontSize: '15px',
+                        background: 'none',
+                        border: 'none',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        color: '#333',
+                        fontWeight: 500,
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      📝 Import from SRT Subtitles
+                    </button>
                   </div>
                 )}
               </div>

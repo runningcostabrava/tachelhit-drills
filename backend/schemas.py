@@ -235,3 +235,29 @@ class GlossaryItem(GlossaryItemBase):
 
     class Config:
         from_attributes = True
+
+# SRT Import Schemas
+class SrtSegment(BaseModel):
+    index: int
+    start_time: float
+    end_time: float
+    start_timestamp: str
+    end_timestamp: str
+    text: str
+
+class SrtImportRequest(BaseModel):
+    video_url: str
+    srt_content: str
+    tag: Optional[str] = None
+    author: Optional[str] = None
+    create_test: bool = False
+    test_title: Optional[str] = None
+    test_description: Optional[str] = None
+
+class SrtImportResponse(BaseModel):
+    success: bool
+    message: str
+    drill_count: int
+    drill_ids: List[int]
+    test_id: Optional[int] = None
+    segments: List[SrtSegment]
