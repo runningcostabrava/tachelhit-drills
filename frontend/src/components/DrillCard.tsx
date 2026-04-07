@@ -39,7 +39,6 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
   const [playerTime, setPlayerTime] = useState(0);
   const [playerDuration, setPlayerDuration] = useState(0);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const [selectedAsrModel, setSelectedAsrModel] = useState('openai/whisper-base'); // New state for model selection
   const [isMobile, setIsMobile] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -125,10 +124,9 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
     setIsTranscribing(true);
     setTranscriptionResult(null);
     try {
-      console.log('🪄 [TRANSCR] Requesting transcription for:', currentUrl, 'with model:', selectedAsrModel);
+      console.log('🪄 [TRANSCR] Requesting transcription for:', currentUrl);
       const response = await axios.post(`${API_BASE}/transcribe/`, {
-        audio_url: currentUrl,
-        model_id: selectedAsrModel // Pass the selected model ID
+        audio_url: currentUrl
       });
       const { corrected_transcription, rough_transcription, similarity_score } = response.data;
       
