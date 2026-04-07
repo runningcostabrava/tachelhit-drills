@@ -138,10 +138,16 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
       });
 
       if (corrected_transcription) {
-        setEditedDrill(prev => ({ ...prev, text_tachelhit: corrected_transcription }));
-        // Also auto-save it
-        await axios.put(`${API_BASE}/drills/${drill.id}`, { text_tachelhit: corrected_transcription });
-        onUpdate();
+        setEditedDrill(prev => {
+          const newText = prev.text_tachelhit ? `${prev.text_tachelhit} (${corrected_transcription})` : corrected_transcription;
+          
+          // Also auto-save it
+          axios.put(`${API_BASE}/drills/${drill.id}`, { text_tachelhit: newText })
+            .then(() => onUpdate())
+            .catch(console.error);
+            
+          return { ...prev, text_tachelhit: newText };
+        });
       }
     } catch (error) {
       console.error('Transcription failed:', error);
@@ -659,7 +665,8 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                           source_lang: 'ca',
                           target_lang: 'shi'
                         });
-                        setEditedDrill({ ...editedDrill, text_tachelhit: res.data.translated_text });
+                        const newText = editedDrill.text_tachelhit ? `${editedDrill.text_tachelhit} (${res.data.translated_text})` : res.data.translated_text;
+                        setEditedDrill({ ...editedDrill, text_tachelhit: newText });
                       } catch (err) {
                         console.error('Translation to Tachelhit failed:', err);
                         alert('Translation failed. Please check your connection.');
@@ -817,7 +824,8 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                                             source_lang: 'shi',
                                             target_lang: 'ca'
                                           });
-                                          setEditedDrill({ ...editedDrill, text_catalan: res.data.translated_text });
+                                          const newText = editedDrill.text_catalan ? `${editedDrill.text_catalan} (${res.data.translated_text})` : res.data.translated_text;
+                                          setEditedDrill({ ...editedDrill, text_catalan: newText });
                                         } catch (err) {
                                           console.error('Translation to Catalan failed:', err);
                                           alert('Translation failed. Please check your connection.');
