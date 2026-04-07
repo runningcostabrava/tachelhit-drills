@@ -162,7 +162,7 @@ def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tac
 
         # Using a reliable fallback model if the custom one is down
         model_id = "facebook/nllb-200-distilled-600M"
-        api_url = f"https://router.huggingface.co/models/{model_id}"
+        api_url = f"https://router.huggingface.co/hf-inference/models/{model_id}"
         headers = {"Authorization": f"Bearer {api_token}"}
         payload = {
             "inputs": text,
