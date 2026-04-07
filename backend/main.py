@@ -2208,52 +2208,47 @@ async def transcribe_audio(
     if not asr_space_url:
         raise HTTPException(status_code=500, detail="HUGGINGFACE_ASR_SPACE_URL not configured in environment")
     
-    # Robust URL joining
-    asr_endpoint = asr_space_url.rstrip("/") + "/transcribe"
-
     try:
-        print(f"[API] Calling ASR Space with {len(dataset_pairs)} reference phrases and {len(glossary_data)} glossary items")
-        model_id = request.model_id if request.model_id else "SoufianeDahimi/whisper-small-tamazight"
-        payload = {
-            "audio_url": audio_url,
-            "dataset": dataset_pairs,
-            "glossary": glossary_data,
-            "model_id": model_id
-        }
-            
-        resp = requests.post(asr_endpoint, json=payload, timeout=600)
+        print(f"[API] Calling ASR Space at {asr_space_url}")
+        client = Client(asr_space_url)
         
-        if resp.status_code != 200:
-            error_text = resp.text
-            print(f"[ASR_SPACE ERROR] Status {resp.status_code}: {error_text}")
-            raise HTTPException(status_code=resp.status_code, detail=f"ASR Space Error ({resp.status_code}): {error_text}")
-
-        data = resp.json()
+        # For Tamazight-NLP/ASR, we use /predict which takes the audio URL using handle_file
+        # Note: If it's a URL, handle_file might work or we can pass the URL string directly if the space accepts it
+        # Actually, gradio_client allows passing the URL string for Audio inputs.
         
-        # Handle the new segment-based response if returned
-        rough = data.get("rough_transcription", "")
-        corrected = data.get("corrected_transcription", "")
-        score = data.get("similarity_score", 0.0)
-
-        # Fallback: if the Space returns 'segments' instead of rough/corrected (generic mode)
-        if not rough and "segments" in data:
-            segments = data["segments"]
-            rough = " ".join([s["text"] for s in segments])
-            # For generic segments, we don't have a corrected version or score yet
-            corrected = rough 
-            score = 1.0
+        rough = await asyncio.to_thread(
+            client.predict,
+            handle_file(audio_url),
+            api_name="/predict"
+        )
+        
+        # Since this space only returns the transcription string, we set rough and corrected to the same
+        corrected = rough
+        score = 1.0
 
         return TranscribeResponse(
             rough_transcription=rough,
             corrected_transcription=corrected,
             similarity_score=score
         )
-    except requests.exceptions.RequestException as e:
-        print(f"[ASR_SPACE CONNECTION ERROR] {str(e)}")
-        raise HTTPException(status_code=503, detail=f"Could not connect to ASR Space at {asr_endpoint}. Is it awake?")
     except Exception as e:
-        print(f"[ASR_SPACE UNKNOWN ERROR] {type(e).__name__}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+        print(f"[ASR_SPACE ERROR] {type(e).__name__}: {str(e)}")
+        # Try a fallback if handle_file fails
+        try:
+            client = Client(asr_space_url)
+            rough = await asyncio.to_thread(
+                client.predict,
+                audio_url,
+                api_name="/predict"
+            )
+            return TranscribeResponse(
+                rough_transcription=rough,
+                corrected_transcription=rough,
+                similarity_score=1.0
+            )
+        except Exception as fallback_e:
+            print(f"[ASR_SPACE FALLBACK ERROR] {type(fallback_e).__name__}: {str(fallback_e)}")
+            raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
 
 class ASRService:
     def transcribe(self, audio_url: str) -> str:
@@ -2263,23 +2258,24 @@ class ASRService:
         asr_space_url = os.getenv("HUGGINGFACE_ASR_SPACE_URL")
         if not asr_space_url:
             raise ValueError("HUGGINGFACE_ASR_SPACE_URL not configured")
-        asr_endpoint = asr_space_url.rstrip("/") + "/transcribe"
-        payload = {
-            "audio_url": audio_url,
-            "dataset": [],
-            "glossary": [],
-            "model_id": "SoufianeDahimi/whisper-small-tamazight"
-        }
+        
         try:
-            resp = requests.post(asr_endpoint, json=payload, timeout=600)
-            if resp.status_code != 200:
-                error_text = resp.text
-                raise Exception(f"ASR Space Error ({resp.status_code}): {error_text}")
-            data = resp.json()
-            rough = data.get("rough_transcription", "")
+            client = Client(asr_space_url)
+            rough = client.predict(
+                handle_file(audio_url),
+                api_name="/predict"
+            )
             return rough
         except Exception as e:
-            raise Exception(f"Transcription request failed: {str(e)}")
+            try:
+                client = Client(asr_space_url)
+                rough = client.predict(
+                    audio_url,
+                    api_name="/predict"
+                )
+                return rough
+            except Exception as fallback_e:
+                raise Exception(f"Transcription request failed: {str(fallback_e)}")
 
 def get_asr_service():
     return ASRService()
