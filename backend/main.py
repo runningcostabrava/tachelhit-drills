@@ -1437,10 +1437,14 @@ async def process_video_analysis_task(job_id: int, video_path: str, tmp_dir: str
         asr_endpoint = asr_space_url.rstrip("/") + "/transcribe"
         print(f"[WORKER] Proxying video file for Job {job_id} to ASR Space...")
         
+        hf_token = os.getenv("HUGGINGFACE_API_KEY")
+        headers = {"Authorization": f"Bearer {hf_token}"} if hf_token else {}
+        
         with open(video_path, "rb") as f:
             resp = requests.post(
                 asr_endpoint, 
                 files={"audio_file": (os.path.basename(video_path), f, "video/mp4")},
+                headers=headers,
                 timeout=600
             )
         
@@ -2242,7 +2246,8 @@ async def transcribe_audio(
             client_id = asr_space_url.split("huggingface.co/spaces/")[-1]
             
         print(f"[API] Calling ASR Space at {client_id}")
-        client = Client(client_id)
+        hf_token = os.getenv("HUGGINGFACE_API_KEY")
+        client = Client(client_id, token=hf_token)
         
         # For Tamazight-NLP/ASR, we use /predict which takes the audio URL using handle_file
         # Note: If it's a URL, handle_file might work or we can pass the URL string directly if the space accepts it
@@ -2291,8 +2296,9 @@ class ASRService:
         if not asr_space_url:
             raise ValueError("HUGGINGFACE_ASR_SPACE_URL not configured")
         
+        hf_token = os.getenv("HUGGINGFACE_API_KEY")
         try:
-            client = Client(asr_space_url)
+            client = Client(asr_space_url, token=hf_token)
             rough = client.predict(
                 handle_file(audio_url),
                 api_name="/predict"
@@ -2303,7 +2309,7 @@ class ASRService:
                 client_id = asr_space_url
                 if "huggingface.co/spaces/" in asr_space_url:
                     client_id = asr_space_url.split("huggingface.co/spaces/")[-1]
-                client = Client(client_id)
+                client = Client(client_id, token=hf_token)
                 rough = client.predict(
                     audio_url,
                     api_name="/predict"
