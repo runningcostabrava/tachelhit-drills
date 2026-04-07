@@ -109,17 +109,18 @@ const TranslateCellRenderer = (props: any) => {
     }
 
     setTranslating(true);
-    try {
-      const res = await axios.post(`${API_BASE}/translate`, {
-        text: text,
-        source_lang: source,
-        target_lang: target
-      });
-      const field = target === 'shi' ? 'text_tachelhit' : 'text_catalan';
-      api.applyTransaction({ update: [{ ...data, [field]: res.data.translated_text }] });
-      // Also save to backend
-      await axios.put(`${API_BASE}/drills/${data.id}`, { [field]: res.data.translated_text });
-    } catch (err) {
+      try {
+        const res = await axios.post(`${API_BASE}/translate`, {
+          text: text,
+          source_lang: source,
+          target_lang: target
+        });
+        const field = target === 'shi' ? 'text_tachelhit' : 'text_catalan';
+        const newText = data[field] ? `${data[field]} (${res.data.translated_text})` : res.data.translated_text;
+        api.applyTransaction({ update: [{ ...data, [field]: newText }] });
+        // Also save to backend
+        await axios.put(`${API_BASE}/drills/${data.id}`, { [field]: newText });
+      } catch (err) {
       console.error('Translation failed:', err);
       alert('Translation failed.');
     } finally {

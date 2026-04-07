@@ -755,22 +755,6 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                                       
                                       {drill.audio_url && (
                                         <>
-                                            <select
-                                                value={selectedAsrModel}
-                                                onChange={(e) => setSelectedAsrModel(e.target.value)}
-                                                style={{
-                                                    padding: '4px 8px',
-                                                    borderRadius: '6px',
-                                                    border: '1px solid #ccc',
-                                                    backgroundColor: '#fff',
-                                                    fontSize: '11px',
-                                                    fontWeight: 600,
-                                                    cursor: 'pointer',
-                                                }}
-                                            >
-                                                <option value="openai/whisper-base">Whisper Base</option>
-                                                <option value="SoufianeDahimi/whisper-small-tamazight">Tamazight Small</option>
-                                            </select>
                                             <button
                                                 onClick={handleAutoTranscribe}
                                                 disabled={isTranscribing}
