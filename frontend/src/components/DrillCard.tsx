@@ -30,7 +30,10 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
   const [editedDrill, setEditedDrill] = useState(drill);
   const [recording, setRecording] = useState<'audio' | 'video' | null>(null);
   const [showVideo, setShowVideo] = useState(false);
+  const [playing, setPlaying] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user');
+  const ytPlayerRef = useRef<any>(null);
+  const ytPlayerReadyRef = useRef(false);
   const [permissionDenied, setPermissionDenied] = useState<{audio: boolean; video: boolean}>({audio: false, video: false});
   const [isTrimming, setIsTrimming] = useState(false);
   const [trimRange, setTrimRange] = useState({ start: 0, end: 5 });
@@ -458,6 +461,99 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
       console.log('🛑 [DEBUG] Recording state set to null');
     } else {
       console.log('🛑 [DEBUG] No active MediaRecorder found');
+    }
+  };
+
+  const openPlayback = () => {
+    setShowVideo(true);
+    setPlaying(false);
+    if (isYouTubeUrl(drill.video_url)) {
+      setTimeout(() => {
+        initializeYouTubePlayer();
+      }, 100);
+    }
+  };
+
+  const closePlayback = () => {
+    if (ytPlayerRef.current) {
+      try { ytPlayerRef.current.pauseVideo(); } catch (e) {}
+    }
+    setShowVideo(false);
+    setPlaying(false);
+  };
+
+  const initializeYouTubePlayer = () => {
+    const videoId = (window as any).getYouTubeVideoId?.(drill.video_url);
+    if (!videoId) return;
+
+    if (!(window as any).YT || !(window as any).YT.Player) {
+      const tag = document.createElement('script');
+      tag.src = "https://www.youtube.com/iframe_api";
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+      
+      (window as any).onYouTubeIframeAPIReady = () => {
+        createYTPlayer(videoId);
+      };
+    } else {
+      createYTPlayer(videoId);
+    }
+  };
+
+  const createYTPlayer = (videoId: string) => {
+    if (ytPlayerRef.current) {
+      try { ytPlayerRef.current.destroy(); } catch (e) {}
+    }
+
+    ytPlayerRef.current = new (window as any).YT.Player(`yt-player-card-${drill.id}`, {
+      videoId: videoId,
+      playerVars: {
+        autoplay: 1,
+        controls: 1,
+        start: Math.floor((drill as any).video_start_time || 0),
+        end: Math.ceil((drill as any).video_end_time || 0)
+      },
+      events: {
+        onReady: () => {
+          ytPlayerReadyRef.current = true;
+          setPlaying(true);
+        },
+        onStateChange: (event: any) => {
+          if (event.data === (window as any).YT.PlayerState.ENDED) {
+            event.target.seekTo((drill as any).video_start_time || 0);
+            event.target.playVideo();
+          }
+          if (event.data === (window as any).YT.PlayerState.PLAYING) setPlaying(true);
+          if (event.data === (window as any).YT.PlayerState.PAUSED) setPlaying(false);
+        }
+      }
+    });
+  };
+
+  const togglePlayPause = () => {
+    if (isYouTubeUrl(drill.video_url)) {
+      if (ytPlayerRef.current && ytPlayerReadyRef.current) {
+        if (playing) {
+          ytPlayerRef.current.pauseVideo();
+        } else {
+          ytPlayerRef.current.playVideo();
+        }
+      }
+    }
+  };
+
+  const goBack2Seconds = () => {
+    if (isYouTubeUrl(drill.video_url)) {
+      if (ytPlayerRef.current && ytPlayerReadyRef.current) {
+        const currentTime = ytPlayerRef.current.getCurrentTime();
+        const startTime = (drill as any).video_start_time || 0;
+        ytPlayerRef.current.seekTo(Math.max(startTime, currentTime - 2));
+      }
+    } else {
+      const video = document.querySelector(`#video-playback-${drill.id}`) as HTMLVideoElement;
+      if (video) {
+        video.currentTime = Math.max(0, video.currentTime - 2);
+      }
     }
   };
 
@@ -1193,7 +1289,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
           )}
           {drill.video_url && (
             <button
-              onClick={() => setShowVideo(true)}
+              onClick={openPlayback}
               style={{
                 flex: 1,
                 padding: isMobile ? '8px' : '10px',
@@ -1454,7 +1550,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
       {/* Video Playback Modal */}
       {showVideo && drill.video_url && (
         <div
-          onClick={() => setShowVideo(false)}
+          onClick={closePlayback}
           style={{
             position: 'fixed',
             top: 0,
@@ -1469,33 +1565,68 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
             padding: isMobile ? '10px' : '20px'
           }}
         >
-          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '800px' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '800px', background: 'white', padding: '20px', borderRadius: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0 }}>Video Playback</h3>
+              <button onClick={closePlayback} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+            </div>
+            
             {isYouTubeUrl(drill.video_url) ? (
-              <iframe
-                src={getYouTubeEmbedUrl(getMediaUrl(drill.video_url))}
+              <div
+                id={`yt-player-card-${drill.id}`}
                 style={{
                   width: '100%',
                   height: isMobile ? '300px' : '450px',
-                  border: 'none',
+                  backgroundColor: '#000',
                   borderRadius: '8px',
                   boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
                 }}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
               />
             ) : (
               <video
+                id={`video-playback-${drill.id}`}
                 autoPlay
                 src={getMediaUrl(drill.video_url)}
                 controls
                 style={{
                   width: '100%',
-                  maxHeight: '90vh',
+                  maxHeight: '70vh',
                   borderRadius: '8px',
                   boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
                 }}
               />
             )}
+            
+            <div style={{ marginTop: '15px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button
+                onClick={goBack2Seconds}
+                style={{
+                  padding: '10px 20px',
+                  background: '#2196F3',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 600
+                }}
+              >
+                ↺ 2s
+              </button>
+              <button
+                onClick={closePlayback}
+                style={{
+                  padding: '10px 20px',
+                  background: '#666',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 600
+                }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

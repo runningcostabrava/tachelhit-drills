@@ -157,6 +157,8 @@ const VideoCellRenderer = (props: any) => {
     const previewRef = useRef<HTMLVideoElement | null>(null);
     const playbackRef = useRef<HTMLVideoElement | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
+    const ytPlayerRef = useRef<any>(null);
+    const ytPlayerReadyRef = useRef(false);
 
 
     // Helper function to format time in seconds to MM:SS format
@@ -268,7 +270,8 @@ const VideoCellRenderer = (props: any) => {
         // Give the DOM time to render before trying to play
         setTimeout(() => {
             if (isYT) {
-                console.log('📺 YouTube video detected, using iframe');
+                console.log('📺 YouTube video detected, initializing API');
+                initializeYouTubePlayer();
             } else if (playbackRef.current) {
                 console.log('✅ Playback ref exists after timeout');
                 console.log('📺 Video element src:', playbackRef.current.src);
@@ -278,26 +281,95 @@ const VideoCellRenderer = (props: any) => {
         }, 100);
     };
 
+    const initializeYouTubePlayer = () => {
+        const videoId = (window as any).getYouTubeVideoId?.(value);
+        if (!videoId) return;
+
+        if (!(window as any).YT || !(window as any).YT.Player) {
+            const tag = document.createElement('script');
+            tag.src = "https://www.youtube.com/iframe_api";
+            const firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+            
+            (window as any).onYouTubeIframeAPIReady = () => {
+                createYTPlayer(videoId);
+            };
+        } else {
+            createYTPlayer(videoId);
+        }
+    };
+
+    const createYTPlayer = (videoId: string) => {
+        if (ytPlayerRef.current) {
+            try { ytPlayerRef.current.destroy(); } catch (e) {}
+        }
+
+        ytPlayerRef.current = new (window as any).YT.Player(`yt-player-${data.id}`, {
+            videoId: videoId,
+            playerVars: {
+                autoplay: 1,
+                controls: 1,
+                start: Math.floor(data.video_start_time || 0),
+                end: Math.ceil(data.video_end_time || 0)
+            },
+            events: {
+                onReady: () => {
+                    ytPlayerReadyRef.current = true;
+                    setPlaying(true);
+                },
+                onStateChange: (event: any) => {
+                    if (event.data === (window as any).YT.PlayerState.ENDED) {
+                        event.target.seekTo(data.video_start_time || 0);
+                        event.target.playVideo();
+                    }
+                    if (event.data === (window as any).YT.PlayerState.PLAYING) setPlaying(true);
+                    if (event.data === (window as any).YT.PlayerState.PAUSED) setPlaying(false);
+                }
+            }
+        });
+    };
+
     const closePlayback = () => {
         console.log('✖️ Closing playback');
         if (playbackRef.current && !isYouTubeUrl(value)) {
             playbackRef.current.pause();
+        }
+        if (ytPlayerRef.current) {
+            try { ytPlayerRef.current.pauseVideo(); } catch (e) {}
         }
         setShowPlayback(false);
         setPlaying(false);
     };
 
     const togglePlayPause = () => {
-        if (playbackRef.current) {
+        if (isYouTubeUrl(value)) {
+            if (ytPlayerRef.current && ytPlayerReadyRef.current) {
+                if (playing) {
+                    ytPlayerRef.current.pauseVideo();
+                } else {
+                    ytPlayerRef.current.playVideo();
+                }
+            }
+        } else if (playbackRef.current) {
             if (playing) {
-                console.log('⏸ Pausing video');
                 playbackRef.current.pause();
                 setPlaying(false);
             } else {
-                console.log('▶️ Playing video');
                 playbackRef.current.play();
                 setPlaying(true);
             }
+        }
+    };
+
+    const goBack2Seconds = () => {
+        if (isYouTubeUrl(value)) {
+            if (ytPlayerRef.current && ytPlayerReadyRef.current) {
+                const currentTime = ytPlayerRef.current.getCurrentTime();
+                const startTime = data.video_start_time || 0;
+                ytPlayerRef.current.seekTo(Math.max(startTime, currentTime - 2));
+            }
+        } else if (playbackRef.current) {
+            playbackRef.current.currentTime = Math.max(0, playbackRef.current.currentTime - 2);
         }
     };
 
@@ -423,9 +495,9 @@ const VideoCellRenderer = (props: any) => {
                 {/* Video container with subtitle overlay */}
                 <div style={{ position: 'relative', width: '800px', maxWidth: '90vw' }}>
                     {isYouTubeUrl(value) ? (
-                        // YouTube embed
-                        <iframe
-                            src={getYouTubeEmbedUrl(getMediaUrl(value))}
+                        // YouTube Player
+                        <div
+                            id={`yt-player-${data.id}`}
                             style={{
                                 width: '100%',
                                 height: '600px',
@@ -435,8 +507,6 @@ const VideoCellRenderer = (props: any) => {
                                 display: 'block',
                                 border: 'none'
                             }}
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
                         />
                     ) : (
                         // Regular video
@@ -530,23 +600,37 @@ const VideoCellRenderer = (props: any) => {
                 </div>
                 
                 <div style={{ marginTop: '15px', textAlign: 'center', display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                    {!isYouTubeUrl(value) && (
-                        <button
-                            onClick={togglePlayPause}
-                            style={{
-                                padding: '10px 24px',
-                                background: '#4CAF50',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                fontSize: '15px',
-                                fontWeight: 600
-                            }}
-                        >
-                            {playing ? '⏸ Pause' : '▶ Play'}
-                        </button>
-                    )}
+                    <button
+                        onClick={goBack2Seconds}
+                        style={{
+                            padding: '10px 24px',
+                            background: '#2196F3',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontSize: '15px',
+                            fontWeight: 600
+                        }}
+                        title="Go back 2 seconds"
+                    >
+                        ↺ 2s
+                    </button>
+                    <button
+                        onClick={togglePlayPause}
+                        style={{
+                            padding: '10px 24px',
+                            background: '#4CAF50',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontSize: '15px',
+                            fontWeight: 600
+                        }}
+                    >
+                        {playing ? '⏸ Pause' : '▶ Play'}
+                    </button>
                     <button
                         onClick={closePlayback}
                         style={{
