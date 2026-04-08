@@ -28,9 +28,10 @@ export function getYouTubeEmbedUrl(url: string): string {
     const urlObj = new URL(url);
     const timestamp = urlObj.searchParams.get('t') || urlObj.searchParams.get('start') || '';
     
-    let embedUrl = `https://www.youtube.com/embed/${videoId}`;
+    let embedUrl = `https://www.youtube.com/embed/${videoId}?loop=1&playlist=${videoId}`;
+    
+    let startTime = 0;
     if (timestamp) {
-      let seconds = 0;
       if (timestamp.includes('h') || timestamp.includes('m') || timestamp.includes('s')) {
         const timeRegex = /(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?/;
         const match = timestamp.match(timeRegex);
@@ -38,14 +39,22 @@ export function getYouTubeEmbedUrl(url: string): string {
           const hours = parseInt(match[1] || '0');
           const minutes = parseInt(match[2] || '0');
           const secs = parseInt(match[3] || '0');
-          seconds = hours * 3600 + minutes * 60 + secs;
+          startTime = hours * 3600 + minutes * 60 + secs;
         }
       } else {
-        seconds = parseInt(timestamp) || 0;
+        startTime = parseInt(timestamp) || 0;
       }
-      if (seconds > 0) {
-        embedUrl += `?start=${seconds}`;
-      }
+    } else {
+      startTime = parseInt(urlObj.searchParams.get('start') || '0');
+    }
+
+    if (startTime > 0) {
+      embedUrl += `&start=${startTime}`;
+    }
+
+    const endTime = urlObj.searchParams.get('end');
+    if (endTime) {
+      embedUrl += `&end=${endTime}`;
     }
     
     return embedUrl;
