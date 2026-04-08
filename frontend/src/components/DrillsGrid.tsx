@@ -165,7 +165,55 @@ const VideoCellRenderer = (props: any) => {
     // Helper function to convert YouTube URL to embed format
     const convertToEmbedUrl = (url: string) => {
         if (!url) return '';
-        return url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/');
+        
+        try {
+            // Parse the URL
+            const urlObj = new URL(url);
+            let videoId = '';
+            
+            // Extract video ID based on URL format
+            if (url.includes('youtu.be')) {
+                // Short URL format: https://youtu.be/VIDEO_ID
+                videoId = urlObj.pathname.split('/')[1];
+            } else if (url.includes('youtube.com')) {
+                // Standard URL format: https://www.youtube.com/watch?v=VIDEO_ID
+                videoId = urlObj.searchParams.get('v') || '';
+            }
+            
+            if (!videoId) return url; // Return original if no video ID found
+            
+            // Get timestamp parameter if exists
+            const timestamp = urlObj.searchParams.get('t') || urlObj.searchParams.get('start') || '';
+            
+            // Build embed URL
+            let embedUrl = `https://www.youtube.com/embed/${videoId}`;
+            if (timestamp) {
+                // Convert timestamp to seconds if needed
+                let seconds = 0;
+                if (timestamp.includes('h') || timestamp.includes('m') || timestamp.includes('s')) {
+                    // Parse HHhMMmSSs format
+                    const timeRegex = /(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?/;
+                    const match = timestamp.match(timeRegex);
+                    if (match) {
+                        const hours = parseInt(match[1] || '0');
+                        const minutes = parseInt(match[2] || '0');
+                        const secs = parseInt(match[3] || '0');
+                        seconds = hours * 3600 + minutes * 60 + secs;
+                    }
+                } else {
+                    seconds = parseInt(timestamp) || 0;
+                }
+                if (seconds > 0) {
+                    embedUrl += `?start=${seconds}`;
+                }
+            }
+            
+            return embedUrl;
+        } catch (error) {
+            console.error('Error converting YouTube URL:', error, url);
+            // Fallback to simple conversion
+            return url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/');
+        }
     };
 
     // Setup preview stream when modal opens
