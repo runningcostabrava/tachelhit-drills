@@ -238,29 +238,50 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         autoplay: 1,
         controls: 1,
         modestbranding: 1,
-        start: currentDrill.video_start_time || 0,
-        end: currentDrill.video_end_time || undefined,
+        start: Math.floor(currentDrill.video_start_time || 0),
+        end: Math.ceil(currentDrill.video_end_time || 0) || undefined,
+        rel: 0,
       },
       events: {
         'onReady': (event: any) => {
+          console.log('✅ YT Player Ready (DrillPlayer)');
           if (videoControls.playbackRate !== 1.0) {
             event.target.setPlaybackRate(videoControls.playbackRate);
           }
-          if (currentDrill.video_start_time !== undefined) {
-            event.target.seekTo(currentDrill.video_start_time, true);
-          }
+          // 1. Force explicit seek to the exact start time on load
+          const startTime = currentDrill.video_start_time || 0;
+          event.target.seekTo(startTime, true);
+          event.target.playVideo();
         },
         'onStateChange': (event: any) => {
+          const player = event.target;
+          const startTime = currentDrill.video_start_time || 0;
+          const endTime = currentDrill.video_end_time;
+
+          if (event.data === window.YT.PlayerState.PAUSED && videoControls.isLooping) {
+            // 2. Loop Logic: Check if it paused because it reached the 'end' limit
+            const currentTime = player.getCurrentTime();
+            if (endTime && currentTime >= endTime - 0.5) {
+              console.log('🔄 Reached end of segment, looping back to:', startTime);
+              player.seekTo(startTime, true);
+              player.playVideo();
+            }
+          }
+
           if (event.data === window.YT.PlayerState.ENDED && videoControls.isLooping) {
-            event.target.seekTo(currentDrill.video_start_time || 0, true);
-            event.target.playVideo();
+            // 3. Loop Logic: If the whole video ended, jump back to start
+            console.log('🔄 Video ended, looping back to:', startTime);
+            player.seekTo(startTime, true);
+            player.playVideo();
           }
         },
         'onError': (error: any) => {
-          console.error('YouTube player error:', error);
+          console.error('❌ YouTube player error:', error);
         }
       },
     });
+>>>>+++ REPLACE
+
 
     return () => {
       if (playerRef.current) {
@@ -271,25 +292,8 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   }, [playerReady, currentDrill?.id, showVideo]);
 
   // Handle precise video looping without destroying player
-  useEffect(() => {
-    if (!playerRef.current || !showVideo || !videoControls.isLooping) return;
+>>>>+++ REPLACE
 
-    const checkLoop = () => {
-      if (!playerRef.current || typeof playerRef.current.getCurrentTime !== 'function') return;
-      
-      const currentTime = playerRef.current.getCurrentTime();
-      const startTime = currentDrill.video_start_time || 0;
-      const endTime = currentDrill.video_end_time;
-
-      if (endTime !== undefined && currentTime >= endTime) {
-        playerRef.current.seekTo(startTime, true);
-        playerRef.current.playVideo();
-      }
-    };
-
-    const interval = window.setInterval(checkLoop, 100);
-    return () => window.clearInterval(interval);
-  }, [showVideo, videoControls.isLooping, currentDrill?.video_start_time, currentDrill?.video_end_time]);
 
   // Handle playback rate separately
   useEffect(() => {

@@ -312,26 +312,52 @@ const VideoCellRenderer = (props: any) => {
                             autoplay: 1,
                             controls: 1,
                             start: Math.floor(data.video_start_time || 0),
-                            end: Math.ceil(data.video_end_time || 0)
+                            end: Math.ceil(data.video_end_time || 0),
+                            rel: 0,
+                            modestbranding: 1
                         },
                         events: {
-                            onReady: () => {
+                            onReady: (event: any) => {
                                 console.log('✅ YT Player Ready');
                                 ytPlayerReadyRef.current = true;
+                                // 1. Force explicit seek to the exact start time on load
+                                const startTime = data.video_start_time || 0;
+                                event.target.seekTo(startTime);
+                                event.target.playVideo();
                                 setPlaying(true);
                             },
                             onStateChange: (event: any) => {
-                                if (event.data === (window as any).YT.PlayerState.ENDED) {
-                                    console.log('🔄 YT Player Ended - Looping');
-                                    event.target.seekTo(data.video_start_time || 0);
-                                    event.target.playVideo();
+                                const player = event.target;
+                                const startTime = data.video_start_time || 0;
+                                const endTime = data.video_end_time;
+
+                                if (event.data === (window as any).YT.PlayerState.PLAYING) {
+                                    setPlaying(true);
                                 }
-                                if (event.data === (window as any).YT.PlayerState.PLAYING) setPlaying(true);
-                                if (event.data === (window as any).YT.PlayerState.PAUSED) setPlaying(false);
+                                
+                                if (event.data === (window as any).YT.PlayerState.PAUSED) {
+                                    setPlaying(false);
+                                    // 2. Loop Logic: Check if it paused because it reached the 'end' limit
+                                    const currentTime = player.getCurrentTime();
+                                    if (endTime && currentTime >= endTime - 0.5) {
+                                        console.log('🔄 Reached end of segment, looping back to:', startTime);
+                                        player.seekTo(startTime);
+                                        player.playVideo();
+                                    }
+                                }
+
+                                if (event.data === (window as any).YT.PlayerState.ENDED) {
+                                    // 3. Loop Logic: If the whole video ended, jump back to start
+                                    console.log('🔄 Video ended, looping back to:', startTime);
+                                    player.seekTo(startTime);
+                                    player.playVideo();
+                                }
                             },
                             onError: (e: any) => console.error('❌ YT Player Error:', e)
                         }
                     });
+>>>>+++ REPLACE
+
                 }, 50); // Small buffer for the Portal
             };
 

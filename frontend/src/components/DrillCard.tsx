@@ -519,19 +519,33 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
           autoplay: 1,
           controls: 1,
           start: Math.floor((drill as any).video_start_time || 0),
-          end: Math.ceil((drill as any).video_end_time || 0)
+          end: Math.ceil((drill as any).video_end_time || 0),
+          rel: 0,
+          modestbranding: 1
         },
         events: {
           onReady: () => {
             ytPlayerReadyRef.current = true;
             setPlaying(true);
+            // Explicitly seek to start time on ready to ensure it starts correctly
+            if ((drill as any).video_start_time) {
+              ytPlayerRef.current.seekTo((drill as any).video_start_time);
+            }
+            ytPlayerRef.current.playVideo();
           },
           onStateChange: (event: any) => {
             if (event.data === (window as any).YT.PlayerState.ENDED) {
               event.target.seekTo((drill as any).video_start_time || 0);
               event.target.playVideo();
             }
-            if (event.data === (window as any).YT.PlayerState.PLAYING) setPlaying(true);
+            if (event.data === (window as any).YT.PlayerState.PLAYING) {
+              setPlaying(true);
+              // Robustness: if we are past the end time, loop now
+              const curr = event.target.getCurrentTime();
+              if ((drill as any).video_end_time && curr >= (drill as any).video_end_time) {
+                event.target.seekTo((drill as any).video_start_time || 0);
+              }
+            }
             if (event.data === (window as any).YT.PlayerState.PAUSED) setPlaying(false);
           }
         }
