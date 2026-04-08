@@ -290,6 +290,13 @@ const VideoCellRenderer = (props: any) => {
             const videoId = getYouTubeVideoId(value);
             if (!videoId) return;
 
+            // Smart fallback logic to extract times from URL or default to 5s window
+            const urlTimeMatch = value.match(/[?&]t=(\d+)/);
+            const parsedUrlTime = urlTimeMatch ? parseInt(urlTimeMatch[1], 10) : 0;
+            const startTime = Number(data.video_start_time) || parsedUrlTime || 0;
+            // If no end time is provided, default to a 5-second loop window
+            const endTime = Number(data.video_end_time) || (startTime > 0 ? startTime + 5 : 0);
+
             const initPlayer = () => {
                 const elementId = `yt-player-${data.id}`;
 
@@ -311,8 +318,8 @@ const VideoCellRenderer = (props: any) => {
                         playerVars: {
                             autoplay: 1,
                             controls: 1,
-                            start: Math.floor(Number(data.video_start_time) || 0),
-                            end: Math.ceil(Number(data.video_end_time) || 0),
+                            start: Math.floor(startTime),
+                            end: endTime > 0 ? Math.ceil(endTime) : undefined,
                             rel: 0,
                             modestbranding: 1
                         },
@@ -321,15 +328,12 @@ const VideoCellRenderer = (props: any) => {
                                 console.log('✅ YT Player Ready');
                                 ytPlayerReadyRef.current = true;
                                 // Force explicit seek to the exact start time on load for precision
-                                const startTime = Number(data.video_start_time) || 0;
                                 event.target.seekTo(startTime);
                                 event.target.playVideo();
                                 setPlaying(true);
                             },
                             onStateChange: (event: any) => {
                                 const player = event.target;
-                                const startTime = Number(data.video_start_time) || 0;
-                                const endTime = Number(data.video_end_time);
 
                                 if (event.data === (window as any).YT.PlayerState.PLAYING) {
                                     setPlaying(true);
