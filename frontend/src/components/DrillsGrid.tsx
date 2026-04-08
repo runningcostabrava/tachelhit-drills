@@ -12,7 +12,7 @@ import TestConfigPanel from './TestConfigPanel';
 import { API_BASE, getMediaUrl } from '../config';
 import DrillCard from './DrillCard';
 import { offlineManager } from '../utils/offlineCache';
-import { isYouTubeUrl } from '../utils/youtubeUtils';
+import { isYouTubeUrl, getYouTubeVideoId } from '../utils/youtubeUtils';
 
 // Audio cell renderer
 const AudioCellRenderer = (props: any) => {
@@ -83,7 +83,7 @@ const AudioCellRenderer = (props: any) => {
                 <>
                     <audio
                         ref={audioRef}
-                        src={getMediaUrl(value)}
+                        src={value.startsWith('http') ? value : getMediaUrl(value)}
                         onEnded={handleAudioEnded}
                         style={{ display: 'none' }}
                     />                    <button
@@ -283,41 +283,50 @@ const VideoCellRenderer = (props: any) => {
     useEffect(() => {
         if (showPlayback && isYouTubeUrl(value)) {
             console.log('🎬 useEffect: Initializing YouTube Player');
-            const videoId = (window as any).getYouTubeVideoId?.(value);
-            if (!videoId) return;
 
             const initPlayer = () => {
-                if (ytPlayerRef.current) {
-                    try { ytPlayerRef.current.destroy(); } catch (e) {}
-                }
-
-                console.log('📺 Creating new YT Player instance');
-                ytPlayerRef.current = new (window as any).YT.Player(`yt-player-${data.id}`, {
-                    videoId: videoId,
-                    playerVars: {
-                        autoplay: 1,
-                        controls: 1,
-                        start: Math.floor(data.video_start_time || 0),
-                        end: Math.ceil(data.video_end_time || 0)
-                    },
-                    events: {
-                        onReady: () => {
-                            console.log('✅ YT Player Ready');
-                            ytPlayerReadyRef.current = true;
-                            setPlaying(true);
-                        },
-                        onStateChange: (event: any) => {
-                            if (event.data === (window as any).YT.PlayerState.ENDED) {
-                                console.log('🔄 YT Player Ended - Looping');
-                                event.target.seekTo(data.video_start_time || 0);
-                                event.target.playVideo();
-                            }
-                            if (event.data === (window as any).YT.PlayerState.PLAYING) setPlaying(true);
-                            if (event.data === (window as any).YT.PlayerState.PAUSED) setPlaying(false);
-                        },
-                        onError: (e: any) => console.error('❌ YT Player Error:', e)
+                const elementId = `yt-player-${data.id}`;
+                
+                // Use a small timeout to ensure the Portal has rendered the div into the body
+                setTimeout(() => {
+                    const targetElement = document.getElementById(elementId);
+                    if (!targetElement) {
+                        console.warn(`⚠️ Target div ${elementId} not found yet. YouTube player aborted.`);
+                        return;
                     }
-                });
+
+                    if (ytPlayerRef.current) {
+                        try { ytPlayerRef.current.destroy(); } catch (e) {}
+                    }
+
+                    console.log('📺 Creating new YT Player instance');
+                    ytPlayerRef.current = new (window as any).YT.Player(elementId, {
+                        videoId: getYouTubeVideoId(value),
+                        playerVars: {
+                            autoplay: 1,
+                            controls: 1,
+                            start: Math.floor(data.video_start_time || 0),
+                            end: Math.ceil(data.video_end_time || 0)
+                        },
+                        events: {
+                            onReady: () => {
+                                console.log('✅ YT Player Ready');
+                                ytPlayerReadyRef.current = true;
+                                setPlaying(true);
+                            },
+                            onStateChange: (event: any) => {
+                                if (event.data === (window as any).YT.PlayerState.ENDED) {
+                                    console.log('🔄 YT Player Ended - Looping');
+                                    event.target.seekTo(data.video_start_time || 0);
+                                    event.target.playVideo();
+                                }
+                                if (event.data === (window as any).YT.PlayerState.PLAYING) setPlaying(true);
+                                if (event.data === (window as any).YT.PlayerState.PAUSED) setPlaying(false);
+                            },
+                            onError: (e: any) => console.error('❌ YT Player Error:', e)
+                        }
+                    });
+                }, 100); // 100ms is usually sufficient for Portal mounting
             };
 
             if (!(window as any).YT || !(window as any).YT.Player) {
@@ -470,7 +479,8 @@ const VideoCellRenderer = (props: any) => {
     );
 
     const playbackModal = showPlayback && value && !recording && createPortal(
-        <div onClick={() => {
+        <div onClick={(e) => {
+            e.stopPropagation(); // Stops the grid from reacting to clicks inside the modal
             console.log('🖱️ Modal background clicked');
         }} style={{
             position: 'fixed',
@@ -485,7 +495,7 @@ const VideoCellRenderer = (props: any) => {
             justifyContent: 'center',
             zIndex: 10000
         }}>
-            <div style={{
+            <div onClick={(e) => e.stopPropagation()} style={{
                 background: 'white',
                 padding: '20px',
                 borderRadius: '12px',
