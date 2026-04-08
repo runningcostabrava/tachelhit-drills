@@ -151,6 +151,7 @@ const VideoCellRenderer = (props: any) => {
     const { value, data } = props;
     const [recording, setRecording] = useState(false);
     const [playing, setPlaying] = useState(false);
+    const [playbackRate, setPlaybackRate] = useState(1);
     const [showPreview, setShowPreview] = useState(false);
     const [showPlayback, setShowPlayback] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -261,6 +262,17 @@ const VideoCellRenderer = (props: any) => {
         }
     };
 
+    const togglePlaybackRate = () => {
+        const rates = [0.5, 0.75, 1, 1.25, 1.5];
+        const currentIndex = rates.indexOf(playbackRate);
+        const nextRate = rates[(currentIndex + 1) % rates.length];
+        setPlaybackRate(nextRate);
+
+        if (ytPlayerRef.current && typeof ytPlayerRef.current.setPlaybackRate === 'function') {
+            ytPlayerRef.current.setPlaybackRate(nextRate);
+        }
+    };
+
     const openPlayback = () => {
         console.log('▶️ Opening video playback for drill:', data.id);
         console.log('📹 Video URL:', value);
@@ -293,9 +305,13 @@ const VideoCellRenderer = (props: any) => {
             // Smart fallback logic to extract times from URL or default to 5s window
             const urlTimeMatch = value.match(/[?&]t=(\d+)/);
             const parsedUrlTime = urlTimeMatch ? parseInt(urlTimeMatch[1], 10) : 0;
-            const startTime = Number(data.video_start_time) || parsedUrlTime || 0;
+            let startTime = Number(data.video_start_time) || parsedUrlTime || 0;
             // If no end time is provided, default to a 5-second loop window
-            const endTime = Number(data.video_end_time) || (startTime > 0 ? startTime + 5 : 0);
+            let endTime = Number(data.video_end_time) || (startTime > 0 ? startTime + 5 : 0);
+
+            // Padding: start 0.5s before and end 0.5s after
+            startTime = Math.max(0, startTime - 0.5);
+            if (endTime > 0) endTime = endTime + 0.5;
 
             const initPlayer = () => {
                 const elementId = `yt-player-${data.id}`;
@@ -327,6 +343,7 @@ const VideoCellRenderer = (props: any) => {
                             onReady: (event: any) => {
                                 console.log('✅ YT Player Ready');
                                 ytPlayerReadyRef.current = true;
+                                event.target.setPlaybackRate(playbackRate);
                                 // Force explicit seek to the exact start time on load for precision
                                 event.target.seekTo(startTime);
                                 event.target.playVideo();
@@ -337,6 +354,7 @@ const VideoCellRenderer = (props: any) => {
 
                                 if (event.data === (window as any).YT.PlayerState.PLAYING) {
                                     setPlaying(true);
+                                    event.target.setPlaybackRate(playbackRate);
                                 }
 
                                 if (event.data === (window as any).YT.PlayerState.PAUSED) {
@@ -391,7 +409,7 @@ const VideoCellRenderer = (props: any) => {
                 ytPlayerReadyRef.current = false;
             }
         };
-    }, [showPlayback, value, data.id, data.video_start_time, data.video_end_time]);
+    }, [showPlayback, value, data.id, data.video_start_time, data.video_end_time, playbackRate]);
 
     const closePlayback = () => {
         console.log('✖️ Closing playback');
@@ -677,6 +695,22 @@ const VideoCellRenderer = (props: any) => {
                         title="Go back 2 seconds"
                     >
                         ↺ 2s
+                    </button>
+                    <button
+                        onClick={togglePlaybackRate}
+                        style={{
+                            padding: '10px 16px',
+                            background: '#667eea',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontSize: '15px',
+                            fontWeight: 600
+                        }}
+                        title="Change playback speed"
+                    >
+                        {playbackRate}x
                     </button>
                     <button
                         onClick={togglePlayPause}
