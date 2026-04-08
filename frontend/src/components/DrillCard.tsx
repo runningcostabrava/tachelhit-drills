@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE, getMediaUrl } from '../config';
-import { isYouTubeUrl, getYouTubeEmbedUrl } from '../utils/youtubeUtils';
+import { isYouTubeUrl } from '../utils/youtubeUtils';
 
 interface Drill {
   id: number;
@@ -467,7 +467,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
   const openPlayback = () => {
     setShowVideo(true);
     setPlaying(false);
-    if (isYouTubeUrl(drill.video_url)) {
+    if (drill.video_url && isYouTubeUrl(drill.video_url)) {
       setTimeout(() => {
         initializeYouTubePlayer();
       }, 100);
@@ -483,7 +483,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
   };
 
   const initializeYouTubePlayer = () => {
-    const videoId = (window as any).getYouTubeVideoId?.(drill.video_url);
+    const videoId = (window as any).getYouTubeVideoId?.(drill.video_url || '');
     if (!videoId) return;
 
     if (!(window as any).YT || !(window as any).YT.Player) {
@@ -531,7 +531,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
   };
 
   const togglePlayPause = () => {
-    if (isYouTubeUrl(drill.video_url)) {
+    if (drill.video_url && isYouTubeUrl(drill.video_url)) {
       if (ytPlayerRef.current && ytPlayerReadyRef.current) {
         if (playing) {
           ytPlayerRef.current.pauseVideo();
@@ -543,7 +543,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
   };
 
   const goBack2Seconds = () => {
-    if (isYouTubeUrl(drill.video_url)) {
+    if (drill.video_url && isYouTubeUrl(drill.video_url)) {
       if (ytPlayerRef.current && ytPlayerReadyRef.current) {
         const currentTime = ytPlayerRef.current.getCurrentTime();
         const startTime = (drill as any).video_start_time || 0;
@@ -1598,6 +1598,22 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
             )}
             
             <div style={{ marginTop: '15px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              {drill.video_url && isYouTubeUrl(drill.video_url) && (
+                <button
+                  onClick={togglePlayPause}
+                  style={{
+                    padding: '10px 20px',
+                    background: '#4CAF50',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 600
+                  }}
+                >
+                  {playing ? '⏸ Pause' : '▶ Play'}
+                </button>
+              )}
               <button
                 onClick={goBack2Seconds}
                 style={{

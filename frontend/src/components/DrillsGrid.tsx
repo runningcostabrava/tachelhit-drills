@@ -12,7 +12,7 @@ import TestConfigPanel from './TestConfigPanel';
 import { API_BASE, getMediaUrl } from '../config';
 import DrillCard from './DrillCard';
 import { offlineManager } from '../utils/offlineCache';
-import { isYouTubeUrl, getYouTubeEmbedUrl } from '../utils/youtubeUtils';
+import { isYouTubeUrl } from '../utils/youtubeUtils';
 
 // Audio cell renderer
 const AudioCellRenderer = (props: any) => {
