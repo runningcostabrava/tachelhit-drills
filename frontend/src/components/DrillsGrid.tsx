@@ -266,68 +266,89 @@ const VideoCellRenderer = (props: any) => {
         setShowPlayback(true);
         setPlaying(false);
         
-        const isYT = isYouTubeUrl(value);
-        // Give the DOM time to render before trying to play
-        setTimeout(() => {
-            if (isYT) {
-                console.log('📺 YouTube video detected, initializing API');
-                initializeYouTubePlayer();
-            } else if (playbackRef.current) {
-                console.log('✅ Playback ref exists after timeout');
-                console.log('📺 Video element src:', playbackRef.current.src);
-            } else {
-                console.warn('⚠️ Playback ref still null after timeout, but may be expected for YouTube');
-            }
-        }, 100);
-    };
-
-    const initializeYouTubePlayer = () => {
-        const videoId = (window as any).getYouTubeVideoId?.(value);
-        if (!videoId) return;
-
-        if (!(window as any).YT || !(window as any).YT.Player) {
-            const tag = document.createElement('script');
-            tag.src = "https://www.youtube.com/iframe_api";
-            const firstScriptTag = document.getElementsByTagName('script')[0];
-            firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-            
-            (window as any).onYouTubeIframeAPIReady = () => {
-                createYTPlayer(videoId);
-            };
-        } else {
-            createYTPlayer(videoId);
-        }
-    };
-
-    const createYTPlayer = (videoId: string) => {
-        if (ytPlayerRef.current) {
-            try { ytPlayerRef.current.destroy(); } catch (e) {}
-        }
-
-        ytPlayerRef.current = new (window as any).YT.Player(`yt-player-${data.id}`, {
-            videoId: videoId,
-            playerVars: {
-                autoplay: 1,
-                controls: 1,
-                start: Math.floor(data.video_start_time || 0),
-                end: Math.ceil(data.video_end_time || 0)
-            },
-            events: {
-                onReady: () => {
-                    ytPlayerReadyRef.current = true;
-                    setPlaying(true);
-                },
-                onStateChange: (event: any) => {
-                    if (event.data === (window as any).YT.PlayerState.ENDED) {
-                        event.target.seekTo(data.video_start_time || 0);
-                        event.target.playVideo();
-                    }
-                    if (event.data === (window as any).YT.PlayerState.PLAYING) setPlaying(true);
-                    if (event.data === (window as any).YT.PlayerState.PAUSED) setPlaying(false);
+        // Non-YouTube video check
+        if (!isYouTubeUrl(value)) {
+            setTimeout(() => {
+                if (playbackRef.current) {
+                    console.log('✅ Playback ref exists after timeout');
+                    console.log('📺 Video element src:', playbackRef.current.src);
+                } else {
+                    console.warn('⚠️ Playback ref still null after timeout');
                 }
-            }
-        });
+            }, 100);
+        }
     };
+
+    // Consolidated YouTube initialization and player creation
+    useEffect(() => {
+        if (showPlayback && isYouTubeUrl(value)) {
+            console.log('🎬 useEffect: Initializing YouTube Player');
+            const videoId = (window as any).getYouTubeVideoId?.(value);
+            if (!videoId) return;
+
+            const initPlayer = () => {
+                if (ytPlayerRef.current) {
+                    try { ytPlayerRef.current.destroy(); } catch (e) {}
+                }
+
+                console.log('📺 Creating new YT Player instance');
+                ytPlayerRef.current = new (window as any).YT.Player(`yt-player-${data.id}`, {
+                    videoId: videoId,
+                    playerVars: {
+                        autoplay: 1,
+                        controls: 1,
+                        start: Math.floor(data.video_start_time || 0),
+                        end: Math.ceil(data.video_end_time || 0)
+                    },
+                    events: {
+                        onReady: () => {
+                            console.log('✅ YT Player Ready');
+                            ytPlayerReadyRef.current = true;
+                            setPlaying(true);
+                        },
+                        onStateChange: (event: any) => {
+                            if (event.data === (window as any).YT.PlayerState.ENDED) {
+                                console.log('🔄 YT Player Ended - Looping');
+                                event.target.seekTo(data.video_start_time || 0);
+                                event.target.playVideo();
+                            }
+                            if (event.data === (window as any).YT.PlayerState.PLAYING) setPlaying(true);
+                            if (event.data === (window as any).YT.PlayerState.PAUSED) setPlaying(false);
+                        },
+                        onError: (e: any) => console.error('❌ YT Player Error:', e)
+                    }
+                });
+            };
+
+            if (!(window as any).YT || !(window as any).YT.Player) {
+                console.log('📦 Loading YouTube IFrame API');
+                if (!document.getElementById('youtube-iframe-api')) {
+                    const tag = document.createElement('script');
+                    tag.id = 'youtube-iframe-api';
+                    tag.src = "https://www.youtube.com/iframe_api";
+                    const firstScriptTag = document.getElementsByTagName('script')[0];
+                    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+                }
+                
+                const prevOnReady = (window as any).onYouTubeIframeAPIReady;
+                (window as any).onYouTubeIframeAPIReady = () => {
+                    if (prevOnReady) prevOnReady();
+                    initPlayer();
+                };
+            } else {
+                initPlayer();
+            }
+        }
+
+        return () => {
+            if (ytPlayerRef.current) {
+                console.log('🧹 Cleaning up YT Player');
+                try { ytPlayerRef.current.destroy(); } catch (e) {}
+                ytPlayerRef.current = null;
+                ytPlayerReadyRef.current = false;
+            }
+        };
+    }, [showPlayback, value, data.id, data.video_start_time, data.video_end_time]);
 
     const closePlayback = () => {
         console.log('✖️ Closing playback');
