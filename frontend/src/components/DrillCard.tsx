@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE, getMediaUrl } from '../config';
+import { isYouTubeUrl, getYouTubeEmbedUrl } from '../utils/youtubeUtils';
 
 interface Drill {
   id: number;
@@ -1461,25 +1462,40 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
             right: 0,
             bottom: 0,
             background: 'rgba(0,0,0,0.9)',
-            zIndex: 10000,
+            zIndex: 30000,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '20px'
+            padding: isMobile ? '10px' : '20px'
           }}
         >
-          <div onClick={(e) => e.stopPropagation()}>
-            <video
-              src={getMediaUrl(drill.video_url)}
-              controls
-              autoPlay
-              playsInline
-              style={{
-                width: '100%',
-                maxWidth: '640px',
-                borderRadius: '12px'
-              }}
-            />
+          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '800px' }}>
+            {isYouTubeUrl(drill.video_url) ? (
+              <iframe
+                src={getYouTubeEmbedUrl(getMediaUrl(drill.video_url))}
+                style={{
+                  width: '100%',
+                  height: isMobile ? '300px' : '450px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
+                }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <video
+                autoPlay
+                src={getMediaUrl(drill.video_url)}
+                controls
+                style={{
+                  width: '100%',
+                  maxHeight: '90vh',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
+                }}
+              />
+            )}
           </div>
         </div>
       )}

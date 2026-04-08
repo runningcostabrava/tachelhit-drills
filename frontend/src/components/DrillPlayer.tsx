@@ -92,7 +92,6 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   const videoIframeRef = useRef<HTMLIFrameElement | null>(null);
   const playerRef = useRef<any>(null); // YouTube Player instance
   const [playerReady, setPlayerReady] = useState(false);
-  const loopIntervalRef = useRef<number | null>(null);
 
   const currentDrill = drills[currentIndex];
   // Note: isMobile is declared for potential future mobile-specific logic
