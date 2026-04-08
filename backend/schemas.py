@@ -58,6 +58,8 @@ class DrillBase(BaseModel):
     video_url: Optional[str] = None
     image_url: Optional[str] = None
     is_correction_dataset: Optional[bool] = None
+    video_start_time: Optional[float] = None  # Start time in seconds
+    video_end_time: Optional[float] = None    # End time in seconds
 
     # Validators for URL fields
     @field_validator('audio_url', 'audio_tts_url', 'video_url', 'image_url')
@@ -261,3 +263,15 @@ class SrtImportResponse(BaseModel):
     drill_ids: List[int]
     test_id: Optional[int] = None
     segments: List[SrtSegment]
+
+# Bulk Video URL Update Schemas
+class BulkVideoUrlUpdateRequest(BaseModel):
+    drill_ids: List[int]
+    base_video_url: str
+    update_timestamps: bool = True  # Whether to update timestamps based on video_start_time
+
+class BulkVideoUrlUpdateResponse(BaseModel):
+    success: bool
+    message: str
+    updated_count: int
+    failed_ids: List[int] = []

@@ -132,6 +132,23 @@ def create_youtube_url_with_timestamp(video_url: str, start_time: float, end_tim
     parsed_url = urlparse(video_url)
     query_params = parse_qs(parsed_url.query)
     
+    # Check if video ID is present
+    video_id = query_params.get('v', [None])[0]
+    
+    # If no video ID found, try to extract from youtu.be format
+    if not video_id and 'youtu.be' in parsed_url.netloc:
+        # Extract from path: youtu.be/VIDEO_ID
+        path_parts = parsed_url.path.split('/')
+        if len(path_parts) > 1 and path_parts[1]:
+            video_id = path_parts[1]
+            # Clear existing query params and set v parameter
+            query_params = {'v': [video_id]}
+    
+    # If still no video ID, return original URL (can't create valid YouTube URL)
+    if not video_id:
+        print(f"WARNING: No video ID found in URL: {video_url}")
+        return video_url
+    
     # Remove any existing timestamp parameters
     if 't' in query_params:
         del query_params['t']
@@ -139,6 +156,9 @@ def create_youtube_url_with_timestamp(video_url: str, start_time: float, end_tim
         del query_params['start']
     if 'end' in query_params:
         del query_params['end']
+    
+    # Ensure video ID is preserved
+    query_params['v'] = [video_id]
     
     # Add the new start time parameter
     query_params['t'] = [str(int(start_time))]

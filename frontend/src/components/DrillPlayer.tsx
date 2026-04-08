@@ -13,6 +13,8 @@ interface Drill {
   image_url?: string;
   tag?: string;
   date_created: string;
+  video_start_time?: number;
+  video_end_time?: number;
 }
 
 interface DrillPlayerProps {
@@ -20,7 +22,46 @@ interface DrillPlayerProps {
   onExit: () => void;
 }
 
+interface VideoControls {
+  playbackRate: number;
+  isLooping: boolean;
+  currentSubtitleIndex: number;
+  subtitleSections: Array<{start: number, end: number}>;
+}
+
 export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
+  // Style definitions (moved to top to avoid "used before declaration" errors)
+  const cleanButtonStyle = {
+    background: 'none',
+    border: 'none',
+    color: 'white',
+    fontSize: '20px',
+    cursor: 'pointer',
+    padding: '4px 8px',
+    borderRadius: '4px'
+  };
+
+  const pillButtonStyle = {
+    padding: '6px 12px',
+    border: 'none',
+    borderRadius: '20px',
+    fontSize: '12px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.2s'
+  };
+
+  const navButtonStyle = {
+    padding: '10px 20px',
+    background: '#f0f0f0',
+    border: '1px solid #ddd',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.2s'
+  };
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(false);
@@ -29,13 +70,36 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   const [audioDuration, setAudioDuration] = useState(0);
   const [imageUrl, setImageUrl] = useState<string>('');
   const [showVideo, setShowVideo] = useState(false);
+  const [showVideoLibrary, setShowVideoLibrary] = useState(false);
+  const [videoControls, setVideoControls] = useState<VideoControls>({
+    playbackRate: 1.0,
+    isLooping: false,
+    currentSubtitleIndex: 0,
+    subtitleSections: []
+  });
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null);
   const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
   const progressIntervalRef = useRef<number | null>(null);
+  const videoIframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const currentDrill = drills[currentIndex];
-  const isMobile = window.innerWidth < 768;
+  // Note: isMobile is declared for potential future mobile-specific logic
+  // const isMobile = window.innerWidth < 768;
+
+  // Initialize subtitle sections when drill changes
+  useEffect(() => {
+    if (currentDrill?.video_start_time !== undefined && currentDrill?.video_end_time !== undefined) {
+      setVideoControls(prev => ({
+        ...prev,
+        subtitleSections: [{
+          start: currentDrill.video_start_time || 0,
+          end: currentDrill.video_end_time || 0
+        }],
+        currentSubtitleIndex: 0
+      }));
+    }
+  }, [currentDrill]);
 
   // Track progress of whichever audio is playing
   useEffect(() => {
@@ -99,6 +163,14 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
       speechSynthesis.cancel();
       speechSynthRef.current = null;
     }
+    
+    // Reset video controls
+    setVideoControls({
+      playbackRate: 1.0,
+      isLooping: false,
+      currentSubtitleIndex: 0,
+      subtitleSections: []
+    });
   }, [currentIndex]);
 
   // Autoplay effect
@@ -258,6 +330,44 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Video control functions
+  const handlePlaybackRateChange = (rate: number) => {
+    setVideoControls(prev => ({ ...prev, playbackRate: rate }));
+    // Note: YouTube iframe API would be needed to actually change playback rate
+    // This is a placeholder for the UI
+  };
+
+  const handleToggleLoop = () => {
+    setVideoControls(prev => ({ ...prev, isLooping: !prev.isLooping }));
+  };
+
+  const handlePreviousSubtitle = () => {
+    if (videoControls.currentSubtitleIndex > 0) {
+      setVideoControls(prev => ({ 
+        ...prev, 
+        currentSubtitleIndex: prev.currentSubtitleIndex - 1 
+      }));
+    }
+  };
+
+  const handleNextSubtitle = () => {
+    if (videoControls.currentSubtitleIndex < videoControls.subtitleSections.length - 1) {
+      setVideoControls(prev => ({ 
+        ...prev, 
+        currentSubtitleIndex: prev.currentSubtitleIndex + 1 
+      }));
+    }
+  };
+
+  const handleJumpToSubtitle = (index: number) => {
+    if (index >= 0 && index < videoControls.subtitleSections.length) {
+      setVideoControls(prev => ({ ...prev, currentSubtitleIndex: index }));
+    }
+  };
+
+  // Get video drills (drills with video URLs)
+  const videoDrills = drills.filter(drill => drill.video_url);
+
   return (
     <div style={{
       height: '100vh',
@@ -298,6 +408,16 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
           >
             LOOP {loopEnabled ? 'ON' : 'OFF'}
           </button>
+          
+          {/* Video Library Button */}
+          {videoDrills.length > 0 && (
+            <button
+              onClick={() => setShowVideoLibrary(true)}
+              style={{ ...pillButtonStyle, background: 'rgba(255,255,255,0.2)', color: 'white' }}
+            >
+              📹 LIBRARY
+            </button>
+          )}
         </div>
       </div>
 
@@ -310,447 +430,619 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         alignItems: 'center'
       }}>
         <div style={{ width: '100%', maxWidth: '500px', display: 'flex', flexDirection: 'column' }}>
+          {/* Tachelhit Text */}
+          <div style={{
+            padding: '24px 16px 16px',
+            textAlign: 'center',
+            fontSize: '28px',
+            fontWeight: 700,
+            color: '#333',
+            lineHeight: 1.4,
+            minHeight: '120px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            {currentDrill?.text_tachelhit || 'No Tachelhit text'}
+          </div>
 
-          {/* 1. Tachelhit (Prominent) */}
-          <div style={{ padding: '20px 16px', textAlign: 'center' }}>
-            <div style={{ fontSize: isMobile ? '26px' : '32px', fontWeight: 800, color: '#2e7d32', lineHeight: 1.2 }}>
-              {currentDrill.text_tachelhit || '---'}
+          {/* Image */}
+          {imageUrl && (
+            <div style={{ padding: '0 16px 16px', display: 'flex', justifyContent: 'center' }}>
+              <img
+                src={imageUrl}
+                alt="Drill"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '300px',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
             </div>
-          </div>
+          )}
 
-          {/* 2. Image (Full Width Square) */}
-          <div style={{ width: '100%', aspectRatio: '1/1', background: '#f0f0f0', overflow: 'hidden' }}>
-            {imageUrl ? (
-              <img src={imageUrl} alt="Visual" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : currentDrill.image_url ? (
-              <img src={getMediaUrl(currentDrill.image_url)} alt="Visual" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', opacity: 0.1 }}>📷</div>
+          {/* Translations */}
+          <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* Arabic */}
+            {currentDrill?.text_arabic && (
+              <div style={{
+                padding: '12px',
+                background: '#f8f9fa',
+                borderRadius: '8px',
+                borderLeft: '4px solid #4CAF50',
+                fontSize: '18px',
+                color: '#333',
+                textAlign: 'right',
+                direction: 'rtl'
+              }}>
+                {currentDrill.text_arabic}
+              </div>
+            )}
+
+            {/* Catalan */}
+            {currentDrill?.text_catalan && (
+              <div style={{
+                padding: '12px',
+                background: '#f0f7ff',
+                borderRadius: '8px',
+                borderLeft: '4px solid #2196F3',
+                fontSize: '16px',
+                color: '#333',
+                fontStyle: 'italic'
+              }}>
+                {currentDrill.text_catalan}
+              </div>
             )}
           </div>
 
-          {/* 3. Translations (Subtle) */}
-          <div style={{ padding: '16px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div style={{ fontSize: '14px', color: '#666', fontWeight: 500 }}>{currentDrill.text_catalan}</div>
-            {currentDrill.text_arabic && (
-              <div style={{ fontSize: '14px', color: '#9C27B0', direction: 'rtl', opacity: 0.8 }}>{currentDrill.text_arabic}</div>
-            )}
-          </div>
+          {/* Video Button (if video exists) */}
+          {currentDrill?.video_url && (
+            <div style={{ padding: '16px', display: 'flex', justifyContent: 'center' }}>
+              <button
+                onClick={() => setShowVideo(true)}
+                style={{
+                  padding: '12px 24px',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                }}
+              >
+                <span>▶️</span>
+                Watch Video with Subtitles
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Navigation Footer - Enhanced for mobile */}
+      {/* Navigation Footer */}
       <div style={{
-        padding: isMobile ? '12px 16px' : '8px 12px',
-        background: 'white',
-        borderTop: '1px solid #eee',
+        padding: '16px',
+        background: '#f8f9fa',
+        borderTop: '1px solid #e0e0e0',
         display: 'flex',
-        flexDirection: 'column',
-        gap: isMobile ? '12px' : '4px',
-        paddingBottom: isMobile ? 'calc(20px + env(safe-area-inset-bottom, 0px))' : '8px',
-        flexShrink: 0
+        justifyContent: 'space-between',
+        alignItems: 'center'
       }}>
-        {/* Progress Slider */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 4px' }}>
-          <span style={{ fontSize: isMobile ? '12px' : '10px', color: '#999', minWidth: '30px', textAlign: 'right' }}>
-            {Math.floor(audioProgress / 60)}:{(audioProgress % 60).toFixed(0).padStart(2, '0')}
+        <button
+          onClick={handlePrev}
+          disabled={currentIndex === 0}
+          style={{
+            ...navButtonStyle,
+            opacity: currentIndex === 0 ? 0.5 : 1,
+            cursor: currentIndex === 0 ? 'not-allowed' : 'pointer'
+          }}
+        >
+          ← Previous
+        </button>
+
+        {/* Audio Progress Bar */}
+        <div style={{ flex: 1, margin: '0 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '12px', color: '#666', minWidth: '40px' }}>
+            {formatTime(audioProgress)}
           </span>
-          <input
-            type="range"
-            min="0"
-            max={audioDuration || 100}
-            step="0.1"
-            value={audioProgress}
-            onChange={(e) => handleSeek(parseFloat(e.target.value))}
+          <div
             style={{
               flex: 1,
-              cursor: 'pointer',
-              accentColor: '#667eea',
-              height: isMobile ? '6px' : '3px',
-              borderRadius: '3px'
+              height: '6px',
+              background: '#e0e0e0',
+              borderRadius: '3px',
+              overflow: 'hidden',
+              cursor: 'pointer'
             }}
-          />
-          <span style={{ fontSize: isMobile ? '12px' : '10px', color: '#999', minWidth: '30px' }}>
-            {Math.floor(audioDuration / 60)}:{(audioDuration % 60).toFixed(0).padStart(2, '0')}
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const percent = (e.clientX - rect.left) / rect.width;
+              const time = percent * audioDuration;
+              handleSeek(time);
+            }}
+          >
+            <div
+              style={{
+                width: `${audioDuration ? (audioProgress / audioDuration) * 100 : 0}%`,
+                height: '100%',
+                background: '#4CAF50',
+                transition: 'width 0.1s'
+              }}
+            />
+          </div>
+          <span style={{ fontSize: '12px', color: '#666', minWidth: '40px' }}>
+            {formatTime(audioDuration)}
           </span>
         </div>
 
-        {/* Main Controls - Enhanced for mobile */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          width: '100%',
-          gap: isMobile ? '8px' : '4px'
-        }}>
-          {/* Previous Button */}
+        <div style={{ display: 'flex', gap: '8px' }}>
           <button
-            onClick={handlePrev}
-            disabled={currentIndex === 0}
+            onClick={playCurrentAudio}
+            disabled={isPlaying}
             style={{
-              ...iconButtonStyle,
-              background: currentIndex === 0 ? '#f5f5f5' : '#667eea',
-              color: currentIndex === 0 ? '#999' : 'white',
-              borderRadius: isMobile ? '12px' : '8px',
-              width: isMobile ? '60px' : '44px',
-              height: isMobile ? '60px' : '44px',
-              fontSize: isMobile ? '24px' : '18px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: currentIndex === 0 ? 0.5 : 1
-            }}
-            title="Previous drill"
-          >
-            ⏮️
-          </button>
-
-          {/* Catalan Speak Button */}
-          <button
-            onClick={() => handleSpeakCatalan()}
-            style={{
-              ...iconButtonStyle,
-              background: '#4CAF50',
+              ...navButtonStyle,
+              background: isPlaying ? '#4CAF50' : '#2196F3',
               color: 'white',
-              borderRadius: isMobile ? '12px' : '8px',
-              width: isMobile ? '60px' : '44px',
-              height: isMobile ? '60px' : '44px',
-              fontSize: isMobile ? '24px' : '18px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
+              minWidth: '100px'
             }}
-            title="Speak Catalan"
           >
-            🗣️
+            {isPlaying ? 'Playing...' : 'Play Audio'}
           </button>
 
-          {/* Main Play Button - More prominent on mobile */}
-          <button
-            onClick={() => playCurrentAudio()}
-            style={{
-              ...iconButtonStyle,
-              background: isPlaying ? '#ff4444' : '#667eea',
-              color: 'white',
-              borderRadius: '50%',
-              width: isMobile ? '80px' : '60px',
-              height: isMobile ? '80px' : '60px',
-              fontSize: isMobile ? '32px' : '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
-              border: isMobile ? '3px solid white' : '2px solid white'
-            }}
-            title={isPlaying ? 'Stop' : 'Play'}
-          >
-            {isPlaying ? '⏸️' : '▶️'}
-          </button>
-
-          {/* Tachelhit Audio Button */}
-          <button
-            onClick={() => playTachelhitAudio()}
-            style={{
-              ...iconButtonStyle,
-              background: '#9C27B0',
-              color: 'white',
-              borderRadius: isMobile ? '12px' : '8px',
-              width: isMobile ? '60px' : '44px',
-              height: isMobile ? '60px' : '44px',
-              fontSize: isMobile ? '24px' : '18px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-            title="Play Tachelhit audio"
-          >
-            🎙️
-          </button>
-
-          {/* Video Play Button */}
-          {currentDrill.video_url && (
-            <button
-              onClick={() => setShowVideo(true)}
-              style={{
-                ...iconButtonStyle,
-                background: '#FF6B6B',
-                color: 'white',
-                borderRadius: isMobile ? '12px' : '8px',
-                width: isMobile ? '60px' : '44px',
-                height: isMobile ? '60px' : '44px',
-                fontSize: isMobile ? '24px' : '18px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              title="Play video"
-            >
-              🎥
-            </button>
-          )}
-
-          {/* Next Button */}
           <button
             onClick={goToNextDrill}
-            style={{
-              ...iconButtonStyle,
-              background: currentIndex < drills.length - 1 ? '#667eea' : (loopEnabled ? '#4CAF50' : '#FFD700'),
-              color: 'white',
-              borderRadius: isMobile ? '12px' : '8px',
-              width: isMobile ? '60px' : '44px',
-              height: isMobile ? '60px' : '44px',
-              fontSize: isMobile ? '24px' : '18px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-            title={currentIndex < drills.length - 1 ? 'Next drill' : (loopEnabled ? 'Restart from beginning' : 'Finish')}
+            style={navButtonStyle}
           >
-            {currentIndex < drills.length - 1 ? '⏭️' : (loopEnabled ? '🔄' : '🏁')}
+            Next →
           </button>
         </div>
+      </div>
 
-        {/* Drill Preview Section - Shows upcoming drills */}
-        {isMobile && drills.length > 1 && (
+      {/* Enhanced Video Modal */}
+      {showVideo && currentDrill?.video_url && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.9)',
+          zIndex: 2000,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
           <div style={{
-            marginTop: '12px',
-            padding: '8px',
-            background: '#f8f9fa',
-            borderRadius: '8px',
-            border: '1px solid #e9ecef'
+            width: '90%',
+            maxWidth: '1000px',
+            background: '#1a1a1a',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
           }}>
+            {/* Video Modal Header */}
             <div style={{
-              fontSize: '12px',
-              fontWeight: 600,
-              color: '#666',
-              marginBottom: '6px',
+              padding: '16px',
+              background: '#2a2a2a',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderBottom: '1px solid #444'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button
+                  onClick={() => setShowVideo(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'white',
+                    fontSize: '20px',
+                    cursor: 'pointer',
+                    padding: '4px 8px'
+                  }}
+                >
+                  ✕
+                </button>
+                <span style={{ color: 'white', fontWeight: 600 }}>
+                  Video Player - {currentDrill.text_tachelhit?.substring(0, 50)}...
+                </span>
+              </div>
+              
+              {/* Video Controls */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {/* Playback Speed */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ color: '#aaa', fontSize: '12px' }}>Speed:</span>
+                  {[0.5, 0.75, 1.0, 1.25, 1.5].map(rate => (
+                    <button
+                      key={rate}
+                      onClick={() => handlePlaybackRateChange(rate)}
+                      style={{
+                        padding: '4px 8px',
+                        background: videoControls.playbackRate === rate ? '#667eea' : '#444',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {rate}x
+                    </button>
+                  ))}
+                </div>
+
+                {/* Loop Toggle */}
+                <button
+                  onClick={handleToggleLoop}
+                  style={{
+                    padding: '6px 12px',
+                    background: videoControls.isLooping ? '#FFD700' : '#444',
+                    color: videoControls.isLooping ? '#333' : 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  🔁 {videoControls.isLooping ? 'Looping ON' : 'Loop'}
+                </button>
+              </div>
+            </div>
+
+            {/* Video Player */}
+            <div style={{ position: 'relative', paddingTop: '56.25%' /* 16:9 aspect ratio */ }}>
+              <iframe
+                ref={videoIframeRef}
+                src={`${currentDrill.video_url}?start=${currentDrill.video_start_time || 0}&end=${currentDrill.video_end_time || ''}&autoplay=1&controls=1&modestbranding=1`}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  border: 'none'
+                }}
+                title="YouTube video player"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+              
+              {/* Subtitle Overlay */}
+              <div style={{
+                position: 'absolute',
+                bottom: '60px',
+                left: 0,
+                right: 0,
+                padding: '0 20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                pointerEvents: 'none'
+              }}>
+                {/* Arabic Subtitle */}
+                {currentDrill?.text_arabic && (
+                  <div style={{
+                    background: 'rgba(0, 0, 0, 0.7)',
+                    color: 'white',
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    fontSize: '20px',
+                    textAlign: 'right',
+                    direction: 'rtl',
+                    lineHeight: 1.4
+                  }}>
+                    {currentDrill.text_arabic}
+                  </div>
+                )}
+                
+                {/* Tachelhit Subtitle */}
+                {currentDrill?.text_tachelhit && (
+                  <div style={{
+                    background: 'rgba(76, 175, 80, 0.8)',
+                    color: 'white',
+                    padding: '10px 16px',
+                    borderRadius: '8px',
+                    fontSize: '18px',
+                    fontWeight: 600,
+                    lineHeight: 1.4
+                  }}>
+                    {currentDrill.text_tachelhit}
+                  </div>
+                )}
+                
+                {/* Catalan Subtitle */}
+                {currentDrill?.text_catalan && (
+                  <div style={{
+                    background: 'rgba(33, 150, 243, 0.9)',
+                    color: 'white',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontSize: '16px',
+                    fontStyle: 'italic',
+                    opacity: 0.9,
+                    lineHeight: 1.4
+                  }}>
+                    {currentDrill.text_catalan}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Subtitle Navigation Controls */}
+            <div style={{
+              padding: '16px',
+              background: '#2a2a2a',
+              borderTop: '1px solid #444',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center'
             }}>
-              <span>Upcoming Drills ({drills.length - currentIndex - 1} remaining)</span>
-              <span style={{ fontSize: '11px', color: '#999' }}>
-                {currentIndex + 1}/{drills.length}
-              </span>
-            </div>
-            <div style={{
-              display: 'flex',
-              gap: '8px',
-              overflowX: 'auto',
-              paddingBottom: '4px'
-            }}>
-              {drills.slice(currentIndex + 1, Math.min(currentIndex + 4, drills.length)).map((drill, idx) => (
-                <div
-                  key={drill.id}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button
+                  onClick={handlePreviousSubtitle}
+                  disabled={videoControls.currentSubtitleIndex === 0}
                   style={{
-                    minWidth: '80px',
-                    padding: '6px',
-                    background: 'white',
-                    borderRadius: '6px',
-                    border: '1px solid #dee2e6',
-                    fontSize: '11px',
-                    color: '#495057',
-                    textAlign: 'center',
-                    cursor: 'pointer',
+                    padding: '8px 16px',
+                    background: videoControls.currentSubtitleIndex === 0 ? '#555' : '#667eea',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: videoControls.currentSubtitleIndex === 0 ? 'not-allowed' : 'pointer',
                     display: 'flex',
-                    flexDirection: 'column',
                     alignItems: 'center',
                     gap: '4px'
                   }}
-                  onClick={() => setCurrentIndex(currentIndex + idx + 1)}
-                  title={`Jump to drill ${currentIndex + idx + 2}: ${drill.text_catalan || 'No text'}`}
                 >
-                  <div style={{
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '50%',
-                    background: '#667eea',
+                  ← Previous Subtitle
+                </button>
+
+                <div style={{ color: '#aaa', fontSize: '14px' }}>
+                  Subtitle {videoControls.currentSubtitleIndex + 1} of {videoControls.subtitleSections.length}
+                </div>
+
+                <button
+                  onClick={handleNextSubtitle}
+                  disabled={videoControls.currentSubtitleIndex >= videoControls.subtitleSections.length - 1}
+                  style={{
+                    padding: '8px 16px',
+                    background: videoControls.currentSubtitleIndex >= videoControls.subtitleSections.length - 1 ? '#555' : '#667eea',
                     color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: videoControls.currentSubtitleIndex >= videoControls.subtitleSections.length - 1 ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '10px',
-                    fontWeight: 'bold'
-                  }}>
-                    {currentIndex + idx + 2}
-                  </div>
-                  <div style={{
-                    whiteSpace: 'nowrap',
+                    gap: '4px'
+                  }}
+                >
+                  Next Subtitle →
+                </button>
+              </div>
+
+              {/* Subtitle Timeline */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: '#aaa', fontSize: '12px' }}>Timeline:</span>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {videoControls.subtitleSections.map((section, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleJumpToSubtitle(index)}
+                      style={{
+                        padding: '4px 8px',
+                        background: videoControls.currentSubtitleIndex === index ? '#FFD700' : '#444',
+                        color: videoControls.currentSubtitleIndex === index ? '#333' : 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        minWidth: '60px'
+                      }}
+                    >
+                      {formatTime(section.start)}-{formatTime(section.end)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Video Library Modal */}
+      {showVideoLibrary && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.9)',
+          zIndex: 2000,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div style={{
+            width: '90%',
+            maxWidth: '1200px',
+            maxHeight: '90vh',
+            background: '#1a1a1a',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Library Header */}
+            <div style={{
+              padding: '16px 24px',
+              background: '#2a2a2a',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderBottom: '1px solid #444'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button
+                  onClick={() => setShowVideoLibrary(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'white',
+                    fontSize: '20px',
+                    cursor: 'pointer',
+                    padding: '4px 8px'
+                  }}
+                >
+                  ✕
+                </button>
+                <span style={{ color: 'white', fontWeight: 600, fontSize: '18px' }}>
+                  📹 Video Library ({videoDrills.length} videos)
+                </span>
+              </div>
+              <div style={{ color: '#aaa', fontSize: '14px' }}>
+                Click any video to play with subtitles
+              </div>
+            </div>
+
+            {/* Video Grid */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '24px',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+              gap: '20px'
+            }}>
+              {videoDrills.map((drill) => (
+                <div
+                  key={drill.id}
+                  onClick={() => {
+                    const drillIndex = drills.findIndex(d => d.id === drill.id);
+                    if (drillIndex !== -1) {
+                      setCurrentIndex(drillIndex);
+                      setShowVideoLibrary(false);
+                      setShowVideo(true);
+                    }
+                  }}
+                  style={{
+                    background: '#2a2a2a',
+                    borderRadius: '8px',
                     overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    maxWidth: '70px'
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s, background 0.2s, border-color 0.2s',
+                    border: '1px solid #444'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.background = '#333';
+                    e.currentTarget.style.borderColor = '#667eea';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = '';
+                    e.currentTarget.style.background = '#2a2a2a';
+                    e.currentTarget.style.borderColor = '#444';
+                  }}
+                >
+                  {/* Video Thumbnail */}
+                  <div style={{
+                    position: 'relative',
+                    paddingTop: '56.25%' /* 16:9 aspect ratio */,
+                    background: '#1a1a1a'
                   }}>
-                    {drill.text_catalan ? (drill.text_catalan.length > 10 ? drill.text_catalan.substring(0, 10) + '...' : drill.text_catalan) : '---'}
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                    }}>
+                      <span style={{ color: 'white', fontSize: '24px' }}>▶️</span>
+                    </div>
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '8px',
+                      right: '8px',
+                      background: 'rgba(0,0,0,0.7)',
+                      color: 'white',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px'
+                    }}>
+                      {drill.video_start_time !== undefined && drill.video_end_time !== undefined 
+                        ? `${formatTime(drill.video_start_time)}-${formatTime(drill.video_end_time)}`
+                        : 'Full video'
+                      }
+                    </div>
+                  </div>
+
+                  {/* Video Info */}
+                  <div style={{ padding: '16px' }}>
+                    <div style={{
+                      color: 'white',
+                      fontSize: '16px',
+                      fontWeight: 600,
+                      marginBottom: '8px',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      lineHeight: 1.4,
+                      height: '44px'
+                    }}>
+                      {drill.text_tachelhit || 'No title'}
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {drill.text_arabic && (
+                        <div style={{
+                          color: '#aaa',
+                          fontSize: '14px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          textAlign: 'right',
+                          direction: 'rtl'
+                        }}>
+                          {drill.text_arabic}
+                        </div>
+                      )}
+                      
+                      {drill.text_catalan && (
+                        <div style={{
+                          color: '#aaa',
+                          fontSize: '12px',
+                          fontStyle: 'italic',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {drill.text_catalan}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Video Player Modal */}
-      {showVideo && currentDrill.video_url && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.9)',
-            zIndex: 2000,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-          onClick={() => setShowVideo(false)}
-        >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '800px',
-              maxHeight: '90vh',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close button */}
-            <button
-              onClick={() => setShowVideo(false)}
-              style={{
-                position: 'absolute',
-                top: '20px',
-                right: '20px',
-                background: 'rgba(255, 255, 255, 0.2)',
-                border: 'none',
-                color: 'white',
-                fontSize: '24px',
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 2001
-              }}
-            >
-              ✕
-            </button>
-
-            {/* Video player with subtitle overlay */}
-            <div style={{ width: '100%', aspectRatio: '16/9', position: 'relative' }}>
-              {currentDrill.video_url.includes('youtube.com') || currentDrill.video_url.includes('youtu.be') ? (
-                // YouTube embed
-                <iframe
-                  src={currentDrill.video_url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/')}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    border: 'none',
-                    borderRadius: '8px'
-                  }}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  title="YouTube video player"
-                />
-              ) : (
-                // Regular video player for non-YouTube URLs
-                <video
-                  src={getMediaUrl(currentDrill.video_url)}
-                  controls
-                  autoPlay
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain',
-                    borderRadius: '8px'
-                  }}
-                />
-              )}
-              
-               {/* Subtitle overlay */}
-               {(currentDrill.text_catalan || currentDrill.text_tachelhit || currentDrill.text_arabic) && (
-                 <div style={{
-                   position: 'absolute',
-                   bottom: '0',
-                   left: '0',
-                   right: '0',
-                   padding: '15px 20px',
-                   backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                   color: 'white',
-                   textAlign: 'center',
-                   borderRadius: '0 0 8px 8px',
-                   backdropFilter: 'blur(4px)',
-                   zIndex: 10
-                 }}>
-                   {/* Arabic subtitle - first, prominent */}
-                   {currentDrill.text_arabic && (
-                     <div style={{
-                       fontSize: '20px',
-                       direction: 'rtl',
-                       fontWeight: 'bold',
-                       marginBottom: currentDrill.text_catalan || currentDrill.text_tachelhit ? '8px' : '0',
-                       color: '#9C27B0'
-                     }}>
-                       {currentDrill.text_arabic}
-                     </div>
-                   )}
-                   
-                   {/* Tachelhit subtitle */}
-                   {currentDrill.text_tachelhit && (
-                     <div style={{
-                       fontSize: '18px',
-                       fontWeight: 'bold',
-                       marginBottom: currentDrill.text_catalan ? '5px' : '0',
-                       color: '#FFD700'
-                     }}>
-                       {currentDrill.text_tachelhit}
-                     </div>
-                   )}
-                   
-                   {/* Catalan subtitle - smaller, underneath */}
-                   {currentDrill.text_catalan && (
-                     <div style={{
-                       fontSize: '16px',
-                       marginBottom: '0',
-                       color: '#4CAF50',
-                       opacity: 0.9
-                     }}>
-                       {currentDrill.text_catalan}
-                     </div>
-                   )}
-                 </div>
-               )}
-            </div>
-
-            {/* Video info */}
-            <div style={{
-              marginTop: '16px',
-              padding: '12px',
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: '8px',
-              maxWidth: '600px',
-              textAlign: 'center'
-            }}>
-              <div style={{ color: 'white', fontSize: '14px', marginBottom: '4px' }}>
-                <strong>Drill ID:</strong> {currentDrill.id}
-                {currentDrill.video_start_time && (
-                  <span style={{ marginLeft: '15px' }}>
-                    <strong>Start time:</strong> {formatTime(currentDrill.video_start_time)}
-                  </span>
-                )}
-                {currentDrill.video_end_time && (
-                  <span style={{ marginLeft: '15px' }}>
-                    <strong>End time:</strong> {formatTime(currentDrill.video_end_time)}
-                  </span>
-                )}
-              </div>
             </div>
           </div>
         </div>
@@ -758,15 +1050,3 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     </div>
   );
 }
-
-const cleanButtonStyle: React.CSSProperties = {
-  background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer', padding: 0
-};
-
-const pillButtonStyle: React.CSSProperties = {
-  padding: '5px 10px', border: 'none', borderRadius: '15px', fontSize: '10px', fontWeight: 800, cursor: 'pointer'
-};
-
-const iconButtonStyle: React.CSSProperties = {
-  background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center'
-};

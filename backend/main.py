@@ -2441,7 +2441,9 @@ def import_srt_content(request: SrtImportRequest, db: Session = Depends(get_db))
                     text_catalan=segment["text"],
                     tag=request.tag,
                     author=request.author,
-                    video_url=youtube_url
+                    video_url=youtube_url,
+                    video_start_time=segment["start_time"],
+                    video_end_time=segment["end_time"]
                 )
                 
                 db.add(db_drill)
@@ -2509,6 +2511,71 @@ def import_srt_content(request: SrtImportRequest, db: Session = Depends(get_db))
         print(f"[SRT IMPORT] Error: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"SRT import failed: {str(e)}")
+
+# ===================== BULK VIDEO URL UPDATE =====================
+@app.post("/drills/bulk-update-video-url", response_model=BulkVideoUrlUpdateResponse)
+def bulk_update_video_url(request: BulkVideoUrlUpdateRequest, db: Session = Depends(get_db)):
+    """
+    Bulk update video URLs for multiple drills.
+    For each drill, creates a proper YouTube URL with timestamp using video_start_time.
+    """
+    try:
+        print(f"[BULK VIDEO URL] Updating video URLs for {len(request.drill_ids)} drills")
+        print(f"[BULK VIDEO URL] Base video URL: {request.base_video_url}")
+        
+        updated_count = 0
+        failed_ids = []
+        
+        for drill_id in request.drill_ids:
+            try:
+                # Get the drill
+                drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+                if not drill:
+                    print(f"[BULK VIDEO URL] Drill {drill_id} not found")
+                    failed_ids.append(drill_id)
+                    continue
+                
+                # Create the YouTube URL with timestamp if requested
+                if request.update_timestamps and drill.video_start_time is not None:
+                    youtube_url = create_youtube_url_with_timestamp(
+                        request.base_video_url, 
+                        drill.video_start_time
+                    )
+                else:
+                    # Just use the base URL without timestamp
+                    youtube_url = request.base_video_url
+                
+                # Update the drill's video_url
+                drill.video_url = youtube_url
+                db.add(drill)
+                
+                print(f"[BULK VIDEO URL] Updated drill {drill_id}: {youtube_url}")
+                updated_count += 1
+                
+            except Exception as drill_error:
+                print(f"[BULK VIDEO URL] Error updating drill {drill_id}: {drill_error}")
+                failed_ids.append(drill_id)
+                continue
+        
+        # Commit all changes
+        db.commit()
+        
+        message = f"Successfully updated {updated_count} drills"
+        if failed_ids:
+            message += f", failed to update {len(failed_ids)} drills"
+        
+        return BulkVideoUrlUpdateResponse(
+            success=True,
+            message=message,
+            updated_count=updated_count,
+            failed_ids=failed_ids
+        )
+        
+    except Exception as e:
+        db.rollback()
+        print(f"[BULK VIDEO URL] Error: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Bulk video URL update failed: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

@@ -20,6 +20,9 @@ class Drill(Base):
     video_url = Column(String, nullable=True)
     image_url = Column(String, nullable=True)
     is_correction_dataset = Column(Boolean, default=False, nullable=False)
+    # Timestamp fields for video segments
+    video_start_time = Column(Float, nullable=True)  # Start time in seconds
+    video_end_time = Column(Float, nullable=True)    # End time in seconds
 
 class Test(Base):
     __tablename__ = "tests"
