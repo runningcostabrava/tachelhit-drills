@@ -483,7 +483,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
   };
 
   const initializeYouTubePlayer = () => {
-    const videoId = (window as any).getYouTubeVideoId?.(drill.video_url || '');
+    const videoId = getYouTubeVideoId(drill.video_url || '');
     if (!videoId) return;
 
     if (!(window as any).YT || !(window as any).YT.Player) {
@@ -514,7 +514,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
       }
 
       ytPlayerRef.current = new (window as any).YT.Player(elementId, {
-        videoId: getYouTubeVideoId(drill.video_url || ''),
+        videoId: videoId,
         playerVars: {
           autoplay: 1,
           controls: 1,
