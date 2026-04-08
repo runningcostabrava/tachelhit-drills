@@ -1,6 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { getMediaUrl } from '../config';
 import { getMediaWithOfflineFallback } from '../utils/offlineCache';
+import { getYouTubeVideoId } from '../utils/youtubeUtils';
+
+declare global {
+  interface Window {
+    onYouTubeIframeAPIReady?: () => void;
+    YT: any;
+  }
+}
 
 interface Drill {
   id: number;
@@ -82,6 +90,9 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
   const progressIntervalRef = useRef<number | null>(null);
   const videoIframeRef = useRef<HTMLIFrameElement | null>(null);
+  const playerRef = useRef<any>(null); // YouTube Player instance
+  const [playerReady, setPlayerReady] = useState(false);
+  const loopIntervalRef = useRef<number | null>(null);
 
   const currentDrill = drills[currentIndex];
   // Note: isMobile is declared for potential future mobile-specific logic
@@ -186,9 +197,110 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   useEffect(() => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     if (!isIOS) {
-      setAutoPlayEnabled(true);
+    setAutoPlayEnabled(true);
     }
   }, []);
+
+  // Load YouTube IFrame API script
+  useEffect(() => {
+    if (!window.YT) {
+      const tag = document.createElement('script');
+      tag.src = "https://www.youtube.com/iframe_api";
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+
+      window.onYouTubeIframeAPIReady = () => {
+        console.log("YouTube IFrame API is Ready");
+        setPlayerReady(true);
+      };
+    } else {
+      setPlayerReady(true);
+    }
+  }, []);
+
+  // Initialize YouTube Player and handle video looping
+  useEffect(() => {
+    if (!playerReady || !currentDrill?.video_url || !showVideo) return;
+
+    const videoId = getYouTubeVideoId(currentDrill.video_url);
+    if (!videoId) {
+      console.error("Invalid YouTube URL or video ID not found:", currentDrill.video_url);
+      return;
+    }
+
+    if (playerRef.current) {
+      playerRef.current.destroy(); // Destroy existing player if any
+    }
+
+    playerRef.current = new window.YT.Player('youtube-player', {
+      videoId: videoId,
+      playerVars: {
+        autoplay: 1,
+        controls: 1,
+        modestbranding: 1,
+        start: currentDrill.video_start_time || 0,
+        end: currentDrill.video_end_time || undefined,
+      },
+      events: {
+        'onReady': (event: any) => {
+          console.log('YouTube player ready');
+          if (videoControls.playbackRate !== 1.0) {
+            event.target.setPlaybackRate(videoControls.playbackRate);
+          }
+          // Ensure video starts at start_time if specified and not already playing
+          if (currentDrill.video_start_time && event.target.getCurrentTime() < currentDrill.video_start_time) {
+            event.target.seekTo(currentDrill.video_start_time, true);
+          }
+        },
+        'onStateChange': (event: any) => {
+          if (event.data === window.YT.PlayerState.ENDED) {
+            if (videoControls.isLooping) {
+              playerRef.current.seekTo(currentDrill.video_start_time || 0, true);
+              playerRef.current.playVideo();
+            } else {
+              // If not looping, stop interval if it's running
+              if (loopIntervalRef.current) {
+                window.clearInterval(loopIntervalRef.current);
+                loopIntervalRef.current = null;
+              }
+            }
+          } else if (event.data === window.YT.PlayerState.PLAYING) {
+            // Start looping interval only when playing
+            if (videoControls.isLooping && loopIntervalRef.current === null) {
+              loopIntervalRef.current = window.setInterval(() => {
+                const currentTime = playerRef.current?.getCurrentTime();
+                const endTime = currentDrill.video_end_time;
+                if (currentTime !== undefined && endTime !== undefined && currentTime >= endTime) {
+                  playerRef.current.seekTo(currentDrill.video_start_time || 0, true);
+                  playerRef.current.playVideo();
+                }
+              }, 500); // Check every 500ms
+            }
+          } else if (event.data === window.YT.PlayerState.PAUSED || event.data === window.YT.PlayerState.BUFFERING) {
+             // If paused or buffering, clear interval to prevent unnecessary checks
+             if (loopIntervalRef.current) {
+              window.clearInterval(loopIntervalRef.current);
+              loopIntervalRef.current = null;
+             }
+          }
+        },
+        'onError': (error: any) => {
+          console.error('YouTube player error:', error);
+        }
+      },
+    });
+
+    return () => {
+      if (playerRef.current) {
+        playerRef.current.destroy();
+        playerRef.current = null;
+      }
+      if (loopIntervalRef.current) {
+        window.clearInterval(loopIntervalRef.current);
+        loopIntervalRef.current = null;
+      }
+    };
+  }, [playerReady, currentDrill, showVideo, videoControls.isLooping, videoControls.playbackRate]);
 
   const playCurrentAudio = async () => {
     stopAllAudio();
@@ -333,37 +445,43 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   // Video control functions
   const handlePlaybackRateChange = (rate: number) => {
     setVideoControls(prev => ({ ...prev, playbackRate: rate }));
-    // Note: YouTube iframe API would be needed to actually change playback rate
-    // This is a placeholder for the UI
+    if (playerRef.current) {
+      playerRef.current.setPlaybackRate(rate);
+    }
   };
 
   const handleToggleLoop = () => {
     setVideoControls(prev => ({ ...prev, isLooping: !prev.isLooping }));
+    // Looping logic is handled in the onStateChange event and a time interval check
+  };
+
+  const seekToSubtitle = (index: number) => {
+    if (index >= 0 && index < videoControls.subtitleSections.length) {
+      const targetSection = videoControls.subtitleSections[index];
+      setVideoControls(prev => ({ ...prev, currentSubtitleIndex: index }));
+      if (playerRef.current) {
+        playerRef.current.seekTo(targetSection.start, true);
+        playerRef.current.playVideo();
+      }
+    }
   };
 
   const handlePreviousSubtitle = () => {
     if (videoControls.currentSubtitleIndex > 0) {
-      setVideoControls(prev => ({ 
-        ...prev, 
-        currentSubtitleIndex: prev.currentSubtitleIndex - 1 
-      }));
+      seekToSubtitle(videoControls.currentSubtitleIndex - 1);
     }
   };
 
   const handleNextSubtitle = () => {
     if (videoControls.currentSubtitleIndex < videoControls.subtitleSections.length - 1) {
-      setVideoControls(prev => ({ 
-        ...prev, 
-        currentSubtitleIndex: prev.currentSubtitleIndex + 1 
-      }));
+      seekToSubtitle(videoControls.currentSubtitleIndex + 1);
     }
   };
 
   const handleJumpToSubtitle = (index: number) => {
-    if (index >= 0 && index < videoControls.subtitleSections.length) {
-      setVideoControls(prev => ({ ...prev, currentSubtitleIndex: index }));
-    }
+    seekToSubtitle(index);
   };
+
 
   // Get video drills (drills with video URLs)
   const videoDrills = drills.filter(drill => drill.video_url);
@@ -705,10 +823,23 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
 
             {/* Video Player */}
             <div style={{ position: 'relative', paddingTop: '56.25%' /* 16:9 aspect ratio */ }}>
+              <div
+                id="youtube-player"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  border: 'none'
+                }}
+              />
+
               <iframe
                 ref={videoIframeRef}
-                src={`${currentDrill.video_url}?start=${currentDrill.video_start_time || 0}&end=${currentDrill.video_end_time || ''}&autoplay=1&controls=1&modestbranding=1`}
+                src="" // Controlled by YouTube Player API
                 style={{
+                  display: 'none', // Hide the original iframe once YT player is loaded
                   position: 'absolute',
                   top: 0,
                   left: 0,
