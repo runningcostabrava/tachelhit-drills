@@ -81,7 +81,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   const [showVideoLibrary, setShowVideoLibrary] = useState(false);
   const [videoControls, setVideoControls] = useState<VideoControls>({
     playbackRate: 1.0,
-    isLooping: false,
+    isLooping: true,
     currentSubtitleIndex: 0,
     subtitleSections: []
   });
@@ -176,12 +176,13 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     }
     
     // Reset video controls
-    setVideoControls({
+    setVideoControls(prev => ({
+      ...prev,
       playbackRate: 1.0,
-      isLooping: false,
+      isLooping: true,
       currentSubtitleIndex: 0,
       subtitleSections: []
-    });
+    }));
   }, [currentIndex]);
 
   // Autoplay effect
@@ -218,7 +219,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     }
   }, []);
 
-  // Initialize YouTube Player and handle video looping
+  // Initialize YouTube Player
   useEffect(() => {
     if (!playerReady || !currentDrill?.video_url || !showVideo) return;
 
@@ -229,7 +230,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     }
 
     if (playerRef.current) {
-      playerRef.current.destroy(); // Destroy existing player if any
+      playerRef.current.destroy();
     }
 
     playerRef.current = new window.YT.Player('youtube-player', {
@@ -243,45 +244,17 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
       },
       events: {
         'onReady': (event: any) => {
-          console.log('YouTube player ready');
           if (videoControls.playbackRate !== 1.0) {
             event.target.setPlaybackRate(videoControls.playbackRate);
           }
-          // Ensure video starts at start_time if specified and not already playing
-          if (currentDrill.video_start_time && event.target.getCurrentTime() < currentDrill.video_start_time) {
+          if (currentDrill.video_start_time !== undefined) {
             event.target.seekTo(currentDrill.video_start_time, true);
           }
         },
         'onStateChange': (event: any) => {
-          if (event.data === window.YT.PlayerState.ENDED) {
-            if (videoControls.isLooping) {
-              playerRef.current.seekTo(currentDrill.video_start_time || 0, true);
-              playerRef.current.playVideo();
-            } else {
-              // If not looping, stop interval if it's running
-              if (loopIntervalRef.current) {
-                window.clearInterval(loopIntervalRef.current);
-                loopIntervalRef.current = null;
-              }
-            }
-          } else if (event.data === window.YT.PlayerState.PLAYING) {
-            // Start looping interval only when playing
-            if (videoControls.isLooping && loopIntervalRef.current === null) {
-              loopIntervalRef.current = window.setInterval(() => {
-                const currentTime = playerRef.current?.getCurrentTime();
-                const endTime = currentDrill.video_end_time;
-                if (currentTime !== undefined && endTime !== undefined && currentTime >= endTime) {
-                  playerRef.current.seekTo(currentDrill.video_start_time || 0, true);
-                  playerRef.current.playVideo();
-                }
-              }, 500); // Check every 500ms
-            }
-          } else if (event.data === window.YT.PlayerState.PAUSED || event.data === window.YT.PlayerState.BUFFERING) {
-             // If paused or buffering, clear interval to prevent unnecessary checks
-             if (loopIntervalRef.current) {
-              window.clearInterval(loopIntervalRef.current);
-              loopIntervalRef.current = null;
-             }
+          if (event.data === window.YT.PlayerState.ENDED && videoControls.isLooping) {
+            event.target.seekTo(currentDrill.video_start_time || 0, true);
+            event.target.playVideo();
           }
         },
         'onError': (error: any) => {
@@ -295,12 +268,36 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         playerRef.current.destroy();
         playerRef.current = null;
       }
-      if (loopIntervalRef.current) {
-        window.clearInterval(loopIntervalRef.current);
-        loopIntervalRef.current = null;
+    };
+  }, [playerReady, currentDrill?.id, showVideo]);
+
+  // Handle precise video looping without destroying player
+  useEffect(() => {
+    if (!playerRef.current || !showVideo || !videoControls.isLooping) return;
+
+    const checkLoop = () => {
+      if (!playerRef.current || typeof playerRef.current.getCurrentTime !== 'function') return;
+      
+      const currentTime = playerRef.current.getCurrentTime();
+      const startTime = currentDrill.video_start_time || 0;
+      const endTime = currentDrill.video_end_time;
+
+      if (endTime !== undefined && currentTime >= endTime) {
+        playerRef.current.seekTo(startTime, true);
+        playerRef.current.playVideo();
       }
     };
-  }, [playerReady, currentDrill, showVideo, videoControls.isLooping, videoControls.playbackRate]);
+
+    const interval = window.setInterval(checkLoop, 100);
+    return () => window.clearInterval(interval);
+  }, [showVideo, videoControls.isLooping, currentDrill?.video_start_time, currentDrill?.video_end_time]);
+
+  // Handle playback rate separately
+  useEffect(() => {
+    if (playerRef.current && typeof playerRef.current.setPlaybackRate === 'function') {
+      playerRef.current.setPlaybackRate(videoControls.playbackRate);
+    }
+  }, [videoControls.playbackRate]);
 
   const playCurrentAudio = async () => {
     stopAllAudio();
