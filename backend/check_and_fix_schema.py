@@ -125,6 +125,54 @@ def check_and_fix():
                 print(f"[SCHEMA] Error adding 'is_correction_dataset' column: {e}")
         else:
             print("[SCHEMA] Column 'is_correction_dataset' already exists.")
+        
+        # Check for 'video_start_time' column
+        if 'video_start_time' not in columns:
+            print("[SCHEMA] Column 'video_start_time' missing. Adding...")
+            try:
+                with engine.connect() as conn:
+                    if DATABASE_URL.startswith('sqlite'):
+                        try:
+                            conn.execute(text("ALTER TABLE drills ADD COLUMN video_start_time FLOAT"))
+                            conn.commit()
+                            print("[SCHEMA] Column 'video_start_time' added successfully (SQLite).")
+                        except Exception as e:
+                            if 'duplicate column name' in str(e).lower():
+                                print("[SCHEMA] Column 'video_start_time' already exists (SQLite).")
+                            else:
+                                raise
+                    else:
+                        conn.execute(text("ALTER TABLE drills ADD COLUMN IF NOT EXISTS video_start_time FLOAT"))
+                        conn.commit()
+                        print("[SCHEMA] Column 'video_start_time' added successfully (PostgreSQL).")
+            except Exception as e:
+                print(f"[SCHEMA] Error adding 'video_start_time' column: {e}")
+        else:
+            print("[SCHEMA] Column 'video_start_time' already exists.")
+
+        # Check for 'video_end_time' column
+        if 'video_end_time' not in columns:
+            print("[SCHEMA] Column 'video_end_time' missing. Adding...")
+            try:
+                with engine.connect() as conn:
+                    if DATABASE_URL.startswith('sqlite'):
+                        try:
+                            conn.execute(text("ALTER TABLE drills ADD COLUMN video_end_time FLOAT"))
+                            conn.commit()
+                            print("[SCHEMA] Column 'video_end_time' added successfully (SQLite).")
+                        except Exception as e:
+                            if 'duplicate column name' in str(e).lower():
+                                print("[SCHEMA] Column 'video_end_time' already exists (SQLite).")
+                            else:
+                                raise
+                    else:
+                        conn.execute(text("ALTER TABLE drills ADD COLUMN IF NOT EXISTS video_end_time FLOAT"))
+                        conn.commit()
+                        print("[SCHEMA] Column 'video_end_time' added successfully (PostgreSQL).")
+            except Exception as e:
+                print(f"[SCHEMA] Error adding 'video_end_time' column: {e}")
+        else:
+            print("[SCHEMA] Column 'video_end_time' already exists.")
 
         # Verify drills table columns
         try:
