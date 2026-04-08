@@ -63,44 +63,46 @@ This application is built with a modern, decoupled three-part architecture. Unde
     -   It saves this URL to the `audio_tts_url` column of the corresponding drill in the PostgreSQL database.
 
 ### Demo Video Generation
-This is the most complex workflow, involving all components of the system.
+66 | This is the most complex workflow, involving all components of the system.
+67 | 
+68 | 1.  **User Action (Vercel):** A user clicks the "Generate Demo Video" button for a specific test on the `TestsDashboard` page.
+69 | 2.  **API Request (Vercel -> Render):** The frontend sends a `POST` request to the `/generate-drillplayer-demo/{test_id}` endpoint on the Render backend.
+70 | 3.  **Backend Orchestration (Render):**
+71 |     -   The `generate_drillplayer_demo` function in `backend/main.py` receives the request.
+72 |     -   It gathers all necessary data for each drill in the test (including `text_catalan`, `text_tachelhit`, `text_arabic`, `image_url`, `audio_url`, `audio_tts_url`) from its PostgreSQL database.
+73 |     -   It packages this data into a JSON payload.
+74 |     -   It starts a background task (`background_video_vault`) to handle the long-running process.
+75 |     -   It **immediately** responds to the frontend with a `{"status": "processing"}` message, preventing a browser timeout.
+76 | 4.  **Video Generation Request (Render -> HuggingFace):**
+77 |     -   The `background_video_vault` task running on Render sends a `POST` request to the `predict` endpoint of the HuggingFace Space, passing the JSON payload with all the drill data.
+78 | 5.  **Video Processing (HuggingFace):**
+79 |     -   The `app.py` on the HuggingFace Space receives the data and calls the `generate_drillplayer_demo` function in `shorts_generator.py`.
+80 |     -   This script iterates through each drill:
+81 |         -   It downloads the `audio_tts_url` (Catalan) and `audio_url` (Tachelhit) from their Cloudinary URLs.
+82 |         -   It uses `moviepy` to create a new audio clip: **Catalan audio (1x) + Tachelhit audio (2x)**.
+83 |         -   It generates a static image simulating the `DrillPlayer` UI.
+84 |         -   It combines the image and the new composite audio track into a short video clip for that drill.
+85 |     -   After processing all drills, it concatenates all individual video clips into one final demo video.
+86 |     -   It saves this video to a temporary local path on the HuggingFace Space and returns this temporary path in its response to the Render backend.
+87 | 6.  **Video Vaulting (Render -> Cloudinary):**
+88 |     -   The `background_video_vault` task on Render receives the temporary video path from HuggingFace.
+89 |     -   It instructs Cloudinary to upload the video directly from the HuggingFace URL.
+90 | 7.  **Database Update (Render):**
+91 |     -   Cloudinary provides a permanent, secure URL for the newly uploaded video.
+92 |     -   The `background_video_vault` task updates the `video_url` field for the corresponding `Test` in the PostgreSQL database.
+93 | 8.  **Polling and Display (Vercel -> Render):**
+94 |     -   Meanwhile, after receiving the initial "processing" status, the frontend UI has started periodically polling the `/tests/{test_id}` endpoint on the Render backend every 10 seconds.
+95 |     -   Once the database is updated (step 7), the response to this `GET` request will contain the permanent Cloudinary `video_url`.
+96 |     -   The frontend sees the new URL, stops polling, and displays the "Demo Video Ready!" section with the embedded video player.
+97 | 
+98 | ---
+99 | 
+100 | ## Local Development Setup & Deployment
+101 | 
+102 | For instructions on setting up the local development environment for each service and for deployment information, please refer to the "Local Development Setup" section above in this document.
+103 | 
+104 | ## Local Tools for Aider/DeepSeek Development
+105 | 
+106 | This project includes a set of local tools to capture the state of the web application for easier debugging and development with AI assistants. For detailed instructions, please see the `local_tools/README.md` file.
 
-1.  **User Action (Vercel):** A user clicks the "Generate Demo Video" button for a specific test on the `TestsDashboard` page.
-2.  **API Request (Vercel -> Render):** The frontend sends a `POST` request to the `/generate-drillplayer-demo/{test_id}` endpoint on the Render backend.
-3.  **Backend Orchestration (Render):**
-    -   The `generate_drillplayer_demo` function in `backend/main.py` receives the request.
-    -   It gathers all necessary data for each drill in the test (including `text_catalan`, `text_tachelhit`, `text_arabic`, `image_url`, `audio_url`, `audio_tts_url`) from its PostgreSQL database.
-    -   It packages this data into a JSON payload.
-    -   It starts a background task (`background_video_vault`) to handle the long-running process.
-    -   It **immediately** responds to the frontend with a `{"status": "processing"}` message, preventing a browser timeout.
-4.  **Video Generation Request (Render -> HuggingFace):**
-    -   The `background_video_vault` task running on Render sends a `POST` request to the `predict` endpoint of the HuggingFace Space, passing the JSON payload with all the drill data.
-5.  **Video Processing (HuggingFace):**
-    -   The `app.py` on the HuggingFace Space receives the data and calls the `generate_drillplayer_demo` function in `shorts_generator.py`.
-    -   This script iterates through each drill:
-        -   It downloads the `audio_tts_url` (Catalan) and `audio_url` (Tachelhit) from their Cloudinary URLs.
-        -   It uses `moviepy` to create a new audio clip: **Catalan audio (1x) + Tachelhit audio (2x)**.
-        -   It generates a static image simulating the `DrillPlayer` UI.
-        -   It combines the image and the new composite audio track into a short video clip for that drill.
-    -   After processing all drills, it concatenates all individual video clips into one final demo video.
-    -   It saves this video to a temporary local path on the HuggingFace Space and returns this temporary path in its response to the Render backend.
-6.  **Video Vaulting (Render -> Cloudinary):**
-    -   The `background_video_vault` task on Render receives the temporary video path from HuggingFace.
-    -   It instructs Cloudinary to upload the video directly from the HuggingFace URL.
-7.  **Database Update (Render):**
-    -   Cloudinary provides a permanent, secure URL for the newly uploaded video.
-    -   The `background_video_vault` task updates the `video_url` field for the corresponding `Test` in the PostgreSQL database.
-8.  **Polling and Display (Vercel -> Render):**
-    -   Meanwhile, after receiving the initial "processing" status, the frontend UI has started periodically polling the `/tests/{test_id}` endpoint on the Render backend every 10 seconds.
-    -   Once the database is updated (step 7), the response to this `GET` request will contain the permanent Cloudinary `video_url`.
-    -   The frontend sees the new URL, stops polling, and displays the "Demo Video Ready!" section with the embedded video player.
-
----
-
-## Local Development Setup & Deployment
-
-For instructions on setting up the local development environment for each service and for deployment information, please refer to the "Local Development Setup" section above in this document.
-
-## Local Tools for Aider/DeepSeek Development
-
-This project includes a set of local tools to capture the state of the web application for easier debugging and development with AI assistants. For detailed instructions, please see the `local_tools/README.md` file.
+<!-- Dummy change to trigger new commit -->
