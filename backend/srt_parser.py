@@ -142,6 +142,69 @@ def create_youtube_url_with_timestamp(video_url: str, start_time: float, end_tim
     
     return url_with_time
 
+def is_corrupted_text(text: str) -> bool:
+    """
+    Detect if text appears to be corrupted OCR/encoding garbage.
+    
+    Args:
+        text: Text to check
+        
+    Returns:
+        True if text appears corrupted, False if valid
+    """
+    if not text or len(text.strip()) == 0:
+        return True
+    
+    # Check for common OCR corruption patterns
+    text_lower = text.lower()
+    
+    # 1. Too many special characters or digits mixed with letters
+    # Count special characters (excluding common punctuation and spaces)
+    special_char_count = sum(1 for c in text if not c.isalnum() and not c.isspace() and c not in ',.!?¿¡\'"-')
+    if special_char_count > len(text) * 0.25:  # More than 25% special chars
+        return True
+    
+    # 2. Contains common OCR garbage patterns
+    garbage_patterns = [
+        r'[0-9]+[a-z]',  # Numbers followed by letters (e.g., "7a", "a2")
+        r'[a-z][0-9]+',  # Letters followed by numbers
+        r'[^a-zA-Z0-9\s]{2,}',  # 2+ consecutive non-alphanumeric chars
+        r'[<>+*^|\\/]{2,}',  # Multiple special characters together
+        r'\b[a-z0-9]{1,3}\b',  # Very short alphanumeric words (1-3 chars) that aren't common words
+    ]
+    
+    # Common short valid words to exclude from the short word check
+    common_short_words = {'a', 'i', 'o', 'u', 'el', 'la', 'en', 'de', 'que', 'y', 'es', 'no', 'si'}
+    
+    for pattern in garbage_patterns:
+        if re.search(pattern, text_lower):
+            # For the short word pattern, check if it's a common word
+            if pattern == r'\b[a-z0-9]{1,3}\b':
+                matches = re.findall(pattern, text_lower)
+                # If all short words are uncommon, it's likely garbage
+                if matches and all(word not in common_short_words for word in matches):
+                    return True
+            else:
+                return True
+    
+    # 3. Check ratio of letters to total characters
+    letter_count = sum(1 for c in text if c.isalpha())
+    if letter_count < len(text) * 0.4:  # Less than 40% letters
+        return True
+    
+    # 4. Check for excessive digit-to-letter transitions
+    digit_letter_transitions = 0
+    for i in range(len(text) - 1):
+        if text[i].isdigit() and text[i+1].isalpha():
+            digit_letter_transitions += 1
+        elif text[i].isalpha() and text[i+1].isdigit():
+            digit_letter_transitions += 1
+    
+    if digit_letter_transitions > len(text) * 0.2:  # More than 20% transitions
+        return True
+    
+    return False
+
 def parse_srt_content(content: str) -> List[Dict[str, Any]]:
     """
     Parse SRT content from a string (not file).
@@ -184,6 +247,11 @@ def parse_srt_content(content: str) -> List[Dict[str, Any]]:
             # Remaining lines: text
             text_lines = lines[2:]
             text = ' '.join(line.strip() for line in text_lines)
+            
+            # Skip corrupted text segments
+            if is_corrupted_text(text):
+                print(f"[SRT PARSER] Skipping corrupted segment {index}: '{text[:50]}...'")
+                continue
             
             segments.append({
                 'index': index,

@@ -2482,7 +2482,9 @@ def import_srt_content(request: SrtImportRequest, db: Session = Depends(get_db))
                 db_test = TestModel(
                     title=test_title,
                     description=test_description,
-                    drill_ids=",".join(str(did) for did in drill_ids)
+                    drill_ids=",".join(str(did) for did in drill_ids),
+                    question_type="text_input",
+                    hint_level="none"
                 )
                 db.add(db_test)
                 db.commit()
