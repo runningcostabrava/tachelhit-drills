@@ -288,7 +288,6 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
       }
     };
   }, [playerReady, currentDrill?.id, showVideo]);
->>>>+++ REPLACE
 
 
 
