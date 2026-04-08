@@ -1677,6 +1677,48 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                         📥 Download Offline ({selectedDrillIds.length})
                     </button>
 
+                    <button
+                        onClick={async () => {
+                            if (selectedDrillIds.length === 0) return;
+                            if (!confirm(`⚠️ WARNING: This will permanently delete ${selectedDrillIds.length} drill(s).\n\nThis action cannot be undone. Are you sure you want to delete these drills?`)) return;
+                            
+                            try {
+                                // Delete drills sequentially
+                                for (const id of selectedDrillIds) {
+                                    await axios.delete(`${API_BASE}/drills/${id}`);
+                                }
+                                
+                                alert(`✅ Successfully deleted ${selectedDrillIds.length} drill(s).`);
+                                refreshData(); // Refresh the grid
+                                
+                                // Clear selection
+                                setSelectedDrillIds([]);
+                                if (gridRef.current) {
+                                    gridRef.current.api.deselectAll();
+                                }
+                            } catch (error) {
+                                console.error('Bulk delete failed:', error);
+                                alert(`❌ Failed to delete some drills. Check console for details.`);
+                            }
+                        }}
+                        style={{
+                            padding: '10px 16px',
+                            fontSize: '14px',
+                            background: selectedDrillIds.length > 0 ? '#ff4444' : '#e0e0e0',
+                            color: selectedDrillIds.length > 0 ? 'white' : '#999',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: selectedDrillIds.length > 0 ? 'pointer' : 'not-allowed',
+                            fontWeight: 600,
+                            boxShadow: selectedDrillIds.length > 0 ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
+                            transition: 'all 0.2s',
+                        }}
+                        disabled={selectedDrillIds.length === 0}
+                        title="Permanently delete selected drills"
+                    >
+                        🗑️ Bulk Delete ({selectedDrillIds.length})
+                    </button>
+
                     <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
                         <button
                             onClick={() => {
