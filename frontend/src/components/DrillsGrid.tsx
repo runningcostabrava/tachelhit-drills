@@ -1729,6 +1729,26 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                         >
                             🎬 Demos
                         </button>
+                        <button
+                            onClick={() => navigate('/srt-import')}
+                            style={{
+                                padding: '10px 16px',
+                                fontSize: '14px',
+                                background: 'white',
+                                color: '#FF5722',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                            title="Import drills from SRT subtitle files"
+                        >
+                            📝 Import SRT
+                        </button>
                     </div>
                 </div>
             </div>

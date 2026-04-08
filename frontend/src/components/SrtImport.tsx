@@ -160,7 +160,7 @@ const SrtImport: React.FC = () => {
 
   const formatTime = (timestamp: string) => {
     // SRT format: HH:MM:SS,mmm
-    const [time, milliseconds] = timestamp.split(',');
+    const [time, _milliseconds] = timestamp.split(',');
     return time;
   };
 
