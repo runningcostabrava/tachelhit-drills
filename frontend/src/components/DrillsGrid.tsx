@@ -310,8 +310,8 @@ const VideoCellRenderer = (props: any) => {
             let endTime = Number(data.video_end_time) || (startTime > 0 ? startTime + 5 : 0);
 
             // Padding: start 0.5s before and end 0.5s after
-            startTime = Math.max(0, startTime - 0.5);
-            if (endTime > 0) endTime = endTime + 0.5;
+            startTime = Math.max(0, startTime - 0.1);
+            if (endTime > 0) endTime = endTime + 0.1;
 
             const initPlayer = () => {
                 const elementId = `yt-player-${data.id}`;

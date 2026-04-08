@@ -7,6 +7,7 @@ import PublicTestView from './components/PublicTestView';
 import MediaRecorderTest from './components/MediaRecorderTest';
 import VideoDrillCreator from './components/VideoDrillCreator';
 import SrtImport from './components/SrtImport';
+import VideoLibraryPage from './components/VideoLibraryPage';
 import './App.css';
 
 // Placeholder component for /demo-videos
@@ -38,6 +39,7 @@ function App() {
         } />
         <Route path="/media-test" element={<MediaRecorderTest />} />
         <Route path="/demo-videos" element={<DemoVideosPage />} />
+        <Route path="/library" element={<VideoLibraryPage />} />
       </Routes>
     </div>
   );
