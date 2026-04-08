@@ -250,6 +250,14 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
   };
 
+  // Helper function to format time in seconds to MM:SS format
+  const formatTime = (seconds: number) => {
+    if (!seconds) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div style={{
       height: '100vh',
@@ -635,7 +643,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
               ✕
             </button>
 
-            {/* Video player */}
+            {/* Video player with subtitle overlay */}
             <div style={{ width: '100%', aspectRatio: '16/9', position: 'relative' }}>
               {currentDrill.video_url.includes('youtube.com') || currentDrill.video_url.includes('youtu.be') ? (
                 // YouTube embed
@@ -665,9 +673,63 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                   }}
                 />
               )}
+              
+               {/* Subtitle overlay */}
+               {(currentDrill.text_catalan || currentDrill.text_tachelhit || currentDrill.text_arabic) && (
+                 <div style={{
+                   position: 'absolute',
+                   bottom: '0',
+                   left: '0',
+                   right: '0',
+                   padding: '15px 20px',
+                   backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                   color: 'white',
+                   textAlign: 'center',
+                   borderRadius: '0 0 8px 8px',
+                   backdropFilter: 'blur(4px)',
+                   zIndex: 10
+                 }}>
+                   {/* Arabic subtitle - first, prominent */}
+                   {currentDrill.text_arabic && (
+                     <div style={{
+                       fontSize: '20px',
+                       direction: 'rtl',
+                       fontWeight: 'bold',
+                       marginBottom: currentDrill.text_catalan || currentDrill.text_tachelhit ? '8px' : '0',
+                       color: '#9C27B0'
+                     }}>
+                       {currentDrill.text_arabic}
+                     </div>
+                   )}
+                   
+                   {/* Tachelhit subtitle */}
+                   {currentDrill.text_tachelhit && (
+                     <div style={{
+                       fontSize: '18px',
+                       fontWeight: 'bold',
+                       marginBottom: currentDrill.text_catalan ? '5px' : '0',
+                       color: '#FFD700'
+                     }}>
+                       {currentDrill.text_tachelhit}
+                     </div>
+                   )}
+                   
+                   {/* Catalan subtitle - smaller, underneath */}
+                   {currentDrill.text_catalan && (
+                     <div style={{
+                       fontSize: '16px',
+                       marginBottom: '0',
+                       color: '#4CAF50',
+                       opacity: 0.9
+                     }}>
+                       {currentDrill.text_catalan}
+                     </div>
+                   )}
+                 </div>
+               )}
             </div>
 
-            {/* Video caption */}
+            {/* Video info */}
             <div style={{
               marginTop: '16px',
               padding: '12px',
@@ -676,14 +738,19 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
               maxWidth: '600px',
               textAlign: 'center'
             }}>
-              <div style={{ color: 'white', fontSize: '16px', fontWeight: 'bold', marginBottom: '4px' }}>
-                {currentDrill.text_tachelhit || currentDrill.text_catalan || 'Video'}
+              <div style={{ color: 'white', fontSize: '14px', marginBottom: '4px' }}>
+                <strong>Drill ID:</strong> {currentDrill.id}
+                {currentDrill.video_start_time && (
+                  <span style={{ marginLeft: '15px' }}>
+                    <strong>Start time:</strong> {formatTime(currentDrill.video_start_time)}
+                  </span>
+                )}
+                {currentDrill.video_end_time && (
+                  <span style={{ marginLeft: '15px' }}>
+                    <strong>End time:</strong> {formatTime(currentDrill.video_end_time)}
+                  </span>
+                )}
               </div>
-              {currentDrill.text_catalan && (
-                <div style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '14px' }}>
-                  {currentDrill.text_catalan}
-                </div>
-              )}
             </div>
           </div>
         </div>

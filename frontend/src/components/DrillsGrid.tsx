@@ -180,7 +180,14 @@ const VideoCellRenderer = (props: any) => {
                 videoId = urlObj.searchParams.get('v') || '';
             }
             
-            if (!videoId) return url; // Return original if no video ID found
+            // If no video ID found, check if this is a malformed URL like https://www.youtube.com/watch?t=1964
+            // Try to extract video ID from the original YouTube URL stored elsewhere or use a default
+            if (!videoId) {
+                console.warn('No video ID found in YouTube URL:', url);
+                // For now, return a placeholder or the original URL
+                // In a real app, you might want to store the original video URL separately
+                return url;
+            }
             
             // Get timestamp parameter if exists
             const timestamp = urlObj.searchParams.get('t') || urlObj.searchParams.get('start') || '';
@@ -214,6 +221,14 @@ const VideoCellRenderer = (props: any) => {
             // Fallback to simple conversion
             return url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/');
         }
+    };
+
+    // Helper function to format time in seconds to MM:SS format
+    const formatTime = (seconds: number) => {
+        if (!seconds) return '0:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
     // Setup preview stream when modal opens
@@ -464,42 +479,116 @@ const VideoCellRenderer = (props: any) => {
                         ✕
                     </button>
                 </div>
-                {isYouTubeUrl(value) ? (
-                    // YouTube embed
-                    <iframe
-                        src={convertToEmbedUrl(getMediaUrl(value))}
-                        style={{
-                            width: '640px',
-                            height: '480px',
-                            maxWidth: '90vw',
-                            maxHeight: '70vh',
-                            backgroundColor: '#000',
-                            borderRadius: '8px',
-                            display: 'block',
-                            border: 'none'
-                        }}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                    />
-                ) : (
-                    // Regular video
-                    <video
-                        ref={playbackRef}
-                        src={getMediaUrl(value)}
-                        controls
-                        onEnded={handleVideoEnded}
-                        style={{
-                            width: '640px',
-                            height: '480px',
-                            maxWidth: '90vw',
-                            maxHeight: '70vh',
-                            backgroundColor: '#000',
-                            borderRadius: '8px',
-                            display: 'block',
-                            objectFit: 'contain'
-                        }}
-                    />
-                )}
+                
+                {/* Video container with subtitle overlay */}
+                <div style={{ position: 'relative', width: '800px', maxWidth: '90vw' }}>
+                    {isYouTubeUrl(value) ? (
+                        // YouTube embed
+                        <iframe
+                            src={convertToEmbedUrl(getMediaUrl(value))}
+                            style={{
+                                width: '100%',
+                                height: '600px',
+                                maxHeight: '70vh',
+                                backgroundColor: '#000',
+                                borderRadius: '8px',
+                                display: 'block',
+                                border: 'none'
+                            }}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                        />
+                    ) : (
+                        // Regular video
+                        <video
+                            ref={playbackRef}
+                            src={getMediaUrl(value)}
+                            controls
+                            onEnded={handleVideoEnded}
+                            style={{
+                                width: '100%',
+                                height: '600px',
+                                maxHeight: '70vh',
+                                backgroundColor: '#000',
+                                borderRadius: '8px',
+                                display: 'block',
+                                objectFit: 'contain'
+                            }}
+                        />
+                    )}
+                    
+                    {/* Subtitle overlay */}
+                    {(data.text_catalan || data.text_tachelhit || data.text_arabic) && (
+                        <div style={{
+                            position: 'absolute',
+                            bottom: '20px',
+                            left: '0',
+                            right: '0',
+                            padding: '10px 20px',
+                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                            color: 'white',
+                            textAlign: 'center',
+                            borderRadius: '0 0 8px 8px',
+                            backdropFilter: 'blur(4px)',
+                            zIndex: 10
+                        }}>
+                            {/* Arabic subtitle - first, prominent */}
+                            {data.text_arabic && (
+                                <div style={{
+                                    fontSize: '20px',
+                                    direction: 'rtl',
+                                    fontWeight: 'bold',
+                                    marginBottom: data.text_catalan || data.text_tachelhit ? '8px' : '0',
+                                    color: '#9C27B0'
+                                }}>
+                                    {data.text_arabic}
+                                </div>
+                            )}
+                            
+                            {/* Tachelhit subtitle */}
+                            {data.text_tachelhit && (
+                                <div style={{
+                                    fontSize: '18px',
+                                    fontWeight: 'bold',
+                                    marginBottom: data.text_catalan ? '5px' : '0',
+                                    color: '#FFD700'
+                                }}>
+                                    {data.text_tachelhit}
+                                </div>
+                            )}
+                            
+                            {/* Catalan subtitle - smaller, underneath */}
+                            {data.text_catalan && (
+                                <div style={{
+                                    fontSize: '16px',
+                                    marginBottom: '0',
+                                    color: '#4CAF50',
+                                    opacity: 0.9
+                                }}>
+                                    {data.text_catalan}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+                
+                {/* Video info */}
+                <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '14px', color: '#666' }}>
+                        <strong>Drill ID:</strong> {data.id}
+                        {data.video_start_time && (
+                            <span style={{ marginLeft: '15px' }}>
+                                <strong>Start time:</strong> {formatTime(data.video_start_time)}
+                            </span>
+                        )}
+                        {data.video_end_time && (
+                            <span style={{ marginLeft: '15px' }}>
+                                <strong>End time:</strong> {formatTime(data.video_end_time)}
+                            </span>
+                        )}
+                    </div>
+                </div>
+                
                 <div style={{ marginTop: '15px', textAlign: 'center', display: 'flex', gap: '10px', justifyContent: 'center' }}>
                     {!isYouTubeUrl(value) && (
                         <button
@@ -928,6 +1017,9 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
     const [showBulkEdit, setShowBulkEdit] = useState(false);
     const [bulkTag, setBulkTag] = useState('');
     const [bulkAuthor, setBulkAuthor] = useState('');
+    const [showBulkVideoUrlUpdate, setShowBulkVideoUrlUpdate] = useState(false);
+    const [bulkVideoUrl, setBulkVideoUrl] = useState('');
+    const [bulkUpdateTimestamps, setBulkUpdateTimestamps] = useState(true);
     const [showVoiceCreator, setShowVoiceCreator] = useState(false);
     const [showNewDrillOptions, setShowNewDrillOptions] = useState(false); // New state for dropdown
     const [editingDrill, setEditingDrill] = useState<any>(null); // State for modal editing
@@ -1639,6 +1731,25 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                         🏷️ Bulk Edit ({selectedDrillIds.length})
                     </button>
                     <button
+                        onClick={() => setShowBulkVideoUrlUpdate(true)}
+                        style={{
+                            padding: '10px 16px',
+                            fontSize: '14px',
+                            background: selectedDrillIds.length > 0 ? '#FF5722' : '#e0e0e0',
+                            color: selectedDrillIds.length > 0 ? 'white' : '#999',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: selectedDrillIds.length > 0 ? 'pointer' : 'not-allowed',
+                            fontWeight: 600,
+                            boxShadow: selectedDrillIds.length > 0 ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
+                            transition: 'all 0.2s',
+                        }}
+                        disabled={selectedDrillIds.length === 0}
+                        title="Update video URLs for selected drills"
+                    >
+                        🎬 Bulk Video URL ({selectedDrillIds.length})
+                    </button>
+                    <button
                         onClick={handleCreateTest}
                         style={{
                             padding: '10px 16px',
@@ -2113,6 +2224,132 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                                 }}
                             >
                                 Apply Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Bulk Video URL Update Modal */}
+            {showBulkVideoUrlUpdate && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10000,
+                }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        padding: '30px',
+                        borderRadius: '12px',
+                        width: '500px',
+                        maxWidth: '90vw',
+                        maxHeight: '90vh',
+                        overflow: 'auto',
+                    }}>
+                        <h2 style={{ marginTop: 0, marginBottom: '20px' }}>
+                            Bulk Video URL Update ({selectedDrillIds.length} drills)
+                        </h2>
+                        <div style={{ marginBottom: '15px' }}>
+                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                                Base YouTube URL
+                            </label>
+                            <input
+                                type="text"
+                                value={bulkVideoUrl}
+                                onChange={(e) => setBulkVideoUrl(e.target.value)}
+                                placeholder="e.g., https://youtu.be/EpJ98WysJHA?si=PsVdqj3ejFKZDKj8"
+                                style={{
+                                    width: '100%',
+                                    padding: '10px',
+                                    fontSize: '14px',
+                                    border: '1px solid #ccc',
+                                    borderRadius: '6px',
+                                }}
+                            />
+                            <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                                Enter the base YouTube URL. Each drill will get this URL with its timestamp appended.
+                            </div>
+                        </div>
+                        <div style={{ marginBottom: '25px' }}>
+                            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={bulkUpdateTimestamps}
+                                    onChange={(e) => setBulkUpdateTimestamps(e.target.checked)}
+                                    style={{ marginRight: '8px' }}
+                                />
+                                Update timestamps based on video_start_time
+                            </label>
+                            <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                                If checked, each drill will get a timestamp parameter based on its video_start_time field.
+                                If unchecked, all drills will get the same URL without timestamps.
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => {
+                                    setShowBulkVideoUrlUpdate(false);
+                                    setBulkVideoUrl('');
+                                    setBulkUpdateTimestamps(true);
+                                }}
+                                style={{
+                                    padding: '10px 20px',
+                                    fontSize: '14px',
+                                    border: '1px solid #ccc',
+                                    borderRadius: '6px',
+                                    backgroundColor: 'white',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (!bulkVideoUrl.trim()) {
+                                        alert('Please enter a YouTube URL.');
+                                        return;
+                                    }
+                                    try {
+                                        const response = await axios.post(`${API_BASE}/drills/bulk-update-video-url`, {
+                                            drill_ids: selectedDrillIds,
+                                            base_video_url: bulkVideoUrl.trim(),
+                                            update_timestamps: bulkUpdateTimestamps
+                                        });
+                                        
+                                        if (response.data.success) {
+                                            alert(`✅ ${response.data.message}`);
+                                            refreshData(); // Refresh the grid
+                                            setShowBulkVideoUrlUpdate(false);
+                                            setBulkVideoUrl('');
+                                            setBulkUpdateTimestamps(true);
+                                        } else {
+                                            alert(`❌ ${response.data.message}`);
+                                        }
+                                    } catch (error: any) {
+                                        console.error('Bulk video URL update failed:', error);
+                                        const errorMsg = error.response?.data?.detail || error.message || 'Failed to update video URLs';
+                                        alert(`❌ ${errorMsg}`);
+                                    }
+                                }}
+                                style={{
+                                    padding: '10px 20px',
+                                    fontSize: '14px',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    backgroundColor: '#FF5722',
+                                    color: 'white',
+                                    cursor: 'pointer',
+                                    fontWeight: 'bold',
+                                }}
+                            >
+                                Apply Updates
                             </button>
                         </div>
                     </div>
