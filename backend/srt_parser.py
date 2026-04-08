@@ -126,19 +126,32 @@ def create_youtube_url_with_timestamp(video_url: str, start_time: float, end_tim
     Returns:
         YouTube URL with timestamp parameters
     """
-    # Clean URL - remove existing timestamp parameters
-    base_url = video_url.split('?')[0] if '?' in video_url else video_url
+    # Parse the URL to extract video ID and preserve other parameters
+    from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
     
-    # Add start time parameter
-    if '?' in base_url:
-        url_with_time = f"{base_url}&t={int(start_time)}"
-    else:
-        url_with_time = f"{base_url}?t={int(start_time)}"
+    parsed_url = urlparse(video_url)
+    query_params = parse_qs(parsed_url.query)
+    
+    # Remove any existing timestamp parameters
+    if 't' in query_params:
+        del query_params['t']
+    if 'start' in query_params:
+        del query_params['start']
+    if 'end' in query_params:
+        del query_params['end']
+    
+    # Add the new start time parameter
+    query_params['t'] = [str(int(start_time))]
     
     # Add end time if provided (YouTube doesn't officially support end time in URL,
     # but we can add it as a custom parameter for our app to use)
     if end_time is not None:
-        url_with_time = f"{url_with_time}&end={int(end_time)}"
+        query_params['end'] = [str(int(end_time))]
+    
+    # Reconstruct the URL with updated query parameters
+    new_query = urlencode(query_params, doseq=True)
+    new_parsed_url = parsed_url._replace(query=new_query)
+    url_with_time = urlunparse(new_parsed_url)
     
     return url_with_time
 

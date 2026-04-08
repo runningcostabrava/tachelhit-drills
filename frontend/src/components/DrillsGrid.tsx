@@ -157,6 +157,17 @@ const VideoCellRenderer = (props: any) => {
     const playbackRef = useRef<HTMLVideoElement | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
 
+    // Helper function to check if URL is a YouTube URL
+    const isYouTubeUrl = (url: string) => {
+        return url && (url.includes('youtube.com') || url.includes('youtu.be'));
+    };
+
+    // Helper function to convert YouTube URL to embed format
+    const convertToEmbedUrl = (url: string) => {
+        if (!url) return '';
+        return url.replace('watch?v=', 'embed/').replace('youtu.be/', 'youtube.com/embed/');
+    };
+
     // Setup preview stream when modal opens
     useEffect(() => {
         if (showPreview && streamRef.current && previewRef.current) {
@@ -405,38 +416,60 @@ const VideoCellRenderer = (props: any) => {
                         ✕
                     </button>
                 </div>
-                <video
-                    ref={playbackRef}
-                    src={getMediaUrl(value)}
-                    controls
-                    onEnded={handleVideoEnded}
-                    style={{
-                        width: '640px',
-                        height: '480px',
-                        maxWidth: '90vw',
-                        maxHeight: '70vh',
-                        backgroundColor: '#000',
-                        borderRadius: '8px',
-                        display: 'block',
-                        objectFit: 'contain'
-                    }}
-                />
-                <div style={{ marginTop: '15px', textAlign: 'center', display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                    <button
-                        onClick={togglePlayPause}
+                {isYouTubeUrl(value) ? (
+                    // YouTube embed
+                    <iframe
+                        src={convertToEmbedUrl(getMediaUrl(value))}
                         style={{
-                            padding: '10px 24px',
-                            background: '#4CAF50',
-                            color: 'white',
-                            border: 'none',
+                            width: '640px',
+                            height: '480px',
+                            maxWidth: '90vw',
+                            maxHeight: '70vh',
+                            backgroundColor: '#000',
                             borderRadius: '8px',
-                            cursor: 'pointer',
-                            fontSize: '15px',
-                            fontWeight: 600
+                            display: 'block',
+                            border: 'none'
                         }}
-                    >
-                        {playing ? '⏸ Pause' : '▶ Play'}
-                    </button>
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                    />
+                ) : (
+                    // Regular video
+                    <video
+                        ref={playbackRef}
+                        src={getMediaUrl(value)}
+                        controls
+                        onEnded={handleVideoEnded}
+                        style={{
+                            width: '640px',
+                            height: '480px',
+                            maxWidth: '90vw',
+                            maxHeight: '70vh',
+                            backgroundColor: '#000',
+                            borderRadius: '8px',
+                            display: 'block',
+                            objectFit: 'contain'
+                        }}
+                    />
+                )}
+                <div style={{ marginTop: '15px', textAlign: 'center', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                    {!isYouTubeUrl(value) && (
+                        <button
+                            onClick={togglePlayPause}
+                            style={{
+                                padding: '10px 24px',
+                                background: '#4CAF50',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontSize: '15px',
+                                fontWeight: 600
+                            }}
+                        >
+                            {playing ? '⏸ Pause' : '▶ Play'}
+                        </button>
+                    )}
                     <button
                         onClick={closePlayback}
                         style={{
