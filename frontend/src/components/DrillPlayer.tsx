@@ -249,14 +249,14 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             event.target.setPlaybackRate(videoControls.playbackRate);
           }
           // 1. Force explicit seek to the exact start time on load
-          const startTime = currentDrill.video_start_time || 0;
+          const startTime = Number(currentDrill.video_start_time) || 0;
           event.target.seekTo(startTime, true);
           event.target.playVideo();
         },
         'onStateChange': (event: any) => {
           const player = event.target;
-          const startTime = currentDrill.video_start_time || 0;
-          const endTime = currentDrill.video_end_time;
+          const startTime = Number(currentDrill.video_start_time) || 0;
+          const endTime = Number(currentDrill.video_end_time);
 
           if (event.data === window.YT.PlayerState.PAUSED && videoControls.isLooping) {
             // 2. Loop Logic: Check if it paused because it reached the 'end' limit
@@ -280,8 +280,6 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         }
       },
     });
->>>>+++ REPLACE
-
 
     return () => {
       if (playerRef.current) {
@@ -290,9 +288,10 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
       }
     };
   }, [playerReady, currentDrill?.id, showVideo]);
-
-  // Handle precise video looping without destroying player
 >>>>+++ REPLACE
+
+
+
 
 
   // Handle playback rate separately

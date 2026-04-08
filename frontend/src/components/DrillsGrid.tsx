@@ -267,7 +267,7 @@ const VideoCellRenderer = (props: any) => {
         console.log('🌐 Full URL:', getMediaUrl(value));
         setShowPlayback(true);
         setPlaying(false);
-        
+
         // Non-YouTube video check
         if (!isYouTubeUrl(value)) {
             setTimeout(() => {
@@ -285,14 +285,14 @@ const VideoCellRenderer = (props: any) => {
     useEffect(() => {
         if (showPlayback && isYouTubeUrl(value)) {
             console.log('🎬 Initializing YouTube Player');
-            
+
             // Fix: Use the imported utility instead of (window as any)
-            const videoId = getYouTubeVideoId(value); 
+            const videoId = getYouTubeVideoId(value);
             if (!videoId) return;
 
             const initPlayer = () => {
                 const elementId = `yt-player-${data.id}`;
-                
+
                 // Fix: Slight delay to ensure the Portal has injected the element into the DOM
                 setTimeout(() => {
                     const targetDiv = document.getElementById(elementId);
@@ -302,7 +302,7 @@ const VideoCellRenderer = (props: any) => {
                     }
 
                     if (ytPlayerRef.current) {
-                        try { ytPlayerRef.current.destroy(); } catch (e) {}
+                        try { ytPlayerRef.current.destroy(); } catch (e) { }
                     }
 
                     console.log('📺 Creating new YT Player instance');
@@ -311,8 +311,8 @@ const VideoCellRenderer = (props: any) => {
                         playerVars: {
                             autoplay: 1,
                             controls: 1,
-                            start: Math.floor(data.video_start_time || 0),
-                            end: Math.ceil(data.video_end_time || 0),
+                            start: Math.floor(Number(data.video_start_time) || 0),
+                            end: Math.ceil(Number(data.video_end_time) || 0),
                             rel: 0,
                             modestbranding: 1
                         },
@@ -320,24 +320,24 @@ const VideoCellRenderer = (props: any) => {
                             onReady: (event: any) => {
                                 console.log('✅ YT Player Ready');
                                 ytPlayerReadyRef.current = true;
-                                // 1. Force explicit seek to the exact start time on load
-                                const startTime = data.video_start_time || 0;
+                                // Force explicit seek to the exact start time on load for precision
+                                const startTime = Number(data.video_start_time) || 0;
                                 event.target.seekTo(startTime);
                                 event.target.playVideo();
                                 setPlaying(true);
                             },
                             onStateChange: (event: any) => {
                                 const player = event.target;
-                                const startTime = data.video_start_time || 0;
-                                const endTime = data.video_end_time;
+                                const startTime = Number(data.video_start_time) || 0;
+                                const endTime = Number(data.video_end_time);
 
                                 if (event.data === (window as any).YT.PlayerState.PLAYING) {
                                     setPlaying(true);
                                 }
-                                
+
                                 if (event.data === (window as any).YT.PlayerState.PAUSED) {
                                     setPlaying(false);
-                                    // 2. Loop Logic: Check if it paused because it reached the 'end' limit
+                                    // Loop Logic: Check if it paused because it reached the 'end' limit
                                     const currentTime = player.getCurrentTime();
                                     if (endTime && currentTime >= endTime - 0.5) {
                                         console.log('🔄 Reached end of segment, looping back to:', startTime);
@@ -347,7 +347,7 @@ const VideoCellRenderer = (props: any) => {
                                 }
 
                                 if (event.data === (window as any).YT.PlayerState.ENDED) {
-                                    // 3. Loop Logic: If the whole video ended, jump back to start
+                                    // Loop Logic: If the whole video ended, jump back to start
                                     console.log('🔄 Video ended, looping back to:', startTime);
                                     player.seekTo(startTime);
                                     player.playVideo();
@@ -356,8 +356,6 @@ const VideoCellRenderer = (props: any) => {
                             onError: (e: any) => console.error('❌ YT Player Error:', e)
                         }
                     });
->>>>+++ REPLACE
-
                 }, 50); // Small buffer for the Portal
             };
 
@@ -370,7 +368,7 @@ const VideoCellRenderer = (props: any) => {
                     const firstScriptTag = document.getElementsByTagName('script')[0];
                     firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
                 }
-                
+
                 const prevOnReady = (window as any).onYouTubeIframeAPIReady;
                 (window as any).onYouTubeIframeAPIReady = () => {
                     if (prevOnReady) prevOnReady();
@@ -384,7 +382,7 @@ const VideoCellRenderer = (props: any) => {
         return () => {
             if (ytPlayerRef.current) {
                 console.log('🧹 Cleaning up YT Player');
-                try { ytPlayerRef.current.destroy(); } catch (e) {}
+                try { ytPlayerRef.current.destroy(); } catch (e) { }
                 ytPlayerRef.current = null;
                 ytPlayerReadyRef.current = false;
             }
@@ -397,7 +395,7 @@ const VideoCellRenderer = (props: any) => {
             playbackRef.current.pause();
         }
         if (ytPlayerRef.current) {
-            try { ytPlayerRef.current.pauseVideo(); } catch (e) {}
+            try { ytPlayerRef.current.pauseVideo(); } catch (e) { }
         }
         setShowPlayback(false);
         setPlaying(false);
@@ -427,7 +425,7 @@ const VideoCellRenderer = (props: any) => {
         if (isYouTubeUrl(value)) {
             if (ytPlayerRef.current && ytPlayerReadyRef.current) {
                 const currentTime = ytPlayerRef.current.getCurrentTime();
-                const startTime = data.video_start_time || 0;
+                const startTime = Number(data.video_start_time) || 0;
                 ytPlayerRef.current.seekTo(Math.max(startTime, currentTime - 2));
             }
         } else if (playbackRef.current) {
@@ -514,16 +512,16 @@ const VideoCellRenderer = (props: any) => {
         <div onClick={(e) => {
             e.stopPropagation(); // Stops the grid from reacting to the click
             closePlayback();
-        }} 
-        style={{
-            position: 'fixed',
-            top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10000
-        }}>
+        }}
+            style={{
+                position: 'fixed',
+                top: 0, left: 0, right: 0, bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10000
+            }}>
             <div onClick={(e) => e.stopPropagation()} style={{
                 background: 'white',
                 padding: '20px',
@@ -551,7 +549,7 @@ const VideoCellRenderer = (props: any) => {
                         ✕
                     </button>
                 </div>
-                
+
                 {/* Video container with subtitle overlay */}
                 <div style={{ position: 'relative', width: '800px', maxWidth: '90vw' }}>
                     {isYouTubeUrl(value) ? (
@@ -586,7 +584,7 @@ const VideoCellRenderer = (props: any) => {
                             }}
                         />
                     )}
-                    
+
                     {/* Subtitle overlay */}
                     {(data.text_catalan || data.text_tachelhit || data.text_arabic) && (
                         <div style={{
@@ -614,7 +612,7 @@ const VideoCellRenderer = (props: any) => {
                                     {data.text_arabic}
                                 </div>
                             )}
-                            
+
                             {/* Tachelhit subtitle */}
                             {data.text_tachelhit && (
                                 <div style={{
@@ -626,7 +624,7 @@ const VideoCellRenderer = (props: any) => {
                                     {data.text_tachelhit}
                                 </div>
                             )}
-                            
+
                             {/* Catalan subtitle - smaller, underneath */}
                             {data.text_catalan && (
                                 <div style={{
@@ -641,7 +639,7 @@ const VideoCellRenderer = (props: any) => {
                         </div>
                     )}
                 </div>
-                
+
                 {/* Video info */}
                 <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '6px' }}>
                     <div style={{ fontSize: '14px', color: '#666' }}>
@@ -658,7 +656,7 @@ const VideoCellRenderer = (props: any) => {
                         )}
                     </div>
                 </div>
-                
+
                 <div style={{ marginTop: '15px', textAlign: 'center', display: 'flex', gap: '10px', justifyContent: 'center' }}>
                     <button
                         onClick={goBack2Seconds}
@@ -1924,16 +1922,16 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                         onClick={async () => {
                             if (selectedDrillIds.length === 0) return;
                             if (!confirm(`⚠️ WARNING: This will permanently delete ${selectedDrillIds.length} drill(s).\n\nThis action cannot be undone. Are you sure you want to delete these drills?`)) return;
-                            
+
                             try {
                                 // Delete drills sequentially
                                 for (const id of selectedDrillIds) {
                                     await axios.delete(`${API_BASE}/drills/${id}`);
                                 }
-                                
+
                                 alert(`✅ Successfully deleted ${selectedDrillIds.length} drill(s).`);
                                 refreshData(); // Refresh the grid
-                                
+
                                 // Clear selection
                                 setSelectedDrillIds([]);
                                 if (gridRef.current) {
@@ -2406,7 +2404,7 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                                             base_video_url: bulkVideoUrl.trim(),
                                             update_timestamps: bulkUpdateTimestamps
                                         });
-                                        
+
                                         if (response.data.success) {
                                             alert(`✅ ${response.data.message}`);
                                             refreshData(); // Refresh the grid
