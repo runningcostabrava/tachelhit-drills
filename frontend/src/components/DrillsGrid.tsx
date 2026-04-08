@@ -83,9 +83,11 @@ const AudioCellRenderer = (props: any) => {
                 <>
                     <audio
                         ref={audioRef}
+                        // Fix: Ensure we aren't double-encoding the URL if getMediaUrl is already absolute
                         src={value.startsWith('http') ? value : getMediaUrl(value)}
                         onEnded={handleAudioEnded}
                         style={{ display: 'none' }}
+                        preload="auto"
                     />                    <button
                         onClick={togglePlayPause}
                         style={{
@@ -282,16 +284,20 @@ const VideoCellRenderer = (props: any) => {
     // Consolidated YouTube initialization and player creation
     useEffect(() => {
         if (showPlayback && isYouTubeUrl(value)) {
-            console.log('🎬 useEffect: Initializing YouTube Player');
+            console.log('🎬 Initializing YouTube Player');
+            
+            // Fix: Use the imported utility instead of (window as any)
+            const videoId = getYouTubeVideoId(value); 
+            if (!videoId) return;
 
             const initPlayer = () => {
                 const elementId = `yt-player-${data.id}`;
                 
-                // Use a small timeout to ensure the Portal has rendered the div into the body
+                // Fix: Slight delay to ensure the Portal has injected the element into the DOM
                 setTimeout(() => {
-                    const targetElement = document.getElementById(elementId);
-                    if (!targetElement) {
-                        console.warn(`⚠️ Target div ${elementId} not found yet. YouTube player aborted.`);
+                    const targetDiv = document.getElementById(elementId);
+                    if (!targetDiv) {
+                        console.warn("⚠️ Player target DIV not found yet. Retrying...");
                         return;
                     }
 
@@ -301,7 +307,7 @@ const VideoCellRenderer = (props: any) => {
 
                     console.log('📺 Creating new YT Player instance');
                     ytPlayerRef.current = new (window as any).YT.Player(elementId, {
-                        videoId: getYouTubeVideoId(value),
+                        videoId: videoId,
                         playerVars: {
                             autoplay: 1,
                             controls: 1,
@@ -326,7 +332,7 @@ const VideoCellRenderer = (props: any) => {
                             onError: (e: any) => console.error('❌ YT Player Error:', e)
                         }
                     });
-                }, 100); // 100ms is usually sufficient for Portal mounting
+                }, 50); // Small buffer for the Portal
             };
 
             if (!(window as any).YT || !(window as any).YT.Player) {
@@ -480,17 +486,14 @@ const VideoCellRenderer = (props: any) => {
 
     const playbackModal = showPlayback && value && !recording && createPortal(
         <div onClick={(e) => {
-            e.stopPropagation(); // Stops the grid from reacting to clicks inside the modal
-            console.log('🖱️ Modal background clicked');
-        }} style={{
+            e.stopPropagation(); // Stops the grid from reacting to the click
+            closePlayback();
+        }} 
+        style={{
             position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
+            top: 0, left: 0, right: 0, bottom: 0,
             backgroundColor: 'rgba(0, 0, 0, 0.8)',
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 10000

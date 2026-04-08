@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE, getMediaUrl } from '../config';
-import { isYouTubeUrl } from '../utils/youtubeUtils';
+import { isYouTubeUrl, getYouTubeVideoId } from '../utils/youtubeUtils';
 
 interface Drill {
   id: number;
@@ -75,7 +75,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
       audio.pause();
       audio.currentTime = 0;
     };
-  }, [drill.audio_url]);
+  }, [drill.audio_url, audioRef]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -501,33 +501,42 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
   };
 
   const createYTPlayer = (videoId: string) => {
-    if (ytPlayerRef.current) {
-      try { ytPlayerRef.current.destroy(); } catch (e) {}
-    }
-
-    ytPlayerRef.current = new (window as any).YT.Player(`yt-player-card-${drill.id}`, {
-      videoId: videoId,
-      playerVars: {
-        autoplay: 1,
-        controls: 1,
-        start: Math.floor((drill as any).video_start_time || 0),
-        end: Math.ceil((drill as any).video_end_time || 0)
-      },
-      events: {
-        onReady: () => {
-          ytPlayerReadyRef.current = true;
-          setPlaying(true);
-        },
-        onStateChange: (event: any) => {
-          if (event.data === (window as any).YT.PlayerState.ENDED) {
-            event.target.seekTo((drill as any).video_start_time || 0);
-            event.target.playVideo();
-          }
-          if (event.data === (window as any).YT.PlayerState.PLAYING) setPlaying(true);
-          if (event.data === (window as any).YT.PlayerState.PAUSED) setPlaying(false);
-        }
+    const elementId = `yt-player-card-${drill.id}`;
+    
+    setTimeout(() => {
+      if (!document.getElementById(elementId)) {
+        console.warn(`⚠️ Target div ${elementId} not found yet. YouTube player aborted.`);
+        return;
       }
-    });
+
+      if (ytPlayerRef.current) {
+        try { ytPlayerRef.current.destroy(); } catch (e) {}
+      }
+
+      ytPlayerRef.current = new (window as any).YT.Player(elementId, {
+        videoId: getYouTubeVideoId(drill.video_url || ''),
+        playerVars: {
+          autoplay: 1,
+          controls: 1,
+          start: Math.floor((drill as any).video_start_time || 0),
+          end: Math.ceil((drill as any).video_end_time || 0)
+        },
+        events: {
+          onReady: () => {
+            ytPlayerReadyRef.current = true;
+            setPlaying(true);
+          },
+          onStateChange: (event: any) => {
+            if (event.data === (window as any).YT.PlayerState.ENDED) {
+              event.target.seekTo((drill as any).video_start_time || 0);
+              event.target.playVideo();
+            }
+            if (event.data === (window as any).YT.PlayerState.PLAYING) setPlaying(true);
+            if (event.data === (window as any).YT.PlayerState.PAUSED) setPlaying(false);
+          }
+        }
+      });
+    }, 50);
   };
 
   const togglePlayPause = () => {
@@ -1283,8 +1292,9 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
           {drill.audio_url && (
             <audio 
               ref={audioRef} 
-              src={getMediaUrl(drill.audio_url)} 
-              style={{ display: 'none' }} 
+              src={drill.audio_url.startsWith('http') ? drill.audio_url : getMediaUrl(drill.audio_url)} 
+              style={{ display: 'none' }}
+              preload="auto"
             />
           )}
           {drill.video_url && (
@@ -1550,7 +1560,10 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
       {/* Video Playback Modal */}
       {showVideo && drill.video_url && (
         <div
-          onClick={closePlayback}
+          onClick={(e) => {
+            e.stopPropagation();
+            closePlayback();
+          }}
           style={{
             position: 'fixed',
             top: 0,
