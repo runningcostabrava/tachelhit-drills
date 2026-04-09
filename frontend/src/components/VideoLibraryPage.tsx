@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { AgGridReact } from 'ag-grid-react';
+import { ColDef } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 import axios from 'axios';
 import { API_BASE } from '../config';
@@ -17,7 +18,7 @@ export default function VideoLibraryPage() {
     }, []);
 
     const libraryVideos = useMemo(() => {
-        const grouped: Record<string, { url: string, drills: any[] }> = {};
+        const grouped: Record<string, { url: string; drills: any[] }> = {};
 
         drills.forEach(drill => {
             if (drill.video_url && isYouTubeUrl(drill.video_url)) {
@@ -48,7 +49,7 @@ export default function VideoLibraryPage() {
         }).filter(video => video.drillCount > 0);
     }, [drills]);
 
-    const columnDefs = [
+    const columnDefs: ColDef[] = [
         { field: 'title', headerName: 'Video Profile', flex: 1 },
         { field: 'drillCount', headerName: 'Number of Drills (Subtitles)', width: 250 },
         {
