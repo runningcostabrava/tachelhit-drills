@@ -1049,6 +1049,7 @@ const GlossaryModal = ({ onClose }: { onClose: () => void }) => {
                         rowData={rowData}
                         columnDefs={columnDefs}
                         theme="legacy"
+                        rowSelection={{ mode: 'multiRow', checkboxes: false, headerCheckbox: false }}
                     />
                 </div>
                 <button onClick={onClose} style={{ marginTop: '16px', padding: '12px', background: '#f5f5f5', border: '1px solid #ccc', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>Close</button>
@@ -2134,25 +2135,26 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                     width: '100%'
                 }}
             >
-                <AgGridReact
-                    ref={gridRef}
-                    rowData={rowData} // Use prop rowData
-                    columnDefs={columnDefs}
-                    theme="legacy"
-                    defaultColDef={{
-                        editable: true,
-                        sortable: true,
-                        filter: true,
-                        resizable: true,
-                        minWidth: 100,
-                        wrapText: true,
-                        autoHeight: true,
-                        cellStyle: { fontSize: '14px', lineHeight: '1.5' }
-                    }}
-                    getRowId={(params) => params.data.id.toString()}
-                    onCellValueChanged={onCellValueChanged}
-                    onSelectionChanged={onSelectionChanged}
-                    onGridReady={(params: any) => {
+                    <AgGridReact
+                        ref={gridRef}
+                        rowData={rowData} // Use prop rowData
+                        columnDefs={columnDefs}
+                        theme="legacy"
+                        rowSelection={{ mode: 'multiRow' }}
+                        defaultColDef={{
+                            editable: true,
+                            sortable: true,
+                            filter: true,
+                            resizable: true,
+                            minWidth: 100,
+                            wrapText: true,
+                            autoHeight: true,
+                            cellStyle: { fontSize: '14px', lineHeight: '1.5' }
+                        }}
+                        getRowId={(params) => params.data.id.toString()}
+                        onCellValueChanged={onCellValueChanged}
+                        onSelectionChanged={onSelectionChanged}
+                        onGridReady={(params: any) => {
                         console.log('✅ AG Grid is ready');
                         setIsGridReady(true);
 

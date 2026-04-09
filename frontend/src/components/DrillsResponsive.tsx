@@ -82,6 +82,8 @@ const GlossaryModal = ({ onClose }: { onClose: () => void }) => {
             columnDefs={columnDefs}
             headerHeight={40}
             rowHeight={45}
+            theme="legacy"
+            rowSelection={{ mode: 'multiRow', checkboxes: false, headerCheckbox: false }}
           />
         </div>
         <button onClick={onClose} style={{ marginTop: '16px', padding: '12px', background: '#f5f5f5', border: '1px solid #ccc', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>Close</button>
@@ -733,6 +735,8 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
             ref={gridRef}
             rowData={filteredDrills}
             columnDefs={columnDefs}
+            theme="legacy"
+            rowSelection={{ mode: 'multiRow', checkboxes: false, headerCheckbox: false }}
             defaultColDef={{
               sortable: true,
               filter: false,

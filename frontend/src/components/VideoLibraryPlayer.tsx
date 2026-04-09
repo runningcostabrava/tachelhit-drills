@@ -72,12 +72,14 @@ export default function VideoLibraryPlayer({ videoUrl, drills, onClose }: { vide
 
     // Controls
     const togglePlayPause = () => {
-        if (!ytPlayerRef.current) return;
-        playing ? ytPlayerRef.current.pauseVideo() : ytPlayerRef.current.playVideo();
+        if (ytPlayerRef.current && typeof ytPlayerRef.current.pauseVideo === 'function') {
+            playing ? ytPlayerRef.current.pauseVideo() : ytPlayerRef.current.playVideo();
+        }
     };
     const goBack2Seconds = () => {
-        if (!ytPlayerRef.current) return;
-        ytPlayerRef.current.seekTo(Math.max(0, currentTime - 2));
+        if (ytPlayerRef.current && typeof ytPlayerRef.current.seekTo === 'function') {
+            ytPlayerRef.current.seekTo(Math.max(0, currentTime - 2));
+        }
     };
     const togglePlaybackRate = () => {
         const rates = [0.5, 0.75, 1, 1.25, 1.5];
