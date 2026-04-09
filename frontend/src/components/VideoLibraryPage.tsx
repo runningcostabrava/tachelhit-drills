@@ -78,6 +78,8 @@ export default function VideoLibraryPage() {
                     rowData={libraryVideos} 
                     columnDefs={columnDefs} 
                     rowHeight={60} 
+                    theme="legacy"
+                    rowSelection={{ mode: 'multiRow', checkboxes: false, headerCheckbox: false }}
                     defaultColDef={{ resizable: true, sortable: true, filter: true }}
                 />
             </div>

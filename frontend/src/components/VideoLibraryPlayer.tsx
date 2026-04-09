@@ -99,7 +99,7 @@ export default function VideoLibraryPlayer({ videoUrl, drills, onClose }: { vide
     return createPortal(
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'black', zIndex: 10000, display: 'flex', flexDirection: 'column' }}>
             <div style={{ flex: 1, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <div id={containerId} style={{ width: '100%', height: '100%', pointerEvents: 'none' }} />
+                <div id={containerId} style={{ width: '100%', height: '100%' }} />
                 
                 {activeDrill && (activeDrill.text_catalan || activeDrill.text_tachelhit || activeDrill.text_arabic) && (
                     <div style={{
