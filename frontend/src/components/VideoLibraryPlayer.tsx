@@ -25,7 +25,15 @@ export default function VideoLibraryPlayer({ videoUrl, drills, onClose }: { vide
 
                 ytPlayerRef.current = new (window as any).YT.Player(containerId, {
                     videoId: videoId,
-                    playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1 },
+                    host: 'https://www.youtube.com',
+                    playerVars: { 
+                        autoplay: 1, 
+                        controls: 0, 
+                        rel: 0, 
+                        modestbranding: 1,
+                        enablejsapi: 1,
+                        origin: window.location.origin
+                    },
                     events: {
                         onReady: (event: any) => {
                             event.target.setPlaybackRate(playbackRate);
