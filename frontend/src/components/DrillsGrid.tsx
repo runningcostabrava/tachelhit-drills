@@ -1400,8 +1400,6 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
             field: 'select',
             headerName: '',
             width: 50,
-            checkboxSelection: true,
-            headerCheckboxSelection: true,
             editable: false,
             filter: false,
             sortable: false,
@@ -2140,7 +2138,7 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                         rowData={rowData} // Use prop rowData
                         columnDefs={columnDefs}
                         theme="legacy"
-                        rowSelection={{ mode: 'multiRow' }}
+                        rowSelection={{ mode: 'multiRow', checkboxes: true, headerCheckbox: true }}
                         defaultColDef={{
                             editable: true,
                             sortable: true,

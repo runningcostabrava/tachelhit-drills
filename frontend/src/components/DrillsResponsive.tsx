@@ -368,6 +368,11 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
   }
 
   const columnDefs: any[] = [
+    {
+      field: 'select',
+      headerName: '',
+      width: 40,
+    },
     { field: 'id', width: 60, headerName: '#' },
     { field: 'text_catalan', width: 120, headerName: 'Català' },
     { field: 'text_tachelhit', width: 120, headerName: 'Tachelhit' },
@@ -736,7 +741,7 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
             rowData={filteredDrills}
             columnDefs={columnDefs}
             theme="legacy"
-            rowSelection={{ mode: 'multiRow', checkboxes: false, headerCheckbox: false }}
+            rowSelection={{ mode: 'multiRow', checkboxes: true, headerCheckbox: false }}
             defaultColDef={{
               sortable: true,
               filter: false,
