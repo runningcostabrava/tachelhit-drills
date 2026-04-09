@@ -69,7 +69,7 @@ export default function VideoLibraryPage() {
     return (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f5f5f5' }}>
             <div style={{ padding: '20px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
-                <h2 style={{ margin: 0 }}>📚 Drill-Driven Video Library</h2>
+                <h2 style={{ margin: 0 }}>📚 Drill-Driven Video Library Nou</h2>
                 <p style={{ margin: '5px 0 0 0', opacity: 0.8 }}>Full videos synced with your existing drill translations.</p>
             </div>
             
