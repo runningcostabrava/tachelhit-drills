@@ -2155,82 +2155,81 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                         onCellValueChanged={onCellValueChanged}
                         onSelectionChanged={onSelectionChanged}
                         onGridReady={(params: any) => {
-                        console.log('✅ AG Grid is ready');
-                        setIsGridReady(true);
+                            console.log('✅ AG Grid is ready');
+                            setIsGridReady(true);
 
-                        // Apply filters from URL on load
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const tag = urlParams.get('tag');
-                        const author = urlParams.get('author');
-                        const text = urlParams.get('text');
+                            // Apply filters from URL on load
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const tag = urlParams.get('tag');
+                            const author = urlParams.get('author');
+                            const text = urlParams.get('text');
 
-                        if (tag || author || text) {
-                            // For OR logic (tag OR author OR text), we need to use a custom approach
-                            // since AG Grid's filter model uses AND logic by default
-                            const allRows: any[] = [];
-                            params.api.forEachNode((node: any) => {
-                                allRows.push(node.data);
-                            });
+                            if (tag || author || text) {
+                                // For OR logic (tag OR author OR text), we need to use a custom approach
+                                // since AG Grid's filter model uses AND logic by default
+                                const allRows: any[] = [];
+                                params.api.forEachNode((node: any) => {
+                                    allRows.push(node.data);
+                                });
 
-                            // Filter rows where tag contains tag OR author contains author OR text contains text
-                            const filteredRows = allRows.filter(row => {
-                                const tagMatch = tag ? (row.tag?.toLowerCase() || '').includes(tag.toLowerCase()) : false;
-                                const authorMatch = author ? (row.author?.toLowerCase() || '').includes(author.toLowerCase()) : false;
-                                const textMatch = text ? (
-                                    (row.text_catalan?.toLowerCase() || '').includes(text.toLowerCase()) ||
-                                    (row.text_tachelhit?.toLowerCase() || '').includes(text.toLowerCase()) ||
-                                    (row.text_arabic?.toLowerCase() || '').includes(text.toLowerCase())
-                                ) : false;
+                                // Filter rows where tag contains tag OR author contains author OR text contains text
+                                const filteredRows = allRows.filter(row => {
+                                    const tagMatch = tag ? (row.tag?.toLowerCase() || '').includes(tag.toLowerCase()) : false;
+                                    const authorMatch = author ? (row.author?.toLowerCase() || '').includes(author.toLowerCase()) : false;
+                                    const textMatch = text ? (
+                                        (row.text_catalan?.toLowerCase() || '').includes(text.toLowerCase()) ||
+                                        (row.text_tachelhit?.toLowerCase() || '').includes(text.toLowerCase()) ||
+                                        (row.text_arabic?.toLowerCase() || '').includes(text.toLowerCase())
+                                    ) : false;
 
-                                // OR logic: match tag OR author OR text (if multiple provided, match any)
-                                const matches = [];
-                                if (tag) matches.push(tagMatch);
-                                if (author) matches.push(authorMatch);
-                                if (text) matches.push(textMatch);
+                                    // OR logic: match tag OR author OR text (if multiple provided, match any)
+                                    const matches = [];
+                                    if (tag) matches.push(tagMatch);
+                                    if (author) matches.push(authorMatch);
+                                    if (text) matches.push(textMatch);
 
-                                // Return true if any of the provided parameters match
-                                return matches.some(match => match === true);
-                            });
+                                    // Return true if any of the provided parameters match
+                                    return matches.some(match => match === true);
+                                });
 
-                            console.log(`🔍 URL filter applied: tag="${tag}", author="${author}", text="${text}"`);
-                            console.log(`🔍 Found ${filteredRows.length} rows matching OR logic`);
+                                console.log(`🔍 URL filter applied: tag="${tag}", author="${author}", text="${text}"`);
+                                console.log(`🔍 Found ${filteredRows.length} rows matching OR logic`);
 
-                            // Clear any existing filters
-                            params.api.setFilterModel(null);
+                                // Clear any existing filters
+                                params.api.setFilterModel(null);
 
-                            // Set the filtered rows
-                            params.api.setRowData(filteredRows);
-                        }
-                    }}
-                    onFilterChanged={(params: any) => {
-                        // Extract filters from grid and update URL
-                        const filterModel = params.api.getFilterModel();
-                        const newUrl = new URL(window.location.href);
+                                // Set the filtered rows
+                                params.api.setRowData(filteredRows);
+                            }
+                        }}
+                        onFilterChanged={(params: any) => {
+                            // Extract filters from grid and update URL
+                            const filterModel = params.api.getFilterModel();
+                            const newUrl = new URL(window.location.href);
 
-                        // Handle 'tag' filter
-                        if (filterModel.tag && filterModel.tag.filter) {
-                            newUrl.searchParams.set('tag', filterModel.tag.filter);
-                        } else {
-                            newUrl.searchParams.delete('tag');
-                        }
+                            // Handle 'tag' filter
+                            if (filterModel.tag && filterModel.tag.filter) {
+                                newUrl.searchParams.set('tag', filterModel.tag.filter);
+                            } else {
+                                newUrl.searchParams.delete('tag');
+                            }
 
-                        // Handle 'author' filter
-                        if (filterModel.author && filterModel.author.filter) {
-                            newUrl.searchParams.set('author', filterModel.author.filter);
-                        } else {
-                            newUrl.searchParams.delete('author');
-                        }
+                            // Handle 'author' filter
+                            if (filterModel.author && filterModel.author.filter) {
+                                newUrl.searchParams.set('author', filterModel.author.filter);
+                            } else {
+                                newUrl.searchParams.delete('author');
+                            }
 
-                        // Update the browser URL without reloading
-                        window.history.replaceState({}, '', newUrl.toString());
-                    }}
-                    animateRows={true}
-                    undoRedoCellEditing={true}
-                    rowSelection="multiple"
-                    suppressHorizontalScroll={false}
-                    rowHeight={60}
-                    context={{ refreshData: refreshData }} // Use prop refreshData
-                />
+                            // Update the browser URL without reloading
+                            window.history.replaceState({}, '', newUrl.toString());
+                        }}
+                        animateRows={true}
+                        undoRedoCellEditing={true}
+                        suppressHorizontalScroll={false}
+                        rowHeight={60}
+                        context={{ refreshData: refreshData }} // Use prop refreshData
+                    />
             </div>
 
             {/* Test Configuration Panel */}
