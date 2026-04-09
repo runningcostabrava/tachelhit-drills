@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { AgGridReact } from 'ag-grid-react';
-import { ColDef } from 'ag-grid-community';
+import type { ColDef } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 import axios from 'axios';
 import { API_BASE } from '../config';
