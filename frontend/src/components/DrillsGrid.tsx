@@ -1736,6 +1736,26 @@ export default function DrillsGrid({ rowData, refreshData }: { rowData: any[]; r
                         </div>
 
                         <button
+                            onClick={() => navigate('/library')}
+                            style={{
+                                padding: '10px 20px',
+                                fontSize: '15px',
+                                background: '#9C27B0',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                        >
+                            🎥 Video Library
+                        </button>
+
+                        <button
                             onClick={() => setShowGlossary(true)}
                             style={{
                                 padding: '10px 20px',
