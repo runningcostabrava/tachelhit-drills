@@ -102,21 +102,21 @@ def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tac
     Translate text using our Gradio Hugging Face Space.
     """
     from gradio_client import Client
-    
+
     # If custom space URL is provided, use it
     if HUGGINGFACE_TRANSLATION_SPACE_URL:
         try:
             # Use the official Gradio Client for robust communication
             # Remove /translate suffix if present as Client expects the base URL
             space_url = HUGGINGFACE_TRANSLATION_SPACE_URL.split('/translate')[0].rstrip('/')
-            
+
             # Extract just the repository ID if it's a full huggingface.co URL
             client_id = space_url
             if "huggingface.co/spaces/" in space_url:
                 client_id = space_url.split("huggingface.co/spaces/")[-1]
-                
+
             print(f"[TRANSLATE] Connecting to Gradio Space: {client_id}")
-            
+
             api_token = os.getenv("HUGGINGFACE_API_KEY")
             client = Client(client_id, token=api_token)
             # The app.py has fn=translate_text with inputs [text, src_lang, tgt_lang]
@@ -129,12 +129,12 @@ def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tac
                 1.0,
                 api_name="/predict"
             )
-            
+
             # The Space returns "Tifinagh: ...\nLatín: ..." for ber_Tfng
             translation = str(result)
             print(f"[TRANSLATE] Success (Gradio Space): '{text[:30]}...' -> '{translation[:30]}...'")
             return translation
-            
+
         except Exception as e:
             print(f"[TRANSLATE] Gradio Space error details: {e}")
             import traceback
@@ -169,7 +169,7 @@ def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tac
             "inputs": text,
             "parameters": {"src_lang": nllb_src, "tgt_lang": nllb_tgt}
         }
-        
+
         print(f"[TRANSLATE] Calling Inference API: {api_url}")
         response = requests.post(api_url, headers=headers, json=payload, timeout=20)
         # NLLB inference API can be slow or return 503 while loading
@@ -179,7 +179,7 @@ def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tac
                 translated = result[0].get("translation_text", text)
                 print(f"[TRANSLATE] Inference API Success: {translated}")
                 return translated
-        
+
         print(f"[TRANSLATE] Inference API returned {response.status_code}: {response.text}. Returning original.")
         return text
     except Exception as e:
@@ -268,7 +268,7 @@ from contextlib import asynccontextmanager
 async def lifespan(app: FastAPI):
     # This runs ON STARTUP
     print("[INIT] Startup lifespan events...")
-    
+
     # Optionally check and fix schema before creating tables
     # Set CHECK_SCHEMA environment variable to "1" to enable
     if os.getenv("CHECK_SCHEMA") == "1":
@@ -367,7 +367,11 @@ allowed_origins_base = [
     "https://tachelhit-drills.vercel.app/",       # Production URL (with trailing slash)
     "https://www.tachelhit-drills.vercel.app",    # Production URL with www
     "https://www.tachelhit-drills.vercel.app/",   # Production URL with www and slash
+    "http://localhost",             # ADD THIS for Android Capacitor
+    "capacitor://localhost",        # ADD THIS for iOS Capacitor
 ]
+
+
 
 # Remove duplicates and None values
 # FRONTEND_URL environment variable is no longer explicitly added to this list for CORS
@@ -535,14 +539,14 @@ def get_db():
 def get_drills(tag: Optional[str] = None, author: Optional[str] = None, db: Session = Depends(get_db)):
     try:
         query = db.query(DrillModel)
-        
+
         if tag:
             # Simple substring match for tags (since they can be comma-separated)
             query = query.filter(DrillModel.tag.ilike(f"%{tag}%"))
-        
+
         if author:
             query = query.filter(DrillModel.author.ilike(f"%{author}%"))
-            
+
         drills = query.order_by(DrillModel.date_created.desc()).all()
         print(f"[API] GET /drills/ (tag={tag}, author={author}) returning {len(drills)} drills")
         # Intentar serializar cada drill para detectar errores de validación Pydantic
@@ -588,11 +592,11 @@ def create_drill(drill: DrillCreate = None, db: Session = Depends(get_db)):
             # Create drill with provided data
             drill_data = drill.model_dump(exclude_unset=True)
             db_drill = DrillModel(**drill_data)
-        
+
         db.add(db_drill)
         db.commit()
         db.refresh(db_drill)
-        
+
         # If Catalan text is provided, generate Arabic translation and TTS
         if db_drill.text_catalan:
             try:
@@ -600,7 +604,7 @@ def create_drill(drill: DrillCreate = None, db: Session = Depends(get_db)):
                 db_drill.text_arabic = translator_ca_to_ar.translate(db_drill.text_catalan)
             except Exception as e:
                 print("Translation error during drill creation:", e)
-            
+
             # Generate TTS audio for Catalan text
             try:
                 tts_url = generate_catalan_tts(db_drill.text_catalan, db_drill.id)
@@ -608,7 +612,7 @@ def create_drill(drill: DrillCreate = None, db: Session = Depends(get_db)):
                 print(f"[TTS] Generated TTS audio for new drill {db_drill.id}: {tts_url}")
             except Exception as e:
                 print(f"[TTS] Failed to generate TTS for new drill: {e}")
-        
+
         db.commit()
         db.refresh(db_drill)
         return db_drill
@@ -1434,26 +1438,26 @@ async def process_video_analysis_task(job_id: int, video_path: str, tmp_dir: str
         asr_space_url = os.getenv("HUGGINGFACE_ASR_SPACE_URL", "https://huggingface.co/spaces/Tamazight-NLP/ASR")
         if not asr_space_url:
             raise Exception("HUGGINGFACE_ASR_SPACE_URL not configured")
-        
+
         asr_endpoint = asr_space_url.rstrip("/") + "/transcribe"
         print(f"[WORKER] Proxying video file for Job {job_id} to ASR Space...")
-        
+
         hf_token = os.getenv("HUGGINGFACE_API_KEY")
         headers = {"Authorization": f"Bearer {hf_token}"} if hf_token else {}
-        
+
         with open(video_path, "rb") as f:
             resp = requests.post(
-                asr_endpoint, 
+                asr_endpoint,
                 files={"audio_file": (os.path.basename(video_path), f, "video/mp4")},
                 headers=headers,
                 timeout=600
             )
-        
+
         resp.raise_for_status()
         asr_data = resp.json()
-        
+
         segments = asr_data.get("segments", [])
-        
+
         # 4. Save segments to DB
         for seg in segments:
             db_segment = VideoSegmentModel(
@@ -1463,7 +1467,7 @@ async def process_video_analysis_task(job_id: int, video_path: str, tmp_dir: str
                 text_original=seg["text"]
             )
             db.add(db_segment)
-        
+
         job.status = "COMPLETED"
         job.processing_log = f"Successfully extracted {len(segments)} segments."
         db.commit()
@@ -1495,12 +1499,12 @@ async def analyze_uploaded_video(
         # Create temp directory
         tmp_dir = tempfile.mkdtemp()
         video_path = os.path.join(tmp_dir, video.filename)
-        
+
         # Save video
         content = await video.read()
         with open(video_path, "wb") as f:
             f.write(content)
-            
+
         # Create a Job entry
         job = VideoProcessingJobModel(
             source_filepath=video_path,
@@ -1516,7 +1520,7 @@ async def analyze_uploaded_video(
             sub_content = (await subtitles.read()).decode("utf-8")
             from video_utils import parse_vtt
             segments = parse_vtt(sub_content)
-            
+
             for seg in segments:
                 db_segment = VideoSegmentModel(
                     job_id=job.id,
@@ -1525,7 +1529,7 @@ async def analyze_uploaded_video(
                     text_original=seg["text"]
                 )
                 db.add(db_segment)
-            
+
             job.status = "COMPLETED"
             db.commit()
             # Cleanup temp directory after immediate processing
@@ -1574,7 +1578,7 @@ def get_video_analysis_job_status(job_id: int, db: Session = Depends(get_db)):
     job = db.query(VideoProcessingJobModel).filter(VideoProcessingJobModel.id == job_id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     # Load segments
     segments = []
     if job.status == "COMPLETED":
@@ -1584,7 +1588,7 @@ def get_video_analysis_job_status(job_id: int, db: Session = Depends(get_db)):
                 "end": seg.segment_end_time,
                 "text": seg.text_original
             })
-            
+
     return {
         "id": job.id,
         "status": job.status,
@@ -1603,35 +1607,35 @@ async def analyze_video(
     try:
         # Get metadata
         info = get_video_metadata(url, cookies_str=cookies)
-        
+
         # Determine subtitle language to use
         available_subs = info.get('subtitles', {})
         available_auto = info.get('automatic_captions', {})
-        
+
         # Priority: Arabic (ar), French (fr), English (en), Spanish (es), Berber (shi)
         lang_priority = ['ar', 'fr', 'en', 'es', 'shi', 'ca']
         lang_to_use = None
-        
+
         # Check standard subtitles first
         for lang in lang_priority:
             if lang in available_subs:
                 lang_to_use = lang
                 break
-        
+
         # Then check automatic captions
         if not lang_to_use:
             for lang in lang_priority:
                 if lang in available_auto:
                     lang_to_use = lang
                     break
-        
+
         # Fallback to the first available if none of the priority languages exist
         if not lang_to_use:
             if available_subs:
                 lang_to_use = list(available_subs.keys())[0]
             elif available_auto:
                 lang_to_use = list(available_auto.keys())[0]
-        
+
         if not lang_to_use:
             return {
                 "title": info.get("title"),
@@ -1640,10 +1644,10 @@ async def analyze_video(
                 "segments": [],
                 "message": "No subtitles or captions found for this video."
             }
-            
+
         # Get segments
         segments = get_video_segments(url, lang_to_use, cookies_str=cookies)
-        
+
         return {
             "title": info.get("title"),
             "thumbnail": info.get("thumbnail"),
@@ -1666,7 +1670,7 @@ async def translate_video_segments(
     """
     try:
         translator = GoogleTranslator(source=source_lang, target='ca')
-        
+
         translated_segments = []
         for seg in segments:
             original_text = seg.get("text", "")
@@ -1678,7 +1682,7 @@ async def translate_video_segments(
                     print(f"[API] Translation error for segment: {e}")
                     seg["text_catalan"] = ""
             translated_segments.append(seg)
-            
+
         return translated_segments
     except Exception as e:
         print(f"[API] Error in translate_video_segments: {e}")
@@ -1706,9 +1710,9 @@ async def create_drills_from_video(
         db.add(job)
         db.commit()
         db.refresh(job)
-        
+
         drills_created = []
-        
+
         if video_path and os.path.exists(video_path):
             # Path A: Local file upload
             for seg in segments:
@@ -1727,7 +1731,7 @@ async def create_drills_from_video(
                 db.add(db_drill)
                 db.commit()
                 db.refresh(db_drill)
-                
+
                 try:
                     res = process_and_upload_segment(video_path, seg["start"], seg["end"], db_drill.id)
                     db_drill.video_url = normalize_media_url(res["video_url"])
@@ -1741,7 +1745,7 @@ async def create_drills_from_video(
                 except Exception as e:
                     print(f"Error processing segment: {e}")
                     db.rollback()
-        
+
         elif url:
             # Path B: YouTube URL - OFF-LOADED TO HF SPACE
             print(f"[API] Offloading YouTube clipping to HF Space: {url}")
@@ -1760,7 +1764,7 @@ async def create_drills_from_video(
                 db.add(db_drill)
                 db.commit()
                 db.refresh(db_drill)
-                
+
                 try:
                     # OFF-LOADED CALL
                     res = remote_process_and_upload_segment(url, seg["start"], seg["end"], db_drill.id)
@@ -1775,11 +1779,11 @@ async def create_drills_from_video(
                 except Exception as e:
                     print(f"Error processing segment: {e}")
                     db.rollback()
-                
+
         job.status = "COMPLETED"
         db.commit()
         return {"status": "success", "drills_created": drills_created}
-        
+
     except Exception as e:
         print(f"[API] Error in create_drills_from_video: {e}")
         if 'job' in locals():
@@ -2225,14 +2229,14 @@ async def transcribe_audio(
                 DrillModel.text_tachelhit != None,
                 DrillModel.text_tachelhit != ''
             ).limit(100).all()
-    
+
     # Fetch Glossary
     glossary = db.query(GlossaryItemModel).all()
     glossary_data = [{"s": item.word_sound, "c": item.correct_spelling} for item in glossary]
 
     # Create pairs: { "t": "tachelhit" }
     dataset_pairs = [
-        {"t": d.text_tachelhit} 
+        {"t": d.text_tachelhit}
         for d in drills if d.text_tachelhit
     ]
 
@@ -2240,26 +2244,26 @@ async def transcribe_audio(
     asr_space_url = os.getenv("HUGGINGFACE_ASR_SPACE_URL", "https://huggingface.co/spaces/Tamazight-NLP/ASR")
     if not asr_space_url:
         raise HTTPException(status_code=500, detail="HUGGINGFACE_ASR_SPACE_URL not configured in environment")
-    
+
     try:
         client_id = asr_space_url
         if "huggingface.co/spaces/" in asr_space_url:
             client_id = asr_space_url.split("huggingface.co/spaces/")[-1]
-            
+
         print(f"[API] Calling ASR Space at {client_id}")
         hf_token = os.getenv("HUGGINGFACE_API_KEY")
         client = Client(client_id, token=hf_token)
-        
+
         # For Tamazight-NLP/ASR, we use /predict which takes the audio URL using handle_file
         # Note: If it's a URL, handle_file might work or we can pass the URL string directly if the space accepts it
         # Actually, gradio_client allows passing the URL string for Audio inputs.
-        
+
         rough = await asyncio.to_thread(
             client.predict,
             handle_file(audio_url),
             api_name="/predict"
         )
-        
+
         # Since this space only returns the transcription string, we set rough and corrected to the same
         corrected = rough
         score = 1.0
@@ -2296,7 +2300,7 @@ class ASRService:
         asr_space_url = os.getenv("HUGGINGFACE_ASR_SPACE_URL", "https://huggingface.co/spaces/josepabloucr/ASR")
         if not asr_space_url:
             raise ValueError("HUGGINGFACE_ASR_SPACE_URL not configured")
-        
+
         hf_token = os.getenv("HUGGINGFACE_API_KEY")
         try:
             client = Client(asr_space_url, token=hf_token)
@@ -2332,13 +2336,13 @@ async def evaluate_dataset(
     """
     drills = db.query(DrillModel).filter(DrillModel.id.in_(selected_pair_ids)).all()
     results = []
-    
+
     asr = get_asr_service()
-    
+
     for drill in drills:
         if not drill.audio_url or not drill.text_tachelhit:
             continue
-            
+
         try:
             rough = asr.transcribe(drill.audio_url)
             results.append({
@@ -2352,7 +2356,7 @@ async def evaluate_dataset(
                 "drill_id": drill.id,
                 "error": str(e)
             })
-            
+
     return results
 
 @app.post("/drills/{drill_id}/trim-audio")
@@ -2375,7 +2379,7 @@ async def trim_drill_audio(
         # Download original audio
         response = requests.get(drill.audio_url, stream=True)
         response.raise_for_status()
-        
+
         with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as tmp_in:
             for chunk in response.iter_content(chunk_size=8192):
                 tmp_in.write(chunk)
@@ -2395,7 +2399,7 @@ async def trim_drill_audio(
             public_id=f"audio_trimmed_{drill_id}_{int(datetime.utcnow().timestamp())}",
             resource_type="video"
         )
-        
+
         url = normalize_media_url(result['secure_url'])
         drill.audio_url = url
         db.commit()
@@ -2421,20 +2425,20 @@ def import_srt_content(request: SrtImportRequest, db: Session = Depends(get_db))
     try:
         print(f"[SRT IMPORT] Importing SRT content for video: {request.video_url}")
         print(f"[SRT IMPORT] SRT content length: {len(request.srt_content)} characters")
-        
+
         # Parse SRT content
         segments = parse_srt_content(request.srt_content)
         print(f"[SRT IMPORT] Parsed {len(segments)} segments")
-        
+
         drill_ids = []
         created_drills = []
-        
+
         # Create a drill for each segment
         for i, segment in enumerate(segments):
             try:
                 # Create YouTube URL with timestamp
                 youtube_url = create_youtube_url_with_timestamp(request.video_url, segment["start_time"])
-                
+
                 # Create drill with the segment text as Catalan text
                 # The SRT content is in Catalan (from the YouTube Catalan translator)
                 db_drill = DrillModel(
@@ -2445,42 +2449,42 @@ def import_srt_content(request: SrtImportRequest, db: Session = Depends(get_db))
                     video_start_time=segment["start_time"],
                     video_end_time=segment["end_time"]
                 )
-                
+
                 db.add(db_drill)
                 db.flush()  # Get the ID without committing
-                
+
                 # Generate Arabic translation
                 try:
                     db_drill.text_arabic = translator_ca_to_ar.translate(segment["text"])
                 except Exception as trans_e:
                     print(f"[SRT IMPORT] Translation error for segment {i+1}: {trans_e}")
-                
+
                 # Generate TTS audio
                 try:
                     tts_url = generate_catalan_tts(segment["text"], db_drill.id)
                     db_drill.audio_tts_url = tts_url
                 except Exception as tts_e:
                     print(f"[SRT IMPORT] TTS error for segment {i+1}: {tts_e}")
-                
+
                 drill_ids.append(db_drill.id)
                 created_drills.append(db_drill)
-                
+
                 print(f"[SRT IMPORT] Created drill {db_drill.id} for segment {i+1}: '{segment['text'][:50]}...'")
-                
+
             except Exception as segment_e:
                 print(f"[SRT IMPORT] Error creating drill for segment {i+1}: {segment_e}")
                 continue
-        
+
         # Commit all drills
         db.commit()
-        
+
         # Create test if requested
         test_id = None
         if request.create_test and drill_ids:
             try:
                 test_title = request.test_title or f"SRT Import - {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}"
                 test_description = request.test_description or f"Test created from SRT import with {len(drill_ids)} segments"
-                
+
                 db_test = TestModel(
                     title=test_title,
                     description=test_description,
@@ -2492,11 +2496,11 @@ def import_srt_content(request: SrtImportRequest, db: Session = Depends(get_db))
                 db.commit()
                 db.refresh(db_test)
                 test_id = db_test.id
-                
+
                 print(f"[SRT IMPORT] Created test {test_id} with {len(drill_ids)} drills")
             except Exception as test_e:
                 print(f"[SRT IMPORT] Error creating test: {test_e}")
-        
+
         return SrtImportResponse(
             success=True,
             message=f"Successfully imported {len(drill_ids)} segments from SRT",
@@ -2505,7 +2509,7 @@ def import_srt_content(request: SrtImportRequest, db: Session = Depends(get_db))
             test_id=test_id,
             segments=segments
         )
-        
+
     except Exception as e:
         db.rollback()
         print(f"[SRT IMPORT] Error: {e}")
@@ -2522,10 +2526,10 @@ def bulk_update_video_url(request: BulkVideoUrlUpdateRequest, db: Session = Depe
     try:
         print(f"[BULK VIDEO URL] Updating video URLs for {len(request.drill_ids)} drills")
         print(f"[BULK VIDEO URL] Base video URL: {request.base_video_url}")
-        
+
         updated_count = 0
         failed_ids = []
-        
+
         for drill_id in request.drill_ids:
             try:
                 # Get the drill
@@ -2534,43 +2538,43 @@ def bulk_update_video_url(request: BulkVideoUrlUpdateRequest, db: Session = Depe
                     print(f"[BULK VIDEO URL] Drill {drill_id} not found")
                     failed_ids.append(drill_id)
                     continue
-                
+
                 # Create the YouTube URL with timestamp if requested
                 if request.update_timestamps and drill.video_start_time is not None:
                     youtube_url = create_youtube_url_with_timestamp(
-                        request.base_video_url, 
+                        request.base_video_url,
                         drill.video_start_time
                     )
                 else:
                     # Just use the base URL without timestamp
                     youtube_url = request.base_video_url
-                
+
                 # Update the drill's video_url
                 drill.video_url = youtube_url
                 db.add(drill)
-                
+
                 print(f"[BULK VIDEO URL] Updated drill {drill_id}: {youtube_url}")
                 updated_count += 1
-                
+
             except Exception as drill_error:
                 print(f"[BULK VIDEO URL] Error updating drill {drill_id}: {drill_error}")
                 failed_ids.append(drill_id)
                 continue
-        
+
         # Commit all changes
         db.commit()
-        
+
         message = f"Successfully updated {updated_count} drills"
         if failed_ids:
             message += f", failed to update {len(failed_ids)} drills"
-        
+
         return BulkVideoUrlUpdateResponse(
             success=True,
             message=message,
             updated_count=updated_count,
             failed_ids=failed_ids
         )
-        
+
     except Exception as e:
         db.rollback()
         print(f"[BULK VIDEO URL] Error: {e}")

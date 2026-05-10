@@ -2,9 +2,14 @@
 const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE || 'http://localhost:8000';
 let API_BASE_TMP = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
 
-// Override for localhost development
-if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+// Override for localhost development, but EXCLUDE native mobile environments
+const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNative;
+
+if (!isNative && typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
   API_BASE_TMP = 'http://localhost:8000';
+} else {
+  // Force production Render URL for APK and actual web production
+  API_BASE_TMP = 'https://tachelhit-drills-api.onrender.com';
 }
 
 // Force production backend if we are in production (vercel)
@@ -96,7 +101,7 @@ export function getMediaUrl(url: string | null | undefined): string {
   if (!url) return '';
 
   let corrected = url;
-  
+
   // Caso especial: URL que comienza con el dominio del backend pegado a https// (sin dos puntos)
   // Ejemplo: tachelhit-drills-api.onrender.comhttps//res.cloudinary.com/...
   // Convertir directamente a https://res.cloudinary.com/...
@@ -105,7 +110,7 @@ export function getMediaUrl(url: string | null | undefined): string {
     // Eliminar todo hasta después de https//
     corrected = corrected.replace(malformedPattern, 'https://');
   }
-  
+
   // Fix malformed protocol (https// -> https://, http// -> http://) anywhere in the string
   corrected = corrected.replace(/https\/\//g, 'https://').replace(/http\/\//g, 'http://');
 
