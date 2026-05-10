@@ -358,17 +358,10 @@ DEVELOPMENT_MODE = DATABASE_URL.startswith("sqlite") or os.getenv("DEVELOPMENT_M
 # CORS configuration - allow frontend URL
 allowed_origins_base = [
     "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:5175",
-    "http://localhost:5176",
-    "http://localhost:4173", # Vite default preview server port
-    "http://localhost:3000",
-    "https://tachelhit-drills.vercel.app",        # Production URL (without www)
-    "https://tachelhit-drills.vercel.app/",       # Production URL (with trailing slash)
-    "https://www.tachelhit-drills.vercel.app",    # Production URL with www
-    "https://www.tachelhit-drills.vercel.app/",   # Production URL with www and slash
-    "http://localhost",             # ADD THIS for Android Capacitor
-    "capacitor://localhost",        # ADD THIS for iOS Capacitor
+    "http://localhost:4173",
+    "https://tachelhit-drills.vercel.app",
+    "http://localhost",              # Add this for Android APK
+    "capacitor://localhost",         # Add this for mobile WebView
 ]
 
 
