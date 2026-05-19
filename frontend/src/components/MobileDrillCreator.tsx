@@ -45,6 +45,21 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const [autoSaveTimer, setAutoSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
     const [lastSaved, setLastSaved] = useState<string | null>(null);
 
+    // 🌟 Helper for device-aware MIME types
+    const getSupportedMimeType = (type: 'audio' | 'video') => {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        if (isIOS) return type === 'audio' ? { mime: 'audio/mp4', ext: 'm4a' } : { mime: 'video/mp4', ext: 'mp4' };
+
+        const types = type === 'audio'
+            ? [{ mime: 'audio/webm', ext: 'webm' }, { mime: 'audio/mp4', ext: 'm4a' }, { mime: 'audio/ogg; codecs=opus', ext: 'ogg' }]
+            : [{ mime: 'video/webm', ext: 'webm' }, { mime: 'video/mp4', ext: 'mp4' }];
+
+        for (const t of types) {
+            if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t.mime)) return t;
+        }
+        return type === 'audio' ? { mime: 'audio/mp4', ext: 'm4a' } : { mime: 'video/mp4', ext: 'mp4' };
+    };
+
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
     const previewRef = useRef<HTMLVideoElement | null>(null);
@@ -145,22 +160,20 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const startAudioRecording = async () => {
         if (!drill.id) {
             const temp = { ...drill, id: Date.now(), text_catalan: drill.text_catalan || `Audio Drill (${new Date().toLocaleDateString()})` };
-            setDrill(temp);
-            saveOffline(temp);
+            setDrill(temp); saveOffline(temp);
         }
         try {
             if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
             const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
             streamRef.current = stream;
 
-            let mimeType = 'audio/webm';
-            if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream) mimeType = 'audio/mp4';
+            const format = getSupportedMimeType('audio');
 
-            mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
+            mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: format.mime });
             chunksRef.current = [];
             mediaRecorderRef.current.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
             mediaRecorderRef.current.onstop = async () => {
-                const blob = new Blob(chunksRef.current, { type: mimeType });
+                const blob = new Blob(chunksRef.current, { type: format.mime });
                 if (blob.size < 1024) return;
 
                 const reader = new FileReader();
@@ -168,8 +181,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 reader.onloadend = async () => {
                     try {
                         const base64Data = (reader.result as string).split(',')[1];
-                        const ext = mimeType.includes('mp4') ? 'm4a' : 'webm';
-                        const fileName = `drills_media/audio_${drill.id || Date.now()}.${ext}`;
+                        const fileName = `drills_media/audio_${drill.id || Date.now()}.${format.ext}`;
 
                         const savedFile = await Filesystem.writeFile({ path: fileName, data: base64Data, directory: Directory.Data, recursive: true });
                         setDrill(prev => {
@@ -177,20 +189,19 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                             triggerDirectSave(updated);
                             return updated;
                         });
-                    } catch (err) { console.error(err); }
+                    } catch (err) { console.error('Offline save failed:', err); }
                     finally { setRecording(null); }
                 };
             };
             mediaRecorderRef.current.start();
             setRecording('audio');
-        } catch (err) { console.error(err); }
+        } catch (err) { alert('Microphone access denied or unavailable.'); console.error(err); }
     };
 
     const startVideoRecording = async (facing: 'user' | 'environment' = 'environment') => {
         if (!drill.id) {
             const temp = { ...drill, id: Date.now(), text_catalan: drill.text_catalan || `Video Drill (${new Date().toLocaleDateString()})` };
-            setDrill(temp);
-            saveOffline(temp);
+            setDrill(temp); saveOffline(temp);
         }
         try {
             if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
@@ -200,11 +211,14 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             setCameraFacing(facing);
 
             setTimeout(() => { if (previewRef.current) { previewRef.current.srcObject = stream; previewRef.current.play().catch(e => console.error(e)); } }, 100);
-            mediaRecorderRef.current = new MediaRecorder(stream);
+
+            const format = getSupportedMimeType('video');
+            mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: format.mime });
             chunksRef.current = [];
+
             mediaRecorderRef.current.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
             mediaRecorderRef.current.onstop = async () => {
-                const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+                const blob = new Blob(chunksRef.current, { type: format.mime });
                 if (blob.size < 1024) { stopCamera(); return; }
 
                 const reader = new FileReader();
@@ -212,18 +226,18 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 reader.onloadend = async () => {
                     try {
                         const base64Data = (reader.result as string).split(',')[1];
-                        const savedFile = await Filesystem.writeFile({ path: `drills_media/video_${drill.id || Date.now()}.webm`, data: base64Data, directory: Directory.Data, recursive: true });
-                        setCapturedVideo(URL.createObjectURL(blob)); // Instant video preview load
+                        const savedFile = await Filesystem.writeFile({ path: `drills_media/video_${drill.id || Date.now()}.${format.ext}`, data: base64Data, directory: Directory.Data, recursive: true });
+                        setCapturedVideo(URL.createObjectURL(blob));
                         setDrill(prev => {
                             const updated = { ...prev, video_url: savedFile.uri };
                             triggerDirectSave(updated);
                             return updated;
                         });
-                    } catch (err) { console.error(err); }
+                    } catch (err) { console.error('Offline save failed:', err); }
                     finally { stopCamera(); setRecording(null); }
                 };
             };
-        } catch (err) { console.error(err); }
+        } catch (err) { alert('Camera access denied or unavailable.'); console.error(err); }
     };
 
     const startImageCapture = async (facing: 'user' | 'environment' = 'environment') => {

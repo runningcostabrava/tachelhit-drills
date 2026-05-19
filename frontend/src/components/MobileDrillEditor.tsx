@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { API_BASE, getMediaUrl } from '../config';
 
@@ -25,8 +25,9 @@ interface MobileDrillEditorProps {
 export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate }: MobileDrillEditorProps) {
   const [localDrill, setLocalDrill] = useState<Drill>({ ...drill });
   const [aiLoadingKey, setAiLoadingKey] = useState<string | null>(null);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync local states if navigation triggers card object reloads
   useEffect(() => {
     setLocalDrill({ ...drill });
   }, [drill]);
@@ -42,7 +43,37 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     }
   };
 
-  // 🌐 Non-Destructive Card Translator Handler
+  // 📤 File Upload Handler for Replacing Media
+  const handleMediaUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingMedia(true);
+    // Determine target field based on MIME type
+    const fileType = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'audio';
+    
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+
+    try {
+      const res = await axios.post(`${API_BASE}/upload-media/${localDrill.id}/${fileType}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      // Update local state and trigger parent refresh
+      if (res.data.url) {
+        setLocalDrill(prev => ({ ...prev, [`${fileType}_url`]: res.data.url }));
+        onUpdate();
+        alert(`Successfully updated ${fileType}!`);
+      }
+    } catch (err) {
+      alert(`Failed to upload ${fileType}. Check your connection.`);
+      console.error(err);
+    } finally {
+      setUploadingMedia(false);
+    }
+  };
+
   const handleTranslateAction = async (source: 'ca' | 'shi', target: 'ca' | 'shi') => {
     const sourceText = source === 'ca' ? localDrill.text_catalan : localDrill.text_tachelhit;
     if (!sourceText) return alert('Source translation field is currently empty.');
@@ -60,7 +91,6 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       const generatedTranslation = res.data.translated_text;
       const currentContent = localDrill[targetField] || '';
 
-      // Safe append: keeps previously written texts safe from deletion
       const safeAppendText = currentContent.trim()
         ? `${currentContent} (${generatedTranslation})`
         : generatedTranslation;
@@ -75,10 +105,9 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     }
   };
 
-  // 🪄 Non-Destructive Card Voice Transcriber Handler
   const handleTranscribeAction = async () => {
     const mediaSource = localDrill.audio_url || localDrill.video_url;
-    if (!mediaSource) return;
+    if (!mediaSource) return alert('No audio or video found to transcribe.');
     setAiLoadingKey('transcribe-voice');
 
     try {
@@ -102,17 +131,26 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'white', zIndex: 11000, display: 'flex', flexDirection: 'column' }}>
-      {/* Header Bar Controls */}
       <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'white' }}>
         <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>✕</button>
         <span style={{ fontWeight: 700, fontSize: '18px' }}>Edit Card #{localDrill.id}</span>
         <div style={{ width: '24px' }} />
       </div>
 
-      {/* Editor Content Area */}
       <div style={{ flex: 1, overflow: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-        {/* Media Attachments previews displayed instantly at the top */}
+        {/* 🎬 NEW MEDIA REPLACEMENT CONTROLS */}
+        <div style={{ background: '#f8f9fa', padding: '12px', borderRadius: '12px', border: '1px dashed #ccc', textAlign: 'center' }}>
+            <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#666' }}>Manage Media Attachments</h4>
+            <input type="file" accept="image/*,video/*,audio/*" ref={fileInputRef} onChange={handleMediaUpload} style={{ display: 'none' }} />
+            
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                <button onClick={() => fileInputRef.current?.click()} disabled={uploadingMedia} style={{ flex: 1, padding: '10px', background: '#e0f2fe', color: '#0284c7', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '12px' }}>
+                    {uploadingMedia ? '⏳ Uploading...' : '📁 Upload / Replace Media'}
+                </button>
+            </div>
+        </div>
+
         {localDrill.image_url && (
           <img src={getMediaUrl(localDrill.image_url)} alt="Drill Asset" style={{ width: '100%', aspectRatio: '1/1', borderRadius: '12px', objectFit: 'cover', border: '1px solid #eee' }} />
         )}
@@ -127,7 +165,6 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
           </button>
         )}
 
-        {/* 🌐 PORTED INLINE CONTROL PANEL: Integrated right into the editor module */}
         <div style={{ display: 'grid', gridTemplateColumns: (localDrill.audio_url || localDrill.video_url) ? '1fr 1fr 1fr' : '1fr 1fr', gap: '8px', background: '#f8f9fa', padding: '10px', borderRadius: '12px' }}>
           <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
             {aiLoadingKey === 'trans-text_tachelhit' ? '⏳...' : '🤖 CA➔SHI'}
@@ -142,7 +179,6 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
           )}
         </div>
 
-        {/* Text Area form cards inputs */}
         <div>
           <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Català</label>
           <textarea value={localDrill.text_catalan || ''} onChange={(e) => handleFieldChange('text_catalan', e.target.value)} rows={3} style={{ width: '100%', padding: '10px', fontSize: '16px', border: '1px solid #ccc', borderRadius: '8px' }} />
@@ -164,7 +200,6 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         </div>
       </div>
 
-      {/* Navigation Footer Target target switches */}
       <div style={{ display: 'flex', borderTop: '1px solid #eee', padding: '12px', background: '#f8f9fa', justifyContent: 'space-between' }}>
         <button onClick={() => onNavigate('prev')} style={{ padding: '12px 24px', background: '#374151', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600 }}>◀ Previous</button>
         <button onClick={() => onNavigate('next')} style={{ padding: '12px 24px', background: '#374151', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600 }}>Next ▶</button>
