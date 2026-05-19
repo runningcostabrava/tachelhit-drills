@@ -1,16 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { API_BASE, getMediaUrl } from '../config';
+import { Network } from '@capacitor/network';
+import { API_BASE } from '../config';
 import { AgGridReact } from 'ag-grid-react';
-// Importar solo el tema Alpine CSS (versión legacy)
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 import MobileDrillEditor from './MobileDrillEditor';
 import DrillsGrid from './DrillsGrid';
-import MobileBottomNav from './MobileBottomNav'; // Added import
-import VoiceDrillCreator from './VoiceDrillCreator'; // Added missing import
-import MobileDrillCreator from './MobileDrillCreator'; // Added import for new component
-import { useLocation, useNavigate } from 'react-router-dom'; // Added imports
+import MobileBottomNav from './MobileBottomNav';
+import VoiceDrillCreator from './VoiceDrillCreator';
+import MobileDrillCreator from './MobileDrillCreator';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface Drill {
   id: number;
@@ -22,7 +22,6 @@ interface Drill {
   image_url?: string;
   tag?: string;
   author?: string;
-  is_correction_dataset?: boolean;
   date_created: string;
 }
 
@@ -92,121 +91,30 @@ const GlossaryModal = ({ onClose }: { onClose: () => void }) => {
   );
 };
 
-// Remove onViewTests and onViewShorts props from here
-interface DrillsResponsiveProps {
-  // onViewTests?: () => void;
-  // onViewShorts?: () => void;
-}
-
-// Translate cell renderer for mobile grid
-const TranslateCellRenderer = (props: any) => {
-  const { data, api } = props;
-  const [translating, setTranslating] = useState(false);
-
-  const handleTranslate = async (source: string, target: string) => {
-    const text = source === 'ca' ? data.text_catalan : data.text_tachelhit;
-    if (!text) {
-      alert(`Please enter ${source === 'ca' ? 'Catalan' : 'Tachelhit'} text first.`);
-      return;
-    }
-
-    setTranslating(true);
-      try {
-        const res = await axios.post(`${API_BASE}/translate`, {
-          text: text,
-          source_lang: source,
-          target_lang: target
-        });
-        const field = target === 'shi' ? 'text_tachelhit' : 'text_catalan';
-        const newText = data[field] ? `${data[field]} (${res.data.translated_text})` : res.data.translated_text;
-        api.applyTransaction({ update: [{ ...data, [field]: newText }] });
-        // Also save to backend
-        await axios.put(`${API_BASE}/drills/${data.id}`, { [field]: newText });
-      } catch (err) {
-      console.error('Translation failed:', err);
-      alert('Translation failed.');
-    } finally {
-      setTranslating(false);
-    }
-  };
-
-  return (
-    <div style={{ display: 'flex', gap: '4px', alignItems: 'center', height: '100%' }}>
-      <button
-        onClick={(e) => { e.stopPropagation(); handleTranslate('ca', 'shi'); }}
-        disabled={translating || !data.text_catalan}
-        style={{
-          padding: '2px 6px',
-          background: '#4CAF50',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: translating ? 'not-allowed' : 'pointer',
-          fontSize: '10px',
-          fontWeight: 600,
-          opacity: !data.text_catalan ? 0.5 : 1
-        }}
-      >
-        {translating ? '...' : 'CA→SHI'}
-      </button>
-      <button
-        onClick={(e) => { e.stopPropagation(); handleTranslate('shi', 'ca'); }}
-        disabled={translating || !data.text_tachelhit}
-        style={{
-          padding: '2px 6px',
-          background: '#2196F3',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: translating ? 'not-allowed' : 'pointer',
-          fontSize: '10px',
-          fontWeight: 600,
-          opacity: !data.text_tachelhit ? 0.5 : 1
-        }}
-      >
-        {translating ? '...' : 'SHI→CA'}
-      </button>
-    </div>
-  );
-};
+interface DrillsResponsiveProps { }
 
 export default function DrillsResponsive({ }: DrillsResponsiveProps) {
-  const location = useLocation(); // Initialize useLocation
-  const navigate = useNavigate(); // Initialize useNavigate
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
   const [drills, setDrills] = useState<Drill[]>([]);
   const [editingDrill, setEditingDrill] = useState<Drill | null>(null);
-  const [showVoiceCreator, setShowVoiceCreator] = useState(false); // New state for VoiceDrillCreator modal
-  const [showMobileDrillCreator, setShowMobileDrillCreator] = useState(false); // New state for MobileDrillCreator modal
-  const [showNewDrillOptions, setShowNewDrillOptions] = useState(false); // New state for dropdown
+  const [showVoiceCreator, setShowVoiceCreator] = useState(false);
+  const [showMobileDrillCreator, setShowMobileDrillCreator] = useState(false);
+  const [showNewDrillOptions, setShowNewDrillOptions] = useState(false);
   const [showGlossary, setShowGlossary] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(''); // Search state
-  const [searchCategory, setSearchCategory] = useState('all'); // 'all', 'catalan', 'tachelhit', 'arabic', 'tag', 'author'
-  const gridRef = useRef<any>(null); // This ref is for DrillsGrid when in mobile view.
-
-  // State for filtered drills (combines URL filters and search box)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchCategory, setSearchCategory] = useState('all');
   const [filteredDrills, setFilteredDrills] = useState<Drill[]>([]);
 
-  // Apply both URL filters and search box filters
   useEffect(() => {
-    console.log('🔍 Applying filters:', {
-      searchQuery,
-      searchCategory,
-      locationSearch: location.search,
-      totalDrills: drills.length
-    });
-
     let result = [...drills];
 
-    // Apply search box filter if search query is not empty
     if (searchQuery.trim()) {
       const searchTerm = searchQuery.toLowerCase();
-      console.log(`🔍 Applying search box filter: "${searchTerm}" in category "${searchCategory}"`);
-
       result = result.filter((drill: Drill) => {
         if (searchCategory === 'all') {
-          // Search across all fields with OR logic
           const fieldsToSearch = [
             drill.text_catalan?.toLowerCase() || '',
             drill.text_tachelhit?.toLowerCase() || '',
@@ -216,7 +124,6 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
           ];
           return fieldsToSearch.some(field => field.includes(searchTerm));
         } else {
-          // Search in specific field
           switch (searchCategory) {
             case 'catalan':
               return (drill.text_catalan?.toLowerCase() || '').includes(searchTerm);
@@ -233,38 +140,37 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
           }
         }
       });
-
-      console.log(`🔍 After search box filter: ${result.length} drills`);
     }
 
     setFilteredDrills(result);
   }, [drills, searchQuery, searchCategory, location.search]);
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
+    const handleResize = () => setIsMobile(window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const fetchDrills = async () => {
     try {
-      // Always fetch all drills, then filter client-side for OR logic
-      const response = await axios.get(`${API_BASE}/drills/`);
-      let allDrills = response.data || [];
+      const status = await Network.getStatus();
+      let allDrills = [];
 
-      // Apply URL filter with OR logic (tag OR author OR text)
+      if (status.connected) {
+        const response = await axios.get(`${API_BASE}/drills/`);
+        allDrills = response.data || [];
+        localStorage.setItem('cached_drills', JSON.stringify(allDrills));
+      } else {
+        const cachedData = localStorage.getItem('cached_drills');
+        allDrills = cachedData ? JSON.parse(cachedData) : [];
+      }
+
       const queryParams = new URLSearchParams(location.search);
       const tag = queryParams.get('tag');
       const author = queryParams.get('author');
       const text = queryParams.get('text');
 
       if (tag || author || text) {
-        console.log(`🔍 Mobile URL filter checking: tag="${tag}", author="${author}", text="${text}"`);
-        console.log(`🔍 Total drills before filtering: ${allDrills.length}`);
-
         allDrills = allDrills.filter((drill: Drill) => {
           const tagMatch = tag ? (drill.tag?.toLowerCase() || '').includes(tag.toLowerCase()) : false;
           const authorMatch = author ? (drill.author?.toLowerCase() || '').includes(author.toLowerCase()) : false;
@@ -274,32 +180,13 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
             (drill.text_arabic?.toLowerCase() || '').includes(text.toLowerCase())
           ) : false;
 
-          // OR logic: match tag OR author OR text (if multiple provided, match any)
           const matches = [];
           if (tag) matches.push(tagMatch);
           if (author) matches.push(authorMatch);
           if (text) matches.push(textMatch);
 
-          // Return true if any of the provided parameters match
-          const result = matches.some(match => match === true);
-
-          // Debug logging for first few drills
-          if (drill.id <= 3) {
-            console.log(`🔍 Drill ${drill.id}: tag="${drill.tag}", author="${drill.author}", tagMatch=${tagMatch}, authorMatch=${authorMatch}, textMatch=${textMatch}, result=${result}`);
-          }
-
-          return result;
+          return matches.some(match => match === true);
         });
-
-        console.log(`🔍 Mobile URL filter applied: tag="${tag}", author="${author}", text="${text}"`);
-        console.log(`🔍 Found ${allDrills.length} drills matching OR logic`);
-
-        // Log first few filtered drills for debugging
-        if (allDrills.length > 0) {
-          console.log(`🔍 First filtered drill: id=${allDrills[0].id}, tag="${allDrills[0].tag}", author="${allDrills[0].author}"`);
-        } else {
-          console.log(`🔍 No drills matched the filter`);
-        }
       }
 
       const sorted = allDrills.sort((a: Drill, b: Drill) =>
@@ -307,22 +194,25 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
       );
       setDrills(sorted);
     } catch (error) {
-      console.error('Error loading drills:', error);
+      console.error('Error loading drills, using fallback:', error);
+      const cachedData = localStorage.getItem('cached_drills');
+      if (cachedData) {
+        const allDrills = JSON.parse(cachedData);
+        const sorted = allDrills.sort((a: Drill, b: Drill) =>
+          new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
+        );
+        setDrills(sorted);
+      }
     }
   };
 
-  useEffect(() => {
-    fetchDrills();
-  }, [location.search]); // Re-fetch drills when URL search params change
+  useEffect(() => { fetchDrills(); }, [location.search]);
 
   const addNewDrill = async () => {
     try {
       const response = await axios.post(`${API_BASE}/drills/`, {});
-      // Actualizar la lista de drills
       await fetchDrills();
-      // Open the newly created drill in editor (mobile view only)
       if (isMobile && response.data) {
-        // Asegurarse de que el drill tiene todos los campos necesarios
         const newDrill = {
           ...response.data,
           text_catalan: response.data.text_catalan || '',
@@ -334,20 +224,11 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
           tag: response.data.tag || '',
           date_created: response.data.date_created || new Date().toISOString()
         };
-        // Esperar un momento para asegurar que el drill está completamente creado
-        setTimeout(() => {
-          setEditingDrill(newDrill);
-        }, 100);
+        setTimeout(() => setEditingDrill(newDrill), 100);
       }
     } catch (error) {
       console.error('Error creating drill:', error);
       alert('Failed to create drill');
-    }
-  };
-
-  const handleRowClick = (event: any) => {
-    if (isMobile && event.data) {
-      setEditingDrill(event.data);
     }
   };
 
@@ -362,138 +243,21 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
     }
   };
 
-  // Desktop: use existing grid
   if (!isMobile) {
-    return <DrillsGrid rowData={drills} refreshData={fetchDrills} />;
+    return <DrillsGrid rowData={drills} refreshData={fetchDrills} onEditDrill={(drill) => setEditingDrill(drill)} />;
   }
 
-  const columnDefs: any[] = [
-    {
-      field: 'select',
-      headerName: '',
-      width: 40,
-    },
-    { field: 'id', width: 60, headerName: '#' },
-    { field: 'text_catalan', width: 120, headerName: 'Català' },
-    { field: 'text_tachelhit', width: 120, headerName: 'Tachelhit' },
-    {
-      headerName: 'TR',
-      width: 100,
-      cellRenderer: TranslateCellRenderer,
-      sortable: false,
-      filter: false
-    },
-    {
-      headerName: '▶️',
-      width: 60,
-      cellRenderer: (params: any) => {
-        const hasAudio = params.data.audio_url;
-        const hasVideo = params.data.video_url;
-
-        if (!hasAudio && !hasVideo) return '';
-
-        const handlePlay = () => {
-          if (hasVideo) {
-            // Open video in new tab or play inline
-            window.open(getMediaUrl(params.data.video_url), '_blank');
-          } else if (hasAudio) {
-            // Play audio
-            const audio = new Audio(getMediaUrl(params.data.audio_url));
-            audio.play().catch(e => console.error('Error playing audio:', e));
-          }
-        };
-
-        return (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handlePlay();
-            }}
-            style={{
-              background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              width: '40px',
-              height: '30px',
-              fontSize: '16px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 0
-            }}
-            title={hasVideo ? 'Play video' : 'Play audio'}
-          >
-            ▶️
-          </button>
-        );
-      },
-      sortable: false,
-      filter: false
-    },
-    {
-      field: 'audio_url',
-      width: 50,
-      headerName: '🎤',
-      cellRenderer: (params: any) => params.value ? '✓' : ''
-    },
-    {
-      field: 'video_url',
-      width: 70,
-      headerName: '🎥',
-      cellRenderer: (params: any) => params.value ? '✓' : ''
-    },
-  ];
-
-  // Mobile: Excel-like grid with full-screen editor
   return (
     <>
-      <div style={{
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        paddingBottom: '60px'
-      }}>
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: '60px' }}>
         {/* Header */}
-        <div style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          padding: '16px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '12px'
-          }}>
-            <h1 style={{
-              margin: 0,
-              fontSize: '20px',
-              fontWeight: 700,
-              color: 'white'
-            }}>
-              Tachelhit Drills
-            </h1>
+        <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: 'white' }}>Tachelhit Drills</h1>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              {/* Standalone Mobile Drill Creator Button */}
               <button
                 onClick={() => setShowMobileDrillCreator(true)}
-                style={{
-                  padding: '10px 16px',
-                  background: '#FFD700',
-                  color: '#333',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '15px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-                }}
-                title="Create drill with big buttons for fast capture"
+                style={{ padding: '10px 16px', background: '#FFD700', color: '#333', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}
               >
                 📱 New Drill
               </button>
@@ -504,147 +268,51 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
                   navigator.clipboard.writeText(url);
                   alert(`Filtered link copied to clipboard!\n${url}`);
                 }}
-                style={{
-                  padding: '8px',
-                  background: 'rgba(255,255,255,0.2)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '18px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-                title="Copy link"
+                style={{ padding: '8px', background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 🔗
               </button>
               <button
                 onClick={() => setShowGlossary(true)}
-                style={{
-                  padding: '8px',
-                  background: 'rgba(255,255,255,0.2)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '18px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-                title="Glossary"
+                style={{ padding: '8px', background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 📖
               </button>
               <div style={{ position: 'relative' }}>
                 <button
                   onClick={() => setShowNewDrillOptions(!showNewDrillOptions)}
-                  style={{
-                    padding: '10px 20px',
-                    background: 'white',
-                    color: '#667eea',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '15px',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
+                  style={{ padding: '10px 20px', background: 'white', color: '#667eea', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 700, cursor: 'pointer' }}
                 >
                   + More ▼
                 </button>
                 {showNewDrillOptions && (
-                  <div style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 10px)',
-                    right: 0,
-                    backgroundColor: 'white',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                    zIndex: 1000,
-                    minWidth: '220px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden',
-                  }}>
+                  <div style={{ position: 'absolute', top: 'calc(100% + 10px)', right: 0, backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 1000, minWidth: '220px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     <button
-                      onClick={() => {
-                        addNewDrill();
-                        setShowNewDrillOptions(false);
-                      }}
-                      style={{
-                        padding: '10px 15px',
-                        fontSize: '15px',
-                        background: 'none',
-                        border: 'none',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        color: '#333',
-                        fontWeight: 500,
-                        whiteSpace: 'nowrap'
-                      }}
+                      onClick={() => { addNewDrill(); setShowNewDrillOptions(false); }}
+                      style={{ padding: '10px 15px', fontSize: '15px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', color: '#333', fontWeight: 500, whiteSpace: 'nowrap' }}
                     >
                       ➕ Create Empty Drill
                     </button>
                     <button
                       onClick={() => {
                         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-                        if (!SpeechRecognition) {
-                          alert('Speech recognition is not supported in your browser. Please use Chrome or Edge for voice features. You can still create a drill manually.');
-                        }
+                        if (!SpeechRecognition) alert('Speech recognition is not supported in your browser.');
                         setShowVoiceCreator(true);
                         setShowNewDrillOptions(false);
                       }}
-                      style={{
-                        padding: '10px 15px',
-                        fontSize: '15px',
-                        background: 'none',
-                        border: 'none',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        color: '#333',
-                        fontWeight: 500,
-                        whiteSpace: 'nowrap'
-                      }}
+                      style={{ padding: '10px 15px', fontSize: '15px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', color: '#333', fontWeight: 500, whiteSpace: 'nowrap' }}
                     >
                       🎤 Create Drill with Voice
                     </button>
                     <button
-                      onClick={() => {
-                        navigate('/video-creator');
-                        setShowNewDrillOptions(false);
-                      }}
-                      style={{
-                        padding: '10px 15px',
-                        fontSize: '15px',
-                        background: 'none',
-                        border: 'none',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        color: '#333',
-                        fontWeight: 500,
-                        whiteSpace: 'nowrap'
-                      }}
+                      onClick={() => { navigate('/video-creator'); setShowNewDrillOptions(false); }}
+                      style={{ padding: '10px 15px', fontSize: '15px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', color: '#333', fontWeight: 500, whiteSpace: 'nowrap' }}
                     >
                       🎬 Create from Video (YouTube)
                     </button>
                     <button
-                      onClick={() => {
-                        navigate('/srt-import');
-                        setShowNewDrillOptions(false);
-                      }}
-                      style={{
-                        padding: '10px 15px',
-                        fontSize: '15px',
-                        background: 'none',
-                        border: 'none',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        color: '#333',
-                        fontWeight: 500,
-                        whiteSpace: 'nowrap'
-                      }}
+                      onClick={() => { navigate('/srt-import'); setShowNewDrillOptions(false); }}
+                      style={{ padding: '10px 15px', fontSize: '15px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', color: '#333', fontWeight: 500, whiteSpace: 'nowrap' }}
                     >
                       📝 Import from SRT Subtitles
                     </button>
@@ -653,49 +321,20 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
               </div>
             </div>
           </div>
-          {/* Search Box for Mobile */}
-          <div style={{
-            width: '100%',
-            display: 'flex',
-            gap: '8px',
-            alignItems: 'center',
-            background: 'rgba(255, 255, 255, 0.15)',
-            borderRadius: '8px',
-            padding: '8px 12px',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            marginTop: '12px'
-          }}>
+          {/* Search Box */}
+          <div style={{ width: '100%', display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255, 255, 255, 0.15)', borderRadius: '8px', padding: '8px 12px', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.2)', marginTop: '12px' }}>
             <div style={{ color: 'white', fontSize: '16px', flexShrink: 0 }}>🔍</div>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search drills..."
-              style={{
-                flex: 1,
-                background: 'transparent',
-                border: 'none',
-                color: 'white',
-                fontSize: '14px',
-                outline: 'none',
-                minWidth: '0'
-              }}
+              style={{ flex: 1, background: 'transparent', border: 'none', color: 'white', fontSize: '14px', outline: 'none', minWidth: '0' }}
             />
             <select
               value={searchCategory}
               onChange={(e) => setSearchCategory(e.target.value)}
-              style={{
-                background: 'rgba(255, 255, 255, 0.2)',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                color: 'white',
-                borderRadius: '6px',
-                padding: '6px 8px',
-                fontSize: '12px',
-                outline: 'none',
-                cursor: 'pointer',
-                flexShrink: 0
-              }}
+              style={{ background: 'rgba(255, 255, 255, 0.2)', border: '1px solid rgba(255, 255, 255, 0.3)', color: 'white', borderRadius: '6px', padding: '6px 8px', fontSize: '12px', outline: 'none', cursor: 'pointer', flexShrink: 0 }}
             >
               <option value="all">All</option>
               <option value="catalan">Català</option>
@@ -704,63 +343,19 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
               <option value="tag">Tag</option>
               <option value="author">Author</option>
             </select>
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'white',
-                  fontSize: '16px',
-                  cursor: 'pointer',
-                  padding: '0 6px',
-                  flexShrink: 0
-                }}
-                title="Clear search"
-              >
-                ✕
-              </button>
-            )}
+            {searchQuery && <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', color: 'white', fontSize: '16px', cursor: 'pointer', padding: '0 6px', flexShrink: 0 }}>✕</button>}
           </div>
-          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginTop: '8px' }}>
-            Tap any row to edit
-          </div>
+          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginTop: '8px' }}>Tap any card to view details</div>
         </div>
 
-        {/* Grid */}
-        <div
-          className="ag-theme-alpine"
-          style={{
-            flex: 1,
-            width: '100%',
-            overflow: 'auto'
-          }}
-        >
-          <AgGridReact
-            ref={gridRef}
-            rowData={filteredDrills}
-            columnDefs={columnDefs}
-            theme="legacy"
-            rowSelection={{ mode: 'multiRow', checkboxes: true, headerCheckbox: false }}
-            defaultColDef={{
-              sortable: true,
-              filter: false,
-              resizable: false,
-              minWidth: 60
-            }}
-            getRowId={(params) => params.data.id.toString()}
-            onRowClicked={handleRowClick}
-            rowHeight={50}
-            suppressHorizontalScroll={false}
-            domLayout="normal"
-          />
+        {/* Card Stream */}
+        <div style={{ flex: 1, width: '100%', overflow: 'auto', padding: '12px 4px' }}>
+          <DrillsGrid rowData={filteredDrills} refreshData={fetchDrills} onEditDrill={(drill) => setEditingDrill(drill)} />
         </div>
 
-        {/* Mobile Bottom Navigation */}
         <MobileBottomNav />
       </div>
 
-      {/* Full-screen Editor */}
       {editingDrill && (
         <MobileDrillEditor
           drill={editingDrill}
@@ -779,58 +374,19 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
         />
       )}
 
-      {/* VoiceDrillCreator Modal for Mobile View */}
       {showVoiceCreator && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.9)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 20000,
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '30px',
-            borderRadius: '12px',
-            width: '600px',
-            maxWidth: '90vw',
-            maxHeight: '90vh',
-            overflow: 'auto',
-            boxShadow: '0 10px 50px rgba(0,0,0,0.5)',
-          }}>
-            <h2 style={{ marginTop: 0, marginBottom: '20px' }}>
-              🎤 Create Drill with Voice
-            </h2>
-            <p style={{ color: '#667eea', marginBottom: '20px' }}>
-              Use speech‑to‑text to quickly create a drill in Catalan, then add translations and media.
-            </p>
-            <VoiceDrillCreator
-              onClose={() => setShowVoiceCreator(false)}
-              onDrillCreated={() => {
-                fetchDrills();
-                setShowVoiceCreator(false);
-              }}
-            />
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20000 }}>
+          <div style={{ backgroundColor: 'white', padding: '30px', borderRadius: '12px', width: '600px', maxWidth: '90vw', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 10px 50px rgba(0,0,0,0.5)' }}>
+            <h2 style={{ marginTop: 0, marginBottom: '20px' }}>🎤 Create Drill with Voice</h2>
+            <VoiceDrillCreator onClose={() => setShowVoiceCreator(false)} onDrillCreated={() => { fetchDrills(); setShowVoiceCreator(false); }} />
           </div>
         </div>
       )}
 
       {showGlossary && <GlossaryModal onClose={() => setShowGlossary(false)} />}
 
-      {/* MobileDrillCreator Modal for Mobile View */}
       {showMobileDrillCreator && (
-        <MobileDrillCreator
-          onClose={() => setShowMobileDrillCreator(false)}
-          onDrillCreated={() => {
-            fetchDrills();
-            setShowMobileDrillCreator(false);
-          }}
-        />
+        <MobileDrillCreator onClose={() => setShowMobileDrillCreator(false)} onDrillCreated={() => { fetchDrills(); setShowMobileDrillCreator(false); }} />
       )}
     </>
   );

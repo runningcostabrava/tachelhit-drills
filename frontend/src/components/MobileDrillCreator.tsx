@@ -1,6 +1,7 @@
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
+import { Network } from '@capacitor/network';
 import { API_BASE, getMediaUrl } from '../config';
 
 interface MobileDrillCreatorProps {
@@ -18,12 +19,10 @@ interface Drill {
     image_url?: string;
     tag?: string;
     author?: string;
-    is_correction_dataset?: boolean;
     date_created?: string;
 }
 
 export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDrillCreatorProps) {
-    // Drill state
     const [drill, setDrill] = useState<Drill>({
         text_catalan: '',
         text_tachelhit: '',
@@ -32,24 +31,20 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         author: ''
     });
 
-    // Media states
     const [recording, setRecording] = useState<'audio' | 'video' | null>(null);
     const [cameraMode, setCameraMode] = useState<'photo' | 'video' | null>(null);
+    const [, setCameraFacing] = useState<'user' | 'environment'>('environment');
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const [capturedVideo, setCapturedVideo] = useState<string | null>(null);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [pastedImage, setPastedImage] = useState<string | null>(null);
-
-    // UI states
-    const [saving, setSaving] = useState(false);
-    const [showCameraChoice, setShowCameraChoice] = useState(false);
-    const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('environment');
-    const [isTranscribing, setIsTranscribing] = useState(false);
     const [transcriptionResult, setTranscriptionResult] = useState<{ rough: string, score: number } | null>(null);
+
+    const [saving, setSaving] = useState(false);
+    const [isTranscribing, setIsTranscribing] = useState(false);
     const [autoSaveTimer, setAutoSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
     const [lastSaved, setLastSaved] = useState<string | null>(null);
 
-    // Refs
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
     const previewRef = useRef<HTMLVideoElement | null>(null);
@@ -58,58 +53,270 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const fileInputRef = useRef<HTMLInputElement>(null);
     const recognitionRef = useRef<any>(null);
 
-    // Cleanup blob URLs on unmount
     useEffect(() => {
         return () => {
-            if (capturedImage && capturedImage.startsWith('blob:')) {
-                URL.revokeObjectURL(capturedImage);
-            }
-            if (capturedVideo && capturedVideo.startsWith('blob:')) {
-                URL.revokeObjectURL(capturedVideo);
-            }
-            if (pastedImage && pastedImage.startsWith('blob:')) {
-                URL.revokeObjectURL(pastedImage);
-            }
-            if (autoSaveTimer) {
-                clearTimeout(autoSaveTimer);
-            }
+            if (capturedImage && capturedImage.startsWith('blob:')) URL.revokeObjectURL(capturedImage);
+            if (capturedVideo && capturedVideo.startsWith('blob:')) URL.revokeObjectURL(capturedVideo);
+            if (pastedImage && pastedImage.startsWith('blob:')) URL.revokeObjectURL(pastedImage);
+            if (autoSaveTimer) clearTimeout(autoSaveTimer);
         };
     }, [capturedImage, capturedVideo, pastedImage, autoSaveTimer]);
 
-    // Initialize speech recognition
+    // Initialize speech recognition with immediate, safe non-closure background saving
     useEffect(() => {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (SpeechRecognition) {
             recognitionRef.current = new SpeechRecognition();
-            recognitionRef.current.lang = 'ca-ES'; // Catalan
+            recognitionRef.current.lang = 'ca-ES';
             recognitionRef.current.continuous = false;
             recognitionRef.current.interimResults = false;
 
             recognitionRef.current.onresult = (event: any) => {
                 const transcript = event.results[0][0].transcript;
-                setDrill(prev => ({ ...prev, text_catalan: transcript }));
-                triggerAutoSave();
-            };
-
-            recognitionRef.current.onerror = (event: any) => {
-                console.error('Speech recognition error', event.error);
-            };
-
-            recognitionRef.current.onend = () => {
-                // Auto-save after speech recognition
-                triggerAutoSave();
+                setDrill(prev => {
+                    const fresh = { ...prev, text_catalan: transcript };
+                    triggerDirectSave(fresh); // Bypasses closure bug completely
+                    return fresh;
+                });
             };
         }
     }, []);
 
-    // Auto-save functionality
+    const triggerDirectSave = async (freshDrill: Drill) => {
+        const status = await Network.getStatus();
+        const cleanPayload = { ...freshDrill };
+        if (cleanPayload.audio_url?.startsWith('file://')) cleanPayload.audio_url = '';
+        if (cleanPayload.video_url?.startsWith('file://')) cleanPayload.video_url = '';
+        if (cleanPayload.image_url?.startsWith('file://')) cleanPayload.image_url = '';
+
+        if (status.connected) {
+            try {
+                if (freshDrill.id && freshDrill.id < 1000000) {
+                    await axios.put(`${API_BASE}/drills/${freshDrill.id}`, cleanPayload);
+                } else {
+                    const res = await axios.post(`${API_BASE}/drills/`, cleanPayload);
+                    setDrill(res.data);
+                }
+                setLastSaved(`Online: ${new Date().toLocaleTimeString()}`);
+            } catch (err) {
+                saveOffline(freshDrill);
+            }
+        } else {
+            saveOffline(freshDrill);
+        }
+    };
+
     const triggerAutoSave = () => {
-        if (autoSaveTimer) {
-            clearTimeout(autoSaveTimer);
+        if (autoSaveTimer) clearTimeout(autoSaveTimer);
+        const timer = setTimeout(() => {
+            triggerDirectSave(drill);
+        }, 2000);
+        setAutoSaveTimer(timer);
+    };
+
+    const saveOffline = (drillToSave: any) => {
+        let currentDrill = { ...drillToSave };
+        if (!currentDrill.id) {
+            currentDrill.id = Date.now();
+            setDrill(currentDrill);
+        }
+        const queue = JSON.parse(localStorage.getItem('sync_queue') || '[]');
+        const filteredQueue = queue.filter((d: any) => d.id !== currentDrill.id);
+        filteredQueue.push(currentDrill);
+        localStorage.setItem('sync_queue', JSON.stringify(filteredQueue));
+
+        const cached = JSON.parse(localStorage.getItem('cached_drills') || '[]');
+        const filteredCached = cached.filter((d: any) => d.id !== currentDrill.id);
+        filteredCached.unshift(currentDrill);
+        localStorage.setItem('cached_drills', JSON.stringify(filteredCached));
+        setLastSaved(`Offline Cache: ${new Date().toLocaleTimeString()}`);
+    };
+
+    const handleTextChange = (field: keyof Drill, value: string) => {
+        setDrill(prev => ({ ...prev, [field]: value }));
+        triggerAutoSave();
+    };
+
+    const startVoiceRecording = () => {
+        if (!recognitionRef.current) return alert('Speech-to-Text not initialized.');
+        recognitionRef.current.start();
+    };
+
+    const startAudioRecording = async () => {
+        if (!drill.id) {
+            const temp = { ...drill, id: Date.now(), text_catalan: drill.text_catalan || `Audio Drill (${new Date().toLocaleDateString()})` };
+            setDrill(temp);
+            saveOffline(temp);
+        }
+        try {
+            if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+            streamRef.current = stream;
+
+            let mimeType = 'audio/webm';
+            if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream) mimeType = 'audio/mp4';
+
+            mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
+            chunksRef.current = [];
+            mediaRecorderRef.current.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+            mediaRecorderRef.current.onstop = async () => {
+                const blob = new Blob(chunksRef.current, { type: mimeType });
+                if (blob.size < 1024) return;
+
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onloadend = async () => {
+                    try {
+                        const base64Data = (reader.result as string).split(',')[1];
+                        const ext = mimeType.includes('mp4') ? 'm4a' : 'webm';
+                        const fileName = `drills_media/audio_${drill.id || Date.now()}.${ext}`;
+
+                        const savedFile = await Filesystem.writeFile({ path: fileName, data: base64Data, directory: Directory.Data, recursive: true });
+                        setDrill(prev => {
+                            const updated = { ...prev, audio_url: savedFile.uri };
+                            triggerDirectSave(updated);
+                            return updated;
+                        });
+                    } catch (err) { console.error(err); }
+                    finally { setRecording(null); }
+                };
+            };
+            mediaRecorderRef.current.start();
+            setRecording('audio');
+        } catch (err) { console.error(err); }
+    };
+
+    const startVideoRecording = async (facing: 'user' | 'environment' = 'environment') => {
+        if (!drill.id) {
+            const temp = { ...drill, id: Date.now(), text_catalan: drill.text_catalan || `Video Drill (${new Date().toLocaleDateString()})` };
+            setDrill(temp);
+            saveOffline(temp);
+        }
+        try {
+            if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: 640, height: 480 }, audio: true });
+            streamRef.current = stream;
+            setCameraMode('video');
+            setCameraFacing(facing);
+
+            setTimeout(() => { if (previewRef.current) { previewRef.current.srcObject = stream; previewRef.current.play().catch(e => console.error(e)); } }, 100);
+            mediaRecorderRef.current = new MediaRecorder(stream);
+            chunksRef.current = [];
+            mediaRecorderRef.current.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+            mediaRecorderRef.current.onstop = async () => {
+                const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+                if (blob.size < 1024) { stopCamera(); return; }
+
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onloadend = async () => {
+                    try {
+                        const base64Data = (reader.result as string).split(',')[1];
+                        const savedFile = await Filesystem.writeFile({ path: `drills_media/video_${drill.id || Date.now()}.webm`, data: base64Data, directory: Directory.Data, recursive: true });
+                        setCapturedVideo(URL.createObjectURL(blob)); // Instant video preview load
+                        setDrill(prev => {
+                            const updated = { ...prev, video_url: savedFile.uri };
+                            triggerDirectSave(updated);
+                            return updated;
+                        });
+                    } catch (err) { console.error(err); }
+                    finally { stopCamera(); setRecording(null); }
+                };
+            };
+        } catch (err) { console.error(err); }
+    };
+
+    const startImageCapture = async (facing: 'user' | 'environment' = 'environment') => {
+        if (!drill.id) {
+            const temp = { ...drill, id: Date.now(), text_catalan: drill.text_catalan || `Image Drill (${new Date().toLocaleDateString()})` };
+            setDrill(temp);
+            saveOffline(temp);
+        }
+        try {
+            if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: 1280, height: 720 } });
+            streamRef.current = stream;
+            setCameraMode('photo');
+            setCameraFacing(facing);
+            setTimeout(() => { if (previewRef.current) { previewRef.current.srcObject = stream; previewRef.current.play().catch(e => console.error(e)); } }, 100);
+        } catch (err) { console.error(err); }
+    };
+
+    const takePicture = () => {
+        if (!previewRef.current || !canvasRef.current || !streamRef.current) return;
+        const video = previewRef.current;
+        const canvas = canvasRef.current;
+
+        if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+            setTimeout(takePicture, 500);
+            return;
         }
 
-        const timer = setTimeout(async () => {
-            // Strip out local hardware disk paths before sending to Python/Render
+        const width = video.videoWidth || 640;
+        const height = video.videoHeight || 480;
+        const size = Math.min(width, height);
+        const sx = (width - size) / 2;
+        const sy = (height - size) / 2;
+
+        canvas.width = size;
+        canvas.height = size;
+        const context = canvas.getContext('2d');
+        if (context) {
+            context.fillStyle = '#ffffff';
+            context.fillRect(0, 0, size, size);
+            context.drawImage(video, sx, sy, size, size, 0, 0, size, size);
+            canvas.toBlob(async (blob) => {
+                if (blob && blob.size > 1024) {
+                    setCapturedImage(URL.createObjectURL(blob)); // Instant photo preview load
+                    const reader = new FileReader();
+                    reader.readAsDataURL(blob);
+                    reader.onloadend = async () => {
+                        try {
+                            const base64Data = (reader.result as string).split(',')[1];
+                            const savedFile = await Filesystem.writeFile({ path: `drills_media/image_${drill.id || Date.now()}.jpg`, data: base64Data, directory: Directory.Data, recursive: true });
+                            setDrill(prev => {
+                                const updated = { ...prev, image_url: savedFile.uri };
+                                triggerDirectSave(updated);
+                                return updated;
+                            });
+                        } catch (err) { console.error(err); }
+                    };
+                }
+                stopCamera();
+            }, 'image/jpeg', 0.9);
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
+            setRecording(null);
+        } else {
+            stopCamera();
+            setRecording(null);
+        }
+    };
+
+    const stopCamera = () => {
+        if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
+        setCameraMode(null);
+        setRecording(null);
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setCapturedImage(null); setCapturedVideo(null); setPastedImage(null); setUploadedFile(file);
+            if (file.type.startsWith('image/')) setCapturedImage(URL.createObjectURL(file));
+            else if (file.type.startsWith('video/')) setCapturedVideo(URL.createObjectURL(file));
+        }
+    };
+
+    const handleSave = async () => {
+        if (saving) return;
+        setSaving(true);
+        try {
+            const status = await Network.getStatus();
             const sanitizePayload = (d: any) => {
                 const clean = { ...d };
                 if (clean.audio_url?.startsWith('file://')) clean.audio_url = '';
@@ -120,1366 +327,160 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
             const outPayload = sanitizePayload(drill);
 
-            if (drill.id) {
-                // Update existing drill
-                try {
-                    await axios.put(`${API_BASE}/drills/${drill.id}`, outPayload);
-                    setLastSaved(new Date().toLocaleTimeString());
-                } catch (error) {
-                    console.error('Auto-save update failed:', error);
-                }
-            } else if (drill.text_catalan || drill.text_tachelhit || drill.text_arabic) {
-                // Create new drill if we have content
-                try {
+            if (status.connected) {
+                if (!drill.id || (typeof drill.id === 'number' && drill.id >= 1000000)) {
                     const response = await axios.post(`${API_BASE}/drills/`, outPayload);
-                    setDrill(prev => ({ ...prev, id: response.data.id }));
-                    setLastSaved(new Date().toLocaleTimeString());
-                } catch (error) {
-                    console.error('Auto-save initialization failed:', error);
-                }
-            }
-        }, 2000); // 2 second delay for auto-save
-
-        setAutoSaveTimer(timer);
-    };
-
-    // Handle text changes with auto-save
-    const handleTextChange = (field: keyof Drill, value: string) => {
-        setDrill(prev => ({ ...prev, [field]: value }));
-        triggerAutoSave();
-    };
-
-    // Start voice recording (speech-to-text)
-    const startVoiceRecording = () => {
-        if (!recognitionRef.current) {
-            alert('Speech recognition is not supported in your browser. Try Chrome or Edge.');
-            return;
-        }
-        recognitionRef.current.start();
-    };
-
-    // Start audio recording (microphone)
-    const startAudioRecording = async () => {
-        console.log('🎤 Starting audio recording');
-
-        if (!drill.id) {
-            try {
-                // Prepare a valid placeholder drill so the database doesn't reject it
-                const initializedDrill = {
-                    ...drill,
-                    text_catalan: drill.text_catalan || `Audio Grabació - ${new Date().toLocaleTimeString()}`,
-                    text_tachelhit: drill.text_tachelhit || '',
-                    text_arabic: drill.text_arabic || ''
-                };
-                const response = await axios.post(`${API_BASE}/drills/`, initializedDrill);
-                setDrill(response.data); // Safely sets the new drill with its live server ID!
-            } catch (error) {
-                console.error('Failed to auto-create drill container:', error);
-                alert('Could not initialize recording slot. Check your internet connection.');
-                return;
-            }
-        }
-
-        try {
-            // Stop any existing stream
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
-                streamRef.current = null;
-            }
-
-            const constraints: MediaStreamConstraints = {
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    sampleRate: 44100
-                }
-            };
-
-            // Check if we already have permission by trying to get the stream
-            // without showing the permission dialog if possible
-            let stream;
-            try {
-                // Try to get existing permissions first
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const hasAudioPermission = devices.some(device => device.kind === 'audioinput' && device.deviceId !== '');
-
-                if (hasAudioPermission) {
-                    // We have permission, get the stream
-                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    setDrill(response.data);
                 } else {
-                    // No permission yet, ask for it
-                    stream = await navigator.mediaDevices.getUserMedia(constraints);
-                }
-            } catch (err) {
-                console.error('Failed to get audio stream:', err);
-                alert('Microphone access is required for audio recording. Please allow microphone access.');
-                setRecording(null);
-                return;
-            }
-
-            streamRef.current = stream;
-
-            // Determine MIME type
-            let mimeType = 'audio/webm';
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-            if (isIOS || isSafari) {
-                mimeType = 'audio/mp4';
-            }
-
-            const options = { mimeType };
-            mediaRecorderRef.current = new MediaRecorder(stream, options);
-            chunksRef.current = [];
-
-            mediaRecorderRef.current.ondataavailable = (e) => {
-                if (e.data.size > 0) {
-                    chunksRef.current.push(e.data);
-                }
-            };
-
-            mediaRecorderRef.current.onstop = async () => {
-                const blob = new Blob(chunksRef.current, { type: mimeType });
-
-                if (blob.size < 1024) {
-                    setRecording(null);
-                    return;
+                    await axios.put(`${API_BASE}/drills/${drill.id}`, outPayload);
                 }
 
-                // OFFLINE MODE: Read the blob and save it locally
-                const reader = new FileReader();
-                reader.readAsDataURL(blob);
-                reader.onloadend = async () => {
-                    try {
-                        const base64Data = (reader.result as string).split(',')[1];
-                        const ext = mimeType.includes('mp4') ? 'm4a' : 'webm';
-                        const fileName = `drills_media/audio_${drill.id || Date.now()}.${ext}`;
-
-                        // Save directly to the device's Data directory
-                        const savedFile = await Filesystem.writeFile({
-                            path: fileName,
-                            data: base64Data,
-                            directory: Directory.Data,
-                            recursive: true // creates the drills_media folder if missing
-                        });
-
-                        console.log('✅ Saved offline audio to:', savedFile.uri);
-
-                        // Update the drill state with the LOCAL file path
-                        setDrill(prev => ({ ...prev, audio_url: savedFile.uri }));
-
-                        // We will update triggerAutoSave next to save to SQLite instead of FastAPI
-                        triggerAutoSave();
-
-                    } catch (err) {
-                        console.error('❌ Failed to save audio offline:', err);
-                        alert('Could not save audio to device storage.');
-                    } finally {
-                        if (streamRef.current) {
-                            streamRef.current.getTracks().forEach(track => track.stop());
-                            streamRef.current = null;
-                        }
-                        setRecording(null);
-                    }
-                };
-            };
-
-            mediaRecorderRef.current.start();
-            setRecording('audio');
-        } catch (err: any) {
-            console.error('Microphone access denied:', err);
-            setRecording(null);
-        }
-    };
-
-    // Start video recording
-    const startVideoRecording = async (facing: 'user' | 'environment' = 'environment') => {
-        console.log('Starting video recording');
-
-        if (!drill.id) {
-            // Create a drill first if we don't have one
-            try {
-                const response = await axios.post(`${API_BASE}/drills/`, drill);
-                setDrill(prev => ({ ...prev, id: response.data.id }));
-            } catch (error) {
-                console.error('Failed to create drill:', error);
-                alert('Please add some text first before recording video.');
-                return;
-            }
-        }
-
-        try {
-            // Stop any existing stream
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
-                streamRef.current = null;
-            }
-
-            let stream;
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: { exact: facing },
-                        width: { ideal: 640 },
-                        height: { ideal: 480 }
-                    },
-                    audio: true
-                });
-            } catch (err) {
-                // Fallback without exact
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: facing,
-                        width: { ideal: 640 },
-                        height: { ideal: 480 }
-                    },
-                    audio: true
-                });
-            }
-
-            streamRef.current = stream;
-            setCameraMode('video');
-            setCameraFacing(facing);
-
-            // Show preview
-            setTimeout(() => {
-                if (previewRef.current) {
-                    previewRef.current.srcObject = stream;
-                    previewRef.current.play().catch(e => {
-                        console.error('Error playing video preview:', e);
-                    });
-                }
-            }, 50);
-
-            mediaRecorderRef.current = new MediaRecorder(stream);
-            chunksRef.current = [];
-
-            mediaRecorderRef.current.ondataavailable = (e) => {
-                if (e.data.size > 0) {
-                    chunksRef.current.push(e.data);
-                }
-            };
-
-            mediaRecorderRef.current.onstop = async () => {
-                const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-
-                if (blob.size < 1024) {
-                    stopCamera();
-                    setRecording(null);
-                    return;
-                }
-
-                // OFFLINE MODE: Save video locally
-                const reader = new FileReader();
-                reader.readAsDataURL(blob);
-                reader.onloadend = async () => {
-                    try {
-                        const base64Data = (reader.result as string).split(',')[1];
-                        const fileName = `drills_media/video_${drill.id || Date.now()}.webm`;
-
-                        const savedFile = await Filesystem.writeFile({
-                            path: fileName,
-                            data: base64Data,
-                            directory: Directory.Data,
-                            recursive: true
-                        });
-
-                        console.log('✅ Saved offline video to:', savedFile.uri);
-                        setDrill(prev => ({ ...prev, video_url: savedFile.uri }));
-                        triggerAutoSave();
-
-                    } catch (err) {
-                        console.error('❌ Video save failed:', err);
-                        alert('Failed to save video locally');
-                    } finally {
-                        stopCamera();
-                        setRecording(null);
-                    }
-                };
-            };
-
-            mediaRecorderRef.current.start();
-            setRecording('video');
-        } catch (err: any) {
-            console.error('Camera access denied:', err);
-            setCameraMode(null);
-            setRecording(null);
-        }
-    };
-
-    // Start image capture
-    const startImageCapture = async (facing: 'user' | 'environment' = 'environment') => {
-        console.log('Starting image capture');
-
-        if (!drill.id) {
-            try {
-                // Prepare a valid placeholder drill so the database doesn't reject it
-                const initializedDrill = {
-                    ...drill,
-                    text_catalan: drill.text_catalan || `Imatge Captura - ${new Date().toLocaleTimeString()}`,
-                    text_tachelhit: drill.text_tachelhit || '',
-                    text_arabic: drill.text_arabic || ''
-                };
-                const response = await axios.post(`${API_BASE}/drills/`, initializedDrill);
-                setDrill(response.data); // Safely sets the new drill with its live server ID!
-            } catch (error) {
-                console.error('Failed to auto-create drill container:', error);
-                alert('Could not initialize capture slot. Check your internet connection.');
-                return;
-            }
-        }
-
-        try {
-            // Stop any existing stream
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
-                streamRef.current = null;
-            }
-
-            const constraints = {
-                video: {
-                    facingMode: facing,
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                }
-            };
-
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
-            streamRef.current = stream;
-            setCameraMode('photo');
-            setCameraFacing(facing);
-
-            // Show preview
-            setTimeout(() => {
-                if (previewRef.current) {
-                    previewRef.current.srcObject = stream;
-                    previewRef.current.play().catch(e => {
-                        console.error('Error playing video:', e);
-                    });
-                }
-            }, 100);
-        } catch (err: any) {
-            console.error('Camera access denied for image capture:', err);
-            setCameraMode(null);
-        }
-    };
-
-    // Take picture
-    const takePicture = () => {
-        if (!previewRef.current || !canvasRef.current || !streamRef.current) return;
-
-        const video = previewRef.current;
-        const canvas = canvasRef.current;
-
-        // Wait for video to be ready
-        if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-            console.log('Video not ready, waiting...');
-            setTimeout(takePicture, 500);
-            return;
-        }
-
-        setTimeout(() => {
-            const videoTrack = streamRef.current?.getVideoTracks()[0];
-            if (!videoTrack) {
-                console.error('No video track available');
-                return;
-            }
-
-            const settings = videoTrack.getSettings();
-            const width = settings.width || 640;
-            const height = settings.height || 480;
-
-            canvas.width = width;
-            canvas.height = height;
-
-            const context = canvas.getContext('2d');
-            if (context) {
-                context.fillStyle = '#ffffff';
-                context.fillRect(0, 0, width, height);
-                context.drawImage(video, 0, 0, width, height);
-
-                canvas.toBlob(async (blob) => {
-                    if (blob && blob.size > 1024) {
-                        // OFFLINE MODE: Save image locally
-                        const reader = new FileReader();
-                        reader.readAsDataURL(blob);
-                        reader.onloadend = async () => {
-                            try {
-                                const base64Data = (reader.result as string).split(',')[1];
-                                const fileName = `drills_media/image_${drill.id || Date.now()}.jpg`;
-
-                                const savedFile = await Filesystem.writeFile({
-                                    path: fileName,
-                                    data: base64Data,
-                                    directory: Directory.Data,
-                                    recursive: true
-                                });
-
-                                console.log('✅ Saved offline image to:', savedFile.uri);
-                                setDrill(prev => ({ ...prev, image_url: savedFile.uri }));
-                                triggerAutoSave();
-
-                            } catch (err) {
-                                console.error('❌ Image save failed:', err);
-                            }
-                        };
-                    }
-                    stopCamera();
-                }, 'image/jpeg', 0.9);
-            }
-        }, 300);
-    };
-
-    // Stop recording
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-            mediaRecorderRef.current.stop();
-        } else {
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
-                streamRef.current = null;
-            }
-            setRecording(null);
-        }
-    };
-
-    // Stop camera
-    const stopCamera = () => {
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
-            streamRef.current = null;
-        }
-        setCameraMode(null);
-    };
-
-    // Handle file upload
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            setCapturedImage(null);
-            setCapturedVideo(null);
-            setPastedImage(null);
-            setUploadedFile(file);
-
-            if (file.type.startsWith('image/')) {
-                setCapturedImage(URL.createObjectURL(file));
-            } else if (file.type.startsWith('video/')) {
-                setCapturedVideo(URL.createObjectURL(file));
-            }
-        }
-    };
-
-    // Handle paste event for images
-    useEffect(() => {
-        const handlePaste = (event: ClipboardEvent) => {
-            const items = event.clipboardData?.items;
-            if (items) {
-                for (let i = 0; i < items.length; i++) {
-                    if (items[i].type.indexOf('image') !== -1) {
-                        const blob = items[i].getAsFile();
-                        if (blob) {
-                            stopCamera();
-                            setCapturedImage(null);
-                            setCapturedVideo(null);
-                            setUploadedFile(null);
-
-                            const imageUrl = URL.createObjectURL(blob);
-                            setPastedImage(imageUrl);
-                            event.preventDefault();
-                            return;
-                        }
+                if (uploadedFile) {
+                    const fileType = uploadedFile.type.startsWith('image/') ? 'image' : uploadedFile.type.startsWith('video/') ? 'video' : null;
+                    if (fileType && drill.id) {
+                        const formData = new FormData();
+                        formData.append('file', uploadedFile, uploadedFile.name);
+                        await axios.post(`${API_BASE}/upload-media/${drill.id}/${fileType}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
                     }
                 }
-            }
-        };
-
-        document.addEventListener('paste', handlePaste);
-        return () => {
-            document.removeEventListener('paste', handlePaste);
-        };
-    }, []);
-
-    // Handle save drill
-    const handleSave = async () => {
-        if (saving) return;
-        setSaving(true);
-
-        try {
-            if (!drill.id) {
-                // Create new drill
-                const response = await axios.post(`${API_BASE}/drills/`, drill);
-                setDrill(prev => ({ ...prev, id: response.data.id }));
+                alert('Drill successfully synchronized to cloud database!');
             } else {
-                // Update existing drill
-                await axios.put(`${API_BASE}/drills/${drill.id}`, drill);
+                saveOffline(drill);
+                alert('Drill securely saved to phone storage cache!');
             }
-
-            // Handle media uploads if any
-            if (uploadedFile) {
-                const fileType = uploadedFile.type.startsWith('image/') ? 'image' :
-                    uploadedFile.type.startsWith('video/') ? 'video' : null;
-                if (fileType && drill.id) {
-                    const formData = new FormData();
-                    formData.append('file', uploadedFile, uploadedFile.name);
-                    await axios.post(`${API_BASE}/upload-media/${drill.id}/${fileType}`, formData, {
-                        headers: { 'Content-Type': 'multipart/form-data' },
-                    });
-                }
-            }
-
-            alert('Drill saved successfully!');
             onDrillCreated();
-            // Don't close the modal - keep it open for further editing
         } catch (error) {
-            console.error('Error saving drill:', error);
-            alert('Failed to save drill');
+            alert('Failed to execute save command.');
         } finally {
             setSaving(false);
         }
     };
 
-    // Handle create new drill
-    const handleCreateNew = () => {
-        // Reset drill state
-        setDrill({
-            text_catalan: '',
-            text_tachelhit: '',
-            text_arabic: '',
-            tag: '',
-            author: ''
-        });
-
-        // Reset media states
-        setCapturedImage(null);
-        setCapturedVideo(null);
-        setUploadedFile(null);
-        setPastedImage(null);
-        setTranscriptionResult(null);
-        setLastSaved(null);
-
-        // Clear auto-save timer
-        if (autoSaveTimer) {
-            clearTimeout(autoSaveTimer);
-            setAutoSaveTimer(null);
-        }
-
-        alert('New drill form ready!');
-    };
-
-    // Handle auto-transcribe
     const handleAutoTranscribe = async () => {
-        if (!drill.audio_url) {
-            alert('Please record audio first');
-            return;
-        }
-
-        setIsTranscribing(true);
-        setTranscriptionResult(null);
+        if (!drill.audio_url) return alert('Please record audio first');
+        setIsTranscribing(true); setTranscriptionResult(null);
         try {
-            const response = await axios.post(`${API_BASE}/transcribe/`, {
-                audio_url: drill.audio_url
-            });
+            const response = await axios.post(`${API_BASE}/transcribe/`, { audio_url: drill.audio_url });
             const { corrected_transcription, rough_transcription, similarity_score } = response.data;
-
-            setTranscriptionResult({
-                rough: rough_transcription,
-                score: similarity_score
-            });
-
+            setTranscriptionResult({ rough: rough_transcription, score: similarity_score });
             if (corrected_transcription) {
-                setDrill(prev => ({ ...prev, text_tachelhit: corrected_transcription }));
-                triggerAutoSave();
+                setDrill(prev => {
+                    const updated = { ...prev, text_tachelhit: corrected_transcription };
+                    triggerDirectSave(updated);
+                    return updated;
+                });
             }
         } catch (error) {
-            console.error('Transcription failed:', error);
             alert('Failed to transcribe audio.');
         } finally {
             setIsTranscribing(false);
         }
     };
 
-    // Render the component
     return (
-        <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'white',
-            zIndex: 10000,
-            display: 'flex',
-            flexDirection: 'column'
-        }}>
-            {/* Header */}
-            <div style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                padding: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-            }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'white', zIndex: 10000, display: 'flex', flexDirection: 'column' }}>
+            {/* Header Toolbar */}
+            <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <button
-                        onClick={onClose}
-                        style={{
-                            background: 'rgba(255,255,255,0.2)',
-                            border: 'none',
-                            color: 'white',
-                            fontSize: '24px',
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '50%',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                    >
-                        ✕
-                    </button>
-
-                    <button
-                        onClick={handleCreateNew}
-                        style={{
-                            background: '#FF9800',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '8px 12px',
-                            fontSize: '14px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                        }}
-                    >
-                        ➕ New
-                    </button>
+                    <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', fontSize: '24px', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                    <button onClick={handleCreateNew} style={{ background: '#FF9800', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>➕ New</button>
                 </div>
-
-                <div style={{
-                    color: 'white',
-                    fontSize: '18px',
-                    fontWeight: 700,
-                    flex: 1,
-                    textAlign: 'center'
-                }}>
-                    {drill.id ? `Drill #${drill.id}` : 'New Drill'}
-                    {lastSaved && <div style={{ fontSize: '12px', color: '#FFD700' }}>Saved: {lastSaved}</div>}
+                <div style={{ color: 'white', fontSize: '18px', fontWeight: 700, flex: 1, textAlign: 'center' }}>
+                    {drill.id && drill.id < 1000000 ? `Drill #${drill.id}` : 'New Drill'}
+                    {lastSaved && <div style={{ fontSize: '12px', color: '#FFD700' }}>{lastSaved}</div>}
                 </div>
-
-                <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    style={{
-                        background: saving ? '#999' : '#4CAF50',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        padding: '8px 16px',
-                        fontSize: '16px',
-                        fontWeight: 700,
-                        cursor: saving ? 'not-allowed' : 'pointer'
-                    }}
-                >
-                    {saving ? 'Saving...' : '💾 Save'}
-                </button>
+                <button onClick={handleSave} disabled={saving} style={{ background: saving ? '#999' : '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '16px', fontWeight: 700 }}>💾 Save</button>
             </div>
 
-            {/* Content - Scrollable */}
-            <div style={{
-                flex: 1,
-                overflow: 'auto',
-                padding: '16px'
-            }}>
-                {/* Big Action Buttons */}
-                <div style={{
-                    background: '#f8f9fa',
-                    padding: '20px',
-                    borderRadius: '16px',
-                    marginBottom: '20px',
-                    textAlign: 'center'
-                }}>
-                    <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 700 }}>
-                        Capture Moments Fast
-                    </h3>
-
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(2, 1fr)',
-                        gap: '16px',
-                        marginBottom: '20px'
-                    }}>
-                        {/* Picture Button */}
-                        <button
-                            onClick={() => startImageCapture('environment')}
-                            style={{
-                                height: '120px',
-                                background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '16px',
-                                fontSize: '24px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px',
-                                boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)'
-                            }}
-                        >
-                            <div style={{ fontSize: '40px' }}>📷</div>
-                            <div>Picture</div>
-                        </button>
-
-                        {/* Audio Button */}
-                        <button
-                            onClick={recording === 'audio' ? stopRecording : startAudioRecording}
-                            style={{
-                                height: '120px',
-                                background: recording === 'audio'
-                                    ? 'linear-gradient(135deg, #ff4444 0%, #cc0000 100%)'
-                                    : 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '16px',
-                                fontSize: '24px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px',
-                                boxShadow: recording === 'audio'
-                                    ? '0 4px 12px rgba(255, 68, 68, 0.3)'
-                                    : '0 4px 12px rgba(33, 150, 243, 0.3)'
-                            }}
-                        >
-                            <div style={{ fontSize: '40px' }}>
-                                {recording === 'audio' ? '⏹️' : '🎙️'}
-                            </div>
-                            <div>{recording === 'audio' ? 'Stop' : 'Audio'}</div>
-                        </button>
-
-                        {/* Video Button */}
-                        <button
-                            onClick={() => setShowCameraChoice(true)}
-                            style={{
-                                height: '120px',
-                                background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '16px',
-                                fontSize: '24px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px',
-                                boxShadow: '0 4px 12px rgba(156, 39, 176, 0.3)'
-                            }}
-                        >
-                            <div style={{ fontSize: '40px' }}>🎬</div>
-                            <div>Video</div>
-                        </button>
-
-                        {/* Voice-to-Text Button */}
-                        <button
-                            onClick={startVoiceRecording}
-                            style={{
-                                height: '120px',
-                                background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '16px',
-                                fontSize: '24px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '8px',
-                                boxShadow: '0 4px 12px rgba(255, 152, 0, 0.3)'
-                            }}
-                        >
-                            <div style={{ fontSize: '40px' }}>🎤</div>
-                            <div>Speak</div>
-                        </button>
-                    </div>
-
-                    {/* File Upload Button */}
-                    <div style={{ marginTop: '10px' }}>
-                        <input
-                            type="file"
-                            accept="image/*,video/*"
-                            style={{ display: 'none' }}
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                        />
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            style={{
-                                width: '100%',
-                                padding: '16px',
-                                background: 'linear-gradient(135deg, #607D8B 0%, #455A64 100%)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '12px',
-                                fontSize: '18px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '10px',
-                                boxShadow: '0 4px 12px rgba(96, 125, 139, 0.3)'
-                            }}
-                        >
-                            <div style={{ fontSize: '24px' }}>📤</div>
-                            <div>Upload File</div>
-                        </button>
-                        <div style={{ fontSize: '12px', color: '#666', marginTop: '8px', textAlign: 'center' }}>
-                            Or paste an image (Ctrl+V)
-                        </div>
-                    </div>
-                </div>
-
-                {/* Text Inputs */}
-                <div style={{ marginBottom: '20px' }}>
-                    <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 700 }}>
-                        Text Content
-                    </h3>
-
-                    {/* Catalan */}
-                    <div style={{ marginBottom: '16px' }}>
-                        <label style={{
-                            display: 'block',
-                            fontSize: '14px',
-                            fontWeight: 600,
-                            color: '#333',
-                            marginBottom: '6px'
-                        }}>
-                            Català
-                        </label>
-                        <textarea
-                            value={drill.text_catalan || ''}
-                            onChange={(e) => handleTextChange('text_catalan', e.target.value)}
-                            placeholder="Catalan text (use voice button above)"
-                            rows={3}
-                            style={{
-                                width: '100%',
-                                padding: '12px',
-                                fontSize: '16px',
-                                border: '2px solid #e0e0e0',
-                                borderRadius: '8px',
-                                outline: 'none',
-                                resize: 'vertical'
-                            }}
-                        />
-                    </div>
-
-                    {/* Tachelhit */}
-                    <div style={{ marginBottom: '16px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <label style={{
-                                fontSize: '14px',
-                                fontWeight: 600,
-                                color: '#333'
-                            }}>
-                                Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)
-                            </label>
-                            {drill.audio_url && (
-                                <button
-                                    onClick={handleAutoTranscribe}
-                                    disabled={isTranscribing}
-                                    style={{
-                                        background: isTranscribing ? '#eee' : '#667eea',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '6px',
-                                        padding: '6px 12px',
-                                        fontSize: '12px',
-                                        cursor: isTranscribing ? 'not-allowed' : 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '4px'
-                                    }}
-                                >
-                                    {isTranscribing ? '⏳...' : '🪄 Auto-Transcribe'}
-                                </button>
-                            )}
-                        </div>
-                        <textarea
-                            value={drill.text_tachelhit || ''}
-                            onChange={(e) => handleTextChange('text_tachelhit', e.target.value)}
-                            placeholder="Tachelhit text"
-                            rows={3}
-                            style={{
-                                width: '100%',
-                                padding: '12px',
-                                fontSize: '16px',
-                                border: '2px solid #e0e0e0',
-                                borderRadius: '8px',
-                                outline: 'none',
-                                resize: 'vertical'
-                            }}
-                        />
-                        {transcriptionResult && (
-                            <div style={{ marginTop: '4px', fontSize: '12px', color: '#666' }}>
-                                Rough: <span style={{ fontFamily: 'monospace' }}>{transcriptionResult.rough}</span>
-                                (Score: {Math.round(transcriptionResult.score * 100)}%)
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Arabic */}
-                    <div style={{ marginBottom: '16px' }}>
-                        <label style={{
-                            display: 'block',
-                            fontSize: '14px',
-                            fontWeight: 600,
-                            color: '#333',
-                            marginBottom: '6px',
-                            textAlign: 'right'
-                        }}>
-                            العربية
-                        </label>
-                        <textarea
-                            value={drill.text_arabic || ''}
-                            onChange={(e) => handleTextChange('text_arabic', e.target.value)}
-                            placeholder="أدخل النص العربي..."
-                            rows={2}
-                            style={{
-                                width: '100%',
-                                padding: '12px',
-                                fontSize: '16px',
-                                border: '2px solid #e0e0e0',
-                                borderRadius: '8px',
-                                outline: 'none',
-                                resize: 'vertical',
-                                direction: 'rtl'
-                            }}
-                        />
-                    </div>
-
-                    {/* Tag and Author */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                        <div>
-                            <label style={{
-                                display: 'block',
-                                fontSize: '14px',
-                                fontWeight: 600,
-                                color: '#333',
-                                marginBottom: '6px'
-                            }}>
-                                Tag
-                            </label>
-                            <input
-                                type="text"
-                                value={drill.tag || ''}
-                                onChange={(e) => handleTextChange('tag', e.target.value)}
-                                placeholder="e.g., greetings"
-                                style={{
-                                    width: '100%',
-                                    padding: '12px',
-                                    fontSize: '16px',
-                                    border: '2px solid #e0e0e0',
-                                    borderRadius: '8px',
-                                    outline: 'none'
-                                }}
-                            />
-                        </div>
-                        <div>
-                            <label style={{
-                                display: 'block',
-                                fontSize: '14px',
-                                fontWeight: 600,
-                                color: '#333',
-                                marginBottom: '6px'
-                            }}>
-                                Author
-                            </label>
-                            <input
-                                type="text"
-                                value={drill.author || ''}
-                                onChange={(e) => handleTextChange('author', e.target.value)}
-                                placeholder="Your name"
-                                style={{
-                                    width: '100%',
-                                    padding: '12px',
-                                    fontSize: '16px',
-                                    border: '2px solid #e0e0e0',
-                                    borderRadius: '8px',
-                                    outline: 'none'
-                                }}
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Media Preview */}
-                {(drill.image_url || capturedImage || pastedImage) && (
-                    <div style={{ marginBottom: '20px' }}>
-                        <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 700 }}>
-                            Image Preview
-                        </h3>
-                        <img
-                            src={drill.image_url ? getMediaUrl(drill.image_url) : capturedImage || pastedImage || ''}
-                            alt="Drill"
-                            style={{
-                                width: '100%',
-                                maxHeight: '300px',
-                                borderRadius: '12px',
-                                border: '1px solid #e0e0e0',
-                                objectFit: 'cover'
-                            }}
-                        />
-                    </div>
-                )}
-
-                {/* Audio Playback */}
-                {drill.audio_url && (
-                    <div style={{ marginBottom: '20px' }}>
-                        <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 700 }}>
-                            Audio Playback
-                        </h3>
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '16px',
-                            background: '#f8f9fa',
-                            borderRadius: '12px',
-                            border: '1px solid #e0e0e0'
-                        }}>
-                            <button
-                                onClick={() => {
-                                    const audio = new Audio(getMediaUrl(drill.audio_url!));
-                                    audio.play().catch(e => console.error('Error playing audio:', e));
-                                }}
-                                style={{
-                                    width: '50px',
-                                    height: '50px',
-                                    borderRadius: '50%',
-                                    background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
-                                    color: 'white',
-                                    border: 'none',
-                                    fontSize: '24px',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}
-                                title="Play audio"
-                            >
-                                ▶️
-                            </button>
-                            <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: '14px', fontWeight: 600, color: '#333' }}>
-                                    Audio Recording
-                                </div>
-                                <div style={{ fontSize: '12px', color: '#666' }}>
-                                    Click play to listen
-                                </div>
-                            </div>
-                            <div style={{ fontSize: '12px', color: '#999' }}>
-                                {drill.audio_url.split('/').pop()}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Camera Choice Modal */}
-                {showCameraChoice && (
-                    <div style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'rgba(0,0,0,0.8)',
-                        zIndex: 20000,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '20px'
-                    }}>
-                        <div style={{
-                            background: 'white',
-                            borderRadius: '16px',
-                            padding: '30px',
-                            maxWidth: '400px',
-                            width: '100%'
-                        }}>
-                            <h3 style={{ margin: '0 0 24px 0', fontSize: '20px', fontWeight: 700, textAlign: 'center' }}>
-                                Choose Video Camera
-                            </h3>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                <button
-                                    onClick={() => {
-                                        setCameraFacing('user');
-                                        setShowCameraChoice(false);
-                                        startVideoRecording('user');
-                                    }}
-                                    style={{
-                                        padding: '20px',
-                                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '12px',
-                                        fontSize: '18px',
-                                        fontWeight: 700,
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '12px'
-                                    }}
-                                >
-                                    <span style={{ fontSize: '32px' }}>🤳</span> Front Camera
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setCameraFacing('environment');
-                                        setShowCameraChoice(false);
-                                        startVideoRecording('environment');
-                                    }}
-                                    style={{
-                                        padding: '20px',
-                                        background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '12px',
-                                        fontSize: '18px',
-                                        fontWeight: 700,
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '12px'
-                                    }}
-                                >
-                                    <span style={{ fontSize: '32px' }}>📷</span> Back Camera
-                                </button>
-                                <button
-                                    onClick={() => setShowCameraChoice(false)}
-                                    style={{
-                                        padding: '14px',
-                                        background: '#e0e0e0',
-                                        color: '#333',
-                                        border: 'none',
-                                        borderRadius: '10px',
-                                        fontSize: '16px',
-                                        fontWeight: 600,
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Camera Preview - Inline, not full screen */}
+            {/* Scrollable Container Form Workspace */}
+            <div style={{ flex: 1, overflow: 'auto', padding: '16px', display: 'flex', flexDirection: 'column' }}>
+                
+                {/* 🌟 1. CAMERA PREVIEW LAYER: Forced non-selfie standard preview order at the absolute top */}
                 {cameraMode && (
-                    <div style={{
-                        background: '#000',
-                        borderRadius: '16px',
-                        marginBottom: '20px',
-                        overflow: 'hidden',
-                        position: 'relative'
-                    }}>
-                        <div style={{ position: 'relative', height: '300px' }}>
-                            <video
-                                ref={previewRef}
-                                autoPlay
-                                muted
-                                playsInline
-                                style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    objectFit: 'cover',
-                                    transform: cameraFacing === 'user' ? 'scaleX(-1)' : 'none'
-                                }}
+                    <div style={{ background: '#000', borderRadius: '16px', marginBottom: '20px', overflow: 'hidden' }}>
+                        <div style={{ position: 'relative', height: '280px' }}>
+                            <video 
+                                ref={previewRef} 
+                                autoPlay 
+                                muted 
+                                playsInline 
+                                style={{ 
+                                    width: '100%', 
+                                    height: '100%', 
+                                    objectFit: 'cover' // ❌ Removed mirrored scale transforms completely to avoid selfie layout distortions
+                                }} 
                             />
-                            <div style={{
-                                position: 'absolute',
-                                top: '10px',
-                                right: '10px',
-                                display: 'flex',
-                                gap: '8px'
-                            }}>
-                                <button
-                                    onClick={() => {
-                                        const newFacing = cameraFacing === 'user' ? 'environment' : 'user';
-                                        if (cameraMode === 'photo') {
-                                            startImageCapture(newFacing);
-                                        } else {
-                                            startVideoRecording(newFacing);
-                                        }
-                                    }}
-                                    style={{
-                                        width: '40px',
-                                        height: '40px',
-                                        borderRadius: '50%',
-                                        background: 'rgba(255, 255, 255, 0.3)',
-                                        border: '1px solid white',
-                                        color: 'white',
-                                        fontSize: '18px',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}
-                                    title="Switch camera"
-                                >
-                                    🔄
-                                </button>
-                                <button
-                                    onClick={stopCamera}
-                                    style={{
-                                        width: '40px',
-                                        height: '40px',
-                                        borderRadius: '50%',
-                                        background: 'rgba(255, 0, 0, 0.7)',
-                                        border: '1px solid white',
-                                        color: 'white',
-                                        fontSize: '18px',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}
-                                    title="Close camera"
-                                >
-                                    ✕
-                                </button>
-                            </div>
+                            <button onClick={stopCamera} style={{ position: 'absolute', top: '12px', right: '12px', width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,0,0,0.8)', color: 'white', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
                         </div>
-                        <div style={{
-                            padding: '20px',
-                            background: 'rgba(0, 0, 0, 0.8)',
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            gap: '20px'
-                        }}>
+                        <div style={{ padding: '16px', background: '#111', display: 'flex', justifyContent: 'center' }}>
                             {cameraMode === 'photo' ? (
-                                <button
-                                    onClick={takePicture}
-                                    style={{
-                                        width: '70px',
-                                        height: '70px',
-                                        borderRadius: '50%',
-                                        background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
-                                        color: 'white',
-                                        border: '3px solid white',
-                                        fontSize: '28px',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}
-                                    title="Take picture"
-                                >
-                                    📸
-                                </button>
+                                <button onClick={takePicture} style={{ width: '75px', height: '75px', borderRadius: '50%', background: 'white', border: '5px solid #4CAF50', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}>CAPTURE</button>
                             ) : (
-                                <button
-                                    onClick={recording === 'video' ? stopRecording : () => {
-                                        // Start video recording with current facing mode
-                                        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-                                            stopRecording();
-                                        } else {
-                                            // The recording should already be started when cameraMode was set to 'video'
-                                            // But if not, we need to start it
-                                            if (streamRef.current && !mediaRecorderRef.current) {
-                                                mediaRecorderRef.current = new MediaRecorder(streamRef.current);
-                                                chunksRef.current = [];
-
-                                                mediaRecorderRef.current.ondataavailable = (e) => {
-                                                    if (e.data.size > 0) {
-                                                        chunksRef.current.push(e.data);
-                                                    }
-                                                };
-
-                                                mediaRecorderRef.current.onstop = async () => {
-                                                    const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-                                                    if (blob.size < 1024) { stopCamera(); setRecording(null); return; }
-
-                                                    const reader = new FileReader();
-                                                    reader.readAsDataURL(blob);
-                                                    reader.onloadend = async () => {
-                                                        try {
-                                                            const base64Data = (reader.result as string).split(',')[1];
-                                                            const fileName = `drills_media/video_${drill.id || Date.now()}.webm`;
-                                                            const savedFile = await Filesystem.writeFile({
-                                                                path: fileName,
-                                                                data: base64Data,
-                                                                directory: Directory.Data,
-                                                                recursive: true
-                                                            });
-                                                            setDrill(prev => ({ ...prev, video_url: savedFile.uri }));
-                                                            triggerAutoSave();
-                                                        } catch (err) {
-                                                            console.error('❌ Video save failed:', err);
-                                                        } finally {
-                                                            stopCamera();
-                                                            setRecording(null);
-                                                        }
-                                                    };
-                                                };
-
-                                                mediaRecorderRef.current.start();
-                                                setRecording('video');
-                                            }
-                                        }
-                                    }}
-                                    style={{
-                                        width: '70px',
-                                        height: '70px',
-                                        borderRadius: '50%',
-                                        background: recording === 'video'
-                                            ? 'linear-gradient(135deg, #ff4444 0%, #cc0000 100%)'
-                                            : 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
-                                        color: 'white',
-                                        border: '3px solid white',
-                                        fontSize: '28px',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}
-                                    title={recording === 'video' ? 'Stop recording' : 'Start recording'}
-                                >
-                                    {recording === 'video' ? '⏹' : '🎬'}
+                                <button onClick={recording === 'video' ? stopRecording : () => { mediaRecorderRef.current?.start(); setRecording('video'); }} style={{ padding: '12px 30px', background: recording === 'video' ? '#ff4444' : '#9C27B0', color: 'white', border: 'none', borderRadius: '30px', fontWeight: 'bold', fontSize: '16px' }}>
+                                    {recording === 'video' ? '⏹️ STOP RECORD' : '🎬 START RECORD'}
                                 </button>
-                            )}
-                            {cameraMode === 'video' && recording !== 'video' && (
-                                <div style={{ color: 'white', fontSize: '14px', textAlign: 'center' }}>
-                                    Tap the button to start recording
-                                </div>
-                            )}
-                            {cameraMode === 'video' && recording === 'video' && (
-                                <div style={{ color: '#ff4444', fontSize: '16px', fontWeight: 'bold', textAlign: 'center' }}>
-                                    ● RECORDING
-                                </div>
                             )}
                         </div>
-                        <canvas ref={canvasRef} style={{ display: 'none' }} />
                     </div>
                 )}
+
+                {/* 🌟 2. INSTANT MEDIA PREVIEWS: Renders immediately under active lens blocks */}
+                {(drill.image_url || capturedImage || pastedImage) && (
+                    <div style={{ marginBottom: '20px', background: '#f8f9fa', padding: '16px', borderRadius: '16px', border: '1px solid #e0e0e0' }}>
+                        <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 700 }}>🖼️ Square Photo Capture</h4>
+                        <img src={drill.image_url ? getMediaUrl(drill.image_url) : capturedImage || pastedImage || ''} alt="Preview" style={{ width: '100%', aspectRatio: '1/1', borderRadius: '12px', objectFit: 'cover' }} />
+                    </div>
+                )}
+
+                {drill.video_url || capturedVideo ? (
+                    <div style={{ marginBottom: '20px', background: '#f8f9fa', padding: '16px', borderRadius: '16px', border: '1px solid #e0e0e0' }}>
+                        <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 700 }}>🎬 Video Preview Asset</h4>
+                        <video src={drill.video_url ? getMediaUrl(drill.video_url) : capturedVideo || ''} controls playsInline style={{ width: '100%', borderRadius: '12px', maxWidth: '220px', background: '#000' }} />
+                    </div>
+                ) : null}
+
+                {/* Quick Action Trigger Pad */}
+                <div style={{ background: '#f8f9fa', padding: '16px', borderRadius: '16px', marginBottom: '20px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                        <button onClick={() => startImageCapture('environment')} style={{ height: '90px', background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold' }}>📷 Take Photo</button>
+                        <button onClick={recording === 'audio' ? stopRecording : startAudioRecording} style={{ height: '90px', background: recording === 'audio' ? '#ff4444' : '#2196F3', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold' }}>{recording === 'audio' ? '⏹️ Stop Mic' : '🎙️ Record Audio'}</button>
+                        <button onClick={() => startVideoRecording('environment')} style={{ height: '90px', background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold' }}>🎬 Record Video</button>
+                        <button onClick={startVoiceRecording} style={{ height: '90px', background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold' }}>🗣️ Speak (Català)</button>
+                    </div>
+                    <input type="file" accept="image/*,video/*" style={{ display: 'none' }} ref={fileInputRef} onChange={handleFileChange} />
+                    <button onClick={() => fileInputRef.current?.click()} style={{ width: '100%', padding: '12px', background: '#607D8B', color: 'white', border: 'none', borderRadius: '8px', marginTop: '12px', fontWeight: 'bold' }}>📤 Gallery Attachment</button>
+                </div>
+
+                {/* Main Text Content Input Panel cards */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Català</label>
+                        <textarea value={drill.text_catalan || ''} onChange={(e) => handleTextChange('text_catalan', e.target.value)} placeholder="Catalan notes..." rows={3} style={{ width: '100%', padding: '10px', fontSize: '16px', border: '2px solid #ddd', borderRadius: '8px' }} />
+                    </div>
+                    <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                            <label style={{ fontSize: '13px', fontWeight: 600 }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label>
+                            {drill.audio_url && <button onClick={handleAutoTranscribe} disabled={isTranscribing} style={{ background: '#667eea', color: 'white', padding: '4px 10px', borderRadius: '4px', border: 'none', fontSize: '11px' }}>{isTranscribing ? '⏳...' : '🪄 Auto-Transcribe'}</button>}
+                        </div>
+                        <textarea value={drill.text_tachelhit || ''} onChange={(e) => handleTextChange('text_tachelhit', e.target.value)} placeholder="Tachelhit notation..." rows={3} style={{ width: '100%', padding: '10px', fontSize: '16px', border: '2px solid #ddd', borderRadius: '8px', fontFamily: 'monospace', fontWeight: 'bold' }} />
+                        {transcriptionResult && <div style={{ marginTop: '4px', fontSize: '12px', color: '#666' }}>Rough: {transcriptionResult.rough} ({Math.round(transcriptionResult.score * 100)}%)</div>}
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px', textAlign: 'right' }}>العربية</label>
+                        <textarea value={drill.text_arabic || ''} onChange={(e) => handleTextChange('text_arabic', e.target.value)} placeholder="النص العربي..." rows={2} style={{ width: '100%', padding: '10px', fontSize: '16px', border: '2px solid #ddd', borderRadius: '8px', direction: 'rtl' }} />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Tag</label><input type="text" value={drill.tag || ''} onChange={(e) => handleTextChange('tag', e.target.value)} placeholder="greetings" style={{ width: '100%', padding: '10px', fontSize: '15px', border: '2px solid #ddd', borderRadius: '8px' }} /></div>
+                        <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Author</label><input type="text" value={drill.author || ''} onChange={(e) => handleTextChange('author', e.target.value)} style={{ width: '100%', padding: '10px', fontSize: '15px', border: '2px solid #ddd', borderRadius: '8px' }} /></div>
+                    </div>
+                </div>
             </div>
         </div>
     );
+
+    function handleCreateNew() {
+        setDrill({ text_catalan: '', text_tachelhit: '', text_arabic: '', tag: '', author: '' });
+        setCapturedImage(null); setCapturedVideo(null); setUploadedFile(null); setPastedImage(null); setTranscriptionResult(null); setLastSaved(null);
+        if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    }
 }
