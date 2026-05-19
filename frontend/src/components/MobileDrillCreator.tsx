@@ -357,10 +357,11 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     };
 
     const handleAutoTranscribe = async () => {
-        if (!drill.audio_url) return alert('Please record audio first');
+        const mediaSource = drill.audio_url || drill.video_url;
+        if (!mediaSource) return alert('Please record audio or video first');
         setIsTranscribing(true); setTranscriptionResult(null);
         try {
-            const response = await axios.post(`${API_BASE}/transcribe/`, { audio_url: drill.audio_url });
+            const response = await axios.post(`${API_BASE}/transcribe/`, { audio_url: mediaSource });
             const { corrected_transcription, rough_transcription, similarity_score } = response.data;
             setTranscriptionResult({ rough: rough_transcription, score: similarity_score });
             if (corrected_transcription) {
@@ -460,7 +461,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                     <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                             <label style={{ fontSize: '13px', fontWeight: 600 }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label>
-                            {drill.audio_url && <button onClick={handleAutoTranscribe} disabled={isTranscribing} style={{ background: '#667eea', color: 'white', padding: '4px 10px', borderRadius: '4px', border: 'none', fontSize: '11px' }}>{isTranscribing ? '⏳...' : '🪄 Auto-Transcribe'}</button>}
+                            {(drill.audio_url || drill.video_url) && <button onClick={handleAutoTranscribe} disabled={isTranscribing} style={{ background: '#667eea', color: 'white', padding: '4px 10px', borderRadius: '4px', border: 'none', fontSize: '11px' }}>{isTranscribing ? '⏳...' : '🪄 Auto-Transcribe'}</button>}
                         </div>
                         <textarea value={drill.text_tachelhit || ''} onChange={(e) => handleTextChange('text_tachelhit', e.target.value)} placeholder="Tachelhit notation..." rows={3} style={{ width: '100%', padding: '10px', fontSize: '16px', border: '2px solid #ddd', borderRadius: '8px', fontFamily: 'monospace', fontWeight: 'bold' }} />
                         {transcriptionResult && <div style={{ marginTop: '4px', fontSize: '12px', color: '#666' }}>Rough: {transcriptionResult.rough} ({Math.round(transcriptionResult.score * 100)}%)</div>}

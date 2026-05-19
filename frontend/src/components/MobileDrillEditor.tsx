@@ -77,11 +77,12 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
   // 🪄 Non-Destructive Card Voice Transcriber Handler
   const handleTranscribeAction = async () => {
-    if (!localDrill.audio_url) return;
+    const mediaSource = localDrill.audio_url || localDrill.video_url;
+    if (!mediaSource) return;
     setAiLoadingKey('transcribe-voice');
 
     try {
-      const res = await axios.post(`${API_BASE}/transcribe/`, { audio_url: localDrill.audio_url });
+      const res = await axios.post(`${API_BASE}/transcribe/`, { audio_url: mediaSource });
       const transcriptionResult = res.data.corrected_transcription;
       const currentTachelhit = localDrill.text_tachelhit || '';
 
@@ -127,14 +128,14 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         )}
 
         {/* 🌐 PORTED INLINE CONTROL PANEL: Integrated right into the editor module */}
-        <div style={{ display: 'grid', gridTemplateColumns: localDrill.audio_url ? '1fr 1fr 1fr' : '1fr 1fr', gap: '8px', background: '#f8f9fa', padding: '10px', borderRadius: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: (localDrill.audio_url || localDrill.video_url) ? '1fr 1fr 1fr' : '1fr 1fr', gap: '8px', background: '#f8f9fa', padding: '10px', borderRadius: '12px' }}>
           <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
             {aiLoadingKey === 'trans-text_tachelhit' ? '⏳...' : '🤖 CA➔SHI'}
           </button>
           <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
             {aiLoadingKey === 'trans-text_catalan' ? '⏳...' : '🤖 SHI➔CA'}
           </button>
-          {localDrill.audio_url && (
+          {(localDrill.audio_url || localDrill.video_url) && (
             <button onClick={handleTranscribeAction} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
               {aiLoadingKey === 'transcribe-voice' ? '⏳...' : '🪄 Transcribe'}
             </button>

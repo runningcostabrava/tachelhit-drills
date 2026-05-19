@@ -359,7 +359,6 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
       {editingDrill && (
         <MobileDrillEditor
           drill={editingDrill}
-          allDrills={drills}
           onClose={() => setEditingDrill(null)}
           onUpdate={() => {
             fetchDrills();
