@@ -152,13 +152,19 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         console.log('🎤 Starting audio recording');
 
         if (!drill.id) {
-            // Create a drill first if we don't have one
             try {
-                const response = await axios.post(`${API_BASE}/drills/`, drill);
-                setDrill(prev => ({ ...prev, id: response.data.id }));
+                // Prepare a valid placeholder drill so the database doesn't reject it
+                const initializedDrill = {
+                    ...drill,
+                    text_catalan: drill.text_catalan || `Audio Grabació - ${new Date().toLocaleTimeString()}`,
+                    text_tachelhit: drill.text_tachelhit || '',
+                    text_arabic: drill.text_arabic || ''
+                };
+                const response = await axios.post(`${API_BASE}/drills/`, initializedDrill);
+                setDrill(response.data); // Safely sets the new drill with its live server ID!
             } catch (error) {
-                console.error('Failed to create drill:', error);
-                alert('Please add some text first before recording audio.');
+                console.error('Failed to auto-create drill container:', error);
+                alert('Could not initialize recording slot. Check your internet connection.');
                 return;
             }
         }
@@ -395,13 +401,19 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         console.log('Starting image capture');
 
         if (!drill.id) {
-            // Create a drill first if we don't have one
             try {
-                const response = await axios.post(`${API_BASE}/drills/`, drill);
-                setDrill(prev => ({ ...prev, id: response.data.id }));
+                // Prepare a valid placeholder drill so the database doesn't reject it
+                const initializedDrill = {
+                    ...drill,
+                    text_catalan: drill.text_catalan || `Imatge Captura - ${new Date().toLocaleTimeString()}`,
+                    text_tachelhit: drill.text_tachelhit || '',
+                    text_arabic: drill.text_arabic || ''
+                };
+                const response = await axios.post(`${API_BASE}/drills/`, initializedDrill);
+                setDrill(response.data); // Safely sets the new drill with its live server ID!
             } catch (error) {
-                console.error('Failed to create drill:', error);
-                alert('Please add some text first before taking a picture.');
+                console.error('Failed to auto-create drill container:', error);
+                alert('Could not initialize capture slot. Check your internet connection.');
                 return;
             }
         }
