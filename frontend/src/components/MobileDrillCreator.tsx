@@ -109,22 +109,33 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         }
 
         const timer = setTimeout(async () => {
+            // Strip out local hardware disk paths before sending to Python/Render
+            const sanitizePayload = (d: any) => {
+                const clean = { ...d };
+                if (clean.audio_url?.startsWith('file://')) clean.audio_url = '';
+                if (clean.video_url?.startsWith('file://')) clean.video_url = '';
+                if (clean.image_url?.startsWith('file://')) clean.image_url = '';
+                return clean;
+            };
+
+            const outPayload = sanitizePayload(drill);
+
             if (drill.id) {
                 // Update existing drill
                 try {
-                    await axios.put(`${API_BASE}/drills/${drill.id}`, drill);
+                    await axios.put(`${API_BASE}/drills/${drill.id}`, outPayload);
                     setLastSaved(new Date().toLocaleTimeString());
                 } catch (error) {
-                    console.error('Auto-save failed:', error);
+                    console.error('Auto-save update failed:', error);
                 }
             } else if (drill.text_catalan || drill.text_tachelhit || drill.text_arabic) {
                 // Create new drill if we have content
                 try {
-                    const response = await axios.post(`${API_BASE}/drills/`, drill);
+                    const response = await axios.post(`${API_BASE}/drills/`, outPayload);
                     setDrill(prev => ({ ...prev, id: response.data.id }));
                     setLastSaved(new Date().toLocaleTimeString());
                 } catch (error) {
-                    console.error('Auto-save failed:', error);
+                    console.error('Auto-save initialization failed:', error);
                 }
             }
         }, 2000); // 2 second delay for auto-save
