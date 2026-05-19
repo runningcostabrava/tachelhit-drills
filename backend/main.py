@@ -361,6 +361,7 @@ allowed_origins_base = [
     "http://localhost:4173",
     "https://tachelhit-drills.vercel.app",
     "http://localhost",              # Add this for Android APK
+    "https://localhost",              # Add this for Android APK
     "capacitor://localhost",         # Add this for mobile WebView
 ]
 
