@@ -1,3 +1,4 @@
+import { Filesystem, Directory } from '@capacitor/filesystem';
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE, getMediaUrl } from '../config';
@@ -228,26 +229,42 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                     return;
                 }
 
-                const formData = new FormData();
-                formData.append('file', blob, `audio_${drill.id}_${Date.now()}.${mimeType.includes('mp4') ? 'm4a' : 'webm'}`);
+                // OFFLINE MODE: Read the blob and save it locally
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onloadend = async () => {
+                    try {
+                        const base64Data = (reader.result as string).split(',')[1];
+                        const ext = mimeType.includes('mp4') ? 'm4a' : 'webm';
+                        const fileName = `drills_media/audio_${drill.id || Date.now()}.${ext}`;
 
-                try {
-                    await axios.post(`${API_BASE}/upload-media/${drill.id}/audio`, formData, {
-                        headers: { 'Content-Type': 'multipart/form-data' },
-                    });
-                    // Refresh drill data
-                    const response = await axios.get(`${API_BASE}/drills/${drill.id}`);
-                    setDrill(response.data);
-                    triggerAutoSave();
-                } catch (err) {
-                    console.error('Audio upload failed:', err);
-                }
+                        // Save directly to the device's Data directory
+                        const savedFile = await Filesystem.writeFile({
+                            path: fileName,
+                            data: base64Data,
+                            directory: Directory.Data,
+                            recursive: true // creates the drills_media folder if missing
+                        });
 
-                if (streamRef.current) {
-                    streamRef.current.getTracks().forEach(track => track.stop());
-                    streamRef.current = null;
-                }
-                setRecording(null);
+                        console.log('✅ Saved offline audio to:', savedFile.uri);
+
+                        // Update the drill state with the LOCAL file path
+                        setDrill(prev => ({ ...prev, audio_url: savedFile.uri }));
+
+                        // We will update triggerAutoSave next to save to SQLite instead of FastAPI
+                        triggerAutoSave();
+
+                    } catch (err) {
+                        console.error('❌ Failed to save audio offline:', err);
+                        alert('Could not save audio to device storage.');
+                    } finally {
+                        if (streamRef.current) {
+                            streamRef.current.getTracks().forEach(track => track.stop());
+                            streamRef.current = null;
+                        }
+                        setRecording(null);
+                    }
+                };
             };
 
             mediaRecorderRef.current.start();
@@ -328,23 +345,40 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
             mediaRecorderRef.current.onstop = async () => {
                 const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-                const formData = new FormData();
-                formData.append('file', blob, `video_${drill.id}_${Date.now()}.webm`);
 
-                try {
-                    await axios.post(`${API_BASE}/upload-media/${drill.id}/video`, formData, {
-                        headers: { 'Content-Type': 'multipart/form-data' },
-                    });
-                    // Refresh drill data
-                    const response = await axios.get(`${API_BASE}/drills/${drill.id}`);
-                    setDrill(response.data);
-                    triggerAutoSave();
-                } catch (err) {
-                    console.error('Video upload failed:', err);
+                if (blob.size < 1024) {
+                    stopCamera();
+                    setRecording(null);
+                    return;
                 }
 
-                stopCamera();
-                setRecording(null);
+                // OFFLINE MODE: Save video locally
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onloadend = async () => {
+                    try {
+                        const base64Data = (reader.result as string).split(',')[1];
+                        const fileName = `drills_media/video_${drill.id || Date.now()}.webm`;
+
+                        const savedFile = await Filesystem.writeFile({
+                            path: fileName,
+                            data: base64Data,
+                            directory: Directory.Data,
+                            recursive: true
+                        });
+
+                        console.log('✅ Saved offline video to:', savedFile.uri);
+                        setDrill(prev => ({ ...prev, video_url: savedFile.uri }));
+                        triggerAutoSave();
+
+                    } catch (err) {
+                        console.error('❌ Video save failed:', err);
+                        alert('Failed to save video locally');
+                    } finally {
+                        stopCamera();
+                        setRecording(null);
+                    }
+                };
             };
 
             mediaRecorderRef.current.start();
@@ -443,19 +477,29 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
                 canvas.toBlob(async (blob) => {
                     if (blob && blob.size > 1024) {
-                        const formData = new FormData();
-                        formData.append('file', blob, `image_${drill.id}_${Date.now()}.jpg`);
-                        try {
-                            await axios.post(`${API_BASE}/upload-media/${drill.id}/image`, formData, {
-                                headers: { 'Content-Type': 'multipart/form-data' },
-                            });
-                            // Refresh drill data
-                            const response = await axios.get(`${API_BASE}/drills/${drill.id}`);
-                            setDrill(response.data);
-                            triggerAutoSave();
-                        } catch (err) {
-                            console.error('Image upload failed:', err);
-                        }
+                        // OFFLINE MODE: Save image locally
+                        const reader = new FileReader();
+                        reader.readAsDataURL(blob);
+                        reader.onloadend = async () => {
+                            try {
+                                const base64Data = (reader.result as string).split(',')[1];
+                                const fileName = `drills_media/image_${drill.id || Date.now()}.jpg`;
+
+                                const savedFile = await Filesystem.writeFile({
+                                    path: fileName,
+                                    data: base64Data,
+                                    directory: Directory.Data,
+                                    recursive: true
+                                });
+
+                                console.log('✅ Saved offline image to:', savedFile.uri);
+                                setDrill(prev => ({ ...prev, image_url: savedFile.uri }));
+                                triggerAutoSave();
+
+                            } catch (err) {
+                                console.error('❌ Image save failed:', err);
+                            }
+                        };
                     }
                     stopCamera();
                 }, 'image/jpeg', 0.9);
@@ -1348,23 +1392,29 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
                                                 mediaRecorderRef.current.onstop = async () => {
                                                     const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-                                                    const formData = new FormData();
-                                                    formData.append('file', blob, `video_${drill.id}_${Date.now()}.webm`);
+                                                    if (blob.size < 1024) { stopCamera(); setRecording(null); return; }
 
-                                                    try {
-                                                        await axios.post(`${API_BASE}/upload-media/${drill.id}/video`, formData, {
-                                                            headers: { 'Content-Type': 'multipart/form-data' },
-                                                        });
-                                                        // Refresh drill data
-                                                        const response = await axios.get(`${API_BASE}/drills/${drill.id}`);
-                                                        setDrill(response.data);
-                                                        triggerAutoSave();
-                                                    } catch (err) {
-                                                        console.error('Video upload failed:', err);
-                                                    }
-
-                                                    stopCamera();
-                                                    setRecording(null);
+                                                    const reader = new FileReader();
+                                                    reader.readAsDataURL(blob);
+                                                    reader.onloadend = async () => {
+                                                        try {
+                                                            const base64Data = (reader.result as string).split(',')[1];
+                                                            const fileName = `drills_media/video_${drill.id || Date.now()}.webm`;
+                                                            const savedFile = await Filesystem.writeFile({
+                                                                path: fileName,
+                                                                data: base64Data,
+                                                                directory: Directory.Data,
+                                                                recursive: true
+                                                            });
+                                                            setDrill(prev => ({ ...prev, video_url: savedFile.uri }));
+                                                            triggerAutoSave();
+                                                        } catch (err) {
+                                                            console.error('❌ Video save failed:', err);
+                                                        } finally {
+                                                            stopCamera();
+                                                            setRecording(null);
+                                                        }
+                                                    };
                                                 };
 
                                                 mediaRecorderRef.current.start();

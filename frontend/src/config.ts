@@ -1,23 +1,27 @@
-// Remove trailing slash if present to avoid double slashes in URLs
-const apiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE || 'http://localhost:8000';
-let API_BASE_TMP = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+// 1. Default to your live production server
+let API_BASE_TMP = 'https://tachelhit-drills-api.onrender.com';
 
-// Override for localhost development, but EXCLUDE native mobile environments
-const isNative = typeof window !== 'undefined' && (window as any).Capacitor?.isNative;
+// 2. ONLY use the local computer backend if we are explicitly running the Vite local dev server ('npm run dev')
+// and we are NOT running inside a native mobile app wrapper.
+const isDevServer = import.meta.env.DEV;
+const isNativeApp = (window as any).Capacitor?.isNative || window.location.hostname !== 'localhost';
 
-if (!isNative && typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+if (isDevServer && !isNativeApp) {
+  console.log("🛠️ Vite Dev Server active - Using local backend");
   API_BASE_TMP = 'http://localhost:8000';
 } else {
-  // Force production Render URL for APK and actual web production
-  API_BASE_TMP = 'https://tachelhit-drills-api.onrender.com';
-}
-
-// Force production backend if we are in production (vercel)
-if (import.meta.env.MODE === 'production' && !API_BASE_TMP.includes('render.com')) {
+  console.log("🚀 Production Bundle active - Forcing Render live URL");
   API_BASE_TMP = 'https://tachelhit-drills-api.onrender.com';
 }
 
 export const API_BASE = API_BASE_TMP;
+
+// UPDATE THIS SECTION AT THE BOTTOM:
+if ((window as any).Capacitor?.isNative || window.location.hostname === 'localhost') {
+  alert("APK is connecting to: " + API_BASE);
+}
+
+
 
 console.log('🔧 Config loaded - Audio fix v5:');
 console.log('   VITE_API_URL:', import.meta.env.VITE_API_URL);
