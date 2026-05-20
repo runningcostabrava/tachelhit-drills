@@ -124,6 +124,41 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
         }
     };
 
+    // 🔊 Smart Tachelhit TTS Pipeline
+    const handleTachelhitTTS = async (drill: Drill) => {
+        const text = drill.text_tachelhit;
+        if (!text) {
+            alert('Tachelhit field is empty.');
+            return;
+        }
+
+        const loadingKey = `tts-${drill.id}`;
+        setActionLoadingId(loadingKey);
+
+        try {
+            const status = await Network.getStatus();
+            if (!status.connected) {
+                alert("⚠️ TTS requires an active internet connection.");
+                return;
+            }
+
+            const res = await axios.post(`${API_BASE}/tts/tachelhit`, { 
+                text, 
+                drill_id: drill.id 
+            });
+
+            if (res.data.url) {
+                new Audio(getMediaUrl(res.data.url)).play();
+                await refreshData();
+            }
+        } catch (err) {
+            console.error('TTS workflow crashed:', err);
+            alert('Failed to generate TTS audio.');
+        } finally {
+            setActionLoadingId(null);
+        }
+    };
+
     const onCellValueChanged = async (params: any) => {
         const { data, colDef, newValue } = params;
         const field = colDef.field;
@@ -405,9 +440,9 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
             width: 80, 
             cellRenderer: (p: any) => p.value ? <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}><img src={getMediaUrl(p.value)} style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} /></div> : null 
         },
-        { field: 'text_catalan', headerName: 'Català', flex: 2, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px' } },
-        { field: 'text_tachelhit', headerName: 'Tachelhit', flex: 2, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px' } },
-        { field: 'text_arabic', headerName: 'العربية', flex: 2, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px', 'direction': 'rtl' } },
+        { field: 'text_catalan', headerName: 'Català', flex: 2, minWidth: 150, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px' } },
+        { field: 'text_tachelhit', headerName: 'Tachelhit', flex: 2, minWidth: 150, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px' } },
+        { field: 'text_arabic', headerName: 'العربية', flex: 2, minWidth: 150, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px', 'direction': 'rtl' } },
         { field: 'tag', headerName: 'Tag', width: 120, filter: true, editable: true },
         {
             headerName: 'Media',
@@ -425,13 +460,14 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
         },
         {
             headerName: 'AI Tools',
-            width: 180,
+            width: 320,
             cellRenderer: (params: any) => (
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center', height: '100%' }}>
                     <button onClick={() => handleTranslate(params.data, 'ca', 'shi')} disabled={actionLoadingId !== null} style={{ padding: '4px 6px', fontSize: '10px', background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>CA➔SHI</button>
                     <button onClick={() => handleTranslate(params.data, 'shi', 'ca')} disabled={actionLoadingId !== null} style={{ padding: '4px 6px', fontSize: '10px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>SHI➔CA</button>
+                    <button onClick={() => handleTachelhitTTS(params.data)} disabled={actionLoadingId !== null} style={{ padding: '4px 6px', fontSize: '10px', background: '#fef3c7', color: '#92400e', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>🔊 TTS SHI</button>
                     {(params.data.audio_url || params.data.video_url) && (
-                        <button onClick={() => handleTranscribe(params.data)} disabled={actionLoadingId !== null} style={{ padding: '4px 6px', fontSize: '10px', background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>🪄</button>
+                        <button onClick={() => handleTranscribe(params.data)} disabled={actionLoadingId !== null} style={{ padding: '4px 6px', fontSize: '10px', background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>🪄 Transcribe</button>
                     )}
                 </div>
             )
@@ -490,9 +526,6 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                     rowSelection="multiple"
                     onSelectionChanged={(event) => {
                         setSelectedRows(event.api.getSelectedRows());
-                    }}
-                    onGridReady={(params) => {
-                        setTimeout(() => params.api.sizeColumnsToFit(), 200);
                     }}
                     onCellValueChanged={onCellValueChanged}
                     defaultColDef={{

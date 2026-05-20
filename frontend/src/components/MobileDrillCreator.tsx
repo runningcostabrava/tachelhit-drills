@@ -67,8 +67,8 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         try {
             addLog('Checking permissions...');
             const status = await Camera.requestPermissions();
-            if (status.camera !== 'granted') {
-                return alert('Camera permission required.');
+            if (status.camera !== 'granted' && status.photos !== 'granted') {
+                addLog(`Permissions status: ${JSON.stringify(status)}`);
             }
 
             addLog('Opening camera...');
@@ -76,11 +76,11 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 quality: 80,
                 allowEditing: false,
                 resultType: CameraResultType.Base64,
-                source: CameraSource.Camera,
+                source: CameraSource.Prompt, // Changed from Camera to Prompt
                 saveToGallery: false,
                 correctOrientation: true,
                 presentationStyle: 'fullscreen',
-                webUseInput: false // Try to force native camera
+                webUseInput: false
             });
 
             if (image && image.base64String) {
@@ -231,33 +231,6 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             const msg = err.response?.data?.detail || err.message;
             alert(`Transcription failed: ${msg}`);
             addLog(`ASR Error: ${msg}`);
-        } finally {
-            setAiLoadingKey(null);
-        }
-    };
-
-    const handleImportLink = async () => {
-        const url = prompt('Paste video or audio link (YouTube, Instagram, etc.):');
-        if (!url) return;
-
-        const status = await Network.getStatus();
-        if (!status.connected) return alert('Importing via link requires internet.');
-
-        setAiLoadingKey('import-link');
-        addLog('Importing link...');
-        try {
-            const res = await axios.post(`${API_BASE}/import-link`, { url, drill_id: drill.id });
-            if (res.data.url) {
-                const updated = { ...drill, video_url: res.data.url };
-                setDrill(updated);
-                setCapturedVideo(res.data.url);
-                triggerSave(updated);
-                addLog('Import success');
-            }
-        } catch (err: any) {
-            const msg = err.response?.data?.detail || err.message;
-            alert(`Import failed: ${msg}`);
-            addLog(`Import Error: ${msg}`);
         } finally {
             setAiLoadingKey(null);
         }

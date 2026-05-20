@@ -61,8 +61,8 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     try {
       addLog('Checking permissions...');
       const status = await Camera.requestPermissions();
-      if (status.camera !== 'granted') {
-          return alert('Camera permission required.');
+      if (status.camera !== 'granted' && status.photos !== 'granted') {
+        addLog(`Permissions status: ${JSON.stringify(status)}`);
       }
 
       addLog('Opening camera...');
@@ -70,11 +70,11 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         quality: 80,
         allowEditing: false,
         resultType: CameraResultType.Base64,
-        source: CameraSource.Camera,
+        source: CameraSource.Prompt, // Changed from Camera to Prompt
         saveToGallery: false,
         correctOrientation: true,
         presentationStyle: 'fullscreen',
-        webUseInput: false // Force native
+        webUseInput: false
       });
 
       if (image && image.base64String) {
@@ -166,32 +166,6 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       addLog(`Dictation error: ${err.code || err.message || JSON.stringify(err)}`);
     }
   };
-
-    const handleImportLink = async () => {
-        const url = prompt('Paste video or audio link (YouTube, Instagram, etc.):');
-        if (!url) return;
-
-        const status = await Network.getStatus();
-        if (!status.connected) return alert('Importing via link requires internet.');
-
-        setAiLoadingKey('import-link');
-        addLog('Importing link...');
-        try {
-            const res = await axios.post(`${API_BASE}/import-link`, { url, drill_id: localDrill.id });
-            if (res.data.url) {
-                const updated = { ...localDrill, video_url: res.data.url };
-                setLocalDrill(updated);
-                triggerSave(updated);
-                addLog('Import success');
-            }
-        } catch (err: any) {
-            const msg = err.response?.data?.detail || err.message;
-            alert(`Import failed: ${msg}`);
-            addLog(`Import Error: ${msg}`);
-        } finally {
-            setAiLoadingKey(null);
-        }
-    };
 
       const handleAutoTranscribe = async () => {
         const mediaSource = localDrill.audio_url || localDrill.video_url;

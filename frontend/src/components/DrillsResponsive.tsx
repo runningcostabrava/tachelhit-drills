@@ -11,7 +11,7 @@ import DrillsGrid from './DrillsGrid';
 import MobileBottomNav from './MobileBottomNav';
 import VoiceDrillCreator from './VoiceDrillCreator';
 import MobileDrillCreator from './MobileDrillCreator';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface Drill {
   id: number;
@@ -96,6 +96,7 @@ interface DrillsResponsiveProps { }
 
 export default function DrillsResponsive({ }: DrillsResponsiveProps) {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
   const [drills, setDrills] = useState<Drill[]>([]);
