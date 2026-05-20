@@ -30,6 +30,9 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
   // Media capture states
   const [recording, setRecording] = useState<'audio' | 'video' | null>(null);
   const [cameraMode, setCameraMode] = useState<'photo' | 'video' | null>(null);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [capturedVideo, setCapturedVideo] = useState<string | null>(null);
+  const [capturedAudio, setCapturedAudio] = useState<string | null>(null);
   const [uploadingMedia, setUploadingMedia] = useState(false);
 
   // Refs for media capture
@@ -99,7 +102,11 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       if (res.data.url) {
-        setLocalDrill(prev => ({ ...prev, [`${type}_url`]: res.data.url }));
+        setLocalDrill(prev => {
+          const updated = { ...prev, [`${type}_url`]: res.data.url };
+          // If we have a local preview, we can keep it until next reload or clear it
+          return updated;
+        });
         onUpdate();
         alert(`Successfully updated ${type}!`);
       }
@@ -125,6 +132,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       mediaRecorderRef.current.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: format.mime });
         if (blob.size >= 1024) {
+          setCapturedAudio(URL.createObjectURL(blob));
           await uploadCapturedBlob(blob, 'audio', `audio_${localDrill.id}_${Date.now()}.${format.ext}`);
         }
         stopCamera();
@@ -151,6 +159,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       mediaRecorderRef.current.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: format.mime });
         if (blob.size >= 1024) {
+          setCapturedVideo(URL.createObjectURL(blob));
           await uploadCapturedBlob(blob, 'video', `video_${localDrill.id}_${Date.now()}.${format.ext}`);
         }
         stopCamera();
@@ -193,6 +202,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       context.drawImage(video, sx, sy, size, size, 0, 0, size, size);
       canvas.toBlob(async (blob) => {
         if (blob && blob.size > 1024) {
+          setCapturedImage(URL.createObjectURL(blob));
           await uploadCapturedBlob(blob, 'image', `image_${localDrill.id}_${Date.now()}.jpg`);
         }
         stopCamera();
@@ -220,6 +230,11 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     const file = event.target.files?.[0];
     if (!file) return;
     const fileType = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'audio';
+    
+    if (fileType === 'image') setCapturedImage(URL.createObjectURL(file));
+    if (fileType === 'video') setCapturedVideo(URL.createObjectURL(file));
+    if (fileType === 'audio') setCapturedAudio(URL.createObjectURL(file));
+    
     await uploadCapturedBlob(file, fileType, file.name);
   };
 
@@ -315,16 +330,16 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         )}
 
         {/* Media Attachments previews */}
-        {localDrill.image_url && (
-          <img src={getMediaUrl(localDrill.image_url)} alt="Drill Asset" style={{ width: '100%', aspectRatio: '1/1', borderRadius: '12px', objectFit: 'cover', border: '1px solid #eee' }} />
+        {(localDrill.image_url || capturedImage) && (
+          <img src={localDrill.image_url ? getMediaUrl(localDrill.image_url) : capturedImage || ''} alt="Drill Asset" style={{ width: '100%', aspectRatio: '1/1', borderRadius: '12px', objectFit: 'cover', border: '1px solid #eee' }} />
         )}
 
-        {localDrill.video_url && (
-          <video src={getMediaUrl(localDrill.video_url)} controls playsInline style={{ width: '100%', borderRadius: '12px', background: '#000' }} />
+        {(localDrill.video_url || capturedVideo) && (
+          <video src={localDrill.video_url ? getMediaUrl(localDrill.video_url) : capturedVideo || ''} controls playsInline style={{ width: '100%', borderRadius: '12px', background: '#000' }} />
         )}
 
-        {localDrill.audio_url && (
-          <button onClick={() => new Audio(getMediaUrl(localDrill.audio_url!)).play()} style={{ width: '100%', padding: '12px', background: '#f3f4f6', border: 'none', borderRadius: '10px', fontWeight: 600, cursor: 'pointer' }}>
+        {(localDrill.audio_url || capturedAudio) && (
+          <button onClick={() => new Audio(localDrill.audio_url ? getMediaUrl(localDrill.audio_url) : capturedAudio || '').play()} style={{ width: '100%', padding: '12px', background: '#f3f4f6', border: 'none', borderRadius: '10px', fontWeight: 600, cursor: 'pointer' }}>
             🔊 Test Audio Recording Playback
           </button>
         )}

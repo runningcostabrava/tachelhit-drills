@@ -35,6 +35,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const [, setCameraFacing] = useState<'user' | 'environment'>('environment');
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const [capturedVideo, setCapturedVideo] = useState<string | null>(null);
+    const [capturedAudio, setCapturedAudio] = useState<string | null>(null);
     const [pastedImage, setPastedImage] = useState<string | null>(null);
     const [transcriptionResult, setTranscriptionResult] = useState<{ rough: string, score: number } | null>(null);
 
@@ -71,11 +72,12 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         return () => {
             if (capturedImage && capturedImage.startsWith('blob:')) URL.revokeObjectURL(capturedImage);
             if (capturedVideo && capturedVideo.startsWith('blob:')) URL.revokeObjectURL(capturedVideo);
+            if (capturedAudio && capturedAudio.startsWith('blob:')) URL.revokeObjectURL(capturedAudio);
             if (pastedImage && pastedImage.startsWith('blob:')) URL.revokeObjectURL(pastedImage);
             if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
             stopCamera();
         };
-    }, [capturedImage, capturedVideo, pastedImage]);
+    }, [capturedImage, capturedVideo, capturedAudio, pastedImage]);
 
     // Initialize speech recognition for Catalan dictation
     useEffect(() => {
@@ -206,6 +208,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             mediaRecorderRef.current.onstop = async () => {
                 const blob = new Blob(chunksRef.current, { type: format.mime });
                 if (blob.size >= 1024) {
+                    setCapturedAudio(URL.createObjectURL(blob));
                     await uploadCapturedBlob(blob, 'audio', `audio_${drill.id || Date.now()}.${format.ext}`);
                 }
                 stopCamera();
@@ -433,8 +436,8 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                     </div>
                 ) : null}
 
-                {drill.audio_url && (
-                    <button onClick={() => new Audio(getMediaUrl(drill.audio_url!)).play()} style={{ width: '100%', padding: '12px', background: '#f3f4f6', border: '1px solid #e0e0e0', borderRadius: '10px', fontWeight: 600, cursor: 'pointer', marginBottom: '20px' }}>
+                {(drill.audio_url || capturedAudio) && (
+                    <button onClick={() => new Audio(drill.audio_url ? getMediaUrl(drill.audio_url) : capturedAudio || '').play()} style={{ width: '100%', padding: '12px', background: '#f3f4f6', border: '1px solid #e0e0e0', borderRadius: '10px', fontWeight: 600, cursor: 'pointer', marginBottom: '20px' }}>
                         🔊 Play Audio Asset
                     </button>
                 )}
