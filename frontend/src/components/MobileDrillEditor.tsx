@@ -26,6 +26,9 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
   useEffect(() => {
     setLocalDrill({ ...drill });
+  }, [drill]);
+
+  useEffect(() => {
     VoiceRecorder.requestAudioRecordingPermission();
     SpeechRecognition.requestPermissions();
   }, [drill]);
@@ -299,26 +302,24 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         <button onClick={() => triggerSave(localDrill)} style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: 'bold' }}>💾 Save</button>
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div style={{ background: '#f8f9fa', padding: '12px', borderRadius: '12px', border: '1px solid #e0e0e0' }}>
-            <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#666', textAlign: 'center', fontWeight: 'bold' }}>NATIVE CONTROLS</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginBottom: '8px' }}>
-              <button onClick={capturePhoto} style={{ height: '60px', background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>📷 Take Photo</button>
-              <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '60px', background: isRecording ? '#ff4444' : '#2196F3', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>{isRecording ? '⏹️ Stop' : '🎙️ Audio'}</button>
-              <button onClick={startDictation} style={{ height: '60px', background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>🗣️ Dictate</button>
-              <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '60px', background: '#607D8B', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>📁 Gallery</button>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '100px' }}>
+        <div style={{ background: '#f8f9fa', padding: '12px', borderRadius: '16px', border: '1px solid #e0e0e0' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+              <button onClick={capturePhoto} style={{ height: '50px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '10px' }}>📷 Photo</button>
+              <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '50px', background: isRecording ? '#ff4444' : '#2196F3', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '10px' }}>{isRecording ? '⏹️ Stop' : '🎙️ Audio'}</button>
+              <button onClick={startDictation} style={{ height: '50px', background: '#FF9800', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '10px' }}>🗣️ Speak</button>
+              <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '50px', background: '#607D8B', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '10px' }}>📁 Gallery</button>
             </div>
-            <button onClick={handleImportLink} disabled={aiLoadingKey !== null} style={{ width: '100%', height: '45px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>🔗 Import via Link (YouTube/Insta)</button>
             <input type="file" id="gallery-upload" style={{ display: 'none' }} onChange={handleFileChange} />
         </div>
 
         {localDrill.image_url && (
-          <img src={getSourceUrl(localDrill.image_url)} alt="Drill Asset" style={{ width: '100%', aspectRatio: '1/1', borderRadius: '12px', objectFit: 'cover', border: '1px solid #eee' }} />
+          <img src={getSourceUrl(localDrill.image_url)} alt="Drill Asset" style={{ width: '100%', height: '150px', borderRadius: '12px', objectFit: 'cover' }} />
         )}
 
         {localDrill.video_url && (
-          <div style={{ background: '#000', borderRadius: '12px', overflow: 'hidden', width: '100%', minHeight: '200px', display: 'flex', alignItems: 'center' }}>
-            <video src={getSourceUrl(localDrill.video_url)} controls playsInline preload="metadata" style={{ width: '100%', borderRadius: '12px' }} />
+          <div style={{ background: '#000', borderRadius: '12px', overflow: 'hidden', width: '100%', height: '150px', display: 'flex', alignItems: 'center' }}>
+            <video src={getSourceUrl(localDrill.video_url)} controls playsInline preload="metadata" style={{ width: '100%', height: '100%' }} />
           </div>
         )}
 
@@ -345,9 +346,9 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
             >🪄 Transcribe</button>
         </div>
 
-                <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600 }}>Tag</label><input type="text" value={localDrill.tag || ''} onChange={(e) => handleFieldChange('tag', e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }} /></div>
                 <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600 }}>Català</label><textarea value={localDrill.text_catalan || ''} onChange={(e) => handleFieldChange('text_catalan', e.target.value)} rows={2} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }} /></div>
                 <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600 }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label><textarea value={localDrill.text_tachelhit || ''} onChange={(e) => handleFieldChange('text_tachelhit', e.target.value)} rows={2} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }} /></div>
+                <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600 }}>Tag</label><input type="text" value={localDrill.tag || ''} onChange={(e) => handleFieldChange('tag', e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }} /></div>
 
         <div style={{ background: '#111', color: '#0f0', padding: '10px', borderRadius: '8px', fontSize: '10px', fontFamily: 'monospace', height: '100px', overflowY: 'auto' }}>
           <div style={{ color: '#fff', borderBottom: '1px solid #333', paddingBottom: '4px', marginBottom: '4px' }}>LIVE DEBUGGER</div>

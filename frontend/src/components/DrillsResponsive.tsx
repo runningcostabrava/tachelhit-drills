@@ -277,6 +277,15 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
                 📱 New Drill
               </button>
 
+              {!isMobile && (
+                <button
+                  onClick={() => navigate('/tests')}
+                  style={{ padding: '10px 16px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}
+                >
+                  📊 Practica
+                </button>
+              )}
+
               <button
                 onClick={() => {
                   const url = window.location.href;

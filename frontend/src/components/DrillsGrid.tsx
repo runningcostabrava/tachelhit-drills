@@ -33,8 +33,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
     const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [passwordInput, setPasswordInput] = useState('');
     const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
-
-    // UI states for loading actions
+    const [selectedRows, setSelectedRows] = useState<Drill[]>([]);
     const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
     // Track responsive screen resize configurations
@@ -130,10 +129,43 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
         const field = colDef.field;
         try {
             await axios.put(`${API_BASE}/drills/${data.id}`, { [field]: newValue });
-            // Optional: alert('Saved');
         } catch (err) {
             console.error('Failed to save inline edit:', err);
-            refreshData(); // Revert on failure
+            refreshData(); 
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedRows.length === 0) return;
+        if (!window.confirm(`Are you sure you want to delete ${selectedRows.length} drills?`)) return;
+
+        try {
+            const status = await Network.getStatus();
+            for (const drill of selectedRows) {
+                if (status.connected && drill.id < 1000000) {
+                    await axios.delete(`${API_BASE}/drills/${drill.id}`);
+                }
+            }
+            alert('Bulk delete complete.');
+            await refreshData();
+        } catch (error) {
+            alert('One or more deletes failed.');
+        }
+    };
+
+    const handleBulkEditTags = async () => {
+        if (selectedRows.length === 0) return;
+        const newTag = prompt('Enter new tag for selected drills (prefix with + to append, - to remove):');
+        if (newTag === null) return;
+
+        try {
+            for (const drill of selectedRows) {
+                await axios.put(`${API_BASE}/drills/${drill.id}`, { tag: newTag });
+            }
+            alert('Bulk tag update complete.');
+            await refreshData();
+        } catch (error) {
+            alert('Tag update failed.');
         }
     };
 
@@ -366,7 +398,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
 
     // 🖥️ DESKTOP INTERFACE: Standard High-Performance spreadsheet view
     const columnDefs: ColDef<Drill>[] = [
-        { field: 'id', headerName: 'ID', width: 80, sortable: true },
+        { field: 'id', headerName: 'ID', width: 80, sortable: true, checkboxSelection: true, headerCheckboxSelection: true },
         { 
             field: 'image_url', 
             headerName: 'Preview', 
@@ -393,13 +425,13 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
         },
         {
             headerName: 'AI Tools',
-            width: 220,
+            width: 180,
             cellRenderer: (params: any) => (
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center', height: '100%' }}>
-                    <button onClick={() => handleTranslate(params.data, 'ca', 'shi')} style={{ padding: '4px 6px', fontSize: '10px', background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>CA➔SHI</button>
-                    <button onClick={() => handleTranslate(params.data, 'shi', 'ca')} style={{ padding: '4px 6px', fontSize: '10px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>SHI➔CA</button>
+                    <button onClick={() => handleTranslate(params.data, 'ca', 'shi')} disabled={actionLoadingId !== null} style={{ padding: '4px 6px', fontSize: '10px', background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>CA➔SHI</button>
+                    <button onClick={() => handleTranslate(params.data, 'shi', 'ca')} disabled={actionLoadingId !== null} style={{ padding: '4px 6px', fontSize: '10px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>SHI➔CA</button>
                     {(params.data.audio_url || params.data.video_url) && (
-                        <button onClick={() => handleTranscribe(params.data)} style={{ padding: '4px 6px', fontSize: '10px', background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>🪄</button>
+                        <button onClick={() => handleTranscribe(params.data)} disabled={actionLoadingId !== null} style={{ padding: '4px 6px', fontSize: '10px', background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>🪄</button>
                     )}
                 </div>
             )
@@ -429,23 +461,46 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
     ];
 
     return (
-        <div className="ag-theme-alpine" style={{ width: '100%', height: 'calc(100vh - 120px)', padding: '20px' }}>
-            <AgGridReact
-                rowData={rowData}
-                columnDefs={columnDefs}
-                animateRows={true}
-                pagination={true}
-                paginationPageSize={50}
-                rowHeight={70}
-                onGridReady={(params) => {
-                    setTimeout(() => params.api.sizeColumnsToFit(), 200);
-                }}
-                onCellValueChanged={onCellValueChanged}
-                defaultColDef={{
-                    resizable: true,
-                    sortable: true
-                }}
-            />
+        <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', padding: '20px' }}>
+            <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <span style={{ fontSize: '14px', fontWeight: 600 }}>{selectedRows.length} items selected</span>
+                <button 
+                    onClick={handleBulkDelete} 
+                    disabled={selectedRows.length === 0} 
+                    style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', opacity: selectedRows.length ? 1 : 0.5 }}
+                >
+                    🗑️ Bulk Delete
+                </button>
+                <button 
+                    onClick={handleBulkEditTags} 
+                    disabled={selectedRows.length === 0} 
+                    style={{ padding: '6px 12px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', opacity: selectedRows.length ? 1 : 0.5 }}
+                >
+                    🏷️ Bulk Edit Tags
+                </button>
+            </div>
+            <div className="ag-theme-alpine" style={{ flex: 1 }}>
+                <AgGridReact
+                    rowData={rowData}
+                    columnDefs={columnDefs}
+                    animateRows={true}
+                    pagination={true}
+                    paginationPageSize={50}
+                    rowHeight={70}
+                    rowSelection="multiple"
+                    onSelectionChanged={(event) => {
+                        setSelectedRows(event.api.getSelectedRows());
+                    }}
+                    onGridReady={(params) => {
+                        setTimeout(() => params.api.sizeColumnsToFit(), 200);
+                    }}
+                    onCellValueChanged={onCellValueChanged}
+                    defaultColDef={{
+                        resizable: true,
+                        sortable: true
+                    }}
+                />
+            </div>
         </div>
     );
 }
