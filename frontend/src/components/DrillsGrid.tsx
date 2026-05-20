@@ -6,6 +6,8 @@ import TestConfigPanel from './TestConfigPanel';
 import { useNavigate } from 'react-router-dom';
 import { syncManager } from '../services/OfflineSyncManager';
 import { Network } from '@capacitor/network';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { VoiceRecorder } from 'capacitor-voice-recorder';
 import { API_BASE, getMediaUrl } from '../config';
 
 // Import CSS structural definitions
@@ -39,6 +41,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
     const [selectedRows, setSelectedRows] = useState<Drill[]>([]);
     const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
     const [showTestConfig, setShowTestConfig] = useState(false);
+    const [pendingMedia, setPendingMedia] = useState<Record<number, {image?: string, audio?: Blob, audioUrl?: string}>>({});
     const navigate = useNavigate();
 
     // Track responsive screen resize configurations
@@ -236,6 +239,99 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
         }
     };
 
+    const handleQuickPhoto = async (drillId: number) => {
+        try {
+            const image = await Camera.getPhoto({
+                quality: 50,
+                width: 640,
+                height: 480,
+                resultType: CameraResultType.Base64,
+                source: CameraSource.Prompt
+            });
+            if (image && image.base64String) {
+                const base64Data = `data:image/${image.format};base64,${image.base64String}`;
+                setPendingMedia(prev => ({
+                    ...prev,
+                    [drillId]: { ...prev[drillId], image: base64Data }
+                }));
+            }
+        } catch (e) {
+            console.error('Quick photo failed', e);
+        }
+    };
+
+    const handleQuickAudio = async (drillId: number) => {
+        try {
+            const isRecording = actionLoadingId === `rec-${drillId}`;
+            if (isRecording) {
+                const result = await VoiceRecorder.stopRecording();
+                setActionLoadingId(null);
+                if (result.value && result.value.recordDataBase64) {
+                    const base64Response = await fetch(`data:${result.value.mimeType};base64,${result.value.recordDataBase64}`);
+                    const blob = await base64Response.blob();
+                    setPendingMedia(prev => ({
+                        ...prev,
+                        [drillId]: { ...prev[drillId], audio: blob, audioUrl: URL.createObjectURL(blob) }
+                    }));
+                }
+            } else {
+                await VoiceRecorder.requestAudioRecordingPermission();
+                await VoiceRecorder.startRecording();
+                setActionLoadingId(`rec-${drillId}`);
+            }
+        } catch (e) {
+            console.error('Quick audio failed', e);
+            setActionLoadingId(null);
+        }
+    };
+
+    const handleQuickSave = async (drill: Drill) => {
+        const pending = pendingMedia[drill.id];
+        if (!pending) return;
+
+        setActionLoadingId(`save-${drill.id}`);
+        try {
+            if (pending.image) {
+                const response = await fetch(pending.image);
+                const blob = await response.blob();
+                const fileName = `photo_${drill.id}_${Date.now()}.jpg`;
+                await syncManager.saveMediaLocally(blob, fileName);
+                await syncManager.queueAction({
+                    type: 'UPLOAD_MEDIA',
+                    drillId: drill.id,
+                    mediaType: 'image',
+                    localPath: fileName,
+                    fileName: fileName
+                });
+            }
+
+            if (pending.audio) {
+                const fileName = `audio_${drill.id}_${Date.now()}.m4a`;
+                await syncManager.saveMediaLocally(pending.audio, fileName);
+                await syncManager.queueAction({
+                    type: 'UPLOAD_MEDIA',
+                    drillId: drill.id,
+                    mediaType: 'audio',
+                    localPath: fileName,
+                    fileName: fileName
+                });
+            }
+
+            // Trigger sync and refresh
+            await syncManager.sync();
+            setPendingMedia(prev => {
+                const next = { ...prev };
+                delete next[drill.id];
+                return next;
+            });
+            await refreshData();
+        } catch (err) {
+            alert('Failed to save media');
+        } finally {
+            setActionLoadingId(null);
+        }
+    };
+
     const executeDeletePipeline = async (id: number) => {
         const confirmDelete = window.confirm('Are you sure you want to permanently delete this drill?');
         if (!confirmDelete) return;
@@ -374,6 +470,39 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
 
 
                         <hr style={{ border: 'none', height: '1px', background: '#f3f4f6', margin: '4px 0' }} />
+
+                        {/* Quick Update Row */}
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                            <button 
+                                onClick={() => handleQuickPhoto(drill.id)}
+                                style={{ flex: 1, padding: '10px', background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold' }}
+                            >📷 Photo</button>
+                            <button 
+                                onClick={() => handleQuickAudio(drill.id)}
+                                style={{ flex: 1, padding: '10px', background: actionLoadingId === `rec-${drill.id}` ? '#fef2f2' : '#eff6ff', color: actionLoadingId === `rec-${drill.id}` ? '#991b1b' : '#1e40af', border: '1px solid #bfdbfe', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold' }}
+                            >
+                                {actionLoadingId === `rec-${drill.id}` ? '⏹ Stop' : '🎙 Audio'}
+                            </button>
+                        </div>
+
+                        {/* Previews for pending media */}
+                        {pendingMedia[drill.id] && (
+                            <div style={{ background: '#fffbeb', padding: '10px', borderRadius: '10px', border: '1px dashed #fbbf24', marginBottom: '8px' }}>
+                                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#92400e', marginBottom: '4px' }}>Pending Updates:</div>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    {pendingMedia[drill.id].image && <img src={pendingMedia[drill.id].image} style={{ width: '40px', height: '40px', borderRadius: '4px', objectFit: 'cover' }} />}
+                                    {pendingMedia[drill.id].audioUrl && <button onClick={() => new Audio(pendingMedia[drill.id].audioUrl).play()} style={{ background: 'none', border: 'none', fontSize: '20px' }}>🔊</button>}
+                                    <div style={{ flex: 1 }}></div>
+                                    <button 
+                                        onClick={() => handleQuickSave(drill)}
+                                        disabled={actionLoadingId !== null}
+                                        style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontWeight: 'bold', fontSize: '13px' }}
+                                    >
+                                        {actionLoadingId === `save-${drill.id}` ? '...' : '💾 Save Now'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Action Footer */}
                         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
