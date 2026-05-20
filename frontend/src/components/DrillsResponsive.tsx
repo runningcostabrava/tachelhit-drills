@@ -262,13 +262,9 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
     }
   };
 
-  if (!isMobile) {
-    return <DrillsGrid rowData={drills} refreshData={fetchDrills} onEditDrill={(drill) => setEditingDrill(drill)} />;
-  }
-
   return (
     <>
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: '60px' }}>
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: isMobile ? '60px' : '0' }}>
         {/* Header */}
         <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
@@ -338,12 +334,12 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
           <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginTop: '8px' }}>Tap any card to view details</div>
         </div>
 
-        {/* Card Stream */}
-        <div style={{ flex: 1, width: '100%', overflow: 'auto', padding: '12px 4px' }}>
+        {/* Main Content Area: Conditional rendering based on isMobile */}
+        <div style={{ flex: 1, width: '100%', overflow: 'auto', padding: isMobile ? '12px 4px' : '0' }}>
           <DrillsGrid rowData={filteredDrills} refreshData={fetchDrills} onEditDrill={(drill) => setEditingDrill(drill)} />
         </div>
 
-        <MobileBottomNav />
+        {isMobile && <MobileBottomNav />}
       </div>
 
       {editingDrill && (

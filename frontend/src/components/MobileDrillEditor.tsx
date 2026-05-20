@@ -61,17 +61,19 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
           return alert('Camera permission required.');
       }
 
+      addLog('Opening camera...');
       const image = await Camera.getPhoto({
-        quality: 85,
+        quality: 80,
         allowEditing: false,
         resultType: CameraResultType.Base64,
-        source: CameraSource.Camera, // Direct to camera for testing
+        source: CameraSource.Camera,
         saveToGallery: false,
         correctOrientation: true,
-        width: 1280
+        presentationStyle: 'fullscreen'
       });
 
-      if (image.base64String) {
+      if (image && image.base64String) {
+        addLog('Photo data received');
         const base64Data = `data:image/${image.format};base64,${image.base64String}`;
         const response = await fetch(base64Data);
         const blob = await response.blob();
@@ -148,12 +150,13 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         popup: true
       });
 
-      SpeechRecognition.addListener('partialResults', (data: any) => {
-        if (data.matches && data.matches.length > 0) {
-          addLog(`Dictated: ${data.matches[0]}`);
-          handleFieldChange('text_catalan', data.matches[0]);
-        }
-      });
+            SpeechRecognition.addListener('partialResults', (data: any) => {
+                if (data.matches && data.matches.length > 0) {
+                    const transcript = data.matches[0];
+                    addLog(`Dictated: ${transcript}`);
+                    setLocalDrill(prev => ({ ...prev, text_catalan: transcript }));
+                }
+            });
     } catch (err: any) {
       addLog(`Dictation error: ${err.code || err.message || JSON.stringify(err)}`);
     }
@@ -185,7 +188,34 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         }
     };
 
-    const handleTachelhitTTS = async () => {
+      const handleAutoTranscribe = async () => {
+        const mediaSource = localDrill.audio_url || localDrill.video_url;
+        if (!mediaSource) return alert('Please record and save media first.');
+        
+        const status = await Network.getStatus();
+        if (!status.connected) return alert('Transcription requires internet connection.');
+
+        setAiLoadingKey('transcribe-voice');
+        addLog('Transcribing media...');
+        try {
+            const res = await axios.post(`${API_BASE}/transcribe/`, { audio_url: mediaSource });
+            const currentContent = localDrill.text_tachelhit || '';
+            const safeText = currentContent.trim() ? `${currentContent} (${res.data.corrected_transcription})` : res.data.corrected_transcription;
+            
+            const updated = { ...localDrill, text_tachelhit: safeText };
+            setLocalDrill(updated);
+            triggerSave(updated);
+            addLog('Transcription success');
+        } catch (err: any) {
+            const msg = err.response?.data?.detail || err.message;
+            alert(`Transcription failed: ${msg}`);
+            addLog(`ASR Error: ${msg}`);
+        } finally {
+            setAiLoadingKey(null);
+        }
+    };
+
+  const handleTachelhitTTS = async () => {
     const text = localDrill.text_tachelhit;
     if (!text) return alert('Tachelhit field is empty.');
     
@@ -228,33 +258,6 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       triggerSave(updated);
     } catch (err) { 
       alert('Translation failed.'); 
-    } finally { 
-      setAiLoadingKey(null); 
-    }
-  };
-
-  const handleTranscribeAction = async () => {
-    const status = await Network.getStatus();
-    if (!status.connected) return alert('Transcription requires internet.');
-
-    const mediaSource = localDrill.audio_url || localDrill.video_url;
-    if (!mediaSource) return;
-    if (mediaSource.startsWith('blob:')) return alert('Please wait for media to upload before transcribing.');
-    setAiLoadingKey('transcribe-voice');
-    addLog('Transcribing media...');
-    try {
-      const res = await axios.post(`${API_BASE}/transcribe/`, { audio_url: mediaSource });
-      const currentContent = localDrill.text_tachelhit || '';
-      const safeText = currentContent.trim() ? `${currentContent} (${res.data.corrected_transcription})` : res.data.corrected_transcription;
-      
-      const updated = { ...localDrill, text_tachelhit: safeText };
-      setLocalDrill(updated);
-      triggerSave(updated);
-      addLog('Transcription success');
-    } catch (err: any) { 
-        const msg = err.response?.data?.detail || err.message;
-        alert(`Transcription failed: ${msg}`);
-        addLog(`ASR Error: ${msg}`);
     } finally { 
       setAiLoadingKey(null); 
     }
@@ -327,9 +330,17 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
           <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '8px' }}>🤖 CA➔SHI</button>
           <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '8px' }}>🤖 SHI➔CA</button>
           <button onClick={handleTachelhitTTS} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#fef3c7', color: '#92400e', border: 'none', borderRadius: '8px' }}>🔊 TTS SHI</button>
-          {(localDrill.audio_url || localDrill.video_url) && (
-            <button onClick={handleTranscribeAction} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '8px' }}>🪄 Transcribe</button>
-          )}
+          <button 
+                onClick={() => {
+                    if (localDrill.audio_url || localDrill.video_url) {
+                        handleAutoTranscribe();
+                    } else {
+                        alert('Please record and save media first.');
+                    }
+                }} 
+                disabled={!(localDrill.audio_url || localDrill.video_url) || aiLoadingKey !== null} 
+                style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '8px', opacity: (localDrill.audio_url || localDrill.video_url) ? 1 : 0.5 }}
+            >🪄 Transcribe</button>
         </div>
 
                 <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600 }}>Tag</label><input type="text" value={localDrill.tag || ''} onChange={(e) => handleFieldChange('tag', e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }} /></div>
