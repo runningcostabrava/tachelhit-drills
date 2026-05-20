@@ -63,27 +63,7 @@ export default function MobileBottomNav({}: MobileBottomNavProps) {
         }}
       >
         <span style={{ fontSize: '20px' }}>📊</span>
-        <span>Tests</span>
-      </button>
-      <button
-        onClick={() => navigate('/shorts')}
-        style={{
-          flex: 1,
-          padding: '8px 0',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '2px',
-          color: isActive('/shorts') ? '#667eea' : '#666',
-          fontWeight: isActive('/shorts') ? 700 : 500,
-          fontSize: '11px',
-        }}
-      >
-        <span style={{ fontSize: '20px' }}>📱</span>
-        <span>Shorts</span>
+        <span>Practica</span>
       </button>
       <button
         onClick={() => navigate('/library')}

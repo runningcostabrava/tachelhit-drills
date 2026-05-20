@@ -11,7 +11,7 @@ import DrillsGrid from './DrillsGrid';
 import MobileBottomNav from './MobileBottomNav';
 import VoiceDrillCreator from './VoiceDrillCreator';
 import MobileDrillCreator from './MobileDrillCreator';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 interface Drill {
   id: number;
@@ -96,7 +96,6 @@ interface DrillsResponsiveProps { }
 
 export default function DrillsResponsive({ }: DrillsResponsiveProps) {
   const location = useLocation();
-  const navigate = useNavigate();
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
   const [drills, setDrills] = useState<Drill[]>([]);
@@ -292,12 +291,6 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
               >
                 🔗
               </button>
-              <button
-                onClick={() => setShowGlossary(true)}
-                style={{ padding: '8px', background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                📖
-              </button>
               <div style={{ position: 'relative' }}>
                 <button
                   onClick={() => setShowNewDrillOptions(!showNewDrillOptions)}
@@ -312,29 +305,6 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
                       style={{ padding: '10px 15px', fontSize: '15px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', color: '#333', fontWeight: 500, whiteSpace: 'nowrap' }}
                     >
                       ➕ Create Empty Drill
-                    </button>
-                    <button
-                      onClick={() => {
-                        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-                        if (!SpeechRecognition) alert('Speech recognition is not supported in your browser.');
-                        setShowVoiceCreator(true);
-                        setShowNewDrillOptions(false);
-                      }}
-                      style={{ padding: '10px 15px', fontSize: '15px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', color: '#333', fontWeight: 500, whiteSpace: 'nowrap' }}
-                    >
-                      🎤 Create Drill with Voice
-                    </button>
-                    <button
-                      onClick={() => { navigate('/video-creator'); setShowNewDrillOptions(false); }}
-                      style={{ padding: '10px 15px', fontSize: '15px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', color: '#333', fontWeight: 500, whiteSpace: 'nowrap' }}
-                    >
-                      🎬 Create from Video (YouTube)
-                    </button>
-                    <button
-                      onClick={() => { navigate('/srt-import'); setShowNewDrillOptions(false); }}
-                      style={{ padding: '10px 15px', fontSize: '15px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', color: '#333', fontWeight: 500, whiteSpace: 'nowrap' }}
-                    >
-                      📝 Import from SRT Subtitles
                     </button>
                   </div>
                 )}

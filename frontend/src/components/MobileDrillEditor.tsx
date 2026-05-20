@@ -5,7 +5,7 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { VoiceRecorder } from 'capacitor-voice-recorder';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { API_BASE, getMediaUrl } from '../config';
-import { syncManager, Drill } from '../services/OfflineSyncManager';
+import { syncManager, type Drill } from '../services/OfflineSyncManager';
 
 interface MobileDrillEditorProps {
   drill: Drill;
@@ -17,7 +17,6 @@ interface MobileDrillEditorProps {
 export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate }: MobileDrillEditorProps) {
   const [localDrill, setLocalDrill] = useState<Drill>({ ...drill });
   const [isRecording, setIsRecording] = useState(false);
-  const [uploadingMedia, setUploadingMedia] = useState(false);
   const [aiLoadingKey, setAiLoadingKey] = useState<string | null>(null);
   const [debugLogs, setDebugLogs] = useState<string[]>(['[System] Native Editor Initialized']);
 
@@ -64,12 +63,13 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       const image = await Camera.getPhoto({
         quality: 90,
         allowEditing: false,
-        resultType: CameraResultType.Uri,
-        source: CameraSource.Camera
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Prompt // Allows Gallery or Camera
       });
 
-      if (image.webPath) {
-        const response = await fetch(image.webPath);
+      if (image.base64String) {
+        const base64Data = `data:image/jpeg;base64,${image.base64String}`;
+        const response = await fetch(base64Data);
         const blob = await response.blob();
         const fileName = `photo_${localDrill.id}_${Date.now()}.jpg`;
         
@@ -128,9 +128,16 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
   const startDictation = async () => {
     try {
+      const perm = await SpeechRecognition.checkPermissions();
+      if (perm.speechRecognition !== 'granted') {
+          const req = await SpeechRecognition.requestPermissions();
+          if (req.speechRecognition !== 'granted') return addLog('Mic permission denied');
+      }
+
       const supported = await SpeechRecognition.available();
       if (!supported) return addLog('Speech not supported');
 
+      addLog('Starting dictation...');
       await SpeechRecognition.start({
         language: 'ca-ES',
         partialResults: false,
@@ -139,11 +146,12 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
       SpeechRecognition.addListener('partialResults', (data: any) => {
         if (data.matches && data.matches.length > 0) {
+          addLog(`Dictated: ${data.matches[0]}`);
           handleFieldChange('text_catalan', data.matches[0]);
         }
       });
     } catch (err: any) {
-      addLog(`Dictation error: ${err.message}`);
+      addLog(`Dictation error: ${err.code || err.message || JSON.stringify(err)}`);
     }
   };
 
@@ -162,8 +170,10 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
             addLog('TTS ready, playing...');
             new Audio(getMediaUrl(res.data.url)).play();
         }
-    } catch (err) {
-        alert('TTS failed.');
+    } catch (err: any) {
+        const msg = err.response?.data?.detail || err.message;
+        alert(`TTS failed: ${msg}`);
+        addLog(`TTS Error: ${msg}`);
     } finally {
         setAiLoadingKey(null);
     }
@@ -199,6 +209,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
     const mediaSource = localDrill.audio_url || localDrill.video_url;
     if (!mediaSource) return;
+    if (mediaSource.startsWith('blob:')) return alert('Please wait for media to upload before transcribing.');
     setAiLoadingKey('transcribe-voice');
     try {
       const res = await axios.post(`${API_BASE}/transcribe/`, { audio_url: mediaSource });
@@ -213,6 +224,26 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     } finally { 
       setAiLoadingKey(null); 
     }
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'audio';
+    const fileName = `${type}_${localDrill.id}_${Date.now()}_${file.name}`;
+    
+    setLocalDrill(prev => ({ ...prev, [`${type}_url`]: URL.createObjectURL(file) }));
+
+    await syncManager.saveMediaLocally(file, fileName);
+    await syncManager.queueAction({
+        type: 'UPLOAD_MEDIA',
+        drillId: localDrill.id,
+        mediaType: type as any,
+        localPath: fileName,
+        fileName: fileName
+    });
+    addLog(`${type} queued from gallery`);
   };
 
   const getSourceUrl = (url: string | undefined) => {
@@ -232,11 +263,13 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       <div style={{ flex: 1, overflow: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div style={{ background: '#f8f9fa', padding: '12px', borderRadius: '12px', border: '1px solid #e0e0e0' }}>
             <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#666', textAlign: 'center', fontWeight: 'bold' }}>NATIVE CONTROLS</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-              <button onClick={capturePhoto} style={{ height: '60px', background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>📷 Photo</button>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', marginBottom: '8px' }}>
+              <button onClick={capturePhoto} style={{ height: '60px', background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>📷 Take Photo</button>
               <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '60px', background: isRecording ? '#ff4444' : '#2196F3', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>{isRecording ? '⏹️ Stop' : '🎙️ Audio'}</button>
               <button onClick={startDictation} style={{ height: '60px', background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>🗣️ Dictate</button>
+              <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '60px', background: '#607D8B', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>📁 Gallery</button>
             </div>
+            <input type="file" id="gallery-upload" style={{ display: 'none' }} onChange={handleFileChange} />
         </div>
 
         {localDrill.image_url && (

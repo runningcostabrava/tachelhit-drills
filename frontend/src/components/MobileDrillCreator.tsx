@@ -5,7 +5,7 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { VoiceRecorder } from 'capacitor-voice-recorder';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { API_BASE, getMediaUrl } from '../config';
-import { syncManager, Drill } from '../services/OfflineSyncManager';
+import { syncManager, type Drill } from '../services/OfflineSyncManager';
 
 interface MobileDrillCreatorProps {
     onClose: () => void;
@@ -28,7 +28,6 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const [capturedVideo, setCapturedVideo] = useState<string | null>(null);
     const [capturedAudio, setCapturedAudio] = useState<string | null>(null);
-    const [saving, setSaving] = useState(false);
     const [aiLoadingKey, setAiLoadingKey] = useState<string | null>(null);
     const [debugLogs, setDebugLogs] = useState<string[]>(['[System] Native Creator Initialized']);
 
@@ -72,17 +71,19 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             const image = await Camera.getPhoto({
                 quality: 90,
                 allowEditing: false,
-                resultType: CameraResultType.Uri,
-                source: CameraSource.Camera
+                resultType: CameraResultType.Base64,
+                source: CameraSource.Prompt // Allows choosing Camera or Gallery
             });
 
-            if (image.webPath) {
-                setCapturedImage(image.webPath);
-                const response = await fetch(image.webPath);
+            if (image.base64String) {
+                const base64Data = `data:image/jpeg;base64,${image.base64String}`;
+                setCapturedImage(base64Data);
+                
+                const response = await fetch(base64Data);
                 const blob = await response.blob();
                 const fileName = `photo_${Date.now()}.jpg`;
                 
-                const localPath = await syncManager.saveMediaLocally(blob, fileName);
+                await syncManager.saveMediaLocally(blob, fileName);
                 await syncManager.queueAction({
                     type: 'UPLOAD_MEDIA',
                     drillId: drill.id!,
@@ -131,7 +132,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 const fileName = `audio_${Date.now()}.m4a`;
                 
                 setCapturedAudio(URL.createObjectURL(blob));
-                const localPath = await syncManager.saveMediaLocally(blob, fileName);
+                await syncManager.saveMediaLocally(blob, fileName);
                 await syncManager.queueAction({
                     type: 'UPLOAD_MEDIA',
                     drillId: drill.id!,
@@ -148,9 +149,16 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
     const startDictation = async () => {
         try {
+            const perm = await SpeechRecognition.checkPermissions();
+            if (perm.speechRecognition !== 'granted') {
+                const req = await SpeechRecognition.requestPermissions();
+                if (req.speechRecognition !== 'granted') return addLog('Mic permission denied');
+            }
+
             const supported = await SpeechRecognition.available();
             if (!supported) return addLog('Speech not supported');
 
+            addLog('Starting dictation...');
             await SpeechRecognition.start({
                 language: 'ca-ES',
                 partialResults: false,
@@ -159,11 +167,12 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
             SpeechRecognition.addListener('partialResults', (data: any) => {
                 if (data.matches && data.matches.length > 0) {
+                    addLog(`Dictated: ${data.matches[0]}`);
                     handleTextChange('text_catalan', data.matches[0]);
                 }
             });
         } catch (err: any) {
-            addLog(`Dictation error: ${err.message}`);
+            addLog(`Dictation error: ${err.code || err.message || JSON.stringify(err)}`);
         }
     };
 
@@ -178,7 +187,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         if (type === 'video') setCapturedVideo(URL.createObjectURL(file));
         if (type === 'audio') setCapturedAudio(URL.createObjectURL(file));
 
-        const localPath = await syncManager.saveMediaLocally(file, fileName);
+        await syncManager.saveMediaLocally(file, fileName);
         await syncManager.queueAction({
             type: 'UPLOAD_MEDIA',
             drillId: drill.id!,
@@ -204,8 +213,10 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 addLog('TTS ready, playing...');
                 new Audio(getMediaUrl(res.data.url)).play();
             }
-        } catch (err) {
-            alert('TTS failed.');
+        } catch (err: any) {
+            const msg = err.response?.data?.detail || err.message;
+            alert(`TTS failed: ${msg}`);
+            addLog(`TTS Error: ${msg}`);
         } finally {
             setAiLoadingKey(null);
         }
@@ -255,17 +266,18 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                         </button>
                         <button onClick={startDictation} style={{ height: '70px', background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold' }}>🗣️ Speak (Català)</button>
                     </div>
-                    <input type="file" accept="video/*" capture="camcorder" id="native-video-input" style={{ display: 'none' }} onChange={handleFileChange} />
+                    <input type="file" accept="video/*" capture={"camcorder" as any} id="native-video-input" style={{ display: 'none' }} onChange={handleFileChange} />
                 </div>
 
                 {capturedImage && <img src={capturedImage} alt="Preview" style={{ width: '100%', aspectRatio: '1/1', borderRadius: '12px', objectFit: 'cover' }} />}
                 {capturedVideo && <video src={capturedVideo} controls style={{ width: '100%', borderRadius: '12px' }} />}
                 {capturedAudio && <button onClick={() => new Audio(capturedAudio).play()} style={{ width: '100%', padding: '12px', background: '#f3f4f6', border: '1px solid #e0e0e0', borderRadius: '10px', fontWeight: 600 }}>🔊 Play Audio Asset</button>}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '8px' }}>
                     <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ padding: '12px', background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '11px' }}>🤖 CA➔SHI</button>
                     <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ padding: '12px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '11px' }}>🤖 SHI➔CA</button>
                     <button onClick={handleTachelhitTTS} disabled={aiLoadingKey !== null} style={{ padding: '12px', background: '#fef3c7', color: '#92400e', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '11px' }}>🔊 TTS SHI</button>
+                    <button onClick={() => alert('Please finish/save drill to enable transcription.')} disabled={!(drill.audio_url || drill.video_url || capturedAudio || capturedVideo) || aiLoadingKey !== null} style={{ padding: '12px', background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '11px', opacity: (drill.audio_url || drill.video_url || capturedAudio || capturedVideo) ? 1 : 0.5 }}>🪄 Transcribe</button>
                 </div>
 
                 <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Català</label><textarea value={drill.text_catalan || ''} onChange={(e) => handleTextChange('text_catalan', e.target.value)} rows={3} style={{ width: '100%', padding: '10px', border: '2px solid #ddd', borderRadius: '8px' }} /></div>

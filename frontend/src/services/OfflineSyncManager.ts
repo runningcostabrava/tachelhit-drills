@@ -94,7 +94,7 @@ class OfflineSyncManager {
             const res = await axios.post(`${API_BASE}/drills/`, action.payload);
             const serverDrill = res.data;
             // Update the local cache with the real ID
-            await this.updateLocalDrillId(action.drillId, serverDrill.id, serverDrill);
+            await this.updateLocalDrillId(action.drillId, serverDrill);
             // Update other actions in queue that refer to this temporary ID
             this.updateQueueDrillId(queue, action.drillId, serverDrill.id);
           } else if (action.type === 'UPDATE') {
@@ -124,7 +124,7 @@ class OfflineSyncManager {
     }
   }
 
-  private async updateLocalDrillId(oldId: number, newId: number, serverData: Drill) {
+  private async updateLocalDrillId(oldId: number, serverData: Drill) {
     const drills = await this.getDrills();
     const idx = drills.findIndex(d => d.id === oldId);
     if (idx > -1) {
