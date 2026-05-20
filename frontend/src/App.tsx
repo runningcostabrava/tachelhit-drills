@@ -4,6 +4,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import axios from 'axios';
 import { API_BASE } from './config';
 import { Routes, Route, useNavigate } from 'react-router-dom';
+import { syncManager } from './services/OfflineSyncManager';
 import DrillsResponsive from './components/DrillsResponsive';
 import TestsDashboard from './components/TestsDashboard';
 import YouTubeShorts from './components/YouTubeShorts';
@@ -43,6 +44,12 @@ function App() {
       if (queue.length === 0) return;
 
       console.log(`🔄 Internet detected! Starting background sync for ${queue.length} drills...`);
+      
+      // Update tests cache
+      try {
+        const testsRes = await axios.get(`${API_BASE}/tests/`);
+        await syncManager.saveTestsToCache(testsRes.data);
+      } catch (e) { console.error('Failed to sync tests cache', e); }
 
       // 2. Process each drill one by one
       for (const drill of queue) {

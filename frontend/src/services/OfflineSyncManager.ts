@@ -28,6 +28,7 @@ export interface SyncAction {
 }
 
 const DRILLS_CACHE_KEY = 'cached_drills';
+const TESTS_CACHE_KEY = 'cached_tests';
 const SYNC_QUEUE_KEY = 'sync_queue';
 
 class OfflineSyncManager {
@@ -42,6 +43,18 @@ class OfflineSyncManager {
     await Preferences.set({
       key: DRILLS_CACHE_KEY,
       value: JSON.stringify(drills),
+    });
+  }
+
+  async getTests(): Promise<any[]> {
+    const { value } = await Preferences.get({ key: TESTS_CACHE_KEY });
+    return value ? JSON.parse(value) : [];
+  }
+
+  async saveTestsToCache(tests: any[]) {
+    await Preferences.set({
+      key: TESTS_CACHE_KEY,
+      value: JSON.stringify(tests),
     });
   }
 
@@ -114,8 +127,12 @@ class OfflineSyncManager {
       });
 
       // Refresh cache after sync
-      const res = await axios.get(`${API_BASE}/drills/`);
-      await this.saveDrillsToCache(res.data);
+      const [drillsRes, testsRes] = await Promise.all([
+        axios.get(`${API_BASE}/drills/`),
+        axios.get(`${API_BASE}/tests/`)
+      ]);
+      await this.saveDrillsToCache(drillsRes.data);
+      await this.saveTestsToCache(testsRes.data);
 
     } catch (err) {
       console.error('[Sync] Critical error:', err);
@@ -205,6 +222,69 @@ class OfflineSyncManager {
       reader.readAsDataURL(blob);
     });
   }
+
+  async downloadAndCacheMedia(url: string): Promise<string> {
+    if (!url || url.startsWith('blob:') || url.startsWith('data:')) return url;
+    
+    try {
+      const fileName = url.split('/').pop() || `media_${Date.now()}`;
+      
+      // Check if already exists
+      try {
+        const stat = await Filesystem.stat({
+          path: `media/${fileName}`,
+          directory: Directory.Data
+        });
+        return (window as any).Capacitor.convertFileSrc(stat.uri);
+      } catch (e) {
+        // Doesn't exist, download it
+      }
+
+      const response = await axios.get(getMediaUrl(url), { responseType: 'blob' });
+      const base64Data = await this.blobToBase64(response.data);
+      
+      await Filesystem.writeFile({
+        path: `media/${fileName}`,
+        data: base64Data,
+        directory: Directory.Data,
+        recursive: true
+      });
+
+      const result = await Filesystem.getUri({
+        path: `media/${fileName}`,
+        directory: Directory.Data
+      });
+      
+      return (window as any).Capacitor.convertFileSrc(result.uri);
+    } catch (err) {
+      console.error('Media download failed:', err);
+      return url;
+    }
+  }
+
+  async getLocalMediaUrl(url: string): Promise<string> {
+    if (!url || url.startsWith('blob:') || url.startsWith('data:')) return url;
+    try {
+      const fileName = url.split('/').pop();
+      const stat = await Filesystem.stat({
+        path: `media/${fileName}`,
+        directory: Directory.Data
+      });
+      return (window as any).Capacitor.convertFileSrc(stat.uri);
+    } catch (e) {
+      return getMediaUrl(url);
+    }
+  }
+}
+
+export function getMediaUrl(url: string | undefined): string {
+  if (!url) return '';
+  if (url.startsWith('http') || url.startsWith('blob:') || url.startsWith('data:')) {
+    return url;
+  }
+  // Remove leading slash if present
+  const cleanUrl = url.startsWith('/') ? url.substring(1) : url;
+  return `${API_BASE}/${cleanUrl}`;
 }
 
 export const syncManager = new OfflineSyncManager();

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { API_BASE, getMediaUrl } from '../config';
+import { syncManager } from '../services/OfflineSyncManager';
 
 interface Test {
   id: number;
@@ -285,8 +286,10 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
     }
 
     try {
+      const localUrl = await syncManager.getLocalMediaUrl(currentDrill.audio_url);
+      
       // Create new audio element each time for reliability
-      const audio = new Audio(getMediaUrl(currentDrill.audio_url));
+      const audio = new Audio(localUrl);
       audioRef.current = audio;
 
       setPlaying(true);

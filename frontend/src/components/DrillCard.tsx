@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE, getMediaUrl } from '../config';
 import { isYouTubeUrl, getYouTubeVideoId } from '../utils/youtubeUtils';
+import { syncManager } from '../services/OfflineSyncManager';
 
 interface Drill {
   id: number;
@@ -850,8 +851,12 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                                     <div style={{ display: 'flex', gap: '8px' }}>
                                                     {drill.audio_url && (
                                                       <button
-                                                        onClick={() => {
-                                                          if (audioRef.current) audioRef.current.play();
+                                                        onClick={async () => {
+                                                          if (audioRef.current) {
+                                                            const localUrl = await syncManager.getLocalMediaUrl(drill.audio_url!);
+                                                            audioRef.current.src = localUrl;
+                                                            audioRef.current.play();
+                                                          }
                                                         }}
                                                         style={{
                                                           padding: '4px 8px',

@@ -4,6 +4,7 @@ import type { ColDef } from 'ag-grid-community';
 import axios from 'axios';
 import TestConfigPanel from './TestConfigPanel';
 import { useNavigate } from 'react-router-dom';
+import { syncManager } from '../services/OfflineSyncManager';
 import { Network } from '@capacitor/network';
 import { API_BASE, getMediaUrl } from '../config';
 
@@ -473,6 +474,19 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                     {(params.data.audio_url || params.data.video_url) && (
                         <button onClick={() => handleTranscribe(params.data)} disabled={actionLoadingId !== null} style={{ padding: '4px 6px', fontSize: '10px', background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>🪄 Transcribe</button>
                     )}
+                    <button 
+                        onClick={async () => {
+                            const media = params.data.audio_url || params.data.video_url;
+                            if (media) {
+                                setActionLoadingId(`down-${params.data.id}`);
+                                await syncManager.downloadAndCacheMedia(media);
+                                setActionLoadingId(null);
+                                alert('Media downloaded for offline use!');
+                            }
+                        }}
+                        disabled={actionLoadingId !== null || !(params.data.audio_url || params.data.video_url)}
+                        style={{ padding: '4px 6px', fontSize: '10px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                    >💾 Cache</button>
                 </div>
             )
         },

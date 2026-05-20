@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Network } from '@capacitor/network';
+import { syncManager } from '../services/OfflineSyncManager';
 import TestTaking from './TestTaking';
 import TestEditPanel from './TestEditPanel';
 import DrillPlayer from './DrillPlayer';
@@ -60,22 +62,34 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
 
   const fetchTests = async (testIdToRefresh?: number) => {
     try {
+      const status = await Network.getStatus();
+      
       if (testIdToRefresh) {
-        const response = await axios.get(`${API_BASE}/tests/${testIdToRefresh}`);
-        setTests(prevTests => 
-          prevTests.map(test => (test.id === testIdToRefresh ? response.data : test))
-        );
-        if (selectedTest?.id === testIdToRefresh) {
-          setSelectedTest(response.data);
+        if (status.connected) {
+          const response = await axios.get(`${API_BASE}/tests/${testIdToRefresh}`);
+          setTests(prevTests => 
+            prevTests.map(test => (test.id === testIdToRefresh ? response.data : test))
+          );
+          if (selectedTest?.id === testIdToRefresh) {
+            setSelectedTest(response.data);
+          }
         }
       } else {
-        const response = await axios.get(`${API_BASE}/tests/`);
-        setTests(response.data);
+        if (status.connected) {
+          const response = await axios.get(`${API_BASE}/tests/`);
+          setTests(response.data);
+          await syncManager.saveTestsToCache(response.data);
+        } else {
+          const cachedTests = await syncManager.getTests();
+          setTests(cachedTests);
+        }
       }
-      setLoading(false); // Only set to false for initial load
+      setLoading(false);
     } catch (error) {
-      console.error('Error fetching tests:', error);
-      setLoading(false); // Only set to false for initial load
+      console.error('Error fetching tests, using cache:', error);
+      const cachedTests = await syncManager.getTests();
+      setTests(cachedTests);
+      setLoading(false);
     }
   };
 
@@ -114,6 +128,9 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
 
   const fetchStats = async (testId: number) => {
     try {
+      const status = await Network.getStatus();
+      if (!status.connected) return;
+      
       const response = await axios.get(`${API_BASE}/tests/${testId}/stats`);
       setStats(response.data);
     } catch (error) {
