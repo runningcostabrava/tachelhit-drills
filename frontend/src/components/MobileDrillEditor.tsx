@@ -56,6 +56,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
   const capturePhoto = async () => {
     try {
+      addLog('Checking permissions...');
       const status = await Camera.requestPermissions();
       if (status.camera !== 'granted') {
           return alert('Camera permission required.');
@@ -69,7 +70,8 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         source: CameraSource.Camera,
         saveToGallery: false,
         correctOrientation: true,
-        presentationStyle: 'fullscreen'
+        presentationStyle: 'fullscreen',
+        webUseInput: false // Force native
       });
 
       if (image && image.base64String) {
