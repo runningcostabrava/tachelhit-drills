@@ -275,6 +275,25 @@ class OfflineSyncManager {
       return getMediaUrl(url);
     }
   }
+
+  async syncAllMedia() {
+    const status = await Network.getStatus();
+    if (!status.connected) return;
+
+    try {
+      const drills = await this.getDrills();
+      console.log(`[OfflineSync] Syncing media for ${drills.length} drills...`);
+      
+      for (const drill of drills) {
+        if (drill.audio_url) await this.downloadAndCacheMedia(drill.audio_url);
+        if (drill.video_url) await this.downloadAndCacheMedia(drill.video_url);
+        if (drill.image_url) await this.downloadAndCacheMedia(drill.image_url);
+      }
+      console.log('[OfflineSync] Media sync complete');
+    } catch (err) {
+      console.error('[OfflineSync] Media sync failed:', err);
+    }
+  }
 }
 
 export function getMediaUrl(url: string | undefined): string {

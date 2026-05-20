@@ -45,10 +45,12 @@ function App() {
 
       console.log(`🔄 Internet detected! Starting background sync for ${queue.length} drills...`);
       
-      // Update tests cache
+      // Update tests cache and media
       try {
         const testsRes = await axios.get(`${API_BASE}/tests/`);
         await syncManager.saveTestsToCache(testsRes.data);
+        // Bulk download media in background
+        syncManager.syncAllMedia();
       } catch (e) { console.error('Failed to sync tests cache', e); }
 
       // 2. Process each drill one by one
