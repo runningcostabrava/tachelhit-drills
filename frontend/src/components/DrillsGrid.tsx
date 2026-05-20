@@ -34,12 +34,108 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
     const [passwordInput, setPasswordInput] = useState('');
     const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
+    // UI states for loading actions
+    const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+
     // Track responsive screen resize configurations
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // 🌐 Smart Non-Destructive Translation Pipeline
+    const handleTranslate = async (drill: Drill, source: 'ca' | 'shi', target: 'ca' | 'shi') => {
+        const sourceText = source === 'ca' ? drill.text_catalan : drill.text_tachelhit;
+        if (!sourceText) {
+            alert(`Please enter text in ${source === 'ca' ? 'Catalan' : 'Tachelhit'} first.`);
+            return;
+        }
+
+        const targetField = target === 'shi' ? 'text_tachelhit' : 'text_catalan';
+        const loadingKey = `trans-${drill.id}-${targetField}`;
+        setActionLoadingId(loadingKey);
+
+        try {
+            const status = await Network.getStatus();
+            if (!status.connected) {
+                alert("⚠️ Translation requires an active internet connection.");
+                return;
+            }
+
+            const res = await axios.post(`${API_BASE}/translate`, {
+                text: sourceText,
+                source_lang: source,
+                target_lang: target
+            });
+
+            const freshTranslation = res.data.translated_text;
+            const currentText = (drill as any)[targetField] || '';
+
+            // Guard against deleting text: append in parentheses if text exists
+            const preservedText = currentText.trim()
+                ? `${currentText} (${freshTranslation})`
+                : freshTranslation;
+
+            // Commit the safe update to the backend DB
+            await axios.put(`${API_BASE}/drills/${drill.id}`, { [targetField]: preservedText });
+            await refreshData();
+        } catch (err) {
+            console.error('Translation workflow crashed:', err);
+            alert('Failed to complete AI translation.');
+        } finally {
+            setActionLoadingId(null);
+        }
+    };
+
+    // 🪄 Smart Non-Destructive Transcription Pipeline
+    const handleTranscribe = async (drill: Drill) => {
+        const mediaSource = drill.audio_url || drill.video_url;
+        if (!mediaSource) return;
+
+        const loadingKey = `scribe-${drill.id}`;
+        setActionLoadingId(loadingKey);
+
+        try {
+            const status = await Network.getStatus();
+            if (!status.connected) {
+                alert("⚠️ Voice transcription requires an internet connection.");
+                return;
+            }
+
+            const response = await axios.post(`${API_BASE}/transcribe/`, {
+                audio_url: mediaSource
+            });
+
+            const freshTranscription = response.data.corrected_transcription;
+            const currentTachelhit = drill.text_tachelhit || '';
+
+            // Guard against deleting text: append text gracefully
+            const preservedText = currentTachelhit.trim()
+                ? `${currentTachelhit} (${freshTranscription})`
+                : freshTranscription;
+
+            await axios.put(`${API_BASE}/drills/${drill.id}`, { text_tachelhit: preservedText });
+            await refreshData();
+        } catch (error) {
+            console.error('Transcription loop error:', error);
+            alert('AI Transcription process failed.');
+        } finally {
+            setActionLoadingId(null);
+        }
+    };
+
+    const onCellValueChanged = async (params: any) => {
+        const { data, colDef, newValue } = params;
+        const field = colDef.field;
+        try {
+            await axios.put(`${API_BASE}/drills/${data.id}`, { [field]: newValue });
+            // Optional: alert('Saved');
+        } catch (err) {
+            console.error('Failed to save inline edit:', err);
+            refreshData(); // Revert on failure
+        }
+    };
 
     // 🗑️ Handle Deletion Security Check Sequence
     const handleDeleteIntent = (id: number) => {
@@ -277,10 +373,37 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
             width: 80, 
             cellRenderer: (p: any) => p.value ? <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}><img src={getMediaUrl(p.value)} style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} /></div> : null 
         },
-        { field: 'text_catalan', headerName: 'Català', flex: 2, filter: true, wrapText: true, autoHeight: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px' } },
-        { field: 'text_tachelhit', headerName: 'Tachelhit', flex: 2, filter: true, wrapText: true, autoHeight: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px' } },
-        { field: 'text_arabic', headerName: 'العربية', flex: 2, filter: true, wrapText: true, autoHeight: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px', 'direction': 'rtl' } },
-        { field: 'tag', headerName: 'Tag', width: 120, filter: true },
+        { field: 'text_catalan', headerName: 'Català', flex: 2, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px' } },
+        { field: 'text_tachelhit', headerName: 'Tachelhit', flex: 2, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px' } },
+        { field: 'text_arabic', headerName: 'العربية', flex: 2, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px', 'direction': 'rtl' } },
+        { field: 'tag', headerName: 'Tag', width: 120, filter: true, editable: true },
+        {
+            headerName: 'Media',
+            width: 140,
+            cellRenderer: (params: any) => (
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', height: '100%' }}>
+                    {params.data.audio_url && (
+                        <button onClick={() => new Audio(getMediaUrl(params.data.audio_url)).play()} style={{ background: '#f3f4f6', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}>🔊</button>
+                    )}
+                    {params.data.video_url && (
+                        <button onClick={() => window.open(getMediaUrl(params.data.video_url), '_blank')} style={{ background: '#f3f4f6', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}>🎬</button>
+                    )}
+                </div>
+            )
+        },
+        {
+            headerName: 'AI Tools',
+            width: 220,
+            cellRenderer: (params: any) => (
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center', height: '100%' }}>
+                    <button onClick={() => handleTranslate(params.data, 'ca', 'shi')} style={{ padding: '4px 6px', fontSize: '10px', background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>CA➔SHI</button>
+                    <button onClick={() => handleTranslate(params.data, 'shi', 'ca')} style={{ padding: '4px 6px', fontSize: '10px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>SHI➔CA</button>
+                    {(params.data.audio_url || params.data.video_url) && (
+                        <button onClick={() => handleTranscribe(params.data)} style={{ padding: '4px 6px', fontSize: '10px', background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>🪄</button>
+                    )}
+                </div>
+            )
+        },
         {
             headerName: 'Actions',
             width: 180,
@@ -317,6 +440,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                 onGridReady={(params) => {
                     setTimeout(() => params.api.sizeColumnsToFit(), 200);
                 }}
+                onCellValueChanged={onCellValueChanged}
                 defaultColDef={{
                     resizable: true,
                     sortable: true
