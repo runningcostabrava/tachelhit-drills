@@ -1,4 +1,3 @@
-import { Filesystem, Directory } from '@capacitor/filesystem';
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { Network } from '@capacitor/network';
@@ -36,13 +35,13 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const [, setCameraFacing] = useState<'user' | 'environment'>('environment');
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const [capturedVideo, setCapturedVideo] = useState<string | null>(null);
-    const [uploadedFile, setUploadedFile] = useState<File | null>(null);
     const [pastedImage, setPastedImage] = useState<string | null>(null);
     const [transcriptionResult, setTranscriptionResult] = useState<{ rough: string, score: number } | null>(null);
 
     const [saving, setSaving] = useState(false);
-    const [isTranscribing, setIsTranscribing] = useState(false);
-    const [autoSaveTimer, setAutoSaveTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+    const [aiLoadingKey, setAiLoadingKey] = useState<string | null>(null);
+    const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isCreatingRef = useRef(false);
     const [lastSaved, setLastSaved] = useState<string | null>(null);
 
     // 🌟 Helper for device-aware MIME types
@@ -73,11 +72,12 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             if (capturedImage && capturedImage.startsWith('blob:')) URL.revokeObjectURL(capturedImage);
             if (capturedVideo && capturedVideo.startsWith('blob:')) URL.revokeObjectURL(capturedVideo);
             if (pastedImage && pastedImage.startsWith('blob:')) URL.revokeObjectURL(pastedImage);
-            if (autoSaveTimer) clearTimeout(autoSaveTimer);
+            if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+            stopCamera();
         };
-    }, [capturedImage, capturedVideo, pastedImage, autoSaveTimer]);
+    }, [capturedImage, capturedVideo, pastedImage]);
 
-    // Initialize speech recognition with immediate, safe non-closure background saving
+    // Initialize speech recognition for Catalan dictation
     useEffect(() => {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (SpeechRecognition) {
@@ -90,7 +90,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 const transcript = event.results[0][0].transcript;
                 setDrill(prev => {
                     const fresh = { ...prev, text_catalan: transcript };
-                    triggerDirectSave(fresh); // Bypasses closure bug completely
+                    triggerDirectSave(fresh);
                     return fresh;
                 });
             };
@@ -100,17 +100,21 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const triggerDirectSave = async (freshDrill: Drill) => {
         const status = await Network.getStatus();
         const cleanPayload = { ...freshDrill };
-        if (cleanPayload.audio_url?.startsWith('file://')) cleanPayload.audio_url = '';
-        if (cleanPayload.video_url?.startsWith('file://')) cleanPayload.video_url = '';
-        if (cleanPayload.image_url?.startsWith('file://')) cleanPayload.image_url = '';
 
         if (status.connected) {
             try {
                 if (freshDrill.id && freshDrill.id < 1000000) {
                     await axios.put(`${API_BASE}/drills/${freshDrill.id}`, cleanPayload);
                 } else {
-                    const res = await axios.post(`${API_BASE}/drills/`, cleanPayload);
-                    setDrill(res.data);
+                    // 🌟 Creation Lock: Prevent duplicate POST requests during rapid typing
+                    if (isCreatingRef.current) return;
+                    isCreatingRef.current = true;
+                    try {
+                        const res = await axios.post(`${API_BASE}/drills/`, cleanPayload);
+                        setDrill(res.data);
+                    } finally {
+                        isCreatingRef.current = false;
+                    }
                 }
                 setLastSaved(`Online: ${new Date().toLocaleTimeString()}`);
             } catch (err) {
@@ -122,11 +126,10 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     };
 
     const triggerAutoSave = () => {
-        if (autoSaveTimer) clearTimeout(autoSaveTimer);
-        const timer = setTimeout(() => {
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = setTimeout(() => {
             triggerDirectSave(drill);
         }, 2000);
-        setAutoSaveTimer(timer);
     };
 
     const saveOffline = (drillToSave: any) => {
@@ -157,54 +160,64 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         recognitionRef.current.start();
     };
 
-    const startAudioRecording = async () => {
-        if (!drill.id) {
-            const temp = { ...drill, id: Date.now(), text_catalan: drill.text_catalan || `Audio Drill (${new Date().toLocaleDateString()})` };
-            setDrill(temp); saveOffline(temp);
-        }
+    // 📤 DIRECT MEDIA UPLOAD PIPELINE
+    const uploadCapturedBlob = async (blob: Blob, type: 'audio' | 'video' | 'image', filename: string) => {
+        setSaving(true);
+        const formData = new FormData();
+        formData.append('file', blob, filename);
+
         try {
-            if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
+            let targetId = drill.id;
+            if (!targetId || targetId >= 1000000) {
+                const res = await axios.post(`${API_BASE}/drills/`, { text_catalan: drill.text_catalan || `New ${type} Drill` });
+                targetId = res.data.id;
+                setDrill(prev => ({ ...prev, id: targetId }));
+            }
+
+            const uploadRes = await axios.post(`${API_BASE}/upload-media/${targetId}/${type}`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            if (uploadRes.data.url) {
+                const updatedDrill = { ...drill, id: targetId, [`${type}_url`]: uploadRes.data.url };
+                setDrill(updatedDrill);
+                triggerDirectSave(updatedDrill);
+                alert(`Successfully uploaded ${type}!`);
+            }
+        } catch (err) {
+            alert(`Failed to upload ${type}. Check your connection.`);
+            console.error(err);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const startAudioRecording = async () => {
+        try {
+            if (streamRef.current) stopCamera();
             const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
             streamRef.current = stream;
 
             const format = getSupportedMimeType('audio');
-
             mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: format.mime });
             chunksRef.current = [];
+
             mediaRecorderRef.current.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
             mediaRecorderRef.current.onstop = async () => {
                 const blob = new Blob(chunksRef.current, { type: format.mime });
-                if (blob.size < 1024) return;
-
-                const reader = new FileReader();
-                reader.readAsDataURL(blob);
-                reader.onloadend = async () => {
-                    try {
-                        const base64Data = (reader.result as string).split(',')[1];
-                        const fileName = `drills_media/audio_${drill.id || Date.now()}.${format.ext}`;
-
-                        const savedFile = await Filesystem.writeFile({ path: fileName, data: base64Data, directory: Directory.Data, recursive: true });
-                        setDrill(prev => {
-                            const updated = { ...prev, audio_url: savedFile.uri };
-                            triggerDirectSave(updated);
-                            return updated;
-                        });
-                    } catch (err) { console.error('Offline save failed:', err); }
-                    finally { setRecording(null); }
-                };
+                if (blob.size >= 1024) {
+                    await uploadCapturedBlob(blob, 'audio', `audio_${drill.id || Date.now()}.${format.ext}`);
+                }
+                stopCamera();
             };
-            mediaRecorderRef.current.start();
+            mediaRecorderRef.current.start(200);
             setRecording('audio');
-        } catch (err) { alert('Microphone access denied or unavailable.'); console.error(err); }
+        } catch (err) { alert('Microphone access denied or unavailable.'); }
     };
 
     const startVideoRecording = async (facing: 'user' | 'environment' = 'environment') => {
-        if (!drill.id) {
-            const temp = { ...drill, id: Date.now(), text_catalan: drill.text_catalan || `Video Drill (${new Date().toLocaleDateString()})` };
-            setDrill(temp); saveOffline(temp);
-        }
         try {
-            if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
+            if (streamRef.current) stopCamera();
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: 640, height: 480 }, audio: true });
             streamRef.current = stream;
             setCameraMode('video');
@@ -219,41 +232,26 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             mediaRecorderRef.current.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
             mediaRecorderRef.current.onstop = async () => {
                 const blob = new Blob(chunksRef.current, { type: format.mime });
-                if (blob.size < 1024) { stopCamera(); return; }
-
-                const reader = new FileReader();
-                reader.readAsDataURL(blob);
-                reader.onloadend = async () => {
-                    try {
-                        const base64Data = (reader.result as string).split(',')[1];
-                        const savedFile = await Filesystem.writeFile({ path: `drills_media/video_${drill.id || Date.now()}.${format.ext}`, data: base64Data, directory: Directory.Data, recursive: true });
-                        setCapturedVideo(URL.createObjectURL(blob));
-                        setDrill(prev => {
-                            const updated = { ...prev, video_url: savedFile.uri };
-                            triggerDirectSave(updated);
-                            return updated;
-                        });
-                    } catch (err) { console.error('Offline save failed:', err); }
-                    finally { stopCamera(); setRecording(null); }
-                };
+                if (blob.size >= 1024) {
+                    setCapturedVideo(URL.createObjectURL(blob));
+                    await uploadCapturedBlob(blob, 'video', `video_${drill.id || Date.now()}.${format.ext}`);
+                }
+                stopCamera();
             };
-        } catch (err) { alert('Camera access denied or unavailable.'); console.error(err); }
+            mediaRecorderRef.current.start(200);
+            setRecording('video');
+        } catch (err) { alert('Camera access denied or unavailable.'); }
     };
 
     const startImageCapture = async (facing: 'user' | 'environment' = 'environment') => {
-        if (!drill.id) {
-            const temp = { ...drill, id: Date.now(), text_catalan: drill.text_catalan || `Image Drill (${new Date().toLocaleDateString()})` };
-            setDrill(temp);
-            saveOffline(temp);
-        }
         try {
-            if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
+            if (streamRef.current) stopCamera();
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: 1280, height: 720 } });
             streamRef.current = stream;
             setCameraMode('photo');
             setCameraFacing(facing);
             setTimeout(() => { if (previewRef.current) { previewRef.current.srcObject = stream; previewRef.current.play().catch(e => console.error(e)); } }, 100);
-        } catch (err) { console.error(err); }
+        } catch (err) { alert('Camera access denied or unavailable.'); }
     };
 
     const takePicture = () => {
@@ -261,13 +259,13 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         const video = previewRef.current;
         const canvas = canvasRef.current;
 
-        if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-            setTimeout(takePicture, 500);
+        if (video.readyState !== video.HAVE_ENOUGH_DATA || video.videoWidth === 0) {
+            setTimeout(takePicture, 200);
             return;
         }
 
-        const width = video.videoWidth || 640;
-        const height = video.videoHeight || 480;
+        const width = video.videoWidth;
+        const height = video.videoHeight;
         const size = Math.min(width, height);
         const sx = (width - size) / 2;
         const sy = (height - size) / 2;
@@ -281,23 +279,11 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             context.drawImage(video, sx, sy, size, size, 0, 0, size, size);
             canvas.toBlob(async (blob) => {
                 if (blob && blob.size > 1024) {
-                    setCapturedImage(URL.createObjectURL(blob)); // Instant photo preview load
-                    const reader = new FileReader();
-                    reader.readAsDataURL(blob);
-                    reader.onloadend = async () => {
-                        try {
-                            const base64Data = (reader.result as string).split(',')[1];
-                            const savedFile = await Filesystem.writeFile({ path: `drills_media/image_${drill.id || Date.now()}.jpg`, data: base64Data, directory: Directory.Data, recursive: true });
-                            setDrill(prev => {
-                                const updated = { ...prev, image_url: savedFile.uri };
-                                triggerDirectSave(updated);
-                                return updated;
-                            });
-                        } catch (err) { console.error(err); }
-                    };
+                    setCapturedImage(URL.createObjectURL(blob));
+                    await uploadCapturedBlob(blob, 'image', `image_${drill.id || Date.now()}.jpg`);
                 }
                 stopCamera();
-            }, 'image/jpeg', 0.9);
+            }, 'image/jpeg', 0.92);
         }
     };
 
@@ -307,7 +293,6 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             setRecording(null);
         } else {
             stopCamera();
-            setRecording(null);
         }
     };
 
@@ -317,12 +302,13 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         setRecording(null);
     };
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            setCapturedImage(null); setCapturedVideo(null); setPastedImage(null); setUploadedFile(file);
-            if (file.type.startsWith('image/')) setCapturedImage(URL.createObjectURL(file));
-            else if (file.type.startsWith('video/')) setCapturedVideo(URL.createObjectURL(file));
+            const fileType = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'audio';
+            if (fileType === 'image') setCapturedImage(URL.createObjectURL(file));
+            if (fileType === 'video') setCapturedVideo(URL.createObjectURL(file));
+            await uploadCapturedBlob(file, fileType, file.name);
         }
     };
 
@@ -330,38 +316,8 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         if (saving) return;
         setSaving(true);
         try {
-            const status = await Network.getStatus();
-            const sanitizePayload = (d: any) => {
-                const clean = { ...d };
-                if (clean.audio_url?.startsWith('file://')) clean.audio_url = '';
-                if (clean.video_url?.startsWith('file://')) clean.video_url = '';
-                if (clean.image_url?.startsWith('file://')) clean.image_url = '';
-                return clean;
-            };
-
-            const outPayload = sanitizePayload(drill);
-
-            if (status.connected) {
-                if (!drill.id || (typeof drill.id === 'number' && drill.id >= 1000000)) {
-                    const response = await axios.post(`${API_BASE}/drills/`, outPayload);
-                    setDrill(response.data);
-                } else {
-                    await axios.put(`${API_BASE}/drills/${drill.id}`, outPayload);
-                }
-
-                if (uploadedFile) {
-                    const fileType = uploadedFile.type.startsWith('image/') ? 'image' : uploadedFile.type.startsWith('video/') ? 'video' : null;
-                    if (fileType && drill.id) {
-                        const formData = new FormData();
-                        formData.append('file', uploadedFile, uploadedFile.name);
-                        await axios.post(`${API_BASE}/upload-media/${drill.id}/${fileType}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-                    }
-                }
-                alert('Drill successfully synchronized to cloud database!');
-            } else {
-                saveOffline(drill);
-                alert('Drill securely saved to phone storage cache!');
-            }
+            await triggerDirectSave(drill);
+            alert('Drill successfully synchronized!');
             onDrillCreated();
         } catch (error) {
             alert('Failed to execute save command.');
@@ -370,30 +326,57 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         }
     };
 
+    // 🌐 AI TRANSLATION & TRANSCRIPTION PIPELINE
+    const handleTranslateAction = async (source: 'ca' | 'shi', target: 'ca' | 'shi') => {
+        const sourceText = source === 'ca' ? drill.text_catalan : drill.text_tachelhit;
+        if (!sourceText) return alert('Source translation field is currently empty.');
+        const targetField = target === 'shi' ? 'text_tachelhit' : 'text_catalan';
+        setAiLoadingKey(`trans-${targetField}`);
+
+        try {
+            const res = await axios.post(`${API_BASE}/translate`, { text: sourceText, source_lang: source, target_lang: target });
+            const generatedTranslation = res.data.translated_text;
+            const currentContent = drill[targetField] || '';
+            const safeAppendText = currentContent.trim() ? `${currentContent} (${generatedTranslation})` : generatedTranslation;
+
+            const updated = { ...drill, [targetField]: safeAppendText };
+            setDrill(updated);
+            triggerDirectSave(updated);
+        } catch (err) { alert('Translation service failed.'); }
+        finally { setAiLoadingKey(null); }
+    };
+
     const handleAutoTranscribe = async () => {
         const mediaSource = drill.audio_url || drill.video_url;
-        if (!mediaSource) return alert('Please record audio or video first');
-        setIsTranscribing(true); setTranscriptionResult(null);
+        if (!mediaSource) return alert('Please record and upload audio or video first.');
+        setAiLoadingKey('transcribe-voice');
+        setTranscriptionResult(null);
+
         try {
             const response = await axios.post(`${API_BASE}/transcribe/`, { audio_url: mediaSource });
             const { corrected_transcription, rough_transcription, similarity_score } = response.data;
             setTranscriptionResult({ rough: rough_transcription, score: similarity_score });
+
             if (corrected_transcription) {
-                setDrill(prev => {
-                    const updated = { ...prev, text_tachelhit: corrected_transcription };
-                    triggerDirectSave(updated);
-                    return updated;
-                });
+                const currentTachelhit = drill.text_tachelhit || '';
+                const safeAppendText = currentTachelhit.trim() ? `${currentTachelhit} (${corrected_transcription})` : corrected_transcription;
+
+                const updated = { ...drill, text_tachelhit: safeAppendText };
+                setDrill(updated);
+                triggerDirectSave(updated);
             }
         } catch (error) {
-            alert('Failed to transcribe audio.');
+            alert('Failed to transcribe audio. Ensure you have an active internet connection.');
         } finally {
-            setIsTranscribing(false);
+            setAiLoadingKey(null);
         }
     };
 
     return (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'white', zIndex: 10000, display: 'flex', flexDirection: 'column' }}>
+            {/* Hidden Canvas for Photo Cropping */}
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+
             {/* Header Toolbar */}
             <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -409,21 +392,17 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
             {/* Scrollable Container Form Workspace */}
             <div style={{ flex: 1, overflow: 'auto', padding: '16px', display: 'flex', flexDirection: 'column' }}>
-                
-                {/* 🌟 1. CAMERA PREVIEW LAYER: Forced non-selfie standard preview order at the absolute top */}
+
+                {/* 🌟 1. CAMERA PREVIEW LAYER */}
                 {cameraMode && (
                     <div style={{ background: '#000', borderRadius: '16px', marginBottom: '20px', overflow: 'hidden' }}>
                         <div style={{ position: 'relative', height: '280px' }}>
-                            <video 
-                                ref={previewRef} 
-                                autoPlay 
-                                muted 
-                                playsInline 
-                                style={{ 
-                                    width: '100%', 
-                                    height: '100%', 
-                                    objectFit: 'cover' // ❌ Removed mirrored scale transforms completely to avoid selfie layout distortions
-                                }} 
+                            <video
+                                ref={previewRef}
+                                autoPlay
+                                muted
+                                playsInline
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />
                             <button onClick={stopCamera} style={{ position: 'absolute', top: '12px', right: '12px', width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,0,0,0.8)', color: 'white', border: 'none', fontSize: '18px', cursor: 'pointer' }}>✕</button>
                         </div>
@@ -431,7 +410,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                             {cameraMode === 'photo' ? (
                                 <button onClick={takePicture} style={{ width: '75px', height: '75px', borderRadius: '50%', background: 'white', border: '5px solid #4CAF50', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}>CAPTURE</button>
                             ) : (
-                                <button onClick={recording === 'video' ? stopRecording : () => { mediaRecorderRef.current?.start(); setRecording('video'); }} style={{ padding: '12px 30px', background: recording === 'video' ? '#ff4444' : '#9C27B0', color: 'white', border: 'none', borderRadius: '30px', fontWeight: 'bold', fontSize: '16px' }}>
+                                <button onClick={recording === 'video' ? stopRecording : () => { mediaRecorderRef.current?.start(200); setRecording('video'); }} style={{ padding: '12px 30px', background: recording === 'video' ? '#ff4444' : '#9C27B0', color: 'white', border: 'none', borderRadius: '30px', fontWeight: 'bold', fontSize: '16px' }}>
                                     {recording === 'video' ? '⏹️ STOP RECORD' : '🎬 START RECORD'}
                                 </button>
                             )}
@@ -439,31 +418,52 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                     </div>
                 )}
 
-                {/* 🌟 2. INSTANT MEDIA PREVIEWS: Renders immediately under active lens blocks */}
+                {/* 🌟 2. INSTANT MEDIA PREVIEWS */}
                 {(drill.image_url || capturedImage || pastedImage) && (
                     <div style={{ marginBottom: '20px', background: '#f8f9fa', padding: '16px', borderRadius: '16px', border: '1px solid #e0e0e0' }}>
-                        <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 700 }}>🖼️ Square Photo Capture</h4>
+                        <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 700 }}>🖼️ Photo Asset</h4>
                         <img src={drill.image_url ? getMediaUrl(drill.image_url) : capturedImage || pastedImage || ''} alt="Preview" style={{ width: '100%', aspectRatio: '1/1', borderRadius: '12px', objectFit: 'cover' }} />
                     </div>
                 )}
 
-                {drill.video_url || capturedVideo ? (
+                {(drill.video_url || capturedVideo) ? (
                     <div style={{ marginBottom: '20px', background: '#f8f9fa', padding: '16px', borderRadius: '16px', border: '1px solid #e0e0e0' }}>
-                        <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 700 }}>🎬 Video Preview Asset</h4>
+                        <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 700 }}>🎬 Video Asset</h4>
                         <video src={drill.video_url ? getMediaUrl(drill.video_url) : capturedVideo || ''} controls playsInline style={{ width: '100%', borderRadius: '12px', maxWidth: '220px', background: '#000' }} />
                     </div>
                 ) : null}
 
+                {drill.audio_url && (
+                    <button onClick={() => new Audio(getMediaUrl(drill.audio_url!)).play()} style={{ width: '100%', padding: '12px', background: '#f3f4f6', border: '1px solid #e0e0e0', borderRadius: '10px', fontWeight: 600, cursor: 'pointer', marginBottom: '20px' }}>
+                        🔊 Play Audio Asset
+                    </button>
+                )}
+
                 {/* Quick Action Trigger Pad */}
-                <div style={{ background: '#f8f9fa', padding: '16px', borderRadius: '16px', marginBottom: '20px' }}>
+                <div style={{ background: '#f8f9fa', padding: '16px', borderRadius: '16px', marginBottom: '20px', border: '1px solid #e0e0e0' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                        <button onClick={() => startImageCapture('environment')} style={{ height: '90px', background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold' }}>📷 Take Photo</button>
-                        <button onClick={recording === 'audio' ? stopRecording : startAudioRecording} style={{ height: '90px', background: recording === 'audio' ? '#ff4444' : '#2196F3', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold' }}>{recording === 'audio' ? '⏹️ Stop Mic' : '🎙️ Record Audio'}</button>
-                        <button onClick={() => startVideoRecording('environment')} style={{ height: '90px', background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold' }}>🎬 Record Video</button>
-                        <button onClick={startVoiceRecording} style={{ height: '90px', background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold' }}>🗣️ Speak (Català)</button>
+                        <button onClick={() => startImageCapture('environment')} disabled={saving} style={{ height: '90px', background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold' }}>📷 Take Photo</button>
+                        <button onClick={recording === 'audio' ? stopRecording : startAudioRecording} disabled={saving} style={{ height: '90px', background: recording === 'audio' ? '#ff4444' : '#2196F3', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold' }}>{recording === 'audio' ? '⏹️ Stop Mic' : '🎙️ Record Audio'}</button>
+                        <button onClick={() => startVideoRecording('environment')} disabled={saving} style={{ height: '90px', background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold' }}>🎬 Record Video</button>
+                        <button onClick={startVoiceRecording} disabled={saving} style={{ height: '90px', background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold' }}>🗣️ Speak (Català)</button>
                     </div>
-                    <input type="file" accept="image/*,video/*" style={{ display: 'none' }} ref={fileInputRef} onChange={handleFileChange} />
-                    <button onClick={() => fileInputRef.current?.click()} style={{ width: '100%', padding: '12px', background: '#607D8B', color: 'white', border: 'none', borderRadius: '8px', marginTop: '12px', fontWeight: 'bold' }}>📤 Gallery Attachment</button>
+                    <input type="file" accept="image/*,video/*,audio/*" style={{ display: 'none' }} ref={fileInputRef} onChange={handleFileChange} />
+                    <button onClick={() => fileInputRef.current?.click()} disabled={saving} style={{ width: '100%', padding: '12px', background: '#607D8B', color: 'white', border: 'none', borderRadius: '8px', marginTop: '12px', fontWeight: 'bold' }}>📤 Gallery Attachment</button>
+                </div>
+
+                {/* AI CONTROL PANEL */}
+                <div style={{ display: 'grid', gridTemplateColumns: (drill.audio_url || drill.video_url) ? '1fr 1fr 1fr' : '1fr 1fr', gap: '8px', background: '#f8f9fa', padding: '10px', borderRadius: '12px', marginBottom: '14px', border: '1px solid #e0e0e0' }}>
+                    <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+                        {aiLoadingKey === 'trans-text_tachelhit' ? '⏳...' : '🤖 CA➔SHI'}
+                    </button>
+                    <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+                        {aiLoadingKey === 'trans-text_catalan' ? '⏳...' : '🤖 SHI➔CA'}
+                    </button>
+                    {(drill.audio_url || drill.video_url) && (
+                        <button onClick={handleAutoTranscribe} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+                            {aiLoadingKey === 'transcribe-voice' ? '⏳...' : '🪄 Transcribe'}
+                        </button>
+                    )}
                 </div>
 
                 {/* Main Text Content Input Panel cards */}
@@ -473,12 +473,9 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                         <textarea value={drill.text_catalan || ''} onChange={(e) => handleTextChange('text_catalan', e.target.value)} placeholder="Catalan notes..." rows={3} style={{ width: '100%', padding: '10px', fontSize: '16px', border: '2px solid #ddd', borderRadius: '8px' }} />
                     </div>
                     <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                            <label style={{ fontSize: '13px', fontWeight: 600 }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label>
-                            {(drill.audio_url || drill.video_url) && <button onClick={handleAutoTranscribe} disabled={isTranscribing} style={{ background: '#667eea', color: 'white', padding: '4px 10px', borderRadius: '4px', border: 'none', fontSize: '11px' }}>{isTranscribing ? '⏳...' : '🪄 Auto-Transcribe'}</button>}
-                        </div>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label>
                         <textarea value={drill.text_tachelhit || ''} onChange={(e) => handleTextChange('text_tachelhit', e.target.value)} placeholder="Tachelhit notation..." rows={3} style={{ width: '100%', padding: '10px', fontSize: '16px', border: '2px solid #ddd', borderRadius: '8px', fontFamily: 'monospace', fontWeight: 'bold' }} />
-                        {transcriptionResult && <div style={{ marginTop: '4px', fontSize: '12px', color: '#666' }}>Rough: {transcriptionResult.rough} ({Math.round(transcriptionResult.score * 100)}%)</div>}
+                        {transcriptionResult && <div style={{ marginTop: '4px', fontSize: '12px', color: '#666' }}>Rough Whisper: {transcriptionResult.rough} ({Math.round(transcriptionResult.score * 100)}%)</div>}
                     </div>
                     <div>
                         <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px', textAlign: 'right' }}>العربية</label>
@@ -495,7 +492,8 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
     function handleCreateNew() {
         setDrill({ text_catalan: '', text_tachelhit: '', text_arabic: '', tag: '', author: '' });
-        setCapturedImage(null); setCapturedVideo(null); setUploadedFile(null); setPastedImage(null); setTranscriptionResult(null); setLastSaved(null);
-        if (autoSaveTimer) clearTimeout(autoSaveTimer);
+        setCapturedImage(null); setCapturedVideo(null); setPastedImage(null); setTranscriptionResult(null); setLastSaved(null);
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        isCreatingRef.current = false;
     }
 }
