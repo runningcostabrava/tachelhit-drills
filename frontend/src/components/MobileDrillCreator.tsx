@@ -70,17 +70,19 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 return alert('Camera permission required.');
             }
 
+            addLog('Opening camera...');
             const image = await Camera.getPhoto({
-                quality: 85,
+                quality: 80,
                 allowEditing: false,
                 resultType: CameraResultType.Base64,
-                source: CameraSource.Camera, // Changed from Prompt to Camera to test direct access
+                source: CameraSource.Camera,
                 saveToGallery: false,
                 correctOrientation: true,
-                width: 1280
+                presentationStyle: 'fullscreen'
             });
 
-            if (image.base64String) {
+            if (image && image.base64String) {
+                addLog('Photo data received');
                 const base64Data = `data:image/${image.format};base64,${image.base64String}`;
                 setCapturedImage(base64Data);
                 
@@ -100,6 +102,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             }
         } catch (err: any) {
             addLog(`Photo error: ${err.message}`);
+            alert(`Photo error: ${err.message}`);
         }
     };
 
@@ -172,8 +175,9 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
             SpeechRecognition.addListener('partialResults', (data: any) => {
                 if (data.matches && data.matches.length > 0) {
-                    addLog(`Dictated: ${data.matches[0]}`);
-                    handleTextChange('text_catalan', data.matches[0]);
+                    const transcript = data.matches[0];
+                    addLog(`Dictated: ${transcript}`);
+                    setDrill(prev => ({ ...prev, text_catalan: transcript }));
                 }
             });
         } catch (err: any) {

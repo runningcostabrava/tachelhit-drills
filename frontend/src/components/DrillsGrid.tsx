@@ -274,16 +274,16 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
         { 
             field: 'image_url', 
             headerName: 'Preview', 
-            width: 100, 
-            cellRenderer: (p: any) => p.value ? <img src={getMediaUrl(p.value)} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} /> : null 
+            width: 80, 
+            cellRenderer: (p: any) => p.value ? <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}><img src={getMediaUrl(p.value)} style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} /></div> : null 
         },
-        { field: 'text_catalan', headerName: 'Català', flex: 2, filter: true, wrapText: true, autoHeight: true },
-        { field: 'text_tachelhit', headerName: 'Tachelhit', flex: 2, filter: true, wrapText: true, autoHeight: true },
-        { field: 'text_arabic', headerName: 'العربية', flex: 2, filter: true, wrapText: true, autoHeight: true },
+        { field: 'text_catalan', headerName: 'Català', flex: 2, filter: true, wrapText: true, autoHeight: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px' } },
+        { field: 'text_tachelhit', headerName: 'Tachelhit', flex: 2, filter: true, wrapText: true, autoHeight: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px' } },
+        { field: 'text_arabic', headerName: 'العربية', flex: 2, filter: true, wrapText: true, autoHeight: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px', 'direction': 'rtl' } },
         { field: 'tag', headerName: 'Tag', width: 120, filter: true },
         {
             headerName: 'Actions',
-            width: 160,
+            width: 180,
             cellRenderer: (params: any) => (
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center', height: '100%' }}>
                     {onEditDrill && (
@@ -313,8 +313,9 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                 animateRows={true}
                 pagination={true}
                 paginationPageSize={50}
+                rowHeight={70}
                 onGridReady={(params) => {
-                    params.api.sizeColumnsToFit();
+                    setTimeout(() => params.api.sizeColumnsToFit(), 200);
                 }}
                 defaultColDef={{
                     resizable: true,
