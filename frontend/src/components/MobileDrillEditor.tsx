@@ -51,6 +51,14 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     }
   };
 
+  const captureVideo = async () => {
+    try {
+        document.getElementById('native-video-input')?.click();
+    } catch (err: any) {
+        addLog(`Video error: ${err.message}`);
+    }
+  };
+
   const handleFieldChange = (field: keyof Drill, value: string) => {
     const updated = { ...localDrill, [field]: value };
     setLocalDrill(updated);
@@ -278,12 +286,14 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '100px' }}>
         <div style={{ background: '#f8f9fa', padding: '12px', borderRadius: '16px', border: '1px solid #e0e0e0' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-              <button onClick={capturePhoto} style={{ height: '50px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '10px' }}>📷 Photo</button>
-              <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '50px', background: isRecording ? '#ff4444' : '#2196F3', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '10px' }}>{isRecording ? '⏹️ Stop' : '🎙️ Audio'}</button>
-              <button onClick={startDictation} style={{ height: '50px', background: '#FF9800', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '10px' }}>🗣️ Speak</button>
-              <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '50px', background: '#607D8B', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '10px' }}>📁 Gallery</button>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px' }}>
+              <button onClick={capturePhoto} style={{ height: '50px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '9px' }}>📷 Photo</button>
+              <button onClick={captureVideo} style={{ height: '50px', background: '#9C27B0', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '9px' }}>🎬 Video</button>
+              <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '50px', background: isRecording ? '#ff4444' : '#2196F3', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '9px' }}>{isRecording ? '⏹️ Stop' : '🎙️ Audio'}</button>
+              <button onClick={startDictation} style={{ height: '50px', background: '#FF9800', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '9px' }}>🗣️ Speak</button>
+              <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '50px', background: '#607D8B', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '9px' }}>📁 Media</button>
             </div>
+            <input type="file" accept="video/*" capture={"camcorder" as any} id="native-video-input" style={{ display: 'none' }} onChange={handleFileChange} />
             <input type="file" id="gallery-upload" style={{ display: 'none' }} onChange={handleFileChange} />
         </div>
 
@@ -299,14 +309,14 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
         {localDrill.audio_url && (
           <button onClick={() => new Audio(getSourceUrl(localDrill.audio_url)).play()} style={{ width: '100%', padding: '12px', background: '#f3f4f6', border: 'none', borderRadius: '10px', fontWeight: 600 }}>
-            🔊 Test Audio Playback
+            🔊 Play
           </button>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '8px', background: '#f8f9fa', padding: '10px', borderRadius: '12px' }}>
-          <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '8px' }}>🤖 CA➔SHI</button>
-          <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '8px' }}>🤖 SHI➔CA</button>
-          <button onClick={handleTachelhitTTS} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#fef3c7', color: '#92400e', border: 'none', borderRadius: '8px' }}>🔊 TTS SHI</button>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(65px, 1fr))', gap: '8px', background: '#f8f9fa', padding: '10px', borderRadius: '12px' }}>
+          <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '8px' }}>🤖 CA➔SH</button>
+          <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '8px' }}>🤖 SH➔CA</button>
+          <button onClick={handleTachelhitTTS} disabled={aiLoadingKey !== null} style={{ padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: '#fef3c7', color: '#92400e', border: 'none', borderRadius: '8px' }}>🔊 TTS</button>
           <button 
                 onClick={() => {
                     if (localDrill.audio_url || localDrill.video_url) {
@@ -316,8 +326,8 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                     }
                 }} 
                 disabled={!(localDrill.audio_url || localDrill.video_url) || aiLoadingKey !== null} 
-                style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '8px', opacity: (localDrill.audio_url || localDrill.video_url) ? 1 : 0.5 }}
-            >🪄 Transcribe</button>
+                style={{ padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '8px', opacity: (localDrill.audio_url || localDrill.video_url) ? 1 : 0.5 }}
+            >🪄 Trans</button>
         </div>
 
                 <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600 }}>Català</label><textarea value={localDrill.text_catalan || ''} onChange={(e) => handleFieldChange('text_catalan', e.target.value)} rows={2} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }} /></div>

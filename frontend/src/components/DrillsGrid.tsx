@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { AgGridReact } from 'ag-grid-react';
 import type { ColDef } from 'ag-grid-community';
 import axios from 'axios';
+import TestConfigPanel from './TestConfigPanel';
+import { useNavigate } from 'react-router-dom';
 import { Network } from '@capacitor/network';
 import { API_BASE, getMediaUrl } from '../config';
 
@@ -35,6 +37,8 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
     const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
     const [selectedRows, setSelectedRows] = useState<Drill[]>([]);
     const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+    const [showTestConfig, setShowTestConfig] = useState(false);
+    const navigate = useNavigate();
 
     // Track responsive screen resize configurations
     useEffect(() => {
@@ -514,6 +518,13 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                 >
                     🏷️ Bulk Edit Tags
                 </button>
+                <button 
+                    onClick={() => setShowTestConfig(true)} 
+                    disabled={selectedRows.length === 0} 
+                    style={{ padding: '6px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', opacity: selectedRows.length ? 1 : 0.5 }}
+                >
+                    📝 Create Practica
+                </button>
             </div>
             <div className="ag-theme-alpine" style={{ flex: 1 }}>
                 <AgGridReact
@@ -534,6 +545,23 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                     }}
                 />
             </div>
+
+            {showTestConfig && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 30000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ background: 'white', borderRadius: '12px', width: '90%', maxWidth: '800px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                        <TestConfigPanel 
+                            onClose={() => setShowTestConfig(false)}
+                            onTestCreated={() => {
+                                setShowTestConfig(false);
+                                if (window.confirm('Practica created successfully! Go to Tests Dashboard?')) {
+                                    navigate('/tests');
+                                }
+                            }}
+                            initialSelectedDrillIds={selectedRows.map(r => r.id)}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
