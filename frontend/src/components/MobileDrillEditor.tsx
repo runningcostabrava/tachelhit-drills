@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Network } from '@capacitor/network';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
@@ -23,8 +23,6 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
   const addLog = (msg: string) => {
     setDebugLogs(prev => [`[${new Date().toLocaleTimeString().split(' ')[0]}] ${msg}`, ...prev].slice(0, 12));
   };
-
-  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setLocalDrill({ ...drill });
@@ -53,22 +51,28 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
   const handleFieldChange = (field: keyof Drill, value: string) => {
     const updated = { ...localDrill, [field]: value };
     setLocalDrill(updated);
-
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    autoSaveTimerRef.current = setTimeout(() => triggerSave(updated), 1500);
+    // Auto-save disabled
   };
 
   const capturePhoto = async () => {
     try {
+      const status = await Camera.requestPermissions();
+      if (status.camera !== 'granted') {
+          return alert('Camera permission required.');
+      }
+
       const image = await Camera.getPhoto({
-        quality: 90,
+        quality: 85,
         allowEditing: false,
         resultType: CameraResultType.Base64,
-        source: CameraSource.Prompt // Allows Gallery or Camera
+        source: CameraSource.Camera, // Direct to camera for testing
+        saveToGallery: false,
+        correctOrientation: true,
+        width: 1280
       });
 
       if (image.base64String) {
-        const base64Data = `data:image/jpeg;base64,${image.base64String}`;
+        const base64Data = `data:image/${image.format};base64,${image.base64String}`;
         const response = await fetch(base64Data);
         const blob = await response.blob();
         const fileName = `photo_${localDrill.id}_${Date.now()}.jpg`;
@@ -155,7 +159,33 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     }
   };
 
-  const handleTachelhitTTS = async () => {
+    const handleImportLink = async () => {
+        const url = prompt('Paste video or audio link (YouTube, Instagram, etc.):');
+        if (!url) return;
+
+        const status = await Network.getStatus();
+        if (!status.connected) return alert('Importing via link requires internet.');
+
+        setAiLoadingKey('import-link');
+        addLog('Importing link...');
+        try {
+            const res = await axios.post(`${API_BASE}/import-link`, { url, drill_id: localDrill.id });
+            if (res.data.url) {
+                const updated = { ...localDrill, video_url: res.data.url };
+                setLocalDrill(updated);
+                triggerSave(updated);
+                addLog('Import success');
+            }
+        } catch (err: any) {
+            const msg = err.response?.data?.detail || err.message;
+            alert(`Import failed: ${msg}`);
+            addLog(`Import Error: ${msg}`);
+        } finally {
+            setAiLoadingKey(null);
+        }
+    };
+
+    const handleTachelhitTTS = async () => {
     const text = localDrill.text_tachelhit;
     if (!text) return alert('Tachelhit field is empty.');
     
@@ -211,6 +241,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     if (!mediaSource) return;
     if (mediaSource.startsWith('blob:')) return alert('Please wait for media to upload before transcribing.');
     setAiLoadingKey('transcribe-voice');
+    addLog('Transcribing media...');
     try {
       const res = await axios.post(`${API_BASE}/transcribe/`, { audio_url: mediaSource });
       const currentContent = localDrill.text_tachelhit || '';
@@ -219,8 +250,11 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       const updated = { ...localDrill, text_tachelhit: safeText };
       setLocalDrill(updated);
       triggerSave(updated);
-    } catch (err) { 
-      alert('Transcription failed.'); 
+      addLog('Transcription success');
+    } catch (err: any) { 
+        const msg = err.response?.data?.detail || err.message;
+        alert(`Transcription failed: ${msg}`);
+        addLog(`ASR Error: ${msg}`);
     } finally { 
       setAiLoadingKey(null); 
     }
@@ -257,7 +291,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'white' }}>
         <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px', cursor: 'pointer' }}>✕</button>
         <span style={{ fontWeight: 700, fontSize: '18px' }}>Edit Card #{localDrill.id}</span>
-        <div style={{ width: '24px' }} />
+        <button onClick={() => triggerSave(localDrill)} style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: 'bold' }}>💾 Save</button>
       </div>
 
       <div style={{ flex: 1, overflow: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -269,6 +303,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
               <button onClick={startDictation} style={{ height: '60px', background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>🗣️ Dictate</button>
               <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '60px', background: '#607D8B', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>📁 Gallery</button>
             </div>
+            <button onClick={handleImportLink} disabled={aiLoadingKey !== null} style={{ width: '100%', height: '45px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>🔗 Import via Link (YouTube/Insta)</button>
             <input type="file" id="gallery-upload" style={{ display: 'none' }} onChange={handleFileChange} />
         </div>
 
@@ -277,7 +312,9 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         )}
 
         {localDrill.video_url && (
-          <video src={getSourceUrl(localDrill.video_url)} controls playsInline style={{ width: '100%', borderRadius: '12px', background: '#000' }} />
+          <div style={{ background: '#000', borderRadius: '12px', overflow: 'hidden', width: '100%', minHeight: '200px', display: 'flex', alignItems: 'center' }}>
+            <video src={getSourceUrl(localDrill.video_url)} controls playsInline preload="metadata" style={{ width: '100%', borderRadius: '12px' }} />
+          </div>
         )}
 
         {localDrill.audio_url && (
@@ -295,8 +332,9 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
           )}
         </div>
 
-        <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600 }}>Català</label><textarea value={localDrill.text_catalan || ''} onChange={(e) => handleFieldChange('text_catalan', e.target.value)} rows={2} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }} /></div>
-        <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600 }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label><textarea value={localDrill.text_tachelhit || ''} onChange={(e) => handleFieldChange('text_tachelhit', e.target.value)} rows={2} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }} /></div>
+                <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600 }}>Tag</label><input type="text" value={localDrill.tag || ''} onChange={(e) => handleFieldChange('tag', e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }} /></div>
+                <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600 }}>Català</label><textarea value={localDrill.text_catalan || ''} onChange={(e) => handleFieldChange('text_catalan', e.target.value)} rows={2} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }} /></div>
+                <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600 }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label><textarea value={localDrill.text_tachelhit || ''} onChange={(e) => handleFieldChange('text_tachelhit', e.target.value)} rows={2} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }} /></div>
 
         <div style={{ background: '#111', color: '#0f0', padding: '10px', borderRadius: '8px', fontSize: '10px', fontFamily: 'monospace', height: '100px', overflowY: 'auto' }}>
           <div style={{ color: '#fff', borderBottom: '1px solid #333', paddingBottom: '4px', marginBottom: '4px' }}>LIVE DEBUGGER</div>

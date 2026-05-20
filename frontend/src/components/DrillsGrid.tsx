@@ -34,95 +34,12 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
     const [passwordInput, setPasswordInput] = useState('');
     const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
-    // UI states for loading actions
-    const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
-
     // Track responsive screen resize configurations
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
-
-    // 🌐 Smart Non-Destructive Translation Pipeline
-    const handleTranslate = async (drill: Drill, source: 'ca' | 'shi', target: 'ca' | 'shi') => {
-        const sourceText = source === 'ca' ? drill.text_catalan : drill.text_tachelhit;
-        if (!sourceText) {
-            alert(`Please enter text in ${source === 'ca' ? 'Catalan' : 'Tachelhit'} first.`);
-            return;
-        }
-
-        const targetField = target === 'shi' ? 'text_tachelhit' : 'text_catalan';
-        const loadingKey = `trans-${drill.id}-${targetField}`;
-        setActionLoadingId(loadingKey);
-
-        try {
-            const status = await Network.getStatus();
-            if (!status.connected) {
-                alert("⚠️ Translation requires an active internet connection.");
-                return;
-            }
-
-            const res = await axios.post(`${API_BASE}/translate`, {
-                text: sourceText,
-                source_lang: source,
-                target_lang: target
-            });
-
-            const freshTranslation = res.data.translated_text;
-            const currentText = drill[targetField] || '';
-
-            // Guard against deleting text: append in parentheses if text exists
-            const preservedText = currentText.trim()
-                ? `${currentText} (${freshTranslation})`
-                : freshTranslation;
-
-            // Commit the safe update to the backend DB
-            await axios.put(`${API_BASE}/drills/${drill.id}`, { [targetField]: preservedText });
-            await refreshData();
-        } catch (err) {
-            console.error('Translation workflow crashed:', err);
-            alert('Failed to complete AI translation.');
-        } finally {
-            setActionLoadingId(null);
-        }
-    };
-
-    // 🪄 Smart Non-Destructive Transcription Pipeline
-    const handleTranscribe = async (drill: Drill) => {
-        if (!drill.audio_url) return;
-
-        const loadingKey = `scribe-${drill.id}`;
-        setActionLoadingId(loadingKey);
-
-        try {
-            const status = await Network.getStatus();
-            if (!status.connected) {
-                alert("⚠️ Voice transcription requires an internet connection.");
-                return;
-            }
-
-            const response = await axios.post(`${API_BASE}/transcribe/`, {
-                audio_url: drill.audio_url
-            });
-
-            const freshTranscription = response.data.corrected_transcription;
-            const currentTachelhit = drill.text_tachelhit || '';
-
-            // Guard against deleting text: append text gracefully
-            const preservedText = currentTachelhit.trim()
-                ? `${currentTachelhit} (${freshTranscription})`
-                : freshTranscription;
-
-            await axios.put(`${API_BASE}/drills/${drill.id}`, { text_tachelhit: preservedText });
-            await refreshData();
-        } catch (error) {
-            console.error('Transcription loop error:', error);
-            alert('AI Transcription process failed.');
-        } finally {
-            setActionLoadingId(null);
-        }
-    };
 
     // 🗑️ Handle Deletion Security Check Sequence
     const handleDeleteIntent = (id: number) => {
@@ -222,78 +139,76 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
 
                         {/* Thumbnail View */}
                         {drill.image_url && (
-                            <img
-                                src={getMediaUrl(drill.image_url)}
-                                alt="Media thumbnail"
-                                style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '12px', marginTop: '4px' }}
-                            />
+                            <div style={{ position: 'relative' }}>
+                                <img
+                                    src={getMediaUrl(drill.image_url)}
+                                    alt="Media thumbnail"
+                                    style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '12px', marginTop: '4px' }}
+                                />
+                                <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.5)', borderRadius: '50%', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '14px' }}>🖼️</div>
+                            </div>
                         )}
 
                         {/* Interactive Audio Controls */}
-                        {drill.audio_url && (
-                            <button
-                                onClick={() => {
-                                    const audio = new Audio(getMediaUrl(drill.audio_url!));
-                                    audio.play().catch(e => console.error('Playback fail:', e));
-                                }}
-                                style={{
-                                    width: '100%',
-                                    padding: '10px',
-                                    background: '#f3f4f6',
-                                    border: 'none',
-                                    borderRadius: '10px',
-                                    fontSize: '14px',
-                                    fontWeight: 600,
-                                    color: '#374151',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '6px'
-                                }}
-                            >
-                                🔊 Play Drill Voice
-                            </button>
-                        )}
-
-                        {/* 🌐 NEW COMPACT MOBILE AI OPERATION PANEL */}
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: drill.audio_url ? '1fr 1fr 1fr' : '1fr 1fr',
-                            gap: '8px',
-                            marginTop: '4px'
-                        }}>
-                            <button
-                                onClick={() => handleTranslate(drill, 'ca', 'shi')}
-                                disabled={actionLoadingId !== null || !drill.text_catalan}
-                                style={{ padding: '8px', fontSize: '11px', fontWeight: 700, background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                            >
-                                {actionLoadingId === `trans-${drill.id}-text_tachelhit` ? '⏳...' : '🤖 CA➔SHI'}
-                            </button>
-                            <button
-                                onClick={() => handleTranslate(drill, 'shi', 'ca')}
-                                disabled={actionLoadingId !== null || !drill.text_tachelhit}
-                                style={{ padding: '8px', fontSize: '11px', fontWeight: 700, background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
-                            >
-                                {actionLoadingId === `trans-${drill.id}-text_catalan` ? '⏳...' : '🤖 SHI➔CA'}
-                            </button>
+                        <div style={{ display: 'flex', gap: '8px' }}>
                             {drill.audio_url && (
                                 <button
-                                    onClick={() => handleTranscribe(drill)}
-                                    disabled={actionLoadingId !== null}
-                                    style={{ padding: '8px', fontSize: '11px', fontWeight: 700, background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                                    onClick={() => {
+                                        const audio = new Audio(getMediaUrl(drill.audio_url!));
+                                        audio.play().catch(e => console.error('Playback fail:', e));
+                                    }}
+                                    style={{
+                                        flex: 1,
+                                        padding: '10px',
+                                        background: '#f3f4f6',
+                                        border: 'none',
+                                        borderRadius: '10px',
+                                        fontSize: '14px',
+                                        fontWeight: 600,
+                                        color: '#374151',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '6px'
+                                    }}
                                 >
-                                    {actionLoadingId === `scribe-${drill.id}` ? '⏳...' : '🪄 Transcribe'}
+                                    🔊 Play Audio
+                                </button>
+                            )}
+                            {drill.video_url && (
+                                <button
+                                    onClick={() => {
+                                        // Simple way to preview video: open in a new tab or use a lightweight modal
+                                        // For now, let's just open the URL
+                                        window.open(getMediaUrl(drill.video_url!), '_blank');
+                                    }}
+                                    style={{
+                                        flex: 1,
+                                        padding: '10px',
+                                        background: '#f3f4f6',
+                                        border: 'none',
+                                        borderRadius: '10px',
+                                        fontSize: '14px',
+                                        fontWeight: 600,
+                                        color: '#374151',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '6px'
+                                    }}
+                                >
+                                    🎬 Play Video
                                 </button>
                             )}
                         </div>
 
+
                         <hr style={{ border: 'none', height: '1px', background: '#f3f4f6', margin: '4px 0' }} />
 
                         {/* Action Footer */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '12px', color: '#9ca3af' }}>By: {drill.author || 'System'}</span>
-
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 {onEditDrill && (
                                     <button
@@ -355,12 +270,17 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
 
     // 🖥️ DESKTOP INTERFACE: Standard High-Performance spreadsheet view
     const columnDefs: ColDef<Drill>[] = [
-        { field: 'id', headerName: 'ID', width: 70 },
-        { field: 'text_catalan', headerName: 'Català', flex: 1, filter: true },
-        { field: 'text_tachelhit', headerName: 'Tachelhit', flex: 1, filter: true },
-        { field: 'text_arabic', headerName: 'العربية', flex: 1, filter: true },
-        { field: 'tag', headerName: 'Tag', width: 110, filter: true },
-        { field: 'author', headerName: 'Author', width: 110, filter: true },
+        { field: 'id', headerName: 'ID', width: 80, sortable: true },
+        { 
+            field: 'image_url', 
+            headerName: 'Preview', 
+            width: 100, 
+            cellRenderer: (p: any) => p.value ? <img src={getMediaUrl(p.value)} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} /> : null 
+        },
+        { field: 'text_catalan', headerName: 'Català', flex: 2, filter: true, wrapText: true, autoHeight: true },
+        { field: 'text_tachelhit', headerName: 'Tachelhit', flex: 2, filter: true, wrapText: true, autoHeight: true },
+        { field: 'text_arabic', headerName: 'العربية', flex: 2, filter: true, wrapText: true, autoHeight: true },
+        { field: 'tag', headerName: 'Tag', width: 120, filter: true },
         {
             headerName: 'Actions',
             width: 160,
@@ -386,13 +306,20 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
     ];
 
     return (
-        <div className="ag-theme-alpine" style={{ width: '100%', height: 'calc(100vh - 180px)' }}>
+        <div className="ag-theme-alpine" style={{ width: '100%', height: 'calc(100vh - 120px)', padding: '20px' }}>
             <AgGridReact
                 rowData={rowData}
                 columnDefs={columnDefs}
                 animateRows={true}
                 pagination={true}
-                paginationPageSize={20}
+                paginationPageSize={50}
+                onGridReady={(params) => {
+                    params.api.sizeColumnsToFit();
+                }}
+                defaultColDef={{
+                    resizable: true,
+                    sortable: true
+                }}
             />
         </div>
     );

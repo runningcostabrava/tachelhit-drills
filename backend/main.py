@@ -586,6 +586,23 @@ async def tachelhit_tts_endpoint(request: TtsRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+class ImportLinkRequest(BaseModel):
+    url: str
+    drill_id: int
+
+@app.post("/import-link")
+@app.post("/import-link/")
+async def import_link_endpoint(request: ImportLinkRequest):
+    """
+    Download video from URL and attach to drill.
+    """
+    from video_utils import download_video_from_url
+    try:
+        url = await asyncio.to_thread(download_video_from_url, request.url, request.drill_id)
+        return {"url": url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 def get_db():
     db = SessionLocal()
     try:

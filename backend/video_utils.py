@@ -106,6 +106,41 @@ def get_video_metadata(url: str, cookies_str: str = None) -> Dict[str, Any]:
                 raise
             raise Exception(f"Error in video metadata extraction: {e}")
 
+def download_video_from_url(url: str, drill_id: int) -> str:
+    """
+    Download video from URL using yt-dlp and upload to Cloudinary.
+    """
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        filename = f"import_{drill_id}_{int(datetime.utcnow().timestamp())}.mp4"
+        filepath = os.path.join(tmp_dir, filename)
+        
+        ydl_opts = {
+            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            'outtmpl': filepath,
+            'quiet': False,
+            'nocheckcertificate': True,
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'referer': 'https://www.google.com/',
+        }
+        
+        with get_yt_dlp_cookie_file() as cookie_file:
+            if cookie_file:
+                ydl_opts['cookiefile'] = cookie_file
+                
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+                
+        if os.path.exists(filepath):
+            print(f"[VIDEO_UTILS] Uploading downloaded video to Cloudinary: {filepath}")
+            result = cloudinary.uploader.upload(
+                filepath, 
+                folder="tachelhit/video_imports", 
+                resource_type="video"
+            )
+            return result['secure_url']
+        else:
+            raise Exception("Failed to download video file")
+
 def parse_vtt(vtt_content: str) -> List[Dict[str, Any]]:
     """
     Minimalistic VTT parser to extract start, end, and text.

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Network } from '@capacitor/network';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
@@ -35,8 +35,6 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         setDebugLogs(prev => [`[${new Date().toLocaleTimeString().split(' ')[0]}] ${msg}`, ...prev].slice(0, 12));
     };
 
-    const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
     useEffect(() => {
         VoiceRecorder.requestAudioRecordingPermission();
         SpeechRecognition.requestPermissions();
@@ -62,21 +60,28 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const handleTextChange = (field: keyof Drill, value: string) => {
         const updated = { ...drill, [field]: value };
         setDrill(updated);
-        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-        autoSaveTimerRef.current = setTimeout(() => triggerSave(updated), 1500);
+        // Auto-save disabled
     };
 
     const capturePhoto = async () => {
         try {
+            const status = await Camera.requestPermissions();
+            if (status.camera !== 'granted') {
+                return alert('Camera permission required.');
+            }
+
             const image = await Camera.getPhoto({
-                quality: 90,
+                quality: 85,
                 allowEditing: false,
                 resultType: CameraResultType.Base64,
-                source: CameraSource.Prompt // Allows choosing Camera or Gallery
+                source: CameraSource.Camera, // Changed from Prompt to Camera to test direct access
+                saveToGallery: false,
+                correctOrientation: true,
+                width: 1280
             });
 
             if (image.base64String) {
-                const base64Data = `data:image/jpeg;base64,${image.base64String}`;
+                const base64Data = `data:image/${image.format};base64,${image.base64String}`;
                 setCapturedImage(base64Data);
                 
                 const response = await fetch(base64Data);
@@ -198,6 +203,60 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         addLog(`${type} queued from file`);
     };
 
+    const handleAutoTranscribe = async () => {
+        const mediaSource = drill.audio_url || drill.video_url;
+        if (!mediaSource) return alert('Please record and save media first.');
+        
+        const status = await Network.getStatus();
+        if (!status.connected) return alert('Transcription requires internet connection.');
+
+        setAiLoadingKey('transcribe-voice');
+        addLog('Transcribing media...');
+        try {
+            const res = await axios.post(`${API_BASE}/transcribe/`, { audio_url: mediaSource });
+            const currentContent = drill.text_tachelhit || '';
+            const safeText = currentContent.trim() ? `${currentContent} (${res.data.corrected_transcription})` : res.data.corrected_transcription;
+            
+            const updated = { ...drill, text_tachelhit: safeText };
+            setDrill(updated);
+            triggerSave(updated);
+            addLog('Transcription success');
+        } catch (err: any) {
+            const msg = err.response?.data?.detail || err.message;
+            alert(`Transcription failed: ${msg}`);
+            addLog(`ASR Error: ${msg}`);
+        } finally {
+            setAiLoadingKey(null);
+        }
+    };
+
+    const handleImportLink = async () => {
+        const url = prompt('Paste video or audio link (YouTube, Instagram, etc.):');
+        if (!url) return;
+
+        const status = await Network.getStatus();
+        if (!status.connected) return alert('Importing via link requires internet.');
+
+        setAiLoadingKey('import-link');
+        addLog('Importing link...');
+        try {
+            const res = await axios.post(`${API_BASE}/import-link`, { url, drill_id: drill.id });
+            if (res.data.url) {
+                const updated = { ...drill, video_url: res.data.url };
+                setDrill(updated);
+                setCapturedVideo(res.data.url);
+                triggerSave(updated);
+                addLog('Import success');
+            }
+        } catch (err: any) {
+            const msg = err.response?.data?.detail || err.message;
+            alert(`Import failed: ${msg}`);
+            addLog(`Import Error: ${msg}`);
+        } finally {
+            setAiLoadingKey(null);
+        }
+    };
+
     const handleTachelhitTTS = async () => {
         const text = drill.text_tachelhit;
         if (!text) return alert('Tachelhit field is empty.');
@@ -252,13 +311,13 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px' }}>✕</button>
                 <div style={{ color: 'white', fontSize: '18px', fontWeight: 700 }}>Native Creator</div>
-                <button onClick={() => { triggerSave(drill); onDrillCreated(); }} style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px' }}>💾 Finish</button>
+                <button onClick={() => { triggerSave(drill); onDrillCreated(); }} style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px' }}>💾 Save & Close</button>
             </div>
 
             <div style={{ flex: 1, overflow: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ background: '#f8f9fa', padding: '16px', borderRadius: '16px', border: '1px solid #e0e0e0' }}>
                     <h4 style={{ margin: '0 0 12px 0', fontSize: '12px', color: '#666', textAlign: 'center', fontWeight: 'bold' }}>NATIVE MEDIA CONTROLS</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '12px' }}>
                         <button onClick={capturePhoto} style={{ height: '70px', background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold' }}>📷 Take Photo</button>
                         <button onClick={captureVideo} style={{ height: '70px', background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold' }}>🎬 Record Video</button>
                         <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '70px', background: isRecording ? '#ff4444' : '#2196F3', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold' }}>
@@ -266,18 +325,36 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                         </button>
                         <button onClick={startDictation} style={{ height: '70px', background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold' }}>🗣️ Speak (Català)</button>
                     </div>
+                    <button onClick={handleImportLink} disabled={aiLoadingKey !== null} style={{ width: '100%', height: '50px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold' }}>🔗 Import via Link (YouTube/Insta)</button>
                     <input type="file" accept="video/*" capture={"camcorder" as any} id="native-video-input" style={{ display: 'none' }} onChange={handleFileChange} />
                 </div>
 
                 {capturedImage && <img src={capturedImage} alt="Preview" style={{ width: '100%', aspectRatio: '1/1', borderRadius: '12px', objectFit: 'cover' }} />}
-                {capturedVideo && <video src={capturedVideo} controls style={{ width: '100%', borderRadius: '12px' }} />}
+                {capturedVideo && (
+                    <div style={{ background: '#000', borderRadius: '12px', overflow: 'hidden', width: '100%', minHeight: '200px', display: 'flex', alignItems: 'center' }}>
+                        <video src={capturedVideo} controls playsInline preload="metadata" style={{ width: '100%', borderRadius: '12px' }} />
+                    </div>
+                )}
                 {capturedAudio && <button onClick={() => new Audio(capturedAudio).play()} style={{ width: '100%', padding: '12px', background: '#f3f4f6', border: '1px solid #e0e0e0', borderRadius: '10px', fontWeight: 600 }}>🔊 Play Audio Asset</button>}
+
+                <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Tag</label><input type="text" value={drill.tag || ''} onChange={(e) => handleTextChange('tag', e.target.value)} style={{ width: '100%', padding: '10px', border: '2px solid #ddd', borderRadius: '8px' }} /></div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '8px' }}>
                     <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ padding: '12px', background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '11px' }}>🤖 CA➔SHI</button>
                     <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ padding: '12px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '11px' }}>🤖 SHI➔CA</button>
                     <button onClick={handleTachelhitTTS} disabled={aiLoadingKey !== null} style={{ padding: '12px', background: '#fef3c7', color: '#92400e', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '11px' }}>🔊 TTS SHI</button>
-                    <button onClick={() => alert('Please finish/save drill to enable transcription.')} disabled={!(drill.audio_url || drill.video_url || capturedAudio || capturedVideo) || aiLoadingKey !== null} style={{ padding: '12px', background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '11px', opacity: (drill.audio_url || drill.video_url || capturedAudio || capturedVideo) ? 1 : 0.5 }}>🪄 Transcribe</button>
+                    <button 
+                        onClick={() => {
+                            if (drill.audio_url || drill.video_url) {
+                                // If already saved and has URL, it will work
+                                handleAutoTranscribe(); // Need to call the actual transcribe function if it exists or define it
+                            } else {
+                                alert('Please finish/save drill to enable transcription.');
+                            }
+                        }} 
+                        disabled={!(drill.audio_url || drill.video_url || capturedAudio || capturedVideo) || aiLoadingKey !== null} 
+                        style={{ padding: '12px', background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '11px', opacity: (drill.audio_url || drill.video_url || capturedAudio || capturedVideo) ? 1 : 0.5 }}
+                    >🪄 Transcribe</button>
                 </div>
 
                 <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Català</label><textarea value={drill.text_catalan || ''} onChange={(e) => handleTextChange('text_catalan', e.target.value)} rows={3} style={{ width: '100%', padding: '10px', border: '2px solid #ddd', borderRadius: '8px' }} /></div>
