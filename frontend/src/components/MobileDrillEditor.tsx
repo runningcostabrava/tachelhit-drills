@@ -75,10 +75,12 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
       addLog('Opening camera...');
       const image = await Camera.getPhoto({
-        quality: 80,
+        quality: 50, // Reduced quality for smaller size
+        width: 640,  // Optimized resolution for drill area
+        height: 480,
         allowEditing: false,
         resultType: CameraResultType.Base64,
-        source: CameraSource.Prompt, // Changed from Camera to Prompt
+        source: CameraSource.Prompt,
         saveToGallery: false,
         correctOrientation: true,
         presentationStyle: 'fullscreen',

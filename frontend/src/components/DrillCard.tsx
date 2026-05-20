@@ -391,7 +391,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: cameraFacing, width: 640, height: 480 },
+        video: { facingMode: cameraFacing, width: { ideal: 640 }, height: { ideal: 480 } },
         audio: true
       });
       streamRef.current = stream;
