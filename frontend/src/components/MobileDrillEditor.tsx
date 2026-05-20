@@ -27,7 +27,6 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
   const [aiLoadingKey, setAiLoadingKey] = useState<string | null>(null);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Media capture states
   const [recording, setRecording] = useState<'audio' | 'video' | null>(null);
   const [cameraMode, setCameraMode] = useState<'photo' | 'video' | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -35,7 +34,12 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
   const [capturedAudio, setCapturedAudio] = useState<string | null>(null);
   const [uploadingMedia, setUploadingMedia] = useState(false);
 
-  // Refs for media capture
+  // 🐛 LIVE DEBUG LOGGER
+  const [debugLogs, setDebugLogs] = useState<string[]>(['[System] Editor Initialized']);
+  const addLog = (msg: string) => {
+    setDebugLogs(prev => [`[${new Date().toLocaleTimeString().split(' ')[0]}] ${msg}`, ...prev].slice(0, 12));
+  };
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -43,9 +47,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  useEffect(() => {
-    setLocalDrill({ ...drill });
-  }, [drill]);
+  useEffect(() => { setLocalDrill({ ...drill }); }, [drill]);
 
   useEffect(() => {
     return () => {
@@ -57,6 +59,25 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     };
   }, []);
 
+  useEffect(() => {
+    if (cameraMode && previewRef.current && streamRef.current) {
+      addLog(`Binding stream to <video> for ${cameraMode}`);
+      const video = previewRef.current;
+      video.srcObject = streamRef.current;
+
+      // Ensure video plays on mobile
+      video.setAttribute('autoplay', '');
+      video.setAttribute('muted', '');
+      video.setAttribute('playsinline', '');
+
+      video.play()
+        .then(() => addLog('Video playback started'))
+        .catch(e => {
+          addLog(`Video playback error: ${e.message}`);
+        });
+    }
+  }, [cameraMode, streamRef.current]);
+
   const handleFieldChange = (field: keyof Drill, value: string) => {
     const updated = { ...localDrill, [field]: value };
     setLocalDrill(updated);
@@ -66,31 +87,18 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       try {
         await axios.put(`${API_BASE}/drills/${localDrill.id}`, { [field]: value });
         onUpdate();
-      } catch (err) {
-        console.error('Auto-save step failed inside editor context:', err);
-      }
+      } catch (err) { addLog('Auto-save step failed'); }
     }, 1500);
   };
-
-  // ------------------------------------------------------------------
-  // 🎙️ MEDIA RECORDING PIPELINE
-  // ------------------------------------------------------------------
 
   const getSupportedMimeType = (type: 'audio' | 'video') => {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     if (isIOS) return type === 'audio' ? { mime: 'audio/mp4', ext: 'm4a' } : { mime: 'video/mp4', ext: 'mp4' };
-
-    const types = type === 'audio'
-      ? [{ mime: 'audio/webm', ext: 'webm' }, { mime: 'audio/mp4', ext: 'm4a' }, { mime: 'audio/ogg; codecs=opus', ext: 'ogg' }]
-      : [{ mime: 'video/webm', ext: 'webm' }, { mime: 'video/mp4', ext: 'mp4' }];
-
-    for (const t of types) {
-      if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(t.mime)) return t;
-    }
-    return type === 'audio' ? { mime: 'audio/mp4', ext: 'm4a' } : { mime: 'video/mp4', ext: 'mp4' };
+    return type === 'audio' ? { mime: 'audio/webm', ext: 'webm' } : { mime: 'video/webm', ext: 'webm' };
   };
 
   const uploadCapturedBlob = async (blob: Blob, type: 'audio' | 'video' | 'image', filename: string) => {
+    addLog(`Uploading ${type} (${blob.size} bytes)...`);
     setUploadingMedia(true);
     const formData = new FormData();
     formData.append('file', blob, filename);
@@ -100,20 +108,80 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       if (res.data.url) {
+        addLog(`Upload success: ${type}`);
         setLocalDrill(prev => ({ ...prev, [`${type}_url`]: res.data.url }));
         onUpdate();
-        alert(`Successfully updated ${type}!`);
       }
-    } catch (err) {
-      alert(`Failed to upload ${type}. Check your connection.`);
+    } catch (err: any) {
+      addLog(`Upload Failed: ${err.message}`);
     } finally {
       setUploadingMedia(false);
     }
   };
 
-  const startAudioRecording = async () => {
+  const stopCamera = () => {
+    if (previewRef.current) previewRef.current.srcObject = null;
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+      addLog('Hardware tracks stopped.');
+    }
+    setCameraMode(null);
+    setRecording(null);
+  };
+
+  const openVideoCamera = async () => {
+    addLog('Init In-App Video Camera...');
     try {
-      if (streamRef.current) stopCamera();
+      stopCamera();
+      await new Promise(r => setTimeout(r, 200));
+      addLog('Requesting video stream...');
+      const constraints = {
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        },
+        audio: true
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+      addLog('Video Stream acquired!');
+      setCameraMode('video');
+    } catch (err: any) {
+      addLog(`In-App Video Error: ${err.name} - ${err.message}`);
+      if (err.name === 'NotAllowedError') alert('Camera/Mic permission denied.');
+    }
+  };
+
+  const startImageCapture = async () => {
+    addLog('Init In-App Photo Camera...');
+    try {
+      stopCamera();
+      await new Promise(r => setTimeout(r, 200));
+      addLog('Requesting photo stream...');
+      const constraints = {
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+      addLog('Photo Stream acquired!');
+      setCameraMode('photo');
+    } catch (err: any) {
+      addLog(`In-App Photo Error: ${err.name} - ${err.message}`);
+      if (err.name === 'NotAllowedError') alert('Camera permission denied.');
+    }
+  };
+
+  const startAudioRecording = async () => {
+    addLog('Init In-App Audio...');
+    try {
+      stopCamera();
+      await new Promise(r => setTimeout(r, 150));
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
       streamRef.current = stream;
 
@@ -124,6 +192,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       mediaRecorderRef.current.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       mediaRecorderRef.current.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: format.mime });
+        addLog(`Audio recorded: ${blob.size} bytes`);
         if (blob.size > 0) {
           setCapturedAudio(URL.createObjectURL(blob));
           await uploadCapturedBlob(blob, 'audio', `audio_${localDrill.id}_${Date.now()}.${format.ext}`);
@@ -132,22 +201,13 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       };
       mediaRecorderRef.current.start();
       setRecording('audio');
-    } catch (err) { alert('Microphone access denied or unavailable.'); }
-  };
-
-  const openVideoCamera = async () => {
-    try {
-      if (streamRef.current) stopCamera();
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: 640, height: 480 }, audio: true });
-      streamRef.current = stream;
-      setCameraMode('video');
-
-      setTimeout(() => { if (previewRef.current) { previewRef.current.srcObject = stream; previewRef.current.play().catch(e => console.error(e)); } }, 100);
-    } catch (err) { alert('Camera access denied or unavailable.'); }
+      addLog('Audio recording STARTED');
+    } catch (err: any) { addLog(`In-App Audio Error: ${err.message}`); }
   };
 
   const startRecordingVideo = () => {
     if (!streamRef.current) return;
+    addLog('Starting video record...');
     const format = getSupportedMimeType('video');
     mediaRecorderRef.current = new MediaRecorder(streamRef.current, { mimeType: format.mime });
     chunksRef.current = [];
@@ -155,6 +215,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     mediaRecorderRef.current.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
     mediaRecorderRef.current.onstop = async () => {
       const blob = new Blob(chunksRef.current, { type: format.mime });
+      addLog(`Video recorded: ${blob.size} bytes`);
       if (blob.size > 0) {
         setCapturedVideo(URL.createObjectURL(blob));
         await uploadCapturedBlob(blob, 'video', `video_${localDrill.id}_${Date.now()}.${format.ext}`);
@@ -165,31 +226,24 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     setRecording('video');
   };
 
-  const startImageCapture = async () => {
-    try {
-      if (streamRef.current) stopCamera();
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: 1280, height: 720 } });
-      streamRef.current = stream;
-      setCameraMode('photo');
-      setTimeout(() => { if (previewRef.current) { previewRef.current.srcObject = stream; previewRef.current.play().catch(e => console.error(e)); } }, 100);
-    } catch (err) { alert('Camera access denied or unavailable.'); }
-  };
-
   const takePicture = () => {
-    if (!previewRef.current || !canvasRef.current || !streamRef.current) return;
+    addLog('Taking picture...');
+    if (!previewRef.current || !canvasRef.current || !streamRef.current) {
+      addLog('Missing ref for picture');
+      return;
+    }
     const video = previewRef.current;
     const canvas = canvasRef.current;
 
     if (video.readyState !== video.HAVE_ENOUGH_DATA || video.videoWidth === 0) {
+      addLog('Video not ready, waiting...');
       setTimeout(takePicture, 200);
       return;
     }
 
-    const width = video.videoWidth;
-    const height = video.videoHeight;
-    const size = Math.min(width, height);
-    const sx = (width - size) / 2;
-    const sy = (height - size) / 2;
+    const size = Math.min(video.videoWidth, video.videoHeight);
+    const sx = (video.videoWidth - size) / 2;
+    const sy = (video.videoHeight - size) / 2;
 
     canvas.width = size;
     canvas.height = size;
@@ -199,6 +253,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       context.fillRect(0, 0, size, size);
       context.drawImage(video, sx, sy, size, size, 0, 0, size, size);
       canvas.toBlob(async (blob) => {
+        addLog(`Picture snapped: ${blob?.size || 0} bytes`);
         if (blob && blob.size > 0) {
           setCapturedImage(URL.createObjectURL(blob));
           await uploadCapturedBlob(blob, 'image', `image_${localDrill.id}_${Date.now()}.jpg`);
@@ -209,8 +264,9 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
   };
 
   const stopRecordingAction = () => {
+    addLog('Stopping recording...');
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      try { mediaRecorderRef.current.requestData(); } catch (e) { } // Force flush for iOS
+      try { mediaRecorderRef.current.requestData(); } catch (e) { }
       mediaRecorderRef.current.stop();
       setRecording(null);
     } else {
@@ -218,15 +274,11 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     }
   };
 
-  const stopCamera = () => {
-    if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
-    setCameraMode(null);
-    setRecording(null);
-  };
-
   const handleMediaUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) { addLog('Native capture canceled.'); return; }
+
+    addLog(`Native capture received: ${file.name} (${file.type})`);
     const fileType = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'audio';
 
     if (fileType === 'image') setCapturedImage(URL.createObjectURL(file));
@@ -236,45 +288,33 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     await uploadCapturedBlob(file, fileType, file.name);
   };
 
-  // ------------------------------------------------------------------
-  // 🌐 AI PIPELINES
-  // ------------------------------------------------------------------
-
   const handleTranslateAction = async (source: 'ca' | 'shi', target: 'ca' | 'shi') => {
     const sourceText = source === 'ca' ? localDrill.text_catalan : localDrill.text_tachelhit;
-    if (!sourceText) return alert('Source translation field is currently empty.');
+    if (!sourceText) return alert('Field is empty.');
     const targetField = target === 'shi' ? 'text_tachelhit' : 'text_catalan';
     setAiLoadingKey(`trans-${targetField}`);
-
     try {
       const res = await axios.post(`${API_BASE}/translate`, { text: sourceText, source_lang: source, target_lang: target });
-      const generatedTranslation = res.data.translated_text;
       const currentContent = localDrill[targetField] || '';
-      const safeAppendText = currentContent.trim() ? `${currentContent} (${generatedTranslation})` : generatedTranslation;
-
-      setLocalDrill(prev => ({ ...prev, [targetField]: safeAppendText }));
-      await axios.put(`${API_BASE}/drills/${localDrill.id}`, { [targetField]: safeAppendText });
+      const safeText = currentContent.trim() ? `${currentContent} (${res.data.translated_text})` : res.data.translated_text;
+      setLocalDrill(prev => ({ ...prev, [targetField]: safeText }));
+      await axios.put(`${API_BASE}/drills/${localDrill.id}`, { [targetField]: safeText });
       onUpdate();
-    } catch (err) { alert('Translation service failed inside editing module.'); }
-    finally { setAiLoadingKey(null); }
+    } catch (err) { alert('Translation failed.'); } finally { setAiLoadingKey(null); }
   };
 
   const handleTranscribeAction = async () => {
     const mediaSource = localDrill.audio_url || localDrill.video_url;
-    if (!mediaSource) return alert('Please record and upload audio or video first.');
+    if (!mediaSource) return;
     setAiLoadingKey('transcribe-voice');
-
     try {
       const res = await axios.post(`${API_BASE}/transcribe/`, { audio_url: mediaSource });
-      const transcriptionResult = res.data.corrected_transcription;
-      const currentTachelhit = localDrill.text_tachelhit || '';
-      const safeAppendText = currentTachelhit.trim() ? `${currentTachelhit} (${transcriptionResult})` : transcriptionResult;
-
-      setLocalDrill(prev => ({ ...prev, text_tachelhit: safeAppendText }));
-      await axios.put(`${API_BASE}/drills/${localDrill.id}`, { text_tachelhit: safeAppendText });
+      const currentContent = localDrill.text_tachelhit || '';
+      const safeText = currentContent.trim() ? `${currentContent} (${res.data.corrected_transcription})` : res.data.corrected_transcription;
+      setLocalDrill(prev => ({ ...prev, text_tachelhit: safeText }));
+      await axios.put(`${API_BASE}/drills/${localDrill.id}`, { text_tachelhit: safeText });
       onUpdate();
-    } catch (err) { alert('AI Speech transcription failed inside editing module.'); }
-    finally { setAiLoadingKey(null); }
+    } catch (err) { alert('Transcription failed.'); } finally { setAiLoadingKey(null); }
   };
 
   return (
@@ -289,19 +329,17 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
       <div style={{ flex: 1, overflow: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-        {/* 🌟 CAMERA PREVIEW LAYER */}
         {cameraMode && (
           <div style={{ background: '#000', borderRadius: '16px', overflow: 'hidden' }}>
             <div style={{ position: 'relative', height: '280px' }}>
               <video ref={previewRef} autoPlay muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
-            {/* Dedicated control bar to prevent UI overlap */}
             <div style={{ padding: '16px', background: '#111', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
-              <button onClick={stopCamera} style={{ padding: '10px 20px', background: '#444', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px' }}>✕ Cancel</button>
+              <button onClick={stopCamera} style={{ padding: '10px 20px', background: '#444', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>✕ Cancel</button>
               {cameraMode === 'photo' ? (
-                <button onClick={takePicture} style={{ width: '65px', height: '65px', borderRadius: '50%', background: 'white', border: '4px solid #4CAF50', fontWeight: 'bold', fontSize: '12px', color: '#333' }}>SNAP</button>
+                <button onClick={takePicture} style={{ width: '65px', height: '65px', borderRadius: '50%', background: 'white', border: '4px solid #4CAF50', fontWeight: 'bold', color: '#333' }}>SNAP</button>
               ) : (
-                <button onClick={recording === 'video' ? stopRecordingAction : startRecordingVideo} style={{ padding: '12px 24px', background: recording === 'video' ? '#ff4444' : '#9C27B0', color: 'white', border: 'none', borderRadius: '30px', fontWeight: 'bold', fontSize: '14px' }}>
+                <button onClick={recording === 'video' ? stopRecordingAction : startRecordingVideo} style={{ padding: '12px 24px', background: recording === 'video' ? '#ff4444' : '#9C27B0', color: 'white', border: 'none', borderRadius: '30px', fontWeight: 'bold' }}>
                   {recording === 'video' ? '⏹️ STOP' : '🎬 START'}
                 </button>
               )}
@@ -309,13 +347,26 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
           </div>
         )}
 
-        {/* 🎬 MEDIA CONTROL PAD */}
         {!cameraMode && (
           <div style={{ background: '#f8f9fa', padding: '12px', borderRadius: '12px', border: '1px solid #e0e0e0' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '8px' }}>
-              <button onClick={startImageCapture} disabled={uploadingMedia} style={{ height: '70px', background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold' }}>📷 Photo</button>
-              <button onClick={recording === 'audio' ? stopRecordingAction : startAudioRecording} disabled={uploadingMedia} style={{ height: '70px', background: recording === 'audio' ? '#ff4444' : '#2196F3', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', animation: recording === 'audio' ? 'pulse 1.5s infinite' : 'none' }}>{recording === 'audio' ? '⏹️ Stop' : '🎙️ Audio'}</button>
-              <button onClick={openVideoCamera} disabled={uploadingMedia} style={{ height: '70px', background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold' }}>🎬 Video</button>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#666', textAlign: 'center' }}>IN-APP CAMERA</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '16px' }}>
+              <button onClick={startImageCapture} disabled={uploadingMedia} style={{ height: '60px', background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>📷 Photo</button>
+              <button onClick={recording === 'audio' ? stopRecordingAction : startAudioRecording} disabled={uploadingMedia} style={{ height: '60px', background: recording === 'audio' ? '#ff4444' : '#2196F3', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>{recording === 'audio' ? '⏹️ Stop' : '🎙️ Audio'}</button>
+              <button onClick={openVideoCamera} disabled={uploadingMedia} style={{ height: '60px', background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold' }}>🎬 Video</button>
+            </div>
+
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#666', textAlign: 'center' }}>NATIVE ANDROID CAPTURE (Backup)</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '12px' }}>
+              {/* 🌟 FIX: Updated HTML5 capture hints to strictly force native camera/mic apps */}
+              <input type="file" accept="image/*" capture={"camera" as any} id="native-photo" style={{ display: 'none' }} onChange={handleMediaUpload} />
+              <button onClick={() => document.getElementById('native-photo')?.click()} disabled={uploadingMedia} style={{ padding: '10px', background: '#333', color: 'white', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold' }}>📱 Photo</button>
+
+              <input type="file" accept="video/*" capture={"camcorder" as any} id="native-video" style={{ display: 'none' }} onChange={handleMediaUpload} />
+              <button onClick={() => document.getElementById('native-video')?.click()} disabled={uploadingMedia} style={{ padding: '10px', background: '#333', color: 'white', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold' }}>📱 Video</button>
+
+              <input type="file" accept="audio/*" capture={"microphone" as any} id="native-audio" style={{ display: 'none' }} onChange={handleMediaUpload} />
+              <button onClick={() => document.getElementById('native-audio')?.click()} disabled={uploadingMedia} style={{ padding: '10px', background: '#333', color: 'white', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold' }}>📱 Audio</button>
             </div>
 
             <input type="file" accept="image/*,video/*,audio/*" ref={fileInputRef} onChange={handleMediaUpload} style={{ display: 'none' }} />
@@ -339,39 +390,26 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
           </button>
         )}
 
-        {/* AI CONTROL PANEL */}
         <div style={{ display: 'grid', gridTemplateColumns: (localDrill.audio_url || localDrill.video_url) ? '1fr 1fr 1fr' : '1fr 1fr', gap: '8px', background: '#f8f9fa', padding: '10px', borderRadius: '12px' }}>
-          <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '8px' }}>
-            {aiLoadingKey === 'trans-text_tachelhit' ? '⏳...' : '🤖 CA➔SHI'}
-          </button>
-          <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '8px' }}>
-            {aiLoadingKey === 'trans-text_catalan' ? '⏳...' : '🤖 SHI➔CA'}
-          </button>
+          <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '8px' }}>🤖 CA➔SHI</button>
+          <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '8px' }}>🤖 SHI➔CA</button>
           {(localDrill.audio_url || localDrill.video_url) && (
-            <button onClick={handleTranscribeAction} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '8px' }}>
-              {aiLoadingKey === 'transcribe-voice' ? '⏳...' : '🪄 Transcribe'}
-            </button>
+            <button onClick={handleTranscribeAction} disabled={aiLoadingKey !== null} style={{ padding: '10px', fontSize: '11px', fontWeight: 700, background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '8px' }}>🪄 Transcribe</button>
           )}
         </div>
 
-        <div>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Català</label>
-          <textarea value={localDrill.text_catalan || ''} onChange={(e) => handleFieldChange('text_catalan', e.target.value)} rows={3} style={{ width: '100%', padding: '10px', fontSize: '16px', border: '1px solid #ccc', borderRadius: '8px' }} />
-        </div>
+        <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600 }}>Català</label><textarea value={localDrill.text_catalan || ''} onChange={(e) => handleFieldChange('text_catalan', e.target.value)} rows={2} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }} /></div>
+        <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600 }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label><textarea value={localDrill.text_tachelhit || ''} onChange={(e) => handleFieldChange('text_tachelhit', e.target.value)} rows={2} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }} /></div>
 
-        <div>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label>
-          <textarea value={localDrill.text_tachelhit || ''} onChange={(e) => handleFieldChange('text_tachelhit', e.target.value)} rows={3} style={{ width: '100%', padding: '10px', fontSize: '16px', border: '1px solid #ccc', borderRadius: '8px', fontFamily: 'monospace', fontWeight: 'bold' }} />
-        </div>
-
-        <div>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px', textAlign: 'right' }}>العربية</label>
-          <textarea value={localDrill.text_arabic || ''} onChange={(e) => handleFieldChange('text_arabic', e.target.value)} rows={2} style={{ width: '100%', padding: '10px', fontSize: '16px', border: '1px solid #ccc', borderRadius: '8px', direction: 'rtl' }} />
+        {/* 🐛 LIVE DEBUG CONSOLE UI */}
+        <div style={{ background: '#111', color: '#0f0', padding: '10px', borderRadius: '8px', fontSize: '10px', fontFamily: 'monospace', height: '120px', overflowY: 'auto' }}>
+          <div style={{ color: '#fff', borderBottom: '1px solid #333', paddingBottom: '4px', marginBottom: '4px' }}>LIVE DEBUGGER</div>
+          {debugLogs.map((log, i) => <div key={i}>{log}</div>)}
         </div>
       </div>
-      <div style={{ display: 'flex', borderTop: '1px solid #eee', padding: '12px', background: '#f8f9fa', justifyContent: 'space-between' }}>
-        <button onClick={() => onNavigate('prev')} style={{ padding: '12px 24px', background: '#374151', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600 }}>◀ Previous</button>
-        <button onClick={() => onNavigate('next')} style={{ padding: '12px 24px', background: '#374151', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 600 }}>Next ▶</button>
+      <div style={{ display: 'flex', padding: '12px', background: '#f8f9fa', justifyContent: 'space-between' }}>
+        <button onClick={() => onNavigate('prev')} style={{ padding: '12px 24px', background: '#374151', color: 'white', border: 'none', borderRadius: '8px' }}>◀ Prev</button>
+        <button onClick={() => onNavigate('next')} style={{ padding: '12px 24px', background: '#374151', color: 'white', border: 'none', borderRadius: '8px' }}>Next ▶</button>
       </div>
     </div>
   );
