@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Network } from '@capacitor/network';
 import { API_BASE } from '../config';
+import { syncManager } from '../services/OfflineSyncManager';
 import { AgGridReact } from 'ag-grid-react';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
@@ -157,12 +158,13 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
       let allDrills = [];
 
       if (status.connected) {
+        // Sync pending changes first
+        await syncManager.sync();
         const response = await axios.get(`${API_BASE}/drills/`);
         allDrills = response.data || [];
-        localStorage.setItem('cached_drills', JSON.stringify(allDrills));
+        await syncManager.saveDrillsToCache(allDrills);
       } else {
-        const cachedData = localStorage.getItem('cached_drills');
-        allDrills = cachedData ? JSON.parse(cachedData) : [];
+        allDrills = await syncManager.getDrills();
       }
 
       const queryParams = new URLSearchParams(location.search);
@@ -210,21 +212,39 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
 
   const addNewDrill = async () => {
     try {
-      const response = await axios.post(`${API_BASE}/drills/`, {});
-      await fetchDrills();
-      if (isMobile && response.data) {
-        const newDrill = {
-          ...response.data,
-          text_catalan: response.data.text_catalan || '',
-          text_tachelhit: response.data.text_tachelhit || '',
-          text_arabic: response.data.text_arabic || '',
-          audio_url: response.data.audio_url || '',
-          video_url: response.data.video_url || '',
-          image_url: response.data.image_url || '',
-          tag: response.data.tag || '',
-          date_created: response.data.date_created || new Date().toISOString()
-        };
-        setTimeout(() => setEditingDrill(newDrill), 100);
+      const status = await Network.getStatus();
+      const tempId = Date.now();
+      const newDrillData = {
+        id: tempId,
+        text_catalan: '',
+        text_tachelhit: '',
+        text_arabic: '',
+        date_created: new Date().toISOString(),
+        is_local: true
+      };
+
+      if (status.connected) {
+        const response = await axios.post(`${API_BASE}/drills/`, {});
+        await fetchDrills();
+        if (isMobile && response.data) {
+          setTimeout(() => setEditingDrill(response.data), 100);
+        }
+      } else {
+        // Offline creation
+        const currentDrills = await syncManager.getDrills();
+        const updatedDrills = [newDrillData, ...currentDrills];
+        await syncManager.saveDrillsToCache(updatedDrills);
+        setDrills(updatedDrills);
+        
+        await syncManager.queueAction({
+          type: 'CREATE',
+          drillId: tempId,
+          payload: {}
+        });
+        
+        if (isMobile) {
+          setTimeout(() => setEditingDrill(newDrillData), 100);
+        }
       }
     } catch (error) {
       console.error('Error creating drill:', error);

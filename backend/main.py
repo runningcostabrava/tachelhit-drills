@@ -9,6 +9,7 @@ import yt_dlp
 from datetime import datetime
 from urllib.parse import quote
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Body, BackgroundTasks
+from pydantic import BaseModel
 from typing import Optional, List, Dict
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -251,6 +252,52 @@ def generate_catalan_tts(text: str, drill_id: int) -> str:
         return url
     except Exception as e:
         print(f"[TTS] Error generating TTS: {e}")
+        raise
+
+def generate_tachelhit_tts_hf(text: str, drill_id: int) -> str:
+    """
+    Generate Tachelhit TTS using Hugging Face Space (Tamazight-NLP/TTS).
+    """
+    try:
+        from gradio_client import Client
+        client = Client("Tamazight-NLP/TTS")
+        
+        # predict(text, variant, speaker, split_sentences, speaker_wav, voice_cv_model, api_name="/predict")
+        result_path = client.predict(
+            text,
+            "shi",
+            "yan",
+            False,
+            None,
+            "freevc24",
+            api_name="/predict"
+        )
+        
+        timestamp = int(datetime.utcnow().timestamp())
+        filename = f"tachelhit_tts_{drill_id}_{timestamp}.wav"
+        
+        use_cloudinary = bool(os.getenv("CLOUDINARY_CLOUD_NAME"))
+        
+        if use_cloudinary:
+            result = cloudinary.uploader.upload(
+                result_path,
+                folder="tachelhit/tts",
+                public_id=f"tachelhit_tts_{drill_id}_{timestamp}",
+                resource_type="video"
+            )
+            url = result['secure_url']
+        else:
+            dir_path = os.path.join(MEDIA_ROOT, "tts")
+            os.makedirs(dir_path, exist_ok=True)
+            final_path = os.path.join(dir_path, filename)
+            shutil.move(result_path, final_path)
+            url = f"/media/tts/{filename}"
+            
+        return normalize_media_url(url)
+    except Exception as e:
+        print(f"[TACHELHIT TTS] Error: {e}")
+        import traceback
+        traceback.print_exc()
         raise
 
 # Database configuration - handle both SQLite and PostgreSQL
@@ -520,6 +567,24 @@ async def translate_text_endpoint(request: TranslateRequest):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Translation failed: {str(e)}")
+
+class TtsRequest(BaseModel):
+    text: str
+    drill_id: Optional[int] = 0
+
+@app.post("/tts/tachelhit")
+@app.post("/tts/tachelhit/")
+async def tachelhit_tts_endpoint(request: TtsRequest):
+    """
+    Generate Tachelhit TTS for given Tifinagh text.
+    """
+    if not request.text:
+        raise HTTPException(status_code=400, detail="Text is required")
+    try:
+        url = await asyncio.to_thread(generate_tachelhit_tts_hf, request.text, request.drill_id or 0)
+        return {"url": url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 def get_db():
     db = SessionLocal()
