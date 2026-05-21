@@ -36,8 +36,10 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     };
 
     useEffect(() => {
-        VoiceRecorder.requestAudioRecordingPermission();
-        SpeechRecognition.requestPermissions();
+        if ((window as any).Capacitor?.isNative) {
+            VoiceRecorder.requestAudioRecordingPermission().catch(e => console.warn('VoiceRecorder permissions not available', e));
+            SpeechRecognition.requestPermissions().catch(e => console.warn('SpeechRecognition permissions not available', e));
+        }
     }, []);
 
     const triggerSave = async (updatedDrill: Partial<Drill>) => {
@@ -159,10 +161,12 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
     const startDictation = async () => {
         try {
-            const perm = await SpeechRecognition.checkPermissions();
-            if (perm.speechRecognition !== 'granted') {
-                const req = await SpeechRecognition.requestPermissions();
-                if (req.speechRecognition !== 'granted') return addLog('Mic permission denied');
+            if ((window as any).Capacitor?.isNative) {
+                const perm = await SpeechRecognition.checkPermissions();
+                if (perm.speechRecognition !== 'granted') {
+                    const req = await SpeechRecognition.requestPermissions();
+                    if (req.speechRecognition !== 'granted') return addLog('Mic permission denied');
+                }
             }
 
             const supported = await SpeechRecognition.available();

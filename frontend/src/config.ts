@@ -135,8 +135,8 @@ export function getMediaUrl(url: string | null | undefined): string {
     }
   }
 
-  // Check if URL is already absolute (starts with http:// or https://)
-  if (corrected.startsWith('http://') || corrected.startsWith('https://')) {
+  // Check if URL is already absolute (starts with http:// or https:// or blob:)
+  if (corrected.startsWith('http://') || corrected.startsWith('https://') || corrected.startsWith('blob:') || corrected.startsWith('data:')) {
     return corrected;
   }
 

@@ -2,7 +2,7 @@ import { Preferences } from '@capacitor/preferences';
 import { Network } from '@capacitor/network';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import axios from 'axios';
-import { API_BASE } from '../config';
+import { API_BASE, getMediaUrl } from '../config';
 
 export interface Drill {
   id: number;
@@ -60,13 +60,36 @@ class OfflineSyncManager {
 
   async queueAction(action: SyncAction) {
     const { value } = await Preferences.get({ key: SYNC_QUEUE_KEY });
-    const queue: SyncAction[] = value ? JSON.parse(value) : [];
+    let queue: SyncAction[] = value ? JSON.parse(value) : [];
     
-    // For UPDATES, if an update for this drill already exists in queue, merge it
-    if (action.type === 'UPDATE') {
-      const existingIdx = queue.findIndex(a => a.type === 'UPDATE' && a.drillId === action.drillId);
+    // Deduplication / Merging logic
+    if (action.type === 'CREATE') {
+      // Check if we already have a CREATE for this temporary drill ID
+      const existingIdx = queue.findIndex(a => a.type === 'CREATE' && a.drillId === action.drillId);
       if (existingIdx > -1) {
         queue[existingIdx].payload = { ...queue[existingIdx].payload, ...action.payload };
+      } else {
+        queue.push(action);
+      }
+    } else if (action.type === 'UPDATE') {
+      // If there's already a CREATE in queue for this drill, just update its payload
+      const createIdx = queue.findIndex(a => a.type === 'CREATE' && a.drillId === action.drillId);
+      if (createIdx > -1) {
+        queue[createIdx].payload = { ...queue[createIdx].payload, ...action.payload };
+      } else {
+        // Otherwise look for existing UPDATE or just add new
+        const existingIdx = queue.findIndex(a => a.type === 'UPDATE' && a.drillId === action.drillId);
+        if (existingIdx > -1) {
+          queue[existingIdx].payload = { ...queue[existingIdx].payload, ...action.payload };
+        } else {
+          queue.push(action);
+        }
+      }
+    } else if (action.type === 'UPLOAD_MEDIA') {
+      // Avoid duplicate media uploads for same drill and type in queue
+      const existingIdx = queue.findIndex(a => a.type === 'UPLOAD_MEDIA' && a.drillId === action.drillId && a.mediaType === action.mediaType);
+      if (existingIdx > -1) {
+        queue[existingIdx] = action; // Replace with newest path
       } else {
         queue.push(action);
       }
@@ -294,16 +317,6 @@ class OfflineSyncManager {
       console.error('[OfflineSync] Media sync failed:', err);
     }
   }
-}
-
-export function getMediaUrl(url: string | undefined): string {
-  if (!url) return '';
-  if (url.startsWith('http') || url.startsWith('blob:') || url.startsWith('data:')) {
-    return url;
-  }
-  // Remove leading slash if present
-  const cleanUrl = url.startsWith('/') ? url.substring(1) : url;
-  return `${API_BASE}/${cleanUrl}`;
 }
 
 export const syncManager = new OfflineSyncManager();
