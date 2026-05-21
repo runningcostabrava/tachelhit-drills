@@ -269,7 +269,12 @@ class OfflineSyncManager {
         // Doesn't exist, download it
       }
 
-      const response = await axios.get(getMediaUrl(url), { responseType: 'blob' });
+      const fullUrl = getMediaUrl(url);
+      console.log(`[OfflineSync] Downloading: ${fullUrl}`);
+      const response = await axios.get(fullUrl, { 
+        responseType: 'blob',
+        timeout: 30000 // 30 second timeout per file
+      });
       const base64Data = await this.blobToBase64(response.data);
       
       await Filesystem.writeFile({
@@ -286,7 +291,7 @@ class OfflineSyncManager {
       
       return (window as any).Capacitor.convertFileSrc(result.uri);
     } catch (err) {
-      console.error('Media download failed:', err);
+      console.error(`[OfflineSync] Media download failed for ${url}:`, err);
       return url;
     }
   }
@@ -313,10 +318,15 @@ class OfflineSyncManager {
       const drills = await this.getDrills();
       console.log(`[OfflineSync] Syncing media for ${drills.length} drills...`);
       
-      for (const drill of drills) {
-        if (drill.audio_url) await this.downloadAndCacheMedia(drill.audio_url);
-        if (drill.video_url) await this.downloadAndCacheMedia(drill.video_url);
-        if (drill.image_url) await this.downloadAndCacheMedia(drill.image_url);
+      // Batch downloads to avoid overwhelming the network
+      const batchSize = 3;
+      for (let i = 0; i < drills.length; i += batchSize) {
+        const batch = drills.slice(i, i + batchSize);
+        await Promise.all(batch.map(async (drill) => {
+          if (drill.audio_url) await this.downloadAndCacheMedia(drill.audio_url);
+          if (drill.video_url) await this.downloadAndCacheMedia(drill.video_url);
+          if (drill.image_url) await this.downloadAndCacheMedia(drill.image_url);
+        }));
       }
       console.log('[OfflineSync] Media sync complete');
     } catch (err) {
