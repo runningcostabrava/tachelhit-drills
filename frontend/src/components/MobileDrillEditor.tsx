@@ -80,7 +80,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         height: 480,
         allowEditing: false,
         resultType: CameraResultType.Base64,
-        source: CameraSource.Prompt,
+        source: CameraSource.Camera, // Direct camera access
         saveToGallery: false,
         correctOrientation: true,
         presentationStyle: 'fullscreen',
@@ -159,19 +159,20 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       if (!supported) return addLog('Speech not supported');
 
       addLog('Starting dictation...');
+      await SpeechRecognition.removeAllListeners();
+
       await SpeechRecognition.start({
         language: 'ca-ES',
-        partialResults: false,
-        popup: true
+        partialResults: true,
+        popup: false
       });
 
-            SpeechRecognition.addListener('partialResults', (data: any) => {
-                if (data.matches && data.matches.length > 0) {
-                    const transcript = data.matches[0];
-                    addLog(`Dictated: ${transcript}`);
-                    setLocalDrill(prev => ({ ...prev, text_catalan: transcript }));
-                }
-            });
+      SpeechRecognition.addListener('partialResults', (data: any) => {
+          if (data.matches && data.matches.length > 0) {
+              const transcript = data.matches[0];
+              setLocalDrill(prev => ({ ...prev, text_catalan: transcript }));
+          }
+      });
     } catch (err: any) {
       addLog(`Dictation error: ${err.code || err.message || JSON.stringify(err)}`);
     }
@@ -289,11 +290,11 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '100px' }}>
         <div style={{ background: '#f8f9fa', padding: '12px', borderRadius: '16px', border: '1px solid #e0e0e0' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px' }}>
-              <button onClick={capturePhoto} style={{ height: '50px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '9px' }}>📷 Photo</button>
-              <button onClick={captureVideo} style={{ height: '50px', background: '#9C27B0', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '9px' }}>🎬 Video</button>
-              <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '50px', background: isRecording ? '#ff4444' : '#2196F3', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '9px' }}>{isRecording ? '⏹️ Stop' : '🎙️ Audio'}</button>
-              <button onClick={startDictation} style={{ height: '50px', background: '#FF9800', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '9px' }}>🗣️ Speak</button>
-              <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '50px', background: '#607D8B', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '9px' }}>📁 Media</button>
+              <button onClick={capturePhoto} style={{ height: '60px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', fontSize: '24px' }}>📷</button>
+              <button onClick={captureVideo} style={{ height: '60px', background: '#9C27B0', color: 'white', border: 'none', borderRadius: '8px', fontSize: '24px' }}>🎬</button>
+              <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '60px', background: isRecording ? '#ff4444' : '#2196F3', color: 'white', border: 'none', borderRadius: '8px', fontSize: '24px' }}>{isRecording ? '⏹️' : '🎙️'}</button>
+              <button onClick={startDictation} style={{ height: '60px', background: '#FF9800', color: 'white', border: 'none', borderRadius: '8px', fontSize: '24px' }}>🗣️</button>
+              <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '60px', background: '#607D8B', color: 'white', border: 'none', borderRadius: '8px', fontSize: '24px' }}>📁</button>
             </div>
             <input type="file" accept="video/*" capture={"camcorder" as any} id="native-video-input" style={{ display: 'none' }} onChange={handleFileChange} />
             <input type="file" id="gallery-upload" style={{ display: 'none' }} onChange={handleFileChange} />
@@ -332,9 +333,9 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
             >🪄 Trans</button>
         </div>
 
-                <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600 }}>Català</label><textarea value={localDrill.text_catalan || ''} onChange={(e) => handleFieldChange('text_catalan', e.target.value)} rows={2} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }} /></div>
-                <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600 }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label><textarea value={localDrill.text_tachelhit || ''} onChange={(e) => handleFieldChange('text_tachelhit', e.target.value)} rows={2} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }} /></div>
-                <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600 }}>Tag</label><input type="text" value={localDrill.tag || ''} onChange={(e) => handleFieldChange('tag', e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '8px' }} /></div>
+                <div><label style={{ display: 'block', fontSize: '16px', fontWeight: 700 }}>Català</label><textarea value={localDrill.text_catalan || ''} onChange={(e) => handleFieldChange('text_catalan', e.target.value)} rows={3} style={{ width: '100%', padding: '12px', border: '2px solid #ccc', borderRadius: '8px', fontSize: '18px' }} /></div>
+                <div><label style={{ display: 'block', fontSize: '16px', fontWeight: 700 }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label><textarea value={localDrill.text_tachelhit || ''} onChange={(e) => handleFieldChange('text_tachelhit', e.target.value)} rows={3} style={{ width: '100%', padding: '12px', border: '2px solid #ccc', borderRadius: '8px', fontSize: '18px' }} /></div>
+                <div><label style={{ display: 'block', fontSize: '16px', fontWeight: 700 }}>Tag</label><input type="text" value={localDrill.tag || ''} onChange={(e) => handleFieldChange('tag', e.target.value)} style={{ width: '100%', padding: '12px', border: '2px solid #ccc', borderRadius: '8px', fontSize: '18px' }} /></div>
 
         <div style={{ background: '#111', color: '#0f0', padding: '10px', borderRadius: '8px', fontSize: '10px', fontFamily: 'monospace', height: '100px', overflowY: 'auto' }}>
           <div style={{ color: '#fff', borderBottom: '1px solid #333', paddingBottom: '4px', marginBottom: '4px' }}>LIVE DEBUGGER</div>

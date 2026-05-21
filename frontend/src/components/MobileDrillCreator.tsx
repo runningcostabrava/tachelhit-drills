@@ -76,7 +76,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 height: 480,
                 allowEditing: false,
                 resultType: CameraResultType.Base64,
-                source: CameraSource.Prompt, 
+                source: CameraSource.Camera, // Direct camera access
                 saveToGallery: false,
                 correctOrientation: true,
                 presentationStyle: 'fullscreen',
@@ -169,16 +169,19 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             if (!supported) return addLog('Speech not supported');
 
             addLog('Starting dictation...');
+            
+            // Remove existing listeners first to avoid duplicates
+            await SpeechRecognition.removeAllListeners();
+
             await SpeechRecognition.start({
                 language: 'ca-ES',
-                partialResults: false,
-                popup: true
+                partialResults: true,
+                popup: false // Try without popup for smoother direct injection
             });
 
             SpeechRecognition.addListener('partialResults', (data: any) => {
                 if (data.matches && data.matches.length > 0) {
                     const transcript = data.matches[0];
-                    addLog(`Dictated: ${transcript}`);
                     setDrill(prev => ({ ...prev, text_catalan: transcript }));
                 }
             });
@@ -296,13 +299,13 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '100px' }}>
                 <div style={{ background: '#f8f9fa', padding: '12px', borderRadius: '16px', border: '1px solid #e0e0e0' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px' }}>
-                        <button onClick={capturePhoto} style={{ height: '50px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '9px' }}>📷 Photo</button>
-                        <button onClick={captureVideo} style={{ height: '50px', background: '#9C27B0', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '9px' }}>🎬 Video</button>
-                        <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '50px', background: isRecording ? '#ff4444' : '#2196F3', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '9px' }}>
-                            {isRecording ? '⏹️ Stop' : '🎙️ Audio'}
+                        <button onClick={capturePhoto} style={{ height: '60px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', fontSize: '24px' }}>📷</button>
+                        <button onClick={captureVideo} style={{ height: '60px', background: '#9C27B0', color: 'white', border: 'none', borderRadius: '8px', fontSize: '24px' }}>🎬</button>
+                        <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '60px', background: isRecording ? '#ff4444' : '#2196F3', color: 'white', border: 'none', borderRadius: '8px', fontSize: '24px' }}>
+                            {isRecording ? '⏹️' : '🎙️'}
                         </button>
-                        <button onClick={startDictation} style={{ height: '50px', background: '#FF9800', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '9px' }}>🗣️ Speak</button>
-                        <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '50px', background: '#607D8B', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '9px' }}>📁 Media</button>
+                        <button onClick={startDictation} style={{ height: '60px', background: '#FF9800', color: 'white', border: 'none', borderRadius: '8px', fontSize: '24px' }}>🗣️</button>
+                        <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '60px', background: '#607D8B', color: 'white', border: 'none', borderRadius: '8px', fontSize: '24px' }}>📁</button>
                     </div>
                     <input type="file" accept="video/*" capture={"camcorder" as any} id="native-video-input" style={{ display: 'none' }} onChange={handleFileChange} />
                     <input type="file" id="gallery-upload" style={{ display: 'none' }} onChange={handleFileChange} />
@@ -314,28 +317,28 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                         <video src={capturedVideo} controls playsInline preload="metadata" style={{ width: '100%', height: '100%' }} />
                     </div>
                 )}
-                {capturedAudio && <button onClick={() => new Audio(capturedAudio).play()} style={{ width: '100%', padding: '12px', background: '#f3f4f6', border: '1px solid #e0e0e0', borderRadius: '10px', fontWeight: 600 }}>🔊 Play</button>}
+                {capturedAudio && <button onClick={() => new Audio(capturedAudio).play()} style={{ width: '100%', padding: '16px', background: '#f3f4f6', border: '1px solid #e0e0e0', borderRadius: '12px', fontWeight: 600, fontSize: '18px' }}>🔊 Play Recording</button>}
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(65px, 1fr))', gap: '8px' }}>
-                    <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ padding: '12px 4px', background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '10px' }}>🤖 CA➔SH</button>
-                    <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ padding: '12px 4px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '10px' }}>🤖 SH➔CA</button>
-                    <button onClick={handleTachelhitTTS} disabled={aiLoadingKey !== null} style={{ padding: '12px 4px', background: '#fef3c7', color: '#92400e', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '10px' }}>🔊 TTS</button>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '8px' }}>
+                    <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ padding: '12px 4px', background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '12px' }}>🤖 CA➔SH</button>
+                    <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ padding: '12px 4px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '12px' }}>🤖 SH➔CA</button>
+                    <button onClick={handleTachelhitTTS} disabled={aiLoadingKey !== null} style={{ padding: '12px 4px', background: '#fef3c7', color: '#92400e', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '12px' }}>🔊 TTS</button>
                     <button 
                         onClick={() => {
-                            if (drill.audio_url || drill.video_url) {
+                            if (drill.audio_url || drill.video_url || capturedAudio || capturedVideo) {
                                 handleAutoTranscribe();
                             } else {
-                                alert('Please finish/save drill to enable transcription.');
+                                alert('Please record or pick media first.');
                             }
                         }} 
                         disabled={!(drill.audio_url || drill.video_url || capturedAudio || capturedVideo) || aiLoadingKey !== null} 
-                        style={{ padding: '12px 4px', background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '10px', opacity: (drill.audio_url || drill.video_url || capturedAudio || capturedVideo) ? 1 : 0.5 }}
+                        style={{ padding: '12px 4px', background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '12px', opacity: (drill.audio_url || drill.video_url || capturedAudio || capturedVideo) ? 1 : 0.5 }}
                     >🪄 Trans</button>
                 </div>
 
-                <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Català</label><textarea value={drill.text_catalan || ''} onChange={(e) => handleTextChange('text_catalan', e.target.value)} rows={3} style={{ width: '100%', padding: '10px', border: '2px solid #ddd', borderRadius: '8px' }} /></div>
-                <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label><textarea value={drill.text_tachelhit || ''} onChange={(e) => handleTextChange('text_tachelhit', e.target.value)} rows={3} style={{ width: '100%', padding: '10px', border: '2px solid #ddd', borderRadius: '8px' }} /></div>
-                <div><label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Tag</label><input type="text" value={drill.tag || ''} onChange={(e) => handleTextChange('tag', e.target.value)} style={{ width: '100%', padding: '10px', border: '2px solid #ddd', borderRadius: '8px' }} /></div>
+                <div><label style={{ display: 'block', fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>Català</label><textarea value={drill.text_catalan || ''} onChange={(e) => handleTextChange('text_catalan', e.target.value)} rows={3} style={{ width: '100%', padding: '12px', border: '2px solid #ccc', borderRadius: '8px', fontSize: '18px' }} /></div>
+                <div><label style={{ display: 'block', fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label><textarea value={drill.text_tachelhit || ''} onChange={(e) => handleTextChange('text_tachelhit', e.target.value)} rows={3} style={{ width: '100%', padding: '12px', border: '2px solid #ccc', borderRadius: '8px', fontSize: '18px' }} /></div>
+                <div><label style={{ display: 'block', fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>Tag</label><input type="text" value={drill.tag || ''} onChange={(e) => handleTextChange('tag', e.target.value)} style={{ width: '100%', padding: '12px', border: '2px solid #ccc', borderRadius: '8px', fontSize: '18px' }} /></div>
 
                 <div style={{ background: '#111', color: '#0f0', padding: '10px', borderRadius: '8px', fontSize: '10px', fontFamily: 'monospace', height: '100px', overflowY: 'auto' }}>
                     <div style={{ color: '#fff', borderBottom: '1px solid #333', paddingBottom: '4px', marginBottom: '4px' }}>DEBUG LOGS</div>
