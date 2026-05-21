@@ -317,14 +317,16 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                 });
             }
 
-            // Trigger sync and refresh
-            await syncManager.sync();
+            // Trigger sync (background) and refresh UI immediately
+            syncManager.sync(); 
             setPendingMedia(prev => {
                 const next = { ...prev };
                 delete next[drill.id];
                 return next;
             });
-            await refreshData();
+            
+            // Artificial delay to allow Preferences to settle before refresh
+            setTimeout(() => refreshData(), 100);
         } catch (err) {
             alert('Failed to save media');
         } finally {

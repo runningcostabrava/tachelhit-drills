@@ -42,16 +42,14 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
     const triggerSave = async (updatedDrill: Partial<Drill>) => {
         try {
-            const status = await Network.getStatus();
-            if (status.connected && !updatedDrill.is_local) {
-                await axios.put(`${API_BASE}/drills/${updatedDrill.id}`, updatedDrill);
-            } else {
-                await syncManager.queueAction({
-                    type: updatedDrill.is_local ? 'CREATE' : 'UPDATE',
-                    drillId: updatedDrill.id!,
-                    payload: updatedDrill
-                });
-            }
+            // Always use queueAction for non-blocking UI
+            await syncManager.queueAction({
+                type: updatedDrill.is_local ? 'CREATE' : 'UPDATE',
+                drillId: updatedDrill.id!,
+                payload: updatedDrill
+            });
+            // Fire and forget sync
+            syncManager.sync();
         } catch (err) {
             addLog('Save queued offline');
         }
