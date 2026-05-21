@@ -191,6 +191,28 @@ export default function DrillsResponsive() {
 
   useEffect(() => { fetchDrills(); }, [location.search]);
 
+  useEffect(() => {
+    if (drills.length === 0) {
+      const timer = setTimeout(() => {
+        if (drills.length === 0) {
+          const popup = document.createElement('div');
+          popup.id = 'loading-drills-popup';
+          popup.innerHTML = `
+            <div style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; borderRadius: 30px; zIndex: 99999; boxShadow: 0 4px 12px rgba(0,0,0,0.3); fontWeight: bold; fontSize: 14px; display: flex; alignItems: center; gap: 8px;">
+              <span class="spinner">⏳</span> Loading drills from local storage...
+            </div>
+          `;
+          document.body.appendChild(popup);
+          setTimeout(() => {
+            const p = document.getElementById('loading-drills-popup');
+            if (p) p.remove();
+          }, 3000);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [drills]);
+
   const addNewDrill = async () => {
     if (isCreating) return;
     setIsCreating(true);

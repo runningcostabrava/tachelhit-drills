@@ -44,6 +44,8 @@ class OfflineSyncManager {
       key: DRILLS_CACHE_KEY,
       value: JSON.stringify(drills),
     });
+    // Trigger media sync in background when drills are updated
+    this.syncAllMedia();
   }
 
   async getTests(): Promise<any[]> {

@@ -33,6 +33,19 @@ function App() {
     const processSyncQueue = async () => {
       const status = await Network.getStatus();
 
+      // Ensure cache is updated even if no queue
+      if (status.connected) {
+        try {
+          const drillsRes = await axios.get(`${API_BASE}/drills/`);
+          await syncManager.saveDrillsToCache(drillsRes.data);
+          const testsRes = await axios.get(`${API_BASE}/tests/`);
+          await syncManager.saveTestsToCache(testsRes.data);
+          syncManager.syncAllMedia();
+        } catch (e) {
+          console.error('Failed to pre-cache data', e);
+        }
+      }
+
       // Only attempt sync if we have internet connection
       if (!status.connected) {
         console.log("✈️ Device is offline. Sync paused.");

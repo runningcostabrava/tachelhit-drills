@@ -102,7 +102,12 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
         else if (sourceType === 'video') mediaSource = drill.video_url || '';
         else mediaSource = drill.audio_url || drill.video_url || '';
 
-        if (!mediaSource) return;
+        console.log(`[Transcribe] Starting for drill ${drill.id}, source type: ${sourceType || 'auto'}, url: ${mediaSource}`);
+
+        if (!mediaSource) {
+            alert('No media available to transcribe.');
+            return;
+        }
 
         const loadingKey = `scribe-${drill.id}`;
         setActionLoadingId(loadingKey);
@@ -110,15 +115,28 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
         try {
             const status = await Network.getStatus();
             if (!status.connected) {
+                console.warn('[Transcribe] Offline. Aborting.');
                 alert("⚠️ Voice transcription requires an internet connection.");
                 return;
             }
 
+            // Ensure we use the proper media URL for transcription
+            const fullMediaUrl = getMediaUrl(mediaSource);
+            console.log(`[Transcribe] Posting to backend with URL: ${fullMediaUrl}`);
+
             const response = await axios.post(`${API_BASE}/transcribe/`, {
-                audio_url: mediaSource
+                audio_url: fullMediaUrl
             });
 
-            const freshTranscription = response.data.corrected_transcription;
+            console.log('[Transcribe] Backend response received:', response.data);
+
+            let freshTranscription = response.data.corrected_transcription;
+            
+            // Add mention if it's from video
+            if (sourceType === 'video' || (!sourceType && mediaSource === drill.video_url)) {
+                freshTranscription = `[Video] ${freshTranscription}`;
+            }
+
             const currentTachelhit = drill.text_tachelhit || '';
 
             // Guard against deleting text: append text gracefully
@@ -126,10 +144,12 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                 ? `${currentTachelhit} (${freshTranscription})`
                 : freshTranscription;
 
+            console.log(`[Transcribe] Saving updated Tachelhit text: ${preservedText}`);
             await axios.put(`${API_BASE}/drills/${drill.id}`, { text_tachelhit: preservedText });
             await refreshData();
+            console.log('[Transcribe] Success.');
         } catch (error) {
-            console.error('Transcription loop error:', error);
+            console.error('[Transcribe] Transcription loop error:', error);
             alert('AI Transcription process failed.');
         } finally {
             setActionLoadingId(null);
@@ -586,7 +606,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
 
     // 🖥️ DESKTOP INTERFACE: Standard High-Performance spreadsheet view
     const columnDefs: ColDef<Drill>[] = [
-        { field: 'id', headerName: 'ID', width: 80, sortable: true, checkboxSelection: true, headerCheckboxSelection: true },
+        { field: 'id', headerName: 'ID', width: 80, sortable: true },
         { 
             field: 'image_url', 
             headerName: 'Preview', 
@@ -714,7 +734,12 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                     pagination={true}
                     paginationPageSize={50}
                     rowHeight={70}
-                    rowSelection="multiple"
+                    theme="legacy"
+                    rowSelection={{
+                        mode: 'multiRow',
+                        checkboxes: true,
+                        headerCheckbox: true
+                    }}
                     onSelectionChanged={(event) => {
                         setSelectedRows(event.api.getSelectedRows());
                     }}
