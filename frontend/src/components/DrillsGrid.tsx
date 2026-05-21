@@ -629,7 +629,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
 
     // 🖥️ DESKTOP INTERFACE: Standard High-Performance spreadsheet view
     const columnDefs: ColDef<Drill>[] = [
-        { field: 'id', headerName: 'ID', width: 80, sortable: true },
+        { field: 'id', headerName: 'ID', width: 80, sortable: true, editable: true },
         { 
             field: 'image_url', 
             headerName: 'Preview', 
