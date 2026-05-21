@@ -314,23 +314,37 @@ class OfflineSyncManager {
     const status = await Network.getStatus();
     if (!status.connected) return;
 
+    // Use a lock to prevent concurrent syncAllMedia runs
+    if ((this as any).isMediaSyncing) {
+      console.log('[OfflineSync] Media sync already in progress, skipping...');
+      return;
+    }
+    (this as any).isMediaSyncing = true;
+
     try {
       const drills = await this.getDrills();
       console.log(`[OfflineSync] Syncing media for ${drills.length} drills...`);
       
-      // Batch downloads to avoid overwhelming the network
-      const batchSize = 3;
+      // Use a smaller batch size and sequential batches to be gentle on Render/Cloudinary
+      const batchSize = 2; 
       for (let i = 0; i < drills.length; i += batchSize) {
         const batch = drills.slice(i, i + batchSize);
-        await Promise.all(batch.map(async (drill) => {
+        // Process batch sequentially to avoid "AxiosError: Network Error" (too many connections)
+        for (const drill of batch) {
           if (drill.audio_url) await this.downloadAndCacheMedia(drill.audio_url);
-          if (drill.video_url) await this.downloadAndCacheMedia(drill.video_url);
           if (drill.image_url) await this.downloadAndCacheMedia(drill.image_url);
-        }));
+          // Video can be large, maybe we only want to cache if explicitly requested? 
+          // But requirement says "all data downloaded locally".
+          if (drill.video_url) await this.downloadAndCacheMedia(drill.video_url);
+        }
+        // Small breathing room between batches
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
       console.log('[OfflineSync] Media sync complete');
     } catch (err) {
       console.error('[OfflineSync] Media sync failed:', err);
+    } finally {
+      (this as any).isMediaSyncing = false;
     }
   }
 }
