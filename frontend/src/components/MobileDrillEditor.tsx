@@ -80,14 +80,14 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
   };
 
   const handleFieldChange = (field: keyof Drill, value: string) => {
+    addLog(`Field change: ${field} -> ${value?.substring(0, 20)}...`);
     const updated = { ...localDrill, [field]: value };
     setLocalDrill(updated);
-    // Auto-save disabled
   };
 
   const capturePhoto = async () => {
     try {
-      addLog('Checking permissions...');
+      addLog('Triggering native photo camera...');
       const status = await Camera.requestPermissions();
       if (status.camera !== 'granted' && status.photos !== 'granted') {
         addLog(`Permissions status: ${JSON.stringify(status)}`);
@@ -306,34 +306,50 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+        addLog('No file chosen in editor handleFileChange');
+        return;
+    }
 
+    addLog(`Editor: File chosen ${file.name} (${file.type})`);
     const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'audio';
     const fileName = `${type}_${localDrill.id}_${Date.now()}_${file.name}`;
     
-    setLocalDrill(prev => ({ ...prev, [`${type}_url`]: URL.createObjectURL(file) }));
+    try {
+        const blobUrl = URL.createObjectURL(file);
+        addLog(`Editor: Mapping ${type} URL to ${blobUrl}`);
+        setLocalDrill(prev => ({ ...prev, [`${type}_url`]: blobUrl }));
 
-    await syncManager.saveMediaLocally(file, fileName);
-    await syncManager.queueAction({
-        type: 'UPLOAD_MEDIA',
-        drillId: localDrill.id,
-        mediaType: type as any,
-        localPath: fileName,
-        fileName: fileName
-    });
-    addLog(`${type} queued from gallery`);
+        addLog(`Editor: Saving ${type} locally...`);
+        await syncManager.saveMediaLocally(file, fileName);
+        addLog('Editor: Local save complete. Queuing upload...');
+        await syncManager.queueAction({
+            type: 'UPLOAD_MEDIA',
+            drillId: localDrill.id,
+            mediaType: type as any,
+            localPath: fileName,
+            fileName: fileName
+        });
+        addLog(`Editor: ${type} upload action created`);
+    } catch (err: any) {
+        addLog(`Editor error: ${err.message}`);
+    }
   };
 
   const handleTrimVideo = async (mode: 'video' | 'audio') => {
-    if (!localDrill.video_url) return;
+    if (!localDrill.video_url) {
+        addLog('Error: No video URL available for trimming');
+        return;
+    }
     setAiLoadingKey(`trim-${mode}`);
-    addLog(`Trimming ${mode}: ${trimTimes.start}s to ${trimTimes.end}s`);
+    addLog(`API Call: Trimming ${mode} (${trimTimes.start}s - ${trimTimes.end}s) via ${API_BASE}`);
     try {
         const endpoint = mode === 'video' ? 'trim-video' : 'trim-audio';
         const res = await axios.post(`${API_BASE}/drills/${localDrill.id}/${endpoint}`, {
             start_time: trimTimes.start,
             end_time: trimTimes.end
         });
+        addLog(`API Response: ${JSON.stringify(res.data).substring(0, 100)}...`);
         if (res.data.url) {
             const updated = mode === 'video' 
                 ? { ...localDrill, video_url: res.data.url }
@@ -341,10 +357,12 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
             
             setLocalDrill(updated);
             triggerSave(updated);
-            addLog(`${mode === 'video' ? 'Video' : 'Audio'} trimmed successfully`);
+            addLog(`${mode === 'video' ? 'Video' : 'Audio'} trim applied successfully`);
+        } else {
+            addLog('Warning: Trim API returned success but no URL');
         }
     } catch (err: any) {
-        addLog(`Trim error: ${err.message}`);
+        addLog(`Trim API Error: ${err.message}`);
     } finally {
         setAiLoadingKey(null);
     }

@@ -111,9 +111,10 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
     const captureVideo = async () => {
         try {
+            addLog('Requesting native video input...');
             document.getElementById('native-video-input')?.click();
         } catch (err: any) {
-            addLog(`Video error: ${err.message}`);
+            addLog(`Video trigger error: ${err.message}`);
         }
     };
 
@@ -189,24 +190,38 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (!file) return;
+        if (!file) {
+            addLog('No file selected in handleFileChange');
+            return;
+        }
 
+        addLog(`File selected: ${file.name} (${file.type}, ${Math.round(file.size/1024)}KB)`);
         const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'audio';
         const fileName = `${type}_${Date.now()}_${file.name}`;
         
-        if (type === 'image') setCapturedImage(URL.createObjectURL(file));
-        if (type === 'video') setCapturedVideo(URL.createObjectURL(file));
-        if (type === 'audio') setCapturedAudio(URL.createObjectURL(file));
+        try {
+            const blobUrl = URL.createObjectURL(file);
+            addLog(`Generated blob URL for ${type}: ${blobUrl}`);
+            if (type === 'image') setCapturedImage(blobUrl);
+            if (type === 'video') setCapturedVideo(blobUrl);
+            if (type === 'audio') setCapturedAudio(blobUrl);
 
-        await syncManager.saveMediaLocally(file, fileName);
-        await syncManager.queueAction({
-            type: 'UPLOAD_MEDIA',
-            drillId: drill.id!,
-            mediaType: type as any,
-            localPath: fileName,
-            fileName: fileName
-        });
-        addLog(`${type} queued from file`);
+            addLog(`Saving ${type} to local storage...`);
+            const localUri = await syncManager.saveMediaLocally(file, fileName);
+            addLog(`Local save success: ${localUri}`);
+
+            addLog(`Queuing ${type} for upload...`);
+            await syncManager.queueAction({
+                type: 'UPLOAD_MEDIA',
+                drillId: drill.id!,
+                mediaType: type as any,
+                localPath: fileName,
+                fileName: fileName
+            });
+            addLog(`${type} successfully queued`);
+        } catch (err: any) {
+            addLog(`File processing error: ${err.message}`);
+        }
     };
 
     const handleAutoTranscribe = async (sourceType?: 'audio' | 'video') => {
@@ -215,26 +230,35 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         else if (sourceType === 'video') mediaSource = drill.video_url || capturedVideo || '';
         else mediaSource = drill.audio_url || drill.video_url || capturedAudio || capturedVideo || '';
 
-        if (!mediaSource) return alert('Please record and save media first.');
+        addLog(`Preparing transcription. Source: ${mediaSource}`);
+        if (!mediaSource) {
+            addLog('Error: No media source found for transcription');
+            return alert('Please record and save media first.');
+        }
         
         const status = await Network.getStatus();
-        if (!status.connected) return alert('Transcription requires internet connection.');
+        if (!status.connected) {
+            addLog('Error: Internet disconnected, transcription failed');
+            return alert('Transcription requires internet connection.');
+        }
 
         setAiLoadingKey('transcribe-voice');
-        addLog(`Transcribing ${sourceType || 'media'}...`);
+        addLog(`API Call: Transcribing ${sourceType || 'media'} via ${API_BASE}/transcribe/`);
         try {
             const res = await axios.post(`${API_BASE}/transcribe/`, { audio_url: mediaSource });
+            addLog(`API Response: ${JSON.stringify(res.data).substring(0, 100)}...`);
             const currentContent = drill.text_tachelhit || '';
             const safeText = currentContent.trim() ? `${currentContent} (${res.data.corrected_transcription})` : res.data.corrected_transcription;
             
             const updated = { ...drill, text_tachelhit: safeText };
             setDrill(updated);
             triggerSave(updated);
-            addLog('Transcription success');
+            addLog('Transcription UI updated & saved');
         } catch (err: any) {
             const msg = err.response?.data?.detail || err.message;
+            const fullErr = JSON.stringify(err.response?.data || err.message);
+            addLog(`ASR API Error: ${fullErr}`);
             alert(`Transcription failed: ${msg}`);
-            addLog(`ASR Error: ${msg}`);
         } finally {
             setAiLoadingKey(null);
         }
@@ -266,23 +290,34 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
     const handleTranslateAction = async (source: 'ca' | 'shi', target: 'ca' | 'shi') => {
         const status = await Network.getStatus();
-        if (!status.connected) return alert('Translation requires internet connection.');
+        if (!status.connected) {
+            addLog('Error: Translation failed - no internet');
+            return alert('Translation requires internet connection.');
+        }
 
         const sourceText = source === 'ca' ? drill.text_catalan : drill.text_tachelhit;
-        if (!sourceText) return alert('Source field is empty.');
+        addLog(`Preparing translation: ${source} -> ${target}. Text: ${sourceText?.substring(0, 30)}...`);
+        if (!sourceText) {
+            addLog('Error: Source text empty');
+            return alert('Source field is empty.');
+        }
         
         const targetField = target === 'shi' ? 'text_tachelhit' : 'text_catalan';
         setAiLoadingKey(`trans-${targetField}`);
 
         try {
+            addLog(`API Call: Translating via ${API_BASE}/translate`);
             const res = await axios.post(`${API_BASE}/translate`, { text: sourceText, source_lang: source, target_lang: target });
+            addLog(`API Response: ${res.data.translated_text}`);
             const currentContent = (drill as any)[targetField] || '';
             const safeText = currentContent.trim() ? `${currentContent} (${res.data.translated_text})` : res.data.translated_text;
 
             const updated = { ...drill, [targetField]: safeText };
             setDrill(updated);
             triggerSave(updated);
-        } catch (err) {
+            addLog('Translation UI updated & saved');
+        } catch (err: any) {
+            addLog(`Translation API Error: ${err.message}`);
             alert('Translation failed.');
         } finally {
             setAiLoadingKey(null);
@@ -318,7 +353,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#F3F4F6', zIndex: 10000, display: 'flex', flexDirection: 'column' }}>
             <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                 <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FaTimes size={20} /></button>
-                <div style={{ color: 'yellow', fontSize: '24px', fontWeight: 900, letterSpacing: '1px', textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>NEW DRILL p1.1</div>
+                <div style={{ color: 'yellow', fontSize: '24px', fontWeight: 900, letterSpacing: '1px', textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>NEW DRILL p2</div>
                 <button onClick={() => { triggerSave(drill); onDrillCreated(); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#10B981', color: 'white', border: 'none', borderRadius: '12px', padding: '10px 18px', fontWeight: 'bold' }}><FaSave /> Save</button>
             </div>
 
@@ -411,7 +446,16 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
                 {capturedAudio && (
                     <div style={{ background: 'white', padding: '15px', borderRadius: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <button onClick={() => new Audio(capturedAudio).play()} style={{ width: '100%', padding: '14px', background: '#f3f4f6', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                        <button 
+                            onClick={() => {
+                                addLog('Playing captured audio...');
+                                const a = new Audio(capturedAudio);
+                                a.onplay = () => addLog('Audio playback started');
+                                a.onerror = (e) => addLog(`Audio playback error: ${JSON.stringify(e)}`);
+                                a.play();
+                            }} 
+                            style={{ width: '100%', padding: '14px', background: '#f3f4f6', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+                        >
                             🔊 Escolta la gravació
                         </button>
                         <div style={{ padding: '10px', background: '#F9FAFB', borderRadius: '12px' }}>

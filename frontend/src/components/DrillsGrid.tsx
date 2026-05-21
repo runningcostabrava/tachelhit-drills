@@ -66,6 +66,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
 
     // 🌐 Smart Non-Destructive Translation Pipeline
     const handleTranslate = async (drill: Drill, source: 'ca' | 'shi', target: 'ca' | 'shi') => {
+        console.log(`[DrillsGrid] Starting translation: ${source} -> ${target} for drill ${drill.id}`);
         const sourceText = source === 'ca' ? drill.text_catalan : drill.text_tachelhit;
         if (!sourceText) {
             alert(`Please enter text in ${source === 'ca' ? 'Catalan' : 'Tachelhit'} first.`);
@@ -83,11 +84,13 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                 return;
             }
 
+            console.log(`[DrillsGrid] API Call: ${API_BASE}/translate`);
             const res = await axios.post(`${API_BASE}/translate`, {
                 text: sourceText,
                 source_lang: source,
                 target_lang: target
             });
+            console.log('[DrillsGrid] API Success:', res.data.translated_text);
 
             const freshTranslation = res.data.translated_text;
             const currentText = (drill as any)[targetField] || '';
