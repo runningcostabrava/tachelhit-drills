@@ -378,10 +378,13 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                             src={capturedVideo} 
                             controls 
                             playsInline 
-                            preload="metadata" 
+                            preload="auto"
+                            onPlay={() => addLog('Creator Video: Play event')}
+                            onError={(e) => addLog(`Creator Video: Error: ${(e.target as any).error?.message}`)}
                             style={{ width: '100%', maxHeight: '300px', display: 'block' }} 
                             onLoadedMetadata={(e) => {
                                 const dur = (e.target as HTMLVideoElement).duration;
+                                addLog(`Creator Video: Metadata loaded. Duration: ${dur}`);
                                 if (dur) {
                                     setVideoDuration(dur);
                                     setTrimTimes(prev => ({ ...prev, end: Math.min(prev.end, dur) }));
@@ -446,13 +449,20 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
                 {capturedAudio && (
                     <div style={{ background: 'white', padding: '15px', borderRadius: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <audio 
+                            id="creator-audio-preview"
+                            src={capturedAudio}
+                            style={{ width: '100%', marginBottom: '8px' }}
+                            controls
+                            preload="auto"
+                            onPlay={() => addLog('Creator Audio: Play event')}
+                            onError={(e) => addLog(`Creator Audio: Error: ${(e.target as any).error?.message}`)}
+                        />
                         <button 
                             onClick={() => {
-                                addLog('Playing captured audio...');
-                                const a = new Audio(capturedAudio);
-                                a.onplay = () => addLog('Audio playback started');
-                                a.onerror = (e) => addLog(`Audio playback error: ${JSON.stringify(e)}`);
-                                a.play();
+                                addLog('Playing captured audio via handle...');
+                                const a = document.getElementById('creator-audio-preview') as HTMLAudioElement;
+                                if (a) a.play().catch(e => addLog(`Play error: ${e.message}`));
                             }} 
                             style={{ width: '100%', padding: '14px', background: '#f3f4f6', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
                         >

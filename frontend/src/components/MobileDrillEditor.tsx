@@ -382,14 +382,22 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
   }, [localDrill.audio_url, localDrill.video_url, localDrill.image_url]);
 
   const getSourceUrl = (url: string | undefined, type: 'audio'|'video'|'image') => {
-    if (!url) return '';
-    if (url.startsWith('blob:') || url.startsWith('data:')) return url;
+    if (!url) {
+        addLog(`getSourceUrl(${type}): empty URL`);
+        return '';
+    }
+    if (url.startsWith('blob:') || url.startsWith('data:')) {
+        addLog(`getSourceUrl(${type}): using blob/data URL`);
+        return url;
+    }
     const local = localMediaUrls[type];
     if (local) {
-      console.log(`[OfflineEditor] Using local path for ${type}: ${local}`);
+      addLog(`getSourceUrl(${type}): Found local path: ${local}`);
       return local;
     }
-    return getMediaUrl(url);
+    const remote = getMediaUrl(url);
+    addLog(`getSourceUrl(${type}): Using remote URL: ${remote}`);
+    return remote;
   };
 
 
@@ -426,7 +434,9 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                 src={getSourceUrl(localDrill.video_url, 'video')} 
                 controls 
                 playsInline 
-                preload="metadata" 
+                preload="auto"
+                onPlay={() => addLog('Video: Play event triggered')}
+                onError={(e) => addLog(`Video: Playback error: ${(e.target as any).error?.message || 'unknown'}`)}
                 style={{ width: '100%', maxHeight: '300px', display: 'block' }} 
                 onLoadedMetadata={(e) => {
                   const dur = (e.target as HTMLVideoElement).duration;
@@ -495,9 +505,16 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
             <audio 
                 id="editor-audio-preview"
                 src={getSourceUrl(localDrill.audio_url, 'audio')} 
-                onLoadedMetadata={(e) => setAudioDuration((e.target as HTMLAudioElement).duration || 60)}
+                onLoadedMetadata={(e) => {
+                    const dur = (e.target as HTMLAudioElement).duration;
+                    addLog(`Audio: Metadata loaded. Duration: ${dur}`);
+                    setAudioDuration(dur || 60);
+                }}
+                onPlay={() => addLog('Audio: Play event triggered')}
+                onError={(e) => addLog(`Audio: Playback error: ${(e.target as any).error?.message || 'unknown'}`)}
                 style={{ display: 'block', width: '100%', marginBottom: '10px' }}
                 controls
+                preload="auto"
             />
             <button 
                 onClick={() => {
