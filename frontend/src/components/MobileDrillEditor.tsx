@@ -156,6 +156,28 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     }
   };
 
+  const handleTrimAudio = async () => {
+    if (!localDrill.audio_url) return;
+    setAiLoadingKey('trim-audio');
+    addLog(`Trimming audio: ${trimTimes.start}s to ${trimTimes.end}s`);
+    try {
+        const res = await axios.post(`${API_BASE}/drills/${localDrill.id}/trim-audio`, {
+            start_time: trimTimes.start,
+            end_time: trimTimes.end
+        });
+        if (res.data.url) {
+            const updated = { ...localDrill, audio_url: res.data.url };
+            setLocalDrill(updated);
+            triggerSave(updated);
+            addLog('Audio trimmed successfully');
+        }
+    } catch (err: any) {
+        addLog(`Trim error: ${err.message}`);
+    } finally {
+        setAiLoadingKey(null);
+    }
+  };
+
   const stopVoiceRecording = async () => {
     try {
       const result = await VoiceRecorder.stopRecording();
@@ -462,9 +484,22 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         )}
 
         {localDrill.audio_url && (
-          <button onClick={() => new Audio(getSourceUrl(localDrill.audio_url, 'audio')).play()} style={{ width: '100%', padding: '12px', background: '#f3f4f6', border: 'none', borderRadius: '10px', fontWeight: 600 }}>
-            🔊 Play
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'white', padding: '15px', borderRadius: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #E5E7EB' }}>
+            <button onClick={() => new Audio(getSourceUrl(localDrill.audio_url, 'audio')).play()} style={{ width: '100%', padding: '12px', background: '#F3F4F6', border: 'none', borderRadius: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#1F2937' }}>
+              <FaVolumeUp /> Play Audio
+            </button>
+            <div style={{ padding: '10px', background: '#F9FAFB', borderRadius: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '11px', fontWeight: 'bold', color: '#6B7280' }}>
+                    <span>START: {trimTimes.start}s</span>
+                    <span>END: {trimTimes.end}s</span>
+                </div>
+                <input type="range" min="0" max="60" step="0.5" value={trimTimes.start} onChange={e => setTrimTimes(p => ({...p, start: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '8px' }} />
+                <input type="range" min="0" max="60" step="0.5" value={trimTimes.end} onChange={e => setTrimTimes(p => ({...p, end: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '12px' }} />
+                <button onClick={handleTrimAudio} disabled={aiLoadingKey !== null} style={{ width: '100%', padding: '10px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px' }}>
+                    <FaScissors /> Trim Audio
+                </button>
+            </div>
+          </div>
         )}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', background: 'white', padding: '15px', borderRadius: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #E5E7EB' }}>
