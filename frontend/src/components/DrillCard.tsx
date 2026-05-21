@@ -1781,7 +1781,8 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                 src={getMediaUrl(drill.video_url)} 
                 controls 
                 playsInline 
-                style={{ width: '100%', maxHeight: '200px', display: 'block' }} 
+                preload="metadata"
+                style={{ width: '100%', maxHeight: '250px', display: 'block', objectFit: 'contain' }} 
             />
         </div>
       )}
