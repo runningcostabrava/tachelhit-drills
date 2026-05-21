@@ -671,9 +671,9 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                     )}
                     <button
                         onClick={() => handleDeleteIntent(params.data.id)}
-                        style={{ background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                        style={{ background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >
-                        🗑️ Delete
+                        🗑️
                     </button>
                 </div>
             )
@@ -721,7 +721,9 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                     onCellValueChanged={onCellValueChanged}
                     defaultColDef={{
                         resizable: true,
-                        sortable: true
+                        sortable: true,
+                        suppressNavigable: false,
+                        cellStyle: { display: 'flex', alignItems: 'center' }
                     }}
                 />
             </div>
