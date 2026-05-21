@@ -327,7 +327,12 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
   const getSourceUrl = (url: string | undefined, type: 'audio'|'video'|'image') => {
     if (!url) return '';
     if (url.startsWith('blob:') || url.startsWith('data:')) return url;
-    return localMediaUrls[type] || getMediaUrl(url);
+    const local = localMediaUrls[type];
+    if (local) {
+      console.log(`[OfflineEditor] Using local path for ${type}: ${local}`);
+      return local;
+    }
+    return getMediaUrl(url);
   };
 
   return (
