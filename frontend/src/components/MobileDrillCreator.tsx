@@ -318,7 +318,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#F3F4F6', zIndex: 10000, display: 'flex', flexDirection: 'column' }}>
             <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                 <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FaTimes size={20} /></button>
-                <div style={{ color: 'white', fontSize: '20px', fontWeight: 800, letterSpacing: '-0.5px' }}>New Drill p1.1</div>
+                <div style={{ color: 'yellow', fontSize: '24px', fontWeight: 900, letterSpacing: '1px', textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>NEW DRILL p1.1</div>
                 <button onClick={() => { triggerSave(drill); onDrillCreated(); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#10B981', color: 'white', border: 'none', borderRadius: '12px', padding: '10px 18px', fontWeight: 'bold' }}><FaSave /> Save</button>
             </div>
 
@@ -353,7 +353,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                                 }
                             }}
                         />
-                        <div style={{ width: '100%', padding: '15px', background: '#111', color: 'white' }}>
+                        <div style={{ width: '100%', padding: '15px', background: '#111' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '12px', fontWeight: 'bold' }}>
                                 <button 
                                     onClick={() => {

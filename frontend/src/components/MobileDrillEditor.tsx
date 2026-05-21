@@ -478,7 +478,8 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                 id="editor-audio-preview"
                 src={getSourceUrl(localDrill.audio_url, 'audio')} 
                 onLoadedMetadata={(e) => setAudioDuration((e.target as HTMLAudioElement).duration || 60)}
-                style={{ display: 'none' }}
+                style={{ display: 'block', width: '100%', marginBottom: '10px' }}
+                controls
             />
             <button 
                 onClick={() => {
