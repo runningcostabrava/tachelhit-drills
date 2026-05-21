@@ -9,6 +9,21 @@ import { Network } from '@capacitor/network';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { VoiceRecorder } from 'capacitor-voice-recorder';
 import { API_BASE, getMediaUrl } from '../config';
+import { 
+  FaVolumeUp, 
+  FaVideo, 
+  FaRobot, 
+  FaLanguage, 
+  FaMagic, 
+  FaSave, 
+  FaEdit, 
+  FaTrash, 
+  FaCheckSquare, 
+  FaTag, 
+  FaPlus,
+  FaFileAudio,
+  FaSearch
+} from 'react-icons/fa';
 
 // Import CSS structural definitions
 import 'ag-grid-community/styles/ag-grid.css';
@@ -462,20 +477,20 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                     style={{
                                         flex: 1,
                                         padding: '10px',
-                                        background: '#f3f4f6',
-                                        border: 'none',
-                                        borderRadius: '10px',
+                                        background: '#EEF2FF',
+                                        border: '1px solid #C3DAFE',
+                                        borderRadius: '12px',
                                         fontSize: '14px',
                                         fontWeight: 600,
-                                        color: '#374151',
+                                        color: '#4338CA',
                                         cursor: 'pointer',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        gap: '6px'
+                                        gap: '8px'
                                     }}
                                 >
-                                    🔊 Play Audio
+                                    <FaVolumeUp /> Audio
                                 </button>
                             )}
                             {drill.text_tachelhit && (
@@ -485,46 +500,44 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                     style={{
                                         flex: 1,
                                         padding: '10px',
-                                        background: '#fef3c7',
-                                        border: '1px solid #fde68a',
-                                        borderRadius: '10px',
+                                        background: '#FEF3C7',
+                                        border: '1px solid #FDE68A',
+                                        borderRadius: '12px',
                                         fontSize: '14px',
                                         fontWeight: 600,
-                                        color: '#92400e',
+                                        color: '#92400E',
                                         cursor: 'pointer',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        gap: '6px'
+                                        gap: '8px'
                                     }}
                                 >
-                                    {actionLoadingId === `tts-${drill.id}` ? '...' : '🗣️ TTS'}
+                                    <FaRobot /> {actionLoadingId === `tts-${drill.id}` ? '...' : 'TTS'}
                                 </button>
                             )}
                             {drill.video_url && (
                                 <button
                                     onClick={() => {
-                                        // Simple way to preview video: open in a new tab or use a lightweight modal
-                                        // For now, let's just open the URL
                                         window.open(getMediaUrl(drill.video_url!), '_blank');
                                     }}
                                     style={{
                                         flex: 1,
                                         padding: '10px',
-                                        background: '#f3f4f6',
-                                        border: 'none',
-                                        borderRadius: '10px',
+                                        background: '#F3E8FF',
+                                        border: '1px solid #E9D5FF',
+                                        borderRadius: '12px',
                                         fontSize: '14px',
                                         fontWeight: 600,
-                                        color: '#374151',
+                                        color: '#7E22CE',
                                         cursor: 'pointer',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        gap: '6px'
+                                        gap: '8px'
                                     }}
                                 >
-                                    🎬 Play Video
+                                    <FaVideo /> Video
                                 </button>
                             )}
                         </div>
@@ -572,16 +585,16 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                 {onEditDrill && (
                                     <button
                                         onClick={() => onEditDrill(drill)}
-                                        style={{ background: '#4f46e5', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 18px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', boxShadow: '0 2px 4px rgba(79, 70, 229, 0.2)' }}
                                     >
-                                        ✏️ Edit
+                                        <FaEdit /> Edit
                                     </button>
                                 )}
                                 <button
                                     onClick={() => handleDeleteIntent(drill.id)}
-                                    style={{ background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '8px', padding: '8px 12px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#FFF1F2', color: '#E11D48', border: '1px solid #FECDD3', borderRadius: '10px', padding: '10px 18px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
                                 >
-                                    🗑️ Delete
+                                    <FaTrash /> Delete
                                 </button>
                             </div>
                         </div>
@@ -633,8 +646,8 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
         { 
             field: 'image_url', 
             headerName: 'Preview', 
-            width: 80, 
-            cellRenderer: (p: any) => p.value ? <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}><img src={getMediaUrl(p.value)} style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '4px' }} /></div> : null 
+            width: 90, 
+            cellRenderer: (p: any) => p.value ? <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}><img src={getMediaUrl(p.value)} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e5e7eb' }} /></div> : null 
         },
         { field: 'text_catalan', headerName: 'Català', flex: 2, minWidth: 150, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px' } },
         { field: 'text_tachelhit', headerName: 'Tachelhit', flex: 2, minWidth: 150, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px' } },
@@ -642,26 +655,26 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
         { field: 'tag', headerName: 'Tag', width: 120, filter: true, editable: true },
         {
             headerName: 'Media',
-            width: 140,
+            width: 120,
             cellRenderer: (params: any) => (
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', height: '100%' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                     {params.data.audio_url && (
-                        <button onClick={() => new Audio(getMediaUrl(params.data.audio_url)).play()} style={{ background: '#f3f4f6', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}>🔊</button>
+                        <button onClick={() => new Audio(getMediaUrl(params.data.audio_url)).play()} style={{ background: '#EEF2FF', border: 'none', borderRadius: '8px', padding: '8px', cursor: 'pointer', color: '#4338CA' }} title="Play Audio"><FaVolumeUp size={16} /></button>
                     )}
                     {params.data.video_url && (
-                        <button onClick={() => window.open(getMediaUrl(params.data.video_url), '_blank')} style={{ background: '#f3f4f6', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}>🎬</button>
+                        <button onClick={() => window.open(getMediaUrl(params.data.video_url), '_blank')} style={{ background: '#F3E8FF', border: 'none', borderRadius: '8px', padding: '8px', cursor: 'pointer', color: '#7E22CE' }} title="Play Video"><FaVideo size={16} /></button>
                     )}
                 </div>
             )
         },
         {
             headerName: 'AI Tools',
-            width: 320,
+            width: 380,
             cellRenderer: (params: any) => (
-                <div style={{ display: 'flex', gap: '4px', alignItems: 'center', height: '100%' }}>
-                    <button onClick={() => handleTranslate(params.data, 'ca', 'shi')} disabled={actionLoadingId !== null} style={{ padding: '4px 6px', fontSize: '10px', background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>CA➔SH</button>
-                    <button onClick={() => handleTranslate(params.data, 'shi', 'ca')} disabled={actionLoadingId !== null} style={{ padding: '4px 6px', fontSize: '10px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>SH➔CA</button>
-                    <button onClick={() => handleTachelhitTTS(params.data)} disabled={actionLoadingId !== null} style={{ padding: '4px 6px', fontSize: '10px', background: '#fef3c7', color: '#92400e', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>🔊 TTS SHI</button>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', height: '100%' }}>
+                    <button onClick={() => handleTranslate(params.data, 'ca', 'shi')} disabled={actionLoadingId !== null} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '11px', fontWeight: 600, background: '#E0E7FF', color: '#4338CA', border: 'none', borderRadius: '8px', cursor: 'pointer' }}><FaLanguage /> CA➔SH</button>
+                    <button onClick={() => handleTranslate(params.data, 'shi', 'ca')} disabled={actionLoadingId !== null} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '11px', fontWeight: 600, background: '#D1FAE5', color: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}><FaLanguage /> SH➔CA</button>
+                    <button onClick={() => handleTachelhitTTS(params.data)} disabled={actionLoadingId !== null} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '11px', fontWeight: 600, background: '#FEF3C7', color: '#D97706', border: 'none', borderRadius: '8px', cursor: 'pointer' }}><FaRobot /> TTS</button>
                     {(params.data.audio_url || params.data.video_url) && (
                         <button 
                             onClick={() => {
@@ -680,8 +693,8 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                 }
                             }} 
                             disabled={actionLoadingId !== null} 
-                            style={{ padding: '4px 6px', fontSize: '10px', background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                        >🪄 Transcribe</button>
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '11px', fontWeight: 600, background: '#FFEDD5', color: '#EA580C', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                        ><FaMagic /> Trans</button>
                     )}
                     <button 
                         onClick={async () => {
@@ -694,29 +707,31 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                             }
                         }}
                         disabled={actionLoadingId !== null || !(params.data.audio_url || params.data.video_url)}
-                        style={{ padding: '4px 6px', fontSize: '10px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                    >💾 Cache</button>
+                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '11px', fontWeight: 600, background: '#F3F4F6', color: '#4B5563', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                    ><FaSave /> Cache</button>
                 </div>
             )
         },
         {
             headerName: 'Actions',
-            width: 180,
+            width: 150,
             cellRenderer: (params: any) => (
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', height: '100%' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                     {onEditDrill && (
                         <button
                             onClick={() => onEditDrill(params.data)}
-                            style={{ background: '#4f46e5', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '12px' }}
+                            style={{ background: '#4f46e5', color: 'white', border: 'none', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                            title="Edit"
                         >
-                            ✏️
+                            <FaEdit size={16} />
                         </button>
                     )}
                     <button
                         onClick={() => handleDeleteIntent(params.data.id)}
-                        style={{ background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        style={{ background: '#FFF1F2', color: '#E11D48', border: 'none', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                        title="Delete"
                     >
-                        🗑️
+                        <FaTrash size={16} />
                     </button>
                 </div>
             )
@@ -725,28 +740,28 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', padding: '20px' }}>
-            <div style={{ marginBottom: '10px', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <span style={{ fontSize: '14px', fontWeight: 600 }}>{selectedRows.length} items selected</span>
+            <div style={{ marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center', background: '#F9FAFB', padding: '15px', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
+                <span style={{ fontSize: '15px', fontWeight: 600, color: '#374151', marginRight: '10px' }}><FaCheckSquare style={{ verticalAlign: 'middle', marginTop: '-3px', marginRight: '5px' }} /> {selectedRows.length} items selected</span>
                 <button 
                     onClick={handleBulkDelete} 
                     disabled={selectedRows.length === 0} 
-                    style={{ padding: '6px 12px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', opacity: selectedRows.length ? 1 : 0.5 }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#EF4444', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', opacity: selectedRows.length ? 1 : 0.5, fontWeight: 600, transition: 'all 0.2s' }}
                 >
-                    🗑️ Bulk Delete
+                    <FaTrash /> Bulk Delete
                 </button>
                 <button 
                     onClick={handleBulkEditTags} 
                     disabled={selectedRows.length === 0} 
-                    style={{ padding: '6px 12px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', opacity: selectedRows.length ? 1 : 0.5 }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', opacity: selectedRows.length ? 1 : 0.5, fontWeight: 600, transition: 'all 0.2s' }}
                 >
-                    🏷️ Bulk Edit Tags
+                    <FaTag /> Bulk Edit Tags
                 </button>
                 <button 
                     onClick={() => setShowTestConfig(true)} 
                     disabled={selectedRows.length === 0} 
-                    style={{ padding: '6px 12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', opacity: selectedRows.length ? 1 : 0.5 }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#10B981', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', opacity: selectedRows.length ? 1 : 0.5, fontWeight: 600, transition: 'all 0.2s' }}
                 >
-                    📝 Create Practica
+                    <FaPlus /> Create Practica
                 </button>
             </div>
             <div className="ag-theme-alpine" style={{ flex: 1 }}>

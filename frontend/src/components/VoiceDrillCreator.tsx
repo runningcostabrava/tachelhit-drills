@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { FaMicrophone, FaPlus, FaCheck, FaTimes, FaCamera, FaVideo, FaKeyboard, FaFolderOpen, FaMagic, FaSave, FaScissors } from 'react-icons/fa';
 import axios from 'axios';
 import { API_BASE } from '../config';
 
@@ -18,120 +19,54 @@ export default function VoiceDrillCreator({ onClose, onDrillCreated }: VoiceDril
     const [cameraMode, setCameraMode] = useState<'photo' | 'video' | null>(null);
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const [capturedVideo, setCapturedVideo] = useState<string | null>(null);
-    const [uploadedFile, setUploadedFile] = useState<File | null>(null); // New state for uploaded file
-    const [pastedImage, setPastedImage] = useState<string | null>(null); // New state for pasted image
+    const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+    const [pastedImage, setPastedImage] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+    const [trimTimes, setTrimTimes] = useState({ start: 0, end: 10 });
 
-    // Ref for hidden file input
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    // Limpiar blob URLs al desmontar
-    useEffect(() => {
-        return () => {
-            if (capturedImage && capturedImage.startsWith('blob:')) {
-                URL.revokeObjectURL(capturedImage);
-            }
-            if (capturedVideo && capturedVideo.startsWith('blob:')) {
-                URL.revokeObjectURL(capturedVideo);
-            }
-            // Limpiar URL del archivo subido/pegado si es un blob
-            if (pastedImage && pastedImage.startsWith('blob:')) {
-                URL.revokeObjectURL(pastedImage);
-            }
-            // uploadedFile no necesita URL.revokeObjectURL ya que es un objeto File, no una URL de blob
-        };
-    }, [capturedImage, capturedVideo, pastedImage]);
-
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
     const previewRef = useRef<HTMLVideoElement | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const recognitionRef = useRef<any>(null);
 
-    // NEW: Handle file selection from input
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            // Clear other media states
-            setCapturedImage(null);
-            setCapturedVideo(null);
-            setPastedImage(null);
-            setUploadedFile(file);
-            // If it's an image, create a preview URL
-            if (file.type.startsWith('image/')) {
-                setCapturedImage(URL.createObjectURL(file));
-            } else if (file.type.startsWith('video/')) {
-                setCapturedVideo(URL.createObjectURL(file));
-            }
-        }
-    };
-
-    // NEW: Handle paste event for images
     useEffect(() => {
-        const handlePaste = (event: ClipboardEvent) => {
-            const items = event.clipboardData?.items;
-            if (items) {
-                for (let i = 0; i < items.length; i++) {
-                    if (items[i].type.indexOf('image') !== -1) {
-                        const blob = items[i].getAsFile();
-                        if (blob) {
-                            // Clear other media states
-                            stopCamera(); // Stop camera if active
-                            setCapturedImage(null);
-                            setCapturedVideo(null);
-                            setUploadedFile(null);
-                            
-                            const imageUrl = URL.createObjectURL(blob);
-                            setPastedImage(imageUrl);
-                            event.preventDefault(); // Prevent default paste behavior (e.g., pasting into text area)
-                            return;
-                        }
-                    }
-                }
-            }
-        };
-
-        document.addEventListener('paste', handlePaste);
         return () => {
-            document.removeEventListener('paste', handlePaste);
+            if (capturedImage && capturedImage.startsWith('blob:')) URL.revokeObjectURL(capturedImage);
+            if (capturedVideo && capturedVideo.startsWith('blob:')) URL.revokeObjectURL(capturedVideo);
+            if (pastedImage && pastedImage.startsWith('blob:')) URL.revokeObjectURL(pastedImage);
         };
-    }, []); // Empty dependency array means this runs once on mount and cleans up on unmount
+    }, [capturedImage, capturedVideo, pastedImage]);
 
-
-    // Inicializar SpeechRecognition
     useEffect(() => {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (SpeechRecognition) {
             recognitionRef.current = new SpeechRecognition();
-            recognitionRef.current.lang = 'ca-ES'; // Catalán
+            recognitionRef.current.lang = 'ca-ES';
             recognitionRef.current.continuous = false;
             recognitionRef.current.interimResults = false;
-
             recognitionRef.current.onresult = (event: any) => {
-                const transcript = event.results[0][0].transcript;
-                setTextCatalan(transcript);
+                setTextCatalan(event.results[0][0].transcript);
                 setTranscribing(false);
             };
-
-            recognitionRef.current.onerror = (event: any) => {
-                console.error('Speech recognition error', event.error);
-                setTranscribing(false);
-                alert('Speech recognition failed: ' + event.error);
-            };
-
-            recognitionRef.current.onend = () => {
-                setTranscribing(false);
-            };
-        } else {
-            console.warn('SpeechRecognition not supported');
+            recognitionRef.current.onerror = () => setTranscribing(false);
+            recognitionRef.current.onend = () => setTranscribing(false);
         }
     }, []);
 
-    const startVoiceRecording = () => {
-        if (!recognitionRef.current) {
-            alert('Speech recognition is not supported in your browser. Try Chrome or Edge.');
-            return;
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setCapturedImage(null); setCapturedVideo(null); setPastedImage(null);
+            setUploadedFile(file);
+            if (file.type.startsWith('image/')) setCapturedImage(URL.createObjectURL(file));
+            else if (file.type.startsWith('video/')) setCapturedVideo(URL.createObjectURL(file));
         }
+    };
+
+    const startVoiceRecording = () => {
+        if (!recognitionRef.current) return alert('Speech recognition not supported.');
         setTranscribing(true);
         recognitionRef.current.start();
     };
@@ -151,11 +86,8 @@ export default function VoiceDrillCreator({ onClose, onDrillCreated }: VoiceDril
                 audio: mode === 'video',
             });
             streamRef.current = stream;
-            if (previewRef.current) {
-                previewRef.current.srcObject = stream;
-            }
+            if (previewRef.current) previewRef.current.srcObject = stream;
         } catch (err) {
-            console.error('Camera access denied:', err);
             setCameraMode(null);
         }
     };
@@ -168,8 +100,7 @@ export default function VoiceDrillCreator({ onClose, onDrillCreated }: VoiceDril
         const ctx = canvas.getContext('2d');
         if (ctx) {
             ctx.drawImage(previewRef.current, 0, 0);
-            const dataUrl = canvas.toDataURL('image/jpeg');
-            setCapturedImage(dataUrl);
+            setCapturedImage(canvas.toDataURL('image/jpeg'));
         }
         stopCamera();
     };
@@ -178,7 +109,6 @@ export default function VoiceDrillCreator({ onClose, onDrillCreated }: VoiceDril
         if (!streamRef.current) return;
         mediaRecorderRef.current = new MediaRecorder(streamRef.current);
         chunksRef.current = [];
-
         mediaRecorderRef.current.ondataavailable = (e) => chunksRef.current.push(e.data);
         mediaRecorderRef.current.onstop = async () => {
             const blob = new Blob(chunksRef.current, { type: 'video/webm' });
@@ -186,7 +116,6 @@ export default function VoiceDrillCreator({ onClose, onDrillCreated }: VoiceDril
             setCapturedVideo(videoUrl);
             stopCamera();
         };
-
         mediaRecorderRef.current.start();
         setRecording(true);
     };
@@ -207,363 +136,122 @@ export default function VoiceDrillCreator({ onClose, onDrillCreated }: VoiceDril
     };
 
     const handleSave = async () => {
-        if (!textCatalan.trim()) {
-            alert('Please provide at least Catalan text.');
-            return;
-        }
-        if (saving) return;
+        if (!textCatalan.trim()) return alert('Please provide Catalan text.');
         setSaving(true);
         try {
-            // 1. Crear el drill básico (sin medios)
-            const drillData: any = {
+            const createResponse = await axios.post(`${API_BASE}/drills/`, {
                 text_catalan: textCatalan,
                 text_tachelhit: textTachelhit,
                 text_arabic: textArabic,
                 tag: tag || undefined,
                 author: author || undefined,
-            };
-            const createResponse = await axios.post(`${API_BASE}/drills/`, drillData);
-            const newDrill = createResponse.data;
-            const drillId = newDrill.id;
-            console.log('Drill created with ID:', drillId);
+            });
+            const drillId = createResponse.data.id;
 
-            // Determine which media to upload
             let mediaToUpload: { blob: Blob, type: 'image' | 'video', filename: string } | null = null;
-
-            if (capturedImage && !capturedImage.startsWith('blob:')) { // Captured via camera (data URL)
-                const response = await fetch(capturedImage);
-                const blob = await response.blob();
-                mediaToUpload = { blob, type: 'image', filename: `image_${drillId}_${Date.now()}.jpg` };
-            } else if (capturedVideo && !capturedVideo.startsWith('blob:')) { // Captured via camera (blob URL)
-                const response = await fetch(capturedVideo);
-                const blob = await response.blob();
-                mediaToUpload = { blob, type: 'video', filename: `video_${drillId}_${Date.now()}.webm` };
-            } else if (uploadedFile) { // Uploaded via file input
-                const fileType = uploadedFile.type.startsWith('image/') ? 'image' : (uploadedFile.type.startsWith('video/') ? 'video' : null);
-                if (fileType) {
-                    mediaToUpload = { blob: uploadedFile, type: fileType, filename: uploadedFile.name };
-                }
-            } else if (pastedImage) { // Pasted from clipboard
-                const response = await fetch(pastedImage);
-                const blob = await response.blob();
-                mediaToUpload = { blob, type: 'image', filename: `pasted_image_${drillId}_${Date.now()}.jpg` };
+            if (capturedImage && !capturedImage.startsWith('blob:')) {
+                const res = await fetch(capturedImage);
+                mediaToUpload = { blob: await res.blob(), type: 'image', filename: `img_${drillId}.jpg` };
+            } else if (capturedVideo && !capturedVideo.startsWith('blob:')) {
+                const res = await fetch(capturedVideo);
+                mediaToUpload = { blob: await res.blob(), type: 'video', filename: `vid_${drillId}.webm` };
+            } else if (uploadedFile) {
+                const type = uploadedFile.type.startsWith('image/') ? 'image' : 'video';
+                mediaToUpload = { blob: uploadedFile, type: type as any, filename: uploadedFile.name };
             }
 
             if (mediaToUpload) {
-                try {
-                    const formData = new FormData();
-                    formData.append('file', mediaToUpload.blob, mediaToUpload.filename);
-                    const uploadRes = await axios.post(`${API_BASE}/upload-media/${drillId}/${mediaToUpload.type}`, formData, {
-                        headers: { 'Content-Type': 'multipart/form-data' },
-                    });
-                    
-                    // Update the drill with the media URL
-                    const updatePayload: any = {};
-                    if (mediaToUpload.type === 'image') {
-                        updatePayload.image_url = uploadRes.data.url;
-                    } else if (mediaToUpload.type === 'video') {
-                        updatePayload.video_url = uploadRes.data.url;
-                    }
-                    await axios.put(`${API_BASE}/drills/${drillId}`, updatePayload);
-                } catch (uploadError) {
-                    console.error('Error uploading media:', uploadError);
-                    // Continue without media
-                }
+                const formData = new FormData();
+                formData.append('file', mediaToUpload.blob, mediaToUpload.filename);
+                const uploadRes = await axios.post(`${API_BASE}/upload-media/${drillId}/${mediaToUpload.type}`, formData);
+                await axios.put(`${API_BASE}/drills/${drillId}`, { [mediaToUpload.type + '_url']: uploadRes.data.url });
             }
-            
-            console.log('Drill fully created:', newDrill);
             onDrillCreated();
             onClose();
         } catch (error) {
-            console.error('Error creating drill:', error);
-            alert('Failed to create drill');
+            alert('Failed to save drill.');
         } finally {
             setSaving(false);
         }
     };
 
     return (
-        <div>
-            {/* Campos de texto */}
-            <div style={{ marginBottom: '15px' }}>
-                <label>Catalan (speech‑to‑text)</label>
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                    <textarea
-                        value={textCatalan}
-                        onChange={(e) => setTextCatalan(e.target.value)}
-                        placeholder="Catalan text will appear here after voice recording"
-                        rows={3}
-                        style={{ flex: 1, padding: '10px', fontSize: '14px' }}
-                    />
-                    <button
-                        onClick={transcribing ? stopVoiceRecording : startVoiceRecording}
-                        style={{
-                            padding: '10px 20px',
-                            background: transcribing ? '#ff4444' : '#4CAF50',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontWeight: 'bold',
-                        }}
-                    >
-                        {transcribing ? '⏹ Stop' : '🎤 Speak'}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ background: '#F9FAFB', padding: '20px', borderRadius: '20px', border: '1px solid #E5E7EB' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#6B7280', marginBottom: '10px', textTransform: 'uppercase' }}>Catalan Voice Input</label>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <textarea value={textCatalan} onChange={e => setTextCatalan(e.target.value)} placeholder="Tap mic and speak..." rows={2} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #D1D5DB', fontSize: '16px', outline: 'none' }} />
+                    <button onClick={transcribing ? stopVoiceRecording : startVoiceRecording} style={{ width: '60px', height: '60px', borderRadius: '12px', border: 'none', background: transcribing ? '#E11D48' : '#4F46E5', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {transcribing ? <div className="pulse-ring" /> : <FaMicrophone size={24} />}
                     </button>
                 </div>
             </div>
 
-            <div style={{ marginBottom: '15px' }}>
-                <label>Tachelhit (optional)</label>
-                <textarea
-                    value={textTachelhit}
-                    onChange={(e) => setTextTachelhit(e.target.value)}
-                    placeholder="Tachelhit translation"
-                    rows={2}
-                    style={{ width: '100%', padding: '10px', fontSize: '14px' }}
-                />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#6B7280', marginBottom: '5px' }}>Tachelhit</label>
+                    <input value={textTachelhit} onChange={e => setTextTachelhit(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #D1D5DB' }} />
+                </div>
+                <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#6B7280', marginBottom: '5px' }}>Tag</label>
+                    <input value={tag} onChange={e => setTag(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid #D1D5DB' }} />
+                </div>
             </div>
 
-            <div style={{ marginBottom: '15px' }}>
-                <label>Arabic (optional)</label>
-                <textarea
-                    value={textArabic}
-                    onChange={(e) => setTextArabic(e.target.value)}
-                    placeholder="Arabic translation"
-                    rows={2}
-                    style={{ width: '100%', padding: '10px', fontSize: '14px', direction: 'rtl' }}
-                />
-            </div>
-
-            <div style={{ marginBottom: '15px' }}>
-                <label>Tag (optional)</label>
-                <input
-                    type="text"
-                    value={tag}
-                    onChange={(e) => setTag(e.target.value)}
-                    placeholder="e.g., greetings"
-                    style={{ width: '100%', padding: '10px', fontSize: '14px' }}
-                />
-            </div>
-
-            <div style={{ marginBottom: '15px' }}>
-                <label>Author (optional)</label>
-                <input
-                    type="text"
-                    value={author}
-                    onChange={(e) => setAuthor(e.target.value)}
-                    placeholder="Your name"
-                    style={{ width: '100%', padding: '10px', fontSize: '14px' }}
-                />
-            </div>
-
-            {/* Media (optional) */}
-            <div style={{ marginBottom: '15px' }}>
-                <label>Media (optional)</label>
-                <input
-                    type="file"
-                    accept="image/*,video/*"
-                    style={{ display: 'none' }}
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                />
-
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
+            <div style={{ background: '#F3F4F6', padding: '15px', borderRadius: '20px' }}>
+                <input type="file" accept="image/*,video/*" style={{ display: 'none' }} ref={fileInputRef} onChange={handleFileChange} />
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                     {!cameraMode ? (
                         <>
-                            <button
-                                onClick={() => startCamera('photo')}
-                                style={{
-                                    padding: '10px 20px',
-                                    background: '#2196F3',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                📸 Take Photo
-                            </button>
-                            <button
-                                onClick={() => startCamera('video')}
-                                style={{
-                                    padding: '10px 20px',
-                                    background: '#9C27B0',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                🎥 Record Video
-                            </button>
-                            <button
-                                onClick={() => fileInputRef.current?.click()}
-                                style={{
-                                    padding: '10px 20px',
-                                    background: '#FFC107',
-                                    color: '#333',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                📤 Upload File
-                            </button>
+                            <button onClick={() => startCamera('photo')} style={{ padding: '12px 20px', background: 'white', borderRadius: '12px', border: '1px solid #D1D5DB', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}><FaCamera /> Photo</button>
+                            <button onClick={() => startCamera('video')} style={{ padding: '12px 20px', background: 'white', borderRadius: '12px', border: '1px solid #D1D5DB', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}><FaVideo /> Video</button>
+                            <button onClick={() => fileInputRef.current?.click()} style={{ padding: '12px 20px', background: 'white', borderRadius: '12px', border: '1px solid #D1D5DB', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}><FaFolderOpen /> Files</button>
                         </>
                     ) : (
-                        <button
-                            onClick={stopCamera}
-                            style={{
-                                padding: '10px 20px',
-                                background: '#ff4444',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                            }}
-                        >
-                            Cancel Camera
-                        </button>
-                    )}
-
-                    {(capturedImage || capturedVideo || uploadedFile || pastedImage || cameraMode) && (
-                        <button
-                            onClick={() => {
-                                stopCamera();
-                                setCapturedImage(null);
-                                setCapturedVideo(null);
-                                setUploadedFile(null);
-                                setPastedImage(null);
-                            }}
-                            style={{
-                                padding: '10px 20px',
-                                background: '#ff4444',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                            }}
-                        >
-                            Clear Media
-                        </button>
+                        <button onClick={stopCamera} style={{ padding: '12px 20px', background: '#374151', color: 'white', borderRadius: '12px', border: 'none' }}>Cancel Camera</button>
                     )}
                 </div>
 
-                {!cameraMode && (
-                    <p style={{ fontSize: '12px', color: '#666', marginTop: '-5px' }}>
-                        Or paste an image from your clipboard (Ctrl+V)
-                    </p>
-                )}
-
                 {cameraMode && (
-                    <div>
-                        <video
-                            ref={previewRef}
-                            autoPlay
-                            muted
-                            playsInline
-                            style={{ width: '100%', maxHeight: '300px', borderRadius: '8px' }}
-                        />
+                    <div style={{ marginTop: '15px' }}>
+                        <video ref={previewRef} autoPlay muted playsInline style={{ width: '100%', borderRadius: '15px', background: '#000' }} />
                         <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
-                            {cameraMode === 'photo' && (
-                                <button
-                                    onClick={capturePhoto}
-                                    style={{
-                                        padding: '10px 20px',
-                                        background: '#4CAF50',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '6px',
-                                        cursor: 'pointer',
-                                    }}
-                                >
-                                    Capture Photo
+                            {cameraMode === 'photo' ? (
+                                <button onClick={capturePhoto} style={{ flex: 1, padding: '12px', background: '#10B981', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold' }}>Capture</button>
+                            ) : (
+                                <button onClick={recording ? stopVideoRecording : startVideoRecording} style={{ flex: 1, padding: '12px', background: recording ? '#E11D48' : '#10B981', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold' }}>
+                                    {recording ? 'Stop Recording' : 'Start Recording'}
                                 </button>
-                            )}
-                            {cameraMode === 'video' && (
-                                <>
-                                    {!recording ? (
-                                        <button
-                                            onClick={startVideoRecording}
-                                            style={{
-                                                padding: '10px 20px',
-                                                background: '#4CAF50',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                            }}
-                                        >
-                                            Start Recording
-                                        </button>
-                                    ) : (
-                                        <button
-                                            onClick={stopVideoRecording}
-                                            style={{
-                                                padding: '10px 20px',
-                                                background: '#ff4444',
-                                                color: 'white',
-                                                border: 'none',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                            }}
-                                        >
-                                            Stop Recording
-                                        </button>
-                                    )}
-                                </>
                             )}
                         </div>
                     </div>
                 )}
-
-                {(capturedImage || pastedImage || (uploadedFile && uploadedFile.type.startsWith('image/'))) && (
-                    <div style={{ marginTop: '10px' }}>
-                        <p>Captured/Uploaded Image:</p>
-                        <img src={capturedImage || pastedImage || URL.createObjectURL(uploadedFile as File)} alt="Media" style={{ maxWidth: '200px', borderRadius: '8px' }} />
-                    </div>
-                )}
-                {(capturedVideo || (uploadedFile && uploadedFile.type.startsWith('video/'))) && (
-                    <div style={{ marginTop: '10px' }}>
-                        <p>Captured/Uploaded Video:</p>
-                        <video src={capturedVideo || URL.createObjectURL(uploadedFile as File)} controls style={{ maxWidth: '200px', borderRadius: '8px' }} />
-                    </div>
-                )}
             </div>
 
-            {/* Botones de acción */}
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
-                <button
-                    onClick={onClose}
-                    disabled={saving}
-                    style={{
-                        padding: '10px 20px',
-                        background: '#e0e0e0',
-                        color: '#333',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: saving ? 'not-allowed' : 'pointer',
-                        fontWeight: 'bold',
-                        opacity: saving ? 0.6 : 1,
-                    }}
-                >
-                    Cancel
-                </button>
-                <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    style={{
-                        padding: '10px 20px',
-                        background: saving ? '#999' : '#4CAF50',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: saving ? 'not-allowed' : 'pointer',
-                        fontWeight: 'bold',
-                        opacity: saving ? 0.8 : 1,
-                    }}
-                >
-                    {saving ? 'Saving...' : 'Save Drill'}
+            {(capturedImage || pastedImage || (uploadedFile && uploadedFile.type.startsWith('image/'))) && (
+                <div style={{ marginTop: '15px', background: 'white', padding: '10px', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
+                    <p style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: 'bold', color: '#6B7280' }}>IMAGE PREVIEW</p>
+                    <img src={capturedImage || pastedImage || (uploadedFile ? URL.createObjectURL(uploadedFile) : '')} alt="Media" style={{ width: '100%', maxHeight: '200px', borderRadius: '12px', objectFit: 'cover' }} />
+                </div>
+            )}
+            {(capturedVideo || (uploadedFile && uploadedFile.type.startsWith('video/'))) && (
+                <div style={{ marginTop: '15px', background: '#000', borderRadius: '20px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                    <video src={capturedVideo || (uploadedFile ? URL.createObjectURL(uploadedFile) : '')} controls playsInline style={{ width: '100%', maxHeight: '250px' }} />
+                    <div style={{ padding: '15px', background: '#111' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                            <span style={{ color: '#9CA3AF', fontSize: '11px', fontWeight: 'bold' }}>START: {trimTimes.start}s</span>
+                            <span style={{ color: '#9CA3AF', fontSize: '11px', fontWeight: 'bold' }}>END: {trimTimes.end}s</span>
+                        </div>
+                        <input type="range" min="0" max="60" step="0.5" value={trimTimes.start} onChange={e => setTrimTimes(p => ({...p, start: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '10px' }} />
+                        <input type="range" min="0" max="60" step="0.5" value={trimTimes.end} onChange={e => setTrimTimes(p => ({...p, end: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '15px' }} />
+                    </div>
+                </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+                <button onClick={onClose} style={{ flex: 1, padding: '15px', background: '#F3F4F6', borderRadius: '16px', border: 'none', fontWeight: 600 }}>Cancel</button>
+                <button onClick={handleSave} disabled={saving} style={{ flex: 2, padding: '15px', background: '#4F46E5', color: 'white', borderRadius: '16px', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                    <FaSave /> {saving ? 'Creating...' : 'Create Drill'}
                 </button>
             </div>
         </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { FaCamera, FaVideo, FaMicrophone, FaKeyboard, FaFolderOpen, FaRobot, FaLanguage, FaMagic, FaSave, FaTimes, FaScissors } from 'react-icons/fa';
 import axios from 'axios';
 import { Network } from '@capacitor/network';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
@@ -30,6 +31,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const [capturedAudio, setCapturedAudio] = useState<string | null>(null);
     const [aiLoadingKey, setAiLoadingKey] = useState<string | null>(null);
     const [debugLogs, setDebugLogs] = useState<string[]>(['[System] Native Creator Initialized']);
+    const [trimTimes, setTrimTimes] = useState({ start: 0, end: 10 });
 
     const addLog = (msg: string) => {
         setDebugLogs(prev => [`[${new Date().toLocaleTimeString().split(' ')[0]}] ${msg}`, ...prev].slice(0, 12));
@@ -44,13 +46,11 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
     const triggerSave = async (updatedDrill: Partial<Drill>) => {
         try {
-            // Always use queueAction for non-blocking UI
             await syncManager.queueAction({
                 type: updatedDrill.is_local ? 'CREATE' : 'UPDATE',
                 drillId: updatedDrill.id!,
                 payload: updatedDrill
             });
-            // Fire and forget sync
             syncManager.sync();
         } catch (err) {
             addLog('Save queued offline');
@@ -60,7 +60,6 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const handleTextChange = (field: keyof Drill, value: string) => {
         const updated = { ...drill, [field]: value };
         setDrill(updated);
-        // Auto-save disabled
     };
 
     const capturePhoto = async () => {
@@ -73,12 +72,12 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
             addLog('Opening camera...');
             const image = await Camera.getPhoto({
-                quality: 50, // Reduced quality for smaller size
-                width: 640,  // Optimized resolution for drill area
+                quality: 50,
+                width: 640,
                 height: 480,
                 allowEditing: false,
                 resultType: CameraResultType.Base64,
-                source: CameraSource.Camera, // Direct camera access
+                source: CameraSource.Camera,
                 saveToGallery: false,
                 correctOrientation: true,
                 presentationStyle: 'fullscreen',
@@ -106,16 +105,11 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             }
         } catch (err: any) {
             addLog(`Photo error: ${err.message}`);
-            alert(`Photo error: ${err.message}`);
         }
     };
 
     const captureVideo = async () => {
         try {
-            // Capacitor Camera doesn't support video recording directly in all versions easily via getPhoto
-            // We use the native capture fallback or a dedicated plugin if needed, 
-            // but many people use captureVideo from @capacitor/camera if available or native input.
-            // For now, let's use native input for video as it's more reliable for video than getUserMedia.
             document.getElementById('native-video-input')?.click();
         } catch (err: any) {
             addLog(`Video error: ${err.message}`);
@@ -173,14 +167,12 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             if (!supported) return addLog('Speech not supported');
 
             addLog('Starting dictation...');
-            
-            // Remove existing listeners first to avoid duplicates
             await SpeechRecognition.removeAllListeners();
 
             await SpeechRecognition.start({
                 language: 'ca-ES',
                 partialResults: true,
-                popup: false // Try without popup for smoother direct injection
+                popup: false
             });
 
             SpeechRecognition.addListener('partialResults', (data: any) => {
@@ -296,24 +288,41 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         }
     };
 
+    const handleTrimVideo = async () => {
+        setAiLoadingKey('trim-video');
+        addLog(`Trimming: ${trimTimes.start}s - ${trimTimes.end}s`);
+        try {
+            const res = await axios.post(`${API_BASE}/drills/${drill.id}/trim-audio`, {
+                start_time: trimTimes.start,
+                end_time: trimTimes.end
+            });
+            if (res.data.url) {
+                setCapturedAudio(getMediaUrl(res.data.url));
+                addLog('Trimmed audio extracted');
+            }
+        } catch (err: any) {
+            addLog(`Trim error: ${err.message}`);
+        } finally {
+            setAiLoadingKey(null);
+        }
+    };
+
     return (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'white', zIndex: 10000, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px' }}>✕</button>
-                <div style={{ color: 'white', fontSize: '18px', fontWeight: 700 }}>Native Creator</div>
-                <button onClick={() => { triggerSave(drill); onDrillCreated(); }} style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px' }}>💾 Save & Close</button>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#F3F4F6', zIndex: 10000, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FaTimes size={20} /></button>
+                <div style={{ color: 'white', fontSize: '20px', fontWeight: 800, letterSpacing: '-0.5px' }}>New Drill</div>
+                <button onClick={() => { triggerSave(drill); onDrillCreated(); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#10B981', color: 'white', border: 'none', borderRadius: '12px', padding: '10px 18px', fontWeight: 'bold' }}><FaSave /> Save</button>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', paddingBottom: '100px' }}>
-                <div style={{ background: '#f8f9fa', padding: '12px', borderRadius: '16px', border: '1px solid #e0e0e0' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px' }}>
-                        <button onClick={capturePhoto} style={{ height: '60px', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', fontSize: '24px' }}>📷</button>
-                        <button onClick={captureVideo} style={{ height: '60px', background: '#9C27B0', color: 'white', border: 'none', borderRadius: '8px', fontSize: '24px' }}>🎬</button>
-                        <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '60px', background: isRecording ? '#ff4444' : '#2196F3', color: 'white', border: 'none', borderRadius: '8px', fontSize: '24px' }}>
-                            {isRecording ? '⏹️' : '🎙️'}
-                        </button>
-                        <button onClick={startDictation} style={{ height: '60px', background: '#FF9800', color: 'white', border: 'none', borderRadius: '8px', fontSize: '24px' }}>🗣️</button>
-                        <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '60px', background: '#607D8B', color: 'white', border: 'none', borderRadius: '8px', fontSize: '24px' }}>📁</button>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '120px' }}>
+                <div style={{ background: 'white', padding: '15px', borderRadius: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #E5E7EB' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
+                        <button onClick={capturePhoto} style={{ height: '55px', background: '#EBFBEE', color: '#166534', border: '1px solid #D1FAE5', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Camera"><FaCamera size={22} /></button>
+                        <button onClick={captureVideo} style={{ height: '55px', background: '#F3E8FF', color: '#7E22CE', border: '1px solid #E9D5FF', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Video"><FaVideo size={22} /></button>
+                        <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '55px', background: isRecording ? '#FFE4E6' : '#E11D48', color: isRecording ? '#E11D48' : '#1D4ED8', border: `1px solid ${isRecording ? '#FECDD3' : '#DBEAFE'}`, borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Voice Record"><FaMicrophone size={22} /></button>
+                        <button onClick={startDictation} style={{ height: '55px', background: '#FFF7ED', color: '#9A3412', border: '1px solid #FFEDD5', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Dictation"><FaKeyboard size={22} /></button>
+                        <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '55px', background: '#F1F5F9', color: '#334155', border: '1px solid #E2E8F0', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Gallery"><FaFolderOpen size={22} /></button>
                     </div>
                     <input type="file" accept="video/*" capture={"camcorder" as any} id="native-video-input" style={{ display: 'none' }} onChange={handleFileChange} />
                     <input type="file" id="gallery-upload" style={{ display: 'none' }} onChange={handleFileChange} />
@@ -321,16 +330,28 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
                 {capturedImage && <img src={capturedImage} alt="Preview" style={{ width: '100%', height: '150px', borderRadius: '12px', objectFit: 'cover' }} />}
                 {capturedVideo && (
-                    <div style={{ background: '#000', borderRadius: '12px', overflow: 'hidden', width: '100%', height: '150px', display: 'flex', alignItems: 'center' }}>
-                        <video src={capturedVideo} controls playsInline preload="metadata" style={{ width: '100%', height: '100%' }} />
+                    <div style={{ background: '#000', borderRadius: '24px', overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
+                        <video src={capturedVideo} controls playsInline preload="metadata" style={{ width: '100%', maxHeight: '250px' }} />
+                        <div style={{ width: '100%', padding: '15px', background: '#111', color: 'white' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '12px', fontWeight: 'bold' }}>
+                                <span style={{ color: '#9CA3AF' }}>START: {trimTimes.start}s</span>
+                                <span style={{ color: '#9CA3AF' }}>END: {trimTimes.end}s</span>
+                            </div>
+                            <input type="range" min="0" max="60" step="0.5" value={trimTimes.start} onChange={e => setTrimTimes(p => ({...p, start: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '10px' }} />
+                            <input type="range" min="0" max="60" step="0.5" value={trimTimes.end} onChange={e => setTrimTimes(p => ({...p, end: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '15px' }} />
+                            <button onClick={handleTrimVideo} disabled={aiLoadingKey !== null} style={{ width: '100%', padding: '12px', background: '#E11D48', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                <FaScissors /> Trim & Extract Audio
+                            </button>
+                        </div>
                     </div>
                 )}
+
                 {capturedAudio && <button onClick={() => new Audio(capturedAudio).play()} style={{ width: '100%', padding: '16px', background: '#f3f4f6', border: '1px solid #e0e0e0', borderRadius: '12px', fontWeight: 600, fontSize: '18px' }}>🔊 Play Recording</button>}
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '8px' }}>
-                    <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ padding: '12px 4px', background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '12px' }}>🤖 CA➔SH</button>
-                    <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ padding: '12px 4px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '12px' }}>🤖 SH➔CA</button>
-                    <button onClick={handleTachelhitTTS} disabled={aiLoadingKey !== null} style={{ padding: '12px 4px', background: '#fef3c7', color: '#92400e', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '12px' }}>🔊 TTS</button>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', background: 'white', padding: '15px', borderRadius: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #E5E7EB' }}>
+                    <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '8px 4px', fontSize: '9px', fontWeight: 700, background: '#EEF2FF', color: '#4338CA', border: 'none', borderRadius: '12px' }}><FaLanguage size={18} /> CA➔SH</button>
+                    <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '8px 4px', fontSize: '9px', fontWeight: 700, background: '#ECFDF5', color: '#059669', border: 'none', borderRadius: '12px' }}><FaLanguage size={18} /> SH➔CA</button>
+                    <button onClick={handleTachelhitTTS} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '8px 4px', fontSize: '9px', fontWeight: 700, background: '#FEF3C7', color: '#B45309', border: 'none', borderRadius: '12px' }}><FaRobot size={18} /> TTS</button>
                     <button 
                         onClick={() => {
                             const hasAudio = drill.audio_url || capturedAudio;
@@ -355,9 +376,11 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                     >🪄 Trans</button>
                 </div>
 
-                <div><label style={{ display: 'block', fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>Català</label><textarea value={drill.text_catalan || ''} onChange={(e) => handleTextChange('text_catalan', e.target.value)} rows={3} style={{ width: '100%', padding: '12px', border: '2px solid #ccc', borderRadius: '8px', fontSize: '18px' }} /></div>
-                <div><label style={{ display: 'block', fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label><textarea value={drill.text_tachelhit || ''} onChange={(e) => handleTextChange('text_tachelhit', e.target.value)} rows={3} style={{ width: '100%', padding: '12px', border: '2px solid #ccc', borderRadius: '8px', fontSize: '18px' }} /></div>
-                <div><label style={{ display: 'block', fontSize: '16px', fontWeight: 700, marginBottom: '8px' }}>Tag</label><input type="text" value={drill.tag || ''} onChange={(e) => handleTextChange('tag', e.target.value)} style={{ width: '100%', padding: '12px', border: '2px solid #ccc', borderRadius: '8px', fontSize: '18px' }} /></div>
+                <div style={{ background: 'white', padding: '20px', borderRadius: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: '#6B7280', marginBottom: '8px', textTransform: 'uppercase' }}>Català</label><textarea value={drill.text_catalan || ''} onChange={(e) => handleTextChange('text_catalan', e.target.value)} rows={3} style={{ width: '100%', padding: '14px', border: '1px solid #D1D5DB', borderRadius: '14px', fontSize: '16px', color: '#1F2937', outline: 'none', background: '#F9FAFB' }} /></div>
+                    <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: '#6B7280', marginBottom: '8px', textTransform: 'uppercase' }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label><textarea value={drill.text_tachelhit || ''} onChange={(e) => handleTextChange('text_tachelhit', e.target.value)} rows={3} style={{ width: '100%', padding: '14px', border: '1px solid #D1D5DB', borderRadius: '14px', fontSize: '16px', color: '#4F46E5', fontWeight: 700, outline: 'none', background: '#F9FAFB' }} /></div>
+                    <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: '#6B7280', marginBottom: '8px', textTransform: 'uppercase' }}>Tag</label><input type="text" value={drill.tag || ''} onChange={(e) => handleTextChange('tag', e.target.value)} style={{ width: '100%', padding: '14px', border: '1px solid #D1D5DB', borderRadius: '14px', fontSize: '16px', color: '#1F2937', outline: 'none', background: '#F9FAFB' }} /></div>
+                </div>
 
                 <div style={{ background: '#111', color: '#0f0', padding: '10px', borderRadius: '8px', fontSize: '10px', fontFamily: 'monospace', height: '100px', overflowY: 'auto' }}>
                     <div style={{ color: '#fff', borderBottom: '1px solid #333', paddingBottom: '4px', marginBottom: '4px' }}>DEBUG LOGS</div>
