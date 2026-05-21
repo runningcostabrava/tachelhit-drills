@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FaMicrophone, FaPlus, FaCheck, FaTimes, FaLink, FaChevronDown, FaSearch, FaBook } from 'react-icons/fa';
+import { FaMicrophone, FaPlus, FaTimes, FaLink, FaChevronDown, FaSearch, FaBook, FaTrash } from 'react-icons/fa';
 import axios from 'axios';
 import { Network } from '@capacitor/network';
 import { API_BASE } from '../config';

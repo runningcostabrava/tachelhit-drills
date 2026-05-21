@@ -20,9 +20,7 @@ import {
   FaTrash, 
   FaCheckSquare, 
   FaTag, 
-  FaPlus,
-  FaFileAudio,
-  FaSearch
+  FaPlus
 } from 'react-icons/fa';
 
 // Import CSS structural definitions

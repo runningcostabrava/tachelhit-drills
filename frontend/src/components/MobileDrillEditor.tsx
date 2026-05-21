@@ -9,10 +9,9 @@ import {
   FaFolderOpen, 
   FaRobot, 
   FaLanguage, 
-  FaMagic, 
   FaChevronLeft, 
   FaChevronRight,
-  FaScissors
+  FaCut as FaScissors
 } from 'react-icons/fa';
 import axios from 'axios';
 import { Network } from '@capacitor/network';
@@ -21,21 +20,6 @@ import { VoiceRecorder } from 'capacitor-voice-recorder';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { API_BASE, getMediaUrl } from '../config';
 import { syncManager, type Drill } from '../services/OfflineSyncManager';
-import { 
-  FaTimes, 
-  FaSave, 
-  FaCamera, 
-  FaVideo, 
-  FaMicrophone, 
-  FaKeyboard, 
-  FaFolderOpen, 
-  FaRobot, 
-  FaLanguage, 
-  FaMagic, 
-  FaChevronLeft, 
-  FaChevronRight,
-  FaScissors
-} from 'react-icons/fa';
 
 interface MobileDrillEditorProps {
   drill: Drill;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FaCamera, FaVideo, FaMicrophone, FaKeyboard, FaFolderOpen, FaRobot, FaLanguage, FaMagic, FaSave, FaTimes, FaScissors } from 'react-icons/fa';
+import { FaCamera, FaVideo, FaMicrophone, FaKeyboard, FaFolderOpen, FaRobot, FaLanguage, FaSave, FaTimes, FaCut as FaScissors } from 'react-icons/fa';
 import axios from 'axios';
 import { Network } from '@capacitor/network';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { API_BASE, getMediaUrl } from '../config';
 import { isYouTubeUrl, getYouTubeVideoId } from '../utils/youtubeUtils';
 import { syncManager } from '../services/OfflineSyncManager';
+import { FaCut as FaScissors } from 'react-icons/fa';
 
 interface Drill {
   id: number;
@@ -44,7 +45,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcriptionDebug, setTranscriptionResult] = useState<{rough?: string, score?: number} | null>(null);
   const [playerTime, setPlayerTime] = useState(0);
-  const [playerDuration, setPlayerDuration] = useState(0);
+  const [playerDuration, setPlayerDuration] = useState(60);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 

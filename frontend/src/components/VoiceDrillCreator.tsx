@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { FaMicrophone, FaPlus, FaCheck, FaTimes, FaCamera, FaVideo, FaKeyboard, FaFolderOpen, FaMagic, FaSave, FaScissors } from 'react-icons/fa';
+import { FaMicrophone, FaCamera, FaVideo, FaFolderOpen, FaSave } from 'react-icons/fa';
 import axios from 'axios';
 import { API_BASE } from '../config';
 
@@ -11,9 +11,9 @@ interface VoiceDrillCreatorProps {
 export default function VoiceDrillCreator({ onClose, onDrillCreated }: VoiceDrillCreatorProps) {
     const [textCatalan, setTextCatalan] = useState('');
     const [textTachelhit, setTextTachelhit] = useState('');
-    const [textArabic, setTextArabic] = useState('');
+    const [textArabic] = useState('');
     const [tag, setTag] = useState('');
-    const [author, setAuthor] = useState('');
+    const [author] = useState('');
     const [recording, setRecording] = useState(false);
     const [transcribing, setTranscribing] = useState(false);
     const [cameraMode, setCameraMode] = useState<'photo' | 'video' | null>(null);
