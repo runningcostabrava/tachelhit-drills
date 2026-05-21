@@ -58,9 +58,13 @@ class OfflineSyncManager {
     });
   }
 
-  async queueAction(action: SyncAction) {
+  async getQueue(): Promise<SyncAction[]> {
     const { value } = await Preferences.get({ key: SYNC_QUEUE_KEY });
-    let queue: SyncAction[] = value ? JSON.parse(value) : [];
+    return value ? JSON.parse(value) : [];
+  }
+
+  async queueAction(action: SyncAction) {
+    const queue = await this.getQueue();
     
     // Deduplication / Merging logic
     if (action.type === 'CREATE') {

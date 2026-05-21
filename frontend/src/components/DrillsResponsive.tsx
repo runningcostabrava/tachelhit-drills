@@ -24,6 +24,7 @@ interface Drill {
   tag?: string;
   author?: string;
   date_created: string;
+  is_local?: boolean;
 }
 
 const GlossaryModal = ({ onClose }: { onClose: () => void }) => {
@@ -92,9 +93,7 @@ const GlossaryModal = ({ onClose }: { onClose: () => void }) => {
   );
 };
 
-interface DrillsResponsiveProps { }
-
-export default function DrillsResponsive({ }: DrillsResponsiveProps) {
+export default function DrillsResponsive() {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -105,6 +104,7 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
   const [showMobileDrillCreator, setShowMobileDrillCreator] = useState(false);
   const [showNewDrillOptions, setShowNewDrillOptions] = useState(false);
   const [showGlossary, setShowGlossary] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCategory, setSearchCategory] = useState('all');
   const [filteredDrills, setFilteredDrills] = useState<Drill[]>([]);
@@ -155,10 +155,9 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
   const fetchDrills = async () => {
     try {
       const status = await Network.getStatus();
-      let allDrills = [];
+      let allDrills: Drill[] = [];
 
       if (status.connected) {
-        // Sync pending changes first
         await syncManager.sync();
         const response = await axios.get(`${API_BASE}/drills/`);
         allDrills = response.data || [];
@@ -167,52 +166,35 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
         allDrills = await syncManager.getDrills();
       }
 
-      const queryParams = new URLSearchParams(location.search);
-      const tag = queryParams.get('tag');
-      const author = queryParams.get('author');
-      const text = queryParams.get('text');
-
-      if (tag || author || text) {
-        allDrills = allDrills.filter((drill: Drill) => {
-          const tagMatch = tag ? (drill.tag?.toLowerCase() || '').includes(tag.toLowerCase()) : false;
-          const authorMatch = author ? (drill.author?.toLowerCase() || '').includes(author.toLowerCase()) : false;
-          const textMatch = text ? (
-            (drill.text_catalan?.toLowerCase() || '').includes(text.toLowerCase()) ||
-            (drill.text_tachelhit?.toLowerCase() || '').includes(text.toLowerCase()) ||
-            (drill.text_arabic?.toLowerCase() || '').includes(text.toLowerCase())
-          ) : false;
-
-          const matches = [];
-          if (tag) matches.push(tagMatch);
-          if (author) matches.push(authorMatch);
-          if (text) matches.push(textMatch);
-
-          return matches.some(match => match === true);
-        });
-      }
+      const queue = await syncManager.getQueue();
+      const localCreates = queue
+        .filter(a => a.type === 'CREATE')
+        .map(a => ({
+          ...a.payload,
+          id: a.drillId,
+          is_local: true,
+          date_created: a.payload.date_created || new Date().toISOString()
+        }));
+      
+      const serverIds = new Set(allDrills.map(d => d.id));
+      const uniqueLocals = localCreates.filter(d => !serverIds.has(d.id));
+      allDrills = [...uniqueLocals, ...allDrills];
 
       const sorted = allDrills.sort((a: Drill, b: Drill) =>
         new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
       );
       setDrills(sorted);
     } catch (error) {
-      console.error('Error loading drills, using fallback:', error);
-      const cachedData = localStorage.getItem('cached_drills');
-      if (cachedData) {
-        const allDrills = JSON.parse(cachedData);
-        const sorted = allDrills.sort((a: Drill, b: Drill) =>
-          new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
-        );
-        setDrills(sorted);
-      }
+      console.error('Error loading drills:', error);
     }
   };
 
   useEffect(() => { fetchDrills(); }, [location.search]);
 
   const addNewDrill = async () => {
+    if (isCreating) return;
+    setIsCreating(true);
     try {
-      const status = await Network.getStatus();
       const tempId = Date.now();
       const newDrillData = {
         id: tempId,
@@ -223,38 +205,29 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
         is_local: true
       };
 
-      if (status.connected) {
-        const response = await axios.post(`${API_BASE}/drills/`, {});
-        await fetchDrills();
-        if (isMobile && response.data) {
-          setTimeout(() => setEditingDrill(response.data), 100);
-        }
+      await syncManager.queueAction({
+        type: 'CREATE',
+        drillId: tempId,
+        payload: newDrillData
+      });
+
+      setDrills(prev => [newDrillData, ...prev]);
+
+      if (isMobile) {
+        setEditingDrill(newDrillData);
       } else {
-        // Offline creation
-        const currentDrills = await syncManager.getDrills();
-        const updatedDrills = [newDrillData, ...currentDrills];
-        await syncManager.saveDrillsToCache(updatedDrills);
-        setDrills(updatedDrills);
-        
-        await syncManager.queueAction({
-          type: 'CREATE',
-          drillId: tempId,
-          payload: {}
-        });
-        
-        if (isMobile) {
-          setTimeout(() => setEditingDrill(newDrillData), 100);
-        }
+        await fetchDrills();
       }
     } catch (error) {
       console.error('Error creating drill:', error);
       alert('Failed to create drill');
+    } finally {
+      setIsCreating(false);
     }
   };
 
   const handleNavigate = (direction: 'next' | 'prev') => {
     if (!editingDrill) return;
-
     const currentIndex = drills.findIndex(d => d.id === editingDrill.id);
     if (direction === 'next' && currentIndex < drills.length - 1) {
       setEditingDrill(drills[currentIndex + 1]);
@@ -266,7 +239,6 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
   return (
     <>
       <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: isMobile ? '60px' : '0' }}>
-        {/* Header */}
         <div style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
             <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: 'white' }}>Tachelhit Drills</h1>
@@ -299,10 +271,11 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
               </button>
               <div style={{ position: 'relative' }}>
                 <button
+                  disabled={isCreating}
                   onClick={() => setShowNewDrillOptions(!showNewDrillOptions)}
-                  style={{ padding: '10px 20px', background: 'white', color: '#667eea', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ padding: '10px 20px', background: 'white', color: '#667eea', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 700, cursor: 'pointer', opacity: isCreating ? 0.7 : 1 }}
                 >
-                  + More ▼
+                  {isCreating ? 'Creating...' : '+ More ▼'}
                 </button>
                 {showNewDrillOptions && (
                   <div style={{ position: 'absolute', top: 'calc(100% + 10px)', right: 0, backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 1000, minWidth: '220px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -317,7 +290,6 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
               </div>
             </div>
           </div>
-          {/* Search Box */}
           <div style={{ width: '100%', display: 'flex', gap: '8px', alignItems: 'center', background: 'rgba(255, 255, 255, 0.15)', borderRadius: '8px', padding: '8px 12px', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.2)', marginTop: '12px' }}>
             <div style={{ color: 'white', fontSize: '16px', flexShrink: 0 }}>🔍</div>
             <input
@@ -343,12 +315,9 @@ export default function DrillsResponsive({ }: DrillsResponsiveProps) {
           </div>
           <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginTop: '8px' }}>Tap any card to view details</div>
         </div>
-
-        {/* Main Content Area: Conditional rendering based on isMobile */}
         <div style={{ flex: 1, width: '100%', overflow: 'auto', padding: isMobile ? '12px 4px' : '0' }}>
           <DrillsGrid rowData={filteredDrills} refreshData={fetchDrills} onEditDrill={(drill) => setEditingDrill(drill)} />
         </div>
-
         {isMobile && <MobileBottomNav />}
       </div>
 
