@@ -408,10 +408,10 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                         </div>
 
                         {/* Thumbnail View */}
-                        {drill.image_url && (
+                        {(drill.image_url || pendingMedia[drill.id]?.image) && (
                             <div style={{ position: 'relative' }}>
                                 <img
-                                    src={getMediaUrl(drill.image_url)}
+                                    src={pendingMedia[drill.id]?.image || getMediaUrl(drill.image_url)}
                                     alt="Media thumbnail"
                                     style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '12px', marginTop: '4px' }}
                                 />
