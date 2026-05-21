@@ -2491,6 +2491,68 @@ async def trim_drill_audio(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/drills/{drill_id}/trim-video")
+async def trim_drill_video(
+    drill_id: int,
+    start_time: float = Body(..., embed=True),
+    end_time: float = Body(..., embed=True),
+    db: Session = Depends(get_db)
+):
+    """
+    Trims the video of a drill using MoviePy and uploads the result.
+    """
+    drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+    if not drill or not drill.video_url:
+        raise HTTPException(status_code=404, detail="Drill or video not found")
+
+    try:
+        from moviepy.video.io.VideoFileClip import VideoFileClip
+
+        # Download original video
+        response = requests.get(drill.video_url, stream=True)
+        response.raise_for_status()
+
+        # Extension detection
+        ext = ".mp4"
+        if "webm" in drill.video_url: ext = ".webm"
+        elif "mov" in drill.video_url: ext = ".mov"
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp_in:
+            for chunk in response.iter_content(chunk_size=8192):
+                tmp_in.write(chunk)
+            tmp_in_path = tmp_in.name
+
+        # Trim video
+        with VideoFileClip(tmp_in_path) as video:
+            trimmed = video.subclip(start_time, min(end_time, video.duration))
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_out:
+                tmp_out_path = tmp_out.name
+                # We use a fast preset and avoid heavy encoding if possible
+                trimmed.write_videofile(tmp_out_path, codec="libx264", audio_codec="aac", logger=None)
+
+        # Upload to Cloudinary
+        result = cloudinary.uploader.upload(
+            tmp_out_path,
+            folder="tachelhit/video",
+            public_id=f"video_trimmed_{drill_id}_{int(datetime.utcnow().timestamp())}",
+            resource_type="video"
+        )
+
+        url = normalize_media_url(result['secure_url'])
+        drill.video_url = url
+        db.commit()
+
+        # Cleanup
+        os.unlink(tmp_in_path)
+        os.unlink(tmp_out_path)
+
+        return {"url": url}
+
+    except Exception as e:
+        print(f"[TRIM VIDEO] Error: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ===================== SRT IMPORT =====================
 @app.post("/srt/import", response_model=SrtImportResponse)
 def import_srt_content(request: SrtImportRequest, db: Session = Depends(get_db)):

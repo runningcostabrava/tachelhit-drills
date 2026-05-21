@@ -39,6 +39,8 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
   const [isTrimming, setIsTrimming] = useState(false);
   const [trimRange, setTrimRange] = useState({ start: 0, end: 5 });
   const [isProcessingTrim, setIsProcessingTrim] = useState(false);
+  const [videoTrimRange, setVideoTrimRange] = useState({ start: 0, end: 5 });
+  const [isVideoTrimming, setIsVideoTrimming] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcriptionDebug, setTranscriptionResult] = useState<{rough?: string, score?: number} | null>(null);
   const [playerTime, setPlayerTime] = useState(0);
@@ -169,19 +171,22 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
     }
   };
 
-  const handleTrim = async () => {
+  const handleTrim = async (mode: 'audio' | 'video') => {
     setIsProcessingTrim(true);
     try {
-      await axios.post(`${API_BASE}/drills/${drill.id}/trim-audio`, {
-        start_time: trimRange.start,
-        end_time: trimRange.end
+      const range = mode === 'audio' ? trimRange : videoTrimRange;
+      const endpoint = mode === 'audio' ? 'trim-audio' : 'trim-video';
+      await axios.post(`${API_BASE}/drills/${drill.id}/${endpoint}`, {
+        start_time: range.start,
+        end_time: range.end
       });
-      setIsTrimming(false);
+      if (mode === 'audio') setIsTrimming(false);
+      else setIsVideoTrimming(false);
       onUpdate();
-      alert('Audio trimmed successfully!');
+      alert(`${mode === 'audio' ? 'Audio' : 'Video'} trimmed successfully!`);
     } catch (error) {
       console.error('Trim failed:', error);
-      alert('Failed to trim audio');
+      alert(`Failed to trim ${mode}`);
     } finally {
       setIsProcessingTrim(false);
     }
@@ -485,7 +490,17 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
 
   const initializeYouTubePlayer = () => {
     const videoId = getYouTubeVideoId(drill.video_url || '');
-    if (!videoId) return;
+    if (!videoId) {
+      // Fallback for native video duration
+      const video = document.querySelector(`#video-playback-${drill.id}`) as HTMLVideoElement;
+      if (video) {
+        const dur = video.duration;
+        if (dur) {
+          setVideoTrimRange(prev => ({ ...prev, end: Math.min(prev.end, dur) }));
+        }
+      }
+      return;
+    }
 
     if (!(window as any).YT || !(window as any).YT.Player) {
       const tag = document.createElement('script');
@@ -1337,6 +1352,71 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
         </div>
       )}
 
+      {/* Video Trimmer Controls */}
+      {drill.video_url && !recording && (
+        <div style={{
+          marginBottom: '12px',
+          padding: '12px',
+          background: '#f3e5f5',
+          borderRadius: '8px',
+          border: '1px solid #d1c4e9'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: '#4a148c' }}>✂️ Video Trimmer</span>
+            <button 
+              onClick={() => setIsVideoTrimming(!isVideoTrimming)}
+              style={{ padding: '4px 8px', fontSize: '11px', background: 'none', border: '1px solid #4a148c', color: '#4a148c', borderRadius: '4px', cursor: 'pointer' }}
+            >
+              {isVideoTrimming ? 'Cancel' : 'Open'}
+            </button>
+          </div>
+          
+          {isVideoTrimming && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '11px', display: 'block' }}>Start (sec)</label>
+                  <input 
+                    type="number" 
+                    value={videoTrimRange.start} 
+                    onChange={e => setVideoTrimRange({...videoTrimRange, start: parseFloat(e.target.value)})}
+                    style={{ width: '100%', padding: '6px', fontSize: '12px' }}
+                    step="0.1"
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: '11px', display: 'block' }}>End (sec)</label>
+                  <input 
+                    type="number" 
+                    value={videoTrimRange.end} 
+                    onChange={e => setVideoTrimRange({...videoTrimRange, end: parseFloat(e.target.value)})}
+                    style={{ width: '100%', padding: '6px', fontSize: '12px' }}
+                    step="0.1"
+                  />
+                </div>
+              </div>
+              <button 
+                onClick={() => handleTrim('video')}
+                disabled={isProcessingTrim}
+                style={{ 
+                  padding: '8px', 
+                  background: '#9c27b0', 
+                  color: 'white',
+                  border: 'none', 
+                  borderRadius: '6px', 
+                  fontWeight: 700, 
+                  fontSize: '13px',
+                  cursor: isProcessingTrim ? 'not-allowed' : 'pointer',
+                  opacity: isProcessingTrim ? 0.7 : 1
+                }}
+              >
+                {isProcessingTrim ? 'Processing...' : 'Apply Video Trim'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Audio Trimmer Controls */}
       {drill.audio_url && !recording && (
         <div style={{
@@ -1434,7 +1514,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                 </div>
               </div>
               <button 
-                onClick={handleTrim}
+                onClick={() => handleTrim('audio')}
                 disabled={isProcessingTrim}
                 style={{ 
                   padding: '8px', 
@@ -1447,7 +1527,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                   opacity: isProcessingTrim ? 0.7 : 1
                 }}
               >
-                {isProcessingTrim ? 'Processing...' : 'Apply Trim'}
+                {isProcessingTrim ? 'Processing...' : 'Apply Audio Trim'}
               </button>
             </div>
           )}
@@ -1625,6 +1705,12 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                   maxHeight: '70vh',
                   borderRadius: '8px',
                   boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
+                }}
+                onLoadedMetadata={(e) => {
+                  const dur = (e.target as HTMLVideoElement).duration;
+                  if (dur) {
+                    setVideoTrimRange(prev => ({ ...prev, end: Math.min(prev.end, dur) }));
+                  }
                 }}
               />
             )}

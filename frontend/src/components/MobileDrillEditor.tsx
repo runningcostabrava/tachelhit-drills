@@ -50,6 +50,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
   const [aiLoadingKey, setAiLoadingKey] = useState<string | null>(null);
   const [debugLogs, setDebugLogs] = useState<string[]>(['[System] Native Editor Initialized']);
   const [trimTimes, setTrimTimes] = useState({ start: 0, end: 10 });
+  const [videoDuration, setVideoDuration] = useState(60);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const addLog = (msg: string) => {
@@ -338,26 +339,24 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     addLog(`${type} queued from gallery`);
   };
 
-  const handleTrimVideo = async () => {
+  const handleTrimVideo = async (mode: 'video' | 'audio') => {
     if (!localDrill.video_url) return;
-    setAiLoadingKey('trim-video');
-    addLog(`Trimming video: ${trimTimes.start}s to ${trimTimes.end}s`);
+    setAiLoadingKey(`trim-${mode}`);
+    addLog(`Trimming ${mode}: ${trimTimes.start}s to ${trimTimes.end}s`);
     try {
-        // Since the backend only has trim-audio right now, we use a generic naming for future-proofing
-        // or just call the trim-audio endpoint if it's actually an audio-only file or we want to extract audio
-        // But the user specifically asked for video trim. 
-        // I will implement a placeholder for video trim or check if main.py has it.
-        // Looking at main.py, it only has trim_drill_audio.
-        // I'll add a log that video trim is simulated for now if backend doesn't support it yet,
-        // or I can try to add the endpoint to main.py later.
-        
-        const res = await axios.post(`${API_BASE}/drills/${localDrill.id}/trim-audio`, {
+        const endpoint = mode === 'video' ? 'trim-video' : 'trim-audio';
+        const res = await axios.post(`${API_BASE}/drills/${localDrill.id}/${endpoint}`, {
             start_time: trimTimes.start,
             end_time: trimTimes.end
         });
         if (res.data.url) {
-            setLocalDrill(prev => ({ ...prev, audio_url: res.data.url }));
-            addLog('Trimmed audio extracted from video');
+            const updated = mode === 'video' 
+                ? { ...localDrill, video_url: res.data.url }
+                : { ...localDrill, audio_url: res.data.url };
+            
+            setLocalDrill(updated);
+            triggerSave(updated);
+            addLog(`${mode === 'video' ? 'Video' : 'Audio'} trimmed successfully`);
         }
     } catch (err: any) {
         addLog(`Trim error: ${err.message}`);
@@ -390,29 +389,6 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     return getMediaUrl(url);
   };
 
-  const [trimTimes, setTrimTimes] = useState({ start: 0, end: 10 });
-
-  const handleTrimVideo = async () => {
-    if (!localDrill.video_url) return;
-    setAiLoadingKey('trim-video');
-    addLog(`Trimming video: ${trimTimes.start}s to ${trimTimes.end}s`);
-    try {
-        const res = await axios.post(`${API_BASE}/drills/${localDrill.id}/trim-audio`, {
-            start_time: trimTimes.start,
-            end_time: trimTimes.end
-        });
-        if (res.data.url) {
-            const updated = { ...localDrill, audio_url: res.data.url };
-            setLocalDrill(updated);
-            triggerSave(updated);
-            addLog('Trimmed audio extracted from video');
-        }
-    } catch (err: any) {
-        addLog(`Trim error: ${err.message}`);
-    } finally {
-        setAiLoadingKey(null);
-    }
-  };
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#F3F4F6', zIndex: 11000, display: 'flex', flexDirection: 'column' }}>
@@ -448,37 +424,53 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                 playsInline 
                 preload="metadata" 
                 style={{ width: '100%', maxHeight: '250px' }} 
+                onLoadedMetadata={(e) => {
+                  const dur = (e.target as HTMLVideoElement).duration;
+                  if (dur) {
+                      setVideoDuration(dur);
+                      setTrimTimes(prev => ({ ...prev, end: Math.min(prev.end, dur) }));
+                  }
+                }}
             />
             <div style={{ width: '100%', padding: '15px', background: '#111', color: 'white' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '12px', fontWeight: 'bold' }}>
-                    <span style={{ color: '#9CA3AF' }}>START: {trimTimes.start}s</span>
-                    <span style={{ color: '#9CA3AF' }}>END: {trimTimes.end}s</span>
+                    <span style={{ color: '#9CA3AF' }}>VIDEO START: {trimTimes.start.toFixed(1)}s</span>
+                    <span style={{ color: '#9CA3AF' }}>END: {trimTimes.end.toFixed(1)}s</span>
                 </div>
                 <input 
                     type="range" 
                     min="0" 
-                    max="60" 
-                    step="0.5" 
+                    max={videoDuration} 
+                    step="0.1" 
                     value={trimTimes.start} 
-                    onChange={e => setTrimTimes(prev => ({ ...prev, start: parseFloat(e.target.value) }))}
+                    onChange={e => setTrimTimes(prev => ({ ...prev, start: Math.min(parseFloat(e.target.value), prev.end - 0.1) }))}
                     style={{ width: '100%', marginBottom: '10px' }}
                 />
                 <input 
                     type="range" 
                     min="0" 
-                    max="60" 
-                    step="0.5" 
+                    max={videoDuration} 
+                    step="0.1" 
                     value={trimTimes.end} 
-                    onChange={e => setTrimTimes(prev => ({ ...prev, end: parseFloat(e.target.value) }))}
+                    onChange={e => setTrimTimes(prev => ({ ...prev, end: Math.max(parseFloat(e.target.value), prev.start + 0.1) }))}
                     style={{ width: '100%', marginBottom: '15px' }}
                 />
-                <button 
-                    onClick={handleTrimVideo}
-                    disabled={aiLoadingKey !== null}
-                    style={{ width: '100%', padding: '12px', background: '#E11D48', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                >
-                    <FaScissors /> Trim & Extract Audio
-                </button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button 
+                      onClick={() => handleTrimVideo('video')}
+                      disabled={aiLoadingKey !== null}
+                      style={{ flex: 1, padding: '12px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  >
+                      <FaScissors /> Trim Video
+                  </button>
+                  <button 
+                      onClick={() => handleTrimVideo('audio')}
+                      disabled={aiLoadingKey !== null}
+                      style={{ flex: 1, padding: '12px', background: '#E11D48', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  >
+                      <FaScissors /> Extract Audio
+                  </button>
+                </div>
             </div>
           </div>
         )}
@@ -486,15 +478,15 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         {localDrill.audio_url && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'white', padding: '15px', borderRadius: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #E5E7EB' }}>
             <button onClick={() => new Audio(getSourceUrl(localDrill.audio_url, 'audio')).play()} style={{ width: '100%', padding: '12px', background: '#F3F4F6', border: 'none', borderRadius: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#1F2937' }}>
-              <FaVolumeUp /> Play Audio
+              Play Audio
             </button>
             <div style={{ padding: '10px', background: '#F9FAFB', borderRadius: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '11px', fontWeight: 'bold', color: '#6B7280' }}>
-                    <span>START: {trimTimes.start}s</span>
-                    <span>END: {trimTimes.end}s</span>
+                    <span>AUDIO START: {trimTimes.start.toFixed(1)}s</span>
+                    <span>END: {trimTimes.end.toFixed(1)}s</span>
                 </div>
-                <input type="range" min="0" max="60" step="0.5" value={trimTimes.start} onChange={e => setTrimTimes(p => ({...p, start: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '8px' }} />
-                <input type="range" min="0" max="60" step="0.5" value={trimTimes.end} onChange={e => setTrimTimes(p => ({...p, end: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '12px' }} />
+                <input type="range" min="0" max="60" step="0.1" value={trimTimes.start} onChange={e => setTrimTimes(p => ({...p, start: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '8px' }} />
+                <input type="range" min="0" max="60" step="0.1" value={trimTimes.end} onChange={e => setTrimTimes(p => ({...p, end: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '12px' }} />
                 <button onClick={handleTrimAudio} disabled={aiLoadingKey !== null} style={{ width: '100%', padding: '10px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px' }}>
                     <FaScissors /> Trim Audio
                 </button>

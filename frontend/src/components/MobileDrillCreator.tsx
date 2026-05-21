@@ -32,6 +32,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const [aiLoadingKey, setAiLoadingKey] = useState<string | null>(null);
     const [debugLogs, setDebugLogs] = useState<string[]>(['[System] Native Creator Initialized']);
     const [trimTimes, setTrimTimes] = useState({ start: 0, end: 10 });
+    const [videoDuration, setVideoDuration] = useState(60);
 
     const addLog = (msg: string) => {
         setDebugLogs(prev => [`[${new Date().toLocaleTimeString().split(' ')[0]}] ${msg}`, ...prev].slice(0, 12));
@@ -288,17 +289,23 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         }
     };
 
-    const handleTrimVideo = async () => {
-        setAiLoadingKey('trim-video');
-        addLog(`Trimming: ${trimTimes.start}s - ${trimTimes.end}s`);
+    const handleTrimVideo = async (mode: 'video' | 'audio') => {
+        setAiLoadingKey(`trim-${mode}`);
+        addLog(`Trimming ${mode}: ${trimTimes.start}s - ${trimTimes.end}s`);
         try {
-            const res = await axios.post(`${API_BASE}/drills/${drill.id}/trim-audio`, {
+            const endpoint = mode === 'video' ? 'trim-video' : 'trim-audio';
+            const res = await axios.post(`${API_BASE}/drills/${drill.id}/${endpoint}`, {
                 start_time: trimTimes.start,
                 end_time: trimTimes.end
             });
             if (res.data.url) {
-                setCapturedAudio(getMediaUrl(res.data.url));
-                addLog('Trimmed audio extracted');
+                if (mode === 'video') {
+                    setCapturedVideo(getMediaUrl(res.data.url));
+                    addLog('Video trimmed successfully');
+                } else {
+                    setCapturedAudio(getMediaUrl(res.data.url));
+                    addLog('Trimmed audio extracted');
+                }
             }
         } catch (err: any) {
             addLog(`Trim error: ${err.message}`);
@@ -331,22 +338,81 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 {capturedImage && <img src={capturedImage} alt="Preview" style={{ width: '100%', height: '150px', borderRadius: '12px', objectFit: 'cover' }} />}
                 {capturedVideo && (
                     <div style={{ background: '#000', borderRadius: '24px', overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
-                        <video src={capturedVideo} controls playsInline preload="metadata" style={{ width: '100%', maxHeight: '250px' }} />
+                        <video 
+                            src={capturedVideo} 
+                            controls 
+                            playsInline 
+                            preload="metadata" 
+                            style={{ width: '100%', maxHeight: '250px' }} 
+                            onLoadedMetadata={(e) => {
+                                const dur = (e.target as HTMLVideoElement).duration;
+                                if (dur) {
+                                    setVideoDuration(dur);
+                                    setTrimTimes(prev => ({ ...prev, end: Math.min(prev.end, dur) }));
+                                }
+                            }}
+                        />
                         <div style={{ width: '100%', padding: '15px', background: '#111', color: 'white' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '12px', fontWeight: 'bold' }}>
-                                <span style={{ color: '#9CA3AF' }}>START: {trimTimes.start}s</span>
-                                <span style={{ color: '#9CA3AF' }}>END: {trimTimes.end}s</span>
+                                <span style={{ color: '#9CA3AF' }}>VIDEO START: {trimTimes.start.toFixed(1)}s</span>
+                                <span style={{ color: '#9CA3AF' }}>END: {trimTimes.end.toFixed(1)}s</span>
                             </div>
-                            <input type="range" min="0" max="60" step="0.5" value={trimTimes.start} onChange={e => setTrimTimes(p => ({...p, start: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '10px' }} />
-                            <input type="range" min="0" max="60" step="0.5" value={trimTimes.end} onChange={e => setTrimTimes(p => ({...p, end: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '15px' }} />
-                            <button onClick={handleTrimVideo} disabled={aiLoadingKey !== null} style={{ width: '100%', padding: '12px', background: '#E11D48', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                <FaScissors /> Trim & Extract Audio
-                            </button>
+                            <input 
+                                type="range" 
+                                min="0" 
+                                max={videoDuration} 
+                                step="0.1" 
+                                value={trimTimes.start} 
+                                onChange={e => setTrimTimes(p => ({...p, start: Math.min(parseFloat(e.target.value), p.end - 0.1)}))} 
+                                style={{ width: '100%', marginBottom: '10px' }} 
+                            />
+                            <input 
+                                type="range" 
+                                min="0" 
+                                max={videoDuration} 
+                                step="0.1" 
+                                value={trimTimes.end} 
+                                onChange={e => setTrimTimes(p => ({...p, end: Math.max(parseFloat(e.target.value), p.start + 0.1)}))} 
+                                style={{ width: '100%', marginBottom: '15px' }} 
+                            />
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button 
+                                    onClick={() => handleTrimVideo('video')} 
+                                    disabled={aiLoadingKey !== null} 
+                                    style={{ flex: 1, padding: '12px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                >
+                                    <FaScissors /> Trim Video
+                                </button>
+                                <button 
+                                    onClick={() => handleTrimVideo('audio')} 
+                                    disabled={aiLoadingKey !== null} 
+                                    style={{ flex: 1, padding: '12px', background: '#E11D48', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                >
+                                    <FaScissors /> Extract Audio
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
 
-                {capturedAudio && <button onClick={() => new Audio(capturedAudio).play()} style={{ width: '100%', padding: '16px', background: '#f3f4f6', border: '1px solid #e0e0e0', borderRadius: '12px', fontWeight: 600, fontSize: '18px' }}>🔊 Play Recording</button>}
+                {capturedAudio && (
+                    <div style={{ background: 'white', padding: '15px', borderRadius: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <button onClick={() => new Audio(capturedAudio).play()} style={{ width: '100%', padding: '14px', background: '#f3f4f6', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                            🔊 Play Recording
+                        </button>
+                        <div style={{ padding: '10px', background: '#F9FAFB', borderRadius: '12px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '11px', fontWeight: 'bold', color: '#6B7280' }}>
+                                <span>AUDIO START: {trimTimes.start.toFixed(1)}s</span>
+                                <span>END: {trimTimes.end.toFixed(1)}s</span>
+                            </div>
+                            <input type="range" min="0" max="60" step="0.1" value={trimTimes.start} onChange={e => setTrimTimes(p => ({...p, start: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '8px' }} />
+                            <input type="range" min="0" max="60" step="0.1" value={trimTimes.end} onChange={e => setTrimTimes(p => ({...p, end: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '12px' }} />
+                            <button onClick={() => handleTrimVideo('audio')} disabled={aiLoadingKey !== null} style={{ width: '100%', padding: '10px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px' }}>
+                                <FaScissors /> Trim Audio
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', background: 'white', padding: '15px', borderRadius: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #E5E7EB' }}>
                     <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '8px 4px', fontSize: '9px', fontWeight: 700, background: '#EEF2FF', color: '#4338CA', border: 'none', borderRadius: '12px' }}><FaLanguage size={18} /> CA➔SH</button>
