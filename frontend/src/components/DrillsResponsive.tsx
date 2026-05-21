@@ -211,12 +211,11 @@ export default function DrillsResponsive() {
         payload: newDrillData
       });
 
-      setDrills(prev => [newDrillData, ...prev]);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      await fetchDrills();
 
       if (isMobile) {
         setEditingDrill(newDrillData);
-      } else {
-        await fetchDrills();
       }
     } catch (error) {
       console.error('Error creating drill:', error);
@@ -315,7 +314,12 @@ export default function DrillsResponsive() {
           </div>
           <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginTop: '8px' }}>Tap any card to view details</div>
         </div>
-        <div style={{ flex: 1, width: '100%', overflow: 'auto', padding: isMobile ? '12px 4px' : '0' }}>
+        <div style={{ flex: 1, width: '100%', overflow: 'auto', padding: isMobile ? '12px 4px' : '0', position: 'relative' }}>
+          {isCreating && (
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.5)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ padding: '10px 20px', background: '#333', color: 'white', borderRadius: '20px', fontWeight: 'bold' }}>Creating...</div>
+            </div>
+          )}
           <DrillsGrid rowData={filteredDrills} refreshData={fetchDrills} onEditDrill={(drill) => setEditingDrill(drill)} />
         </div>
         {isMobile && <MobileBottomNav />}
