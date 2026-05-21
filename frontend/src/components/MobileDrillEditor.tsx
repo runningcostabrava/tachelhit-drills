@@ -401,7 +401,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         )}
 
         {localDrill.video_url && (
-          <div style={{ background: '#000', borderRadius: '24px', overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
+          <div style={{ background: '#000', borderRadius: '24px', overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', marginBottom: '15px' }}>
             <video 
                 ref={videoRef}
                 id="editor-video-preview"
@@ -409,7 +409,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                 controls 
                 playsInline 
                 preload="metadata" 
-                style={{ width: '100%', maxHeight: '250px' }} 
+                style={{ width: '100%', maxHeight: '300px', display: 'block' }} 
                 onLoadedMetadata={(e) => {
                   const dur = (e.target as HTMLVideoElement).duration;
                   if (dur) {

@@ -337,14 +337,14 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
                 {capturedImage && <img src={capturedImage} alt="Preview" style={{ width: '100%', height: '150px', borderRadius: '12px', objectFit: 'cover' }} />}
                 {capturedVideo && (
-                    <div style={{ background: '#000', borderRadius: '24px', overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
+                    <div style={{ background: '#000', borderRadius: '24px', overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', marginBottom: '15px' }}>
                         <video 
                             id="creator-video-preview"
                             src={capturedVideo} 
                             controls 
                             playsInline 
                             preload="metadata" 
-                            style={{ width: '100%', maxHeight: '250px' }} 
+                            style={{ width: '100%', maxHeight: '300px', display: 'block' }} 
                             onLoadedMetadata={(e) => {
                                 const dur = (e.target as HTMLVideoElement).duration;
                                 if (dur) {
