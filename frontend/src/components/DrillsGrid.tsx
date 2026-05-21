@@ -478,6 +478,29 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                     🔊 Play Audio
                                 </button>
                             )}
+                            {drill.text_tachelhit && (
+                                <button
+                                    onClick={() => handleTachelhitTTS(drill)}
+                                    disabled={actionLoadingId === `tts-${drill.id}`}
+                                    style={{
+                                        flex: 1,
+                                        padding: '10px',
+                                        background: '#fef3c7',
+                                        border: '1px solid #fde68a',
+                                        borderRadius: '10px',
+                                        fontSize: '14px',
+                                        fontWeight: 600,
+                                        color: '#92400e',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '6px'
+                                    }}
+                                >
+                                    {actionLoadingId === `tts-${drill.id}` ? '...' : '🗣️ TTS'}
+                                </button>
+                            )}
                             {drill.video_url && (
                                 <button
                                     onClick={() => {
