@@ -650,9 +650,9 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
         { field: 'text_catalan', headerName: 'Català', flex: 2, minWidth: 150, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px' } },
         { field: 'text_tachelhit', headerName: 'Tachelhit', flex: 2, minWidth: 150, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px' } },
         { field: 'text_arabic', headerName: 'العربية', flex: 2, minWidth: 150, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px', 'direction': 'rtl' } },
-        { field: 'tag', headerName: 'Tag', width: 120, filter: true, editable: true },
+        { field: 'tag', headerName: 'Etiqueta', width: 120, filter: true, editable: true },
         {
-            headerName: 'Media',
+            headerName: 'Multimèdia',
             width: 120,
             cellRenderer: (params: any) => (
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
@@ -666,7 +666,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
             )
         },
         {
-            headerName: 'AI Tools',
+            headerName: 'Eines IA',
             width: 380,
             cellRenderer: (params: any) => (
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center', height: '100%' }}>
@@ -679,7 +679,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                 const hasAudio = params.data.audio_url;
                                 const hasVideo = params.data.video_url;
                                 if (hasAudio && hasVideo) {
-                                    if (confirm('Transcribe from VIDEO? (Cancel for AUDIO)')) {
+                                    if (confirm('Transcripció des de VÍDEO? (Cancel·la per ÀUDIO)')) {
                                         handleTranscribe(params.data, 'video');
                                     } else {
                                         handleTranscribe(params.data, 'audio');
@@ -701,7 +701,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                 setActionLoadingId(`down-${params.data.id}`);
                                 await syncManager.downloadAndCacheMedia(media);
                                 setActionLoadingId(null);
-                                alert('Media downloaded for offline use!');
+                                alert('Mèdia descarregat per a ús fora de línia!');
                             }
                         }}
                         disabled={actionLoadingId !== null || !(params.data.audio_url || params.data.video_url)}
@@ -711,7 +711,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
             )
         },
         {
-            headerName: 'Actions',
+            headerName: 'Accions',
             width: 150,
             cellRenderer: (params: any) => (
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
@@ -739,27 +739,27 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', padding: '20px' }}>
             <div style={{ marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center', background: '#F9FAFB', padding: '15px', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
-                <span style={{ fontSize: '15px', fontWeight: 600, color: '#374151', marginRight: '10px' }}><FaCheckSquare style={{ verticalAlign: 'middle', marginTop: '-3px', marginRight: '5px' }} /> {selectedRows.length} items selected</span>
+                <span style={{ fontSize: '15px', fontWeight: 600, color: '#374151', marginRight: '10px' }}><FaCheckSquare style={{ verticalAlign: 'middle', marginTop: '-3px', marginRight: '5px' }} /> {selectedRows.length} elements seleccionats</span>
                 <button 
                     onClick={handleBulkDelete} 
                     disabled={selectedRows.length === 0} 
                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#EF4444', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', opacity: selectedRows.length ? 1 : 0.5, fontWeight: 600, transition: 'all 0.2s' }}
                 >
-                    <FaTrash /> Bulk Delete
+                    <FaTrash /> Esborrar selecció
                 </button>
                 <button 
                     onClick={handleBulkEditTags} 
                     disabled={selectedRows.length === 0} 
                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', opacity: selectedRows.length ? 1 : 0.5, fontWeight: 600, transition: 'all 0.2s' }}
                 >
-                    <FaTag /> Bulk Edit Tags
+                    <FaTag /> Editar etiquetes
                 </button>
                 <button 
                     onClick={() => setShowTestConfig(true)} 
                     disabled={selectedRows.length === 0} 
                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#10B981', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', opacity: selectedRows.length ? 1 : 0.5, fontWeight: 600, transition: 'all 0.2s' }}
                 >
-                    <FaPlus /> Create Practica
+                    <FaPlus /> Crear Pràctica
                 </button>
             </div>
             <div className="ag-theme-alpine" style={{ flex: 1 }}>
@@ -796,7 +796,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                             onClose={() => setShowTestConfig(false)}
                             onTestCreated={() => {
                                 setShowTestConfig(false);
-                                if (window.confirm('Practica created successfully! Go to Tests Dashboard?')) {
+                                if (window.confirm('Pràctica creada correctament! Vols anar al panell de tests?')) {
                                     navigate('/tests');
                                 }
                             }}
