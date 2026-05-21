@@ -162,6 +162,8 @@ export default function DrillsResponsive() {
         const response = await axios.get(`${API_BASE}/drills/`);
         allDrills = response.data || [];
         await syncManager.saveDrillsToCache(allDrills);
+        // Trigger media sync to ensure APK has everything offline
+        syncManager.syncAllMedia();
       } else {
         allDrills = await syncManager.getDrills();
       }

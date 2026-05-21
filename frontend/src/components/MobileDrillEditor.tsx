@@ -311,10 +311,23 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     }
   };
 
-  const getSourceUrl = (url: string | undefined) => {
+  const [localMediaUrls, setLocalMediaUrls] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const resolveLocalUrls = async () => {
+      const urls: Record<string, string> = {};
+      if (localDrill.audio_url) urls.audio = await syncManager.getLocalMediaUrl(localDrill.audio_url);
+      if (localDrill.video_url) urls.video = await syncManager.getLocalMediaUrl(localDrill.video_url);
+      if (localDrill.image_url) urls.image = await syncManager.getLocalMediaUrl(localDrill.image_url);
+      setLocalMediaUrls(urls);
+    };
+    resolveLocalUrls();
+  }, [localDrill.audio_url, localDrill.video_url, localDrill.image_url]);
+
+  const getSourceUrl = (url: string | undefined, type: 'audio'|'video'|'image') => {
     if (!url) return '';
-    if (url.startsWith('blob:') || url.startsWith('http')) return url;
-    return getMediaUrl(url);
+    if (url.startsWith('blob:') || url.startsWith('data:')) return url;
+    return localMediaUrls[type] || getMediaUrl(url);
   };
 
   return (
@@ -339,14 +352,14 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         </div>
 
         {localDrill.image_url && (
-          <img src={getSourceUrl(localDrill.image_url)} alt="Drill Asset" style={{ width: '100%', height: '150px', borderRadius: '12px', objectFit: 'cover' }} />
+          <img src={getSourceUrl(localDrill.image_url, 'image')} alt="Drill Asset" style={{ width: '100%', height: '150px', borderRadius: '12px', objectFit: 'cover' }} />
         )}
 
         {localDrill.video_url && (
           <div style={{ background: '#000', borderRadius: '12px', overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <video 
                 ref={videoRef}
-                src={getSourceUrl(localDrill.video_url)} 
+                src={getSourceUrl(localDrill.video_url, 'video')} 
                 controls 
                 playsInline 
                 preload="metadata" 
@@ -387,7 +400,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         )}
 
         {localDrill.audio_url && (
-          <button onClick={() => new Audio(getSourceUrl(localDrill.audio_url)).play()} style={{ width: '100%', padding: '12px', background: '#f3f4f6', border: 'none', borderRadius: '10px', fontWeight: 600 }}>
+          <button onClick={() => new Audio(getSourceUrl(localDrill.audio_url, 'audio')).play()} style={{ width: '100%', padding: '12px', background: '#f3f4f6', border: 'none', borderRadius: '10px', fontWeight: 600 }}>
             🔊 Play
           </button>
         )}

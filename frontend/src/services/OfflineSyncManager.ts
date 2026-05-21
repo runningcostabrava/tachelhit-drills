@@ -271,9 +271,11 @@ class OfflineSyncManager {
 
       const fullUrl = getMediaUrl(url);
       console.log(`[OfflineSync] Downloading: ${fullUrl}`);
+      
+      // Use standard fetch if axios fails in some Capacitor environments
       const response = await axios.get(fullUrl, { 
         responseType: 'blob',
-        timeout: 30000 // 30 second timeout per file
+        timeout: 60000 // Increased timeout for potentially large video files
       });
       const base64Data = await this.blobToBase64(response.data);
       
