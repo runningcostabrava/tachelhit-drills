@@ -425,14 +425,14 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                             if (videoRef.current) setTrimTimes(prev => ({ ...prev, start: videoRef.current!.currentTime }));
                         }}
                         style={{ background: '#333', color: '#10B981', border: '1px solid #444', borderRadius: '4px', padding: '2px 6px', fontSize: '10px' }}
-                    >SET START</button>
+                    >INICI</button>
                     <span style={{ color: '#9CA3AF' }}>{trimTimes.start.toFixed(1)}s - {trimTimes.end.toFixed(1)}s</span>
                     <button 
                         onClick={() => {
                             if (videoRef.current) setTrimTimes(prev => ({ ...prev, end: videoRef.current!.currentTime }));
                         }}
                         style={{ background: '#333', color: '#EF4444', border: '1px solid #444', borderRadius: '4px', padding: '2px 6px', fontSize: '10px' }}
-                    >SET END</button>
+                    >FINAL</button>
                 </div>
                 <input 
                     type="range" 
@@ -458,14 +458,14 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                       disabled={aiLoadingKey !== null}
                       style={{ flex: 1, padding: '12px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                   >
-                      <FaScissors /> Trim Video
+                      <FaScissors /> Retallar Vídeo
                   </button>
                   <button 
                       onClick={() => handleTrimVideo('audio')}
                       disabled={aiLoadingKey !== null}
                       style={{ flex: 1, padding: '12px', background: '#E11D48', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                   >
-                      <FaScissors /> Extract Audio
+                      <FaScissors /> Extreure Àudio
                   </button>
                 </div>
             </div>
@@ -488,7 +488,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                 }} 
                 style={{ width: '100%', padding: '12px', background: '#F3F4F6', border: 'none', borderRadius: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#1F2937' }}
             >
-              Play Audio
+              Play Àudio
             </button>
             <div style={{ padding: '10px', background: '#F9FAFB', borderRadius: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '11px', fontWeight: 'bold', color: '#6B7280' }}>
@@ -498,7 +498,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                             if (a) setTrimTimes(prev => ({ ...prev, start: a.currentTime }));
                         }}
                         style={{ background: '#ddd', border: 'none', borderRadius: '4px', padding: '2px 6px' }}
-                    >SET START</button>
+                    >INICI</button>
                     <span>{trimTimes.start.toFixed(1)}s - {trimTimes.end.toFixed(1)}s</span>
                     <button 
                         onClick={() => {
@@ -506,12 +506,12 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                             if (a) setTrimTimes(prev => ({ ...prev, end: a.currentTime }));
                         }}
                         style={{ background: '#ddd', border: 'none', borderRadius: '4px', padding: '2px 6px' }}
-                    >SET END</button>
+                    >FINAL</button>
                 </div>
                 <input type="range" min="0" max={audioDuration} step="0.1" value={trimTimes.start} onChange={e => setTrimTimes(p => ({...p, start: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '8px' }} />
                 <input type="range" min="0" max={audioDuration} step="0.1" value={trimTimes.end} onChange={e => setTrimTimes(p => ({...p, end: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '12px' }} />
                 <button onClick={handleTrimAudio} disabled={aiLoadingKey !== null} style={{ width: '100%', padding: '10px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px' }}>
-                    <FaScissors /> Trim Audio
+                    <FaScissors /> Retallar Àudio
                 </button>
             </div>
           </div>

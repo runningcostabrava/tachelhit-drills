@@ -1376,27 +1376,27 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '11px', display: 'block' }}>START: {videoTrimRange.start.toFixed(1)}s</label>
+                  <label style={{ fontSize: '11px', display: 'block' }}>INICI: {videoTrimRange.start.toFixed(1)}s</label>
                   <input 
                     type="range" 
-                    min="0"
-                    max="60"
-                    step="0.1"
+                    min="0" 
+                    max={playerDuration} 
+                    step="0.1" 
                     value={videoTrimRange.start} 
                     onChange={e => setVideoTrimRange(prev => ({...prev, start: parseFloat(e.target.value)}))}
-                    style={{ width: '100%' }}
+                    style={{ width: '100%' }} 
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '11px', display: 'block' }}>END: {videoTrimRange.end.toFixed(1)}s</label>
+                  <label style={{ fontSize: '11px', display: 'block' }}>FINAL: {videoTrimRange.end.toFixed(1)}s</label>
                   <input 
                     type="range" 
-                    min="0"
-                    max="60"
-                    step="0.1"
+                    min="0" 
+                    max={playerDuration} 
+                    step="0.1" 
                     value={videoTrimRange.end} 
                     onChange={e => setVideoTrimRange(prev => ({...prev, end: parseFloat(e.target.value)}))}
-                    style={{ width: '100%' }}
+                    style={{ width: '100%' }} 
                   />
                 </div>
               </div>
@@ -1419,7 +1419,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                   gap: '8px'
                 }}
               >
-                {isProcessingTrim ? 'Processing...' : <><FaScissors /> Apply Video Trim</>}
+                {isProcessingTrim ? 'Processant...' : <><FaScissors /> Retallar Vídeo</>}
               </button>
             </div>
           )}

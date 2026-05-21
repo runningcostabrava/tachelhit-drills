@@ -361,7 +361,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                                         if (v) setTrimTimes(prev => ({ ...prev, start: v.currentTime }));
                                     }}
                                     style={{ background: '#333', color: '#10B981', border: '1px solid #444', borderRadius: '4px', padding: '2px 6px', fontSize: '10px' }}
-                                >SET START</button>
+                                >INICI</button>
                                 <span style={{ color: '#9CA3AF' }}>{trimTimes.start.toFixed(1)}s - {trimTimes.end.toFixed(1)}s</span>
                                 <button 
                                     onClick={() => {
@@ -369,7 +369,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                                         if (v) setTrimTimes(prev => ({ ...prev, end: v.currentTime }));
                                     }}
                                     style={{ background: '#333', color: '#EF4444', border: '1px solid #444', borderRadius: '4px', padding: '2px 6px', fontSize: '10px' }}
-                                >SET END</button>
+                                >FINAL</button>
                             </div>
                             <input 
                                 type="range" 
@@ -395,14 +395,14 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                                     disabled={aiLoadingKey !== null} 
                                     style={{ flex: 1, padding: '12px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                                 >
-                                    <FaScissors /> Trim Video
+                                    <FaScissors /> Retallar Vídeo
                                 </button>
                                 <button 
                                     onClick={() => handleTrimVideo('audio')} 
                                     disabled={aiLoadingKey !== null} 
                                     style={{ flex: 1, padding: '12px', background: '#E11D48', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                                 >
-                                    <FaScissors /> Extract Audio
+                                    <FaScissors /> Extreure Àudio
                                 </button>
                             </div>
                         </div>
@@ -412,17 +412,17 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 {capturedAudio && (
                     <div style={{ background: 'white', padding: '15px', borderRadius: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <button onClick={() => new Audio(capturedAudio).play()} style={{ width: '100%', padding: '14px', background: '#f3f4f6', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                            🔊 Play Recording
+                            🔊 Escolta la gravació
                         </button>
                         <div style={{ padding: '10px', background: '#F9FAFB', borderRadius: '12px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '11px', fontWeight: 'bold', color: '#6B7280' }}>
-                                <span>AUDIO START: {trimTimes.start.toFixed(1)}s</span>
-                                <span>END: {trimTimes.end.toFixed(1)}s</span>
+                                <span>INICI ÀUDIO: {trimTimes.start.toFixed(1)}s</span>
+                                <span>FINAL: {trimTimes.end.toFixed(1)}s</span>
                             </div>
                             <input type="range" min="0" max="60" step="0.1" value={trimTimes.start} onChange={e => setTrimTimes(p => ({...p, start: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '8px' }} />
                             <input type="range" min="0" max="60" step="0.1" value={trimTimes.end} onChange={e => setTrimTimes(p => ({...p, end: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '12px' }} />
                             <button onClick={() => handleTrimVideo('audio')} disabled={aiLoadingKey !== null} style={{ width: '100%', padding: '10px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px' }}>
-                                <FaScissors /> Trim Audio
+                                <FaScissors /> Retallar Àudio
                             </button>
                         </div>
                     </div>
