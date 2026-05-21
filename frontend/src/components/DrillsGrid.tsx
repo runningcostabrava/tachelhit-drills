@@ -41,7 +41,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
     const [selectedRows, setSelectedRows] = useState<Drill[]>([]);
     const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
     const [showTestConfig, setShowTestConfig] = useState(false);
-    const [pendingMedia, setPendingMedia] = useState<Record<number, {image?: string, audio?: Blob, audioUrl?: string}>>({});
+    const [pendingMedia, setPendingMedia] = useState<Record<number, {image?: string, audio?: Blob, audioUrl?: string, video?: Blob, videoUrl?: string}>>({});
     const navigate = useNavigate();
 
     // Track responsive screen resize configurations
@@ -321,6 +321,18 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                 });
             }
 
+            if (pending.video) {
+                const fileName = `video_${drill.id}_${Date.now()}.mp4`;
+                await syncManager.saveMediaLocally(pending.video, fileName);
+                await syncManager.queueAction({
+                    type: 'UPLOAD_MEDIA',
+                    drillId: drill.id,
+                    mediaType: 'video',
+                    localPath: fileName,
+                    fileName: fileName
+                });
+            }
+
             // Trigger sync (background) and refresh UI immediately
             syncManager.sync(); 
             setPendingMedia(prev => {
@@ -498,6 +510,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                     {pendingMedia[drill.id].image && <img src={pendingMedia[drill.id].image} style={{ width: '40px', height: '40px', borderRadius: '4px', objectFit: 'cover' }} />}
                                     {pendingMedia[drill.id].audioUrl && <button onClick={() => new Audio(pendingMedia[drill.id].audioUrl).play()} style={{ background: 'none', border: 'none', fontSize: '20px' }}>🔊</button>}
+                                    {pendingMedia[drill.id].videoUrl && <button onClick={() => window.open(pendingMedia[drill.id].videoUrl, '_blank')} style={{ background: 'none', border: 'none', fontSize: '20px' }}>🎬</button>}
                                     <div style={{ flex: 1 }}></div>
                                     <button 
                                         onClick={() => handleQuickSave(drill)}
