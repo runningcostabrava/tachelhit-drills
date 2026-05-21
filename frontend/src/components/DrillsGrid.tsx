@@ -96,8 +96,12 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
     };
 
     // 🪄 Smart Non-Destructive Transcription Pipeline
-    const handleTranscribe = async (drill: Drill) => {
-        const mediaSource = drill.audio_url || drill.video_url;
+    const handleTranscribe = async (drill: Drill, sourceType?: 'audio' | 'video') => {
+        let mediaSource = '';
+        if (sourceType === 'audio') mediaSource = drill.audio_url || '';
+        else if (sourceType === 'video') mediaSource = drill.video_url || '';
+        else mediaSource = drill.audio_url || drill.video_url || '';
+
         if (!mediaSource) return;
 
         const loadingKey = `scribe-${drill.id}`;
@@ -599,11 +603,29 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
             width: 320,
             cellRenderer: (params: any) => (
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center', height: '100%' }}>
-                    <button onClick={() => handleTranslate(params.data, 'ca', 'shi')} disabled={actionLoadingId !== null} style={{ padding: '4px 6px', fontSize: '10px', background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>CA➔SHI</button>
-                    <button onClick={() => handleTranslate(params.data, 'shi', 'ca')} disabled={actionLoadingId !== null} style={{ padding: '4px 6px', fontSize: '10px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>SHI➔CA</button>
+                    <button onClick={() => handleTranslate(params.data, 'ca', 'shi')} disabled={actionLoadingId !== null} style={{ padding: '4px 6px', fontSize: '10px', background: '#eef2ff', color: '#4f46e5', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>CA➔SH</button>
+                    <button onClick={() => handleTranslate(params.data, 'shi', 'ca')} disabled={actionLoadingId !== null} style={{ padding: '4px 6px', fontSize: '10px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>SH➔CA</button>
                     <button onClick={() => handleTachelhitTTS(params.data)} disabled={actionLoadingId !== null} style={{ padding: '4px 6px', fontSize: '10px', background: '#fef3c7', color: '#92400e', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>🔊 TTS SHI</button>
                     {(params.data.audio_url || params.data.video_url) && (
-                        <button onClick={() => handleTranscribe(params.data)} disabled={actionLoadingId !== null} style={{ padding: '4px 6px', fontSize: '10px', background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>🪄 Transcribe</button>
+                        <button 
+                            onClick={() => {
+                                const hasAudio = params.data.audio_url;
+                                const hasVideo = params.data.video_url;
+                                if (hasAudio && hasVideo) {
+                                    if (confirm('Transcribe from VIDEO? (Cancel for AUDIO)')) {
+                                        handleTranscribe(params.data, 'video');
+                                    } else {
+                                        handleTranscribe(params.data, 'audio');
+                                    }
+                                } else if (hasVideo) {
+                                    handleTranscribe(params.data, 'video');
+                                } else {
+                                    handleTranscribe(params.data, 'audio');
+                                }
+                            }} 
+                            disabled={actionLoadingId !== null} 
+                            style={{ padding: '4px 6px', fontSize: '10px', background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                        >🪄 Transcribe</button>
                     )}
                     <button 
                         onClick={async () => {

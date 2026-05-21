@@ -178,15 +178,19 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     }
   };
 
-      const handleAutoTranscribe = async () => {
-        const mediaSource = localDrill.audio_url || localDrill.video_url;
+      const handleAutoTranscribe = async (sourceType?: 'audio' | 'video') => {
+        let mediaSource = '';
+        if (sourceType === 'audio') mediaSource = localDrill.audio_url || '';
+        else if (sourceType === 'video') mediaSource = localDrill.video_url || '';
+        else mediaSource = localDrill.audio_url || localDrill.video_url || '';
+
         if (!mediaSource) return alert('Please record and save media first.');
         
         const status = await Network.getStatus();
         if (!status.connected) return alert('Transcription requires internet connection.');
 
         setAiLoadingKey('transcribe-voice');
-        addLog('Transcribing media...');
+        addLog(`Transcribing ${sourceType || 'media'}...`);
         try {
             const res = await axios.post(`${API_BASE}/transcribe/`, { audio_url: mediaSource });
             const currentContent = localDrill.text_tachelhit || '';
@@ -322,8 +326,19 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
           <button onClick={handleTachelhitTTS} disabled={aiLoadingKey !== null} style={{ padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: '#fef3c7', color: '#92400e', border: 'none', borderRadius: '8px' }}>🔊 TTS</button>
           <button 
                 onClick={() => {
-                    if (localDrill.audio_url || localDrill.video_url) {
-                        handleAutoTranscribe();
+                    const hasAudio = localDrill.audio_url;
+                    const hasVideo = localDrill.video_url;
+
+                    if (hasAudio && hasVideo) {
+                        if (confirm('Transcribe from VIDEO? (Cancel for AUDIO)')) {
+                            handleAutoTranscribe('video');
+                        } else {
+                            handleAutoTranscribe('audio');
+                        }
+                    } else if (hasVideo) {
+                        handleAutoTranscribe('video');
+                    } else if (hasAudio) {
+                        handleAutoTranscribe('audio');
                     } else {
                         alert('Please record and save media first.');
                     }

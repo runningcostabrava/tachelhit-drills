@@ -212,15 +212,19 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         addLog(`${type} queued from file`);
     };
 
-    const handleAutoTranscribe = async () => {
-        const mediaSource = drill.audio_url || drill.video_url;
+    const handleAutoTranscribe = async (sourceType?: 'audio' | 'video') => {
+        let mediaSource = '';
+        if (sourceType === 'audio') mediaSource = drill.audio_url || capturedAudio || '';
+        else if (sourceType === 'video') mediaSource = drill.video_url || capturedVideo || '';
+        else mediaSource = drill.audio_url || drill.video_url || capturedAudio || capturedVideo || '';
+
         if (!mediaSource) return alert('Please record and save media first.');
         
         const status = await Network.getStatus();
         if (!status.connected) return alert('Transcription requires internet connection.');
 
         setAiLoadingKey('transcribe-voice');
-        addLog('Transcribing media...');
+        addLog(`Transcribing ${sourceType || 'media'}...`);
         try {
             const res = await axios.post(`${API_BASE}/transcribe/`, { audio_url: mediaSource });
             const currentContent = drill.text_tachelhit || '';
@@ -325,14 +329,25 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                     <button onClick={handleTachelhitTTS} disabled={aiLoadingKey !== null} style={{ padding: '12px 4px', background: '#fef3c7', color: '#92400e', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '12px' }}>🔊 TTS</button>
                     <button 
                         onClick={() => {
-                            if (drill.audio_url || drill.video_url || capturedAudio || capturedVideo) {
-                                handleAutoTranscribe();
+                            const hasAudio = drill.audio_url || capturedAudio;
+                            const hasVideo = drill.video_url || capturedVideo;
+
+                            if (hasAudio && hasVideo) {
+                                if (confirm('Transcribe from VIDEO? (Cancel for AUDIO)')) {
+                                    handleAutoTranscribe('video');
+                                } else {
+                                    handleAutoTranscribe('audio');
+                                }
+                            } else if (hasVideo) {
+                                handleAutoTranscribe('video');
+                            } else if (hasAudio) {
+                                handleAutoTranscribe('audio');
                             } else {
                                 alert('Please record or pick media first.');
                             }
                         }} 
                         disabled={!(drill.audio_url || drill.video_url || capturedAudio || capturedVideo) || aiLoadingKey !== null} 
-                        style={{ padding: '12px 4px', background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '12px', opacity: (drill.audio_url || drill.video_url || capturedAudio || capturedVideo) ? 1 : 0.5 }}
+                        style={{ padding: '12px 4px', background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '10px', opacity: (drill.audio_url || drill.video_url || capturedAudio || capturedVideo) ? 1 : 0.5 }}
                     >🪄 Trans</button>
                 </div>
 
