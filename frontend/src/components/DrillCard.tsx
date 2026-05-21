@@ -1373,25 +1373,29 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
           
           {isVideoTrimming && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '11px', display: 'block' }}>Start (sec)</label>
+                  <label style={{ fontSize: '11px', display: 'block' }}>START: {videoTrimRange.start.toFixed(1)}s</label>
                   <input 
-                    type="number" 
-                    value={videoTrimRange.start} 
-                    onChange={e => setVideoTrimRange({...videoTrimRange, start: parseFloat(e.target.value)})}
-                    style={{ width: '100%', padding: '6px', fontSize: '12px' }}
+                    type="range" 
+                    min="0"
+                    max="60"
                     step="0.1"
+                    value={videoTrimRange.start} 
+                    onChange={e => setVideoTrimRange(prev => ({...prev, start: parseFloat(e.target.value)}))}
+                    style={{ width: '100%' }}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '11px', display: 'block' }}>End (sec)</label>
+                  <label style={{ fontSize: '11px', display: 'block' }}>END: {videoTrimRange.end.toFixed(1)}s</label>
                   <input 
-                    type="number" 
-                    value={videoTrimRange.end} 
-                    onChange={e => setVideoTrimRange({...videoTrimRange, end: parseFloat(e.target.value)})}
-                    style={{ width: '100%', padding: '6px', fontSize: '12px' }}
+                    type="range" 
+                    min="0"
+                    max="60"
                     step="0.1"
+                    value={videoTrimRange.end} 
+                    onChange={e => setVideoTrimRange(prev => ({...prev, end: parseFloat(e.target.value)}))}
+                    style={{ width: '100%' }}
                   />
                 </div>
               </div>
@@ -1399,18 +1403,22 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                 onClick={() => handleTrim('video')}
                 disabled={isProcessingTrim}
                 style={{ 
-                  padding: '8px', 
+                  padding: '10px', 
                   background: '#9c27b0', 
                   color: 'white',
                   border: 'none', 
-                  borderRadius: '6px', 
+                  borderRadius: '10px', 
                   fontWeight: 700, 
-                  fontSize: '13px',
+                  fontSize: '14px',
                   cursor: isProcessingTrim ? 'not-allowed' : 'pointer',
-                  opacity: isProcessingTrim ? 0.7 : 1
+                  opacity: isProcessingTrim ? 0.7 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
                 }}
               >
-                {isProcessingTrim ? 'Processing...' : 'Apply Video Trim'}
+                {isProcessingTrim ? 'Processing...' : <><FaScissors /> Apply Video Trim</>}
               </button>
             </div>
           )}
@@ -1762,6 +1770,18 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Video Player (Integrated) */}
+      {drill.video_url && !isYouTubeUrl(drill.video_url) && !recording && !showVideo && (
+        <div style={{ marginBottom: '12px', borderRadius: '12px', overflow: 'hidden', background: '#000' }}>
+            <video 
+                src={getMediaUrl(drill.video_url)} 
+                controls 
+                playsInline 
+                style={{ width: '100%', maxHeight: '200px', display: 'block' }} 
+            />
         </div>
       )}
 

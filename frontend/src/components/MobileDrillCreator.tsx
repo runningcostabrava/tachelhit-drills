@@ -327,7 +327,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
                         <button onClick={capturePhoto} style={{ height: '55px', background: '#EBFBEE', color: '#166534', border: '1px solid #D1FAE5', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Camera"><FaCamera size={22} /></button>
                         <button onClick={captureVideo} style={{ height: '55px', background: '#F3E8FF', color: '#7E22CE', border: '1px solid #E9D5FF', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Video"><FaVideo size={22} /></button>
-                        <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '55px', background: isRecording ? '#FFE4E6' : '#E11D48', color: isRecording ? '#E11D48' : '#1D4ED8', border: `1px solid ${isRecording ? '#FECDD3' : '#DBEAFE'}`, borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Voice Record"><FaMicrophone size={22} /></button>
+                        <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '55px', background: isRecording ? '#FFE4E6' : '#E11D48', color: isRecording ? '#E11D48' : 'white', border: `1px solid ${isRecording ? '#FECDD3' : '#E11D48'}`, borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Voice Record"><FaMicrophone size={22} /></button>
                         <button onClick={startDictation} style={{ height: '55px', background: '#FFF7ED', color: '#9A3412', border: '1px solid #FFEDD5', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Dictation"><FaKeyboard size={22} /></button>
                         <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '55px', background: '#F1F5F9', color: '#334155', border: '1px solid #E2E8F0', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Gallery"><FaFolderOpen size={22} /></button>
                     </div>
@@ -339,6 +339,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 {capturedVideo && (
                     <div style={{ background: '#000', borderRadius: '24px', overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
                         <video 
+                            id="creator-video-preview"
                             src={capturedVideo} 
                             controls 
                             playsInline 
@@ -354,8 +355,21 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                         />
                         <div style={{ width: '100%', padding: '15px', background: '#111', color: 'white' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '12px', fontWeight: 'bold' }}>
-                                <span style={{ color: '#9CA3AF' }}>VIDEO START: {trimTimes.start.toFixed(1)}s</span>
-                                <span style={{ color: '#9CA3AF' }}>END: {trimTimes.end.toFixed(1)}s</span>
+                                <button 
+                                    onClick={() => {
+                                        const v = document.getElementById('creator-video-preview') as HTMLVideoElement;
+                                        if (v) setTrimTimes(prev => ({ ...prev, start: v.currentTime }));
+                                    }}
+                                    style={{ background: '#333', color: '#10B981', border: '1px solid #444', borderRadius: '4px', padding: '2px 6px', fontSize: '10px' }}
+                                >SET START</button>
+                                <span style={{ color: '#9CA3AF' }}>{trimTimes.start.toFixed(1)}s - {trimTimes.end.toFixed(1)}s</span>
+                                <button 
+                                    onClick={() => {
+                                        const v = document.getElementById('creator-video-preview') as HTMLVideoElement;
+                                        if (v) setTrimTimes(prev => ({ ...prev, end: v.currentTime }));
+                                    }}
+                                    style={{ background: '#333', color: '#EF4444', border: '1px solid #444', borderRadius: '4px', padding: '2px 6px', fontSize: '10px' }}
+                                >SET END</button>
                             </div>
                             <input 
                                 type="range" 
