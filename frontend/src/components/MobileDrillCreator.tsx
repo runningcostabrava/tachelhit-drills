@@ -35,7 +35,8 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const [videoDuration, setVideoDuration] = useState(60);
 
     const addLog = (msg: string) => {
-        setDebugLogs(prev => [`[${new Date().toLocaleTimeString().split(' ')[0]}] ${msg}`, ...prev].slice(0, 12));
+        console.log(`[MobileDrillCreator] ${msg}`);
+        setDebugLogs(prev => [`[${new Date().toLocaleTimeString().split(' ')[0]}] ${msg}`, ...prev].slice(0, 20));
     };
 
     useEffect(() => {
@@ -217,15 +218,18 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 // Web-based direct upload
                 const formData = new FormData();
                 formData.append('file', file, fileName);
+                addLog(`Uploading ${type} to ${API_BASE}...`);
                 const res = await axios.post(`${API_BASE}/upload-media/${drill.id}/${type}`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
                 if (res.data.url) {
-                    addLog(`${type} uploaded to server`);
+                    addLog(`${type} uploaded: ${res.data.url.substring(0, 30)}...`);
                 }
             }
         } catch (err: any) {
-            addLog(`File processing error: ${err.message}`);
+            const errorMsg = err.response?.data?.detail || err.message || 'Unknown error';
+            addLog(`ERROR: ${type} upload: ${errorMsg}`);
+            console.error('Upload error details:', err);
         }
     };
 
@@ -360,7 +364,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
                 {capturedImage && <img src={capturedImage} alt="Preview" style={{ width: '100%', height: '150px', borderRadius: '12px', objectFit: 'cover' }} />}
                 {capturedVideo && (
-                    <div style={{ background: '#000', borderRadius: '24px', overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', marginBottom: '15px' }}>
+                    <div style={{ background: '#000', borderRadius: '16px', overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.3)', marginBottom: '15px', border: '1px solid #333' }}>
                         <video 
                             id="creator-video-preview"
                             key={capturedVideo}
@@ -368,16 +372,17 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                             controls 
                             playsInline 
                             preload="auto"
-                            onPlay={() => addLog('Creator Video: Play event')}
-                            onError={(e) => addLog(`Creator Video: Error: ${(e.target as any).error?.message}`)}
+                            onPlay={() => addLog('Video Playback started')}
+                            onError={(e) => addLog(`Video Load Error: ${(e.target as any).error?.message || 'Check format'}`)}
                             onLoadedMetadata={(e) => {
                                 const dur = (e.target as HTMLVideoElement).duration;
                                 if (dur) {
+                                    addLog(`Video loaded: ${dur.toFixed(1)}s`);
                                     setVideoDuration(dur);
-                                    setTrimTimes(prev => ({ ...prev, end: Math.min(prev.end, dur) }));
+                                    setTrimTimes(prev => ({ ...prev, end: dur }));
                                 }
                             }}
-                            style={{ width: '100%', minHeight: '150px', maxHeight: '300px', display: 'block', backgroundColor: '#333', objectFit: 'contain' }} 
+                            style={{ width: '100%', maxHeight: '40vh', display: 'block', backgroundColor: '#000', objectFit: 'contain' }} 
                         />
                         <div style={{ width: '100%', padding: '15px', background: '#111' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '12px', fontWeight: 'bold' }}>
