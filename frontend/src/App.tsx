@@ -40,7 +40,8 @@ function App() {
           await syncManager.saveDrillsToCache(drillsRes.data);
           const testsRes = await axios.get(`${API_BASE}/tests/`);
           await syncManager.saveTestsToCache(testsRes.data);
-          syncManager.syncAllMedia();
+          // Sync audio & images only by default (videos are typically large and can be cached on-demand)
+          syncManager.syncAllMedia({ includeVideos: false });
         } catch (e) {
           console.error('Failed to pre-cache data', e);
         }
@@ -57,13 +58,13 @@ function App() {
       if (queue.length === 0) return;
 
       console.log(`🔄 Internet detected! Starting background sync for ${queue.length} drills...`);
-      
+
       // Update tests cache and media
       try {
         const testsRes = await axios.get(`${API_BASE}/tests/`);
         await syncManager.saveTestsToCache(testsRes.data);
-        // Bulk download media in background
-        syncManager.syncAllMedia();
+        // Sync audio & images only (videos are large and should be cached on-demand)
+        syncManager.syncAllMedia({ includeVideos: false });
       } catch (e) { console.error('Failed to sync tests cache', e); }
 
       // 2. Process each drill one by one
