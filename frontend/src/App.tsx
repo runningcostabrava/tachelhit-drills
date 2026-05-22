@@ -185,7 +185,7 @@ function App() {
         textAlign: 'center',
         zIndex: 9999
       }}>
-        Last Commit: Fix: Conditional offline sync & Build error resolution
+        Last Commit Hash: 6f4054e
       </div>
       <Routes>
         <Route path="/" element={<DrillsResponsive />} />
