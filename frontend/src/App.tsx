@@ -185,7 +185,7 @@ function App() {
         textAlign: 'center',
         zIndex: 9999
       }}>
-        Last Commit: Fix: TS errors (unused import, verbatimModuleSyntax)
+        Last Commit: Fix: Conditional offline sync & Build error resolution
       </div>
       <Routes>
         <Route path="/" element={<DrillsResponsive />} />
