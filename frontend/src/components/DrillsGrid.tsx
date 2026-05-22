@@ -9,18 +9,18 @@ import { Network } from '@capacitor/network';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { VoiceRecorder } from 'capacitor-voice-recorder';
 import { API_BASE, getMediaUrl } from '../config';
-import { 
-  FaVolumeUp, 
-  FaVideo, 
-  FaRobot, 
-  FaLanguage, 
-  FaMagic, 
-  FaSave, 
-  FaEdit, 
-  FaTrash, 
-  FaCheckSquare, 
-  FaTag, 
-  FaPlus
+import {
+    FaVolumeUp,
+    FaVideo,
+    FaRobot,
+    FaLanguage,
+    FaMagic,
+    FaSave,
+    FaEdit,
+    FaTrash,
+    FaCheckSquare,
+    FaTag,
+    FaPlus
 } from 'react-icons/fa';
 
 // Import CSS structural definitions
@@ -54,7 +54,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
     const [selectedRows, setSelectedRows] = useState<Drill[]>([]);
     const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
     const [showTestConfig, setShowTestConfig] = useState(false);
-    const [pendingMedia, setPendingMedia] = useState<Record<number, {image?: string, audio?: Blob, audioUrl?: string, video?: Blob, videoUrl?: string}>>({});
+    const [pendingMedia, setPendingMedia] = useState<Record<number, { image?: string, audio?: Blob, audioUrl?: string, video?: Blob, videoUrl?: string }>>({});
     const navigate = useNavigate();
 
     // Track responsive screen resize configurations
@@ -147,7 +147,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
             console.log('[Transcribe] Backend response received:', response.data);
 
             let freshTranscription = response.data.corrected_transcription;
-            
+
             // Add mention if it's from video
             if (sourceType === 'video' || (!sourceType && mediaSource === drill.video_url)) {
                 freshTranscription = `[Video] ${freshTranscription}`;
@@ -190,9 +190,9 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                 return;
             }
 
-            const res = await axios.post(`${API_BASE}/tts/tachelhit`, { 
-                text, 
-                drill_id: drill.id 
+            const res = await axios.post(`${API_BASE}/tts/tachelhit`, {
+                text,
+                drill_id: drill.id
             });
 
             if (res.data.url) {
@@ -214,7 +214,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
             await axios.put(`${API_BASE}/drills/${data.id}`, { [field]: newValue });
         } catch (err) {
             console.error('Failed to save inline edit:', err);
-            refreshData(); 
+            refreshData();
         }
     };
 
@@ -370,13 +370,13 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
             }
 
             // Trigger sync (background) and refresh UI immediately
-            syncManager.sync(); 
+            syncManager.sync();
             setPendingMedia(prev => {
                 const next = { ...prev };
                 delete next[drill.id];
                 return next;
             });
-            
+
             // Artificial delay to allow Preferences to settle before refresh
             setTimeout(() => refreshData(), 100);
         } catch (err) {
@@ -548,11 +548,11 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
 
                         {/* Quick Update Row */}
                         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                            <button 
+                            <button
                                 onClick={() => handleQuickPhoto(drill.id)}
                                 style={{ flex: 1, padding: '10px', background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold' }}
                             >📷 Photo</button>
-                            <button 
+                            <button
                                 onClick={() => handleQuickAudio(drill.id)}
                                 style={{ flex: 1, padding: '10px', background: actionLoadingId === `rec-${drill.id}` ? '#fef2f2' : '#eff6ff', color: actionLoadingId === `rec-${drill.id}` ? '#991b1b' : '#1e40af', border: '1px solid #bfdbfe', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold' }}
                             >
@@ -569,7 +569,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                     {pendingMedia[drill.id].audioUrl && <button onClick={() => new Audio(pendingMedia[drill.id].audioUrl).play()} style={{ background: 'none', border: 'none', fontSize: '20px' }}>🔊</button>}
                                     {pendingMedia[drill.id].videoUrl && <button onClick={() => window.open(pendingMedia[drill.id].videoUrl, '_blank')} style={{ background: 'none', border: 'none', fontSize: '20px' }}>🎬</button>}
                                     <div style={{ flex: 1 }}></div>
-                                    <button 
+                                    <button
                                         onClick={() => handleQuickSave(drill)}
                                         disabled={actionLoadingId !== null}
                                         style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontWeight: 'bold', fontSize: '13px' }}
@@ -644,11 +644,11 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
     // 🖥️ DESKTOP INTERFACE: Standard High-Performance spreadsheet view
     const columnDefs: ColDef<Drill>[] = [
         { field: 'id', headerName: 'ID', width: 80, sortable: true, editable: true },
-        { 
-            field: 'image_url', 
-            headerName: 'Preview', 
-            width: 90, 
-            cellRenderer: (p: any) => p.value ? <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}><img src={getMediaUrl(p.value)} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e5e7eb' }} /></div> : null 
+        {
+            field: 'image_url',
+            headerName: 'Preview',
+            width: 90,
+            cellRenderer: (p: any) => p.value ? <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}><img src={getMediaUrl(p.value)} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e5e7eb' }} /></div> : null
         },
         { field: 'text_catalan', headerName: 'Català', flex: 2, minWidth: 150, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px' } },
         { field: 'text_tachelhit', headerName: 'Tachelhit', flex: 2, minWidth: 150, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px' } },
@@ -677,7 +677,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                     <button onClick={() => handleTranslate(params.data, 'shi', 'ca')} disabled={actionLoadingId !== null} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '11px', fontWeight: 600, background: '#D1FAE5', color: '#059669', border: 'none', borderRadius: '8px', cursor: 'pointer' }}><FaLanguage /> SH➔CA</button>
                     <button onClick={() => handleTachelhitTTS(params.data)} disabled={actionLoadingId !== null} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '11px', fontWeight: 600, background: '#FEF3C7', color: '#D97706', border: 'none', borderRadius: '8px', cursor: 'pointer' }}><FaRobot /> TTS</button>
                     {(params.data.audio_url || params.data.video_url) && (
-                        <button 
+                        <button
                             onClick={() => {
                                 const hasAudio = params.data.audio_url;
                                 const hasVideo = params.data.video_url;
@@ -692,17 +692,20 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                 } else {
                                     handleTranscribe(params.data, 'audio');
                                 }
-                            }} 
-                            disabled={actionLoadingId !== null} 
+                            }}
+                            disabled={actionLoadingId !== null}
                             style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', fontSize: '11px', fontWeight: 600, background: '#FFEDD5', color: '#EA580C', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
                         ><FaMagic /> Trans</button>
                     )}
-                    <button 
+                    <button
                         onClick={async () => {
-                            const media = params.data.audio_url || params.data.video_url;
+                            const audio = params.data.audio_url;
+                            const video = params.data.video_url;
+                            const media = audio || video;
                             if (media) {
                                 setActionLoadingId(`down-${params.data.id}`);
-                                await syncManager.downloadAndCacheMedia(media);
+                                const mediaType = audio ? 'audio' : 'video';
+                                await syncManager.downloadAndCacheMedia(media, mediaType);
                                 setActionLoadingId(null);
                                 alert('Mèdia descarregat per a ús fora de línia!');
                             }
@@ -743,23 +746,23 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
         <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', padding: '20px' }}>
             <div style={{ marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center', background: '#F9FAFB', padding: '15px', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
                 <span style={{ fontSize: '15px', fontWeight: 600, color: '#374151', marginRight: '10px' }}><FaCheckSquare style={{ verticalAlign: 'middle', marginTop: '-3px', marginRight: '5px' }} /> {selectedRows.length} elements seleccionats</span>
-                <button 
-                    onClick={handleBulkDelete} 
-                    disabled={selectedRows.length === 0} 
+                <button
+                    onClick={handleBulkDelete}
+                    disabled={selectedRows.length === 0}
                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#EF4444', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', opacity: selectedRows.length ? 1 : 0.5, fontWeight: 600, transition: 'all 0.2s' }}
                 >
                     <FaTrash /> Esborrar selecció
                 </button>
-                <button 
-                    onClick={handleBulkEditTags} 
-                    disabled={selectedRows.length === 0} 
+                <button
+                    onClick={handleBulkEditTags}
+                    disabled={selectedRows.length === 0}
                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', opacity: selectedRows.length ? 1 : 0.5, fontWeight: 600, transition: 'all 0.2s' }}
                 >
                     <FaTag /> Editar etiquetes
                 </button>
-                <button 
-                    onClick={() => setShowTestConfig(true)} 
-                    disabled={selectedRows.length === 0} 
+                <button
+                    onClick={() => setShowTestConfig(true)}
+                    disabled={selectedRows.length === 0}
                     style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#10B981', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', opacity: selectedRows.length ? 1 : 0.5, fontWeight: 600, transition: 'all 0.2s' }}
                 >
                     <FaPlus /> Crear Pràctica
@@ -795,7 +798,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
             {showTestConfig && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 30000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ background: 'white', borderRadius: '12px', width: '90%', maxWidth: '800px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                        <TestConfigPanel 
+                        <TestConfigPanel
                             onClose={() => setShowTestConfig(false)}
                             onTestCreated={() => {
                                 setShowTestConfig(false);

@@ -73,11 +73,11 @@ const GlossaryModal = ({ onClose }: { onClose: () => void }) => {
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(17, 24, 39, 0.8)', zIndex: 30000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}>
       <div style={{ background: 'white', padding: '30px', borderRadius: '24px', width: '100%', maxWidth: '500px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <FaBook style={{ color: '#4F46E5' }} />
-                <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#111827' }}>Glossary (AI)</h3>
-            </div>
-            <button onClick={onClose} style={{ background: '#F3F4F6', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6B7280' }}><FaTimes /></button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <FaBook style={{ color: '#4F46E5' }} />
+            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#111827' }}>Glossary (AI)</h3>
+          </div>
+          <button onClick={onClose} style={{ background: '#F3F4F6', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6B7280' }}><FaTimes /></button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px', padding: '15px', background: '#F9FAFB', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
           <input placeholder="Sound (e.g. anayr)" value={newWord.sound} onChange={e => setNewWord({ ...newWord, sound: e.target.value })} style={{ padding: '12px', borderRadius: '10px', border: '1px solid #D1D5DB', fontSize: '14px', outline: 'none' }} />
@@ -105,7 +105,7 @@ export default function DrillsResponsive() {
   const navigate = useNavigate();
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
-  const [drills, setDrills] = useState< Drill[]>([]);
+  const [drills, setDrills] = useState<Drill[]>([]);
   const [editingDrill, setEditingDrill] = useState<Drill | null>(null);
   const [showVoiceCreator, setShowVoiceCreator] = useState(false);
   const [showMobileDrillCreator, setShowMobileDrillCreator] = useState(false);
@@ -169,8 +169,8 @@ export default function DrillsResponsive() {
         const response = await axios.get(`${API_BASE}/drills/`);
         allDrills = response.data || [];
         await syncManager.saveDrillsToCache(allDrills);
-        // Trigger media sync to ensure APK has everything offline
-        syncManager.syncAllMedia();
+        // Trigger media sync (audio & images only; videos are large and cached on-demand)
+        syncManager.syncAllMedia({ includeVideos: false });
       } else {
         allDrills = await syncManager.getDrills();
       }
@@ -184,7 +184,7 @@ export default function DrillsResponsive() {
           is_local: true,
           date_created: a.payload.date_created || new Date().toISOString()
         }));
-      
+
       const serverIds = new Set(allDrills.map(d => d.id));
       const uniqueLocals = localCreates.filter(d => !serverIds.has(d.id));
       allDrills = [...uniqueLocals, ...allDrills];

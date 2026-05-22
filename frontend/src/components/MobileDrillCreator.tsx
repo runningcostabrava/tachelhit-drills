@@ -375,13 +375,13 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                     <div style={{ background: '#000', borderRadius: '24px', overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', marginBottom: '15px' }}>
                         <video 
                             id="creator-video-preview"
+                            key={capturedVideo}
                             src={capturedVideo} 
                             controls 
                             playsInline 
                             preload="auto"
                             onPlay={() => addLog('Creator Video: Play event')}
                             onError={(e) => addLog(`Creator Video: Error: ${(e.target as any).error?.message}`)}
-                            style={{ width: '100%', maxHeight: '300px', display: 'block' }} 
                             onLoadedMetadata={(e) => {
                                 const dur = (e.target as HTMLVideoElement).duration;
                                 addLog(`Creator Video: Metadata loaded. Duration: ${dur}`);
@@ -390,6 +390,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                                     setTrimTimes(prev => ({ ...prev, end: Math.min(prev.end, dur) }));
                                 }
                             }}
+                            style={{ width: '100%', minHeight: '150px', maxHeight: '300px', display: 'block', backgroundColor: '#333', objectFit: 'contain' }} 
                         />
                         <div style={{ width: '100%', padding: '15px', background: '#111' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '12px', fontWeight: 'bold' }}>

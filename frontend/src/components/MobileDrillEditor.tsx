@@ -430,14 +430,16 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
           <div style={{ background: '#000', borderRadius: '24px', overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', marginBottom: '15px' }}>
             <video 
                 ref={videoRef}
+                key={getSourceUrl(localDrill.video_url, 'video')}
                 id="editor-video-preview"
                 src={getSourceUrl(localDrill.video_url, 'video')} 
                 controls 
                 playsInline 
                 preload="auto"
+                crossOrigin="anonymous"
                 onPlay={() => addLog('Video: Play event triggered')}
                 onError={(e) => addLog(`Video: Playback error: ${(e.target as any).error?.message || 'unknown'}`)}
-                style={{ width: '100%', maxHeight: '300px', display: 'block' }} 
+                style={{ width: '100%', minHeight: '150px', maxHeight: '300px', display: 'block', backgroundColor: '#333' }} 
                 onLoadedMetadata={(e) => {
                   const dur = (e.target as HTMLVideoElement).duration;
                   if (dur) {
