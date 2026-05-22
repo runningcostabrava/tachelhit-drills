@@ -820,7 +820,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             </div>
 
             {/* Video Player */}
-            <div style={{ position: 'relative', paddingTop: '56.25%' /* 16:9 aspect ratio */ }}>
+            <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9' }}>
               <div
                 id="youtube-player"
                 style={{

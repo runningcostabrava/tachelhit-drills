@@ -316,9 +316,25 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     const fileName = `${type}_${localDrill.id}_${Date.now()}_${file.name}`;
     
     try {
+        // Create an object URL only for UI preview purposes
+        // IMPORTANT: We must NOT use this URL for any state that triggers re-renders 
+        // which might involve components that don't handle blobs well (like some native listeners)
         const blobUrl = URL.createObjectURL(file);
         addLog(`Editor: Mapping ${type} URL to ${blobUrl}`);
-        setLocalDrill(prev => ({ ...prev, [`${type}_url`]: blobUrl }));
+        
+        // Use a functional update to ensure we're not closing over stale state
+        // and to avoid immediate re-render issues in the main drill object
+        setLocalMediaUrls(prev => {
+          const newUrls = { ...prev };
+          newUrls[type] = blobUrl;
+          return newUrls;
+        });
+
+        setLocalDrill(prev => {
+          const updated = { ...prev };
+          (updated as any)[`${type}_url`] = blobUrl;
+          return updated;
+        });
 
         addLog(`Editor: Saving ${type} locally...`);
         await syncManager.saveMediaLocally(file, fileName);
@@ -372,32 +388,35 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
   useEffect(() => {
     const resolveLocalUrls = async () => {
-      const urls: Record<string, string> = {};
-      if (localDrill.audio_url) urls.audio = await syncManager.getLocalMediaUrl(localDrill.audio_url);
-      if (localDrill.video_url) urls.video = await syncManager.getLocalMediaUrl(localDrill.video_url);
-      if (localDrill.image_url) urls.image = await syncManager.getLocalMediaUrl(localDrill.image_url);
-      setLocalMediaUrls(urls);
+      const urls: Record<string, string> = { ...localMediaUrls };
+      let changed = false;
+
+      if (localDrill.audio_url && !localDrill.audio_url.startsWith('blob:') && !localDrill.audio_url.startsWith('data:')) {
+        const resolved = await syncManager.getLocalMediaUrl(localDrill.audio_url);
+        if (resolved !== urls.audio) { urls.audio = resolved; changed = true; }
+      }
+      if (localDrill.video_url && !localDrill.video_url.startsWith('blob:') && !localDrill.video_url.startsWith('data:')) {
+        const resolved = await syncManager.getLocalMediaUrl(localDrill.video_url);
+        if (resolved !== urls.video) { urls.video = resolved; changed = true; }
+      }
+      if (localDrill.image_url && !localDrill.image_url.startsWith('blob:') && !localDrill.image_url.startsWith('data:')) {
+        const resolved = await syncManager.getLocalMediaUrl(localDrill.image_url);
+        if (resolved !== urls.image) { urls.image = resolved; changed = true; }
+      }
+
+      if (changed) setLocalMediaUrls(urls);
     };
     resolveLocalUrls();
   }, [localDrill.audio_url, localDrill.video_url, localDrill.image_url]);
 
   const getSourceUrl = (url: string | undefined, type: 'audio'|'video'|'image') => {
-    if (!url) {
-        addLog(`getSourceUrl(${type}): empty URL`);
-        return '';
-    }
-    if (url.startsWith('blob:') || url.startsWith('data:')) {
-        addLog(`getSourceUrl(${type}): using blob/data URL`);
-        return url;
-    }
+    if (!url) return '';
+    if (url.startsWith('blob:') || url.startsWith('data:')) return url;
+    
     const local = localMediaUrls[type];
-    if (local) {
-      addLog(`getSourceUrl(${type}): Found local path: ${local}`);
-      return local;
-    }
-    const remote = getMediaUrl(url);
-    addLog(`getSourceUrl(${type}): Using remote URL: ${remote}`);
-    return remote;
+    if (local) return local;
+    
+    return getMediaUrl(url);
   };
 
 

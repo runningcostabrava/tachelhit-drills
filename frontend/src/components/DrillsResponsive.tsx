@@ -326,7 +326,7 @@ export default function DrillsResponsive() {
               </div>
             </div>
           </div>
-          <div style={{ width: '100%', display: 'flex', gap: '10px', alignItems: 'center', background: 'rgba(255, 255, 255, 0.12)', borderRadius: '14px', padding: '10px 16px', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.15)', marginTop: '12px' }}>
+          <div style={{ width: '100%', display: 'flex', gap: '10px', alignItems: 'center', background: 'rgba(255, 255, 255, 0.12)', borderRadius: '14px', padding: '10px 16px', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.15)', marginTop: '12px', boxSizing: 'border-box' }}>
             <div style={{ color: 'white', opacity: 0.8, fontSize: '18px', flexShrink: 0 }}><FaSearch /></div>
             <input
               type="text"
@@ -351,7 +351,7 @@ export default function DrillsResponsive() {
           </div>
           <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.9)', marginTop: '8px' }}>Tap any card to view details</div>
         </div>
-        <div style={{ flex: 1, width: '100%', overflow: 'auto', padding: isMobile ? '12px 4px' : '0', position: 'relative' }}>
+        <div style={{ flex: 1, width: '100%', overflowX: 'hidden', overflowY: 'auto', padding: isMobile ? '12px 4px' : '0', position: 'relative', boxSizing: 'border-box' }}>
           {isCreating && (
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.5)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ padding: '10px 20px', background: '#333', color: 'white', borderRadius: '20px', fontWeight: 'bold' }}>Creating...</div>

@@ -65,13 +65,11 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
     const capturePhoto = async () => {
         try {
-            addLog('Checking permissions...');
             const status = await Camera.requestPermissions();
             if (status.camera !== 'granted' && status.photos !== 'granted') {
                 addLog(`Permissions status: ${JSON.stringify(status)}`);
             }
 
-            addLog('Opening camera...');
             const image = await Camera.getPhoto({
                 quality: 50,
                 width: 640,
@@ -86,7 +84,6 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             });
 
             if (image && image.base64String) {
-                addLog('Photo data received');
                 const base64Data = `data:image/${image.format};base64,${image.base64String}`;
                 setCapturedImage(base64Data);
                 
@@ -111,7 +108,6 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
     const captureVideo = async () => {
         try {
-            addLog('Requesting native video input...');
             document.getElementById('native-video-input')?.click();
         } catch (err: any) {
             addLog(`Video trigger error: ${err.message}`);
@@ -191,26 +187,20 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) {
-            addLog('No file selected in handleFileChange');
             return;
         }
 
-        addLog(`File selected: ${file.name} (${file.type}, ${Math.round(file.size/1024)}KB)`);
+        addLog(`File selected: ${file.name} (${file.type})`);
         const type = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'audio';
         const fileName = `${type}_${Date.now()}_${file.name}`;
         
         try {
             const blobUrl = URL.createObjectURL(file);
-            addLog(`Generated blob URL for ${type}: ${blobUrl}`);
             if (type === 'image') setCapturedImage(blobUrl);
             if (type === 'video') setCapturedVideo(blobUrl);
             if (type === 'audio') setCapturedAudio(blobUrl);
 
-            addLog(`Saving ${type} to local storage...`);
             const localUri = await syncManager.saveMediaLocally(file, fileName);
-            addLog(`Local save success: ${localUri}`);
-
-            addLog(`Queuing ${type} for upload...`);
             await syncManager.queueAction({
                 type: 'UPLOAD_MEDIA',
                 drillId: drill.id!,
@@ -230,34 +220,27 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         else if (sourceType === 'video') mediaSource = drill.video_url || capturedVideo || '';
         else mediaSource = drill.audio_url || drill.video_url || capturedAudio || capturedVideo || '';
 
-        addLog(`Preparing transcription. Source: ${mediaSource}`);
         if (!mediaSource) {
-            addLog('Error: No media source found for transcription');
             return alert('Please record and save media first.');
         }
         
         const status = await Network.getStatus();
         if (!status.connected) {
-            addLog('Error: Internet disconnected, transcription failed');
             return alert('Transcription requires internet connection.');
         }
 
         setAiLoadingKey('transcribe-voice');
-        addLog(`API Call: Transcribing ${sourceType || 'media'} via ${API_BASE}/transcribe/`);
         try {
             const res = await axios.post(`${API_BASE}/transcribe/`, { audio_url: mediaSource });
-            addLog(`API Response: ${JSON.stringify(res.data).substring(0, 100)}...`);
             const currentContent = drill.text_tachelhit || '';
             const safeText = currentContent.trim() ? `${currentContent} (${res.data.corrected_transcription})` : res.data.corrected_transcription;
             
             const updated = { ...drill, text_tachelhit: safeText };
             setDrill(updated);
             triggerSave(updated);
-            addLog('Transcription UI updated & saved');
+            addLog('Transcription success');
         } catch (err: any) {
             const msg = err.response?.data?.detail || err.message;
-            const fullErr = JSON.stringify(err.response?.data || err.message);
-            addLog(`ASR API Error: ${fullErr}`);
             alert(`Transcription failed: ${msg}`);
         } finally {
             setAiLoadingKey(null);
@@ -272,17 +255,14 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         if (!status.connected) return alert('TTS requires internet connection.');
 
         setAiLoadingKey('tts-shi');
-        addLog('Generating Tachelhit TTS...');
         try {
             const res = await axios.post(`${API_BASE}/tts/tachelhit`, { text, drill_id: drill.id });
             if (res.data.url) {
-                addLog('TTS ready, playing...');
                 new Audio(getMediaUrl(res.data.url)).play();
             }
         } catch (err: any) {
             const msg = err.response?.data?.detail || err.message;
             alert(`TTS failed: ${msg}`);
-            addLog(`TTS Error: ${msg}`);
         } finally {
             setAiLoadingKey(null);
         }
@@ -291,14 +271,11 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const handleTranslateAction = async (source: 'ca' | 'shi', target: 'ca' | 'shi') => {
         const status = await Network.getStatus();
         if (!status.connected) {
-            addLog('Error: Translation failed - no internet');
             return alert('Translation requires internet connection.');
         }
 
         const sourceText = source === 'ca' ? drill.text_catalan : drill.text_tachelhit;
-        addLog(`Preparing translation: ${source} -> ${target}. Text: ${sourceText?.substring(0, 30)}...`);
         if (!sourceText) {
-            addLog('Error: Source text empty');
             return alert('Source field is empty.');
         }
         
@@ -306,18 +283,15 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         setAiLoadingKey(`trans-${targetField}`);
 
         try {
-            addLog(`API Call: Translating via ${API_BASE}/translate`);
             const res = await axios.post(`${API_BASE}/translate`, { text: sourceText, source_lang: source, target_lang: target });
-            addLog(`API Response: ${res.data.translated_text}`);
             const currentContent = (drill as any)[targetField] || '';
             const safeText = currentContent.trim() ? `${currentContent} (${res.data.translated_text})` : res.data.translated_text;
 
             const updated = { ...drill, [targetField]: safeText };
             setDrill(updated);
             triggerSave(updated);
-            addLog('Translation UI updated & saved');
+            addLog('Translation success');
         } catch (err: any) {
-            addLog(`Translation API Error: ${err.message}`);
             alert('Translation failed.');
         } finally {
             setAiLoadingKey(null);
@@ -326,7 +300,6 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
     const handleTrimVideo = async (mode: 'video' | 'audio') => {
         setAiLoadingKey(`trim-${mode}`);
-        addLog(`Trimming ${mode}: ${trimTimes.start}s - ${trimTimes.end}s`);
         try {
             const endpoint = mode === 'video' ? 'trim-video' : 'trim-audio';
             const res = await axios.post(`${API_BASE}/drills/${drill.id}/${endpoint}`, {
@@ -359,7 +332,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '120px' }}>
                 <div style={{ background: 'white', padding: '15px', borderRadius: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #E5E7EB' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
+                    <div style={{ gridTemplateColumns: 'repeat(5, 1fr)', display: 'grid', gap: '10px' }}>
                         <button onClick={capturePhoto} style={{ height: '55px', background: '#EBFBEE', color: '#166534', border: '1px solid #D1FAE5', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Camera"><FaCamera size={22} /></button>
                         <button onClick={captureVideo} style={{ height: '55px', background: '#F3E8FF', color: '#7E22CE', border: '1px solid #E9D5FF', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Video"><FaVideo size={22} /></button>
                         <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '55px', background: isRecording ? '#FFE4E6' : '#E11D48', color: isRecording ? '#E11D48' : 'white', border: `1px solid ${isRecording ? '#FECDD3' : '#E11D48'}`, borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Voice Record"><FaMicrophone size={22} /></button>
@@ -384,7 +357,6 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                             onError={(e) => addLog(`Creator Video: Error: ${(e.target as any).error?.message}`)}
                             onLoadedMetadata={(e) => {
                                 const dur = (e.target as HTMLVideoElement).duration;
-                                addLog(`Creator Video: Metadata loaded. Duration: ${dur}`);
                                 if (dur) {
                                     setVideoDuration(dur);
                                     setTrimTimes(prev => ({ ...prev, end: Math.min(prev.end, dur) }));
@@ -461,7 +433,6 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                         />
                         <button 
                             onClick={() => {
-                                addLog('Playing captured audio via handle...');
                                 const a = document.getElementById('creator-audio-preview') as HTMLAudioElement;
                                 if (a) a.play().catch(e => addLog(`Play error: ${e.message}`));
                             }} 

@@ -180,12 +180,17 @@ function App() {
       <div style={{
         backgroundColor: '#333',
         color: 'white',
-        padding: '5px 10px',
+        padding: '8px 10px',
         fontSize: '12px',
         textAlign: 'center',
-        zIndex: 9999
+        zIndex: 9999,
+        lineHeight: '1.2',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '20px'
       }}>
-        Last Commit Hash: 6f4054e
+        Last Commit Hash: 9e4a61b
       </div>
       <Routes>
         <Route path="/" element={<DrillsResponsive />} />

@@ -1776,13 +1776,19 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
 
       {/* Video Player (Integrated) */}
       {drill.video_url && !isYouTubeUrl(drill.video_url) && !recording && !showVideo && (
-        <div style={{ marginBottom: '12px', borderRadius: '12px', overflow: 'hidden', background: '#000' }}>
+        <div style={{ marginBottom: '12px', borderRadius: '12px', overflow: 'hidden', background: '#000', width: '100%' }}>
             <video 
                 src={getMediaUrl(drill.video_url)} 
                 controls 
                 playsInline 
                 preload="metadata"
-                style={{ width: '100%', maxHeight: '250px', display: 'block', objectFit: 'contain' }} 
+                style={{ 
+                  width: '100%', 
+                  height: 'auto',
+                  aspectRatio: '16/9',
+                  display: 'block', 
+                  objectFit: 'contain' 
+                }} 
             />
         </div>
       )}

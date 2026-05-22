@@ -322,6 +322,15 @@ class OfflineSyncManager {
   }
 
   async syncAllMedia(options?: { includeVideos?: boolean; batchSize?: number }) {
+    // Only perform background sync if running in a regular web browser on localhost OR if in Capacitor environment
+    // For production web (Vercel), we don't want to try downloading files to a filesystem that doesn't exist
+    const isCapacitor = (window as any).Capacitor?.isNativePlatform();
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    
+    if (!isCapacitor && !isLocalhost) {
+      return;
+    }
+
     const status = await Network.getStatus();
     if (!status.connected) return;
 
