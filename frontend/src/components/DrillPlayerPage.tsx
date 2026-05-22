@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Network } from '@capacitor/network';
 import { API_BASE } from '../config';
-import { syncManager, Drill } from '../services/OfflineSyncManager';
+import { syncManager } from '../services/OfflineSyncManager';
+import type { Drill } from '../services/OfflineSyncManager';
 import DrillPlayer from './DrillPlayer';
 
 export default function DrillPlayerPage() {

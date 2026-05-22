@@ -9,7 +9,6 @@ import { syncManager } from './services/OfflineSyncManager';
 import DrillsResponsive from './components/DrillsResponsive';
 import TestsDashboard from './components/TestsDashboard';
 import YouTubeShorts from './components/YouTubeShorts';
-import DrillPlayer from './components/DrillPlayer';
 import DrillPlayerPage from './components/DrillPlayerPage';
 import PublicTestView from './components/PublicTestView';
 import MediaRecorderTest from './components/MediaRecorderTest';
@@ -30,8 +29,19 @@ const DemoVideosPage = () => (
 function App() {
   const navigate = useNavigate();
 
-  // THE OFFLINE SYNC LOGIC
+  // THE OFFLINE SYNC LOGIC (Mobile/Capacitor only)
   useEffect(() => {
+    // Skip offline sync logic if running in a regular web browser
+    if (!window.location.protocol.includes('capacitor') && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
+      // In production web, we don't need offline sync
+      // We check for capacitor protocol or localhost (for development/testing)
+      if (!window.location.hostname.includes('vercel.app')) {
+          // If it's not vercel, we might be in an APK, so we proceed cautiously
+      } else {
+          return; 
+      }
+    }
+
     const processSyncQueue = async () => {
       const status = await Network.getStatus();
 
@@ -175,7 +185,7 @@ function App() {
         textAlign: 'center',
         zIndex: 9999
       }}>
-        Last Commit: Fix: App.tsx now uses Preferences instead of localStorage for sync_queue (resolved conflict)
+        Last Commit: Fix: TS errors (unused import, verbatimModuleSyntax)
       </div>
       <Routes>
         <Route path="/" element={<DrillsResponsive />} />
