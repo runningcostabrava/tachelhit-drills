@@ -10,6 +10,7 @@ import DrillsResponsive from './components/DrillsResponsive';
 import TestsDashboard from './components/TestsDashboard';
 import YouTubeShorts from './components/YouTubeShorts';
 import DrillPlayer from './components/DrillPlayer';
+import DrillPlayerPage from './components/DrillPlayerPage';
 import PublicTestView from './components/PublicTestView';
 import MediaRecorderTest from './components/MediaRecorderTest';
 import VideoDrillCreator from './components/VideoDrillCreator';
@@ -165,6 +166,17 @@ function App() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Temporary bar with last commit message */}
+      <div style={{
+        backgroundColor: '#333',
+        color: 'white',
+        padding: '5px 10px',
+        fontSize: '12px',
+        textAlign: 'center',
+        zIndex: 9999
+      }}>
+        Last Commit: Fix: App.tsx now uses Preferences instead of localStorage for sync_queue (resolved conflict)
+      </div>
       <Routes>
         <Route path="/" element={<DrillsResponsive />} />
         <Route path="/tests" element={<TestsDashboard onBackToDrills={() => navigate('/')} />} />
@@ -172,12 +184,7 @@ function App() {
         <Route path="/shorts" element={<YouTubeShorts onBackToDrills={() => navigate('/')} />} />
         <Route path="/video-creator" element={<VideoDrillCreator />} />
         <Route path="/srt-import" element={<SrtImport />} />
-        <Route path="/player" element={
-          <DrillPlayer
-            drills={[]} // Needs dynamic data
-            onExit={() => navigate('/')}
-          />
-        } />
+        <Route path="/player" element={<DrillPlayerPage />} />
         <Route path="/media-test" element={<MediaRecorderTest />} />
         <Route path="/demo-videos" element={<DemoVideosPage />} />
         <Route path="/library" element={<VideoLibraryPage />} />
