@@ -47,6 +47,16 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     }, []);
 
     const triggerSave = async (updatedDrill: Partial<Drill>) => {
+        if (!(window as any).Capacitor?.isNative) {
+            // Web direct save
+            try {
+                const res = await axios.post(`${API_BASE}/drills/`, updatedDrill);
+                setDrill(res.data);
+                return;
+            } catch (err) {
+                console.error("Web direct save failed", err);
+            }
+        }
         try {
             await syncManager.queueAction({
                 type: updatedDrill.is_local ? 'CREATE' : 'UPDATE',
