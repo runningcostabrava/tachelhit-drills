@@ -200,7 +200,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             if (type === 'video') setCapturedVideo(blobUrl);
             if (type === 'audio') setCapturedAudio(blobUrl);
 
-            const localUri = await syncManager.saveMediaLocally(file, fileName);
+            await syncManager.saveMediaLocally(file, fileName);
             await syncManager.queueAction({
                 type: 'UPLOAD_MEDIA',
                 drillId: drill.id!,
