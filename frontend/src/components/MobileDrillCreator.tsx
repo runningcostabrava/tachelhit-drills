@@ -394,10 +394,10 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                                         setTrimTimes(prev => ({ ...prev, end: dur }));
                                     }
                                 }}
-                                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: '#000', objectFit: 'contain' }} 
-                            />
-                        </div>
-                        <div style={{ width: '100%', padding: '15px', background: '#111' }}>
+                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: '#000', objectFit: 'contain' }} 
+                        />
+                    </div>
+                    <div style={{ width: '100%', padding: '10px 15px', background: '#111' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '12px', fontWeight: 'bold' }}>
                                 <button 
                                     onClick={() => {
@@ -433,18 +433,18 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                                 onChange={e => setTrimTimes(p => ({...p, end: Math.max(parseFloat(e.target.value), p.start + 0.1)}))} 
                                 style={{ width: '100%', marginBottom: '15px' }} 
                             />
-                            <div style={{ display: 'flex', gap: '10px' }}>
+                            <div style={{ display: 'flex', gap: '8px' }}>
                                 <button 
                                     onClick={() => handleTrimVideo('video')} 
                                     disabled={aiLoadingKey !== null} 
-                                    style={{ flex: 1, padding: '12px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                    style={{ flex: 1, padding: '10px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px' }}
                                 >
                                     <FaScissors /> Retallar Vídeo
                                 </button>
                                 <button 
                                     onClick={() => handleTrimVideo('audio')} 
                                     disabled={aiLoadingKey !== null} 
-                                    style={{ flex: 1, padding: '12px', background: '#E11D48', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                    style={{ flex: 1, padding: '10px', background: '#E11D48', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px' }}
                                 >
                                     <FaScissors /> Extreure Àudio
                                 </button>

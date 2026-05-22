@@ -137,6 +137,7 @@ export function getMediaUrl(url: string | null | undefined): string {
 
   // Check if URL is already absolute (starts with http:// or https:// or blob:)
   if (corrected.startsWith('http://') || corrected.startsWith('https://') || corrected.startsWith('blob:') || corrected.startsWith('data:')) {
+    // If it's already a full URL (like Cloudinary), return it directly without any more processing
     return corrected;
   }
 
