@@ -200,15 +200,30 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             if (type === 'video') setCapturedVideo(blobUrl);
             if (type === 'audio') setCapturedAudio(blobUrl);
 
-            await syncManager.saveMediaLocally(file, fileName);
-            await syncManager.queueAction({
-                type: 'UPLOAD_MEDIA',
-                drillId: drill.id!,
-                mediaType: type as any,
-                localPath: fileName,
-                fileName: fileName
-            });
-            addLog(`${type} successfully queued`);
+            if ((window as any).Capacitor?.isNative) {
+                await syncManager.saveMediaLocally(file, fileName);
+            }
+            if ((window as any).Capacitor?.isNative) {
+                await syncManager.saveMediaLocally(file, fileName);
+                await syncManager.queueAction({
+                    type: 'UPLOAD_MEDIA',
+                    drillId: drill.id!,
+                    mediaType: type as any,
+                    localPath: fileName,
+                    fileName: fileName
+                });
+                addLog(`${type} successfully queued`);
+            } else {
+                // Web-based direct upload
+                const formData = new FormData();
+                formData.append('file', file, fileName);
+                const res = await axios.post(`${API_BASE}/upload-media/${drill.id}/${type}`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                if (res.data.url) {
+                    addLog(`${type} uploaded to server`);
+                }
+            }
         } catch (err: any) {
             addLog(`File processing error: ${err.message}`);
         }
