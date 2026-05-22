@@ -36,7 +36,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
     const addLog = (msg: string) => {
         console.log(`[MobileDrillCreator] ${msg}`);
-        setDebugLogs(prev => [`[${new Date().toLocaleTimeString().split(' ')[0]}] ${msg}`, ...prev].slice(0, 20));
+        setDebugLogs(prev => [`[${new Date().toLocaleTimeString().split(' ')[0]}] ${msg}`, ...prev].slice(0, 30));
     };
 
     useEffect(() => {
@@ -218,8 +218,9 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 // Web-based direct upload
                 const formData = new FormData();
                 formData.append('file', file, fileName);
-                addLog(`Uploading ${type} to ${API_BASE}...`);
-                const res = await axios.post(`${API_BASE}/upload-media/${drill.id}/${type}`, formData, {
+                const uploadUrl = `${API_BASE}/upload-media/${drill.id}/${type}`;
+                addLog(`Uploading ${type} to ${uploadUrl}...`);
+                const res = await axios.post(uploadUrl, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
                 if (res.data.url) {
@@ -365,25 +366,27 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 {capturedImage && <img src={capturedImage} alt="Preview" style={{ width: '100%', height: '150px', borderRadius: '12px', objectFit: 'cover' }} />}
                 {capturedVideo && (
                     <div style={{ background: '#000', borderRadius: '16px', overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.3)', marginBottom: '15px', border: '1px solid #333' }}>
-                        <video 
-                            id="creator-video-preview"
-                            key={capturedVideo}
-                            src={capturedVideo} 
-                            controls 
-                            playsInline 
-                            preload="auto"
-                            onPlay={() => addLog('Video Playback started')}
-                            onError={(e) => addLog(`Video Load Error: ${(e.target as any).error?.message || 'Check format'}`)}
-                            onLoadedMetadata={(e) => {
-                                const dur = (e.target as HTMLVideoElement).duration;
-                                if (dur) {
-                                    addLog(`Video loaded: ${dur.toFixed(1)}s`);
-                                    setVideoDuration(dur);
-                                    setTrimTimes(prev => ({ ...prev, end: dur }));
-                                }
-                            }}
-                            style={{ width: '100%', maxHeight: '40vh', display: 'block', backgroundColor: '#000', objectFit: 'contain' }} 
-                        />
+                        <div style={{ width: '100%', position: 'relative', paddingTop: '56.25%', background: '#000' }}>
+                            <video 
+                                id="creator-video-preview"
+                                key={capturedVideo}
+                                src={capturedVideo} 
+                                controls 
+                                playsInline 
+                                preload="auto"
+                                onPlay={() => addLog('Video Playback started')}
+                                onError={(e) => addLog(`Video Load Error: ${(e.target as any).error?.message || 'Check format'}`)}
+                                onLoadedMetadata={(e) => {
+                                    const dur = (e.target as HTMLVideoElement).duration;
+                                    if (dur) {
+                                        addLog(`Video loaded: ${dur.toFixed(1)}s`);
+                                        setVideoDuration(dur);
+                                        setTrimTimes(prev => ({ ...prev, end: dur }));
+                                    }
+                                }}
+                                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: '#000', objectFit: 'contain' }} 
+                            />
+                        </div>
                         <div style={{ width: '100%', padding: '15px', background: '#111' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '12px', fontWeight: 'bold' }}>
                                 <button 
