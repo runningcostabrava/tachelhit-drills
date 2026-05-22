@@ -67,7 +67,7 @@ class OfflineSyncManager {
 
   async queueAction(action: SyncAction) {
     const queue = await this.getQueue();
-    
+
     // Deduplication / Merging logic
     if (action.type === 'CREATE') {
       // Check if we already have a CREATE for this temporary drill ID
@@ -107,7 +107,7 @@ class OfflineSyncManager {
       key: SYNC_QUEUE_KEY,
       value: JSON.stringify(queue),
     });
-    
+
     // Try to sync if online
     this.sync();
   }
@@ -252,12 +252,19 @@ class OfflineSyncManager {
     });
   }
 
-  async downloadAndCacheMedia(url: string): Promise<string> {
+  async downloadAndCacheMedia(url: string, mediaType?: 'audio' | 'video' | 'image'): Promise<string> {
     if (!url || url.startsWith('blob:') || url.startsWith('data:')) return url;
-    
+
+    // Auto-detect media type if not provided
+    if (!mediaType) {
+      if (url.includes('.mp4') || url.includes('.webm')) mediaType = 'video';
+      else if (url.includes('.jpg') || url.includes('.jpeg') || url.includes('.png')) mediaType = 'image';
+      else if (url.includes('.mp3') || url.includes('.wav') || url.includes('.m4a')) mediaType = 'audio';
+    }
+
     try {
       const fileName = url.split('/').pop() || `media_${Date.now()}`;
-      
+
       // Check if already exists
       try {
         const stat = await Filesystem.stat({
@@ -270,15 +277,17 @@ class OfflineSyncManager {
       }
 
       const fullUrl = getMediaUrl(url);
-      console.log(`[OfflineSync] Downloading: ${fullUrl}`);
-      
+      console.log(`[OfflineSync] Downloading ${mediaType}: ${fullUrl}`);
+
       // Use standard fetch if axios fails in some Capacitor environments
-      const response = await axios.get(fullUrl, { 
+      // Use different timeout based on media type
+      const timeout = mediaType === 'video' ? 120000 : 60000;
+      const response = await axios.get(fullUrl, {
         responseType: 'blob',
-        timeout: 60000 // Increased timeout for potentially large video files
+        timeout
       });
       const base64Data = await this.blobToBase64(response.data);
-      
+
       await Filesystem.writeFile({
         path: `media/${fileName}`,
         data: base64Data,
@@ -290,7 +299,7 @@ class OfflineSyncManager {
         path: `media/${fileName}`,
         directory: Directory.Data
       });
-      
+
       return (window as any).Capacitor.convertFileSrc(result.uri);
     } catch (err) {
       console.error(`[OfflineSync] Media download failed for ${url}:`, err);
@@ -312,7 +321,7 @@ class OfflineSyncManager {
     }
   }
 
-  async syncAllMedia() {
+  async syncAllMedia(options?: { includeVideos?: boolean; batchSize?: number }) {
     const status = await Network.getStatus();
     if (!status.connected) return;
 
@@ -325,22 +334,30 @@ class OfflineSyncManager {
 
     try {
       const drills = await this.getDrills();
-      console.log(`[OfflineSync] Syncing media for ${drills.length} drills...`);
+      const includeVideos = options?.includeVideos ?? false; // Don't cache videos by default
+      const batchSize = options?.batchSize ?? 3; // Slightly increased batch size since we're being selective
       
-      // Use a smaller batch size and sequential batches to be gentle on Render/Cloudinary
-      const batchSize = 2; 
+      console.log(`[OfflineSync] Syncing media for ${drills.length} drills (includeVideos: ${includeVideos})...`);
+
+      // Use smaller batches and sequential processing to avoid "AxiosError: Network Error"
       for (let i = 0; i < drills.length; i += batchSize) {
         const batch = drills.slice(i, i + batchSize);
-        // Process batch sequentially to avoid "AxiosError: Network Error" (too many connections)
+        // Process batch sequentially to avoid connection flooding
         for (const drill of batch) {
-          if (drill.audio_url) await this.downloadAndCacheMedia(drill.audio_url);
-          if (drill.image_url) await this.downloadAndCacheMedia(drill.image_url);
-          // Video can be large, maybe we only want to cache if explicitly requested? 
-          // But requirement says "all data downloaded locally".
-          if (drill.video_url) await this.downloadAndCacheMedia(drill.video_url);
+          try {
+            if (drill.audio_url) await this.downloadAndCacheMedia(drill.audio_url, 'audio');
+            if (drill.image_url) await this.downloadAndCacheMedia(drill.image_url, 'image');
+            // Only cache videos if explicitly requested - they can be very large
+            if (includeVideos && drill.video_url) {
+              await this.downloadAndCacheMedia(drill.video_url, 'video');
+            }
+          } catch (drillErr) {
+            console.warn(`[OfflineSync] Failed to sync media for drill ${drill.id}:`, drillErr);
+            // Continue with next drill instead of failing the entire batch
+          }
         }
-        // Small breathing room between batches
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Small breathing room between batches to avoid overwhelming the connection
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
       console.log('[OfflineSync] Media sync complete');
     } catch (err) {
