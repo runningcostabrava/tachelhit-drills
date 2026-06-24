@@ -81,6 +81,10 @@ translator_ca_to_en = GoogleTranslator(source='ca', target='en')
 # HF Translation
 HF_TRANSLATION_MODEL = os.getenv("HF_TRANSLATION_MODEL", "facebook/nllb-200-distilled-600M")
 HUGGINGFACE_TRANSLATION_SPACE_URL = os.getenv("HUGGINGFACE_TRANSLATION_SPACE_URL", "https://huggingface.co/spaces/josepabloucr/Finetuned-Quantized-NLLB")
+# TTS (read Tachelhit/Tifinagh text aloud). Configurable like ASR/translation so
+# it can point at your own Space instead of the hardcoded upstream one. Accepts
+# either a "user/space" id or a full huggingface.co/spaces URL.
+HUGGINGFACE_TTS_SPACE_URL = os.getenv("HUGGINGFACE_TTS_SPACE_URL", "Tamazight-NLP/TTS")
 LANGUAGE_CODE_MAP = {
     "ca": "Catalan",
     "cat": "Catalan",
@@ -256,12 +260,18 @@ def generate_catalan_tts(text: str, drill_id: int) -> str:
 
 def generate_tachelhit_tts_hf(text: str, drill_id: int) -> str:
     """
-    Generate Tachelhit TTS using Hugging Face Space (Tamazight-NLP/TTS).
+    Generate Tachelhit TTS using a Hugging Face Space (HUGGINGFACE_TTS_SPACE_URL,
+    default Tamazight-NLP/TTS).
     """
     try:
         from gradio_client import Client
-        client = Client("Tamazight-NLP/TTS")
-        
+        # Accept either a "user/space" id or a full huggingface.co/spaces URL.
+        tts_space = HUGGINGFACE_TTS_SPACE_URL
+        if "huggingface.co/spaces/" in tts_space:
+            tts_space = tts_space.split("huggingface.co/spaces/")[-1].rstrip("/")
+        print(f"[TACHELHIT TTS] Using Space: {tts_space}")
+        client = Client(tts_space, token=os.getenv("HUGGINGFACE_API_KEY"))
+
         # predict(text, variant, speaker, split_sentences, speaker_wav, voice_cv_model, api_name="/predict")
         result_path = client.predict(
             text,
