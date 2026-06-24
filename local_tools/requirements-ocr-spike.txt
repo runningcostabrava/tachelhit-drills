@@ -1,0 +1,9 @@
+# Dependencies for the OCR Phase-0 spike (local_tools/ocr_spike.py).
+# This is a throwaway diagnostic tool; install in a scratch venv.
+# easyocr pulls in torch, so the first install is large.
+numpy
+Pillow
+moviepy>=2.1.1
+yt-dlp>=2025.2.18
+easyocr            # Latin + Arabic OCR
+gradio_client>=1.3.0   # calls the Tifinagh HF Space
