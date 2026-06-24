@@ -8,3 +8,6 @@ pydantic
 openai
 requests
 python-multipart
+fastapi
+uvicorn[standard]
+gradio

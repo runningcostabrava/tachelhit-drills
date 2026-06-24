@@ -1,4 +1,6 @@
 import os
+import tempfile
+
 import torch
 import gradio as gr
 from transformers import pipeline
@@ -77,22 +79,22 @@ def transcribe_audio_logic(audio_path):
         return f"Error during processing: {str(e)}"
 
 
-# 2. Define standard Gradio Interface (Used by Mobile Microphone)
-demo = gr.Interface(
-    fn=transcribe_audio_logic,
-    inputs=gr.Audio(type="filepath", label="Input Audio"),
-    outputs=gr.Textbox(label="Tachelhit Transcription"),
-    title="Tachelhit ASR Service"
-)
+# 2. FastAPI is the real server. The custom API routes live on it directly, so
+# they are first-class (not shadowed by Gradio's catch-all) and are NOT subject
+# to Gradio's cross-site form-POST protection. The Gradio UI is mounted under
+# this app at the end.
+app = FastAPI(title="Tachelhit ASR Service")
 
-# 3. Mount custom FastAPI route onto Gradio (Used by Video Upload Parser)
-app = demo.app
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "model": MODEL_ID}
+
 
 @app.post("/transcribe")
 async def transcribe_uploaded_file(audio_file: UploadFile = File(...)):
     try:
-        import tempfile
-        suffix = os.path.splitext(audio_file.filename)[1] or ".mp4"
+        suffix = os.path.splitext(audio_file.filename or "")[1] or ".mp4"
 
         # Save incoming video/audio binary data to temporary disk
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
@@ -104,7 +106,6 @@ async def transcribe_uploaded_file(audio_file: UploadFile = File(...)):
             # Run inference: full text + real timestamped segments
             full_text, segments = transcribe_with_segments(tmp_path)
         finally:
-            # Securely remove temporary file
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
 
@@ -113,7 +114,29 @@ async def transcribe_uploaded_file(audio_file: UploadFile = File(...)):
             "rough_transcription": full_text,
             "corrected_transcription": full_text,
             "similarity_score": 1.0,
-            "segments": segments
+            "segments": segments,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# 3. Gradio UI (used by the mobile microphone) mounted at the root path.
+# Built with Blocks + an explicit api_name="predict" so the gradio_client
+# endpoint is "/predict" — the backend's audio-record correction path
+# (main.py) calls client.predict(..., api_name="/predict"). gr.Interface in
+# Gradio 5/6 would auto-name the endpoint after the function instead.
+# Mounting after the API routes means POST /transcribe still resolves to the
+# explicit FastAPI route above.
+with gr.Blocks(title="Tachelhit ASR Service") as demo:
+    gr.Markdown("# Tachelhit ASR Service")
+    audio_in = gr.Audio(type="filepath", label="Input Audio")
+    text_out = gr.Textbox(label="Tachelhit Transcription")
+    gr.Button("Transcribe").click(
+        transcribe_audio_logic, inputs=audio_in, outputs=text_out, api_name="predict"
+    )
+app = gr.mount_gradio_app(app, demo, path="/")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=7860)

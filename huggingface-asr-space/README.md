@@ -3,7 +3,8 @@ title: Tachelhit ASR Correction Service
 emoji: 🎤
 colorFrom: green
 colorTo: blue
-sdk: gradio
+sdk: docker
+app_port: 7860
 pinned: false
 ---
 
