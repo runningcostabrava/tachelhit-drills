@@ -1,0 +1,6 @@
+[submodule "tachelhit-translator/Finetuned-NLLB"]
+	path = tachelhit-translator/Finetuned-NLLB
+	url = https://huggingface.co/spaces/Tamazight-NLP/Finetuned-NLLB
+[submodule "tachelhit-video-generator"]
+	path = tachelhit-video-generator
+	url = https://huggingface.co/spaces/josepabloucr/tachelhit-video-generator
