@@ -93,7 +93,7 @@ GITIGNORE
 4. **Environment Variables** (Click "Advanced"):
    ```
    DATABASE_URL = [La Internal Database URL que has guardat]
-   PEXELS_API_KEY = dX9JkRJYfaRQUZdi6tKsF1TfJT44HnZMAPu2RyA4vt0JyRbzmdiVYGgW
+   PEXELS_API_KEY = [La teva Pexels API Key]
    FRONTEND_URL = https://TU-APP.vercel.app
    ```
 5. Click **"Create Web Service"**

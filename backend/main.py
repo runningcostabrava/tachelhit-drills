@@ -190,7 +190,7 @@ def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tac
         return text
 
 # Config
-PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "dX9JkRJYfaRQUZdi6tKsF1TfJT44HnZMAPu2RyA4vt0JyRbzmdiVYGgW")
+PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///drills.db")
 # Usar el nuevo Space tachelhit-video-generator
