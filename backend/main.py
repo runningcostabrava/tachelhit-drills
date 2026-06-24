@@ -1742,21 +1742,34 @@ async def translate_video_segments(
     source_lang: str = Body("auto")
 ):
     """
-    Translate a list of video segments to Catalan.
+    Translate a list of video segments to Catalan using the fine-tuned NLLB
+    Hugging Face Space. Google Translate has no Tachelhit/Tamazight support, so
+    it cannot translate ASR output; the NLLB space (same one used by /translate)
+    can.
     """
     try:
-        translator = GoogleTranslator(source=source_lang, target='ca')
+        # Map the caller's language code to the friendly name translate_with_hf
+        # expects. ASR output (and unknown/"auto") is treated as Tachelhit, the
+        # primary language of this app's source videos.
+        if source_lang in (None, "", "auto"):
+            src_name = "Tachelhit/Central Atlas Tamazight"
+        else:
+            src_name = LANGUAGE_CODE_MAP.get(source_lang, source_lang)
+        tgt_name = "Catalan"
 
         translated_segments = []
         for seg in segments:
-            original_text = seg.get("text", "")
+            original_text = (seg.get("text") or "").strip()
             if original_text:
                 try:
-                    catalan_text = translator.translate(original_text)
+                    catalan_text = await asyncio.to_thread(
+                        translate_with_hf, original_text, src_name, tgt_name
+                    )
                     seg["text_catalan"] = catalan_text
                 except Exception as e:
                     print(f"[API] Translation error for segment: {e}")
-                    seg["text_catalan"] = ""
+                    # Preserve any existing value rather than blanking it out
+                    seg["text_catalan"] = seg.get("text_catalan", "")
             translated_segments.append(seg)
 
         return translated_segments
