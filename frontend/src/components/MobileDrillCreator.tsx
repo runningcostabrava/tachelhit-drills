@@ -328,6 +328,51 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         }
     };
 
+    // One-tap pipeline: take the recording, transcribe it to Tachelhit, then
+    // translate that to Catalan, and fill both fields in a single save. Uses the
+    // fresh API responses (not React state) to avoid async-state races.
+    const handleVoiceToDrill = async () => {
+        const mediaSource = drill.audio_url || drill.video_url || capturedAudio || capturedVideo || '';
+        if (!mediaSource) {
+            return alert('Please record or capture audio/video first.');
+        }
+        const status = await Network.getStatus();
+        if (!status.connected) {
+            return alert('Voice → Drill requires an internet connection.');
+        }
+
+        setAiLoadingKey('voice-to-drill');
+        try {
+            // 1. Transcribe the recording to Tachelhit
+            const tRes = await axios.post(`${API_BASE}/transcribe/`, { audio_url: mediaSource });
+            const tachelhit = (tRes.data.corrected_transcription || '').trim();
+            if (!tachelhit) {
+                alert('Transcription returned empty text.');
+                return;
+            }
+
+            // 2. Translate the Tachelhit to Catalan (best-effort)
+            let catalan = '';
+            try {
+                const trRes = await axios.post(`${API_BASE}/translate`, { text: tachelhit, source_lang: 'shi', target_lang: 'ca' });
+                catalan = (trRes.data.translated_text || '').trim();
+            } catch {
+                addLog('Voice→Drill: translation step failed, keeping transcription only');
+            }
+
+            // 3. Fill both fields in one save
+            const updated = { ...drill, text_tachelhit: tachelhit, ...(catalan ? { text_catalan: catalan } : {}) };
+            setDrill(updated);
+            triggerSave(updated);
+            addLog('Voice→Drill complete');
+        } catch (err: any) {
+            const msg = err.response?.data?.detail || err.message;
+            alert(`Voice → Drill failed: ${msg}`);
+        } finally {
+            setAiLoadingKey(null);
+        }
+    };
+
     const handleTrimVideo = async (mode: 'video' | 'audio') => {
         setAiLoadingKey(`trim-${mode}`);
         try {
@@ -486,6 +531,15 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                         </div>
                     </div>
                 )}
+
+                <button
+                    onClick={handleVoiceToDrill}
+                    disabled={!(drill.audio_url || drill.video_url || capturedAudio || capturedVideo) || aiLoadingKey !== null}
+                    style={{ width: '100%', padding: '16px', marginBottom: '12px', background: aiLoadingKey === 'voice-to-drill' ? '#9CA3AF' : 'linear-gradient(90deg, #E11D48, #7E22CE)', color: 'white', border: 'none', borderRadius: '16px', fontWeight: 800, fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', opacity: (drill.audio_url || drill.video_url || capturedAudio || capturedVideo) ? 1 : 0.5, boxShadow: '0 4px 12px rgba(126,34,206,0.25)' }}
+                    title="Transcribe the recording to Tachelhit and translate it to Catalan in one tap"
+                >
+                    <FaMicrophone size={18} /> {aiLoadingKey === 'voice-to-drill' ? 'Working…' : 'Voice → Drill (auto)'}
+                </button>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', background: 'white', padding: '15px', borderRadius: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #E5E7EB' }}>
                     <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '8px 4px', fontSize: '9px', fontWeight: 700, background: '#EEF2FF', color: '#4338CA', border: 'none', borderRadius: '12px' }}><FaLanguage size={18} /> CA➔SH</button>
