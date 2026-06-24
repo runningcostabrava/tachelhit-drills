@@ -7,56 +7,16 @@ const isDevServer = import.meta.env.DEV;
 const isNativeApp = (window as any).Capacitor?.isNative || window.location.hostname !== 'localhost';
 
 if (isDevServer && !isNativeApp) {
-  console.log("🛠️ Vite Dev Server active - Using local backend");
   API_BASE_TMP = 'http://localhost:8000';
 } else {
-  console.log("🚀 Production Bundle active - Forcing Render live URL");
   API_BASE_TMP = 'https://tachelhit-drills-api.onrender.com';
 }
 
 export const API_BASE = API_BASE_TMP;
 
-// UPDATE THIS SECTION AT THE BOTTOM:
-if ((window as any).Capacitor?.isNative || window.location.hostname === 'localhost') {
-  alert("APK is connecting to: " + API_BASE);
+if (import.meta.env.DEV) {
+  console.log('[config] API_BASE:', API_BASE, '| mode:', import.meta.env.MODE);
 }
-
-
-
-console.log('🔧 Config loaded - Audio fix v5:');
-console.log('   VITE_API_URL:', import.meta.env.VITE_API_URL);
-console.log('   VITE_API_BASE:', import.meta.env.VITE_API_BASE);
-console.log('   API_BASE:', API_BASE);
-console.log('   NODE_ENV:', import.meta.env.MODE);
-console.log('   Production forced:', import.meta.env.MODE === 'production');
-console.log('   Timestamp:', new Date().toISOString());
-console.log('   Build version: 2026-02-24-robust-asr');
-console.log('   User agent:', navigator.userAgent);
-
-// Test connection to backend with timeout - error handling updated
-(async () => {
-  try {
-    console.log('🔌 Testing connection to backend...');
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout for cold starts
-    const response = await fetch(`${API_BASE}/test-connection`, {
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    if (response.ok) {
-      const data = await response.json();
-      console.log('✅ Backend connection successful:', data);
-    } else {
-      console.error('❌ Backend connection failed:', response.status, response.statusText);
-    }
-  } catch (error: any) {
-    if (error.name === 'AbortError') {
-      console.error('❌ Backend connection timeout after 5 seconds. The backend may not be running.');
-    } else {
-      console.error('❌ Backend connection error:', error.message);
-    }
-  }
-})();
 
 // Test fetching drills - error handling updated (commented out for now to prevent startup errors)
 /*

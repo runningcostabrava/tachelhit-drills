@@ -1,90 +1,86 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 
-interface MobileBottomNavProps {
-  // No longer need onViewTests/onViewShorts as we'll use useNavigate directly
-}
-
-export default function MobileBottomNav({}: MobileBottomNavProps) {
+export default function MobileBottomNav({}: {}) {
   const navigate = useNavigate();
   const location = useLocation();
 
   const isActive = (path: string) => location.pathname === path;
 
+  const items: { path: string; icon: string; label: string }[] = [
+    { path: '/', icon: '📚', label: 'Drills' },
+    { path: '/tests', icon: '🎯', label: 'Practica' },
+    { path: '/library', icon: '🎥', label: 'Library' },
+  ];
+
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: '60px', // Adjust height as needed
-      backgroundColor: 'white',
-      borderTop: '1px solid #e0e0e0',
-      display: 'flex',
-      justifyContent: 'space-around',
-      alignItems: 'center',
-      boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
-      zIndex: 1000
-    }}>
-      <button
-        onClick={() => navigate('/')}
-        style={{
-          flex: 1,
-          padding: '8px 0',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '2px',
-          color: isActive('/') ? '#667eea' : '#666',
-          fontWeight: isActive('/') ? 700 : 500,
-          fontSize: '11px',
-        }}
-      >
-        <span style={{ fontSize: '20px' }}>📚</span>
-        <span>Drills</span>
-      </button>
-      <button
-        onClick={() => navigate('/tests')}
-        style={{
-          flex: 1,
-          padding: '8px 0',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '2px',
-          color: isActive('/tests') ? '#667eea' : '#666',
-          fontWeight: isActive('/tests') ? 700 : 500,
-          fontSize: '11px',
-        }}
-      >
-        <span style={{ fontSize: '20px' }}>📊</span>
-        <span>Practica</span>
-      </button>
-      <button
-        onClick={() => navigate('/library')}
-        style={{
-          flex: 1,
-          padding: '8px 0',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '2px',
-          color: isActive('/library') ? '#667eea' : '#666',
-          fontWeight: isActive('/library') ? 700 : 500,
-          fontSize: '11px',
-        }}
-      >
-        <span style={{ fontSize: '20px' }}>🎥</span>
-        <span>Library</span>
-      </button>
+    <div
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 'calc(64px + env(safe-area-inset-bottom, 0px))',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        background: 'rgba(255,255,255,0.92)',
+        backdropFilter: 'blur(16px)',
+        borderTop: '1px solid var(--border)',
+        display: 'flex',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        boxShadow: '0 -4px 20px rgba(15,23,42,0.06)',
+        zIndex: 1000,
+      }}
+    >
+      {items.map((item) => {
+        const active = isActive(item.path);
+        return (
+          <button
+            key={item.path}
+            onClick={() => navigate(item.path)}
+            style={{
+              flex: 1,
+              height: '100%',
+              padding: '6px 0',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '3px',
+              color: active ? 'var(--brand-1)' : 'var(--text-muted)',
+              fontWeight: active ? 800 : 600,
+              fontSize: '11px',
+              position: 'relative',
+            }}
+          >
+            <span
+              style={{
+                fontSize: '20px',
+                transform: active ? 'translateY(-1px) scale(1.08)' : 'none',
+                transition: 'transform var(--t-fast)',
+                filter: active ? 'none' : 'grayscale(0.3) opacity(0.85)',
+              }}
+            >
+              {item.icon}
+            </span>
+            <span>{item.label}</span>
+            {active && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '6px',
+                  width: '28px',
+                  height: '3px',
+                  borderRadius: '999px',
+                  background: 'var(--brand-gradient)',
+                }}
+              />
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

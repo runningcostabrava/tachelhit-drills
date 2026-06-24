@@ -176,22 +176,6 @@ function App() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Temporary bar with last commit message */}
-      <div style={{
-        backgroundColor: '#333',
-        color: 'white',
-        padding: '8px 10px',
-        fontSize: '12px',
-        textAlign: 'center',
-        zIndex: 9999,
-        lineHeight: '1.2',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '20px'
-      }}>
-        Last Commit Hash: 9e4a61b
-      </div>
       <Routes>
         <Route path="/" element={<DrillsResponsive />} />
         <Route path="/tests" element={<TestsDashboard onBackToDrills={() => navigate('/')} />} />
