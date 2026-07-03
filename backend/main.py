@@ -2152,6 +2152,43 @@ def ocr_video_segments(
 
     return segments
 
+@app.post("/video-analysis/align-lyrics")
+def align_lyrics_to_segments(
+    segments: List[Dict] = Body(...),
+    lyrics: str = Body(...)
+):
+    """
+    Swap ASR-guessed segment text for real lyric lines while keeping the ASR
+    timestamps (ASR hears sung vocals poorly but times them well). Each
+    segment gets the best fuzzy-matching lyric line near its proportionally
+    expected position; the original ASR guess is preserved in text_asr.
+    """
+    import difflib
+
+    lines = [l.strip() for l in (lyrics or "").splitlines() if l.strip()]
+    if not lines:
+        raise HTTPException(status_code=400, detail="No lyric lines provided")
+    if not segments:
+        return segments
+
+    n_seg, n_lines = len(segments), len(lines)
+    used = set()
+    for i, seg in enumerate(segments):
+        expected = round(i * (n_lines - 1) / max(1, n_seg - 1)) if n_seg > 1 else 0
+        window = range(max(0, expected - 2), min(n_lines, expected + 3))
+        asr_text = (seg.get("text") or "").lower()
+        best_idx, best_score = expected, -1.0
+        for j in window:
+            score = difflib.SequenceMatcher(None, asr_text, lines[j].lower()).ratio()
+            if j in used:  # prefer lines not already claimed
+                score -= 0.15
+            if score > best_score:
+                best_idx, best_score = j, score
+        used.add(best_idx)
+        seg["text_asr"] = seg.get("text")
+        seg["text"] = lines[best_idx]
+    return segments
+
 # Which segment field each translation target fills; these are the three
 # text fields a Drill actually stores.
 TRANSLATE_TARGET_FIELDS = {

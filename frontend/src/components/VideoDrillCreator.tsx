@@ -35,6 +35,7 @@ const VideoDrillCreator: React.FC = () => {
   const [tag, setTag] = useState('video_capture');
   const [audioOnly, setAudioOnly] = useState(false);
   const [autoMode, setAutoMode] = useState(false);
+  const [lyrics, setLyrics] = useState('');
   const [autoStatus, setAutoStatus] = useState<string | null>(null);
 
   // Polls a fully server-side auto-drills job (URL captures). The pipeline
@@ -305,6 +306,32 @@ const VideoDrillCreator: React.FC = () => {
     }
   };
 
+  // Song lyrics: keep ASR timestamps, swap in the real lyric lines
+  const handleAlignLyrics = async () => {
+    if (!videoInfo || !lyrics.trim()) return;
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/video-analysis/align-lyrics`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ segments: videoInfo.segments, lyrics }),
+      });
+      if (!response.ok) throw new Error('Lyrics alignment failed');
+      const aligned = await response.json();
+      setVideoInfo({
+        ...videoInfo,
+        segments: aligned.map((s: any, i: number) => ({
+          ...s,
+          selected: videoInfo.segments[i].selected
+        }))
+      });
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Correction layer: glossary fixes + mapping onto the curated phrase dataset
   const handleCorrectAll = async () => {
     if (!videoInfo || !videoInfo.segments.length) return;
@@ -497,6 +524,28 @@ const VideoDrillCreator: React.FC = () => {
           </div>
         </div>
 
+        <div>
+          <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--text-soft)', fontWeight: 600 }}>
+            🎼 Song lyrics <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Optional · one line per phrase · after analysis, use "Alinea la lletra" to replace the rough ASR text while keeping its timestamps)</span>
+          </label>
+          <textarea
+            value={lyrics}
+            onChange={(e) => setLyrics(e.target.value)}
+            placeholder="Paste the song lyrics here..."
+            style={{
+              width: '100%',
+              height: '80px',
+              padding: '12px',
+              borderRadius: 'var(--r-md)',
+              border: '1px solid var(--border)',
+              background: 'var(--surface-2)',
+              fontSize: '13px',
+              color: 'var(--text)',
+              fontFamily: 'var(--font-tifinagh)',
+            }}
+          />
+        </div>
+
         <div className="cookies-section">
           <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--text-soft)', fontWeight: 600 }}>
             Cookies <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Optional · Netscape format · needed for private content or when blocked by bot detection)</span>
@@ -580,6 +629,16 @@ const VideoDrillCreator: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '12px' }}>
             <h4 style={{ margin: 0, fontSize: '16px' }}>Video Segments <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>({videoInfo.segments.length})</span></h4>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              {lyrics.trim() && (
+                <button
+                  onClick={handleAlignLyrics}
+                  disabled={loading}
+                  title="Replace the rough ASR text with the pasted lyric lines, keeping the timestamps"
+                  style={{ padding: '9px 18px', background: 'var(--brand-1)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
+                >
+                  🎼 Alinea la lletra
+                </button>
+              )}
               <button
                 onClick={handleCorrectAll}
                 disabled={loading}
