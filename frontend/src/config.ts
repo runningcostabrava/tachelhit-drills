@@ -1,62 +1,68 @@
-// 1. Default to your live production server
-let API_BASE_TMP = 'https://tachelhit-drills-api.onrender.com';
+import axios from 'axios';
 
-// 2. ONLY use the local computer backend if we are explicitly running the Vite local dev server ('npm run dev')
-// and we are NOT running inside a native mobile app wrapper.
-const isDevServer = import.meta.env.DEV;
-const isNativeApp = (window as any).Capacitor?.isNative || window.location.hostname !== 'localhost';
+// Backend selection, in priority order:
+// 1. VITE_API_URL (frontend/.env) always wins when set.
+// 2. Native app builds (Capacitor APK/WebView) default to production.
+// 3. The Vite dev server defaults to a local backend on the same host the
+//    page was loaded from — so `npm run dev --host` tested from a phone hits
+//    your dev backend over the LAN instead of silently writing to production.
+// 4. Production web builds default to the Render API.
+const PROD_API = 'https://tachelhit-drills-api.onrender.com';
+const envApiUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
+const isNativeApp = !!((window as any).Capacitor?.isNativePlatform?.() ?? (window as any).Capacitor?.isNative);
 
-if (isDevServer && !isNativeApp) {
-  console.log("🛠️ Vite Dev Server active - Using local backend");
-  API_BASE_TMP = 'http://localhost:8000';
-} else {
-  console.log("🚀 Production Bundle active - Forcing Render live URL");
-  API_BASE_TMP = 'https://tachelhit-drills-api.onrender.com';
-}
+export const API_BASE =
+  envApiUrl ||
+  (import.meta.env.DEV && !isNativeApp ? `http://${window.location.hostname}:8000` : PROD_API);
 
-export const API_BASE = API_BASE_TMP;
+// ---- Identity & API-key header injection ----
+// Components call axios and fetch directly all over the codebase, so until
+// there is a shared API client both headers are injected globally here:
+// - X-API-Key: must match the backend's API_KEY env var (bot lock)
+// - X-User-Token: the personal token from /users/register (multi-tenancy);
+//   read from localStorage on every request so login applies immediately.
+const API_KEY = import.meta.env.VITE_API_KEY as string | undefined;
 
-// UPDATE THIS SECTION AT THE BOTTOM:
-if ((window as any).Capacitor?.isNative || window.location.hostname === 'localhost') {
-  alert("APK is connecting to: " + API_BASE);
-}
+export const getUserToken = () => localStorage.getItem('user_token') || '';
+export const getUserName = () => localStorage.getItem('user_name') || '';
+export const setUserIdentity = (token: string, username: string) => {
+  localStorage.setItem('user_token', token);
+  if (username) localStorage.setItem('user_name', username);
+};
+export const clearUserIdentity = () => {
+  localStorage.removeItem('user_token');
+  localStorage.removeItem('user_name');
+};
 
-
-
-console.log('🔧 Config loaded - Audio fix v5:');
-console.log('   VITE_API_URL:', import.meta.env.VITE_API_URL);
-console.log('   VITE_API_BASE:', import.meta.env.VITE_API_BASE);
-console.log('   API_BASE:', API_BASE);
-console.log('   NODE_ENV:', import.meta.env.MODE);
-console.log('   Production forced:', import.meta.env.MODE === 'production');
-console.log('   Timestamp:', new Date().toISOString());
-console.log('   Build version: 2026-02-24-robust-asr');
-console.log('   User agent:', navigator.userAgent);
-
-// Test connection to backend with timeout - error handling updated
-(async () => {
-  try {
-    console.log('🔌 Testing connection to backend...');
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout for cold starts
-    const response = await fetch(`${API_BASE}/test-connection`, {
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    if (response.ok) {
-      const data = await response.json();
-      console.log('✅ Backend connection successful:', data);
-    } else {
-      console.error('❌ Backend connection failed:', response.status, response.statusText);
-    }
-  } catch (error: any) {
-    if (error.name === 'AbortError') {
-      console.error('❌ Backend connection timeout after 5 seconds. The backend may not be running.');
-    } else {
-      console.error('❌ Backend connection error:', error.message);
-    }
+axios.interceptors.request.use((cfg) => {
+  const url = typeof cfg.url === 'string' ? cfg.url : '';
+  if (url.startsWith(API_BASE) || url.startsWith('/')) {
+    if (API_KEY) (cfg.headers as any)['X-API-Key'] = API_KEY;
+    const t = getUserToken();
+    if (t) (cfg.headers as any)['X-User-Token'] = t;
   }
-})();
+  return cfg;
+});
+
+const originalFetch = window.fetch.bind(window);
+window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+  const url =
+    typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+  if (url.startsWith(API_BASE)) {
+    const headers = new Headers(
+      init?.headers ?? (input instanceof Request ? input.headers : undefined)
+    );
+    if (API_KEY) headers.set('X-API-Key', API_KEY);
+    const t = getUserToken();
+    if (t) headers.set('X-User-Token', t);
+    init = { ...init, headers };
+  }
+  return originalFetch(input, init);
+};
+
+if (import.meta.env.DEV) {
+  console.log('[config] API_BASE:', API_BASE, '| mode:', import.meta.env.MODE);
+}
 
 // Test fetching drills - error handling updated (commented out for now to prevent startup errors)
 /*

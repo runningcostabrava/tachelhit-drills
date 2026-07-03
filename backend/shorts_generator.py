@@ -16,7 +16,7 @@ except ImportError:
 from moviepy.video.VideoClip import ImageClip
 from moviepy.audio.io.AudioFileClip import AudioFileClip
 from moviepy.video.io.VideoFileClip import VideoFileClip
-from moviepy.video.compositing.concatenate import concatenate_videoclips
+from moviepy import concatenate_videoclips
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 
 # --- Configuration ---
@@ -123,11 +123,11 @@ def generate_youtube_short(drill_data, output_filename):
 
     # Create the video clip
     # CRITICAL FIX: Set duration exactly to what we decided (the audio length)
-    video_clip = ImageClip(img_array).set_duration(duration)
+    video_clip = ImageClip(img_array).with_duration(duration)
 
     if audio_clip:
         # Attach audio. video_clip duration matches audio_clip duration exactly now.
-        video_clip = video_clip.set_audio(audio_clip)
+        video_clip = video_clip.with_audio(audio_clip)
 
     # 7. Write Output
     final_path = os.path.join(SHORTS_DIR, output_filename)

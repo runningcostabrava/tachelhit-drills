@@ -1,83 +1,235 @@
+/* ============================================================================
+   Tachelhit Drills — Design System
+   Modern token-based foundation. Components reference these CSS variables and
+   utility classes for a consistent, contemporary look.
+   ========================================================================== */
+
 :root {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  /* Brand */
+  --brand-1: #6366f1;          /* indigo  */
+  --brand-2: #8b5cf6;          /* violet  */
+  --brand-3: #a855f7;          /* purple  */
+  --brand-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 55%, #a855f7 100%);
+  --brand-gradient-soft: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+
+  /* Accents */
+  --emerald: #10b981;
+  --emerald-soft: #ecfdf5;
+  --amber: #f59e0b;
+  --amber-soft: #fffbeb;
+  --amber-strong: #b45309;   /* readable text on --amber-soft / white */
+  --rose: #f43f5e;
+  --rose-soft: #fff1f2;
+  --sky: #0ea5e9;
+  --sky-soft: #f0f9ff;
+
+  /* Neutrals (slate) */
+  --bg: #f1f5f9;
+  --bg-elevated: #f8fafc;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text: #0f172a;
+  --text-soft: #475569;
+  --text-muted: #94a3b8;
+
+  /* Radius */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+  --r-2xl: 28px;
+  --r-pill: 999px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.12), 0 4px 8px rgba(15, 23, 42, 0.06);
+  --shadow-xl: 0 24px 48px rgba(15, 23, 42, 0.18);
+  --shadow-brand: 0 8px 20px rgba(99, 102, 241, 0.35);
+
+  /* Type */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-tifinagh: 'Noto Sans Tifinagh', 'Inter', sans-serif;
+
+  /* Motion */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --t-fast: 0.15s var(--ease);
+  --t-med: 0.25s var(--ease);
+
+  font-family: var(--font-sans);
   line-height: 1.5;
   font-weight: 400;
-
   color-scheme: light;
-  color: #213547;
-  background-color: #ffffff;
-
+  color: var(--text);
+  background-color: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh; /* Changed from height: 100vh */
+  min-height: 100vh;
   width: 100%;
-  /* Removed: overflow: hidden; */
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
 }
 
-* {
-  box-sizing: border-box;
-}
-
-h1 {
+h1, h2, h3, h4 {
   margin: 0;
   padding: 0;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  font-weight: 800;
 }
 
-button {
-  border-radius: 6px;
-  border: none;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
+a {
   font-weight: 500;
+  color: var(--brand-1);
+  text-decoration: none;
+  transition: color var(--t-fast);
+}
+a:hover { color: var(--brand-2); }
+
+/* Tifinagh script — proper glyph rendering wherever this class is applied */
+.tifinagh { font-family: var(--font-tifinagh); }
+
+/* ---- Base button (components may override via inline styles) ------------- */
+button {
+  border-radius: var(--r-md);
+  border: none;
+  padding: 0.6em 1.1em;
+  font-size: 1em;
+  font-weight: 600;
   font-family: inherit;
-  background-color: #f0f0f0;
-  color: #333;
+  background-color: var(--surface-2);
+  color: var(--text);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform var(--t-fast), box-shadow var(--t-fast), background-color var(--t-fast), opacity var(--t-fast);
 }
-
-button:hover {
-  background-color: #e0e0e0;
-  transform: translateY(-1px);
-}
-
-button:active {
-  transform: translateY(0);
-}
-
-button:focus,
+button:hover:not(:disabled) { transform: translateY(-1px); }
+button:active:not(:disabled) { transform: translateY(0); }
+button:disabled { cursor: not-allowed; opacity: 0.55; }
 button:focus-visible {
-  outline: 2px solid #667eea;
+  outline: 2px solid var(--brand-1);
   outline-offset: 2px;
 }
 
-/* AG-Grid styling */
+input, select, textarea { font-family: inherit; }
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--brand-1);
+  outline-offset: 1px;
+}
+
+/* ---- Reusable component classes ----------------------------------------- */
+.ds-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.ds-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--r-md);
+  padding: 11px 18px;
+  font-weight: 700;
+  font-size: 14px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.ds-btn-primary {
+  background: var(--brand-gradient);
+  color: #fff;
+  box-shadow: var(--shadow-brand);
+}
+.ds-btn-primary:hover:not(:disabled) { filter: brightness(1.05); box-shadow: var(--shadow-lg); }
+.ds-btn-ghost {
+  background: var(--surface);
+  color: var(--text-soft);
+  border-color: var(--border);
+  box-shadow: var(--shadow-xs);
+}
+.ds-btn-ghost:hover:not(:disabled) { border-color: var(--border-strong); background: var(--surface-2); }
+
+.ds-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--brand-gradient-soft);
+  color: var(--brand-1);
+}
+
+.ds-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 15px;
+  color: var(--text);
+  outline: none;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.ds-input:focus {
+  border-color: var(--brand-1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  background: var(--surface);
+}
+
+/* ---- Custom scrollbars --------------------------------------------------- */
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--r-pill);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--text-muted); background-clip: content-box; }
+
+/* ---- AG-Grid: align with the design system ------------------------------ */
 .ag-theme-alpine {
-  --ag-font-family: system-ui, -apple-system, sans-serif;
+  --ag-font-family: var(--font-sans);
+  --ag-foreground-color: var(--text);
+  --ag-header-foreground-color: var(--text-soft);
+  --ag-header-background-color: var(--surface-2);
+  --ag-border-color: var(--border);
+  --ag-row-hover-color: var(--brand-gradient-soft);
+  --ag-selected-row-background-color: #eef2ff;
+  --ag-font-size: 14px;
+  --ag-border-radius: 12px;
 }
+.ag-row { min-height: 70px !important; }
+.ag-cell { display: flex !important; align-items: center !important; }
 
-.ag-row {
-  min-height: 70px !important;
-}
+/* ---- Animations ---------------------------------------------------------- */
+@keyframes ds-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ds-slide-up { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ds-scale-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 50% { opacity: 0.55; } }
 
-.ag-cell {
-  display: flex !important;
-  align-items: center !important;
+.ds-fade-in { animation: ds-fade-in var(--t-med) both; }
+.ds-slide-up { animation: ds-slide-up var(--t-med) both; }
+.ds-scale-in { animation: ds-scale-in var(--t-med) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

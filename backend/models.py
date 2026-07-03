@@ -23,6 +23,17 @@ class Drill(Base):
     # Timestamp fields for video segments
     video_start_time = Column(Float, nullable=True)  # Start time in seconds
     video_end_time = Column(Float, nullable=True)    # End time in seconds
+    # --- Documentation / variation layer (auditor Phase 2) ---
+    text_tachelhit_latin = Column(String, nullable=True)  # Latin romanization
+    created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # contributor attribution
+    variety = Column(String, nullable=True)   # e.g. "tashelhit", "central-atlas", "tarifit"
+    region = Column(String, nullable=True)    # e.g. "Souss", "Tafraout", "diaspora-BCN"
+    speaker = Column(String, nullable=True)   # speaker/contributor label (with consent)
+    source_url = Column(String, nullable=True)  # provenance: where the content came from
+    license = Column(String, nullable=True)     # e.g. "CC-BY-SA", "personal", "unknown"
+    # --- Contribution review (auditor Phase 3): NULL/False = unreviewed ---
+    verified = Column(Boolean, nullable=True)
+    verified_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
 class Test(Base):
     __tablename__ = "tests"
@@ -119,3 +130,39 @@ class GlossaryItem(Base):
     correct_spelling = Column(String, nullable=False) # e.g., "anaygh"
     notes = Column(String, nullable=True)
     date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+class DrillReview(Base):
+    """Spaced-repetition state for a drill (SM-2 style scheduling)."""
+    __tablename__ = "drill_reviews"
+
+    id = Column(Integer, primary_key=True, index=True)
+    drill_id = Column(Integer, ForeignKey("drills.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # NULL = anonymous/legacy
+    ease = Column(Float, default=2.5, nullable=False)
+    interval_days = Column(Float, default=0.0, nullable=False)
+    repetitions = Column(Integer, default=0, nullable=False)
+    due_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    last_grade = Column(Integer, nullable=True)     # 0=again 1=hard 2=good 3=easy
+    last_reviewed = Column(DateTime, nullable=True)
+    total_reviews = Column(Integer, default=0, nullable=False)
+    lapses = Column(Integer, default=0, nullable=False)
+
+class User(Base):
+    """Contributor/learner identity (auditor Phase 1: multi-tenancy)."""
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, nullable=False, index=True)
+    display_name = Column(String, nullable=True)
+    token = Column(String, unique=True, nullable=False, index=True)
+    date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+class ReviewLog(Base):
+    """One row per review grade — powers streaks and progress stats."""
+    __tablename__ = "review_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    drill_id = Column(Integer, ForeignKey("drills.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    grade = Column(Integer, nullable=False)
+    reviewed_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)

@@ -1,14 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { getYouTubeVideoId } from '../utils/youtubeUtils';
+import { getYouTubeVideoId, loadYouTubeApi } from '../utils/youtubeUtils';
+
+let libPlayerCounter = 0;
 
 export default function VideoLibraryPlayer({ videoUrl, drills, onClose }: { videoUrl: string, drills: any[], onClose: () => void }) {
     const [playing, setPlaying] = useState(false);
     const [playbackRate, setPlaybackRate] = useState(1);
     const [currentTime, setCurrentTime] = useState(0);
-    
+
     const ytPlayerRef = useRef<any>(null);
-    const containerId = `lib-player-${Date.now()}`;
+    // Stable for the component's lifetime — a per-render id would detach the
+    // rendered div from the element the YT player was bound to
+    const containerIdRef = useRef(`lib-player-${++libPlayerCounter}`);
+    const containerId = containerIdRef.current;
 
     useEffect(() => {
         const videoId = getYouTubeVideoId(videoUrl);
@@ -44,34 +49,18 @@ export default function VideoLibraryPlayer({ videoUrl, drills, onClose }: { vide
             });
         };
 
-        if (!(window as any).YT || !(window as any).YT.Player) {
-            if (!document.getElementById('youtube-iframe-api')) {
-                const tag = document.createElement('script');
-                tag.id = 'youtube-iframe-api';
-                tag.src = "https://www.youtube.com/iframe_api";
-                document.head.appendChild(tag);
-            }
-            // Overwrite or hook into global ready callback
-            const prevOnReady = (window as any).onYouTubeIframeAPIReady;
-            (window as any).onYouTubeIframeAPIReady = () => {
-                if (prevOnReady) prevOnReady();
-                initPlayer();
-            };
-        } else {
-            // Already loaded
-            initPlayer();
-        }
+        let cancelled = false;
+        loadYouTubeApi().then(() => { if (!cancelled) initPlayer(); });
 
         const interval = setInterval(() => {
             if (ytPlayerRef.current && typeof ytPlayerRef.current.getCurrentTime === 'function') {
-                const time = ytPlayerRef.current.getCurrentTime();
-                if (time !== currentTime) {
-                    setCurrentTime(time);
-                }
+                // React skips the re-render when the value hasn't changed
+                setCurrentTime(ytPlayerRef.current.getCurrentTime());
             }
         }, 200); // 5 updates per second is enough for subtitles
 
         return () => {
+            cancelled = true;
             clearInterval(interval);
             if (ytPlayerRef.current) {
                 try { ytPlayerRef.current.destroy(); } catch (e) { }
@@ -120,22 +109,22 @@ export default function VideoLibraryPlayer({ videoUrl, drills, onClose }: { vide
                 {activeDrill && (
                     <div style={{
                         position: 'absolute', bottom: '15%', left: '50%', transform: 'translateX(-50%)',
-                        padding: '15px 30px', backgroundColor: 'rgba(0, 0, 0, 0.75)', textAlign: 'center',
-                        borderRadius: '12px', backdropFilter: 'blur(8px)', minWidth: '80%', maxWidth: '90%',
-                        pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.1)'
+                        padding: '18px 32px', backgroundColor: 'rgba(15, 23, 42, 0.78)', textAlign: 'center',
+                        borderRadius: 'var(--r-lg)', backdropFilter: 'blur(10px)', minWidth: '80%', maxWidth: '90%',
+                        pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.12)'
                     }}>
                         {activeDrill.text_arabic && (
-                            <div style={{ fontSize: '32px', direction: 'rtl', fontWeight: 'bold', marginBottom: '8px', color: '#E91E63' }}>
+                            <div style={{ fontSize: '32px', direction: 'rtl', fontWeight: 'bold', marginBottom: '8px', color: '#f472b6' }}>
                                 {activeDrill.text_arabic}
                             </div>
                         )}
                         {activeDrill.text_tachelhit && (
-                            <div style={{ fontSize: '26px', fontWeight: 'bold', marginBottom: '5px', color: '#FFD700' }}>
+                            <div style={{ fontSize: '26px', fontWeight: 'bold', marginBottom: '6px', color: 'var(--amber)', fontFamily: 'var(--font-tifinagh)' }}>
                                 {activeDrill.text_tachelhit}
                             </div>
                         )}
                         {activeDrill.text_catalan && (
-                            <div style={{ fontSize: '22px', color: '#4CAF50', fontWeight: '500' }}>
+                            <div style={{ fontSize: '22px', color: 'var(--emerald)', fontWeight: '500' }}>
                                 {activeDrill.text_catalan}
                             </div>
                         )}
@@ -143,27 +132,27 @@ export default function VideoLibraryPlayer({ videoUrl, drills, onClose }: { vide
                 )}
             </div>
             
-            <div style={{ height: '100px', backgroundColor: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', borderTop: '1px solid #333' }}>
+            <div style={{ height: '100px', backgroundColor: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                 <button onClick={goBack2Seconds} style={btnStyle}>↺ 2s</button>
-                <button onClick={togglePlayPause} style={{...btnStyle, background: playing ? '#f44336' : '#4CAF50', minWidth: '120px'}}>
+                <button onClick={togglePlayPause} style={{...btnStyle, background: playing ? 'var(--rose)' : 'var(--emerald)', border: 'none', minWidth: '120px'}}>
                     {playing ? '⏸ Pause' : '▶ Play'}
                 </button>
                 <button onClick={togglePlaybackRate} style={btnStyle}>{playbackRate}x</button>
-                <button onClick={onClose} style={{...btnStyle, background: '#333', marginLeft: '40px'}}>✕ Close</button>
+                <button onClick={onClose} style={{...btnStyle, marginLeft: '40px'}}>✕ Close</button>
             </div>
         </div>,
         document.body
     );
 }
 
-const btnStyle: React.CSSProperties = { 
-    padding: '14px 28px', 
-    background: '#222', 
-    color: 'white', 
-    border: '1px solid #444', 
-    borderRadius: '10px', 
-    cursor: 'pointer', 
-    fontSize: '18px', 
+const btnStyle: React.CSSProperties = {
+    padding: '14px 28px',
+    background: 'rgba(255,255,255,0.08)',
+    color: 'white',
+    border: '1px solid rgba(255,255,255,0.16)',
+    borderRadius: 'var(--r-md)',
+    cursor: 'pointer',
+    fontSize: '18px',
     fontWeight: 'bold',
     display: 'flex',
     alignItems: 'center',

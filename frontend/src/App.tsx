@@ -1,21 +1,66 @@
-import { useEffect } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { Network } from '@capacitor/network';
-import { Preferences } from '@capacitor/preferences';
-import { Filesystem, Directory } from '@capacitor/filesystem';
 import axios from 'axios';
-import { API_BASE } from './config';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { API_BASE, getUserName, getUserToken } from './config';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { syncManager } from './services/OfflineSyncManager';
-import DrillsResponsive from './components/DrillsResponsive';
-import TestsDashboard from './components/TestsDashboard';
-import YouTubeShorts from './components/YouTubeShorts';
-import DrillPlayerPage from './components/DrillPlayerPage';
-import PublicTestView from './components/PublicTestView';
-import MediaRecorderTest from './components/MediaRecorderTest';
-import VideoDrillCreator from './components/VideoDrillCreator';
-import SrtImport from './components/SrtImport';
-import VideoLibraryPage from './components/VideoLibraryPage';
 import './App.css';
+
+// Route-level code splitting: each page loads its chunk on first visit,
+// keeping the initial bundle small (AG Grid, players, creators all split out)
+const DrillsResponsive = lazy(() => import('./components/DrillsResponsive'));
+const TestsDashboard = lazy(() => import('./components/TestsDashboard'));
+const YouTubeShorts = lazy(() => import('./components/YouTubeShorts'));
+const DrillPlayerPage = lazy(() => import('./components/DrillPlayerPage'));
+const PublicTestView = lazy(() => import('./components/PublicTestView'));
+const MediaRecorderTest = lazy(() => import('./components/MediaRecorderTest'));
+const VideoDrillCreator = lazy(() => import('./components/VideoDrillCreator'));
+const SrtImport = lazy(() => import('./components/SrtImport'));
+const VideoLibraryPage = lazy(() => import('./components/VideoLibraryPage'));
+const ProfilePage = lazy(() => import('./components/ProfilePage'));
+const CorpusPage = lazy(() => import('./components/CorpusPage'));
+
+const RouteLoader = () => (
+  <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ width: '44px', height: '44px', borderRadius: '50%', border: '4px solid var(--border)', borderTopColor: 'var(--brand-1)', animation: 'spin 0.9s linear infinite' }} />
+  </div>
+);
+
+// Floating spaced-repetition entry point, shown on the home screen when
+// there are cards due or new drills to learn
+const ReviewFab = () => {
+  const navigate = useNavigate();
+  const [counts, setCounts] = useState<{ due: number; new: number } | null>(null);
+  const [streak, setStreak] = useState(0);
+
+  useEffect(() => {
+    axios.get(`${API_BASE}/reviews/stats`)
+      .then(r => setCounts({ due: r.data.due, new: r.data.new }))
+      .catch(() => {});
+    axios.get(`${API_BASE}/reviews/streak`)
+      .then(r => setStreak(r.data.streak_days || 0))
+      .catch(() => {});
+  }, []);
+
+  const pending = (counts?.due || 0) + (counts?.new || 0);
+  if (!pending) return null;
+
+  return (
+    <button
+      onClick={() => navigate('/player?mode=review')}
+      style={{
+        position: 'fixed', bottom: '86px', right: '16px', zIndex: 900,
+        padding: '13px 20px', background: 'var(--brand-gradient)', color: 'white',
+        border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 800, fontSize: '15px',
+        boxShadow: 'var(--shadow-brand)', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: '8px'
+      }}
+    >
+      🧠 Repàs {counts!.due > 0 ? `(${counts!.due})` : `(${counts!.new} nous)`}
+      {streak > 0 && <span style={{ marginLeft: '4px' }}>🔥{streak}</span>}
+    </button>
+  );
+};
 
 // Placeholder component for /demo-videos
 const DemoVideosPage = () => (
@@ -28,146 +73,40 @@ const DemoVideosPage = () => (
 
 function App() {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // THE OFFLINE SYNC LOGIC (Mobile/Capacitor only)
+  // Offline sync bootstrap. All queue processing lives in OfflineSyncManager;
+  // this effect just pushes pending actions and refreshes the local caches on
+  // boot and whenever the network comes back.
   useEffect(() => {
-    // Skip offline sync logic if running in a regular web browser
-    if (!window.location.protocol.includes('capacitor') && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')) {
-      // In production web, we don't need offline sync
-      // We check for capacitor protocol or localhost (for development/testing)
-      if (!window.location.hostname.includes('vercel.app')) {
-          // If it's not vercel, we might be in an APK, so we proceed cautiously
-      } else {
-          return; 
-      }
-    }
-
-    const processSyncQueue = async () => {
+    const runSync = async () => {
       const status = await Network.getStatus();
-
-      // Ensure cache is updated even if no queue
-      if (status.connected) {
-        try {
-          const drillsRes = await axios.get(`${API_BASE}/drills/`);
-          await syncManager.saveDrillsToCache(drillsRes.data);
-          const testsRes = await axios.get(`${API_BASE}/tests/`);
-          await syncManager.saveTestsToCache(testsRes.data);
-          // Sync audio & images only by default (videos are typically large and can be cached on-demand)
-          syncManager.syncAllMedia({ includeVideos: false });
-        } catch (e) {
-          console.error('Failed to pre-cache data', e);
-        }
-      }
-
-      // Only attempt sync if we have internet connection
       if (!status.connected) {
-        console.log("✈️ Device is offline. Sync paused.");
+        console.log('✈️ Device is offline. Sync paused.');
         return;
       }
 
-      // 1. Grab the pending drills from local storage
-      const { value } = await Preferences.get({ key: 'sync_queue' });
-      const queue = JSON.parse(value || '[]');
-      if (queue.length === 0) return;
+      // Push queued offline actions first so the cache refresh sees the result
+      await syncManager.sync();
 
-      console.log(`🔄 Internet detected! Starting background sync for ${queue.length} drills...`);
-
-      // Update tests cache and media
       try {
-        const testsRes = await axios.get(`${API_BASE}/tests/`);
+        const [drillsRes, testsRes] = await Promise.all([
+          axios.get(`${API_BASE}/drills/`),
+          axios.get(`${API_BASE}/tests/`),
+        ]);
+        // saveDrillsToCache also kicks off background media caching
+        // (audio & images only; videos are cached on demand)
+        await syncManager.saveDrillsToCache(drillsRes.data);
         await syncManager.saveTestsToCache(testsRes.data);
-        // Sync audio & images only (videos are large and should be cached on-demand)
-        syncManager.syncAllMedia({ includeVideos: false });
-      } catch (e) { console.error('Failed to sync tests cache', e); }
-
-      // 2. Process each drill one by one
-      for (const drill of queue) {
-        try {
-          // Note: If drill.id is a timestamp (large number), it's a new drill created offline
-          const isNewOfflineDrill = drill.id > 1000000;
-          let serverDrillId = drill.id;
-
-          // Step A: Sync Text Data
-          if (isNewOfflineDrill) {
-            // Create a totally new drill on the server
-            const { id, ...drillWithoutTempId } = drill; // Remove the fake ID
-            const res = await axios.post(`${API_BASE}/drills/`, drillWithoutTempId);
-            serverDrillId = res.data.id;
-          } else {
-            // Update an existing drill on the server
-            await axios.put(`${API_BASE}/drills/${drill.id}`, drill);
-          }
-
-          // Step B: Sync Media Files (If they exist)
-          const mediaFields = ['audio_url', 'video_url', 'image_url'] as const;
-
-          for (const field of mediaFields) {
-            const localUri = drill[field];
-
-            // If it starts with file://, we know it's a local file that needs uploading
-            if (localUri && localUri.startsWith('file://')) {
-
-              // Extract the filename from the path
-              const pathParts = localUri.split('/');
-              const fileName = pathParts[pathParts.length - 1];
-
-              // Read the file off the phone's hard drive
-              const fileData = await Filesystem.readFile({
-                path: `drills_media/${fileName}`,
-                directory: Directory.Data
-              });
-
-              // Convert the base64 back into a Blob so Axios can send it as a file
-              const res = await fetch(`data:application/octet-stream;base64,${fileData.data}`);
-              const blob = await res.blob();
-
-              // Determine type for the endpoint url
-              const typeMap: Record<string, string> = {
-                'audio_url': 'audio',
-                'video_url': 'video',
-                'image_url': 'image'
-              };
-
-              const formData = new FormData();
-              formData.append('file', blob, fileName);
-
-              console.log(`⬆️ Uploading ${typeMap[field]} to server...`);
-              await axios.post(`${API_BASE}/upload-media/${serverDrillId}/${typeMap[field]}`, formData);
-
-              // Clean up: Delete the local file now that it's safe in Cloudinary
-              await Filesystem.deleteFile({
-                path: `drills_media/${fileName}`,
-                directory: Directory.Data
-              });
-            }
-          }
-
-          // Step C: Remove this drill from the queue now that it is synced
-          const { value: currentVal } = await Preferences.get({ key: 'sync_queue' });
-          const updatedQueue = JSON.parse(currentVal || '[]');
-          const filteredQueue = updatedQueue.filter((d: any) => d.id !== drill.id);
-          await Preferences.set({
-            key: 'sync_queue',
-            value: JSON.stringify(filteredQueue)
-          });
-
-          console.log(`✅ Drill ${drill.id} successfully synced and removed from queue.`);
-
-        } catch (err) {
-          console.error(`❌ Failed to sync drill ${drill.id}:`, err);
-          // It stays in the queue to try again next time
-        }
+      } catch (e) {
+        console.error('Failed to pre-cache data', e);
       }
     };
 
-    // Run sync immediately when the app boots
-    processSyncQueue();
+    runSync();
 
-    // Also listen for network changes (e.g., turning off Airplane mode) and trigger sync
     const listener = Network.addListener('networkStatusChange', status => {
-      if (status.connected) {
-        processSyncQueue();
-      }
+      if (status.connected) runSync();
     });
 
     return () => { listener.then(l => l.remove()); };
@@ -176,22 +115,36 @@ function App() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Temporary bar with last commit message */}
-      <div style={{
-        backgroundColor: '#333',
-        color: 'white',
-        padding: '8px 10px',
-        fontSize: '12px',
-        textAlign: 'center',
-        zIndex: 9999,
-        lineHeight: '1.2',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '20px'
-      }}>
-        Last Commit Hash: 9e4a61b
-      </div>
+      {location.pathname === '/' && <ReviewFab />}
+      {location.pathname === '/' && (
+        <button
+          onClick={() => navigate('/profile')}
+          title={getUserToken() ? 'El teu perfil' : 'Crea el teu compte'}
+          style={{
+            position: 'fixed', top: '12px', right: '12px', zIndex: 900,
+            padding: '9px 14px', background: 'var(--surface)', color: 'var(--text)',
+            border: '1px solid var(--border)', borderRadius: 'var(--r-pill)',
+            fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)', cursor: 'pointer'
+          }}
+        >
+          👤 {getUserName() || 'Entra'}
+        </button>
+      )}
+      {location.pathname === '/' && (
+        <button
+          onClick={() => navigate('/corpus')}
+          title="Explora i revisa el corpus"
+          style={{
+            position: 'fixed', top: '12px', right: '110px', zIndex: 900,
+            padding: '9px 14px', background: 'var(--surface)', color: 'var(--text)',
+            border: '1px solid var(--border)', borderRadius: 'var(--r-pill)',
+            fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)', cursor: 'pointer'
+          }}
+        >
+          📖 Corpus
+        </button>
+      )}
+      <Suspense fallback={<RouteLoader />}>
       <Routes>
         <Route path="/" element={<DrillsResponsive />} />
         <Route path="/tests" element={<TestsDashboard onBackToDrills={() => navigate('/')} />} />
@@ -203,7 +156,10 @@ function App() {
         <Route path="/media-test" element={<MediaRecorderTest />} />
         <Route path="/demo-videos" element={<DemoVideosPage />} />
         <Route path="/library" element={<VideoLibraryPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/corpus" element={<CorpusPage />} />
       </Routes>
+      </Suspense>
     </div>
   );
 }

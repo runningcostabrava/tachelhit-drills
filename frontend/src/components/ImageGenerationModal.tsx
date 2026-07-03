@@ -31,25 +31,28 @@ export default function ImageGenerationModal({ isOpen, onClose, onGenerate, defa
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      backgroundColor: 'rgba(15, 23, 42, 0.7)',
+      backdropFilter: 'blur(6px)',
+      WebkitBackdropFilter: 'blur(6px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 10001
     }}>
-      <div style={{
-        backgroundColor: 'white',
-        padding: '30px',
-        borderRadius: '12px',
-        boxShadow: '0 5px 15px rgba(0,0,0,0.3)',
+      <div className="ds-scale-in" style={{
+        backgroundColor: 'var(--surface)',
+        padding: '32px',
+        borderRadius: 'var(--r-2xl)',
+        boxShadow: 'var(--shadow-xl)',
+        border: '1px solid var(--border)',
         width: '90%',
         maxWidth: '500px',
-        color: '#333'
+        color: 'var(--text)'
       }}>
-        <h2 style={{ marginTop: 0, marginBottom: '20px', fontSize: '24px', textAlign: 'center' }}>Generate Image</h2>
+        <h2 style={{ marginTop: 0, marginBottom: '24px', fontSize: '24px', textAlign: 'center' }}>Generate Image</h2>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '15px' }}>
-            <label htmlFor="searchQuery" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>
+            <label htmlFor="searchQuery" style={{ display: 'block', marginBottom: '8px', fontWeight: 700, color: 'var(--text-soft)' }}>
               Search Phrase:
             </label>
             <input
@@ -59,21 +62,23 @@ export default function ImageGenerationModal({ isOpen, onClose, onGenerate, defa
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 width: '100%',
-                padding: '10px',
-                border: '1px solid #ccc',
-                borderRadius: '8px',
-                fontSize: '16px',
+                padding: '12px 14px',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--r-md)',
+                fontSize: '15px',
+                background: 'var(--surface-2)',
+                color: 'var(--text)',
                 boxSizing: 'border-box'
               }}
               placeholder="Enter search phrase"
             />
-            <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
               (Catalan text will be auto-translated to English for AI/Pexels)
             </p>
           </div>
 
           <div style={{ marginBottom: '25px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700, color: 'var(--text-soft)' }}>
               Image Source:
             </label>
             <div style={{ display: 'flex', gap: '20px' }}>
@@ -107,14 +112,14 @@ export default function ImageGenerationModal({ isOpen, onClose, onGenerate, defa
               type="button"
               onClick={onClose}
               style={{
-                padding: '10px 20px',
-                background: '#ccc',
-                color: '#333',
-                border: 'none',
-                borderRadius: '8px',
+                padding: '12px 20px',
+                background: 'var(--surface)',
+                color: 'var(--text-soft)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--r-md)',
                 cursor: 'pointer',
-                fontSize: '16px',
-                fontWeight: 600
+                fontSize: '15px',
+                fontWeight: 700
               }}
             >
               Cancel
@@ -122,14 +127,15 @@ export default function ImageGenerationModal({ isOpen, onClose, onGenerate, defa
             <button
               type="submit"
               style={{
-                padding: '10px 20px',
-                background: '#667eea',
+                padding: '12px 22px',
+                background: 'var(--brand-gradient)',
                 color: 'white',
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: 'var(--r-md)',
                 cursor: 'pointer',
-                fontSize: '16px',
-                fontWeight: 600
+                fontSize: '15px',
+                fontWeight: 700,
+                boxShadow: 'var(--shadow-brand)'
               }}
             >
               Generate

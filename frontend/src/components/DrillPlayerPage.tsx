@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { Network } from '@capacitor/network';
 import { API_BASE } from '../config';
@@ -9,12 +9,21 @@ import DrillPlayer from './DrillPlayer';
 
 export default function DrillPlayerPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const reviewMode = searchParams.get('mode') === 'review';
   const [drills, setDrills] = useState<Drill[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchDrills = async () => {
       try {
+        if (reviewMode) {
+          // Spaced-repetition queue: due cards first, then new drills
+          const response = await axios.get(`${API_BASE}/reviews/due?limit=30`);
+          setDrills(response.data || []);
+          return;
+        }
+
         const status = await Network.getStatus();
         let allDrills: Drill[] = [];
 
@@ -42,7 +51,7 @@ export default function DrillPlayerPage() {
     };
 
     fetchDrills();
-  }, []);
+  }, [reviewMode]);
 
   if (loading) {
     return (
@@ -51,11 +60,20 @@ export default function DrillPlayerPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#f3f4f6'
+        background: 'var(--bg)',
+        fontFamily: 'var(--font-sans)'
       }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', marginBottom: '10px' }}>⏳</div>
-          <div>Loading Drills...</div>
+        <div style={{ textAlign: 'center', color: 'var(--text-soft)' }}>
+          <div style={{
+            width: '52px',
+            height: '52px',
+            margin: '0 auto 18px',
+            borderRadius: 'var(--r-pill)',
+            border: '4px solid var(--border)',
+            borderTopColor: 'var(--brand-1)',
+            animation: 'spin 0.9s linear infinite'
+          }} />
+          <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text)' }}>Loading drills…</div>
         </div>
       </div>
     );
@@ -68,27 +86,47 @@ export default function DrillPlayerPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#f3f4f6',
+        background: 'var(--bg)',
         padding: '20px',
-        textAlign: 'center'
+        textAlign: 'center',
+        fontFamily: 'var(--font-sans)'
       }}>
-        <div>
-          <div style={{ fontSize: '48px', marginBottom: '20px' }}>📭</div>
-          <h2 style={{ marginBottom: '10px' }}>No Drills Found</h2>
-          <p style={{ color: '#666', marginBottom: '20px' }}>Create some drills first to use the player.</p>
+        <div style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--r-2xl)',
+          boxShadow: 'var(--shadow-lg)',
+          padding: '40px 36px',
+          maxWidth: '420px'
+        }}>
+          <div style={{
+            width: '72px',
+            height: '72px',
+            margin: '0 auto 22px',
+            borderRadius: 'var(--r-xl)',
+            background: 'var(--brand-gradient-soft)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '36px'
+          }}>{reviewMode ? '🎉' : '📭'}</div>
+          <h2 style={{ margin: '0 0 10px', fontSize: '22px', fontWeight: 800, color: 'var(--text)' }}>{reviewMode ? 'Res per repassar!' : 'No drills found'}</h2>
+          <p style={{ color: 'var(--text-soft)', margin: '0 0 24px', fontSize: '15px', lineHeight: 1.5 }}>{reviewMode ? 'Has acabat el repàs d\'avui. Torna més tard o crea drills nous.' : 'Create some drills first to use the player.'}</p>
           <button
             onClick={() => navigate('/')}
             style={{
-              padding: '10px 20px',
-              background: '#4f46e5',
+              padding: '12px 28px',
+              background: 'var(--brand-gradient)',
               color: 'white',
               border: 'none',
-              borderRadius: '8px',
-              fontWeight: 'bold',
-              cursor: 'pointer'
+              borderRadius: 'var(--r-pill)',
+              fontWeight: 700,
+              fontSize: '15px',
+              cursor: 'pointer',
+              boxShadow: 'var(--shadow-brand)'
             }}
           >
-            Go Back
+            Go back
           </button>
         </div>
       </div>
@@ -99,6 +137,12 @@ export default function DrillPlayerPage() {
     <DrillPlayer
       drills={drills}
       onExit={() => navigate('/')}
+      reviewMode={reviewMode}
+      onGrade={
+        reviewMode
+          ? (drillId, grade) => axios.post(`${API_BASE}/reviews/${drillId}/grade`, { grade }).then(() => {})
+          : undefined
+      }
     />
   );
 }

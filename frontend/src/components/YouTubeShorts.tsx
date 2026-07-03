@@ -86,16 +86,22 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
   };
 
   if (loading) {
-    return <div style={{ padding: '40px', textAlign: 'center' }}>Carregant...</div>;
+    return (
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', background: 'var(--bg)', color: 'var(--text-soft)' }}>
+        <div style={{ width: '40px', height: '40px', border: '4px solid var(--border)', borderTopColor: 'var(--brand-1)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <p style={{ margin: 0, fontWeight: 600 }}>Carregant...</p>
+      </div>
+    );
   }
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
       {/* Header */}
       <div style={{
-        padding: '16px',
-        background: 'linear-gradient(135deg, #FF0080 0%, #FF8C00 100%)',
-        borderBottom: '2px solid #FF0080',
+        padding: '20px 24px',
+        background: 'var(--brand-gradient)',
+        borderRadius: '0 0 var(--r-2xl) var(--r-2xl)',
+        boxShadow: 'var(--shadow-brand)',
         display: 'flex',
         alignItems: 'center',
         gap: '16px'
@@ -105,10 +111,10 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
           style={{
             padding: '8px 16px',
             fontSize: '14px',
-            background: 'rgba(255,255,255,0.2)',
+            background: 'rgba(255,255,255,0.18)',
             color: 'white',
-            border: '1px solid white',
-            borderRadius: '6px',
+            border: '1px solid rgba(255,255,255,0.4)',
+            borderRadius: 'var(--r-pill)',
             cursor: 'pointer',
             fontWeight: 600,
           }}
@@ -118,14 +124,20 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
         <h1 style={{
           margin: 0,
           fontSize: '24px',
-          fontWeight: 700,
+          fontWeight: 800,
           color: 'white',
-          letterSpacing: '0.5px'
         }}>
           📱 YouTube Shorts
         </h1>
-        <span style={{ color: 'white', fontSize: '16px' }}>
-          ({shorts.length} shorts generats)
+        <span style={{
+          color: 'white',
+          fontSize: '13px',
+          fontWeight: 700,
+          background: 'rgba(255,255,255,0.18)',
+          padding: '4px 12px',
+          borderRadius: 'var(--r-pill)',
+        }}>
+          {shorts.length} shorts generats
         </span>
       </div>
 
@@ -133,13 +145,13 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
         {/* Left: Drills list for generation */}
         <div style={{
           width: '350px',
-          borderRight: '1px solid #e0e0e0',
+          borderRight: '1px solid var(--border)',
           overflowY: 'auto',
           padding: '20px',
-          background: '#f8f9fa'
+          background: 'var(--surface-2)'
         }}>
-          <h3 style={{ marginTop: 0 }}>Generar Shorts</h3>
-          <p style={{ fontSize: '13px', color: '#666', marginBottom: '20px' }}>
+          <h3 style={{ marginTop: 0, fontSize: '17px' }}>Generar Shorts</h3>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
             Selecciona un drill per generar un YouTube Short
           </p>
 
@@ -149,42 +161,46 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
               <div
                 key={drill.id}
                 style={{
-                  padding: '12px',
-                  background: 'white',
-                  borderRadius: '8px',
+                  padding: '14px',
+                  background: 'var(--surface)',
+                  borderRadius: 'var(--r-lg)',
                   marginBottom: '12px',
-                  border: hasShort ? '2px solid #4CAF50' : '1px solid #e0e0e0'
+                  border: hasShort ? '1.5px solid var(--emerald)' : '1px solid var(--border)',
+                  boxShadow: 'var(--shadow-xs)',
                 }}
               >
-                <div style={{ marginBottom: '8px' }}>
-                  <strong style={{ fontSize: '14px' }}>{drill.text_catalan}</strong>
+                <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <strong style={{ fontSize: '14px', color: 'var(--text)' }}>{drill.text_catalan}</strong>
                   {hasShort && (
                     <span style={{
-                      marginLeft: '8px',
-                      fontSize: '12px',
-                      color: '#4CAF50',
-                      fontWeight: 'bold'
+                      fontSize: '11px',
+                      color: 'var(--emerald)',
+                      fontWeight: 700,
+                      background: 'var(--emerald-soft)',
+                      padding: '2px 8px',
+                      borderRadius: 'var(--r-pill)',
                     }}>
                       ✓ Generat
                     </span>
                   )}
                 </div>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-soft)', marginBottom: '10px', fontFamily: 'var(--font-tifinagh)' }}>
                   {drill.text_tachelhit}
                 </div>
                 <button
                   onClick={() => handleGenerateShort(drill.id)}
                   disabled={generating === drill.id}
                   style={{
-                    padding: '6px 12px',
-                    fontSize: '12px',
-                    background: generating === drill.id ? '#ccc' : '#FF0080',
+                    padding: '8px 12px',
+                    fontSize: '13px',
+                    background: generating === drill.id ? 'var(--border)' : 'var(--brand-gradient)',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '4px',
+                    borderRadius: 'var(--r-md)',
                     cursor: generating === drill.id ? 'not-allowed' : 'pointer',
-                    fontWeight: 600,
-                    width: '100%'
+                    fontWeight: 700,
+                    width: '100%',
+                    boxShadow: generating === drill.id ? 'none' : 'var(--shadow-brand)',
                   }}
                 >
                   {generating === drill.id ? '⏳ Generant...' : '🎬 Generar Short'}
@@ -197,30 +213,34 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
         {/* Middle: Shorts list */}
         <div style={{
           width: '400px',
-          borderRight: '1px solid #e0e0e0',
+          borderRight: '1px solid var(--border)',
           overflowY: 'auto',
-          padding: '20px'
+          padding: '20px',
+          background: 'var(--bg)'
         }}>
-          <h3 style={{ marginTop: 0 }}>Shorts Generats</h3>
+          <h3 style={{ marginTop: 0, fontSize: '17px' }}>Shorts Generats</h3>
 
           {error && (
-            <div style={{ 
-              padding: '12px', 
-              background: '#ffebee', 
-              color: '#c62828', 
-              borderRadius: '8px',
+            <div style={{
+              padding: '12px 14px',
+              background: 'var(--rose-soft)',
+              color: 'var(--rose)',
+              borderRadius: 'var(--r-md)',
+              border: '1px solid var(--rose)',
               marginBottom: '16px'
             }}>
               <strong>Error:</strong> {error}
-              <button 
+              <button
                 onClick={() => setError(null)}
-                style={{ 
-                  marginLeft: '8px', 
-                  background: 'transparent', 
-                  border: 'none', 
-                  color: '#c62828',
+                style={{
+                  marginLeft: '8px',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--rose)',
                   cursor: 'pointer',
-                  textDecoration: 'underline'
+                  textDecoration: 'underline',
+                  padding: 0,
+                  fontSize: '13px',
                 }}
               >
                 Dismiss
@@ -229,9 +249,10 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
           )}
 
           {shorts.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
-              <p>Cap short generat encara</p>
-              <p style={{ fontSize: '13px' }}>Selecciona un drill a l'esquerra per començar</p>
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', background: 'var(--surface)', border: '1px dashed var(--border-strong)', borderRadius: 'var(--r-xl)' }}>
+              <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎞️</div>
+              <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: 'var(--text-soft)' }}>Cap short generat encara</p>
+              <p style={{ fontSize: '13px', margin: 0 }}>Selecciona un drill a l'esquerra per començar</p>
             </div>
           ) : (
             shorts.map(short => (
@@ -240,23 +261,24 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
                 onClick={() => setSelectedVideo(short)}
                 style={{
                   padding: '16px',
-                  border: selectedVideo?.id === short.id ? '2px solid #FF0080' : '1px solid #e0e0e0',
-                  borderRadius: '8px',
+                  border: selectedVideo?.id === short.id ? '1.5px solid var(--brand-1)' : '1px solid var(--border)',
+                  borderRadius: 'var(--r-lg)',
                   marginBottom: '12px',
                   cursor: 'pointer',
-                  background: selectedVideo?.id === short.id ? '#fff0f8' : 'white',
+                  background: selectedVideo?.id === short.id ? 'var(--brand-gradient-soft)' : 'var(--surface)',
+                  boxShadow: 'var(--shadow-xs)',
                   transition: 'all 0.2s'
                 }}
               >
                 <div style={{ marginBottom: '8px' }}>
-                  <strong style={{ fontSize: '15px', color: '#333' }}>
+                  <strong style={{ fontSize: '15px', color: 'var(--text)' }}>
                     {short.text_catalan}
                   </strong>
                 </div>
-                <div style={{ fontSize: '13px', color: '#666', marginBottom: '8px' }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-soft)', marginBottom: '8px', fontFamily: 'var(--font-tifinagh)' }}>
                   {short.text_tachelhit}
                 </div>
-                <div style={{ fontSize: '12px', color: '#999', marginBottom: '12px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
                   {new Date(short.date_created).toLocaleString('ca-ES')}
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -267,14 +289,14 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
                     }}
                     style={{
                       flex: 1,
-                      padding: '6px 12px',
-                      fontSize: '12px',
-                      background: '#2196F3',
+                      padding: '8px 12px',
+                      fontSize: '13px',
+                      background: 'var(--sky)',
                       color: 'white',
                       border: 'none',
-                      borderRadius: '4px',
+                      borderRadius: 'var(--r-md)',
                       cursor: 'pointer',
-                      fontWeight: 600,
+                      fontWeight: 700,
                     }}
                   >
                     ▶ Veure
@@ -285,14 +307,14 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
                       handleDeleteShort(short.id);
                     }}
                     style={{
-                      padding: '6px 12px',
-                      fontSize: '12px',
-                      background: '#ff4444',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
+                      padding: '8px 12px',
+                      fontSize: '13px',
+                      background: 'var(--rose-soft)',
+                      color: 'var(--rose)',
+                      border: '1px solid var(--rose)',
+                      borderRadius: 'var(--r-md)',
                       cursor: 'pointer',
-                      fontWeight: 600,
+                      fontWeight: 700,
                     }}
                   >
                     🗑 Eliminar
@@ -304,25 +326,27 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
         </div>
 
         {/* Right: Video player */}
-        <div style={{ flex: 1, padding: '30px', background: '#f8f9fa' }}>
+        <div style={{ flex: 1, padding: '30px', background: 'var(--surface-2)', overflowY: 'auto' }}>
           {selectedVideo ? (
             <div>
-              <h2 style={{ marginTop: 0 }}>Preview del Short</h2>
+              <h2 style={{ marginTop: 0, fontSize: '22px' }}>Preview del Short</h2>
 
               <div style={{
                 marginBottom: '20px',
-                padding: '16px',
-                background: 'white',
-                borderRadius: '8px'
+                padding: '18px',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--r-xl)',
+                boxShadow: 'var(--shadow-sm)',
               }}>
-                <div style={{ marginBottom: '8px' }}>
-                  <strong>Català:</strong> {selectedVideo.text_catalan}
+                <div style={{ marginBottom: '8px', color: 'var(--text)' }}>
+                  <strong style={{ color: 'var(--text-soft)' }}>Català:</strong> {selectedVideo.text_catalan}
                 </div>
-                <div style={{ marginBottom: '8px' }}>
-                  <strong>Tachelhit:</strong> {selectedVideo.text_tachelhit}
+                <div style={{ marginBottom: '8px', color: 'var(--text)', fontFamily: 'var(--font-tifinagh)' }}>
+                  <strong style={{ color: 'var(--text-soft)', fontFamily: 'var(--font-sans)' }}>Tachelhit:</strong> {selectedVideo.text_tachelhit}
                 </div>
-                <div style={{ marginBottom: '8px' }}>
-                  <strong>العربية:</strong> {selectedVideo.text_arabic}
+                <div style={{ marginBottom: '8px', color: 'var(--text)' }}>
+                  <strong style={{ color: 'var(--text-soft)' }}>العربية:</strong> {selectedVideo.text_arabic}
                 </div>
               </div>
 
@@ -331,16 +355,16 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
                 display: 'flex',
                 justifyContent: 'center',
                 background: '#000',
-                borderRadius: '16px',
+                borderRadius: 'var(--r-xl)',
                 padding: '20px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                boxShadow: 'var(--shadow-lg)'
               }}>
                 <div style={{
                   position: 'relative',
                   width: '360px',
                   maxWidth: '100%',
                   aspectRatio: '9/16',
-                  borderRadius: '12px',
+                  borderRadius: 'var(--r-md)',
                   overflow: 'hidden',
                   boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
                 }}>
@@ -377,13 +401,13 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
                     alignItems: 'center',
                     gap: '8px',
                     padding: '12px 24px',
-                    background: 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
+                    background: 'var(--emerald)',
                     color: 'white',
                     textDecoration: 'none',
-                    borderRadius: '10px',
+                    borderRadius: 'var(--r-md)',
                     fontWeight: 700,
                     fontSize: '14px',
-                    boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)'
+                    boxShadow: 'var(--shadow-md)'
                   }}
                 >
                   <span style={{ fontSize: '18px' }}>⬇</span>
@@ -408,14 +432,14 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
                     alignItems: 'center',
                     gap: '8px',
                     padding: '12px 24px',
-                    background: 'linear-gradient(135deg, #FF0000 0%, #CC0000 100%)',
+                    background: 'var(--rose)',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '10px',
+                    borderRadius: 'var(--r-md)',
                     fontWeight: 700,
                     fontSize: '14px',
                     cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(255, 0, 0, 0.3)'
+                    boxShadow: 'var(--shadow-md)'
                   }}
                 >
                   <span style={{ fontSize: '18px' }}>📤</span>
@@ -433,14 +457,14 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
                     alignItems: 'center',
                     gap: '8px',
                     padding: '12px 24px',
-                    background: 'linear-gradient(135deg, #1DA1F2 0%, #0d8bd9 100%)',
+                    background: 'var(--sky)',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '10px',
+                    borderRadius: 'var(--r-md)',
                     fontWeight: 700,
                     fontSize: '14px',
                     cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(29, 161, 242, 0.3)'
+                    boxShadow: 'var(--shadow-md)'
                   }}
                 >
                   <span style={{ fontSize: '18px' }}>🐦</span>
@@ -449,8 +473,9 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
               </div>
             </div>
           ) : (
-            <div style={{ textAlign: 'center', padding: '60px', color: '#999' }}>
-              <p style={{ fontSize: '18px' }}>Selecciona un short per veure'l</p>
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}>📺</div>
+              <p style={{ fontSize: '17px', fontWeight: 600, color: 'var(--text-soft)' }}>Selecciona un short per veure'l</p>
             </div>
           )}
         </div>

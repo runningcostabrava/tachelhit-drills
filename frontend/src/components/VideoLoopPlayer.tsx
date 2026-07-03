@@ -23,13 +23,15 @@ export default function VideoLoopPlayer({ videoUrl, onBack }: VideoLoopPlayerPro
         <button
           onClick={onBack}
           style={{
-            padding: '10px 20px',
-            fontSize: '16px',
-            background: '#333',
+            padding: '11px 20px',
+            fontSize: '15px',
+            fontWeight: 700,
+            background: 'var(--brand-gradient)',
             color: 'white',
-            border: '1px solid white',
-            borderRadius: '8px',
-            cursor: 'pointer'
+            border: 'none',
+            borderRadius: 'var(--r-pill)',
+            cursor: 'pointer',
+            boxShadow: 'var(--shadow-brand)'
           }}
         >
           ← Back to Dashboard
@@ -39,7 +41,10 @@ export default function VideoLoopPlayer({ videoUrl, onBack }: VideoLoopPlayerPro
         width: '100%',
         maxWidth: '1280px',
         aspectRatio: '16 / 9',
-        background: '#000'
+        background: '#000',
+        borderRadius: 'var(--r-xl)',
+        overflow: 'hidden',
+        boxShadow: 'var(--shadow-xl)'
       }}>
         <video
           key={videoUrl} // Use key to force re-render if URL changes
@@ -50,7 +55,7 @@ export default function VideoLoopPlayer({ videoUrl, onBack }: VideoLoopPlayerPro
           style={{
             width: '100%',
             height: '100%',
-            borderRadius: '8px'
+            borderRadius: 'var(--r-xl)'
           }}
         >
           Your browser does not support the video tag.

@@ -48,6 +48,27 @@ interface TestEditPanelProps {
   onTestUpdated: () => void;
 }
 
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  marginBottom: '8px',
+  fontWeight: 600,
+  fontSize: '13px',
+  color: 'var(--text-soft)',
+};
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '11px 14px',
+  fontSize: '14px',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--r-md)',
+  backgroundColor: 'var(--surface-2)',
+  color: 'var(--text)',
+  fontFamily: 'var(--font-sans)',
+  outline: 'none',
+  boxSizing: 'border-box',
+};
+
 // SortableItem component for drag and drop
 function SortableItem({ drill, index, onRemove }: { drill: Drill; index: number; onRemove: (id: number) => void }) {
   const {
@@ -71,28 +92,33 @@ function SortableItem({ drill, index, onRemove }: { drill: Drill; index: number;
       style={{
         ...style,
         userSelect: 'none',
-        padding: '8px',
-        margin: '0 0 8px 0',
+        padding: '10px 12px',
+        margin: '0 0 6px 0',
         minHeight: '30px',
-        backgroundColor: 'white',
-        border: '1px solid #ddd',
-        borderRadius: '4px',
+        backgroundColor: 'var(--surface-2)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--r-md)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+        gap: '10px',
+        boxShadow: isDragging ? 'var(--shadow-md)' : 'var(--shadow-xs)',
         cursor: 'grab',
       }}
       {...attributes}
       {...listeners}
     >
-      <span>{index + 1}. {drill.text_catalan} ({drill.id})</span>
+      <span style={{ fontSize: '14px', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ color: 'var(--text-muted)' }}>⠿</span>
+        <span><span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{index + 1}.</span> {drill.text_catalan}
+        <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}> (#{drill.id})</span></span>
+      </span>
       <button
         onClick={(e) => {
           e.stopPropagation();
           onRemove(drill.id);
         }}
-        style={{ background: '#ff4444', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}
+        style={{ background: 'var(--rose-soft)', color: 'var(--rose)', border: 'none', borderRadius: 'var(--r-sm)', padding: '5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
       >
         Remove
       </button>
@@ -234,13 +260,16 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.7)',
+        backgroundColor: 'rgba(15,23,42,0.7)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 10000,
+        fontFamily: 'var(--font-sans)',
       }}>
-        <div style={{ color: 'white', fontSize: '18px' }}>Loading test...</div>
+        <div style={{ color: 'white', fontSize: '16px', fontWeight: 600 }}>Loading test...</div>
       </div>
     );
   }
@@ -252,24 +281,52 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.7)',
+      backgroundColor: 'rgba(15,23,42,0.7)',
+      backdropFilter: 'blur(6px)',
+      WebkitBackdropFilter: 'blur(6px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 10000,
+      padding: '20px',
+      fontFamily: 'var(--font-sans)',
     }}>
       <div style={{
-        backgroundColor: 'white',
-        padding: '30px',
-        borderRadius: '12px',
+        backgroundColor: 'var(--surface)',
+        padding: '28px',
+        borderRadius: 'var(--r-2xl)',
         width: '700px', // Increased width
+        maxWidth: '100%',
         maxHeight: '90vh',
         overflow: 'auto',
+        boxShadow: 'var(--shadow-xl)',
+        border: '1px solid var(--border)',
       }}>
-        <h2 style={{ marginTop: 0, marginBottom: '20px' }}>Edit Test Configuration</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '22px' }}>
+          <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>
+            Edit Test
+          </h2>
+          <button
+            onClick={onClose}
+            aria-label='Close'
+            style={{
+              border: 'none',
+              background: 'var(--surface-2)',
+              color: 'var(--text-soft)',
+              width: '34px',
+              height: '34px',
+              borderRadius: 'var(--r-pill)',
+              cursor: 'pointer',
+              fontSize: '18px',
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+        <div style={{ marginBottom: '16px' }}>
+          <label style={labelStyle}>
             Test Title *
           </label>
           <input
@@ -277,18 +334,12 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
             value={config.title}
             onChange={(e) => setConfig({ ...config, title: e.target.value })}
             placeholder='e.g., Basic Greetings Test'
-            style={{
-              width: '100%',
-              padding: '8px',
-              fontSize: '14px',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-            }}
+            style={inputStyle}
           />
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+        <div style={{ marginBottom: '16px' }}>
+          <label style={labelStyle}>
             Description
           </label>
           <textarea
@@ -296,30 +347,18 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
             onChange={(e) => setConfig({ ...config, description: e.target.value })}
             placeholder='Optional description'
             rows={3}
-            style={{
-              width: '100%',
-              padding: '8px',
-              fontSize: '14px',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-            }}
+            style={{ ...inputStyle, resize: 'vertical' }}
           />
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+        <div style={{ marginBottom: '16px' }}>
+          <label style={labelStyle}>
             Question Type
           </label>
           <select
             value={config.question_type}
             onChange={(e) => setConfig({ ...config, question_type: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '8px',
-              fontSize: '14px',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-            }}
+            style={inputStyle}
           >
             <option value='text_input'>Text Input - Student writes Tachelhit</option>
             <option value='audio'>Audio Recognition - Listen and write</option>
@@ -329,20 +368,14 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
         </div>
 
         {/* New Playback Direction Field */}
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+        <div style={{ marginBottom: '16px' }}>
+          <label style={labelStyle}>
             Playback Direction
           </label>
           <select
             value={config.playback_direction}
             onChange={(e) => setConfig({ ...config, playback_direction: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '8px',
-              fontSize: '14px',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-            }}
+            style={inputStyle}
           >
             <option value='cat-tash'>Catalan (Question) → Tachelhit (Answer)</option>
             <option value='tash-cat'>Tachelhit (Question) → Catalan (Answer)</option>
@@ -351,20 +384,14 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
           </select>
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+        <div style={{ marginBottom: '16px' }}>
+          <label style={labelStyle}>
             Hint Level
           </label>
           <select
             value={config.hint_level}
             onChange={(e) => setConfig({ ...config, hint_level: e.target.value })}
-            style={{
-              width: '100%',
-              padding: '8px',
-              fontSize: '14px',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-            }}
+            style={inputStyle}
           >
             <option value='none'>No Hints</option>
             <option value='partial'>Partial Letters (%)</option>
@@ -373,9 +400,9 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
         </div>
 
         {config.hint_level === 'partial' && (
-          <div style={{ marginBottom: '15px', marginLeft: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
-              Percentage of letters to reveal: {config.hint_percentage}%
+          <div style={{ marginBottom: '16px', marginLeft: '4px', padding: '14px 16px', background: 'var(--brand-gradient-soft)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
+            <label style={{ ...labelStyle, marginBottom: '10px', color: 'var(--text)' }}>
+              Percentage of letters to reveal: <span style={{ color: 'var(--brand-1)', fontWeight: 700 }}>{config.hint_percentage}%</span>
             </label>
             <input
               type='range'
@@ -383,14 +410,14 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
               max='80'
               value={config.hint_percentage}
               onChange={(e) => setConfig({ ...config, hint_percentage: parseInt(e.target.value) })}
-              style={{ width: '100%' }}
+              style={{ width: '100%', accentColor: 'var(--brand-1)' }}
             />
           </div>
         )}
 
         {config.hint_level === 'full_after_tries' && (
-          <div style={{ marginBottom: '15px', marginLeft: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
+          <div style={{ marginBottom: '16px', marginLeft: '4px', padding: '14px 16px', background: 'var(--brand-gradient-soft)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
+            <label style={{ ...labelStyle, marginBottom: '10px', color: 'var(--text)' }}>
               Number of tries before revealing:
             </label>
             <input
@@ -399,19 +426,13 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
               max='10'
               value={config.hint_tries_before_reveal}
               onChange={(e) => setConfig({ ...config, hint_tries_before_reveal: parseInt(e.target.value) })}
-              style={{
-                padding: '8px',
-                fontSize: '14px',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                width: '100px',
-              }}
+              style={{ ...inputStyle, width: '110px' }}
             />
           </div>
         )}
 
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+        <div style={{ marginBottom: '16px' }}>
+          <label style={labelStyle}>
             Time Limit (seconds per question, 0 = no limit)
           </label>
           <input
@@ -419,19 +440,13 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
             min='0'
             value={config.time_limit_seconds}
             onChange={(e) => setConfig({ ...config, time_limit_seconds: parseInt(e.target.value) })}
-            style={{
-              padding: '8px',
-              fontSize: '14px',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-              width: '150px',
-            }}
+            style={{ ...inputStyle, width: '160px' }}
           />
         </div>
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-            Passing Score (%): {config.passing_score}%
+        <div style={{ marginBottom: '20px', padding: '14px 16px', background: 'var(--emerald-soft)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
+          <label style={{ ...labelStyle, marginBottom: '10px', color: 'var(--text)' }}>
+            Passing Score: <span style={{ color: 'var(--emerald)', fontWeight: 700 }}>{config.passing_score}%</span>
           </label>
           <input
             type='range'
@@ -439,13 +454,26 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
             max='100'
             value={config.passing_score}
             onChange={(e) => setConfig({ ...config, passing_score: parseInt(e.target.value) })}
-            style={{ width: '100%' }}
+            style={{ width: '100%', accentColor: 'var(--emerald)' }}
           />
         </div>
 
         {/* Drill Management Section - Updated */}
-        <div style={{ marginBottom: '20px', border: '1px solid #e0e0e0', borderRadius: '8px', padding: '15px' }}>
-          <h3 style={{ marginTop: '0', marginBottom: '15px', fontSize: '18px' }}>Manage Drills ({selectedDrills.length})</h3>
+        <div style={{ marginBottom: '24px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', padding: '18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text)' }}>Manage Drills</h3>
+            <span style={{
+              background: 'var(--brand-gradient-soft)',
+              color: 'var(--brand-1)',
+              fontSize: '12px',
+              fontWeight: 700,
+              padding: '2px 10px',
+              borderRadius: 'var(--r-pill)',
+            }}>
+              {selectedDrills.length}
+            </span>
+            <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-muted)' }}>Drag to reorder</span>
+          </div>
 
           <DndContext
             sensors={sensors}
@@ -456,9 +484,9 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
               items={selectedDrills.map(d => d.id)}
               strategy={verticalListSortingStrategy}
             >
-              <div style={{ marginBottom: '15px', maxHeight: '250px', overflowY: 'auto', border: '1px solid #f0f0f0', borderRadius: '4px', padding: '10px' }}>
+              <div style={{ marginBottom: '14px', maxHeight: '250px', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '8px' }}>
                 {selectedDrills.length === 0 ? (
-                  <p style={{ color: '#888', textAlign: 'center', padding: '20px' }}>No drills selected for this test.</p>
+                  <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px', margin: 0, fontSize: '13px' }}>No drills selected for this test.</p>
                 ) : (
                   selectedDrills.map((drill, index) => (
                     <SortableItem
@@ -474,32 +502,34 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
           </DndContext>
 
           {/* Add new drills section */}
-          <div style={{ marginBottom: '10px', paddingTop: '10px', borderTop: '1px dashed #e0e0e0' }}>
-            <h4 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>Add Drills:</h4>
+          <div style={{ paddingTop: '14px', borderTop: '1px solid var(--border)' }}>
+            <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 600, color: 'var(--text-soft)' }}>Add Drills</h4>
             <input
               type='text' // Changed to text for search
               placeholder='Search by ID or text...'
               value={drillSearchTerm}
               onChange={(e) => setDrillSearchTerm(e.target.value)}
-              style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px', width: 'calc(100% - 80px)' }}
+              style={inputStyle}
             />
-            <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #f0f0f0', borderRadius: '4px', marginTop: '10px', padding: '5px' }}>
+            <div style={{ maxHeight: '150px', overflowY: 'auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', marginTop: '10px', padding: '6px' }}>
               {drillSearchTerm.length > 0 && filteredAvailableDrills.length > 0 ? (
                 filteredAvailableDrills.map(drill => (
-                  <div key={drill.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px dotted #eee' }}>
-                    <span>{drill.id}. {drill.text_catalan}</span>
+                  <div key={drill.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', padding: '8px 10px', borderRadius: 'var(--r-sm)', marginBottom: '4px', background: 'var(--surface-2)' }}>
+                    <span style={{ fontSize: '14px', color: 'var(--text)' }}>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>#{drill.id}</span> {drill.text_catalan}
+                    </span>
                     <button
                       onClick={() => handleAddDrill(drill)}
-                      style={{ background: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer' }}
+                      style={{ background: 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-sm)', padding: '5px 14px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, boxShadow: 'var(--shadow-brand)' }}
                     >
                       Add
                     </button>
                   </div>
                 ))
               ) : drillSearchTerm.length > 0 ? (
-                <p style={{ color: '#888', textAlign: 'center', padding: '10px' }}>No matching drills found.</p>
+                <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '12px', margin: 0, fontSize: '13px' }}>No matching drills found.</p>
               ) : (
-                <p style={{ color: '#888', textAlign: 'center', padding: '10px' }}>Type to search available drills.</p>
+                <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '12px', margin: 0, fontSize: '13px' }}>Type to search available drills.</p>
               )}
             </div>
           </div>
@@ -509,12 +539,14 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
           <button
             onClick={onClose}
             style={{
-              padding: '10px 20px',
+              padding: '11px 22px',
               fontSize: '14px',
-              border: '1px solid #ccc',
-              borderRadius: '4px',
-              backgroundColor: 'white',
+              border: '1px solid var(--border-strong)',
+              borderRadius: 'var(--r-md)',
+              backgroundColor: 'var(--surface)',
+              color: 'var(--text-soft)',
               cursor: 'pointer',
+              fontWeight: 600,
             }}
           >
             Cancel
@@ -522,14 +554,15 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
           <button
             onClick={handleUpdate}
             style={{
-              padding: '10px 20px',
+              padding: '11px 26px',
               fontSize: '14px',
               border: 'none',
-              borderRadius: '4px',
-              backgroundColor: '#2196F3',
+              borderRadius: 'var(--r-md)',
+              background: 'var(--brand-gradient)',
               color: 'white',
               cursor: 'pointer',
-              fontWeight: 'bold',
+              fontWeight: 700,
+              boxShadow: 'var(--shadow-brand)',
             }}
           >
             Update Test

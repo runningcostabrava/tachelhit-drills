@@ -141,6 +141,42 @@ def download_video_from_url(url: str, drill_id: int) -> str:
         else:
             raise Exception("Failed to download video file")
 
+def download_video_to_dir(url: str, dest_dir: str, cookies_str: Optional[str] = None, audio_only: bool = False) -> Tuple[str, Dict[str, Any]]:
+    """
+    Download media from any yt-dlp-supported site (YouTube, Instagram, TikTok,
+    podcasts, ...) into dest_dir. Returns (local_file_path, info_dict).
+    Video is capped at 720p to keep files small enough for ASR and clipping on
+    Render; audio_only grabs the best audio track (podcasts, voice content).
+    """
+    outtmpl = os.path.join(dest_dir, "source.%(ext)s")
+    ydl_opts = {
+        'format': 'ba[ext=m4a]/ba/b' if audio_only
+                  else 'bv*[height<=720][ext=mp4]+ba[ext=m4a]/b[height<=720][ext=mp4]/b',
+        'outtmpl': outtmpl,
+        'noplaylist': True,
+        'quiet': False,
+        'nocheckcertificate': True,
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'referer': 'https://www.google.com/',
+    }
+    if not audio_only:
+        ydl_opts['merge_output_format'] = 'mp4'
+
+    with get_yt_dlp_cookie_file(cookies_str) as cookie_file:
+        if cookie_file:
+            ydl_opts['cookiefile'] = cookie_file
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+
+    for name in os.listdir(dest_dir):
+        if name.startswith("source."):
+            path = os.path.join(dest_dir, name)
+            print(f"[VIDEO_UTILS] Downloaded {url} -> {path} ({os.path.getsize(path)} bytes)")
+            return path, info or {}
+
+    raise Exception("Download finished but no output file was produced")
+
 def parse_vtt(vtt_content: str) -> List[Dict[str, Any]]:
     """
     Minimalistic VTT parser to extract start, end, and text.
@@ -236,6 +272,36 @@ def get_video_segments(url: str, lang: str = 'en', cookies_str: str = None) -> L
                 print(f"[VIDEO_UTILS] Error in getting segments: {e}")
                 return []
 
+AUDIO_EXTENSIONS = {'.mp3', '.m4a', '.wav', '.ogg', '.opus', '.aac', '.flac'}
+
+def is_audio_file(path: str) -> bool:
+    return os.path.splitext(path)[1].lower() in AUDIO_EXTENSIONS
+
+def process_and_upload_audio_segment(
+    audio_path: str,
+    start: float,
+    end: float,
+    drill_id: int
+) -> Dict[str, str]:
+    """
+    Clip an audio segment and upload it to Cloudinary. The audio counterpart of
+    process_and_upload_segment for podcast / voice-note sources.
+    """
+    from moviepy.audio.io.AudioFileClip import AudioFileClip
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        clip_path = os.path.join(tmp_dir, f"audio_clip_{drill_id}.mp3")
+        with AudioFileClip(audio_path) as audio:
+            sub = audio.subclipped(max(0, start - 0.1), min(audio.duration, end + 0.1))
+            sub.write_audiofile(clip_path, logger=None)
+
+        result = cloudinary.uploader.upload(
+            clip_path,
+            folder="tachelhit/audio_segments",
+            resource_type="video"  # Cloudinary stores audio under the video resource type
+        )
+        return {"audio_url": result['secure_url']}
+
 def remote_process_and_upload_segment(
     source_url: str, 
     start: float, 
@@ -315,7 +381,7 @@ def process_and_upload_segment(
         thumb_path = os.path.join(tmp_dir, f"thumb_{drill_id}.jpg")
         
         video = VideoFileClip(video_path)
-        subclip = video.subclip(max(0, start - 0.2), min(video.duration, end + 0.2))
+        subclip = video.subclipped(max(0, start - 0.2), min(video.duration, end + 0.2))
         subclip.write_videofile(clip_path, codec="libx264", audio_codec="aac", logger=None)
         
         midpoint = (start + end) / 2 - start

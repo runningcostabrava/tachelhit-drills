@@ -174,7 +174,29 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
   };
 
   if (loading) {
-    return <div style={{ padding: '40px', textAlign: 'center' }}>Loading tests...</div>;
+    return (
+      <div style={{
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '16px',
+        background: 'var(--bg)',
+        color: 'var(--text-soft)',
+        fontFamily: 'var(--font-sans)'
+      }}>
+        <div className="spinner" style={{
+          border: '4px solid var(--border)',
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          borderLeftColor: 'var(--brand-1)',
+          animation: 'spin 1s linear infinite'
+        }}></div>
+        <p style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Loading tests…</p>
+      </div>
+    );
   }
 
   // If taking a test, show the test-taking interface
@@ -210,42 +232,86 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
   }
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', fontFamily: 'var(--font-sans)' }}>
       {/* Header */}
       <div style={{
-        padding: '16px',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        borderBottom: '2px solid #5a67d8',
+        padding: '20px 24px 26px',
+        background: 'var(--brand-gradient)',
+        borderBottomLeftRadius: '26px',
+        borderBottomRightRadius: '26px',
+        boxShadow: 'var(--shadow-brand)',
         display: 'flex',
         alignItems: 'center',
-        gap: '16px'
+        gap: '16px',
+        flexWrap: 'wrap'
       }}>
         <button
           onClick={onBackToDrills}
           style={{
-            padding: '8px 16px',
+            padding: '9px 16px',
             fontSize: '14px',
-            background: 'rgba(255,255,255,0.2)',
+            background: 'rgba(255,255,255,0.18)',
             color: 'white',
-            border: '1px solid white',
-            borderRadius: '6px',
+            border: '1px solid rgba(255,255,255,0.55)',
+            borderRadius: 'var(--r-pill)',
             cursor: 'pointer',
-            fontWeight: 600,
+            fontWeight: 700,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            backdropFilter: 'blur(4px)'
           }}
         >
           ← Back to Drills
         </button>
-        <h1 style={{
-          margin: 0,
-          fontSize: '24px',
-          fontWeight: 700,
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          <h1 style={{
+            margin: 0,
+            fontSize: '24px',
+            fontWeight: 800,
+            color: 'white',
+            letterSpacing: '-0.02em'
+          }}>
+            Tests Dashboard
+          </h1>
+          <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: '14px', fontWeight: 500 }}>
+            Manage tests, generate demo videos and start practice
+          </span>
+        </div>
+        <button
+          onClick={async () => {
+            try {
+              const res = await axios.post(`${API_BASE}/tests/from-weakest`, { count: 10 });
+              await fetchTests();
+              alert(`💪 ${res.data.title}: ${res.data.drill_count} preguntes creades amb les teves targetes més difícils!`);
+            } catch (e: any) {
+              alert(e?.response?.data?.detail || 'No s\'ha pogut crear el test');
+            }
+          }}
+          title="Crea un test automàtic amb les teves targetes més difícils (SRS)"
+          style={{
+            marginLeft: 'auto',
+            padding: '8px 16px',
+            background: 'rgba(255,255,255,0.18)',
+            color: 'white',
+            border: '1px solid rgba(255,255,255,0.4)',
+            borderRadius: 'var(--r-pill)',
+            fontWeight: 700,
+            fontSize: '13px',
+            cursor: 'pointer'
+          }}
+        >
+          💪 Test dels punts febles
+        </button>
+        <span style={{
           color: 'white',
-          letterSpacing: '0.5px'
+          fontSize: '13px',
+          fontWeight: 700,
+          padding: '6px 14px',
+          background: 'rgba(255,255,255,0.18)',
+          borderRadius: 'var(--r-pill)'
         }}>
-          Tests Dashboard
-        </h1>
-        <span style={{ color: 'white', fontSize: '16px' }}>
-          ({tests.length} {tests.length === 1 ? 'test' : 'tests'})
+          {tests.length} {tests.length === 1 ? 'test' : 'tests'}
         </span>
       </div>
 
@@ -260,25 +326,26 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
         {(showTestList || !isMobile) && (
           <div style={{
             width: isMobile ? '100%' : '400px',
-            borderRight: isMobile ? 'none' : '1px solid #e0e0e0',
+            borderRight: isMobile ? 'none' : '1px solid var(--border)',
             overflowY: 'auto',
             padding: isMobile ? '16px' : '20px',
-            background: isMobile ? '#f8f9fa' : 'white'
+            background: 'var(--bg)'
           }}>
             {isMobile && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h2 style={{ margin: 0, fontSize: '20px', color: '#333' }}>Tests</h2>
+                <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text)', fontWeight: 800 }}>Tests</h2>
                 <button
                   onClick={() => setShowTestList(false)}
                   style={{
                     padding: '8px 16px',
-                    background: '#667eea',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
+                    background: 'var(--surface)',
+                    color: 'var(--text-soft)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--r-pill)',
                     fontSize: '14px',
-                    fontWeight: 600,
-                    cursor: 'pointer'
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: 'var(--shadow-xs)'
                   }}
                 >
                   Close
@@ -286,9 +353,28 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
               </div>
             )}
             {tests.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
-                <p style={{ fontSize: '18px', marginBottom: '10px' }}>No tests created yet</p>
-                <p style={{ fontSize: '14px' }}>Go back to drills and select some to create a test</p>
+              <div style={{
+                textAlign: 'center',
+                padding: '48px 24px',
+                color: 'var(--text-soft)',
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--r-xl)',
+                boxShadow: 'var(--shadow-sm)'
+              }}>
+                <div style={{
+                  width: '64px',
+                  height: '64px',
+                  margin: '0 auto 16px',
+                  borderRadius: 'var(--r-lg)',
+                  background: 'var(--brand-gradient-soft)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '30px'
+                }}>📝</div>
+                <p style={{ fontSize: '18px', marginBottom: '8px', fontWeight: 800, color: 'var(--text)' }}>No tests created yet</p>
+                <p style={{ fontSize: '14px', margin: 0 }}>Go back to drills and select some to create a test</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -304,34 +390,87 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
                       // Remove navigate(`/tests/${test.id}`); as it would trigger the TestTaking view
                     }}
                     style={{
-                      padding: isMobile ? '20px' : '16px',
-                      border: selectedTest?.id === test.id ? '2px solid #667eea' : '1px solid #e0e0e0',
-                      borderRadius: '12px',
+                      padding: isMobile ? '18px' : '16px',
+                      border: selectedTest?.id === test.id ? '2px solid var(--brand-1)' : '1px solid var(--border)',
+                      borderRadius: 'var(--r-xl)',
                       cursor: 'pointer',
-                      backgroundColor: selectedTest?.id === test.id ? '#f0f4ff' : 'white',
-                      transition: 'all 0.2s'
+                      backgroundColor: 'var(--surface)',
+                      boxShadow: selectedTest?.id === test.id ? 'var(--shadow-md)' : 'var(--shadow-sm)',
+                      transition: 'transform var(--t-fast), box-shadow var(--t-fast), border-color var(--t-fast)'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (selectedTest?.id !== test.id) {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (selectedTest?.id !== test.id) {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
+                      }
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px' }}>
-                      <div style={{ flex: 1 }}>
-                        <h3 style={{ 
-                          margin: '0 0 8px 0', 
-                          fontSize: isMobile ? '18px' : '16px', 
-                          color: '#333',
-                          fontWeight: 600 
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px', gap: '8px' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h3 style={{
+                          margin: '0 0 6px 0',
+                          fontSize: isMobile ? '18px' : '16px',
+                          color: 'var(--text)',
+                          fontWeight: 800,
+                          fontFamily: 'var(--font-tifinagh)'
                         }}>
                           {test.title}
                         </h3>
-                        <p style={{ margin: '0 0 8px 0', fontSize: isMobile ? '14px' : '13px', color: '#666' }}>
+                        <p style={{ margin: '0 0 10px 0', fontSize: isMobile ? '14px' : '13px', color: 'var(--text-soft)', lineHeight: 1.4 }}>
                           {test.description || 'No description'}
                         </p>
-                        <div style={{ fontSize: isMobile ? '13px' : '12px', color: '#999' }}>
-                          <div>{test.drill_ids.split(',').length} drills</div>
-                          <div>{new Date(test.date_created).toLocaleDateString()}</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            padding: '4px 11px',
+                            borderRadius: 'var(--r-pill)',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            background: 'var(--brand-gradient-soft)',
+                            color: 'var(--brand-1)'
+                          }}>
+                            📚 {test.drill_ids.split(',').length} drills
+                          </span>
+                          <span style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            padding: '4px 11px',
+                            borderRadius: 'var(--r-pill)',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            background: 'var(--surface-2)',
+                            color: 'var(--text-muted)'
+                          }}>
+                            📅 {new Date(test.date_created).toLocaleDateString()}
+                          </span>
+                          {test.video_url && (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              padding: '4px 11px',
+                              borderRadius: 'var(--r-pill)',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              background: 'var(--emerald-soft)',
+                              color: 'var(--emerald)'
+                            }}>
+                              🎬 Video ready
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                       <button
                         onClick={(e) => {
                           e.stopPropagation(); // Prevent triggering handleViewTest
@@ -340,18 +479,20 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
                           alert(`Test link copied to clipboard!\n${url}`);
                         }}
                         style={{
-                          padding: isMobile ? '8px 12px' : '4px 8px',
+                          padding: isMobile ? '9px 12px' : '7px 10px',
                           fontSize: isMobile ? '14px' : '12px',
-                          background: '#007BFF',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
+                          background: 'var(--surface)',
+                          color: 'var(--brand-1)',
+                          border: '1px solid var(--border)',
+                          borderRadius: 'var(--r-md)',
                           cursor: 'pointer',
-                          fontWeight: 600,
+                          fontWeight: 700,
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '4px',
-                          flexGrow: 1
+                          justifyContent: 'center',
+                          gap: '5px',
+                          flexGrow: 1,
+                          boxShadow: 'var(--shadow-xs)'
                         }}
                         title="Copy link to this test"
                       >
@@ -365,17 +506,17 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
                           }
                         }}
                         style={{
-                          padding: isMobile ? '8px 12px' : '4px 8px',
+                          padding: isMobile ? '9px 12px' : '7px 10px',
                           fontSize: isMobile ? '14px' : '12px',
-                          background: '#ff4444',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
+                          background: 'var(--rose-soft)',
+                          color: 'var(--rose)',
+                          border: '1px solid var(--rose)',
+                          borderRadius: 'var(--r-md)',
                           cursor: 'pointer',
-                          fontWeight: 600,
+                          fontWeight: 700,
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '4px'
+                          gap: '5px'
                         }}
                         title="Delete test"
                       >
@@ -391,11 +532,11 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
 
         {/* Test Details - Show only when a test is selected on mobile */}
         {(!isMobile || selectedTest) && selectedTest && (
-          <div style={{ 
-            flex: 1, 
-            padding: isMobile ? '16px' : '30px', 
+          <div style={{
+            flex: 1,
+            padding: isMobile ? '16px' : '30px',
             overflowY: 'auto',
-            background: 'white'
+            background: 'var(--bg)'
           }}>
             {/* Mobile back button */}
             {isMobile && selectedTest && (
@@ -406,95 +547,102 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
                 }}
                 style={{
                   marginBottom: '20px',
-                  padding: '10px 16px',
-                  background: '#667eea',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontWeight: 600,
+                  padding: '10px 18px',
+                  background: 'var(--surface)',
+                  color: 'var(--text-soft)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--r-pill)',
+                  fontSize: '15px',
+                  fontWeight: 700,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px'
+                  gap: '8px',
+                  boxShadow: 'var(--shadow-xs)'
                 }}
               >
                 ← Back to Tests
               </button>
             )}
-            <h2 style={{ 
-              marginTop: 0, 
-              marginBottom: '16px', 
-              color: '#333',
-              fontSize: isMobile ? '22px' : '28px'
+            {/* Title banner */}
+            <div style={{
+              background: 'var(--brand-gradient)',
+              borderRadius: 'var(--r-xl)',
+              boxShadow: 'var(--shadow-brand)',
+              padding: isMobile ? '18px 20px' : '24px 28px',
+              marginBottom: '20px'
             }}>
-              {selectedTest.title}
-            </h2>
-
-
-            {selectedTest.description && (
-              <p style={{ 
-                marginBottom: '20px', 
-                color: '#666', 
-                fontSize: isMobile ? '15px' : '15px',
-                lineHeight: 1.5,
-                padding: isMobile ? '12px' : '16px',
-                background: '#f8f9fa',
-                borderRadius: '8px'
+              <h2 style={{
+                margin: 0,
+                color: 'white',
+                fontSize: isMobile ? '22px' : '28px',
+                fontWeight: 800,
+                fontFamily: 'var(--font-tifinagh)'
               }}>
-                {selectedTest.description}
-              </p>
-            )}
+                {selectedTest.title}
+              </h2>
+              {selectedTest.description && (
+                <p style={{
+                  margin: '8px 0 0',
+                  color: 'rgba(255,255,255,0.9)',
+                  fontSize: '15px',
+                  lineHeight: 1.5
+                }}>
+                  {selectedTest.description}
+                </p>
+              )}
+            </div>
 
             {/* Configuration - Compact */}
             <div style={{
-              padding: isMobile ? '12px' : '16px',
-              background: '#f8f9fa',
-              borderRadius: '10px',
-              marginBottom: '16px',
-              borderLeft: '4px solid #667eea'
+              padding: isMobile ? '16px' : '20px',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--r-xl)',
+              boxShadow: 'var(--shadow-sm)',
+              marginBottom: '16px'
             }}>
-              <h3 style={{ 
-                marginTop: 0, 
-                marginBottom: '12px', 
-                fontSize: isMobile ? '16px' : '16px',
-                fontWeight: 600,
-                color: '#333',
+              <h3 style={{
+                marginTop: 0,
+                marginBottom: '14px',
+                fontSize: '16px',
+                fontWeight: 800,
+                color: 'var(--text)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px'
               }}>
                 <span>⚙️</span> Test Configuration
               </h3>
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(2, 1fr)', 
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
                 gap: isMobile ? '10px' : '12px',
                 fontSize: isMobile ? '13px' : '14px'
               }}>
-                <div style={{ padding: '8px', background: 'white', borderRadius: '6px' }}>
-                  <div style={{ fontWeight: 600, color: '#667eea', marginBottom: '4px' }}>Type</div>
-                  <div>{getQuestionTypeLabel(selectedTest.question_type)}</div>
+                <div style={{ padding: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Type</div>
+                  <div style={{ color: 'var(--text)', fontWeight: 600 }}>{getQuestionTypeLabel(selectedTest.question_type)}</div>
                 </div>
-                <div style={{ padding: '8px', background: 'white', borderRadius: '6px' }}>
-                  <div style={{ fontWeight: 600, color: '#667eea', marginBottom: '4px' }}>Hints</div>
-                  <div>
+                <div style={{ padding: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Hints</div>
+                  <div style={{ color: 'var(--text)', fontWeight: 600 }}>
                     {getHintLevelLabel(selectedTest.hint_level)}
                     {selectedTest.hint_level === 'partial' && ` (${selectedTest.hint_percentage ?? 0}%)`}
                     {selectedTest.hint_level === 'full_after_tries' && ` (${selectedTest.hint_tries_before_reveal ?? 0})`}
                   </div>
                 </div>
-                <div style={{ padding: '8px', background: 'white', borderRadius: '6px' }}>
-                  <div style={{ fontWeight: 600, color: '#667eea', marginBottom: '4px' }}>Time</div>
-                  <div>{(selectedTest.time_limit_seconds ?? 0) > 0 ? `${selectedTest.time_limit_seconds ?? 0}s` : 'No limit'}</div>
+                <div style={{ padding: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Time</div>
+                  <div style={{ color: 'var(--text)', fontWeight: 600 }}>{(selectedTest.time_limit_seconds ?? 0) > 0 ? `${selectedTest.time_limit_seconds ?? 0}s` : 'No limit'}</div>
                 </div>
-                <div style={{ padding: '8px', background: 'white', borderRadius: '6px' }}>
-                  <div style={{ fontWeight: 600, color: '#667eea', marginBottom: '4px' }}>Passing</div>
-                  <div>{selectedTest.passing_score}%</div>
+                <div style={{ padding: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Passing</div>
+                  <div style={{ color: 'var(--text)', fontWeight: 600 }}>{selectedTest.passing_score}%</div>
                 </div>
-                <div style={{ padding: '8px', background: 'white', borderRadius: '6px', gridColumn: isMobile ? 'span 2' : 'span 1' }}>
-                  <div style={{ fontWeight: 600, color: '#667eea', marginBottom: '4px' }}>Drills</div>
-                  <div>{selectedTest.drill_ids.split(',').length} drills</div>
+                <div style={{ padding: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', gridColumn: isMobile ? 'span 2' : 'span 1' }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Drills</div>
+                  <div style={{ color: 'var(--text)', fontWeight: 600 }}>{selectedTest.drill_ids.split(',').length} drills</div>
                 </div>
               </div>
             </div>
@@ -502,49 +650,50 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
             {/* Statistics - Compact */}
             {stats && stats.total_attempts > 0 && (
               <div style={{
-                padding: isMobile ? '12px' : '16px',
-                background: '#e8f5e9',
-                borderRadius: '10px',
-                marginBottom: '16px',
-                borderLeft: '4px solid #4CAF50'
+                padding: isMobile ? '16px' : '20px',
+                background: 'var(--emerald-soft)',
+                border: '1px solid var(--emerald)',
+                borderRadius: 'var(--r-xl)',
+                boxShadow: 'var(--shadow-sm)',
+                marginBottom: '16px'
               }}>
-                <h3 style={{ 
-                  marginTop: 0, 
-                  marginBottom: '12px', 
-                  fontSize: isMobile ? '16px' : '16px',
-                  fontWeight: 600,
-                  color: '#2e7d32',
+                <h3 style={{
+                  marginTop: 0,
+                  marginBottom: '14px',
+                  fontSize: '16px',
+                  fontWeight: 800,
+                  color: 'var(--emerald)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px'
                 }}>
                   <span>📊</span> Statistics
                 </h3>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', 
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
                   gap: isMobile ? '10px' : '12px',
                   fontSize: isMobile ? '13px' : '14px'
                 }}>
-                  <div style={{ padding: '8px', background: 'rgba(255,255,255,0.7)', borderRadius: '6px' }}>
-                    <div style={{ fontWeight: 600, color: '#2e7d32', marginBottom: '4px' }}>Attempts</div>
-                    <div>{stats.total_attempts}</div>
+                  <div style={{ padding: '12px', background: 'var(--surface)', borderRadius: 'var(--r-md)' }}>
+                    <div style={{ fontWeight: 700, color: 'var(--emerald)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Attempts</div>
+                    <div style={{ color: 'var(--text)', fontWeight: 800, fontSize: '18px' }}>{stats.total_attempts}</div>
                   </div>
-                  <div style={{ padding: '8px', background: 'rgba(255,255,255,0.7)', borderRadius: '6px' }}>
-                    <div style={{ fontWeight: 600, color: '#2e7d32', marginBottom: '4px' }}>Avg Score</div>
-                    <div>{stats.average_score}%</div>
+                  <div style={{ padding: '12px', background: 'var(--surface)', borderRadius: 'var(--r-md)' }}>
+                    <div style={{ fontWeight: 700, color: 'var(--emerald)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Avg Score</div>
+                    <div style={{ color: 'var(--text)', fontWeight: 800, fontSize: '18px' }}>{stats.average_score}%</div>
                   </div>
-                  <div style={{ padding: '8px', background: 'rgba(255,255,255,0.7)', borderRadius: '6px' }}>
-                    <div style={{ fontWeight: 600, color: '#2e7d32', marginBottom: '4px' }}>Completion</div>
-                    <div>{stats.completion_rate}%</div>
+                  <div style={{ padding: '12px', background: 'var(--surface)', borderRadius: 'var(--r-md)' }}>
+                    <div style={{ fontWeight: 700, color: 'var(--emerald)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Completion</div>
+                    <div style={{ color: 'var(--text)', fontWeight: 800, fontSize: '18px' }}>{stats.completion_rate}%</div>
                   </div>
-                  <div style={{ padding: '8px', background: 'rgba(255,255,255,0.7)', borderRadius: '6px' }}>
-                    <div style={{ fontWeight: 600, color: '#2e7d32', marginBottom: '4px' }}>Passed</div>
-                    <div>{stats.passed_attempts}/{stats.total_attempts}</div>
+                  <div style={{ padding: '12px', background: 'var(--surface)', borderRadius: 'var(--r-md)' }}>
+                    <div style={{ fontWeight: 700, color: 'var(--emerald)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Passed</div>
+                    <div style={{ color: 'var(--text)', fontWeight: 800, fontSize: '18px' }}>{stats.passed_attempts}/{stats.total_attempts}</div>
                   </div>
-                  <div style={{ padding: '8px', background: 'rgba(255,255,255,0.7)', borderRadius: '6px', gridColumn: isMobile ? 'span 2' : 'span 1' }}>
-                    <div style={{ fontWeight: 600, color: '#2e7d32', marginBottom: '4px' }}>Avg Time</div>
-                    <div>{stats.average_time}s</div>
+                  <div style={{ padding: '12px', background: 'var(--surface)', borderRadius: 'var(--r-md)', gridColumn: isMobile ? 'span 2' : 'span 1' }}>
+                    <div style={{ fontWeight: 700, color: 'var(--emerald)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Avg Time</div>
+                    <div style={{ color: 'var(--text)', fontWeight: 800, fontSize: '18px' }}>{stats.average_time}s</div>
                   </div>
                 </div>
               </div>
@@ -561,16 +710,16 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
               <button
                 onClick={() => setTakingTestId(selectedTest.id)}
                 style={{
-                  padding: isMobile ? '14px 20px' : '12px 24px',
-                  fontSize: isMobile ? '15px' : '15px',
-                  background: '#4CAF50',
+                  padding: isMobile ? '14px 20px' : '13px 24px',
+                  fontSize: '15px',
+                  background: 'var(--brand-gradient)',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: 'var(--r-md)',
                   cursor: 'pointer',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   width: '100%',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  boxShadow: 'var(--shadow-brand)'
                 }}
               >
                 🎯 Take Test
@@ -578,16 +727,16 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
               <button
                 onClick={() => setEditingTestId(selectedTest.id)}
                 style={{
-                  padding: isMobile ? '14px 20px' : '12px 24px',
-                  fontSize: isMobile ? '15px' : '15px',
-                  background: '#2196F3',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
+                  padding: isMobile ? '14px 20px' : '13px 24px',
+                  fontSize: '15px',
+                  background: 'var(--surface)',
+                  color: 'var(--text-soft)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--r-md)',
                   cursor: 'pointer',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   width: '100%',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  boxShadow: 'var(--shadow-xs)'
                 }}
               >
                 ✏️ Edit Test
@@ -606,16 +755,16 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
                   }
                 }}
                 style={{
-                  padding: isMobile ? '14px 20px' : '12px 24px',
-                  fontSize: isMobile ? '15px' : '15px',
-                  background: '#9C27B0',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
+                  padding: isMobile ? '14px 20px' : '13px 24px',
+                  fontSize: '15px',
+                  background: 'var(--sky-soft)',
+                  color: 'var(--sky)',
+                  border: '1px solid var(--sky)',
+                  borderRadius: 'var(--r-md)',
                   cursor: 'pointer',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   width: '100%',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  boxShadow: 'var(--shadow-xs)'
                 }}
               >
                 ▶️ Play Drills
@@ -639,16 +788,16 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
                   }
                 }}
                 style={{
-                  padding: isMobile ? '14px 20px' : '12px 24px',
-                  fontSize: isMobile ? '15px' : '15px',
-                  background: '#FF9800',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
+                  padding: isMobile ? '14px 20px' : '13px 24px',
+                  fontSize: '15px',
+                  background: 'var(--amber-soft)',
+                  color: 'var(--amber-strong)',
+                  border: '1px solid var(--amber)',
+                  borderRadius: 'var(--r-md)',
                   cursor: 'pointer',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   width: '100%',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                  boxShadow: 'var(--shadow-xs)'
                 }}
               >
                 🎬 Crear Vidi
@@ -658,29 +807,32 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
             {selectedTest.video_url && (
               <div style={{
                 marginTop: '20px',
-                padding: '16px',
-                background: '#e6ffed',
-                borderLeft: '4px solid #4CAF50',
-                borderRadius: '8px',
+                padding: '20px',
+                background: 'var(--emerald-soft)',
+                border: '1px solid var(--emerald)',
+                borderRadius: 'var(--r-xl)',
+                boxShadow: 'var(--shadow-sm)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '10px',
+                gap: '12px',
                 alignItems: 'flex-start'
               }}>
-                <h3 style={{ margin: 0, color: '#2e7d32', fontSize: '18px' }}>✅ Video Ready!</h3>
+                <h3 style={{ margin: 0, color: 'var(--emerald)', fontSize: '18px', fontWeight: 800 }}>✅ Video Ready!</h3>
                 <button
                   onClick={() => setViewingVideoUrl(selectedTest.video_url ?? null)}
                   style={{
-                    padding: '10px 20px',
-                    fontSize: '16px',
-                    background: '#4CAF50',
+                    padding: '11px 20px',
+                    fontSize: '15px',
+                    background: 'var(--emerald)',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer'
+                    borderRadius: 'var(--r-md)',
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                    boxShadow: 'var(--shadow-sm)'
                   }}
                 >
-                  View Video in Loop Player
+                  ▶ View Video in Loop Player
                 </button>
               </div>
             )}
@@ -688,22 +840,17 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
             {generatingDemoVideoId === selectedTest.id && (
               <div style={{
                 marginTop: '20px',
-                padding: '16px',
-                background: '#fff3e0',
-                borderLeft: '4px solid #FF9800',
-                borderRadius: '8px',
+                padding: '20px',
+                background: 'var(--amber-soft)',
+                border: '1px solid var(--amber)',
+                borderRadius: 'var(--r-xl)',
+                boxShadow: 'var(--shadow-sm)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px'
+                gap: '12px'
               }}>
-                <div className="spinner" style={{ border: '4px solid rgba(0, 0, 0, 0.1)', width: '24px', height: '24px', borderRadius: '50%', borderLeftColor: '#FF9800', animation: 'spin 1s ease infinite' }}></div>
-                <p style={{ margin: 0, color: '#E65100', fontSize: '16px' }}>Generating demo video... This may take a few minutes. Please keep this page open.</p>
-                <style>{`
-                  @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
-                  }
-                `}</style>
+                <div className="spinner" style={{ border: '4px solid var(--border)', width: '24px', height: '24px', borderRadius: '50%', borderLeftColor: 'var(--amber)', animation: 'spin 1s ease infinite', flexShrink: 0 }}></div>
+                <p style={{ margin: 0, color: 'var(--amber-strong)', fontSize: '15px', fontWeight: 600 }}>Generating demo video… This may take a few minutes. Please keep this page open.</p>
               </div>
             )}
           </div>
@@ -711,29 +858,59 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
 
         {/* No test selected (desktop) */}
         {!isMobile && !selectedTest && (
-          <div style={{ flex: 1, padding: '30px', overflowY: 'auto' }}>
-            <div style={{ textAlign: 'center', padding: '60px', color: '#999' }}>
-              <p style={{ fontSize: '18px' }}>Select a test to view details</p>
+          <div style={{ flex: 1, padding: '30px', overflowY: 'auto', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{
+              textAlign: 'center',
+              padding: '48px',
+              color: 'var(--text-soft)',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--r-xl)',
+              boxShadow: 'var(--shadow-sm)',
+              maxWidth: '380px'
+            }}>
+              <div style={{
+                width: '72px',
+                height: '72px',
+                margin: '0 auto 18px',
+                borderRadius: 'var(--r-lg)',
+                background: 'var(--brand-gradient-soft)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '34px'
+              }}>👈</div>
+              <p style={{ fontSize: '18px', margin: 0, fontWeight: 800, color: 'var(--text)' }}>Select a test to view details</p>
+              <p style={{ fontSize: '14px', marginTop: '8px', marginBottom: 0 }}>Pick a test from the list to see its configuration, stats and actions.</p>
             </div>
           </div>
         )}
         {/* No test selected (mobile) - Show message if list is hidden */}
         {isMobile && !selectedTest && !showTestList && (
-          <div style={{ flex: 1, padding: '30px', overflowY: 'auto', background: 'white' }}>
-            <div style={{ textAlign: 'center', padding: '60px', color: '#999' }}>
-              <p style={{ fontSize: '18px' }}>No test selected</p>
+          <div style={{ flex: 1, padding: '30px', overflowY: 'auto', background: 'var(--bg)' }}>
+            <div style={{
+              textAlign: 'center',
+              padding: '48px 24px',
+              color: 'var(--text-soft)',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--r-xl)',
+              boxShadow: 'var(--shadow-sm)'
+            }}>
+              <p style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)' }}>No test selected</p>
               <button
                 onClick={() => setShowTestList(true)}
                 style={{
                   marginTop: '20px',
-                  padding: '12px 24px',
-                  background: '#667eea',
+                  padding: '13px 24px',
+                  background: 'var(--brand-gradient)',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
+                  borderRadius: 'var(--r-md)',
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: 'var(--shadow-brand)'
                 }}
               >
                 Show Tests List
