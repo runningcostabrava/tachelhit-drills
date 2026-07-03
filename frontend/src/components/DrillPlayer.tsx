@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { getMediaUrl } from '../config';
+import { API_BASE, getMediaUrl } from '../config';
 import { getMediaWithOfflineFallback } from '../utils/offlineCache';
 import { getYouTubeVideoId, loadYouTubeApi } from '../utils/youtubeUtils';
 
@@ -88,6 +88,56 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
   useEffect(() => { isLoopingRef.current = videoControls.isLooping; }, [videoControls.isLooping]);
   useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
 
+  // Pronunciation check (review mode): record -> ASR -> similarity score
+  const pronunciationRecorderRef = useRef<MediaRecorder | null>(null);
+  const [isCheckingRecording, setIsCheckingRecording] = useState(false);
+  const [pronunciationBusy, setPronunciationBusy] = useState(false);
+  const [pronunciationResult, setPronunciationResult] = useState<{ heard: string; score: number } | null>(null);
+
+  const togglePronunciationRecording = async () => {
+    if (isCheckingRecording) {
+      pronunciationRecorderRef.current?.stop();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        setIsCheckingRecording(false);
+        const drillId = drills[currentIndexRef.current]?.id;
+        if (!drillId || !chunks.length) return;
+        setPronunciationBusy(true);
+        try {
+          const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' });
+          const fd = new FormData();
+          fd.append('drill_id', String(drillId));
+          fd.append('audio', blob, 'pronunciation.webm');
+          const res = await fetch(`${API_BASE}/pronunciation/check`, { method: 'POST', body: fd });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || 'Pronunciation check failed');
+          }
+          const data = await res.json();
+          setPronunciationResult({ heard: data.heard, score: data.score });
+        } catch (e: any) {
+          console.error('Pronunciation check failed:', e);
+          setPronunciationResult({ heard: e.message || 'Error', score: -1 });
+        } finally {
+          setPronunciationBusy(false);
+        }
+      };
+      recorder.start();
+      pronunciationRecorderRef.current = recorder;
+      setPronunciationResult(null);
+      setIsCheckingRecording(true);
+    } catch (e) {
+      console.error('Microphone access failed:', e);
+    }
+  };
+
   const currentDrill = drills[currentIndex];
   // Note: isMobile is declared for potential future mobile-specific logic
   // const isMobile = window.innerWidth < 768;
@@ -162,6 +212,11 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
     // audio can't restart over the new drill
     audioTimersRef.current.forEach(t => window.clearTimeout(t));
     audioTimersRef.current = [];
+    // Reset pronunciation feedback for the new card
+    setPronunciationResult(null);
+    if (pronunciationRecorderRef.current?.state === 'recording') {
+      try { pronunciationRecorderRef.current.stop(); } catch { /* already stopped */ }
+    }
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -1265,6 +1320,37 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
         </div>
       )}
 
+      {/* Pronunciation feedback chip */}
+      {reviewMode && (pronunciationResult || pronunciationBusy) && (
+        <div style={{
+          position: 'fixed', bottom: '80px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 10001, maxWidth: '90vw',
+          background: 'rgba(15, 23, 42, 0.9)', color: 'white',
+          padding: '10px 18px', borderRadius: 'var(--r-lg)',
+          backdropFilter: 'blur(8px)', boxShadow: 'var(--shadow-lg)',
+          fontSize: '14px', textAlign: 'center'
+        }}>
+          {pronunciationBusy ? (
+            <span>👂 Escoltant la teva pronunciació…</span>
+          ) : pronunciationResult && pronunciationResult.score >= 0 ? (
+            <>
+              <span style={{
+                fontWeight: 800,
+                color: pronunciationResult.score >= 0.8 ? 'var(--emerald)'
+                  : pronunciationResult.score >= 0.5 ? 'var(--amber)' : 'var(--rose)'
+              }}>
+                {pronunciationResult.score >= 0.8 ? '🎯' : pronunciationResult.score >= 0.5 ? '👍' : '🔁'}{' '}
+                {Math.round(pronunciationResult.score * 100)}%
+              </span>
+              <span style={{ margin: '0 8px', opacity: 0.5 }}>·</span>
+              <span style={{ fontFamily: 'var(--font-tifinagh)' }}>He sentit: “{pronunciationResult.heard}”</span>
+            </>
+          ) : (
+            <span style={{ color: 'var(--rose)' }}>⚠️ {pronunciationResult?.heard}</span>
+          )}
+        </div>
+      )}
+
       {/* Spaced-repetition grading bar */}
       {reviewMode && onGrade && currentDrill && (
         <div style={{
@@ -1273,6 +1359,21 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
           background: 'rgba(15, 23, 42, 0.85)', padding: '10px 14px',
           borderRadius: 'var(--r-pill)', backdropFilter: 'blur(8px)', boxShadow: 'var(--shadow-lg)'
         }}>
+          <button
+            onClick={togglePronunciationRecording}
+            disabled={pronunciationBusy}
+            title={isCheckingRecording ? 'Atura i comprova' : 'Comprova la teva pronunciació'}
+            style={{
+              padding: '10px 14px',
+              background: isCheckingRecording ? 'var(--rose)' : 'rgba(255,255,255,0.15)',
+              color: 'white', border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '15px',
+              cursor: pronunciationBusy ? 'wait' : 'pointer',
+              animation: isCheckingRecording ? 'pulse 1s infinite' : undefined
+            }}
+          >
+            {isCheckingRecording ? '⏹' : '🎤'}
+          </button>
           {[
             { g: 0, label: 'Un altre cop', bg: 'var(--rose)' },
             { g: 1, label: 'Difícil', bg: 'var(--amber)' },

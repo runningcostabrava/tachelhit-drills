@@ -8,7 +8,7 @@ import shutil
 import yt_dlp
 from datetime import datetime, timedelta
 from urllib.parse import quote
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Body, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Body, Form, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional, List, Dict
 import re
@@ -2323,6 +2323,75 @@ async def create_drills_from_video(
             job.error_message = str(e)
             db.commit()
         raise HTTPException(status_code=500, detail=str(e))
+
+# ===================== PRONUNCIATION CHECK =====================
+
+def _normalize_for_comparison(text: str) -> str:
+    """Lowercase, strip punctuation/extra whitespace for fuzzy comparison."""
+    cleaned = re.sub(r"[^\w\sⴰ-⵿]", "", (text or "").lower(), flags=re.UNICODE)
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+@app.post("/pronunciation/check")
+async def pronunciation_check(
+    drill_id: int = Form(...),
+    audio: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Pronunciation feedback: transcribe the user's recording with the ASR
+    Space and fuzzy-compare it against the drill's Tachelhit text (after
+    glossary sound->spelling normalization). Returns what was heard and a
+    0-1 similarity score. Nothing is stored.
+    """
+    import difflib
+
+    drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+    if not drill or not drill.text_tachelhit:
+        raise HTTPException(status_code=404, detail="Drill not found or has no Tachelhit text")
+    target = drill.text_tachelhit
+
+    suffix = os.path.splitext(os.path.basename(audio.filename or ""))[1] or ".webm"
+    tmp_path = None
+    try:
+        content = await audio.read()
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        asr_space_url = os.getenv("HUGGINGFACE_ASR_SPACE_URL", "https://huggingface.co/spaces/Tamazight-NLP/ASR")
+        client_id = asr_space_url
+        if "huggingface.co/spaces/" in asr_space_url:
+            client_id = asr_space_url.split("huggingface.co/spaces/")[-1]
+        client = Client(client_id, token=os.getenv("HUGGINGFACE_API_KEY"))
+        rough = await asyncio.to_thread(client.predict, handle_file(tmp_path), api_name="/predict")
+        heard = str(rough or "").strip()
+
+        # Glossary normalization so known sound->spelling quirks don't penalize
+        fixed = heard
+        for g in db.query(GlossaryItemModel).all():
+            if g.word_sound:
+                fixed = fixed.replace(g.word_sound, g.correct_spelling)
+
+        score = difflib.SequenceMatcher(
+            None, _normalize_for_comparison(fixed), _normalize_for_comparison(target)
+        ).ratio()
+
+        return {
+            "drill_id": drill_id,
+            "target": target,
+            "heard": fixed,
+            "score": round(score, 3)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[PRONUNCIATION] Error: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Pronunciation check failed: {str(e)}")
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            try: os.unlink(tmp_path)
+            except OSError: pass
 
 # ===================== SPACED REPETITION (SRS) =====================
 # SM-2 style scheduling. Grades: 0=again, 1=hard, 2=good, 3=easy.
