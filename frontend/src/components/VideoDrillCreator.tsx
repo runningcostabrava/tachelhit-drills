@@ -35,6 +35,7 @@ const VideoDrillCreator: React.FC = () => {
   const [tag, setTag] = useState('video_capture');
   const [audioOnly, setAudioOnly] = useState(false);
   const [autoMode, setAutoMode] = useState(false);
+  const [makeReels, setMakeReels] = useState(false);
   const [lyrics, setLyrics] = useState('');
   const [autoStatus, setAutoStatus] = useState<string | null>(null);
 
@@ -47,6 +48,7 @@ const VideoDrillCreator: React.FC = () => {
     CORRECTING: 'Correcting with your phrase dataset…',
     TRANSLATING: 'Translating to Català · العربية · ⵜⴰⵛⵍⵃⵉⵜ…',
     CREATING_DRILLS: 'Clipping media & creating drills…',
+    GENERATING_REELS: 'Rendering vertical reels…',
   };
 
   const pollAutoJob = (jobId: number, title: string) => {
@@ -232,7 +234,14 @@ const VideoDrillCreator: React.FC = () => {
         const response = await fetch(`${API_BASE}/video-analysis/auto-drills`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, cookies: cookies || null, audio_only: audioOnly, tag }),
+          body: JSON.stringify({
+            url,
+            cookies: cookies || null,
+            audio_only: audioOnly,
+            tag,
+            lyrics: lyrics.trim() || null,
+            generate_reels: makeReels,
+          }),
         });
         if (!response.ok) {
           const errorData = await response.json();
@@ -508,6 +517,12 @@ const VideoDrillCreator: React.FC = () => {
             <input type="checkbox" checked={autoMode} onChange={(e) => setAutoMode(e.target.checked)} />
             ⚡ Auto mode (correct + translate + create drills from ALL segments)
           </label>
+          {autoMode && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-soft)', fontWeight: 600, cursor: 'pointer' }}>
+              <input type="checkbox" checked={makeReels} onChange={(e) => setMakeReels(e.target.checked)} />
+              🎬 Also render a vertical reel per drill
+            </label>
+          )}
         </div>
 
         <div style={{ padding: '20px', background: 'var(--surface-2)', borderRadius: 'var(--r-lg)', border: '2px dashed var(--border-strong)', textAlign: 'center' }}>

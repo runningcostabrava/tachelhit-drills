@@ -1832,7 +1832,8 @@ async def import_video_from_url(
 
 async def auto_drills_pipeline_task(job_id: int, url: Optional[str], video_path: str, tmp_dir: str,
                                     language: Optional[str], tag: Optional[str],
-                                    apply_correction: bool, has_segments: bool):
+                                    apply_correction: bool, has_segments: bool,
+                                    lyrics: Optional[str] = None, generate_reels: bool = False):
     """
     Fully server-side capture pipeline: (ASR if needed) -> correction ->
     translation into all drill languages -> drill creation with media clips.
@@ -1870,6 +1871,12 @@ async def auto_drills_pipeline_task(job_id: int, url: Optional[str], video_path:
 
         effective_source = language if language not in (None, "", "auto") else "shi"
         src_name = LANGUAGE_CODE_MAP.get(effective_source, effective_source)
+
+        # Song mode: replace ASR guesses with the provided lyric lines while
+        # keeping the ASR timestamps; skip dataset correction (lyrics are truth)
+        if lyrics and lyrics.strip():
+            segments = _align_lyrics_lines(segments, lyrics)
+            apply_correction = False
 
         # Phase 2: correction layer (Tachelhit-ish sources only)
         if apply_correction and effective_source in ("shi", "ber"):
@@ -1947,10 +1954,33 @@ async def auto_drills_pipeline_task(job_id: int, url: Optional[str], video_path:
                 print(f"[AUTO] Media clipping failed for a segment: {e}")
                 db.rollback()
 
+        # Phase 5 (optional): render a vertical reel for every created drill
+        if generate_reels and drills_created:
+            job.status = "GENERATING_REELS"
+            db.commit()
+            for did in drills_created:
+                try:
+                    d = db.query(DrillModel).filter(DrillModel.id == did).first()
+                    if not d:
+                        continue
+                    drill_data = {
+                        'text_catalan': d.text_catalan,
+                        'text_tachelhit': d.text_tachelhit,
+                        'text_arabic': d.text_arabic,
+                        'image_url': d.image_url,
+                        'audio_url': d.audio_url,
+                        'audio_tts_url': d.audio_tts_url
+                    }
+                    filename = f"short_{did}_{int(datetime.utcnow().timestamp())}.mp4"
+                    payload_data = ["short", json.dumps(drill_data), None, filename, 0]
+                    await asyncio.to_thread(background_video_vault, "short", did, payload_data)
+                except Exception as reel_err:
+                    print(f"[AUTO] Reel generation failed for drill {did}: {reel_err}")
+
         job.status = "COMPLETED"
         job.processing_log = json.dumps({"drills_created": drills_created})
         db.commit()
-        print(f"[AUTO] Job {job_id}: created {len(drills_created)} drills.")
+        print(f"[AUTO] Job {job_id}: created {len(drills_created)} drills (reels={generate_reels}).")
 
     except Exception as e:
         print(f"[AUTO] Pipeline error in job {job_id}: {e}")
@@ -1975,12 +2005,15 @@ async def auto_drills_from_url(
     audio_only: Optional[bool] = Body(False),
     tag: Optional[str] = Body(None),
     apply_correction: Optional[bool] = Body(True),
+    lyrics: Optional[str] = Body(None),
+    generate_reels: Optional[bool] = Body(False),
     db: Session = Depends(get_db)
 ):
     """
-    One-shot capture: download -> transcribe -> correct -> translate -> create
-    drills, all server-side in the background. Returns a job_id to poll via
-    /video-analysis/job/{id}; the final response there carries drills_created.
+    One-shot capture: download -> transcribe -> (align lyrics) -> correct ->
+    translate -> create drills -> (render reels), all server-side in the
+    background. Returns a job_id to poll via /video-analysis/job/{id}; the
+    final response there carries drills_created.
     """
     tmp_dir = None
     try:
@@ -2025,7 +2058,8 @@ async def auto_drills_from_url(
         background_tasks.add_task(
             auto_drills_pipeline_task,
             job.id, url, video_path, tmp_dir,
-            lang_to_use or language, tag, bool(apply_correction), bool(segments)
+            lang_to_use or language, tag, bool(apply_correction), bool(segments),
+            lyrics, bool(generate_reels)
         )
 
         return {
@@ -2152,11 +2186,7 @@ def ocr_video_segments(
 
     return segments
 
-@app.post("/video-analysis/align-lyrics")
-def align_lyrics_to_segments(
-    segments: List[Dict] = Body(...),
-    lyrics: str = Body(...)
-):
+def _align_lyrics_lines(segments: List[Dict], lyrics: str) -> List[Dict]:
     """
     Swap ASR-guessed segment text for real lyric lines while keeping the ASR
     timestamps (ASR hears sung vocals poorly but times them well). Each
@@ -2166,9 +2196,7 @@ def align_lyrics_to_segments(
     import difflib
 
     lines = [l.strip() for l in (lyrics or "").splitlines() if l.strip()]
-    if not lines:
-        raise HTTPException(status_code=400, detail="No lyric lines provided")
-    if not segments:
+    if not lines or not segments:
         return segments
 
     n_seg, n_lines = len(segments), len(lines)
@@ -2188,6 +2216,16 @@ def align_lyrics_to_segments(
         seg["text_asr"] = seg.get("text")
         seg["text"] = lines[best_idx]
     return segments
+
+@app.post("/video-analysis/align-lyrics")
+def align_lyrics_to_segments(
+    segments: List[Dict] = Body(...),
+    lyrics: str = Body(...)
+):
+    """Manual alignment endpoint for the review table. See _align_lyrics_lines."""
+    if not (lyrics or "").strip():
+        raise HTTPException(status_code=400, detail="No lyric lines provided")
+    return _align_lyrics_lines(segments, lyrics)
 
 # Which segment field each translation target fills; these are the three
 # text fields a Drill actually stores.
