@@ -278,8 +278,32 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
             Manage tests, generate demo videos and start practice
           </span>
         </div>
+        <button
+          onClick={async () => {
+            try {
+              const res = await axios.post(`${API_BASE}/tests/from-weakest`, { count: 10 });
+              await fetchTests();
+              alert(`💪 ${res.data.title}: ${res.data.drill_count} preguntes creades amb les teves targetes més difícils!`);
+            } catch (e: any) {
+              alert(e?.response?.data?.detail || 'No s\'ha pogut crear el test');
+            }
+          }}
+          title="Crea un test automàtic amb les teves targetes més difícils (SRS)"
+          style={{
+            marginLeft: 'auto',
+            padding: '8px 16px',
+            background: 'rgba(255,255,255,0.18)',
+            color: 'white',
+            border: '1px solid rgba(255,255,255,0.4)',
+            borderRadius: 'var(--r-pill)',
+            fontWeight: 700,
+            fontSize: '13px',
+            cursor: 'pointer'
+          }}
+        >
+          💪 Test dels punts febles
+        </button>
         <span style={{
-          marginLeft: 'auto',
           color: 'white',
           fontSize: '13px',
           fontWeight: 700,

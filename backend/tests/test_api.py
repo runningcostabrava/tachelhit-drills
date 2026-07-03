@@ -195,3 +195,19 @@ def test_streak_tracking():
     assert s["streak_days"] == 1
     assert s["reviews_today"] >= 1
     assert s["active_days"] == 1
+
+
+def test_smart_test_from_weakest():
+    token = register("weakuser")
+    drills = client.get("/drills/").json()
+    # Create some review history: lapse one drill so it's clearly weakest
+    client.post(f"/reviews/{drills[0]['id']}/grade", json={"grade": 0},
+                headers={"X-User-Token": token})
+    r = client.post("/tests/from-weakest", json={"count": 5},
+                    headers={"X-User-Token": token})
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["drill_count"] >= 1
+    # The lapsed drill must lead the test
+    test = client.get(f"/tests/{data['test_id']}").json()
+    assert str(drills[0]["id"]) == test["drill_ids"].split(",")[0]

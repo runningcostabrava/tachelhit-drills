@@ -2805,6 +2805,56 @@ def grade_review(drill_id: int, grade: int = Body(..., embed=True), db: Session 
         "repetitions": review.repetitions
     }
 
+@app.post("/tests/from-weakest")
+def create_test_from_weakest(
+    count: int = Body(10, embed=True),
+    db: Session = Depends(get_db),
+    user: Optional[UserModel] = Depends(get_current_user)
+):
+    """
+    Build a test from the requesting user's weakest cards (lowest ease, most
+    lapses first), topping up with recent drills if there isn't enough review
+    history yet. Closes the loop between SRS data and testing.
+    """
+    uid = user.id if user else None
+    count = max(3, min(count, 30))
+
+    weakest = (
+        db.query(DrillReviewModel)
+        .filter(DrillReviewModel.user_id == uid)
+        .order_by(DrillReviewModel.ease.asc(), DrillReviewModel.lapses.desc())
+        .limit(count)
+        .all()
+    )
+    drill_ids = [r.drill_id for r in weakest]
+
+    if len(drill_ids) < count:
+        q = db.query(DrillModel.id).filter(
+            DrillModel.text_tachelhit != None,
+            DrillModel.text_tachelhit != ''
+        )
+        if drill_ids:
+            q = q.filter(~DrillModel.id.in_(drill_ids))
+        extra = q.order_by(DrillModel.date_created.desc()).limit(count - len(drill_ids)).all()
+        drill_ids += [row[0] for row in extra]
+
+    if not drill_ids:
+        raise HTTPException(status_code=400, detail="No drills available to build a test from")
+
+    test = TestModel(
+        title=f"💪 Punts febles {datetime.utcnow().strftime('%d/%m')}",
+        description="Generat automàticament amb les teves targetes més difícils",
+        question_type="text_input",
+        hint_level="partial",
+        hint_percentage=30,
+        passing_score=70.0,
+        drill_ids=",".join(str(i) for i in drill_ids)
+    )
+    db.add(test)
+    db.commit()
+    db.refresh(test)
+    return {"test_id": test.id, "title": test.title, "drill_count": len(drill_ids)}
+
 @app.get("/reviews/streak")
 def review_streak(db: Session = Depends(get_db),
                   user: Optional[UserModel] = Depends(get_current_user)):
