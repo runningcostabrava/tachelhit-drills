@@ -31,6 +31,9 @@ class Drill(Base):
     speaker = Column(String, nullable=True)   # speaker/contributor label (with consent)
     source_url = Column(String, nullable=True)  # provenance: where the content came from
     license = Column(String, nullable=True)     # e.g. "CC-BY-SA", "personal", "unknown"
+    # --- Contribution review (auditor Phase 3): NULL/False = unreviewed ---
+    verified = Column(Boolean, nullable=True)
+    verified_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
 class Test(Base):
     __tablename__ = "tests"

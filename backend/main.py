@@ -2478,11 +2478,30 @@ def get_me(user: Optional[UserModel] = Depends(get_current_user), db: Session = 
         "cards_learning": cards_learning
     }
 
+@app.post("/drills/{drill_id}/verify")
+def verify_drill(drill_id: int, verified: bool = Body(True, embed=True),
+                 db: Session = Depends(get_db),
+                 user: Optional[UserModel] = Depends(get_current_user)):
+    """
+    Contribution review (auditor Phase 3): a registered user marks a drill's
+    text/audio as verified (or revokes it). Verified items are what the
+    corpus flywheel exports for model fine-tuning.
+    """
+    if not user:
+        raise HTTPException(status_code=401, detail="Verification requires a registered user (X-User-Token)")
+    drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+    if not drill:
+        raise HTTPException(status_code=404, detail="Drill not found")
+    drill.verified = bool(verified)
+    drill.verified_by_user_id = user.id if verified else None
+    db.commit()
+    return {"drill_id": drill_id, "verified": drill.verified, "verified_by": user.username if verified else None}
+
 # ===================== CORPUS (documentation & research) =====================
 
 CORPUS_EXPORT_FIELDS = [
     "id", "date_created", "tag", "author", "speaker", "variety", "region",
-    "license", "source_url", "text_catalan", "text_tachelhit",
+    "license", "source_url", "verified", "text_catalan", "text_tachelhit",
     "text_tachelhit_latin", "text_arabic", "audio_url", "audio_tts_url",
     "video_url", "image_url", "video_start_time", "video_end_time"
 ]
@@ -2546,16 +2565,20 @@ def corpus_export(format: str = "json", db: Session = Depends(get_db)):
     return {"count": len(rows), "drills": rows}
 
 @app.get("/corpus/flywheel")
-def corpus_flywheel(db: Session = Depends(get_db)):
+def corpus_flywheel(verified_only: bool = False, db: Session = Depends(get_db)):
     """
-    Verified (audio, text) pairs for fine-tuning ASR/translation models —
-    the data flywheel: every human-verified drill improves the models that
-    power capture for the whole language.
+    (audio, text) pairs for fine-tuning ASR/translation models — the data
+    flywheel: every human-verified drill improves the models that power
+    capture for the whole language. verified_only=true restricts the export
+    to human-reviewed items (recommended for training).
     """
-    drills = db.query(DrillModel).filter(
+    query = db.query(DrillModel).filter(
         DrillModel.audio_url != None, DrillModel.audio_url != '',
         DrillModel.text_tachelhit != None, DrillModel.text_tachelhit != ''
-    ).all()
+    )
+    if verified_only:
+        query = query.filter(DrillModel.verified == True)
+    drills = query.all()
     pairs = [{
         "drill_id": d.id,
         "audio_url": normalize_media_url(d.audio_url),
@@ -2577,6 +2600,7 @@ def corpus_stats(db: Session = Depends(get_db)):
     with_audio = db.query(DrillModel).filter(DrillModel.audio_url != None, DrillModel.audio_url != '').count()
     with_video = db.query(DrillModel).filter(DrillModel.video_url != None, DrillModel.video_url != '').count()
     with_latin = db.query(DrillModel).filter(DrillModel.text_tachelhit_latin != None, DrillModel.text_tachelhit_latin != '').count()
+    verified = db.query(DrillModel).filter(DrillModel.verified == True).count()
     by_variety = {str(k or "unspecified"): v for k, v in db.query(DrillModel.variety, func.count()).group_by(DrillModel.variety).all()}
     by_region = {str(k or "unspecified"): v for k, v in db.query(DrillModel.region, func.count()).group_by(DrillModel.region).all()}
     return {
@@ -2584,6 +2608,7 @@ def corpus_stats(db: Session = Depends(get_db)):
         "with_audio": with_audio,
         "with_video": with_video,
         "with_latin_script": with_latin,
+        "verified": verified,
         "by_variety": by_variety,
         "by_region": by_region,
     }

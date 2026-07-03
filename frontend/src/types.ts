@@ -16,4 +16,12 @@ export interface Drill {
   video_end_time?: number;
   is_correction_dataset?: boolean;
   is_local?: boolean; // client-side marker for drills created offline
+  // Documentation / variation layer
+  text_tachelhit_latin?: string;
+  variety?: string;
+  region?: string;
+  speaker?: string;
+  source_url?: string;
+  license?: string;
+  verified?: boolean;
 }
