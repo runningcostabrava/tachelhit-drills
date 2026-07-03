@@ -1,15 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE, getMediaUrl, getUserToken } from '../config';
+import { getMediaUrl, getUserToken } from '../config';
+import { api, type CorpusStats } from '../api';
 import type { Drill } from '../types';
-
-interface CorpusStats {
-  total_drills: number;
-  with_audio: number;
-  verified: number;
-  by_variety: Record<string, number>;
-  by_region: Record<string, number>;
-}
 
 export default function CorpusPage() {
   const navigate = useNavigate();
@@ -21,22 +14,15 @@ export default function CorpusPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetch(`${API_BASE}/corpus/stats`).then(async r => { if (r.ok) setStats(await r.json()); }).catch(() => {});
+    api.corpusStats().then(setStats).catch(() => {});
   }, []);
 
   const search = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (q.trim()) params.set('q', q.trim());
-      if (variety.trim()) params.set('variety', variety.trim());
-      params.set('limit', '100');
-      const r = await fetch(`${API_BASE}/corpus/search?${params}`);
-      if (r.ok) {
-        let rows: Drill[] = await r.json();
-        if (onlyUnverified) rows = rows.filter(d => !d.verified);
-        setResults(rows);
-      }
+      let rows = await api.corpusSearch({ q: q.trim(), variety: variety.trim(), limit: 100 });
+      if (onlyUnverified) rows = rows.filter(d => !d.verified);
+      setResults(rows);
     } catch (e) {
       console.error('Corpus search failed', e);
     } finally {
@@ -57,12 +43,7 @@ export default function CorpusPage() {
       return;
     }
     try {
-      const r = await fetch(`${API_BASE}/drills/${d.id}/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ verified: !d.verified }),
-      });
-      if (!r.ok) throw new Error((await r.json()).detail || 'Verification failed');
+      await api.verifyDrill(d.id, !d.verified);
       setResults(prev => prev.map(x => x.id === d.id ? { ...x, verified: !d.verified } : x));
     } catch (e: any) {
       alert(e.message);

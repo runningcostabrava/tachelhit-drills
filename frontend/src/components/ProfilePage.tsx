@@ -1,14 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE, getUserToken, setUserIdentity, clearUserIdentity } from '../config';
-
-interface Me {
-  username: string;
-  display_name: string;
-  date_created: string;
-  drills_contributed: number;
-  cards_learning: number;
-}
+import { getUserToken, setUserIdentity, clearUserIdentity } from '../config';
+import { api, type Me } from '../api';
 
 const cardStyle: React.CSSProperties = {
   background: 'var(--surface)',
@@ -44,31 +37,20 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!hasToken) return;
-    fetch(`${API_BASE}/users/me`)
-      .then(async (r) => {
-        if (r.ok) {
-          setMe(await r.json());
-        } else if (r.status === 401) {
-          clearUserIdentity();
-        }
+    api.me()
+      .then((data) => {
+        if (data) setMe(data);
+        else clearUserIdentity(); // token no longer valid
       })
       .catch(() => {});
-    fetch(`${API_BASE}/reviews/streak`)
-      .then(async (r) => { if (r.ok) setStreak(await r.json()); })
-      .catch(() => {});
+    api.reviewStreak().then(setStreak).catch(() => {});
   }, [hasToken]);
 
   const register = async () => {
     setBusy(true);
     setError(null);
     try {
-      const r = await fetch(`${API_BASE}/users/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim(), display_name: displayName.trim() || null }),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.detail || 'Registration failed');
+      const data = await api.register(username.trim(), displayName.trim() || null);
       setUserIdentity(data.token, data.username);
       setNewToken(data.token);
       setMe(null); // will refetch via effect on next mount; show token first

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { Network } from '@capacitor/network';
 import { API_BASE } from '../config';
+import { api } from '../api';
 import { syncManager } from '../services/OfflineSyncManager';
 import type { Drill } from '../services/OfflineSyncManager';
 import DrillPlayer from './DrillPlayer';
@@ -19,8 +20,7 @@ export default function DrillPlayerPage() {
       try {
         if (reviewMode) {
           // Spaced-repetition queue: due cards first, then new drills
-          const response = await axios.get(`${API_BASE}/reviews/due?limit=30`);
-          setDrills(response.data || []);
+          setDrills(await api.dueReviews(30));
           return;
         }
 
@@ -140,7 +140,7 @@ export default function DrillPlayerPage() {
       reviewMode={reviewMode}
       onGrade={
         reviewMode
-          ? (drillId, grade) => axios.post(`${API_BASE}/reviews/${drillId}/grade`, { grade }).then(() => {})
+          ? (drillId, grade) => api.gradeReview(drillId, grade).then(() => {})
           : undefined
       }
     />
