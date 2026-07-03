@@ -637,20 +637,46 @@ async def translate_text_endpoint(request: TranslateRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Translation failed: {str(e)}")
 
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def _hash_token(raw: str) -> str:
+    """Tokens are stored hashed; only the user ever holds the raw value."""
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+def get_current_user(request: Request, db: Session = Depends(get_db)) -> Optional[UserModel]:
+    """Resolve the requesting user from the X-User-Token header (None = anonymous)."""
+    token = (request.headers.get("x-user-token") or "").strip()
+    if not token:
+        return None
+    return db.query(UserModel).filter(UserModel.token == _hash_token(token)).first()
+
 class TtsRequest(BaseModel):
     text: str
     drill_id: Optional[int] = 0
 
 @app.post("/tts/tachelhit")
 @app.post("/tts/tachelhit/")
-async def tachelhit_tts_endpoint(request: TtsRequest):
+async def tachelhit_tts_endpoint(request: TtsRequest, db: Session = Depends(get_db)):
     """
-    Generate Tachelhit TTS for given Tifinagh text.
+    Generate Tachelhit TTS for given Tifinagh text. When a drill_id is given,
+    the synthesized voice is stored on the drill (audio_tts_shi_url) so the
+    player can voice text-only cards without re-synthesizing — synthetic
+    audio is scaffolding for cards that lack a native recording.
     """
     if not request.text:
         raise HTTPException(status_code=400, detail="Text is required")
     try:
         url = await asyncio.to_thread(generate_tachelhit_tts_hf, request.text, request.drill_id or 0)
+        if request.drill_id:
+            drill = db.query(DrillModel).filter(DrillModel.id == request.drill_id).first()
+            if drill:
+                drill.audio_tts_shi_url = url
+                db.commit()
         return {"url": url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -671,24 +697,6 @@ async def import_link_endpoint(request: ImportLinkRequest):
         return {"url": url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-def _hash_token(raw: str) -> str:
-    """Tokens are stored hashed; only the user ever holds the raw value."""
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
-
-def get_current_user(request: Request, db: Session = Depends(get_db)) -> Optional[UserModel]:
-    """Resolve the requesting user from the X-User-Token header (None = anonymous)."""
-    token = (request.headers.get("x-user-token") or "").strip()
-    if not token:
-        return None
-    return db.query(UserModel).filter(UserModel.token == _hash_token(token)).first()
 
 # ===================== CRUD =====================
 @app.get("/drills/", response_model=list[Drill])
@@ -1556,12 +1564,9 @@ async def process_video_analysis_task(job_id: int, video_path: str, tmp_dir: str
         if language in (None, "", "auto", "shi", "ber"):
             glossary = db.query(GlossaryItemModel).all()
             if glossary:
+                pairs = [(g.word_sound, g.correct_spelling) for g in glossary]
                 for seg in segments:
-                    text = seg.get("text") or ""
-                    for g in glossary:
-                        if g.word_sound:
-                            text = text.replace(g.word_sound, g.correct_spelling)
-                    seg["text"] = text
+                    seg["text"] = apply_glossary(seg.get("text") or "", pairs)
 
         # 4. Save segments to DB
         for seg in segments:
@@ -2143,10 +2148,7 @@ async def correct_video_segments(
             text = (seg.get("text") or "").strip()
             if not text:
                 continue
-            fixed = text
-            for g in glossary:
-                if g.word_sound:
-                    fixed = fixed.replace(g.word_sound, g.correct_spelling)
+            fixed = apply_glossary(text, [(g.word_sound, g.correct_spelling) for g in glossary])
             try:
                 corrected, score = await asyncio.to_thread(svc.correct_transcription, fixed, phrases)
                 seg["text"] = corrected
@@ -2645,6 +2647,39 @@ def _normalize_for_comparison(text: str) -> str:
     cleaned = re.sub(r"[^\w\sⴰ-⵿]", "", (text or "").lower(), flags=re.UNICODE)
     return re.sub(r"\s+", " ", cleaned).strip()
 
+def apply_glossary(text: str, pairs) -> str:
+    """
+    Word-boundary-aware sound->spelling normalization. `pairs` is an iterable
+    of (word_sound, correct_spelling). Boundaries matter: flat substring
+    replacement would also rewrite matches *inside* longer words (\\w covers
+    Tifinagh and Arabic letters in Python's Unicode mode).
+    """
+    for sound, spelling in pairs:
+        if sound:
+            text = re.sub(rf"(?<!\w){re.escape(sound)}(?!\w)", spelling, text)
+    return text
+
+def _best_pronunciation_match(heard_fixed: str, drill) -> tuple:
+    """
+    Script-aware pronunciation scoring: the ASR may emit either script, so
+    compare against the Tifinagh text AND the Latin romanization and keep the
+    best match. Returns (matched_script, target_text, score).
+    """
+    import difflib
+    candidates = []
+    if drill.text_tachelhit:
+        candidates.append(("tifinagh", drill.text_tachelhit))
+    if drill.text_tachelhit_latin:
+        candidates.append(("latin", drill.text_tachelhit_latin))
+    best = ("", "", -1.0)
+    for script, target in candidates:
+        s = difflib.SequenceMatcher(
+            None, _normalize_for_comparison(heard_fixed), _normalize_for_comparison(target)
+        ).ratio()
+        if s > best[2]:
+            best = (script, target, s)
+    return best
+
 @app.post("/pronunciation/check")
 async def pronunciation_check(
     drill_id: int = Form(...),
@@ -2654,15 +2689,13 @@ async def pronunciation_check(
     """
     Pronunciation feedback: transcribe the user's recording with the ASR
     Space and fuzzy-compare it against the drill's Tachelhit text (after
-    glossary sound->spelling normalization). Returns what was heard and a
-    0-1 similarity score. Nothing is stored.
+    word-boundary glossary normalization). Script-aware: scores against both
+    the Tifinagh text and the Latin romanization, keeping the best match, so
+    the ASR's output script never collapses the score. Nothing is stored.
     """
-    import difflib
-
     drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
-    if not drill or not drill.text_tachelhit:
-        raise HTTPException(status_code=404, detail="Drill not found or has no Tachelhit text")
-    target = drill.text_tachelhit
+    if not drill or not (drill.text_tachelhit or drill.text_tachelhit_latin):
+        raise HTTPException(status_code=404, detail="Drill not found or has no Tachelhit text in any script")
 
     suffix = os.path.splitext(os.path.basename(audio.filename or ""))[1] or ".webm"
     tmp_path = None
@@ -2681,20 +2714,17 @@ async def pronunciation_check(
         heard = str(rough or "").strip()
 
         # Glossary normalization so known sound->spelling quirks don't penalize
-        fixed = heard
-        for g in db.query(GlossaryItemModel).all():
-            if g.word_sound:
-                fixed = fixed.replace(g.word_sound, g.correct_spelling)
+        pairs = [(g.word_sound, g.correct_spelling) for g in db.query(GlossaryItemModel).all()]
+        fixed = apply_glossary(heard, pairs)
 
-        score = difflib.SequenceMatcher(
-            None, _normalize_for_comparison(fixed), _normalize_for_comparison(target)
-        ).ratio()
+        matched_script, target, score = _best_pronunciation_match(fixed, drill)
 
         return {
             "drill_id": drill_id,
             "target": target,
+            "matched_script": matched_script,
             "heard": fixed,
-            "score": round(score, 3)
+            "score": round(max(score, 0.0), 3)
         }
     except HTTPException:
         raise
@@ -3390,10 +3420,7 @@ async def transcribe_audio(
         corrected = rough
         score = 1.0
         if isinstance(rough, str) and rough.strip():
-            fixed = rough
-            for g in glossary_data:
-                if g["s"]:
-                    fixed = fixed.replace(g["s"], g["c"])
+            fixed = apply_glossary(rough, [(g["s"], g["c"]) for g in glossary_data])
             phrases = [p["t"] for p in dataset_pairs]
             try:
                 corrected, score = await asyncio.to_thread(

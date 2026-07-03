@@ -211,3 +211,23 @@ def test_smart_test_from_weakest():
     # The lapsed drill must lead the test
     test = client.get(f"/tests/{data['test_id']}").json()
     assert str(drills[0]["id"]) == test["drill_ids"].split(",")[0]
+
+
+def test_glossary_word_boundaries():
+    pairs = [("anayr", "anaygh")]
+    # whole word replaced
+    assert main.apply_glossary("is anayr dik", pairs) == "is anaygh dik"
+    # NOT inside a longer word
+    assert main.apply_glossary("tanayrit", pairs) == "tanayrit"
+
+
+def test_pronunciation_best_match_is_script_aware():
+    class FakeDrill:
+        text_tachelhit = "ⵜⴰⵏⵎⵎⵉⵔⵜ"
+        text_tachelhit_latin = "tanmmirt"
+    # Latin ASR output must match the Latin field, not collapse vs Tifinagh
+    script, target, score = main._best_pronunciation_match("tanmmirt", FakeDrill())
+    assert script == "latin" and score > 0.9
+    # Tifinagh ASR output matches the Tifinagh field
+    script, _, score = main._best_pronunciation_match("ⵜⴰⵏⵎⵎⵉⵔⵜ", FakeDrill())
+    assert script == "tifinagh" and score > 0.9
