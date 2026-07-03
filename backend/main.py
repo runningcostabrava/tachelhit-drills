@@ -6,7 +6,7 @@ import traceback
 import tempfile
 import shutil
 import yt_dlp
-from datetime import datetime
+from datetime import datetime, timedelta
 from urllib.parse import quote
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Body, BackgroundTasks
 from pydantic import BaseModel
@@ -35,7 +35,7 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
 
-from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel  # ← Alias for ORM models
+from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel  # ← Alias for ORM models
 from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort, VideoProcessingJobCreate, VideoProcessingJob, VideoSegmentCreate, VideoSegment, TranscribeRequest, TranscribeResponse, TranslateRequest, TranslateResponse, DrillPairInfo, GlossaryItem, GlossaryItemCreate, SrtImportRequest, SrtImportResponse, SrtSegment, BulkVideoUrlUpdateRequest, BulkVideoUrlUpdateResponse  # ← Pydantic schemas
 from correction_service import get_correction_service
 from srt_parser import parse_srt_content, create_youtube_url_with_timestamp
@@ -2323,6 +2323,109 @@ async def create_drills_from_video(
             job.error_message = str(e)
             db.commit()
         raise HTTPException(status_code=500, detail=str(e))
+
+# ===================== SPACED REPETITION (SRS) =====================
+# SM-2 style scheduling. Grades: 0=again, 1=hard, 2=good, 3=easy.
+
+@app.get("/reviews/due", response_model=list[Drill])
+def get_due_reviews(limit: int = 20, db: Session = Depends(get_db)):
+    """
+    Drills due for spaced-repetition review: overdue cards first (most
+    overdue first), then never-reviewed drills (newest first) to fill up.
+    """
+    now = datetime.utcnow()
+    due_rows = (
+        db.query(DrillModel)
+        .join(DrillReviewModel, DrillReviewModel.drill_id == DrillModel.id)
+        .filter(DrillReviewModel.due_date <= now)
+        .order_by(DrillReviewModel.due_date.asc())
+        .limit(limit)
+        .all()
+    )
+    drills = list(due_rows)
+    if len(drills) < limit:
+        new_drills = (
+            db.query(DrillModel)
+            .filter(~DrillModel.id.in_(db.query(DrillReviewModel.drill_id)))
+            .order_by(DrillModel.date_created.desc())
+            .limit(limit - len(drills))
+            .all()
+        )
+        drills.extend(new_drills)
+    return drills
+
+@app.post("/reviews/{drill_id}/grade")
+def grade_review(drill_id: int, grade: int = Body(..., embed=True), db: Session = Depends(get_db)):
+    """Record a review grade and reschedule the drill (SM-2)."""
+    if grade not in (0, 1, 2, 3):
+        raise HTTPException(status_code=400, detail="grade must be 0 (again), 1 (hard), 2 (good) or 3 (easy)")
+    drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+    if not drill:
+        raise HTTPException(status_code=404, detail="Drill not found")
+
+    now = datetime.utcnow()
+    review = db.query(DrillReviewModel).filter(DrillReviewModel.drill_id == drill_id).first()
+    if not review:
+        review = DrillReviewModel(
+            drill_id=drill_id, ease=2.5, interval_days=0.0,
+            repetitions=0, total_reviews=0, lapses=0, due_date=now
+        )
+        db.add(review)
+
+    if grade == 0:  # again — lapse, back to the start, retry this session
+        review.repetitions = 0
+        review.lapses += 1
+        review.ease = max(1.3, review.ease - 0.2)
+        review.interval_days = 0.007  # ~10 minutes
+    elif grade == 1:  # hard
+        review.ease = max(1.3, review.ease - 0.15)
+        review.interval_days = 0.5 if review.repetitions == 0 else review.interval_days * 1.2
+        review.repetitions += 1
+    elif grade == 2:  # good
+        if review.repetitions == 0:
+            review.interval_days = 1.0
+        elif review.repetitions == 1:
+            review.interval_days = 6.0
+        else:
+            review.interval_days = review.interval_days * review.ease
+        review.repetitions += 1
+    else:  # easy
+        review.ease = min(3.0, review.ease + 0.15)
+        if review.repetitions == 0:
+            review.interval_days = 2.0
+        elif review.repetitions == 1:
+            review.interval_days = 8.0
+        else:
+            review.interval_days = review.interval_days * review.ease * 1.3
+        review.repetitions += 1
+
+    review.due_date = now + timedelta(days=review.interval_days)
+    review.last_grade = grade
+    review.last_reviewed = now
+    review.total_reviews += 1
+    db.commit()
+    db.refresh(review)
+    return {
+        "drill_id": drill_id,
+        "next_due": review.due_date.isoformat(),
+        "interval_days": round(review.interval_days, 3),
+        "ease": round(review.ease, 2),
+        "repetitions": review.repetitions
+    }
+
+@app.get("/reviews/stats")
+def review_stats(db: Session = Depends(get_db)):
+    """Counts for the home-screen review badge."""
+    now = datetime.utcnow()
+    total = db.query(DrillModel).count()
+    tracked = db.query(DrillReviewModel).count()
+    due = db.query(DrillReviewModel).filter(DrillReviewModel.due_date <= now).count()
+    return {
+        "total_drills": total,
+        "new": max(0, total - tracked),
+        "due": due,
+        "learning": tracked
+    }
 
 # ===================== DEBUG ENDPOINTS =====================
 # Added a comment to trigger Render deployment - 2026-02-24

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { Network } from '@capacitor/network';
 import { API_BASE } from '../config';
@@ -9,12 +9,21 @@ import DrillPlayer from './DrillPlayer';
 
 export default function DrillPlayerPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const reviewMode = searchParams.get('mode') === 'review';
   const [drills, setDrills] = useState<Drill[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchDrills = async () => {
       try {
+        if (reviewMode) {
+          // Spaced-repetition queue: due cards first, then new drills
+          const response = await axios.get(`${API_BASE}/reviews/due?limit=30`);
+          setDrills(response.data || []);
+          return;
+        }
+
         const status = await Network.getStatus();
         let allDrills: Drill[] = [];
 
@@ -42,7 +51,7 @@ export default function DrillPlayerPage() {
     };
 
     fetchDrills();
-  }, []);
+  }, [reviewMode]);
 
   if (loading) {
     return (
@@ -100,9 +109,9 @@ export default function DrillPlayerPage() {
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '36px'
-          }}>📭</div>
-          <h2 style={{ margin: '0 0 10px', fontSize: '22px', fontWeight: 800, color: 'var(--text)' }}>No drills found</h2>
-          <p style={{ color: 'var(--text-soft)', margin: '0 0 24px', fontSize: '15px', lineHeight: 1.5 }}>Create some drills first to use the player.</p>
+          }}>{reviewMode ? '🎉' : '📭'}</div>
+          <h2 style={{ margin: '0 0 10px', fontSize: '22px', fontWeight: 800, color: 'var(--text)' }}>{reviewMode ? 'Res per repassar!' : 'No drills found'}</h2>
+          <p style={{ color: 'var(--text-soft)', margin: '0 0 24px', fontSize: '15px', lineHeight: 1.5 }}>{reviewMode ? 'Has acabat el repàs d\'avui. Torna més tard o crea drills nous.' : 'Create some drills first to use the player.'}</p>
           <button
             onClick={() => navigate('/')}
             style={{
@@ -128,6 +137,12 @@ export default function DrillPlayerPage() {
     <DrillPlayer
       drills={drills}
       onExit={() => navigate('/')}
+      reviewMode={reviewMode}
+      onGrade={
+        reviewMode
+          ? (drillId, grade) => axios.post(`${API_BASE}/reviews/${drillId}/grade`, { grade }).then(() => {})
+          : undefined
+      }
     />
   );
 }

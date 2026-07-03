@@ -15,6 +15,10 @@ import type { Drill } from '../types';
 interface DrillPlayerProps {
   drills: Drill[];
   onExit: () => void;
+  // Spaced-repetition session: audio plays but never auto-advances; the user
+  // grades each drill (0=again 1=hard 2=good 3=easy) to move on
+  reviewMode?: boolean;
+  onGrade?: (drillId: number, grade: number) => Promise<void> | void;
 }
 
 interface VideoControls {
@@ -24,7 +28,7 @@ interface VideoControls {
   subtitleSections: Array<{start: number, end: number}>;
 }
 
-export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
+export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: DrillPlayerProps) {
   // Style definitions (moved to top to avoid "used before declaration" errors)
   const cleanButtonStyle = {
     background: 'rgba(255,255,255,0.15)',
@@ -301,7 +305,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
       setIsPlaying(false);
       // Only auto-advance if the user hasn't already navigated away — an
       // interrupted play() also rejects, and advancing then would skip a drill
-      if (autoPlayEnabled && currentIndexRef.current === startedAtIndex) goToNextDrill();
+      if (autoPlayEnabled && !reviewMode && currentIndexRef.current === startedAtIndex) goToNextDrill();
     }
   };
 
@@ -313,7 +317,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
 
   const playTachelhitAudio = async (): Promise<void> => {
     if (!currentDrill?.audio_url) {
-      if (autoPlayEnabled) goToNextDrill();
+      if (autoPlayEnabled && !reviewMode) goToNextDrill();
       return;
     }
 
@@ -339,7 +343,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             } else {
               setIsPlaying(false);
               audioTimersRef.current.push(window.setTimeout(() => {
-                if (autoPlayEnabled) goToNextDrill();
+                if (autoPlayEnabled && !reviewMode) goToNextDrill();
                 resolve();
               }, 1000));
             }
@@ -1258,6 +1262,47 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Spaced-repetition grading bar */}
+      {reviewMode && onGrade && currentDrill && (
+        <div style={{
+          position: 'fixed', bottom: '18px', left: '50%', transform: 'translateX(-50%)',
+          display: 'flex', gap: '10px', zIndex: 10001,
+          background: 'rgba(15, 23, 42, 0.85)', padding: '10px 14px',
+          borderRadius: 'var(--r-pill)', backdropFilter: 'blur(8px)', boxShadow: 'var(--shadow-lg)'
+        }}>
+          {[
+            { g: 0, label: 'Un altre cop', bg: 'var(--rose)' },
+            { g: 1, label: 'Difícil', bg: 'var(--amber)' },
+            { g: 2, label: 'Bé', bg: 'var(--emerald)' },
+            { g: 3, label: 'Fàcil', bg: 'var(--sky)' },
+          ].map(({ g, label, bg }) => (
+            <button
+              key={g}
+              onClick={async () => {
+                const drillId = currentDrill.id;
+                try {
+                  await onGrade(drillId, g);
+                } catch (e) {
+                  console.error('Failed to record grade', e);
+                }
+                // "Again" replays the same card; any other grade moves on
+                if (g === 0) {
+                  playCurrentAudio();
+                } else {
+                  goToNextDrill();
+                }
+              }}
+              style={{
+                padding: '10px 16px', background: bg, color: 'white', border: 'none',
+                borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '14px', cursor: 'pointer'
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       )}
     </div>

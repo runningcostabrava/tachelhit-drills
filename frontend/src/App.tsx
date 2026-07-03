@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Network } from '@capacitor/network';
 import axios from 'axios';
 import { API_BASE } from './config';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { syncManager } from './services/OfflineSyncManager';
 import DrillsResponsive from './components/DrillsResponsive';
 import TestsDashboard from './components/TestsDashboard';
@@ -15,6 +15,37 @@ import SrtImport from './components/SrtImport';
 import VideoLibraryPage from './components/VideoLibraryPage';
 import './App.css';
 
+// Floating spaced-repetition entry point, shown on the home screen when
+// there are cards due or new drills to learn
+const ReviewFab = () => {
+  const navigate = useNavigate();
+  const [counts, setCounts] = useState<{ due: number; new: number } | null>(null);
+
+  useEffect(() => {
+    axios.get(`${API_BASE}/reviews/stats`)
+      .then(r => setCounts({ due: r.data.due, new: r.data.new }))
+      .catch(() => {});
+  }, []);
+
+  const pending = (counts?.due || 0) + (counts?.new || 0);
+  if (!pending) return null;
+
+  return (
+    <button
+      onClick={() => navigate('/player?mode=review')}
+      style={{
+        position: 'fixed', bottom: '86px', right: '16px', zIndex: 900,
+        padding: '13px 20px', background: 'var(--brand-gradient)', color: 'white',
+        border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 800, fontSize: '15px',
+        boxShadow: 'var(--shadow-brand)', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: '8px'
+      }}
+    >
+      🧠 Repàs {counts!.due > 0 ? `(${counts!.due})` : `(${counts!.new} nous)`}
+    </button>
+  );
+};
+
 // Placeholder component for /demo-videos
 const DemoVideosPage = () => (
   <div style={{ padding: '20px', textAlign: 'center' }}>
@@ -26,6 +57,7 @@ const DemoVideosPage = () => (
 
 function App() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Offline sync bootstrap. All queue processing lives in OfflineSyncManager;
   // this effect just pushes pending actions and refreshes the local caches on
@@ -67,6 +99,7 @@ function App() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {location.pathname === '/' && <ReviewFab />}
       <Routes>
         <Route path="/" element={<DrillsResponsive />} />
         <Route path="/tests" element={<TestsDashboard onBackToDrills={() => navigate('/')} />} />

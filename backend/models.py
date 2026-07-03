@@ -119,3 +119,18 @@ class GlossaryItem(Base):
     correct_spelling = Column(String, nullable=False) # e.g., "anaygh"
     notes = Column(String, nullable=True)
     date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+class DrillReview(Base):
+    """Spaced-repetition state for a drill (SM-2 style scheduling)."""
+    __tablename__ = "drill_reviews"
+
+    id = Column(Integer, primary_key=True, index=True)
+    drill_id = Column(Integer, ForeignKey("drills.id"), unique=True, nullable=False, index=True)
+    ease = Column(Float, default=2.5, nullable=False)
+    interval_days = Column(Float, default=0.0, nullable=False)
+    repetitions = Column(Integer, default=0, nullable=False)
+    due_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    last_grade = Column(Integer, nullable=True)     # 0=again 1=hard 2=good 3=easy
+    last_reviewed = Column(DateTime, nullable=True)
+    total_reviews = Column(Integer, default=0, nullable=False)
+    lapses = Column(Integer, default=0, nullable=False)
