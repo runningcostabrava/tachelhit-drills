@@ -1,3 +1,4 @@
+import '../agGridSetup';
 import { useState, useEffect } from 'react';
 import { FaMicrophone, FaPlus, FaTimes, FaLink, FaChevronDown, FaSearch, FaBook, FaTrash } from 'react-icons/fa';
 import axios from 'axios';

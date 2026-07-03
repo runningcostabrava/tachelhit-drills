@@ -1,3 +1,4 @@
+import '../agGridSetup';
 import { useState, useEffect, useMemo } from 'react';
 import { AgGridReact } from 'ag-grid-react';
 import type { ColDef } from 'ag-grid-community';

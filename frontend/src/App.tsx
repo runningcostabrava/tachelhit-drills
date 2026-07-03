@@ -1,22 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { Network } from '@capacitor/network';
 import axios from 'axios';
-import { API_BASE } from './config';
+import { API_BASE, getUserName, getUserToken } from './config';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { syncManager } from './services/OfflineSyncManager';
-import DrillsResponsive from './components/DrillsResponsive';
-import TestsDashboard from './components/TestsDashboard';
-import YouTubeShorts from './components/YouTubeShorts';
-import DrillPlayerPage from './components/DrillPlayerPage';
-import PublicTestView from './components/PublicTestView';
-import MediaRecorderTest from './components/MediaRecorderTest';
-import VideoDrillCreator from './components/VideoDrillCreator';
-import SrtImport from './components/SrtImport';
-import VideoLibraryPage from './components/VideoLibraryPage';
-import ProfilePage from './components/ProfilePage';
-import CorpusPage from './components/CorpusPage';
-import { getUserName, getUserToken } from './config';
 import './App.css';
+
+// Route-level code splitting: each page loads its chunk on first visit,
+// keeping the initial bundle small (AG Grid, players, creators all split out)
+const DrillsResponsive = lazy(() => import('./components/DrillsResponsive'));
+const TestsDashboard = lazy(() => import('./components/TestsDashboard'));
+const YouTubeShorts = lazy(() => import('./components/YouTubeShorts'));
+const DrillPlayerPage = lazy(() => import('./components/DrillPlayerPage'));
+const PublicTestView = lazy(() => import('./components/PublicTestView'));
+const MediaRecorderTest = lazy(() => import('./components/MediaRecorderTest'));
+const VideoDrillCreator = lazy(() => import('./components/VideoDrillCreator'));
+const SrtImport = lazy(() => import('./components/SrtImport'));
+const VideoLibraryPage = lazy(() => import('./components/VideoLibraryPage'));
+const ProfilePage = lazy(() => import('./components/ProfilePage'));
+const CorpusPage = lazy(() => import('./components/CorpusPage'));
+
+const RouteLoader = () => (
+  <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ width: '44px', height: '44px', borderRadius: '50%', border: '4px solid var(--border)', borderTopColor: 'var(--brand-1)', animation: 'spin 0.9s linear infinite' }} />
+  </div>
+);
 
 // Floating spaced-repetition entry point, shown on the home screen when
 // there are cards due or new drills to learn
@@ -131,6 +139,7 @@ function App() {
           📖 Corpus
         </button>
       )}
+      <Suspense fallback={<RouteLoader />}>
       <Routes>
         <Route path="/" element={<DrillsResponsive />} />
         <Route path="/tests" element={<TestsDashboard onBackToDrills={() => navigate('/')} />} />
@@ -145,6 +154,7 @@ function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/corpus" element={<CorpusPage />} />
       </Routes>
+      </Suspense>
     </div>
   );
 }
