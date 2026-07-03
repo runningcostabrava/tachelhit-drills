@@ -11,6 +11,7 @@ from urllib.parse import quote
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Body, Form, BackgroundTasks, Request
 from pydantic import BaseModel
 from typing import Optional, List, Dict
+import hashlib
 import re
 import secrets
 from fastapi.middleware.cors import CORSMiddleware
@@ -678,12 +679,16 @@ def get_db():
     finally:
         db.close()
 
+def _hash_token(raw: str) -> str:
+    """Tokens are stored hashed; only the user ever holds the raw value."""
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> Optional[UserModel]:
     """Resolve the requesting user from the X-User-Token header (None = anonymous)."""
     token = (request.headers.get("x-user-token") or "").strip()
     if not token:
         return None
-    return db.query(UserModel).filter(UserModel.token == token).first()
+    return db.query(UserModel).filter(UserModel.token == _hash_token(token)).first()
 
 # ===================== CRUD =====================
 @app.get("/drills/", response_model=list[Drill])
@@ -2439,30 +2444,45 @@ async def create_drills_from_video(
 # ===================== USERS (multi-tenancy, auditor Phase 1) =====================
 # (get_current_user lives next to get_db near the top of the file)
 
+# Naive in-memory rate limit for registration (per process; resets on deploy)
+_register_attempts: Dict[str, List[float]] = {}
+
 @app.post("/users/register")
 def register_user(
+    request: Request,
     username: str = Body(..., embed=True),
     display_name: Optional[str] = Body(None, embed=True),
     db: Session = Depends(get_db)
 ):
     """
     Create a contributor/learner identity. Returns a personal token the client
-    must send as the X-User-Token header on every request; it is shown once.
+    must send as the X-User-Token header on every request; it is shown once
+    and stored only as a hash.
     """
+    ip = request.client.host if request.client else "unknown"
+    now_ts = datetime.utcnow().timestamp()
+    attempts = [t for t in _register_attempts.get(ip, []) if now_ts - t < 3600]
+    if len(attempts) >= 5:
+        raise HTTPException(status_code=429, detail="Too many registrations from this address; try again later")
+    attempts.append(now_ts)
+    _register_attempts[ip] = attempts
+
     uname = (username or "").strip().lower()
     if not re.fullmatch(r"[a-z0-9_\-\.]{3,32}", uname):
         raise HTTPException(status_code=400, detail="Username must be 3-32 chars: a-z 0-9 _ - .")
     if db.query(UserModel).filter(UserModel.username == uname).first():
         raise HTTPException(status_code=409, detail="Username already taken")
+
+    raw_token = secrets.token_hex(16)
     user = UserModel(
         username=uname,
         display_name=(display_name or uname).strip(),
-        token=secrets.token_hex(16)
+        token=_hash_token(raw_token)
     )
     db.add(user)
     db.commit()
     db.refresh(user)
-    return {"username": user.username, "display_name": user.display_name, "token": user.token}
+    return {"username": user.username, "display_name": user.display_name, "token": raw_token}
 
 @app.get("/users/me")
 def get_me(user: Optional[UserModel] = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -2513,9 +2533,11 @@ def corpus_search(
     region: Optional[str] = None,
     tag: Optional[str] = None,
     limit: int = 100,
+    offset: int = 0,
     db: Session = Depends(get_db)
 ):
-    """Search the corpus across all text fields; filter by variety/region/tag."""
+    """Search the corpus across all text fields; filter by variety/region/tag.
+    Paginate with limit/offset."""
     from sqlalchemy import or_
     query = db.query(DrillModel)
     if q:
@@ -2532,7 +2554,7 @@ def corpus_search(
         query = query.filter(DrillModel.region == region)
     if tag:
         query = query.filter(DrillModel.tag == tag)
-    return query.order_by(DrillModel.date_created.desc()).limit(min(limit, 500)).all()
+    return query.order_by(DrillModel.date_created.desc()).offset(max(0, offset)).limit(min(limit, 500)).all()
 
 @app.get("/corpus/export")
 def corpus_export(format: str = "json", db: Session = Depends(get_db)):
