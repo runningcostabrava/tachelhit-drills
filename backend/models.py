@@ -156,3 +156,13 @@ class User(Base):
     display_name = Column(String, nullable=True)
     token = Column(String, unique=True, nullable=False, index=True)
     date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+class ReviewLog(Base):
+    """One row per review grade — powers streaks and progress stats."""
+    __tablename__ = "review_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    drill_id = Column(Integer, ForeignKey("drills.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    grade = Column(Integer, nullable=False)
+    reviewed_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)

@@ -31,10 +31,14 @@ const RouteLoader = () => (
 const ReviewFab = () => {
   const navigate = useNavigate();
   const [counts, setCounts] = useState<{ due: number; new: number } | null>(null);
+  const [streak, setStreak] = useState(0);
 
   useEffect(() => {
     axios.get(`${API_BASE}/reviews/stats`)
       .then(r => setCounts({ due: r.data.due, new: r.data.new }))
+      .catch(() => {});
+    axios.get(`${API_BASE}/reviews/streak`)
+      .then(r => setStreak(r.data.streak_days || 0))
       .catch(() => {});
   }, []);
 
@@ -53,6 +57,7 @@ const ReviewFab = () => {
       }}
     >
       🧠 Repàs {counts!.due > 0 ? `(${counts!.due})` : `(${counts!.new} nous)`}
+      {streak > 0 && <span style={{ marginLeft: '4px' }}>🔥{streak}</span>}
     </button>
   );
 };

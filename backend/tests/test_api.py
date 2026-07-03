@@ -184,3 +184,14 @@ def test_flywheel_respects_privacy():
     private_id = r.json()["id"]
     pairs = client.get("/corpus/flywheel").json()["pairs"]
     assert all(p["drill_id"] != private_id for p in pairs)
+
+
+def test_streak_tracking():
+    token = register("streaker")
+    drill_id = client.get("/drills/").json()[0]["id"]
+    client.post(f"/reviews/{drill_id}/grade", json={"grade": 2},
+                headers={"X-User-Token": token})
+    s = client.get("/reviews/streak", headers={"X-User-Token": token}).json()
+    assert s["streak_days"] == 1
+    assert s["reviews_today"] >= 1
+    assert s["active_days"] == 1

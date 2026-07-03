@@ -36,7 +36,7 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
 
-from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel  # ← Alias for ORM models
+from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel  # ← Alias for ORM models
 from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort, VideoProcessingJobCreate, VideoProcessingJob, VideoSegmentCreate, VideoSegment, TranscribeRequest, TranscribeResponse, TranslateRequest, TranslateResponse, DrillPairInfo, GlossaryItem, GlossaryItemCreate, SrtImportRequest, SrtImportResponse, SrtSegment, BulkVideoUrlUpdateRequest, BulkVideoUrlUpdateResponse  # ← Pydantic schemas
 from correction_service import get_correction_service
 from srt_parser import parse_srt_content, create_youtube_url_with_timestamp
@@ -2794,6 +2794,7 @@ def grade_review(drill_id: int, grade: int = Body(..., embed=True), db: Session 
     review.last_grade = grade
     review.last_reviewed = now
     review.total_reviews += 1
+    db.add(ReviewLogModel(drill_id=drill_id, user_id=uid, grade=grade, reviewed_at=now))
     db.commit()
     db.refresh(review)
     return {
@@ -2802,6 +2803,35 @@ def grade_review(drill_id: int, grade: int = Body(..., embed=True), db: Session 
         "interval_days": round(review.interval_days, 3),
         "ease": round(review.ease, 2),
         "repetitions": review.repetitions
+    }
+
+@app.get("/reviews/streak")
+def review_streak(db: Session = Depends(get_db),
+                  user: Optional[UserModel] = Depends(get_current_user)):
+    """Daily streak and activity counts for the requesting user."""
+    uid = user.id if user else None
+    rows = db.query(ReviewLogModel.reviewed_at).filter(ReviewLogModel.user_id == uid).all()
+    days = {r[0].date() for r in rows}
+    today = datetime.utcnow().date()
+
+    # Streak of consecutive review days; still alive if yesterday was reviewed
+    streak = 0
+    if today in days:
+        cursor = today
+    elif (today - timedelta(days=1)) in days:
+        cursor = today - timedelta(days=1)
+    else:
+        cursor = None
+    while cursor is not None and cursor in days:
+        streak += 1
+        cursor = cursor - timedelta(days=1)
+
+    week_ago = today - timedelta(days=6)
+    return {
+        "streak_days": streak,
+        "reviews_today": sum(1 for r in rows if r[0].date() == today),
+        "reviews_week": sum(1 for r in rows if r[0].date() >= week_ago),
+        "active_days": len(days),
     }
 
 @app.get("/reviews/stats")

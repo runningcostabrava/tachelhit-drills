@@ -33,6 +33,7 @@ const inputStyle: React.CSSProperties = {
 export default function ProfilePage() {
   const navigate = useNavigate();
   const [me, setMe] = useState<Me | null>(null);
+  const [streak, setStreak] = useState<{ streak_days: number; reviews_week: number } | null>(null);
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [tokenInput, setTokenInput] = useState('');
@@ -51,6 +52,9 @@ export default function ProfilePage() {
           clearUserIdentity();
         }
       })
+      .catch(() => {});
+    fetch(`${API_BASE}/reviews/streak`)
+      .then(async (r) => { if (r.ok) setStreak(await r.json()); })
       .catch(() => {});
   }, [hasToken]);
 
@@ -143,6 +147,11 @@ export default function ProfilePage() {
               <div style={{ padding: '12px 18px', background: 'var(--emerald-soft)', borderRadius: 'var(--r-lg)', fontWeight: 700, color: 'var(--emerald)' }}>
                 🧠 {me.cards_learning} targetes en aprenentatge
               </div>
+              {streak && streak.streak_days > 0 && (
+                <div style={{ padding: '12px 18px', background: 'var(--amber-soft)', borderRadius: 'var(--r-lg)', fontWeight: 700, color: 'var(--amber-strong)' }}>
+                  🔥 {streak.streak_days} {streak.streak_days === 1 ? 'dia' : 'dies'} seguits · {streak.reviews_week} repassos aquesta setmana
+                </div>
+              )}
             </div>
             <button
               onClick={logout}
