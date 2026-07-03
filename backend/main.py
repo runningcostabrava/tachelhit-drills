@@ -2594,9 +2594,12 @@ def corpus_flywheel(verified_only: bool = False, db: Session = Depends(get_db)):
     capture for the whole language. verified_only=true restricts the export
     to human-reviewed items (recommended for training).
     """
+    from sqlalchemy import or_
     query = db.query(DrillModel).filter(
         DrillModel.audio_url != None, DrillModel.audio_url != '',
-        DrillModel.text_tachelhit != None, DrillModel.text_tachelhit != ''
+        DrillModel.text_tachelhit != None, DrillModel.text_tachelhit != '',
+        # Respect per-recording consent: private contributions never leave
+        or_(DrillModel.license == None, DrillModel.license != 'private')
     )
     if verified_only:
         query = query.filter(DrillModel.verified == True)

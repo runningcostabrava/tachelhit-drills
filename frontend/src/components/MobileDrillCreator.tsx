@@ -26,6 +26,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     });
 
     const [isRecording, setIsRecording] = useState(false);
+    const [corpusConsent, setCorpusConsent] = useState(true);
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
     const [capturedVideo, setCapturedVideo] = useState<string | null>(null);
     const [capturedAudio, setCapturedAudio] = useState<string | null>(null);
@@ -45,6 +46,9 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     }, []);
 
     const triggerSave = async (updatedDrill: Partial<Drill>) => {
+        // Per-recording consent: unchecked keeps the contribution out of the
+        // public corpus exports (license 'private')
+        updatedDrill = { ...updatedDrill, license: corpusConsent ? 'CC-BY-SA' : 'private' };
         if (!(window as any).Capacitor?.isNative) {
             // Web direct save
             try {
@@ -566,6 +570,11 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                         style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '10px 4px', background: 'var(--sky-soft)', color: 'var(--sky)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 700, fontSize: '10px', cursor: 'pointer', opacity: (drill.audio_url || drill.video_url || capturedAudio || capturedVideo) ? 1 : 0.5 }}
                     >🪄 Trans</button>
                 </div>
+
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '12px', color: 'var(--text-soft)', padding: '0 4px', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={corpusConsent} onChange={(e) => setCorpusConsent(e.target.checked)} style={{ marginTop: '2px' }} />
+                    <span>Consento que aquesta gravació s'afegeixi al corpus per documentar la llengua (CC BY-SA). Desmarca-ho per mantenir-la privada.</span>
+                </label>
 
                 <div style={{ background: 'var(--surface)', padding: '20px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div><label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Català</label><textarea value={drill.text_catalan || ''} onChange={(e) => handleTextChange('text_catalan', e.target.value)} rows={3} style={{ width: '100%', padding: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '16px', color: 'var(--text)', outline: 'none', background: 'var(--surface-2)', fontFamily: 'var(--font-sans)' }} /></div>
