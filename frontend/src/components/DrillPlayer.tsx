@@ -676,6 +676,19 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
             )}
           </div>
 
+          {/* Latin romanization (shown with the answer) */}
+          {!hideAnswer && currentDrill?.text_tachelhit_latin && (
+            <div style={{
+              padding: '0 24px 14px',
+              textAlign: 'center',
+              fontSize: '17px',
+              fontStyle: 'italic',
+              color: 'var(--text-soft)'
+            }}>
+              {currentDrill.text_tachelhit_latin}
+            </div>
+          )}
+
           {/* Image */}
           {imageUrl && (
             <div style={{ padding: '0 24px 20px', display: 'flex', justifyContent: 'center' }}>
