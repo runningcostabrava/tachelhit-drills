@@ -2519,6 +2519,28 @@ def verify_drill(drill_id: int, verified: bool = Body(True, embed=True),
     db.commit()
     return {"drill_id": drill_id, "verified": drill.verified, "verified_by": user.username if verified else None}
 
+@app.get("/version")
+def get_version():
+    """
+    Deploy verification: Render injects RENDER_GIT_COMMIT automatically, so
+    this answers 'which code is production actually running?' at a glance.
+    """
+    return {
+        "commit": os.getenv("RENDER_GIT_COMMIT", "local"),
+        "features": {
+            "capture_import_url": True,
+            "auto_drills_pipeline": True,
+            "lyrics_alignment": True,
+            "ocr": bool(os.getenv("HUGGINGFACE_OCR_SPACE_URL")),
+            "srs": True,
+            "pronunciation_check": True,
+            "tachelhit_tts_fallback": True,
+            "users": True,
+            "corpus": True,
+            "api_key_gate": bool((os.getenv("API_KEY") or "").strip()),
+        }
+    }
+
 # ===================== CORPUS (documentation & research) =====================
 
 CORPUS_EXPORT_FIELDS = [

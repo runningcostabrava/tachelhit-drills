@@ -231,3 +231,11 @@ def test_pronunciation_best_match_is_script_aware():
     # Tifinagh ASR output matches the Tifinagh field
     script, _, score = main._best_pronunciation_match("ⵜⴰⵏⵎⵎⵉⵔⵜ", FakeDrill())
     assert script == "tifinagh" and score > 0.9
+
+
+def test_version_endpoint():
+    r = client.get("/version")
+    assert r.status_code == 200
+    data = r.json()
+    assert "commit" in data
+    assert data["features"]["srs"] is True
