@@ -60,6 +60,13 @@ class DrillBase(BaseModel):
     is_correction_dataset: Optional[bool] = None
     video_start_time: Optional[float] = None  # Start time in seconds
     video_end_time: Optional[float] = None    # End time in seconds
+    # Documentation / variation layer (auditor Phase 2)
+    text_tachelhit_latin: Optional[str] = None
+    variety: Optional[str] = None
+    region: Optional[str] = None
+    speaker: Optional[str] = None
+    source_url: Optional[str] = None
+    license: Optional[str] = None
 
     # Validators for URL fields
     @field_validator('audio_url', 'audio_tts_url', 'video_url', 'image_url')

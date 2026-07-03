@@ -23,6 +23,13 @@ class Drill(Base):
     # Timestamp fields for video segments
     video_start_time = Column(Float, nullable=True)  # Start time in seconds
     video_end_time = Column(Float, nullable=True)    # End time in seconds
+    # --- Documentation / variation layer (auditor Phase 2) ---
+    text_tachelhit_latin = Column(String, nullable=True)  # Latin romanization
+    variety = Column(String, nullable=True)   # e.g. "tashelhit", "central-atlas", "tarifit"
+    region = Column(String, nullable=True)    # e.g. "Souss", "Tafraout", "diaspora-BCN"
+    speaker = Column(String, nullable=True)   # speaker/contributor label (with consent)
+    source_url = Column(String, nullable=True)  # provenance: where the content came from
+    license = Column(String, nullable=True)     # e.g. "CC-BY-SA", "personal", "unknown"
 
 class Test(Base):
     __tablename__ = "tests"

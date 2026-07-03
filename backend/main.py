@@ -360,6 +360,26 @@ async def lifespan(app: FastAPI):
     # Create tables
     Base.metadata.create_all(bind=engine)
 
+    # Lightweight schema sync: create_all only creates NEW tables; it never
+    # alters existing ones. Add any missing nullable columns so model changes
+    # deploy without hand-written migrations (works on SQLite and Postgres).
+    try:
+        from sqlalchemy import inspect as sa_inspect, text as sa_text
+        inspector = sa_inspect(engine)
+        with engine.begin() as conn:
+            for table in Base.metadata.sorted_tables:
+                if not inspector.has_table(table.name):
+                    continue
+                existing_cols = {c["name"] for c in inspector.get_columns(table.name)}
+                for col in table.columns:
+                    if col.name in existing_cols or col.primary_key or not col.nullable:
+                        continue
+                    coltype = col.type.compile(engine.dialect)
+                    conn.execute(sa_text(f'ALTER TABLE {table.name} ADD COLUMN {col.name} {coltype}'))
+                    print(f"[SCHEMA] Added missing column {table.name}.{col.name} ({coltype})")
+    except Exception as e:
+        print(f"[SCHEMA] Column sync skipped: {e}")
+
     # Add sample data if database is empty
     with SessionLocal() as db:
         count = db.query(DrillModel).count()
@@ -1931,7 +1951,8 @@ async def auto_drills_pipeline_task(job_id: int, url: Optional[str], video_path:
                 text_tachelhit=drill_tachelhit,
                 text_arabic=drill_arabic,
                 tag=tag or "auto_capture",
-                author="Auto Capture"
+                author="Auto Capture",
+                source_url=url
             )
             db.add(db_drill)
             db.commit()
@@ -2327,7 +2348,8 @@ async def create_drills_from_video(
                     text_tachelhit=drill_tachelhit,
                     text_arabic=drill_arabic,
                     tag=tag or "file_import",
-                    author="Manual Upload"
+                    author="Manual Upload",
+                    source_url=url
                 )
                 db.add(db_drill)
                 db.commit()
@@ -2366,7 +2388,8 @@ async def create_drills_from_video(
                     text_catalan=seg.get("text_catalan"),
                     text_tachelhit=drill_tachelhit,
                     text_arabic=drill_arabic,
-                    tag=tag or "video_capture"
+                    tag=tag or "video_capture",
+                    source_url=url
                 )
                 db.add(db_drill)
                 db.commit()
@@ -2398,6 +2421,116 @@ async def create_drills_from_video(
             job.error_message = str(e)
             db.commit()
         raise HTTPException(status_code=500, detail=str(e))
+
+# ===================== CORPUS (documentation & research) =====================
+
+CORPUS_EXPORT_FIELDS = [
+    "id", "date_created", "tag", "author", "speaker", "variety", "region",
+    "license", "source_url", "text_catalan", "text_tachelhit",
+    "text_tachelhit_latin", "text_arabic", "audio_url", "audio_tts_url",
+    "video_url", "image_url", "video_start_time", "video_end_time"
+]
+
+@app.get("/corpus/search", response_model=list[Drill])
+def corpus_search(
+    q: Optional[str] = None,
+    variety: Optional[str] = None,
+    region: Optional[str] = None,
+    tag: Optional[str] = None,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """Search the corpus across all text fields; filter by variety/region/tag."""
+    from sqlalchemy import or_
+    query = db.query(DrillModel)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(or_(
+            DrillModel.text_tachelhit.ilike(like),
+            DrillModel.text_tachelhit_latin.ilike(like),
+            DrillModel.text_catalan.ilike(like),
+            DrillModel.text_arabic.ilike(like),
+        ))
+    if variety:
+        query = query.filter(DrillModel.variety == variety)
+    if region:
+        query = query.filter(DrillModel.region == region)
+    if tag:
+        query = query.filter(DrillModel.tag == tag)
+    return query.order_by(DrillModel.date_created.desc()).limit(min(limit, 500)).all()
+
+@app.get("/corpus/export")
+def corpus_export(format: str = "json", db: Session = Depends(get_db)):
+    """
+    Full corpus export (json or csv): every drill with all text, media and
+    provenance fields. The corpus should never be trapped in one database.
+    """
+    drills = db.query(DrillModel).order_by(DrillModel.id).all()
+    rows = []
+    for d in drills:
+        row = {}
+        for f in CORPUS_EXPORT_FIELDS:
+            v = getattr(d, f, None)
+            row[f] = v.isoformat() if f == "date_created" and v else v
+        rows.append(row)
+
+    if format == "csv":
+        import csv
+        import io
+        from fastapi.responses import Response
+        buf = io.StringIO()
+        writer = csv.DictWriter(buf, fieldnames=CORPUS_EXPORT_FIELDS)
+        writer.writeheader()
+        writer.writerows(rows)
+        return Response(
+            content=buf.getvalue(),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=tachelhit_corpus.csv"}
+        )
+    return {"count": len(rows), "drills": rows}
+
+@app.get("/corpus/flywheel")
+def corpus_flywheel(db: Session = Depends(get_db)):
+    """
+    Verified (audio, text) pairs for fine-tuning ASR/translation models —
+    the data flywheel: every human-verified drill improves the models that
+    power capture for the whole language.
+    """
+    drills = db.query(DrillModel).filter(
+        DrillModel.audio_url != None, DrillModel.audio_url != '',
+        DrillModel.text_tachelhit != None, DrillModel.text_tachelhit != ''
+    ).all()
+    pairs = [{
+        "drill_id": d.id,
+        "audio_url": normalize_media_url(d.audio_url),
+        "text_tachelhit": d.text_tachelhit,
+        "text_tachelhit_latin": d.text_tachelhit_latin,
+        "text_catalan": d.text_catalan,
+        "text_arabic": d.text_arabic,
+        "variety": d.variety,
+        "region": d.region,
+        "license": d.license,
+    } for d in drills]
+    return {"count": len(pairs), "pairs": pairs}
+
+@app.get("/corpus/stats")
+def corpus_stats(db: Session = Depends(get_db)):
+    """Corpus health overview: sizes, media coverage, varieties, regions."""
+    from sqlalchemy import func
+    total = db.query(DrillModel).count()
+    with_audio = db.query(DrillModel).filter(DrillModel.audio_url != None, DrillModel.audio_url != '').count()
+    with_video = db.query(DrillModel).filter(DrillModel.video_url != None, DrillModel.video_url != '').count()
+    with_latin = db.query(DrillModel).filter(DrillModel.text_tachelhit_latin != None, DrillModel.text_tachelhit_latin != '').count()
+    by_variety = {str(k or "unspecified"): v for k, v in db.query(DrillModel.variety, func.count()).group_by(DrillModel.variety).all()}
+    by_region = {str(k or "unspecified"): v for k, v in db.query(DrillModel.region, func.count()).group_by(DrillModel.region).all()}
+    return {
+        "total_drills": total,
+        "with_audio": with_audio,
+        "with_video": with_video,
+        "with_latin_script": with_latin,
+        "by_variety": by_variety,
+        "by_region": by_region,
+    }
 
 # ===================== PRONUNCIATION CHECK =====================
 
