@@ -28,7 +28,11 @@ def check_and_fix():
     print(f"[SCHEMA] Checking schema for database: {masked_url}")
     
     try:
-        engine = create_engine(DATABASE_URL, connect_args={"connect_timeout": 10})
+        # connect_timeout is a Postgres driver kwarg; sqlite3 rejects it
+        if DATABASE_URL.startswith("sqlite"):
+            engine = create_engine(DATABASE_URL)
+        else:
+            engine = create_engine(DATABASE_URL, connect_args={"connect_timeout": 10})
     except Exception as e:
         print(f"[SCHEMA] Error creating engine: {e}")
         return

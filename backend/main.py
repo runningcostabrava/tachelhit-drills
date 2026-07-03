@@ -125,17 +125,30 @@ def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tac
             print(f"[TRANSLATE] Connecting to Gradio Space: {client_id}")
 
             api_token = os.getenv("HUGGINGFACE_API_KEY")
-            client = Client(client_id, token=api_token)
+            import httpx
+            # A sleeping free-tier Space wakes and loads the model on first
+            # request; the default httpx read timeout aborts mid-wake, so give
+            # it a long one and retry once.
+            client = Client(client_id, token=api_token,
+                            httpx_kwargs={"timeout": httpx.Timeout(180.0, connect=30.0)})
             # The app.py has fn=translate_text with inputs [text, src_lang, tgt_lang]
-            result = client.predict(
-                text,
-                src_lang,
-                tgt_lang,
-                237,
-                4,
-                1.0,
-                api_name="/predict"
-            )
+            result = None
+            for attempt in (1, 2):
+                try:
+                    result = client.predict(
+                        text,
+                        src_lang,
+                        tgt_lang,
+                        237,
+                        4,
+                        1.0,
+                        api_name="/predict"
+                    )
+                    break
+                except Exception as retry_err:
+                    print(f"[TRANSLATE] Space attempt {attempt} failed: {retry_err}")
+                    if attempt == 2:
+                        raise
 
             # The Space returns "Tifinagh: ...\nLatín: ..." for ber_Tfng
             translation = str(result)
