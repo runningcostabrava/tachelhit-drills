@@ -50,10 +50,10 @@ const SrtImport: React.FC = () => {
       const lines = content.split('\n');
       const segments: SrtSegment[] = [];
       let currentSegment: Partial<SrtSegment> = {};
-      
+
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
-        
+
         if (!line) {
           // Empty line indicates end of segment
           if (currentSegment.sequence && currentSegment.start_time && currentSegment.end_time && currentSegment.text) {
@@ -62,7 +62,7 @@ const SrtImport: React.FC = () => {
           currentSegment = {};
           continue;
         }
-        
+
         if (!currentSegment.sequence && /^\d+$/.test(line)) {
           // Sequence number
           currentSegment.sequence = parseInt(line, 10);
@@ -80,12 +80,12 @@ const SrtImport: React.FC = () => {
           }
         }
       }
-      
+
       // Add last segment if exists
       if (currentSegment.sequence && currentSegment.start_time && currentSegment.end_time && currentSegment.text) {
         segments.push(currentSegment as SrtSegment);
       }
-      
+
       setParsedSegments(segments);
       setPreviewMode(true);
     } catch (err) {
@@ -164,45 +164,112 @@ const SrtImport: React.FC = () => {
     return time;
   };
 
+  const sectionCardStyle: React.CSSProperties = {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    padding: '24px',
+    borderRadius: 'var(--r-xl)',
+    boxShadow: 'var(--shadow-sm)',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    marginBottom: '8px',
+    fontWeight: 700,
+    fontSize: '14px',
+    color: 'var(--text-soft)',
+  };
+
+  const sectionHeadingStyle: React.CSSProperties = {
+    marginTop: 0,
+    marginBottom: '16px',
+    fontSize: '17px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  };
+
+  const stepBadgeStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '26px',
+    height: '26px',
+    borderRadius: 'var(--r-pill)',
+    background: 'var(--brand-gradient)',
+    color: '#fff',
+    fontSize: '13px',
+    fontWeight: 800,
+    flexShrink: 0,
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '12px 14px',
+    borderRadius: 'var(--r-md)',
+    border: '1px solid var(--border)',
+    background: 'var(--surface-2)',
+    fontSize: '15px',
+    color: 'var(--text)',
+  };
+
   return (
-    <div className="srt-import" style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
-      <button 
-        onClick={() => navigate('/')}
-        style={{ 
-          marginBottom: '20px', 
-          padding: '8px 16px', 
-          backgroundColor: '#eee', 
-          border: 'none', 
-          borderRadius: '4px',
-          cursor: 'pointer'
-        }}
-      >
-        ← Back to Drills
-      </button>
-      <h2 style={{ color: '#2c3e50', marginBottom: '20px' }}>Import Drills from SRT Subtitles</h2>
-      
+    <div className="srt-import" style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: '48px' }}>
+      {/* Gradient header banner */}
+      <div style={{
+        background: 'var(--brand-gradient)',
+        borderRadius: '0 0 var(--r-2xl) var(--r-2xl)',
+        padding: '24px 24px 32px',
+        boxShadow: 'var(--shadow-brand)',
+        color: '#fff',
+      }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+          <button
+            onClick={() => navigate('/')}
+            style={{
+              marginBottom: '20px',
+              padding: '8px 16px',
+              background: 'rgba(255,255,255,0.18)',
+              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.4)',
+              borderRadius: 'var(--r-pill)',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '14px',
+            }}
+          >
+            ← Back to Drills
+          </button>
+          <h2 style={{ color: '#fff', fontSize: '28px', margin: 0 }}>📝 Import Drills from SRT Subtitles</h2>
+          <p style={{ margin: '8px 0 0 0', color: 'rgba(255,255,255,0.85)', fontSize: '15px' }}>
+            Turn an SRT subtitle file into a set of timestamped drills
+          </p>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px' }}>
       <div className="import-form" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div className="input-section" style={{ backgroundColor: '#f9f9f9', padding: '20px', borderRadius: '12px' }}>
-          <h3 style={{ marginTop: 0, marginBottom: '15px' }}>1. SRT File</h3>
-          
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-              Upload SRT File:
+        <div className="input-section" style={sectionCardStyle}>
+          <h3 style={sectionHeadingStyle}><span style={stepBadgeStyle}>1</span> SRT File</h3>
+
+          <div style={{ marginBottom: '16px', padding: '20px', background: 'var(--surface-2)', borderRadius: 'var(--r-lg)', border: '2px dashed var(--border-strong)', textAlign: 'center' }}>
+            <label style={{ display: 'block', marginBottom: '10px', fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}>
+              ⬆️ Upload SRT File
             </label>
             <input
               type="file"
               accept=".srt,.txt"
               onChange={handleFileUpload}
-              style={{ padding: '8px', borderRadius: '6px', border: '1px solid #ddd' }}
+              style={{ fontSize: '13px' }}
             />
-            <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px', marginBottom: 0 }}>
               Or paste SRT content below
             </p>
           </div>
-          
+
           <div>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-              SRT Content:
+            <label style={labelStyle}>
+              SRT Content
             </label>
             <textarea
               value={srtContent}
@@ -218,99 +285,89 @@ This is the second line.`}
               style={{
                 width: '100%',
                 padding: '12px',
-                borderRadius: '8px',
-                border: '1px solid #ddd',
+                borderRadius: 'var(--r-md)',
+                border: '1px solid var(--border)',
+                background: 'var(--surface-2)',
                 fontFamily: 'monospace',
                 fontSize: '14px',
+                color: 'var(--text)',
                 resize: 'vertical'
               }}
             />
           </div>
-          
+
           <button
             onClick={handleParse}
             disabled={!srtContent.trim()}
             style={{
-              marginTop: '15px',
-              padding: '10px 20px',
-              backgroundColor: '#3498db',
-              color: 'white',
+              marginTop: '16px',
+              padding: '11px 22px',
+              background: srtContent.trim() ? 'var(--brand-gradient)' : 'var(--border)',
+              color: '#fff',
               border: 'none',
-              borderRadius: '6px',
+              borderRadius: 'var(--r-md)',
               cursor: srtContent.trim() ? 'pointer' : 'not-allowed',
-              opacity: srtContent.trim() ? 1 : 0.7
+              opacity: srtContent.trim() ? 1 : 0.7,
+              fontWeight: 700,
+              fontSize: '14px',
+              boxShadow: srtContent.trim() ? 'var(--shadow-brand)' : 'none',
             }}
           >
             {previewMode ? 'Update Preview' : 'Preview Segments'}
           </button>
         </div>
 
-        <div className="input-section" style={{ backgroundColor: '#f9f9f9', padding: '20px', borderRadius: '12px' }}>
-          <h3 style={{ marginTop: 0, marginBottom: '15px' }}>2. Video Configuration</h3>
-          
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-              YouTube Video URL:
+        <div className="input-section" style={sectionCardStyle}>
+          <h3 style={sectionHeadingStyle}><span style={stepBadgeStyle}>2</span> Video Configuration</h3>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={labelStyle}>
+              YouTube Video URL
             </label>
             <input
               type="text"
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
               placeholder="https://www.youtube.com/watch?v=..."
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: '8px',
-                border: '1px solid #ddd'
-              }}
+              style={inputStyle}
             />
-            <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
               Each drill will link to this video with the appropriate timestamp
             </p>
           </div>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Tag:
+              <label style={labelStyle}>
+                Tag
               </label>
               <input
                 type="text"
                 value={tag}
                 onChange={(e) => setTag(e.target.value)}
                 placeholder="youtube_srt"
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: '6px',
-                  border: '1px solid #ddd'
-                }}
+                style={inputStyle}
               />
             </div>
-            
+
             <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Author (Optional):
+              <label style={labelStyle}>
+                Author <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Optional)</span>
               </label>
               <input
                 type="text"
                 value={author}
                 onChange={(e) => setAuthor(e.target.value)}
                 placeholder="Your name"
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: '6px',
-                  border: '1px solid #ddd'
-                }}
+                style={inputStyle}
               />
             </div>
           </div>
         </div>
 
-        <div className="input-section" style={{ backgroundColor: '#f9f9f9', padding: '20px', borderRadius: '12px' }}>
-          <h3 style={{ marginTop: 0, marginBottom: '15px' }}>3. Test Configuration</h3>
-          
+        <div className="input-section" style={sectionCardStyle}>
+          <h3 style={sectionHeadingStyle}><span style={stepBadgeStyle}>3</span> Test Configuration</h3>
+
           <div style={{ marginBottom: '15px' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
               <input
@@ -318,60 +375,57 @@ This is the second line.`}
                 checked={createTest}
                 onChange={(e) => setCreateTest(e.target.checked)}
               />
-              <span style={{ fontWeight: 'bold' }}>Create a test with all drills</span>
+              <span style={{ fontWeight: 700, color: 'var(--text)' }}>Create a test with all drills</span>
             </label>
-            <p style={{ fontSize: '12px', color: '#666', marginLeft: '30px', marginTop: '5px' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '30px', marginTop: '5px' }}>
               Creates a test containing all the imported drills for practice
             </p>
           </div>
-          
+
           {createTest && (
             <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                Test Title (Optional):
+              <label style={labelStyle}>
+                Test Title <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Optional)</span>
               </label>
               <input
                 type="text"
                 value={testTitle}
                 onChange={(e) => setTestTitle(e.target.value)}
                 placeholder="e.g., 'Episode 1 Vocabulary Practice'"
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: '6px',
-                  border: '1px solid #ddd'
-                }}
+                style={inputStyle}
               />
             </div>
           )}
         </div>
 
         {error && (
-          <div style={{ padding: '15px', backgroundColor: '#ffe6e6', borderRadius: '8px', border: '1px solid #ff9999' }}>
-            <p style={{ color: '#cc0000', margin: 0 }}>Error: {error}</p>
+          <div style={{ padding: '15px', background: 'var(--rose-soft)', borderRadius: 'var(--r-md)', border: '1px solid var(--rose)' }}>
+            <p style={{ color: 'var(--rose)', margin: 0, fontWeight: 600 }}>Error: {error}</p>
           </div>
         )}
 
         {success && (
-          <div style={{ padding: '15px', backgroundColor: '#e6ffe6', borderRadius: '8px', border: '1px solid #99cc99' }}>
-            <p style={{ color: '#006600', margin: 0, fontWeight: 'bold' }}>
+          <div style={{ padding: '16px', background: 'var(--emerald-soft)', borderRadius: 'var(--r-md)', border: '1px solid var(--emerald)' }}>
+            <p style={{ color: 'var(--emerald)', margin: 0, fontWeight: 700 }}>
               ✅ Successfully created {success.drills_created} drills!
             </p>
             {success.test_id && (
-              <p style={{ color: '#006600', margin: '5px 0 0 0' }}>
+              <p style={{ color: 'var(--emerald)', margin: '5px 0 0 0' }}>
                 Test created with ID: {success.test_id}
               </p>
             )}
             <button
               onClick={() => navigate('/tests')}
               style={{
-                marginTop: '10px',
-                padding: '8px 16px',
-                backgroundColor: '#27ae60',
-                color: 'white',
+                marginTop: '12px',
+                padding: '9px 18px',
+                background: 'var(--emerald)',
+                color: '#fff',
                 border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer'
+                borderRadius: 'var(--r-md)',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: '14px',
               }}
             >
               View Tests
@@ -380,26 +434,29 @@ This is the second line.`}
         )}
 
         {previewMode && parsedSegments.length > 0 && (
-          <div className="preview-section" style={{ backgroundColor: '#f0f7ff', padding: '20px', borderRadius: '12px' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '15px' }}>Preview: {parsedSegments.length} Segments Found</h3>
-            
-            <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #cce3ff', borderRadius: '8px', backgroundColor: 'white' }}>
+          <div className="preview-section" style={{ background: 'var(--surface)', border: '1px solid var(--border)', padding: '24px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '17px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              Preview
+              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: 'var(--r-pill)', fontSize: '12px', fontWeight: 700, background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)' }}>{parsedSegments.length} segments found</span>
+            </h3>
+
+            <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', background: 'var(--surface)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead style={{ position: 'sticky', top: 0, backgroundColor: '#e6f2ff', zIndex: 1 }}>
+                <thead style={{ position: 'sticky', top: 0, background: 'var(--surface-2)', zIndex: 1 }}>
                   <tr>
-                    <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #cce3ff' }}>#</th>
-                    <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #cce3ff' }}>Start Time</th>
-                    <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #cce3ff' }}>End Time</th>
-                    <th style={{ padding: '10px', textAlign: 'left', borderBottom: '1px solid #cce3ff' }}>Text</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>#</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>Start Time</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>End Time</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>Text</th>
                   </tr>
                 </thead>
                 <tbody>
                   {parsedSegments.slice(0, 20).map((segment, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #e6f2ff' }}>
-                      <td style={{ padding: '10px', fontWeight: 'bold' }}>{segment.sequence}</td>
-                      <td style={{ padding: '10px', fontFamily: 'monospace' }}>{formatTime(segment.start_time)}</td>
-                      <td style={{ padding: '10px', fontFamily: 'monospace' }}>{formatTime(segment.end_time)}</td>
-                      <td style={{ padding: '10px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '12px', fontWeight: 700, color: 'var(--brand-1)' }}>{segment.sequence}</td>
+                      <td style={{ padding: '12px', fontFamily: 'monospace', color: 'var(--text-soft)' }}>{formatTime(segment.start_time)}</td>
+                      <td style={{ padding: '12px', fontFamily: 'monospace', color: 'var(--text-soft)' }}>{formatTime(segment.end_time)}</td>
+                      <td style={{ padding: '12px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-tifinagh)' }}>
                         {segment.text}
                       </td>
                     </tr>
@@ -407,8 +464,8 @@ This is the second line.`}
                 </tbody>
               </table>
               {parsedSegments.length > 20 && (
-                <div style={{ padding: '10px', textAlign: 'center', backgroundColor: '#f0f7ff', borderTop: '1px solid #cce3ff' }}>
-                  <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>
+                <div style={{ padding: '12px', textAlign: 'center', background: 'var(--surface-2)', borderTop: '1px solid var(--border)' }}>
+                  <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '14px' }}>
                     ... and {parsedSegments.length - 20} more segments
                   </p>
                 </div>
@@ -417,29 +474,30 @@ This is the second line.`}
           </div>
         )}
 
-        <div style={{ textAlign: 'center', marginTop: '20px' }}>
+        <div style={{ textAlign: 'center', marginTop: '12px' }}>
           <button
             onClick={handleImport}
             disabled={loading || !srtContent.trim() || !videoUrl.trim()}
             style={{
               padding: '15px 40px',
-              backgroundColor: '#27ae60',
-              color: 'white',
+              background: (loading || !srtContent.trim() || !videoUrl.trim()) ? 'var(--border)' : 'var(--brand-gradient)',
+              color: '#fff',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: 'var(--r-md)',
               fontSize: '16px',
-              fontWeight: 'bold',
+              fontWeight: 700,
               cursor: (loading || !srtContent.trim() || !videoUrl.trim()) ? 'not-allowed' : 'pointer',
               opacity: (loading || !srtContent.trim() || !videoUrl.trim()) ? 0.7 : 1,
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+              boxShadow: (loading || !srtContent.trim() || !videoUrl.trim()) ? 'none' : 'var(--shadow-brand)',
             }}
           >
-            {loading ? 'Importing...' : 'Import SRT and Create Drills'}
+            {loading ? '⏳ Importing...' : 'Import SRT and Create Drills'}
           </button>
-          <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '10px' }}>
             This will create one drill for each SRT segment with video timestamps
           </p>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -4,22 +4,13 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import axios from 'axios';
 import { API_BASE, getMediaUrl } from '../config';
 
-export interface Drill {
-  id: number;
-  text_catalan?: string;
-  text_tachelhit?: string;
-  text_arabic?: string;
-  audio_url?: string;
-  video_url?: string;
-  image_url?: string;
-  tag?: string;
-  author?: string;
-  date_created: string;
-  is_local?: boolean; // Marker for locally created drills
-}
+import type { Drill } from '../types';
+
+// Re-exported for existing imports (MobileDrillCreator/Editor)
+export type { Drill };
 
 export interface SyncAction {
-  type: 'CREATE' | 'UPDATE' | 'UPLOAD_MEDIA';
+  type: 'CREATE' | 'UPDATE' | 'UPLOAD_MEDIA' | 'DELETE';
   drillId: number;
   payload?: any;
   mediaType?: 'audio' | 'video' | 'image';
@@ -32,7 +23,7 @@ const TESTS_CACHE_KEY = 'cached_tests';
 const SYNC_QUEUE_KEY = 'sync_queue';
 
 class OfflineSyncManager {
-  private isSyncing = false;
+  private syncPromise: Promise<void> | null = null;
 
   async getDrills(): Promise<Drill[]> {
     const { value } = await Preferences.get({ key: DRILLS_CACHE_KEY });
@@ -99,6 +90,17 @@ class OfflineSyncManager {
       } else {
         queue.push(action);
       }
+    } else if (action.type === 'DELETE') {
+      // Drop every pending action for this drill; if it was created offline
+      // and never synced (a CREATE is still queued), the server never heard
+      // of it, so no DELETE needs to be sent at all.
+      const hadUnsyncedCreate = queue.some(a => a.type === 'CREATE' && a.drillId === action.drillId);
+      for (let i = queue.length - 1; i >= 0; i--) {
+        if (queue[i].drillId === action.drillId) queue.splice(i, 1);
+      }
+      if (!hadUnsyncedCreate) {
+        queue.push(action);
+      }
     } else {
       queue.push(action);
     }
@@ -112,18 +114,25 @@ class OfflineSyncManager {
     this.sync();
   }
 
-  async sync() {
-    if (this.isSyncing) return;
+  // Awaitable: concurrent callers share the same in-flight run.
+  sync(): Promise<void> {
+    if (!this.syncPromise) {
+      this.syncPromise = this.doSync().finally(() => {
+        this.syncPromise = null;
+      });
+    }
+    return this.syncPromise;
+  }
+
+  private async doSync() {
     const status = await Network.getStatus();
     if (!status.connected) return;
 
-    this.isSyncing = true;
     try {
       const { value } = await Preferences.get({ key: SYNC_QUEUE_KEY });
       let queue: SyncAction[] = value ? JSON.parse(value) : [];
 
       if (queue.length === 0) {
-        this.isSyncing = false;
         return;
       }
 
@@ -143,6 +152,13 @@ class OfflineSyncManager {
             await axios.put(`${API_BASE}/drills/${action.drillId}`, action.payload);
           } else if (action.type === 'UPLOAD_MEDIA') {
             await this.processMediaUpload(action);
+          } else if (action.type === 'DELETE') {
+            try {
+              await axios.delete(`${API_BASE}/drills/${action.drillId}`);
+            } catch (err: any) {
+              // Already gone on the server counts as success
+              if (err?.response?.status !== 404) throw err;
+            }
           }
         } catch (err) {
           console.error('[Sync] Action failed:', action, err);
@@ -165,9 +181,20 @@ class OfflineSyncManager {
 
     } catch (err) {
       console.error('[Sync] Critical error:', err);
-    } finally {
-      this.isSyncing = false;
     }
+  }
+
+  // Removes a drill from the local cache immediately and queues the server
+  // delete (skipped entirely for drills created offline that never synced).
+  // Resolves once a sync attempt has run, so callers can refresh afterwards.
+  async deleteDrill(id: number) {
+    const drills = await this.getDrills();
+    await Preferences.set({
+      key: DRILLS_CACHE_KEY,
+      value: JSON.stringify(drills.filter(d => d.id !== id)),
+    });
+    await this.queueAction({ type: 'DELETE', drillId: id });
+    await this.sync();
   }
 
   private async updateLocalDrillId(oldId: number, serverData: Drill) {

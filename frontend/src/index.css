@@ -17,6 +17,7 @@
   --emerald-soft: #ecfdf5;
   --amber: #f59e0b;
   --amber-soft: #fffbeb;
+  --amber-strong: #b45309;   /* readable text on --amber-soft / white */
   --rose: #f43f5e;
   --rose-soft: #fff1f2;
   --sky: #0ea5e9;

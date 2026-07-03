@@ -51,11 +51,20 @@ export default function DrillPlayerPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#f3f4f6'
+        background: 'var(--bg)',
+        fontFamily: 'var(--font-sans)'
       }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '24px', marginBottom: '10px' }}>⏳</div>
-          <div>Loading Drills...</div>
+        <div style={{ textAlign: 'center', color: 'var(--text-soft)' }}>
+          <div style={{
+            width: '52px',
+            height: '52px',
+            margin: '0 auto 18px',
+            borderRadius: 'var(--r-pill)',
+            border: '4px solid var(--border)',
+            borderTopColor: 'var(--brand-1)',
+            animation: 'spin 0.9s linear infinite'
+          }} />
+          <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text)' }}>Loading drills…</div>
         </div>
       </div>
     );
@@ -68,27 +77,47 @@ export default function DrillPlayerPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#f3f4f6',
+        background: 'var(--bg)',
         padding: '20px',
-        textAlign: 'center'
+        textAlign: 'center',
+        fontFamily: 'var(--font-sans)'
       }}>
-        <div>
-          <div style={{ fontSize: '48px', marginBottom: '20px' }}>📭</div>
-          <h2 style={{ marginBottom: '10px' }}>No Drills Found</h2>
-          <p style={{ color: '#666', marginBottom: '20px' }}>Create some drills first to use the player.</p>
+        <div style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--r-2xl)',
+          boxShadow: 'var(--shadow-lg)',
+          padding: '40px 36px',
+          maxWidth: '420px'
+        }}>
+          <div style={{
+            width: '72px',
+            height: '72px',
+            margin: '0 auto 22px',
+            borderRadius: 'var(--r-xl)',
+            background: 'var(--brand-gradient-soft)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '36px'
+          }}>📭</div>
+          <h2 style={{ margin: '0 0 10px', fontSize: '22px', fontWeight: 800, color: 'var(--text)' }}>No drills found</h2>
+          <p style={{ color: 'var(--text-soft)', margin: '0 0 24px', fontSize: '15px', lineHeight: 1.5 }}>Create some drills first to use the player.</p>
           <button
             onClick={() => navigate('/')}
             style={{
-              padding: '10px 20px',
-              background: '#4f46e5',
+              padding: '12px 28px',
+              background: 'var(--brand-gradient)',
               color: 'white',
               border: 'none',
-              borderRadius: '8px',
-              fontWeight: 'bold',
-              cursor: 'pointer'
+              borderRadius: 'var(--r-pill)',
+              fontWeight: 700,
+              fontSize: '15px',
+              cursor: 'pointer',
+              boxShadow: 'var(--shadow-brand)'
             }}
           >
-            Go Back
+            Go back
           </button>
         </div>
       </div>

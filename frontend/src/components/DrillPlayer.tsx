@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getMediaUrl } from '../config';
 import { getMediaWithOfflineFallback } from '../utils/offlineCache';
-import { getYouTubeVideoId } from '../utils/youtubeUtils';
+import { getYouTubeVideoId, loadYouTubeApi } from '../utils/youtubeUtils';
 
 declare global {
   interface Window {
@@ -10,20 +10,7 @@ declare global {
   }
 }
 
-interface Drill {
-  id: number;
-  text_catalan?: string;
-  text_tachelhit?: string;
-  text_arabic?: string;
-  audio_url?: string;
-  audio_tts_url?: string;
-  video_url?: string;
-  image_url?: string;
-  tag?: string;
-  date_created: string;
-  video_start_time?: number;
-  video_end_time?: number;
-}
+import type { Drill } from '../types';
 
 interface DrillPlayerProps {
   drills: Drill[];
@@ -40,32 +27,28 @@ interface VideoControls {
 export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   // Style definitions (moved to top to avoid "used before declaration" errors)
   const cleanButtonStyle = {
-    background: 'none',
-    border: 'none',
+    background: 'rgba(255,255,255,0.15)',
+    border: '1px solid rgba(255,255,255,0.25)',
     color: 'white',
-    fontSize: '20px',
+    fontSize: '18px',
+    lineHeight: 1,
     cursor: 'pointer',
-    padding: '4px 8px',
-    borderRadius: '4px'
-  };
-
-  const pillButtonStyle = {
-    padding: '6px 12px',
-    border: 'none',
-    borderRadius: '20px',
-    fontSize: '12px',
-    fontWeight: 600,
-    cursor: 'pointer',
+    width: '38px',
+    height: '38px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 'var(--r-pill)',
     transition: 'all 0.2s'
   };
 
-  const navButtonStyle = {
-    padding: '10px 20px',
-    background: '#f0f0f0',
-    border: '1px solid #ddd',
-    borderRadius: '6px',
-    fontSize: '14px',
-    fontWeight: 600,
+  const pillButtonStyle = {
+    padding: '8px 14px',
+    border: 'none',
+    borderRadius: 'var(--r-pill)',
+    fontSize: '12px',
+    fontWeight: 700,
+    letterSpacing: '0.02em',
     cursor: 'pointer',
     transition: 'all 0.2s'
   };
@@ -92,6 +75,14 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   const videoIframeRef = useRef<HTMLIFrameElement | null>(null);
   const playerRef = useRef<any>(null); // YouTube Player instance
   const [playerReady, setPlayerReady] = useState(false);
+  // Refs read inside long-lived callbacks (YT event handlers, audio promise
+  // chains) so they always see current values instead of stale closures.
+  const isLoopingRef = useRef(videoControls.isLooping);
+  const currentIndexRef = useRef(currentIndex);
+  const audioTimersRef = useRef<number[]>([]);
+
+  useEffect(() => { isLoopingRef.current = videoControls.isLooping; }, [videoControls.isLooping]);
+  useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
 
   const currentDrill = drills[currentIndex];
   // Note: isMobile is declared for potential future mobile-specific logic
@@ -108,6 +99,8 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         }],
         currentSubtitleIndex: 0
       }));
+    } else {
+      setVideoControls(prev => ({ ...prev, subtitleSections: [], currentSubtitleIndex: 0 }));
     }
   }, [currentDrill]);
 
@@ -161,6 +154,10 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   // Cleanup on drill change
   useEffect(() => {
     setIsPlaying(false);
+    // Cancel any pending replay/advance timers from the previous drill so its
+    // audio can't restart over the new drill
+    audioTimersRef.current.forEach(t => window.clearTimeout(t));
+    audioTimersRef.current = [];
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -173,14 +170,12 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
       speechSynthesis.cancel();
       speechSynthRef.current = null;
     }
-    
-    // Reset video controls
+
+    // Reset playback controls (subtitle sections are owned by the init effect above)
     setVideoControls(prev => ({
       ...prev,
       playbackRate: 1.0,
-      isLooping: true,
-      currentSubtitleIndex: 0,
-      subtitleSections: []
+      isLooping: true
     }));
   }, [currentIndex]);
 
@@ -201,21 +196,11 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     }
   }, []);
 
-  // Load YouTube IFrame API script
+  // Load YouTube IFrame API script (shared, non-clobbering loader)
   useEffect(() => {
-    if (!window.YT) {
-      const tag = document.createElement('script');
-      tag.src = "https://www.youtube.com/iframe_api";
-      const firstScriptTag = document.getElementsByTagName('script')[0];
-      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-
-      window.onYouTubeIframeAPIReady = () => {
-        console.log("YouTube IFrame API is Ready");
-        setPlayerReady(true);
-      };
-    } else {
-      setPlayerReady(true);
-    }
+    let cancelled = false;
+    loadYouTubeApi().then(() => { if (!cancelled) setPlayerReady(true); });
+    return () => { cancelled = true; };
   }, []);
 
   // Initialize YouTube Player
@@ -258,7 +243,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
           const startTime = Number(currentDrill.video_start_time) || 0;
           const endTime = Number(currentDrill.video_end_time);
 
-          if (event.data === window.YT.PlayerState.PAUSED && videoControls.isLooping) {
+          if (event.data === window.YT.PlayerState.PAUSED && isLoopingRef.current) {
             // 2. Loop Logic: Check if it paused because it reached the 'end' limit
             const currentTime = player.getCurrentTime();
             if (endTime && currentTime >= endTime - 0.5) {
@@ -268,7 +253,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             }
           }
 
-          if (event.data === window.YT.PlayerState.ENDED && videoControls.isLooping) {
+          if (event.data === window.YT.PlayerState.ENDED && isLoopingRef.current) {
             // 3. Loop Logic: If the whole video ended, jump back to start
             console.log('🔄 Video ended, looping back to:', startTime);
             player.seekTo(startTime, true);
@@ -303,6 +288,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   const playCurrentAudio = async () => {
     stopAllAudio();
     setIsPlaying(true);
+    const startedAtIndex = currentIndexRef.current;
 
     try {
       // 1. Catalan (1x)
@@ -313,7 +299,9 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     } catch (error) {
       console.error('Playback sequence error:', error);
       setIsPlaying(false);
-      if (autoPlayEnabled) goToNextDrill();
+      // Only auto-advance if the user hasn't already navigated away — an
+      // interrupted play() also rejects, and advancing then would skip a drill
+      if (autoPlayEnabled && currentIndexRef.current === startedAtIndex) goToNextDrill();
     }
   };
 
@@ -346,13 +334,14 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             audio.removeEventListener('error', handleError);
 
             if (internalCount < 2) {
-              setTimeout(playInstance, 600);
+              // Tracked so navigating away cancels the pending replay
+              audioTimersRef.current.push(window.setTimeout(playInstance, 600));
             } else {
               setIsPlaying(false);
-              setTimeout(() => {
+              audioTimersRef.current.push(window.setTimeout(() => {
                 if (autoPlayEnabled) goToNextDrill();
                 resolve();
-              }, 1000);
+              }, 1000));
             }
           };
 
@@ -360,7 +349,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             audio.removeEventListener('ended', handleEnded);
             audio.removeEventListener('error', handleError);
             setIsPlaying(false);
-            if (autoPlayEnabled) goToNextDrill();
+            // Advancing on failure is handled once, in playCurrentAudio's catch
             reject(error);
           };
 
@@ -373,7 +362,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     } catch (error) {
       console.error('Failed to load audio:', error);
       setIsPlaying(false);
-      if (autoPlayEnabled) goToNextDrill();
+      // Advancing on failure is handled once, in playCurrentAudio's catch
       throw error;
     }
   };
@@ -419,8 +408,11 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
   };
 
   const goToNextDrill = () => {
-    if (currentIndex < drills.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+    // Read the index from a ref: this runs at the end of multi-second audio
+    // chains, so the closure's currentIndex may be stale after manual navigation
+    const idx = currentIndexRef.current;
+    if (idx < drills.length - 1) {
+      setCurrentIndex(idx + 1);
     } else if (loopEnabled) {
       setCurrentIndex(0);
     } else {
@@ -490,7 +482,8 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
       width: '100vw',
       display: 'flex',
       flexDirection: 'column',
-      background: 'white',
+      background: 'var(--bg)',
+      fontFamily: 'var(--font-sans)',
       overflow: 'hidden',
       position: 'fixed',
       top: 0, left: 0, right: 0, bottom: 0,
@@ -498,38 +491,47 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
     }}>
       {/* Header */}
       <div style={{
-        padding: '10px 16px',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        padding: '12px 18px',
+        background: 'var(--brand-gradient)',
         color: 'white',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        boxShadow: 'var(--shadow-brand)',
+        flexWrap: 'wrap',
+        gap: '8px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button onClick={onExit} style={cleanButtonStyle}>✕</button>
-          <span style={{ fontWeight: 700 }}>{currentIndex + 1} / {drills.length}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <button onClick={onExit} style={cleanButtonStyle} aria-label="Close">✕</button>
+          <span style={{
+            fontWeight: 800,
+            fontSize: '14px',
+            letterSpacing: '0.02em',
+            background: 'rgba(255,255,255,0.15)',
+            padding: '6px 14px',
+            borderRadius: 'var(--r-pill)'
+          }}>{currentIndex + 1} / {drills.length}</span>
         </div>
 
-        <div style={{ display: 'flex', gap: '6px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={() => setAutoPlayEnabled(!autoPlayEnabled)}
-            style={{ ...pillButtonStyle, background: autoPlayEnabled ? '#FFD700' : 'rgba(255,255,255,0.2)', color: autoPlayEnabled ? '#333' : 'white' }}
+            style={{ ...pillButtonStyle, background: autoPlayEnabled ? 'var(--amber)' : 'rgba(255,255,255,0.18)', color: autoPlayEnabled ? '#3a2a00' : 'white' }}
           >
             AUTO {autoPlayEnabled ? 'ON' : 'OFF'}
           </button>
           <button
             onClick={() => setLoopEnabled(!loopEnabled)}
-            style={{ ...pillButtonStyle, background: loopEnabled ? '#FFD700' : 'rgba(255,255,255,0.2)', color: loopEnabled ? '#333' : 'white' }}
+            style={{ ...pillButtonStyle, background: loopEnabled ? 'var(--amber)' : 'rgba(255,255,255,0.18)', color: loopEnabled ? '#3a2a00' : 'white' }}
           >
             LOOP {loopEnabled ? 'ON' : 'OFF'}
           </button>
-          
+
           {/* Video Library Button */}
           {videoDrills.length > 0 && (
             <button
               onClick={() => setShowVideoLibrary(true)}
-              style={{ ...pillButtonStyle, background: 'rgba(255,255,255,0.2)', color: 'white' }}
+              style={{ ...pillButtonStyle, background: 'rgba(255,255,255,0.18)', color: 'white' }}
             >
               📹 LIBRARY
             </button>
@@ -543,18 +545,44 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
         overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center'
+        alignItems: 'center',
+        padding: '24px 16px'
       }}>
-        <div style={{ width: '100%', maxWidth: '500px', display: 'flex', flexDirection: 'column' }}>
-          {/* Tachelhit Text */}
+        <div style={{
+          width: '100%',
+          maxWidth: '560px',
+          display: 'flex',
+          flexDirection: 'column',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--r-2xl)',
+          boxShadow: 'var(--shadow-lg)',
+          overflow: 'hidden'
+        }}>
+          {/* Catalan (primary) */}
+          {currentDrill?.text_catalan && (
+            <div style={{
+              padding: '28px 24px 8px',
+              textAlign: 'center',
+              fontSize: '26px',
+              fontWeight: 800,
+              color: 'var(--text)',
+              lineHeight: 1.35
+            }}>
+              {currentDrill.text_catalan}
+            </div>
+          )}
+
+          {/* Tachelhit Text (Tifinagh) */}
           <div style={{
-            padding: '24px 16px 16px',
+            padding: '12px 24px 20px',
             textAlign: 'center',
-            fontSize: '28px',
+            fontSize: '30px',
             fontWeight: 700,
-            color: '#333',
-            lineHeight: 1.4,
-            minHeight: '120px',
+            color: 'var(--brand-1)',
+            fontFamily: 'var(--font-tifinagh)',
+            lineHeight: 1.5,
+            minHeight: '64px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
@@ -564,15 +592,15 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
 
           {/* Image */}
           {imageUrl && (
-            <div style={{ padding: '0 16px 16px', display: 'flex', justifyContent: 'center' }}>
+            <div style={{ padding: '0 24px 20px', display: 'flex', justifyContent: 'center' }}>
               <img
                 src={imageUrl}
                 alt="Drill"
                 style={{
                   maxWidth: '100%',
-                  maxHeight: '300px',
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                  maxHeight: '320px',
+                  borderRadius: 'var(--r-lg)',
+                  boxShadow: 'var(--shadow-md)'
                 }}
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
@@ -582,57 +610,42 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
           )}
 
           {/* Translations */}
-          <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ padding: '0 24px 8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {/* Arabic */}
             {currentDrill?.text_arabic && (
               <div style={{
-                padding: '12px',
-                background: '#f8f9fa',
-                borderRadius: '8px',
-                borderLeft: '4px solid #4CAF50',
-                fontSize: '18px',
-                color: '#333',
+                padding: '14px 16px',
+                background: 'var(--emerald-soft)',
+                borderRadius: 'var(--r-md)',
+                borderLeft: '4px solid var(--emerald)',
+                fontSize: '20px',
+                color: 'var(--text)',
                 textAlign: 'right',
                 direction: 'rtl'
               }}>
                 {currentDrill.text_arabic}
               </div>
             )}
-
-            {/* Catalan */}
-            {currentDrill?.text_catalan && (
-              <div style={{
-                padding: '12px',
-                background: '#f0f7ff',
-                borderRadius: '8px',
-                borderLeft: '4px solid #2196F3',
-                fontSize: '16px',
-                color: '#333',
-                fontStyle: 'italic'
-              }}>
-                {currentDrill.text_catalan}
-              </div>
-            )}
           </div>
 
           {/* Video Button (if video exists) */}
           {currentDrill?.video_url && (
-            <div style={{ padding: '16px', display: 'flex', justifyContent: 'center' }}>
+            <div style={{ padding: '16px 24px 24px', display: 'flex', justifyContent: 'center' }}>
               <button
                 onClick={() => setShowVideo(true)}
                 style={{
-                  padding: '12px 24px',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  padding: '13px 26px',
+                  background: 'var(--brand-gradient)',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '16px',
-                  fontWeight: 600,
+                  borderRadius: 'var(--r-pill)',
+                  fontSize: '15px',
+                  fontWeight: 700,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                  boxShadow: 'var(--shadow-brand)'
                 }}
               >
                 <span>▶️</span>
@@ -645,36 +658,51 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
 
       {/* Navigation Footer */}
       <div style={{
-        padding: '16px',
-        background: '#f8f9fa',
-        borderTop: '1px solid #e0e0e0',
+        padding: '16px 20px',
+        background: 'var(--surface)',
+        borderTop: '1px solid var(--border)',
+        boxShadow: '0 -4px 16px rgba(15,23,42,0.04)',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        gap: '14px',
+        flexWrap: 'wrap'
       }}>
         <button
           onClick={handlePrev}
           disabled={currentIndex === 0}
+          aria-label="Previous"
           style={{
-            ...navButtonStyle,
-            opacity: currentIndex === 0 ? 0.5 : 1,
-            cursor: currentIndex === 0 ? 'not-allowed' : 'pointer'
+            width: '48px',
+            height: '48px',
+            borderRadius: 'var(--r-pill)',
+            border: '1px solid var(--border)',
+            background: 'var(--surface-2)',
+            color: 'var(--text-soft)',
+            fontSize: '20px',
+            cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
+            opacity: currentIndex === 0 ? 0.4 : 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s',
+            flexShrink: 0
           }}
         >
-          ← Previous
+          ⏮
         </button>
 
         {/* Audio Progress Bar */}
-        <div style={{ flex: 1, margin: '0 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '12px', color: '#666', minWidth: '40px' }}>
+        <div style={{ flex: 1, minWidth: '160px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', minWidth: '38px' }}>
             {formatTime(audioProgress)}
           </span>
           <div
             style={{
               flex: 1,
-              height: '6px',
-              background: '#e0e0e0',
-              borderRadius: '3px',
+              height: '8px',
+              background: 'var(--border)',
+              borderRadius: 'var(--r-pill)',
               overflow: 'hidden',
               cursor: 'pointer'
             }}
@@ -689,35 +717,61 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
               style={{
                 width: `${audioDuration ? (audioProgress / audioDuration) * 100 : 0}%`,
                 height: '100%',
-                background: '#4CAF50',
+                background: 'var(--brand-gradient)',
+                borderRadius: 'var(--r-pill)',
                 transition: 'width 0.1s'
               }}
             />
           </div>
-          <span style={{ fontSize: '12px', color: '#666', minWidth: '40px' }}>
+          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', minWidth: '38px' }}>
             {formatTime(audioDuration)}
           </span>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0 }}>
           <button
             onClick={playCurrentAudio}
             disabled={isPlaying}
+            aria-label={isPlaying ? 'Playing' : 'Play audio'}
             style={{
-              ...navButtonStyle,
-              background: isPlaying ? '#4CAF50' : '#2196F3',
+              width: '60px',
+              height: '60px',
+              borderRadius: 'var(--r-pill)',
+              background: 'var(--brand-gradient)',
               color: 'white',
-              minWidth: '100px'
+              border: 'none',
+              fontSize: '24px',
+              cursor: isPlaying ? 'default' : 'pointer',
+              boxShadow: 'var(--shadow-brand)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: isPlaying ? 0.9 : 1,
+              transition: 'all 0.2s'
             }}
           >
-            {isPlaying ? 'Playing...' : 'Play Audio'}
+            {isPlaying ? '❚❚' : '▶'}
           </button>
 
           <button
             onClick={goToNextDrill}
-            style={navButtonStyle}
+            aria-label="Next"
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: 'var(--r-pill)',
+              border: '1px solid var(--border)',
+              background: 'var(--surface-2)',
+              color: 'var(--text-soft)',
+              fontSize: '20px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s'
+            }}
           >
-            Next →
+            ⏭
           </button>
         </div>
       </div>
@@ -740,56 +794,66 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
           <div style={{
             width: '90%',
             maxWidth: '1000px',
-            background: '#1a1a1a',
-            borderRadius: '12px',
+            background: '#0f1220',
+            borderRadius: 'var(--r-xl)',
             overflow: 'hidden',
+            boxShadow: 'var(--shadow-xl)',
             display: 'flex',
             flexDirection: 'column'
           }}>
             {/* Video Modal Header */}
             <div style={{
-              padding: '16px',
-              background: '#2a2a2a',
+              padding: '14px 18px',
+              background: '#171a2b',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              borderBottom: '1px solid #444'
+              gap: '12px',
+              flexWrap: 'wrap',
+              borderBottom: '1px solid rgba(255,255,255,0.08)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <button
                   onClick={() => setShowVideo(false)}
+                  aria-label="Close"
                   style={{
-                    background: 'none',
-                    border: 'none',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.18)',
                     color: 'white',
-                    fontSize: '20px',
+                    fontSize: '16px',
                     cursor: 'pointer',
-                    padding: '4px 8px'
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: 'var(--r-pill)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
                   ✕
                 </button>
-                <span style={{ color: 'white', fontWeight: 600 }}>
-                  Video Player - {currentDrill.text_tachelhit?.substring(0, 50)}...
+                <span style={{ color: 'white', fontWeight: 700, fontFamily: 'var(--font-tifinagh)', fontSize: '15px' }}>
+                  {currentDrill.text_tachelhit?.substring(0, 50)}…
                 </span>
               </div>
-              
+
               {/* Video Controls */}
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                 {/* Playback Speed */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ color: '#aaa', fontSize: '12px' }}>Speed:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600 }}>Speed</span>
                   {[0.5, 0.75, 1.0, 1.25, 1.5].map(rate => (
                     <button
                       key={rate}
                       onClick={() => handlePlaybackRateChange(rate)}
                       style={{
-                        padding: '4px 8px',
-                        background: videoControls.playbackRate === rate ? '#667eea' : '#444',
+                        padding: '5px 10px',
+                        background: videoControls.playbackRate === rate ? 'var(--brand-gradient)' : 'rgba(255,255,255,0.08)',
                         color: 'white',
                         border: 'none',
-                        borderRadius: '4px',
+                        borderRadius: 'var(--r-pill)',
                         fontSize: '12px',
+                        fontWeight: 700,
                         cursor: 'pointer'
                       }}
                     >
@@ -802,16 +866,17 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                 <button
                   onClick={handleToggleLoop}
                   style={{
-                    padding: '6px 12px',
-                    background: videoControls.isLooping ? '#FFD700' : '#444',
-                    color: videoControls.isLooping ? '#333' : 'white',
+                    padding: '7px 14px',
+                    background: videoControls.isLooping ? 'var(--amber)' : 'rgba(255,255,255,0.08)',
+                    color: videoControls.isLooping ? '#3a2a00' : 'white',
                     border: 'none',
-                    borderRadius: '4px',
+                    borderRadius: 'var(--r-pill)',
                     fontSize: '12px',
+                    fontWeight: 700,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px'
+                    gap: '5px'
                   }}
                 >
                   🔁 {videoControls.isLooping ? 'Looping ON' : 'Loop'}
@@ -868,7 +933,7 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                     background: 'rgba(0, 0, 0, 0.7)',
                     color: 'white',
                     padding: '12px 16px',
-                    borderRadius: '8px',
+                    borderRadius: 'var(--r-md)',
                     fontSize: '20px',
                     textAlign: 'right',
                     direction: 'rtl',
@@ -881,28 +946,29 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                 {/* Tachelhit Subtitle */}
                 {currentDrill?.text_tachelhit && (
                   <div style={{
-                    background: 'rgba(76, 175, 80, 0.8)',
+                    background: 'rgba(99, 102, 241, 0.85)',
                     color: 'white',
                     padding: '10px 16px',
-                    borderRadius: '8px',
-                    fontSize: '18px',
+                    borderRadius: 'var(--r-md)',
+                    fontSize: '20px',
                     fontWeight: 600,
-                    lineHeight: 1.4
+                    fontFamily: 'var(--font-tifinagh)',
+                    lineHeight: 1.5
                   }}>
                     {currentDrill.text_tachelhit}
                   </div>
                 )}
-                
+
                 {/* Catalan Subtitle */}
                 {currentDrill?.text_catalan && (
                   <div style={{
-                    background: 'rgba(33, 150, 243, 0.9)',
+                    background: 'rgba(14, 165, 233, 0.9)',
                     color: 'white',
                     padding: '8px 16px',
-                    borderRadius: '8px',
+                    borderRadius: 'var(--r-md)',
                     fontSize: '16px',
-                    fontStyle: 'italic',
-                    opacity: 0.9,
+                    fontWeight: 600,
+                    opacity: 0.95,
                     lineHeight: 1.4
                   }}>
                     {currentDrill.text_catalan}
@@ -913,12 +979,14 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
 
             {/* Subtitle Navigation Controls */}
             <div style={{
-              padding: '16px',
-              background: '#2a2a2a',
-              borderTop: '1px solid #444',
+              padding: '14px 18px',
+              background: '#171a2b',
+              borderTop: '1px solid rgba(255,255,255,0.08)',
               display: 'flex',
               justifyContent: 'space-between',
-              alignItems: 'center'
+              alignItems: 'center',
+              gap: '12px',
+              flexWrap: 'wrap'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <button
@@ -926,20 +994,23 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                   disabled={videoControls.currentSubtitleIndex === 0}
                   style={{
                     padding: '8px 16px',
-                    background: videoControls.currentSubtitleIndex === 0 ? '#555' : '#667eea',
+                    background: videoControls.currentSubtitleIndex === 0 ? 'rgba(255,255,255,0.06)' : 'var(--brand-gradient)',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '4px',
+                    borderRadius: 'var(--r-pill)',
+                    fontWeight: 700,
+                    fontSize: '13px',
                     cursor: videoControls.currentSubtitleIndex === 0 ? 'not-allowed' : 'pointer',
+                    opacity: videoControls.currentSubtitleIndex === 0 ? 0.5 : 1,
                     display: 'flex',
                     alignItems: 'center',
                     gap: '4px'
                   }}
                 >
-                  ← Previous Subtitle
+                  ← Previous
                 </button>
 
-                <div style={{ color: '#aaa', fontSize: '14px' }}>
+                <div style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600 }}>
                   Subtitle {videoControls.currentSubtitleIndex + 1} of {videoControls.subtitleSections.length}
                 </div>
 
@@ -948,35 +1019,39 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                   disabled={videoControls.currentSubtitleIndex >= videoControls.subtitleSections.length - 1}
                   style={{
                     padding: '8px 16px',
-                    background: videoControls.currentSubtitleIndex >= videoControls.subtitleSections.length - 1 ? '#555' : '#667eea',
+                    background: videoControls.currentSubtitleIndex >= videoControls.subtitleSections.length - 1 ? 'rgba(255,255,255,0.06)' : 'var(--brand-gradient)',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '4px',
+                    borderRadius: 'var(--r-pill)',
+                    fontWeight: 700,
+                    fontSize: '13px',
                     cursor: videoControls.currentSubtitleIndex >= videoControls.subtitleSections.length - 1 ? 'not-allowed' : 'pointer',
+                    opacity: videoControls.currentSubtitleIndex >= videoControls.subtitleSections.length - 1 ? 0.5 : 1,
                     display: 'flex',
                     alignItems: 'center',
                     gap: '4px'
                   }}
                 >
-                  Next Subtitle →
+                  Next →
                 </button>
               </div>
 
               {/* Subtitle Timeline */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ color: '#aaa', fontSize: '12px' }}>Timeline:</span>
-                <div style={{ display: 'flex', gap: '4px' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600 }}>Timeline</span>
+                <div style={{ display: 'flex', gap: '5px' }}>
                   {videoControls.subtitleSections.map((section, index) => (
                     <button
                       key={index}
                       onClick={() => handleJumpToSubtitle(index)}
                       style={{
-                        padding: '4px 8px',
-                        background: videoControls.currentSubtitleIndex === index ? '#FFD700' : '#444',
-                        color: videoControls.currentSubtitleIndex === index ? '#333' : 'white',
+                        padding: '5px 10px',
+                        background: videoControls.currentSubtitleIndex === index ? 'var(--amber)' : 'rgba(255,255,255,0.08)',
+                        color: videoControls.currentSubtitleIndex === index ? '#3a2a00' : 'white',
                         border: 'none',
-                        borderRadius: '4px',
+                        borderRadius: 'var(--r-pill)',
                         fontSize: '12px',
+                        fontWeight: 700,
                         cursor: 'pointer',
                         minWidth: '60px'
                       }}
@@ -1010,40 +1085,49 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
             width: '90%',
             maxWidth: '1200px',
             maxHeight: '90vh',
-            background: '#1a1a1a',
-            borderRadius: '12px',
+            background: '#0f1220',
+            borderRadius: 'var(--r-xl)',
             overflow: 'hidden',
+            boxShadow: 'var(--shadow-xl)',
             display: 'flex',
             flexDirection: 'column'
           }}>
             {/* Library Header */}
             <div style={{
               padding: '16px 24px',
-              background: '#2a2a2a',
+              background: '#171a2b',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              borderBottom: '1px solid #444'
+              gap: '12px',
+              flexWrap: 'wrap',
+              borderBottom: '1px solid rgba(255,255,255,0.08)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <button
                   onClick={() => setShowVideoLibrary(false)}
+                  aria-label="Close"
                   style={{
-                    background: 'none',
-                    border: 'none',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.18)',
                     color: 'white',
-                    fontSize: '20px',
+                    fontSize: '16px',
                     cursor: 'pointer',
-                    padding: '4px 8px'
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: 'var(--r-pill)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
                   ✕
                 </button>
-                <span style={{ color: 'white', fontWeight: 600, fontSize: '18px' }}>
+                <span style={{ color: 'white', fontWeight: 800, fontSize: '18px' }}>
                   📹 Video Library ({videoDrills.length} videos)
                 </span>
               </div>
-              <div style={{ color: '#aaa', fontSize: '14px' }}>
+              <div style={{ color: 'var(--text-muted)', fontSize: '14px', fontWeight: 600 }}>
                 Click any video to play with subtitles
               </div>
             </div>
@@ -1069,29 +1153,29 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                     }
                   }}
                   style={{
-                    background: '#2a2a2a',
-                    borderRadius: '8px',
+                    background: 'rgba(255,255,255,0.04)',
+                    borderRadius: 'var(--r-lg)',
                     overflow: 'hidden',
                     cursor: 'pointer',
                     transition: 'transform 0.2s, background 0.2s, border-color 0.2s',
-                    border: '1px solid #444'
+                    border: '1px solid rgba(255,255,255,0.08)'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.background = '#333';
-                    e.currentTarget.style.borderColor = '#667eea';
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                    e.currentTarget.style.borderColor = 'var(--brand-1)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = '';
-                    e.currentTarget.style.background = '#2a2a2a';
-                    e.currentTarget.style.borderColor = '#444';
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
                   }}
                 >
                   {/* Video Thumbnail */}
                   <div style={{
                     position: 'relative',
                     paddingTop: '56.25%' /* 16:9 aspect ratio */,
-                    background: '#1a1a1a'
+                    background: '#0f1220'
                   }}>
                     <div style={{
                       position: 'absolute',
@@ -1102,9 +1186,9 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                      background: 'var(--brand-gradient)'
                     }}>
-                      <span style={{ color: 'white', fontSize: '24px' }}>▶️</span>
+                      <span style={{ color: 'white', fontSize: '28px' }}>▶️</span>
                     </div>
                     <div style={{
                       position: 'absolute',
@@ -1127,8 +1211,9 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                   <div style={{ padding: '16px' }}>
                     <div style={{
                       color: 'white',
-                      fontSize: '16px',
-                      fontWeight: 600,
+                      fontSize: '17px',
+                      fontWeight: 700,
+                      fontFamily: 'var(--font-tifinagh)',
                       marginBottom: '8px',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -1136,15 +1221,15 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                       WebkitLineClamp: 2,
                       WebkitBoxOrient: 'vertical',
                       lineHeight: 1.4,
-                      height: '44px'
+                      height: '48px'
                     }}>
                       {drill.text_tachelhit || 'No title'}
                     </div>
-                    
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       {drill.text_arabic && (
                         <div style={{
-                          color: '#aaa',
+                          color: 'var(--text-muted)',
                           fontSize: '14px',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -1155,12 +1240,11 @@ export default function DrillPlayer({ drills, onExit }: DrillPlayerProps) {
                           {drill.text_arabic}
                         </div>
                       )}
-                      
+
                       {drill.text_catalan && (
                         <div style={{
-                          color: '#aaa',
+                          color: 'var(--text-muted)',
                           fontSize: '12px',
-                          fontStyle: 'italic',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap'

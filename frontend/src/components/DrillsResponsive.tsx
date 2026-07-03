@@ -14,19 +14,7 @@ import VoiceDrillCreator from './VoiceDrillCreator';
 import MobileDrillCreator from './MobileDrillCreator';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-interface Drill {
-  id: number;
-  text_catalan?: string;
-  text_tachelhit?: string;
-  text_arabic?: string;
-  audio_url?: string;
-  video_url?: string;
-  image_url?: string;
-  tag?: string;
-  author?: string;
-  date_created: string;
-  is_local?: boolean;
-}
+import type { Drill } from '../types';
 
 const GlossaryModal = ({ onClose }: { onClose: () => void }) => {
   const [rowData, setRowData] = useState<any[]>([]);

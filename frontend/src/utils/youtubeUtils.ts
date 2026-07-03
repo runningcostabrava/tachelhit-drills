@@ -1,3 +1,32 @@
+let ytApiPromise: Promise<any> | null = null;
+
+/**
+ * Loads the YouTube IFrame API exactly once, no matter how many components
+ * request it (DrillPlayer, DrillCard, VideoLibraryPlayer, ...). Resolves with
+ * `window.YT` once `YT.Player` is usable. Chains any pre-existing
+ * `onYouTubeIframeAPIReady` instead of clobbering it.
+ */
+export function loadYouTubeApi(): Promise<any> {
+  const w = window as any;
+  if (w.YT?.Player) return Promise.resolve(w.YT);
+  if (ytApiPromise) return ytApiPromise;
+
+  ytApiPromise = new Promise(resolve => {
+    const prev = w.onYouTubeIframeAPIReady;
+    w.onYouTubeIframeAPIReady = () => {
+      if (prev) prev();
+      resolve(w.YT);
+    };
+    if (!document.getElementById('youtube-iframe-api')) {
+      const tag = document.createElement('script');
+      tag.id = 'youtube-iframe-api';
+      tag.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(tag);
+    }
+  });
+  return ytApiPromise;
+}
+
 export function getYouTubeVideoId(url: string): string | null {
   if (!url) return null;
   try {

@@ -1,23 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE, getMediaUrl } from '../config';
-import { isYouTubeUrl, getYouTubeVideoId } from '../utils/youtubeUtils';
+import { isYouTubeUrl, getYouTubeVideoId, loadYouTubeApi } from '../utils/youtubeUtils';
 import { syncManager } from '../services/OfflineSyncManager';
 import { FaCut as FaScissors } from 'react-icons/fa';
 
-interface Drill {
-  id: number;
-  text_catalan?: string;
-  text_tachelhit?: string;
-  text_arabic?: string;
-  audio_url?: string;
-  video_url?: string;
-  image_url?: string;
-  tag?: string;
-  author?: string;
-  date_created: string;
-  is_correction_dataset: boolean;
-}
+import type { Drill } from '../types';
 
 interface DrillCardProps {
   drill: Drill;
@@ -503,18 +491,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
       return;
     }
 
-    if (!(window as any).YT || !(window as any).YT.Player) {
-      const tag = document.createElement('script');
-      tag.src = "https://www.youtube.com/iframe_api";
-      const firstScriptTag = document.getElementsByTagName('script')[0];
-      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-      
-      (window as any).onYouTubeIframeAPIReady = () => {
-        createYTPlayer(videoId);
-      };
-    } else {
-      createYTPlayer(videoId);
-    }
+    loadYouTubeApi().then(() => createYTPlayer(videoId));
   };
 
   const createYTPlayer = (videoId: string) => {
@@ -535,8 +512,8 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
         playerVars: {
           autoplay: 1,
           controls: 1,
-          start: Math.floor((drill as any).video_start_time || 0),
-          end: Math.ceil((drill as any).video_end_time || 0),
+          start: Math.floor(drill.video_start_time || 0),
+          end: Math.ceil(drill.video_end_time || 0),
           rel: 0,
           modestbranding: 1
         },
@@ -545,22 +522,22 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
             ytPlayerReadyRef.current = true;
             setPlaying(true);
             // Explicitly seek to start time on ready to ensure it starts correctly
-            if ((drill as any).video_start_time) {
-              ytPlayerRef.current.seekTo((drill as any).video_start_time);
+            if (drill.video_start_time) {
+              ytPlayerRef.current.seekTo(drill.video_start_time);
             }
             ytPlayerRef.current.playVideo();
           },
           onStateChange: (event: any) => {
             if (event.data === (window as any).YT.PlayerState.ENDED) {
-              event.target.seekTo((drill as any).video_start_time || 0);
+              event.target.seekTo(drill.video_start_time || 0);
               event.target.playVideo();
             }
             if (event.data === (window as any).YT.PlayerState.PLAYING) {
               setPlaying(true);
               // Robustness: if we are past the end time, loop now
               const curr = event.target.getCurrentTime();
-              if ((drill as any).video_end_time && curr >= (drill as any).video_end_time) {
-                event.target.seekTo((drill as any).video_start_time || 0);
+              if (drill.video_end_time && curr >= drill.video_end_time) {
+                event.target.seekTo(drill.video_start_time || 0);
               }
             }
             if (event.data === (window as any).YT.PlayerState.PAUSED) setPlaying(false);
@@ -586,7 +563,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
     if (drill.video_url && isYouTubeUrl(drill.video_url)) {
       if (ytPlayerRef.current && ytPlayerReadyRef.current) {
         const currentTime = ytPlayerRef.current.getCurrentTime();
-        const startTime = (drill as any).video_start_time || 0;
+        const startTime = drill.video_start_time || 0;
         ytPlayerRef.current.seekTo(Math.max(startTime, currentTime - 2));
       }
     } else {
@@ -618,7 +595,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'white',
+          background: 'var(--surface)',
           zIndex: 10000,
           overflow: 'auto'
         }}>
@@ -626,14 +603,15 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
           <div style={{
             position: 'sticky',
             top: 0,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            padding: isMobile ? '12px' : '16px',
+            zIndex: 1,
+            background: 'var(--brand-gradient)',
+            padding: isMobile ? '14px 16px' : '18px 22px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+            boxShadow: 'var(--shadow-md)'
           }}>
-            <h2 style={{ margin: 0, color: 'white', fontSize: isMobile ? '18px' : '20px', fontWeight: 700 }}>
+            <h2 style={{ margin: 0, color: 'white', fontSize: isMobile ? '18px' : '20px', fontWeight: 700, letterSpacing: '-0.01em' }}>
               Edit Drill #{drill.id}
             </h2>
             <button
@@ -642,13 +620,13 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                 setIsEditing(false);
               }}
               style={{
-                background: 'rgba(255,255,255,0.2)',
-                border: 'none',
+                background: 'rgba(255,255,255,0.18)',
+                border: '1px solid rgba(255,255,255,0.3)',
                 color: 'white',
-                fontSize: '24px',
+                fontSize: '20px',
                 width: '36px',
                 height: '36px',
-                borderRadius: '50%',
+                borderRadius: 'var(--r-pill)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -667,11 +645,11 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                 display: 'block',
                 fontSize: '14px',
                 fontWeight: 600,
-                color: '#333',
+                color: 'var(--text)',
                 marginBottom: '8px'
               }}>
                 Tag (optional)
-                <span style={{ fontSize: '12px', color: '#666', marginLeft: '8px' }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px', fontWeight: 400 }}>
                   Use '+' to add, '-' to remove, or replace
                 </span>
               </label>
@@ -683,15 +661,17 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                   width: '100%',
                   padding: '14px',
                   fontSize: '16px',
-                  border: '2px solid #e0e0e0',
-                  borderRadius: '8px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface-2)',
+                  color: 'var(--text)',
+                  borderRadius: 'var(--r-md)',
                   outline: 'none',
-                  transition: 'border-color 0.2s'
+                  transition: 'border-color 0.2s, box-shadow 0.2s'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#667eea'}
-                onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                onFocus={(e) => { e.target.style.borderColor = 'var(--brand-1)'; e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.12)'; }}
+                onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
               />
-              <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
                 Current tags: {drill.tag || 'none'}
               </div>
             </div>
@@ -702,7 +682,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                 display: 'block',
                 fontSize: '14px',
                 fontWeight: 600,
-                color: '#333',
+                color: 'var(--text)',
                 marginBottom: '8px'
               }}>
                 Author (optional)
@@ -718,13 +698,15 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                   width: '100%',
                   padding: '14px',
                   fontSize: '16px',
-                  border: '2px solid #e0e0e0',
-                  borderRadius: '8px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface-2)',
+                  color: 'var(--text)',
+                  borderRadius: 'var(--r-md)',
                   outline: 'none',
-                  transition: 'border-color 0.2s'
+                  transition: 'border-color 0.2s, box-shadow 0.2s'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#667eea'}
-                onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                onFocus={(e) => { e.target.style.borderColor = 'var(--brand-1)'; e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.12)'; }}
+                onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
               />
               <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
                 <button
@@ -743,12 +725,13 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                     }
                   }}
                   style={{
-                    padding: '6px 12px',
+                    padding: '8px 14px',
                     fontSize: '12px',
-                    background: '#9C27B0',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
+                    fontWeight: 600,
+                    background: 'var(--brand-gradient-soft)',
+                    color: 'var(--brand-1)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--r-pill)',
                     cursor: 'pointer',
                     whiteSpace: 'nowrap'
                   }}
@@ -764,7 +747,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                 display: 'block',
                 fontSize: '14px',
                 fontWeight: 600,
-                color: '#333',
+                color: 'var(--text)',
                 marginBottom: '8px'
               }}>
                 Català
@@ -779,16 +762,18 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                     flex: 1,
                     padding: '14px',
                     fontSize: '16px',
-                    border: '2px solid #e0e0e0',
-                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--surface-2)',
+                    color: 'var(--text)',
+                    borderRadius: 'var(--r-md)',
                     outline: 'none',
                     resize: 'vertical',
-                    fontFamily: 'system-ui',
-                    transition: 'border-color 0.2s',
+                    fontFamily: 'var(--font-sans)',
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
                     minHeight: '100px'
                   }}
-                  onFocus={(e) => e.target.style.borderColor = '#667eea'}
-                  onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                  onFocus={(e) => { e.target.style.borderColor = 'var(--brand-1)'; e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.12)'; }}
+                  onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
                 />
                 <div style={{ display: 'flex', flexDirection: isMobile ? 'row' : 'column', gap: '8px', minWidth: isMobile ? 'auto' : '120px' }}>
                   <button
@@ -810,10 +795,11 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                     style={{
                       padding: isMobile ? '8px 12px' : '10px 16px',
                       fontSize: isMobile ? '12px' : '14px',
-                      background: '#4CAF50',
+                      fontWeight: 600,
+                      background: 'var(--emerald)',
                       color: 'white',
                       border: 'none',
-                      borderRadius: '6px',
+                      borderRadius: 'var(--r-md)',
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
                       flex: 1
@@ -839,10 +825,11 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                     style={{
                       padding: isMobile ? '8px 12px' : '10px 16px',
                       fontSize: isMobile ? '12px' : '14px',
-                      background: '#2196F3',
+                      fontWeight: 600,
+                      background: 'var(--sky)',
                       color: 'white',
                       border: 'none',
-                      borderRadius: '6px',
+                      borderRadius: 'var(--r-md)',
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
                       flex: 1
@@ -860,9 +847,9 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                                     <label style={{
                                       fontSize: '14px',
                                       fontWeight: 600,
-                                      color: '#333'
+                                      color: 'var(--text)'
                                     }}>
-                                      Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)
+                                      Tachelhit (<span style={{ fontFamily: 'var(--font-tifinagh)' }}>ⵜⴰⵛⵍⵃⵉⵜ</span>)
                                     </label>
                                     <div style={{ display: 'flex', gap: '8px' }}>
                                                     {drill.audio_url && (
@@ -875,11 +862,11 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                                                           }
                                                         }}
                                                         style={{
-                                                          padding: '4px 8px',
-                                                          background: '#e8f5e9',
-                                                          color: '#2e7d32',
-                                                          border: '1px solid #2e7d32',
-                                                          borderRadius: '6px',
+                                                          padding: '6px 10px',
+                                                          background: 'var(--emerald-soft)',
+                                                          color: 'var(--emerald)',
+                                                          border: '1px solid var(--emerald)',
+                                                          borderRadius: 'var(--r-pill)',
                                                           fontSize: '11px',
                                                           fontWeight: 600,
                                                           cursor: 'pointer',
@@ -898,14 +885,15 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                                                 onClick={handleAutoTranscribe}
                                                 disabled={isTranscribing}
                                                 style={{
-                                                    padding: '4px 8px',
-                                                    background: '#f0f4ff',
-                                                    color: '#667eea',
-                                                    border: '1px solid #667eea',
-                                                    borderRadius: '6px',
+                                                    padding: '6px 10px',
+                                                    background: 'var(--brand-gradient-soft)',
+                                                    color: 'var(--brand-1)',
+                                                    border: '1px solid var(--brand-1)',
+                                                    borderRadius: 'var(--r-pill)',
                                                     fontSize: '11px',
                                                     fontWeight: 600,
                                                     cursor: isTranscribing ? 'not-allowed' : 'pointer',
+                                                    opacity: isTranscribing ? 0.7 : 1,
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     gap: '4px'
@@ -927,15 +915,17 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                           width: '100%',
                           padding: '14px',
                           fontSize: '16px',
-                          border: '2px solid #e0e0e0',
-                          borderRadius: '8px',
+                          border: '1px solid var(--border)',
+                          background: 'var(--surface-2)',
+                          color: 'var(--text)',
+                          borderRadius: 'var(--r-md)',
                           outline: 'none',
                           resize: 'vertical',
-                          fontFamily: 'system-ui',
-                          transition: 'border-color 0.2s'
+                          fontFamily: 'var(--font-tifinagh)',
+                          transition: 'border-color 0.2s, box-shadow 0.2s'
                         }}
-                                    onFocus={(e) => e.target.style.borderColor = '#667eea'}
-                                    onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                                    onFocus={(e) => { e.target.style.borderColor = 'var(--brand-1)'; e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.12)'; }}
+                                    onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
                                   />
                                   <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
                                     <button
@@ -955,12 +945,13 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                                         }
                                       }}
                                       style={{
-                                        padding: '6px 12px',
+                                        padding: '8px 14px',
                                         fontSize: '12px',
-                                        background: '#9C27B0',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '6px',
+                                        fontWeight: 600,
+                                        background: 'var(--brand-gradient-soft)',
+                                        color: 'var(--brand-1)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: 'var(--r-pill)',
                                         cursor: 'pointer',
                                         whiteSpace: 'nowrap'
                                       }}
@@ -969,20 +960,21 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                                     </button>
                                   </div>
                                   {transcriptionDebug && (
-                                    <div style={{ 
-                                      marginTop: '8px', 
-                                      padding: '8px', 
-                                      background: '#f0f4ff', 
-                                      borderRadius: '6px', 
-                                      fontSize: '11px', 
-                                      border: '1px dashed #667eea' 
+                                    <div style={{
+                                      marginTop: '8px',
+                                      padding: '10px 12px',
+                                      background: 'var(--brand-gradient-soft)',
+                                      borderRadius: 'var(--r-md)',
+                                      fontSize: '11px',
+                                      color: 'var(--text-soft)',
+                                      border: '1px dashed var(--brand-1)'
                                     }}>
-                                      <div style={{ color: '#667eea', fontWeight: 700, marginBottom: '2px' }}>
+                                      <div style={{ color: 'var(--brand-1)', fontWeight: 700, marginBottom: '2px' }}>
                                         AI Debug Info:
                                       </div>
-                                      <div><strong>Whisper heard:</strong> "{transcriptionDebug.rough}"</div>
+                                      <div><strong>Whisper heard:</strong> "<span style={{ fontFamily: 'var(--font-tifinagh)' }}>{transcriptionDebug.rough}</span>"</div>
                                       <div><strong>Confidence Score:</strong> {Math.round((transcriptionDebug.score || 0) * 100)}%</div>
-                                      <div style={{ marginTop: '4px', fontStyle: 'italic', color: '#666' }}>
+                                      <div style={{ marginTop: '4px', fontStyle: 'italic', color: 'var(--text-muted)' }}>
                                         * Matches against your "Dataset" drills.
                                       </div>
                                     </div>
@@ -996,7 +988,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                 display: 'block',
                 fontSize: '14px',
                 fontWeight: 600,
-                color: '#333',
+                color: 'var(--text)',
                 marginBottom: '8px',
                 textAlign: 'right'
               }}>
@@ -1011,16 +1003,18 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                   width: '100%',
                   padding: '14px',
                   fontSize: '16px',
-                  border: '2px solid #e0e0e0',
-                  borderRadius: '8px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--surface-2)',
+                  color: 'var(--text)',
+                  borderRadius: 'var(--r-md)',
                   outline: 'none',
                   resize: 'vertical',
                   direction: 'rtl',
-                  fontFamily: 'system-ui',
-                  transition: 'border-color 0.2s'
+                  fontFamily: 'var(--font-sans)',
+                  transition: 'border-color 0.2s, box-shadow 0.2s'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#667eea'}
-                onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                onFocus={(e) => { e.target.style.borderColor = 'var(--brand-1)'; e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.12)'; }}
+                onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
               />
             </div>
 
@@ -1028,9 +1022,10 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
             <div style={{
               position: 'sticky',
               bottom: 0,
-              background: 'white',
+              background: 'var(--surface)',
               padding: '20px 0',
               marginTop: '30px',
+              borderTop: '1px solid var(--border)',
               display: 'flex',
               gap: '12px'
             }}>
@@ -1042,10 +1037,10 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                 style={{
                   flex: 1,
                   padding: isMobile ? '14px' : '16px',
-                  background: '#e0e0e0',
-                  color: '#333',
-                  border: 'none',
-                  borderRadius: '12px',
+                  background: 'var(--surface-2)',
+                  color: 'var(--text-soft)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--r-md)',
                   fontSize: isMobile ? '15px' : '16px',
                   fontWeight: 700,
                   cursor: 'pointer'
@@ -1058,14 +1053,14 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                 style={{
                   flex: 1,
                   padding: isMobile ? '14px' : '16px',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: 'var(--emerald)',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '12px',
+                  borderRadius: 'var(--r-md)',
                   fontSize: isMobile ? '15px' : '16px',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                  boxShadow: 'var(--shadow-md)'
                 }}
               >
                 ✓ Save Changes
@@ -1077,12 +1072,12 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
 
       {/* Drill Card */}
       <div style={{
-        background: 'white',
-        borderRadius: '12px',
-        padding: '16px',
+        background: 'var(--surface)',
+        borderRadius: 'var(--r-xl)',
+        padding: '18px',
         marginBottom: '16px',
-        boxShadow: isSelected ? '0 4px 12px rgba(102, 126, 234, 0.4)' : '0 2px 8px rgba(0,0,0,0.1)',
-        border: isSelected ? '2px solid #667eea' : '1px solid #e0e0e0',
+        boxShadow: isSelected ? 'var(--shadow-brand)' : 'var(--shadow-sm)',
+        border: isSelected ? '2px solid var(--brand-1)' : '1px solid var(--border)',
         transition: 'all 0.2s'
       }}>
         {/* Header with ID and Select */}
@@ -1097,21 +1092,21 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                   width: '20px',
                   height: '20px',
                   cursor: 'pointer',
-                  accentColor: '#667eea'
+                  accentColor: 'var(--brand-1)'
                 }}
               />
             )}
-            <span style={{ fontSize: '14px', color: '#666', fontWeight: 600 }}>
+            <span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 600 }}>
               #{drill.id}
             </span>
             {drill.tag && (
               <span style={{
                 fontSize: '12px',
-                background: '#e0e7ff',
-                color: '#667eea',
-                padding: '4px 8px',
-                borderRadius: '4px',
-                fontWeight: 500
+                background: 'var(--brand-gradient-soft)',
+                color: 'var(--brand-1)',
+                padding: '4px 10px',
+                borderRadius: 'var(--r-pill)',
+                fontWeight: 600
               }}>
                 {drill.tag}
               </span>
@@ -1119,23 +1114,23 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
             {drill.author && (
               <span style={{
                 fontSize: '12px',
-                background: '#e0f7fa',
-                color: '#00796b',
-                padding: '4px 8px',
-                borderRadius: '4px',
-                fontWeight: 500
+                background: 'var(--sky-soft)',
+                color: 'var(--sky)',
+                padding: '4px 10px',
+                borderRadius: 'var(--r-pill)',
+                fontWeight: 600
               }}>
                 👤 {drill.author}
               </span>
             )}
             
             {/* Correction Dataset Toggle */}
-            <label style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '6px', 
-              fontSize: '12px', 
-              color: drill.is_correction_dataset ? '#4CAF50' : '#666',
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              color: drill.is_correction_dataset ? 'var(--emerald)' : 'var(--text-soft)',
               fontWeight: 600,
               cursor: 'pointer'
             }}>
@@ -1151,10 +1146,10 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
           <button
             onClick={onDelete}
             style={{
-              background: '#ff4444',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
+              background: 'var(--rose-soft)',
+              color: 'var(--rose)',
+              border: '1px solid var(--rose)',
+              borderRadius: 'var(--r-md)',
               padding: '6px 12px',
               fontSize: '13px',
               fontWeight: 600,
@@ -1170,20 +1165,21 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
           style={{
             marginBottom: '12px',
             cursor: 'pointer',
-            padding: '12px',
-            background: '#f8f9fa',
-            borderRadius: '8px'
+            padding: '14px',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--r-lg)'
           }}
           onClick={() => setIsEditing(true)}
         >
-          <div style={{ fontSize: '14px', fontWeight: 600, color: '#333', marginBottom: '4px' }}>
-            {drill.text_catalan || <span style={{ color: '#999', fontSize: '13px' }}>+ Add Catalan</span>}
+          <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', marginBottom: '6px' }}>
+            {drill.text_catalan || <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 400 }}>+ Add Catalan</span>}
           </div>
-          <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>
-            {drill.text_tachelhit || <span style={{ color: '#999', fontSize: '12px' }}>+ Add Tachelhit</span>}
+          <div style={{ fontSize: '13px', color: 'var(--text-soft)', marginBottom: '6px', fontFamily: 'var(--font-tifinagh)' }}>
+            {drill.text_tachelhit || <span style={{ color: 'var(--text-muted)', fontSize: '12px', fontFamily: 'var(--font-sans)' }}>+ Add Tachelhit</span>}
           </div>
-          <div style={{ fontSize: '13px', color: '#666', direction: 'rtl' }}>
-            {drill.text_arabic || <span style={{ color: '#999', fontSize: '12px' }}>+ أضف عربي</span>}
+          <div style={{ fontSize: '13px', color: 'var(--text-soft)', direction: 'rtl' }}>
+            {drill.text_arabic || <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>+ أضف عربي</span>}
           </div>
         </div>
 
@@ -1201,14 +1197,14 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
             style={{
               flex: 1,
               padding: '16px',
-              background: '#ff4444',
+              background: 'var(--rose)',
               color: 'white',
               border: 'none',
-              borderRadius: '10px',
+              borderRadius: 'var(--r-md)',
               fontSize: '16px',
               fontWeight: 700,
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(255, 68, 68, 0.3)',
+              boxShadow: 'var(--shadow-md)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1225,14 +1221,14 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
             style={{
               flex: 1,
               padding: isMobile ? '12px' : '16px',
-              background: drill.audio_url ? 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)' : 'linear-gradient(135deg, #4CAF50 0%, #388E3C 100%)',
+              background: 'var(--rose)',
               color: 'white',
               border: 'none',
-              borderRadius: '10px',
+              borderRadius: 'var(--r-md)',
               fontSize: isMobile ? '14px' : '16px',
               fontWeight: 700,
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              boxShadow: 'var(--shadow-sm)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1251,14 +1247,14 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
             style={{
               flex: 1,
               padding: '16px',
-              background: '#ff4444',
+              background: 'var(--rose)',
               color: 'white',
               border: 'none',
-              borderRadius: '10px',
+              borderRadius: 'var(--r-md)',
               fontSize: '16px',
               fontWeight: 700,
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(255, 68, 68, 0.3)',
+              boxShadow: 'var(--shadow-md)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1275,14 +1271,14 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
             style={{
               flex: 1,
               padding: isMobile ? '12px' : '16px',
-              background: drill.video_url ? 'linear-gradient(135deg, #FF6B6B 0%, #EE5A6F 100%)' : 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
+              background: 'var(--brand-gradient)',
               color: 'white',
               border: 'none',
-              borderRadius: '10px',
+              borderRadius: 'var(--r-md)',
               fontSize: isMobile ? '14px' : '16px',
               fontWeight: 700,
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              boxShadow: 'var(--shadow-brand)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1311,11 +1307,11 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
               }}
               style={{
                 flex: 1,
-                padding: isMobile ? '8px' : '10px',
-                background: 'white',
-                color: '#4CAF50',
-                border: '2px solid #4CAF50',
-                borderRadius: '8px',
+                padding: isMobile ? '10px' : '12px',
+                background: 'var(--emerald-soft)',
+                color: 'var(--emerald)',
+                border: '1px solid var(--emerald)',
+                borderRadius: 'var(--r-md)',
                 fontSize: isMobile ? '13px' : '14px',
                 fontWeight: 600,
                 cursor: 'pointer'
@@ -1337,11 +1333,11 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
               onClick={openPlayback}
               style={{
                 flex: 1,
-                padding: isMobile ? '8px' : '10px',
-                background: 'white',
-                color: '#9C27B0',
-                border: '2px solid #9C27B0',
-                borderRadius: '8px',
+                padding: isMobile ? '10px' : '12px',
+                background: 'var(--brand-gradient-soft)',
+                color: 'var(--brand-1)',
+                border: '1px solid var(--brand-1)',
+                borderRadius: 'var(--r-md)',
                 fontSize: isMobile ? '13px' : '14px',
                 fontWeight: 600,
                 cursor: 'pointer'
@@ -1357,16 +1353,16 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
       {drill.video_url && !recording && (
         <div style={{
           marginBottom: '12px',
-          padding: '12px',
-          background: '#f3e5f5',
-          borderRadius: '8px',
-          border: '1px solid #d1c4e9'
+          padding: '14px',
+          background: 'var(--brand-gradient-soft)',
+          borderRadius: 'var(--r-lg)',
+          border: '1px solid var(--border)'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: '#4a148c' }}>✂️ Video Trimmer</span>
-            <button 
+            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--brand-1)' }}>✂️ Video Trimmer</span>
+            <button
               onClick={() => setIsVideoTrimming(!isVideoTrimming)}
-              style={{ padding: '4px 8px', fontSize: '11px', background: 'none', border: '1px solid #4a148c', color: '#4a148c', borderRadius: '4px', cursor: 'pointer' }}
+              style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 600, background: 'var(--surface)', border: '1px solid var(--brand-1)', color: 'var(--brand-1)', borderRadius: 'var(--r-pill)', cursor: 'pointer' }}
             >
               {isVideoTrimming ? 'Cancel' : 'Open'}
             </button>
@@ -1376,43 +1372,44 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '11px', display: 'block' }}>INICI: {videoTrimRange.start.toFixed(1)}s</label>
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max={playerDuration} 
-                    step="0.1" 
-                    value={videoTrimRange.start} 
+                  <label style={{ fontSize: '11px', display: 'block', color: 'var(--text-soft)', fontWeight: 600, marginBottom: '4px' }}>INICI: {videoTrimRange.start.toFixed(1)}s</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max={playerDuration}
+                    step="0.1"
+                    value={videoTrimRange.start}
                     onChange={e => setVideoTrimRange(prev => ({...prev, start: parseFloat(e.target.value)}))}
-                    style={{ width: '100%' }} 
+                    style={{ width: '100%', accentColor: 'var(--brand-1)' }}
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '11px', display: 'block' }}>FINAL: {videoTrimRange.end.toFixed(1)}s</label>
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max={playerDuration} 
-                    step="0.1" 
-                    value={videoTrimRange.end} 
+                  <label style={{ fontSize: '11px', display: 'block', color: 'var(--text-soft)', fontWeight: 600, marginBottom: '4px' }}>FINAL: {videoTrimRange.end.toFixed(1)}s</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max={playerDuration}
+                    step="0.1"
+                    value={videoTrimRange.end}
                     onChange={e => setVideoTrimRange(prev => ({...prev, end: parseFloat(e.target.value)}))}
-                    style={{ width: '100%' }} 
+                    style={{ width: '100%', accentColor: 'var(--brand-1)' }}
                   />
                 </div>
               </div>
               <button 
                 onClick={() => handleTrim('video')}
                 disabled={isProcessingTrim}
-                style={{ 
-                  padding: '10px', 
-                  background: '#9c27b0', 
+                style={{
+                  padding: '12px',
+                  background: 'var(--brand-gradient)',
                   color: 'white',
-                  border: 'none', 
-                  borderRadius: '10px', 
-                  fontWeight: 700, 
+                  border: 'none',
+                  borderRadius: 'var(--r-md)',
+                  fontWeight: 700,
                   fontSize: '14px',
                   cursor: isProcessingTrim ? 'not-allowed' : 'pointer',
                   opacity: isProcessingTrim ? 0.7 : 1,
+                  boxShadow: 'var(--shadow-brand)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1430,16 +1427,16 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
       {drill.audio_url && !recording && (
         <div style={{
           marginBottom: '12px',
-          padding: '12px',
-          background: '#fff9e6',
-          borderRadius: '8px',
-          border: '1px solid #ffe680'
+          padding: '14px',
+          background: 'var(--amber-soft)',
+          borderRadius: 'var(--r-lg)',
+          border: '1px solid var(--border)'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: '#856404' }}>✂️ Audio Trimmer</span>
-            <button 
+            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--amber-strong)' }}>✂️ Audio Trimmer</span>
+            <button
               onClick={() => setIsTrimming(!isTrimming)}
-              style={{ padding: '4px 8px', fontSize: '11px', background: 'none', border: '1px solid #856404', color: '#856404', borderRadius: '4px', cursor: 'pointer' }}
+              style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 600, background: 'var(--surface)', border: '1px solid var(--amber)', color: 'var(--amber-strong)', borderRadius: 'var(--r-pill)', cursor: 'pointer' }}
             >
               {isTrimming ? 'Cancel' : 'Open'}
             </button>
@@ -1448,91 +1445,93 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
           {isTrimming && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {/* Integrated Audio Player Controls */}
-              <div style={{ background: '#f0f0f0', padding: '10px', borderRadius: '8px', marginBottom: '8px' }}>
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', padding: '12px', borderRadius: 'var(--r-md)', marginBottom: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <button 
+                  <button
                     onClick={() => {
                       if (audioRef.current) {
                         if (isAudioPlaying) audioRef.current.pause();
                         else audioRef.current.play();
                       }
                     }}
-                    style={{ padding: '8px 12px', background: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                    style={{ padding: '8px 14px', background: 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontWeight: 700 }}
                   >
                     {isAudioPlaying ? '⏸ Pause' : '▶️ Play'}
                   </button>
-                  <button 
+                  <button
                     onClick={() => { if (audioRef.current) audioRef.current.currentTime -= 5; }}
-                    style={{ padding: '8px', background: 'white', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' }}
+                    style={{ padding: '8px', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontWeight: 600 }}
                   >-5s</button>
-                  <button 
+                  <button
                     onClick={() => { if (audioRef.current) audioRef.current.currentTime += 5; }}
-                    style={{ padding: '8px', background: 'white', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' }}
+                    style={{ padding: '8px', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontWeight: 600 }}
                   >+5s</button>
-                  <div style={{ flex: 1, fontSize: '12px', textAlign: 'right', fontFamily: 'monospace' }}>
+                  <div style={{ flex: 1, fontSize: '12px', textAlign: 'right', fontFamily: 'monospace', color: 'var(--text-soft)' }}>
                     {playerTime.toFixed(1)}s / {playerDuration.toFixed(1)}s
                   </div>
                 </div>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max={playerDuration || 100} 
-                  step="0.1" 
+                <input
+                  type="range"
+                  min="0"
+                  max={playerDuration || 100}
+                  step="0.1"
                   value={playerTime}
                   onChange={(e) => { if (audioRef.current) audioRef.current.currentTime = parseFloat(e.target.value); }}
-                  style={{ width: '100%', cursor: 'pointer', accentColor: '#2196F3' }}
+                  style={{ width: '100%', cursor: 'pointer', accentColor: 'var(--brand-1)' }}
                 />
               </div>
 
               <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '11px', display: 'block' }}>Start (sec)</label>
-                  <div style={{ display: 'flex', gap: '2px' }}>
-                    <button onClick={() => setTrimRange({...trimRange, start: Math.max(0, parseFloat((trimRange.start - 0.4).toFixed(1)))})} style={{ padding: '4px' }}>-</button>
-                    <input 
-                      type="number" 
-                      value={trimRange.start} 
+                  <label style={{ fontSize: '11px', display: 'block', color: 'var(--text-soft)', fontWeight: 600, marginBottom: '4px' }}>Start (sec)</label>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button onClick={() => setTrimRange({...trimRange, start: Math.max(0, parseFloat((trimRange.start - 0.4).toFixed(1)))})} style={{ padding: '6px 10px', background: 'var(--surface)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontWeight: 600 }}>-</button>
+                    <input
+                      type="number"
+                      value={trimRange.start}
                       onChange={e => setTrimRange({...trimRange, start: parseFloat(e.target.value)})}
-                      style={{ width: '100%', padding: '6px', fontSize: '12px' }}
+                      style={{ width: '100%', padding: '6px', fontSize: '12px', background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)' }}
                       step="0.1"
                     />
-                    <button onClick={() => setTrimRange({...trimRange, start: parseFloat((trimRange.start + 0.4).toFixed(1))})} style={{ padding: '4px' }}>+</button>
+                    <button onClick={() => setTrimRange({...trimRange, start: parseFloat((trimRange.start + 0.4).toFixed(1))})} style={{ padding: '6px 10px', background: 'var(--surface)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontWeight: 600 }}>+</button>
                   </div>
-                  <button 
+                  <button
                     onClick={() => setTrimRange({...trimRange, start: Number(audioRef.current?.currentTime.toFixed(1) || 0)})}
-                    style={{ width: '100%', marginTop: '4px', fontSize: '10px', padding: '4px', cursor: 'pointer' }}
+                    style={{ width: '100%', marginTop: '6px', fontSize: '10px', padding: '6px', cursor: 'pointer', background: 'var(--surface)', color: 'var(--amber-strong)', border: '1px solid var(--amber)', borderRadius: 'var(--r-sm)', fontWeight: 600 }}
                   >📍 Set current</button>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '11px', display: 'block' }}>End (sec)</label>
-                  <div style={{ display: 'flex', gap: '2px' }}>
-                    <button onClick={() => setTrimRange({...trimRange, end: Math.max(0, parseFloat((trimRange.end - 0.4).toFixed(1)))})} style={{ padding: '4px' }}>-</button>
-                    <input 
-                      type="number" 
-                      value={trimRange.end} 
+                  <label style={{ fontSize: '11px', display: 'block', color: 'var(--text-soft)', fontWeight: 600, marginBottom: '4px' }}>End (sec)</label>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button onClick={() => setTrimRange({...trimRange, end: Math.max(0, parseFloat((trimRange.end - 0.4).toFixed(1)))})} style={{ padding: '6px 10px', background: 'var(--surface)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontWeight: 600 }}>-</button>
+                    <input
+                      type="number"
+                      value={trimRange.end}
                       onChange={e => setTrimRange({...trimRange, end: parseFloat(e.target.value)})}
-                      style={{ width: '100%', padding: '6px', fontSize: '12px' }}
+                      style={{ width: '100%', padding: '6px', fontSize: '12px', background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)' }}
                       step="0.1"
                     />
-                    <button onClick={() => setTrimRange({...trimRange, end: parseFloat((trimRange.end + 0.4).toFixed(1))})} style={{ padding: '4px' }}>+</button>
+                    <button onClick={() => setTrimRange({...trimRange, end: parseFloat((trimRange.end + 0.4).toFixed(1))})} style={{ padding: '6px 10px', background: 'var(--surface)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer', fontWeight: 600 }}>+</button>
                   </div>
-                  <button 
+                  <button
                     onClick={() => setTrimRange({...trimRange, end: Number(audioRef.current?.currentTime.toFixed(1) || 0)})}
-                    style={{ width: '100%', marginTop: '4px', fontSize: '10px', padding: '4px', cursor: 'pointer' }}
+                    style={{ width: '100%', marginTop: '6px', fontSize: '10px', padding: '6px', cursor: 'pointer', background: 'var(--surface)', color: 'var(--amber-strong)', border: '1px solid var(--amber)', borderRadius: 'var(--r-sm)', fontWeight: 600 }}
                   >📍 Set current</button>
                 </div>
               </div>
               <button 
                 onClick={() => handleTrim('audio')}
                 disabled={isProcessingTrim}
-                style={{ 
-                  padding: '8px', 
-                  background: '#ffc107', 
-                  border: 'none', 
-                  borderRadius: '6px', 
-                  fontWeight: 700, 
+                style={{
+                  padding: '12px',
+                  background: 'var(--amber)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 'var(--r-md)',
+                  fontWeight: 700,
                   fontSize: '13px',
                   cursor: isProcessingTrim ? 'not-allowed' : 'pointer',
+                  boxShadow: 'var(--shadow-sm)',
                   opacity: isProcessingTrim ? 0.7 : 1
                 }}
               >
@@ -1646,14 +1645,14 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
               style={{
                 width: '80px',
                 height: '80px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #ff4444 0%, #cc0000 100%)',
+                borderRadius: 'var(--r-pill)',
+                background: 'var(--rose)',
                 color: 'white',
                 border: '4px solid white',
                 fontSize: '32px',
                 fontWeight: 700,
                 cursor: 'pointer',
-                boxShadow: '0 6px 20px rgba(255, 68, 68, 0.5)',
+                boxShadow: 'var(--shadow-lg)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -1678,7 +1677,9 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0,0,0,0.9)',
+            background: 'rgba(15,23,42,.7)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
             zIndex: 30000,
             display: 'flex',
             alignItems: 'center',
@@ -1686,10 +1687,10 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
             padding: isMobile ? '10px' : '20px'
           }}
         >
-          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '800px', background: 'white', padding: '20px', borderRadius: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
-              <h3 style={{ margin: 0 }}>Video Playback</h3>
-              <button onClick={closePlayback} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '800px', background: 'var(--surface)', padding: '20px', borderRadius: 'var(--r-2xl)', boxShadow: 'var(--shadow-xl)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0, color: 'var(--text)', fontWeight: 700 }}>Video Playback</h3>
+              <button onClick={closePlayback} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-soft)', width: '32px', height: '32px', borderRadius: 'var(--r-pill)', fontSize: '16px', cursor: 'pointer' }}>✕</button>
             </div>
             
             {isYouTubeUrl(drill.video_url) ? (
@@ -1730,10 +1731,10 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                   onClick={togglePlayPause}
                   style={{
                     padding: '10px 20px',
-                    background: '#4CAF50',
+                    background: 'var(--emerald)',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '8px',
+                    borderRadius: 'var(--r-md)',
                     cursor: 'pointer',
                     fontWeight: 600
                   }}
@@ -1745,10 +1746,10 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                 onClick={goBack2Seconds}
                 style={{
                   padding: '10px 20px',
-                  background: '#2196F3',
+                  background: 'var(--sky)',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: 'var(--r-md)',
                   cursor: 'pointer',
                   fontWeight: 600
                 }}
@@ -1759,10 +1760,10 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
                 onClick={closePlayback}
                 style={{
                   padding: '10px 20px',
-                  background: '#666',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
+                  background: 'var(--surface-2)',
+                  color: 'var(--text-soft)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--r-md)',
                   cursor: 'pointer',
                   fontWeight: 600
                 }}
@@ -1776,7 +1777,7 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
 
       {/* Video Player (Integrated) */}
       {drill.video_url && !isYouTubeUrl(drill.video_url) && !recording && !showVideo && (
-        <div style={{ marginBottom: '12px', borderRadius: '12px', overflow: 'hidden', background: '#000', width: '100%' }}>
+        <div style={{ marginBottom: '12px', borderRadius: 'var(--r-lg)', overflow: 'hidden', background: '#000', width: '100%', boxShadow: 'var(--shadow-sm)' }}>
             <video 
                 src={getMediaUrl(drill.video_url)} 
                 controls 
@@ -1798,15 +1799,15 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
         onClick={() => setIsEditing(true)}
         style={{
           width: '100%',
-          padding: isMobile ? '10px' : '12px',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          padding: isMobile ? '12px' : '14px',
+          background: 'var(--brand-gradient)',
           color: 'white',
           border: 'none',
-          borderRadius: '8px',
+          borderRadius: 'var(--r-md)',
           fontSize: isMobile ? '14px' : '15px',
           fontWeight: 600,
           cursor: 'pointer',
-          boxShadow: '0 2px 6px rgba(102, 126, 234, 0.3)',
+          boxShadow: 'var(--shadow-brand)',
           marginTop: '8px'
         }}
       >

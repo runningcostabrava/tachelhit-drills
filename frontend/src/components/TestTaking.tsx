@@ -315,7 +315,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
 
   if (!test || drills.length === 0) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
+      <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'var(--font-sans)', color: 'var(--text-soft)' }}>
         <p>Loading test...</p>
       </div>
     );
@@ -333,16 +333,20 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
           height: '100vh',
           display: 'flex',
           flexDirection: 'column',
-          background: '#f5f5f5'
+          background: 'var(--bg)',
+          fontFamily: 'var(--font-sans)'
         }}>
           {/* Header */}
           <div style={{
-            padding: '20px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white'
+            padding: '22px 24px 28px',
+            background: 'var(--brand-gradient)',
+            color: '#fff',
+            borderBottomLeftRadius: '26px',
+            borderBottomRightRadius: '26px',
+            boxShadow: 'var(--shadow-md)'
           }}>
-            <h2 style={{ margin: 0 }}>Review Your Answers</h2>
-            <p style={{ margin: '5px 0 0 0', opacity: 0.9 }}>
+            <h2 style={{ margin: 0, color: '#fff', fontWeight: 800 }}>Review Your Answers</h2>
+            <p style={{ margin: '8px 0 0 0', opacity: 0.92 }}>
               Score: {Math.round(score)}% ({correctAnswers}/{questionResults.length} correct)
             </p>
           </div>
@@ -380,26 +384,30 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                   break;
               }
 
+              const reviewQuestionIsTashelhit = test.playback_direction === 'tash-cat' || test.playback_direction === 'tash-ar';
+              const reviewAnswerIsTashelhit = test.playback_direction === 'cat-tash' || test.playback_direction === 'ar-tash' || (!test.playback_direction);
+              const reviewAnswerIsArabic = test.playback_direction === 'tash-ar';
+
               return (
                 <div key={index} style={{
-                  background: 'white',
+                  background: 'var(--surface)',
                   padding: '24px',
-                  borderRadius: '12px',
+                  borderRadius: 'var(--r-xl)',
                   marginBottom: '16px',
-                  border: result.correct ? '2px solid #4CAF50' : '2px solid #ff4444',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                  border: result.correct ? '1px solid var(--emerald)' : '1px solid var(--rose)',
+                  boxShadow: 'var(--shadow-sm)'
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '16px' }}>
-                    <h3 style={{ margin: 0, fontSize: '18px', color: '#333' }}>
+                    <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--text)', fontWeight: 800 }}>
                       Question {index + 1}
                     </h3>
                     <span style={{
-                      padding: '4px 12px',
-                      borderRadius: '12px',
-                      fontSize: '14px',
-                      fontWeight: 'bold',
-                      background: result.correct ? '#4CAF50' : '#ff4444',
-                      color: 'white'
+                      padding: '5px 14px',
+                      borderRadius: 'var(--r-pill)',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      background: result.correct ? 'var(--emerald-soft)' : 'var(--rose-soft)',
+                      color: result.correct ? 'var(--emerald)' : 'var(--rose)'
                     }}>
                       {result.correct ? '✓ Correct' : '✗ Incorrect'}
                     </span>
@@ -414,7 +422,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                         style={{
                           maxWidth: '100%',
                           maxHeight: '150px',
-                          borderRadius: '8px',
+                          borderRadius: 'var(--r-md)',
                           objectFit: 'contain'
                         }}
                       />
@@ -422,32 +430,33 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                   )}
 
                   <div style={{ marginBottom: '12px' }}>
-                    <strong style={{ color: '#667eea' }}>Question:</strong>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '16px' }}>{reviewQuestionText}</p>
+                    <strong style={{ color: 'var(--brand-1)' }}>Question:</strong>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '16px', color: 'var(--text)', fontFamily: reviewQuestionIsTashelhit ? 'var(--font-tifinagh)' : 'var(--font-sans)' }}>{reviewQuestionText}</p>
                   </div>
 
                   <div style={{ marginBottom: '12px' }}>
-                    <strong style={{ color: result.correct ? '#4CAF50' : '#ff4444' }}>Your Answer:</strong>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 500 }}>
+                    <strong style={{ color: result.correct ? 'var(--emerald)' : 'var(--rose)' }}>Your Answer:</strong>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 500, color: 'var(--text)', fontFamily: reviewAnswerIsTashelhit ? 'var(--font-tifinagh)' : 'var(--font-sans)', direction: reviewAnswerIsArabic ? 'rtl' : 'ltr' }}>
                       {result.user_answer || '(no answer)'}
                     </p>
                   </div>
 
                   {!result.correct && (
                     <div style={{
-                      background: '#e8f5e9',
-                      padding: '12px',
-                      borderRadius: '8px',
-                      marginBottom: '12px'
+                      background: 'var(--emerald-soft)',
+                      padding: '12px 14px',
+                      borderRadius: 'var(--r-md)',
+                      marginBottom: '12px',
+                      border: '1px solid var(--emerald)'
                     }}>
-                      <strong style={{ color: '#2e7d32' }}>Correct Answer:</strong>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 500, color: '#2e7d32' }}>
+                      <strong style={{ color: 'var(--emerald)' }}>Correct Answer:</strong>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '16px', fontWeight: 600, color: 'var(--emerald)', fontFamily: reviewAnswerIsTashelhit ? 'var(--font-tifinagh)' : 'var(--font-sans)', direction: reviewAnswerIsArabic ? 'rtl' : 'ltr' }}>
                         {reviewCorrectAnswerText}
                       </p>
                     </div>
                   )}
 
-                  <div style={{ fontSize: '13px', color: '#999', marginTop: '12px' }}>
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '12px' }}>
                     Attempts: {result.attempts} • Time: {result.time_spent}s
                   </div>
                 </div>
@@ -457,9 +466,9 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
 
           {/* Footer Buttons */}
           <div style={{
-            padding: '20px',
-            background: 'white',
-            borderTop: '1px solid #e0e0e0',
+            padding: '18px 20px',
+            background: 'var(--surface)',
+            borderTop: '1px solid var(--border)',
             display: 'flex',
             gap: '12px',
             justifyContent: 'center'
@@ -469,12 +478,13 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
               style={{
                 padding: '12px 24px',
                 fontSize: '15px',
-                background: '#667eea',
-                color: 'white',
+                background: 'var(--brand-gradient)',
+                color: '#fff',
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: 'var(--r-md)',
                 cursor: 'pointer',
-                fontWeight: 600,
+                fontWeight: 700,
+                boxShadow: 'var(--shadow-brand)'
               }}
             >
               Back to Results
@@ -484,12 +494,13 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
               style={{
                 padding: '12px 24px',
                 fontSize: '15px',
-                background: '#999',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
+                background: 'var(--surface)',
+                color: 'var(--text-soft)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--r-md)',
                 cursor: 'pointer',
-                fontWeight: 600,
+                fontWeight: 700,
+                boxShadow: 'var(--shadow-xs)'
               }}
             >
               Exit
@@ -505,58 +516,76 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        padding: '24px',
+        background: 'var(--brand-gradient)',
+        fontFamily: 'var(--font-sans)'
       }}>
         <div style={{
-          background: 'white',
-          padding: '40px',
-          borderRadius: '16px',
+          background: 'var(--surface)',
+          padding: '44px 40px',
+          borderRadius: 'var(--r-2xl)',
           maxWidth: '600px',
+          width: '100%',
           textAlign: 'center',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+          boxShadow: 'var(--shadow-xl)'
         }}>
+          <div style={{
+            width: '96px',
+            height: '96px',
+            margin: '0 auto 18px',
+            borderRadius: 'var(--r-pill)',
+            background: passed ? 'var(--emerald-soft)' : 'var(--amber-soft)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '48px'
+          }}>{passed ? '🎉' : '📚'}</div>
           <h1 style={{
-            fontSize: '48px',
-            margin: '0 0 20px 0',
-            color: passed ? '#4CAF50' : '#ff4444'
+            fontSize: '32px',
+            margin: '0 0 14px 0',
+            fontWeight: 800,
+            color: passed ? 'var(--emerald)' : 'var(--amber)'
           }}>
-            {passed ? '🎉 Passed!' : '📚 Keep Practicing'}
+            {passed ? 'Passed!' : 'Keep Practicing'}
           </h1>
 
-          <h2 style={{ fontSize: '64px', margin: '20px 0', color: '#333' }}>
+          <h2 style={{ fontSize: '64px', margin: '12px 0', color: 'var(--text)', fontWeight: 800 }}>
             {Math.round(score)}%
           </h2>
 
-          <p style={{ fontSize: '18px', color: '#666', marginBottom: '30px' }}>
+          <p style={{ fontSize: '18px', color: 'var(--text-soft)', marginBottom: '28px' }}>
             {correctAnswers} out of {questionResults.length} correct
           </p>
 
           <div style={{
-            background: '#f8f9fa',
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border)',
             padding: '20px',
-            borderRadius: '8px',
-            marginBottom: '30px'
+            borderRadius: 'var(--r-lg)',
+            marginBottom: '30px',
+            color: 'var(--text-soft)'
           }}>
             <div style={{ marginBottom: '10px' }}>
-              <strong>Time Taken:</strong> {Math.floor((Date.now() - testStartTime) / 1000)}s
+              <strong style={{ color: 'var(--text)' }}>Time Taken:</strong> {Math.floor((Date.now() - testStartTime) / 1000)}s
             </div>
             <div>
-              <strong>Passing Score:</strong> {test.passing_score}%
+              <strong style={{ color: 'var(--text)' }}>Passing Score:</strong> {test.passing_score}%
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
               onClick={() => setReviewMode(true)}
               style={{
-                padding: '14px 32px',
+                padding: '14px 30px',
                 fontSize: '16px',
-                background: '#4CAF50',
-                color: 'white',
+                background: 'var(--brand-gradient)',
+                color: '#fff',
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: 'var(--r-md)',
                 cursor: 'pointer',
-                fontWeight: 600,
+                fontWeight: 700,
+                boxShadow: 'var(--shadow-brand)'
               }}
             >
               📝 Review Answers
@@ -564,14 +593,15 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
             <button
               onClick={onExit}
               style={{
-                padding: '14px 32px',
+                padding: '14px 30px',
                 fontSize: '16px',
-                background: '#667eea',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
+                background: 'var(--surface)',
+                color: 'var(--brand-1)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--r-md)',
                 cursor: 'pointer',
-                fontWeight: 600,
+                fontWeight: 700,
+                boxShadow: 'var(--shadow-xs)'
               }}
             >
               Back to Tests
@@ -583,7 +613,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
   }
 
   if (!currentDrill || !questionText || !correctAnswer) {
-    return <div>Loading question...</div>;
+    return <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'var(--font-sans)', color: 'var(--text-soft)' }}>Loading question...</div>;
   }
 
   const hintText = getHintText();
@@ -617,26 +647,33 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
       break;
   }
 
+  const mainQuestionIsTashelhit = test.playback_direction === 'tash-cat' || test.playback_direction === 'tash-ar';
+  const answerIsTashelhit = correctAnswer === currentDrill.text_tachelhit;
+  const progressPct = ((currentQuestionIndex + 1) / drills.length) * 100;
+
   return (
     <div style={{
       height: '100vh',
       display: 'flex',
       flexDirection: 'column',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      background: 'var(--bg)',
+      fontFamily: 'var(--font-sans)'
     }}>
       {/* Header */}
       <div style={{
-        padding: '20px',
-        background: 'rgba(255,255,255,0.1)',
-        backdropFilter: 'blur(10px)',
-        color: 'white',
+        padding: '20px 24px 26px',
+        background: 'var(--brand-gradient)',
+        color: '#fff',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        borderBottomLeftRadius: '26px',
+        borderBottomRightRadius: '26px',
+        boxShadow: 'var(--shadow-md)'
       }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: '20px' }}>{test.title}</h2>
-          <p style={{ margin: '5px 0 0 0', fontSize: '14px', opacity: 0.9 }}>
+          <h2 style={{ margin: 0, fontSize: '20px', color: '#fff', fontWeight: 800 }}>{test.title}</h2>
+          <p style={{ margin: '6px 0 0 0', fontSize: '14px', opacity: 0.92 }}>
             Question {currentQuestionIndex + 1} of {drills.length}
           </p>
         </div>
@@ -644,8 +681,8 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
           {timeRemaining !== null && (
             <div style={{
               fontSize: '24px',
-              fontWeight: 'bold',
-              color: timeRemaining < 10 ? '#ff4444' : 'white'
+              fontWeight: 800,
+              color: timeRemaining < 10 ? '#fecaca' : '#fff'
             }}>
               ⏱ {timeRemaining}s
             </div>
@@ -658,18 +695,29 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
             }}
             style={{
               marginTop: '10px',
-              padding: '6px 12px',
-              background: 'rgba(255,255,255,0.2)',
-              color: 'white',
-              border: '1px solid white',
-              borderRadius: '4px',
+              padding: '7px 14px',
+              background: 'rgba(255,255,255,0.18)',
+              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.45)',
+              borderRadius: 'var(--r-pill)',
               cursor: 'pointer',
-              fontSize: '12px'
+              fontSize: '12px',
+              fontWeight: 600
             }}
           >
             Exit Test
           </button>
         </div>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ height: '6px', background: 'var(--border)', flexShrink: 0 }}>
+        <div style={{
+          height: '100%',
+          width: `${progressPct}%`,
+          background: 'var(--brand-gradient)',
+          transition: 'width 0.3s var(--ease)'
+        }} />
       </div>
 
       {/* Question Area */}
@@ -681,12 +729,13 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
         padding: '40px'
       }}>
         <div style={{
-          background: 'white',
-          padding: '50px',
-          borderRadius: '16px',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          padding: window.innerWidth < 768 ? '28px' : '48px',
+          borderRadius: 'var(--r-xl)',
           maxWidth: '800px',
           width: '100%',
-          boxShadow: '0 10px 40px rgba(0,0,0,0.2)'
+          boxShadow: 'var(--shadow-lg)'
         }}>
           {/* Image if available */}
           {currentDrill.image_url && (
@@ -697,7 +746,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                 style={{
                   maxWidth: '100%',
                   maxHeight: '200px',
-                  borderRadius: '8px',
+                  borderRadius: 'var(--r-md)',
                   objectFit: 'contain'
                 }}
               />
@@ -709,10 +758,11 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
             <div style={{
               fontSize: window.innerWidth < 768 ? '24px' : '36px',
               textAlign: 'center',
-              color: '#333',
-              fontWeight: 600,
+              color: 'var(--text)',
+              fontWeight: 700,
               lineHeight: 1.3,
-              direction: isArabicQuestion ? 'rtl' : 'ltr'
+              direction: isArabicQuestion ? 'rtl' : 'ltr',
+              fontFamily: mainQuestionIsTashelhit ? 'var(--font-tifinagh)' : 'var(--font-sans)'
             }}>
               {mainQuestionDisplay}
             </div>
@@ -720,11 +770,12 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
               <div style={{
                 fontSize: window.innerWidth < 768 ? '14px' : '16px',
                 textAlign: 'center',
-                color: '#666',
-                marginTop: '8px',
-                padding: '8px',
-                background: '#f8f9fa',
-                borderRadius: '6px',
+                color: 'var(--text-soft)',
+                marginTop: '10px',
+                padding: '8px 12px',
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--r-md)',
                 direction: secondaryQuestionDisplay === currentDrill.text_arabic ? 'rtl' : 'ltr'
               }}>
                 {secondaryQuestionDisplay}
@@ -751,18 +802,19 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                   style={{
                     padding: window.innerWidth < 768 ? '10px 16px' : '12px 24px',
                     fontSize: window.innerWidth < 768 ? '14px' : '16px',
-                    background: playing ? '#ccc' : '#4CAF50',
-                    color: 'white',
+                    background: playing ? 'var(--surface-2)' : 'var(--emerald)',
+                    color: playing ? 'var(--text-muted)' : '#fff',
                     border: 'none',
-                    borderRadius: '8px',
+                    borderRadius: 'var(--r-md)',
                     cursor: playing ? 'not-allowed' : 'pointer',
-                    fontWeight: 600,
+                    fontWeight: 700,
                     flex: window.innerWidth < 768 ? '1' : 'none',
                     width: window.innerWidth < 768 ? '100%' : 'auto',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px'
+                    gap: '8px',
+                    boxShadow: playing ? 'none' : 'var(--shadow-sm)'
                   }}
                 >
                   <span>{playing ? '🔊' : '🔊'}</span>
@@ -780,18 +832,19 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                   style={{
                     padding: window.innerWidth < 768 ? '10px 16px' : '12px 24px',
                     fontSize: window.innerWidth < 768 ? '14px' : '16px',
-                    background: '#2196F3',
-                    color: 'white',
+                    background: 'var(--sky)',
+                    color: '#fff',
                     border: 'none',
-                    borderRadius: '8px',
+                    borderRadius: 'var(--r-md)',
                     cursor: 'pointer',
-                    fontWeight: 600,
+                    fontWeight: 700,
                     flex: window.innerWidth < 768 ? '1' : 'none',
                     width: window.innerWidth < 768 ? '100%' : 'auto',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px'
+                    gap: '8px',
+                    boxShadow: 'var(--shadow-sm)'
                   }}
                 >
                   <span>🎥</span>
@@ -802,11 +855,13 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
               {/* Fallback message if no media available in combined mode */}
               {test.question_type === 'combined' && !currentDrill.audio_url && !currentDrill.video_url && (
                 <div style={{
-                  padding: '10px',
-                  background: '#fff3cd',
-                  borderRadius: '8px',
+                  padding: '10px 14px',
+                  background: 'var(--amber-soft)',
+                  border: '1px solid var(--amber)',
+                  borderRadius: 'var(--r-md)',
                   fontSize: window.innerWidth < 768 ? '12px' : '14px',
-                  color: '#856404',
+                  color: 'var(--amber-strong)',
+                  fontWeight: 600,
                   width: '100%'
                 }}>
                   💡 No audio/video available
@@ -825,8 +880,8 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
             }}>
               <label style={{
                 fontSize: window.innerWidth < 768 ? '14px' : '16px',
-                fontWeight: 600,
-                color: '#555',
+                fontWeight: 700,
+                color: 'var(--text-soft)',
                 direction: (test.playback_direction === 'ar-tash' || test.playback_direction === 'tash-ar') ? 'rtl' : 'ltr' // Apply direction to label
               }}>
                 Your answer in {correctAnswer === currentDrill.text_tachelhit ? 'Tachelhit' : correctAnswer === currentDrill.text_catalan ? 'Catalan' : 'Arabic'}:
@@ -834,11 +889,11 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
               {timeRemaining !== null && (
                 <div style={{
                   fontSize: window.innerWidth < 768 ? '14px' : '16px',
-                  fontWeight: 'bold',
-                  color: timeRemaining < 10 ? '#ff4444' : '#667eea',
-                  background: '#f0f4ff',
-                  padding: '4px 10px',
-                  borderRadius: '12px'
+                  fontWeight: 700,
+                  color: timeRemaining < 10 ? 'var(--rose)' : 'var(--brand-1)',
+                  background: timeRemaining < 10 ? 'var(--rose-soft)' : 'var(--brand-gradient-soft)',
+                  padding: '5px 12px',
+                  borderRadius: 'var(--r-pill)'
                 }}>
                   ⏱ {timeRemaining}s
                 </div>
@@ -857,55 +912,61 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
               autoFocus
               style={{
                 width: '100%',
-                padding: window.innerWidth < 768 ? '12px' : '16px',
+                padding: window.innerWidth < 768 ? '12px 14px' : '15px 16px',
                 fontSize: window.innerWidth < 768 ? '16px' : '18px',
-                border: '2px solid #ddd',
-                borderRadius: '8px',
+                border: '1px solid var(--border)',
+                background: 'var(--surface-2)',
+                color: 'var(--text)',
+                borderRadius: 'var(--r-md)',
                 outline: 'none',
-                transition: 'border-color 0.2s',
-                direction: (test.playback_direction === 'ar-tash' || test.playback_direction === 'tash-ar') ? 'rtl' : 'ltr' // Apply direction to input
+                transition: 'border-color 0.2s, box-shadow 0.2s',
+                direction: (test.playback_direction === 'ar-tash' || test.playback_direction === 'tash-ar') ? 'rtl' : 'ltr', // Apply direction to input
+                fontFamily: answerIsTashelhit ? 'var(--font-tifinagh)' : 'var(--font-sans)'
               }}
-              onFocus={(e) => e.target.style.borderColor = '#667eea'}
-              onBlur={(e) => e.target.style.borderColor = '#ddd'}
+              onFocus={(e) => { e.target.style.borderColor = 'var(--brand-1)'; e.target.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.12)'; e.target.style.background = 'var(--surface)'; }}
+              onBlur={(e) => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; e.target.style.background = 'var(--surface-2)'; }}
             />
           </div>
 
           {/* Hint Display - Compact */}
           {showHint && hintText && (
             <div style={{
-              padding: window.innerWidth < 768 ? '12px' : '16px',
-              background: '#fff3cd',
-              border: '1px solid #ffc107',
-              borderRadius: '8px',
+              padding: window.innerWidth < 768 ? '12px 14px' : '16px',
+              background: 'var(--amber-soft)',
+              border: '1px solid var(--amber)',
+              borderRadius: 'var(--r-md)',
               marginBottom: window.innerWidth < 768 ? '16px' : '20px',
-              fontSize: window.innerWidth < 768 ? '14px' : '15px'
+              fontSize: window.innerWidth < 768 ? '14px' : '15px',
+              color: 'var(--text)'
             }}>
-              <strong>💡 Hint:</strong> {hintText}
+              <strong style={{ color: 'var(--amber-strong)' }}>💡 Hint:</strong>{' '}
+              <span style={{ fontFamily: answerIsTashelhit ? 'var(--font-tifinagh)' : 'var(--font-sans)' }}>{hintText}</span>
             </div>
           )}
 
           {/* Correct Answer Display - Compact */}
           {showCorrectAnswer && currentDrill && (
             <div style={{
-              padding: window.innerWidth < 768 ? '12px' : '16px',
-              background: '#e8f5e9',
-              border: '2px solid #4CAF50',
-              borderRadius: '8px',
+              padding: window.innerWidth < 768 ? '12px 14px' : '16px',
+              background: 'var(--emerald-soft)',
+              border: '1px solid var(--emerald)',
+              borderRadius: 'var(--r-md)',
               marginBottom: window.innerWidth < 768 ? '16px' : '20px'
             }}>
               <div style={{
                 fontSize: window.innerWidth < 768 ? '14px' : '16px',
-                fontWeight: 600,
-                color: '#2e7d32',
+                fontWeight: 700,
+                color: 'var(--emerald)',
                 marginBottom: '6px'
               }}>
                 ✓ Correct Answer:
               </div>
               <div style={{
                 fontSize: window.innerWidth < 768 ? '16px' : '18px',
-                fontWeight: 600,
-                color: '#2e7d32',
-                direction: (correctAnswer === currentDrill.text_arabic) ? 'rtl' : 'ltr'
+                fontWeight: 700,
+                color: 'var(--emerald)',
+                direction: (correctAnswer === currentDrill.text_arabic) ? 'rtl' : 'ltr',
+                fontFamily: answerIsTashelhit ? 'var(--font-tifinagh)' : 'var(--font-sans)'
               }}>
                 {correctAnswer}
               </div>
@@ -915,16 +976,16 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
           {/* Feedback after wrong answer - Compact */}
           {attempts > 0 && !showCorrectAnswer && (
             <div style={{
-              padding: window.innerWidth < 768 ? '12px' : '16px',
-              background: '#ffebee',
-              border: '1px solid #ff4444',
-              borderRadius: '8px',
+              padding: window.innerWidth < 768 ? '12px 14px' : '16px',
+              background: 'var(--rose-soft)',
+              border: '1px solid var(--rose)',
+              borderRadius: 'var(--r-md)',
               marginBottom: window.innerWidth < 768 ? '16px' : '20px'
             }}>
               <div style={{
-                color: '#c62828',
+                color: 'var(--rose)',
                 fontSize: window.innerWidth < 768 ? '14px' : '15px',
-                fontWeight: 600,
+                fontWeight: 700,
                 marginBottom: '8px'
               }}>
                 ✗ Not quite right. Attempts: {attempts}
@@ -940,12 +1001,12 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                     flex: window.innerWidth < 768 ? '1 1 calc(50% - 4px)' : 'none',
                     padding: window.innerWidth < 768 ? '8px 12px' : '8px 16px',
                     fontSize: window.innerWidth < 768 ? '13px' : '14px',
-                    background: '#4CAF50',
-                    color: 'white',
+                    background: 'var(--emerald)',
+                    color: '#fff',
                     border: 'none',
-                    borderRadius: '6px',
+                    borderRadius: 'var(--r-sm)',
                     cursor: 'pointer',
-                    fontWeight: 600,
+                    fontWeight: 700,
                   }}
                 >
                   👁 Show Answer
@@ -956,12 +1017,12 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                     flex: window.innerWidth < 768 ? '1 1 calc(50% - 4px)' : 'none',
                     padding: window.innerWidth < 768 ? '8px 12px' : '8px 16px',
                     fontSize: window.innerWidth < 768 ? '13px' : '14px',
-                    background: '#2196F3',
-                    color: 'white',
+                    background: 'var(--sky)',
+                    color: '#fff',
                     border: 'none',
-                    borderRadius: '6px',
+                    borderRadius: 'var(--r-sm)',
                     cursor: 'pointer',
-                    fontWeight: 600,
+                    fontWeight: 700,
                   }}
                 >
                   Next →
@@ -985,12 +1046,13 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                     flex: window.innerWidth < 768 ? '1 1 100%' : 1,
                     padding: window.innerWidth < 768 ? '14px' : '16px',
                     fontSize: window.innerWidth < 768 ? '15px' : '16px',
-                    background: userAnswer.trim() ? '#4CAF50' : '#ccc',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
+                    background: userAnswer.trim() ? 'var(--brand-gradient)' : 'var(--surface-2)',
+                    color: userAnswer.trim() ? '#fff' : 'var(--text-muted)',
+                    border: userAnswer.trim() ? 'none' : '1px solid var(--border)',
+                    borderRadius: 'var(--r-md)',
                     cursor: userAnswer.trim() ? 'pointer' : 'not-allowed',
-                    fontWeight: 600,
+                    fontWeight: 700,
+                    boxShadow: userAnswer.trim() ? 'var(--shadow-brand)' : 'none',
                     minWidth: window.innerWidth < 768 ? '100%' : 'auto'
                   }}
                 >
@@ -1004,12 +1066,12 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                       flex: window.innerWidth < 768 ? '1 1 calc(50% - 4px)' : 'none',
                       padding: window.innerWidth < 768 ? '12px' : '16px 24px',
                       fontSize: window.innerWidth < 768 ? '14px' : '16px',
-                      background: '#FFC107',
-                      color: '#333',
-                      border: 'none',
-                      borderRadius: '8px',
+                      background: 'var(--amber-soft)',
+                      color: 'var(--amber-strong)',
+                      border: '1px solid var(--amber)',
+                      borderRadius: 'var(--r-md)',
                       cursor: 'pointer',
-                      fontWeight: 600,
+                      fontWeight: 700,
                       minWidth: window.innerWidth < 768 ? 'calc(50% - 4px)' : 'auto'
                     }}
                   >
@@ -1024,12 +1086,12 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                       flex: window.innerWidth < 768 ? '1 1 calc(50% - 4px)' : 'none',
                       padding: window.innerWidth < 768 ? '12px' : '16px 24px',
                       fontSize: window.innerWidth < 768 ? '14px' : '16px',
-                      background: '#FFC107',
-                      color: '#333',
-                      border: 'none',
-                      borderRadius: '8px',
+                      background: 'var(--amber-soft)',
+                      color: 'var(--amber-strong)',
+                      border: '1px solid var(--amber)',
+                      borderRadius: 'var(--r-md)',
                       cursor: 'pointer',
-                      fontWeight: 600,
+                      fontWeight: 700,
                       minWidth: window.innerWidth < 768 ? 'calc(50% - 4px)' : 'auto'
                     }}
                   >
@@ -1045,12 +1107,12 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                       flex: window.innerWidth < 768 ? '1 1 calc(50% - 4px)' : 'none',
                       padding: window.innerWidth < 768 ? '12px' : '8px 16px',
                       fontSize: window.innerWidth < 768 ? '13px' : '14px',
-                      background: '#9C27B0',
-                      color: 'white',
+                      background: 'var(--brand-2)',
+                      color: '#fff',
                       border: 'none',
-                      borderRadius: '8px',
+                      borderRadius: 'var(--r-md)',
                       cursor: 'pointer',
-                      fontWeight: 600,
+                      fontWeight: 700,
                       minWidth: window.innerWidth < 768 ? 'calc(50% - 4px)' : 'auto'
                     }}
                   >
@@ -1066,12 +1128,12 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                       flex: '1 1 calc(50% - 4px)',
                       padding: '12px',
                       fontSize: '14px',
-                      background: '#666',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
+                      background: 'var(--surface)',
+                      color: 'var(--text-soft)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--r-md)',
                       cursor: 'pointer',
-                      fontWeight: 600,
+                      fontWeight: 700,
                     }}
                   >
                     Skip →
@@ -1085,12 +1147,13 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                   flex: 1,
                   padding: window.innerWidth < 768 ? '14px' : '16px',
                   fontSize: window.innerWidth < 768 ? '15px' : '16px',
-                  background: '#2196F3',
-                  color: 'white',
+                  background: 'var(--brand-gradient)',
+                  color: '#fff',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: 'var(--r-md)',
                   cursor: 'pointer',
-                  fontWeight: 600,
+                  fontWeight: 700,
+                  boxShadow: 'var(--shadow-brand)',
                   minWidth: window.innerWidth < 768 ? '100%' : 'auto'
                 }}
               >

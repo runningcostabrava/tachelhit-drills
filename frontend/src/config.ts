@@ -1,18 +1,43 @@
-// 1. Default to your live production server
-let API_BASE_TMP = 'https://tachelhit-drills-api.onrender.com';
+import axios from 'axios';
 
-// 2. ONLY use the local computer backend if we are explicitly running the Vite local dev server ('npm run dev')
-// and we are NOT running inside a native mobile app wrapper.
-const isDevServer = import.meta.env.DEV;
-const isNativeApp = (window as any).Capacitor?.isNative || window.location.hostname !== 'localhost';
+// Backend selection, in priority order:
+// 1. VITE_API_URL (frontend/.env) always wins when set.
+// 2. Native app builds (Capacitor APK/WebView) default to production.
+// 3. The Vite dev server defaults to a local backend on the same host the
+//    page was loaded from — so `npm run dev --host` tested from a phone hits
+//    your dev backend over the LAN instead of silently writing to production.
+// 4. Production web builds default to the Render API.
+const PROD_API = 'https://tachelhit-drills-api.onrender.com';
+const envApiUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
+const isNativeApp = !!((window as any).Capacitor?.isNativePlatform?.() ?? (window as any).Capacitor?.isNative);
 
-if (isDevServer && !isNativeApp) {
-  API_BASE_TMP = 'http://localhost:8000';
-} else {
-  API_BASE_TMP = 'https://tachelhit-drills-api.onrender.com';
+export const API_BASE =
+  envApiUrl ||
+  (import.meta.env.DEV && !isNativeApp ? `http://${window.location.hostname}:8000` : PROD_API);
+
+// Optional API key, must match the backend's API_KEY env var. Sent as
+// X-API-Key on every request to API_BASE (mutating requests are rejected
+// with 401 by the backend when its key is set and the header is absent).
+// Components call axios and fetch directly all over the codebase, so until
+// there is a shared API client the key is injected globally here.
+const API_KEY = import.meta.env.VITE_API_KEY as string | undefined;
+if (API_KEY) {
+  axios.defaults.headers.common['X-API-Key'] = API_KEY;
+
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+    const url =
+      typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+    if (url.startsWith(API_BASE)) {
+      const headers = new Headers(
+        init?.headers ?? (input instanceof Request ? input.headers : undefined)
+      );
+      headers.set('X-API-Key', API_KEY);
+      init = { ...init, headers };
+    }
+    return originalFetch(input, init);
+  };
 }
-
-export const API_BASE = API_BASE_TMP;
 
 if (import.meta.env.DEV) {
   console.log('[config] API_BASE:', API_BASE, '| mode:', import.meta.env.MODE);

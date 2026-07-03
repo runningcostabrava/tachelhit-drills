@@ -40,8 +40,8 @@ export default function PublicTestView() {
     if (testId) fetchData();
   }, [testId]);
 
-  if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading test...</div>;
-  if (!test) return <div style={{ padding: '40px', textAlign: 'center' }}>Test not found.</div>;
+  if (loading) return <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'var(--font-sans)', color: 'var(--text-soft)' }}>Loading test...</div>;
+  if (!test) return <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'var(--font-sans)', color: 'var(--text-soft)' }}>Test not found.</div>;
 
   if (view === 'taking') {
     return <TestTaking testId={test.id} onExit={() => setView('landing')} />;
@@ -52,30 +52,33 @@ export default function PublicTestView() {
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
       flexDirection: 'column',
-      background: '#f5f7fa'
+      background: 'var(--bg)',
+      fontFamily: 'var(--font-sans)'
     }}>
       {/* Header */}
       <div style={{
-        padding: '16px 20px',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        color: 'white',
+        padding: '18px 24px 26px',
+        background: 'var(--brand-gradient)',
+        color: '#fff',
         display: 'flex',
         alignItems: 'center',
         gap: '15px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        borderBottomLeftRadius: '26px',
+        borderBottomRightRadius: '26px',
+        boxShadow: 'var(--shadow-md)'
       }}>
-        <button 
+        <button
           onClick={() => navigate('/')}
           style={{
-            background: 'rgba(255,255,255,0.2)',
+            background: 'rgba(255,255,255,0.18)',
             border: '1px solid rgba(255,255,255,0.4)',
-            color: 'white',
-            padding: '6px 12px',
-            borderRadius: '6px',
+            color: '#fff',
+            padding: '8px 14px',
+            borderRadius: 'var(--r-pill)',
             cursor: 'pointer',
             fontSize: '14px',
             fontWeight: 600
@@ -83,51 +86,63 @@ export default function PublicTestView() {
         >
           ← Home
         </button>
-        <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700 }}>Tachelhit Drills</h1>
+        <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#fff' }}>Tachelhit Drills</h1>
       </div>
 
       {/* Main Content */}
-      <div style={{ 
-        flex: 1, 
-        display: 'flex', 
-        alignItems: 'center', 
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'center',
-        padding: '20px'
+        padding: '24px'
       }}>
         <div style={{
-          background: 'white',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
           padding: '40px',
-          borderRadius: '16px',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
+          borderRadius: 'var(--r-xl)',
+          boxShadow: 'var(--shadow-sm)',
           width: '100%',
           maxWidth: '500px',
           textAlign: 'center'
         }}>
-          <div style={{ fontSize: '50px', marginBottom: '20px' }}>📊</div>
-          <h2 style={{ margin: '0 0 10px 0', fontSize: '28px', color: '#333' }}>{test.title}</h2>
+          <div style={{
+            width: '84px',
+            height: '84px',
+            margin: '0 auto 22px',
+            borderRadius: 'var(--r-lg)',
+            background: 'var(--brand-gradient-soft)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '42px',
+            boxShadow: 'var(--shadow-xs)'
+          }}>📊</div>
+          <h2 style={{ margin: '0 0 10px 0', fontSize: '28px', color: 'var(--text)', fontWeight: 800 }}>{test.title}</h2>
           {test.description && (
-            <p style={{ margin: '0 0 30px 0', color: '#666', lineHeight: 1.5 }}>
+            <p style={{ margin: '0 0 30px 0', color: 'var(--text-soft)', lineHeight: 1.5 }}>
               {test.description}
             </p>
           )}
 
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: '15px' 
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px'
           }}>
             <button
               onClick={() => setView('taking')}
               style={{
                 padding: '16px 24px',
-                fontSize: '18px',
-                background: '#4CAF50',
-                color: 'white',
+                fontSize: '17px',
+                background: 'var(--brand-gradient)',
+                color: '#fff',
                 border: 'none',
-                borderRadius: '12px',
+                borderRadius: 'var(--r-lg)',
                 cursor: 'pointer',
                 fontWeight: 700,
-                boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+                boxShadow: 'var(--shadow-brand)',
                 transition: 'transform 0.2s'
               }}
               onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
@@ -140,14 +155,14 @@ export default function PublicTestView() {
               onClick={() => setView('playing')}
               style={{
                 padding: '16px 24px',
-                fontSize: '18px',
-                background: '#9C27B0',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
+                fontSize: '17px',
+                background: 'var(--surface)',
+                color: 'var(--brand-1)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--r-lg)',
                 cursor: 'pointer',
                 fontWeight: 700,
-                boxShadow: '0 4px 12px rgba(156, 39, 176, 0.3)',
+                boxShadow: 'var(--shadow-xs)',
                 transition: 'transform 0.2s'
               }}
               onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
@@ -157,7 +172,7 @@ export default function PublicTestView() {
             </button>
           </div>
 
-          <div style={{ marginTop: '30px', color: '#999', fontSize: '14px' }}>
+          <div style={{ marginTop: '28px', color: 'var(--text-muted)', fontSize: '14px' }}>
             {drills.length} exercises in this test
           </div>
         </div>

@@ -90,34 +90,45 @@ export default function MediaRecorderTest() {
   };
 
   return (
-    <div>
-      <h2>Media Recorder Test</h2>
-      {!recording ? (
-        <button onClick={startRecording}>Start Recording</button>
-      ) : (
-        <button onClick={stopRecording}>Stop Recording</button>
-      )}
-      {audioURL && <audio src={audioURL} controls />}
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '32px', fontFamily: 'var(--font-sans)' }}>
+      <div style={{ maxWidth: '720px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <h2 style={{ margin: 0 }}>Media Recorder Test</h2>
 
-      <h3>Speech Synthesis Test</h3>
-      <button onClick={() => speakText('Hello in Catalan', 'ca-ES', 1.5)}>
-        Speak Catalan (Fast)
-      </button>
-      <button onClick={() => speakText('Hello in Tachelhit', 'shi', 1)}>
-        Speak Tachelhit (shi)
-      </button>
-      <button onClick={() => speakText('Hello in Arabic', 'ar-SA', 1)}>
-        Speak Arabic (ar-SA)
-      </button>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {!recording ? (
+            <button onClick={startRecording} style={{ alignSelf: 'flex-start', background: 'var(--rose)', color: 'white', borderRadius: 'var(--r-md)', padding: '11px 18px', fontWeight: 700 }}>● Start Recording</button>
+          ) : (
+            <button onClick={stopRecording} style={{ alignSelf: 'flex-start', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '11px 18px', fontWeight: 700 }}>■ Stop Recording</button>
+          )}
+          {audioURL && <audio src={audioURL} controls style={{ width: '100%' }} />}
+        </div>
 
-      <h3>Available Voices ({supportedVoices.length})</h3>
-      <ul>
-        {supportedVoices.map(voice => (
-          <li key={voice.name}>
-            {voice.name} ({voice.lang}) - Default: {voice.default ? 'Yes' : 'No'}
-          </li>
-        ))}
-      </ul>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', padding: '20px' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '14px' }}>Speech Synthesis Test</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+            <button onClick={() => speakText('Hello in Catalan', 'ca-ES', 1.5)} style={{ background: 'var(--brand-gradient)', color: 'white', borderRadius: 'var(--r-md)', padding: '10px 16px', fontWeight: 700, boxShadow: 'var(--shadow-brand)' }}>
+              Speak Catalan (Fast)
+            </button>
+            <button onClick={() => speakText('Hello in Tachelhit', 'shi', 1)} style={{ background: 'var(--brand-gradient)', color: 'white', borderRadius: 'var(--r-md)', padding: '10px 16px', fontWeight: 700, boxShadow: 'var(--shadow-brand)', fontFamily: 'var(--font-tifinagh)' }}>
+              Speak Tachelhit (shi)
+            </button>
+            <button onClick={() => speakText('Hello in Arabic', 'ar-SA', 1)} style={{ background: 'var(--brand-gradient)', color: 'white', borderRadius: 'var(--r-md)', padding: '10px 16px', fontWeight: 700, boxShadow: 'var(--shadow-brand)' }}>
+              Speak Arabic (ar-SA)
+            </button>
+          </div>
+        </div>
+
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', padding: '20px' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '14px' }}>Available Voices ({supportedVoices.length})</h3>
+          <ul style={{ margin: 0, paddingLeft: '18px', color: 'var(--text-soft)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {supportedVoices.map(voice => (
+              <li key={voice.name}>
+                {voice.name} ({voice.lang}) - Default: {voice.default ? 'Yes' : 'No'}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }

@@ -11,18 +11,9 @@ const DB_VERSION = 1;
 const STORE_NAME = 'drills';
 
 // Types
-export interface Drill {
-    id: number;
-    text_catalan?: string;
-    text_tachelhit?: string;
-    text_arabic?: string;
-    audio_url?: string;
-    audio_tts_url?: string;
-    video_url?: string;
-    image_url?: string;
-    tag?: string;
-    date_created: string;
-}
+import type { Drill } from '../types';
+
+export type { Drill };
 
 export interface CachedDrill extends Drill {
     _cachedAt: number;

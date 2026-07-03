@@ -32,14 +32,13 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
   const [localDrill, setLocalDrill] = useState<Drill>({ ...drill });
   const [isRecording, setIsRecording] = useState(false);
   const [aiLoadingKey, setAiLoadingKey] = useState<string | null>(null);
-  const [debugLogs, setDebugLogs] = useState<string[]>(['[System] Native Editor Initialized']);
     const [trimTimes, setTrimTimes] = useState({ start: 0, end: 10 });
     const [videoDuration, setVideoDuration] = useState(60);
     const [audioDuration, setAudioDuration] = useState(60);
     const videoRef = useRef<HTMLVideoElement>(null);
 
   const addLog = (msg: string) => {
-    setDebugLogs(prev => [`[${new Date().toLocaleTimeString().split(' ')[0]}] ${msg}`, ...prev].slice(0, 12));
+    console.log(`[MobileDrillEditor] ${msg}`);
   };
 
   useEffect(() => {
@@ -421,32 +420,32 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#F3F4F6', zIndex: 11000, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaTimes size={20} /></button>
-                <div style={{ color: 'yellow', fontSize: '24px', fontWeight: 900, letterSpacing: '1px', textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>EDIT CARD p1</div>
-                <button onClick={() => triggerSave(localDrill)} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#10B981', color: 'white', border: 'none', borderRadius: '12px', padding: '10px 20px', fontWeight: 'bold', fontSize: '15px', boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)' }}><FaSave /> Save</button>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--bg)', zIndex: 11000, display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)' }}>
+            <div style={{ background: 'var(--brand-gradient)', padding: '20px 20px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'white', borderBottomLeftRadius: 'var(--r-2xl)', borderBottomRightRadius: 'var(--r-2xl)', boxShadow: 'var(--shadow-brand)' }}>
+                <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', color: 'white', borderRadius: 'var(--r-pill)', width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaTimes size={20} /></button>
+                <div style={{ color: 'white', fontSize: '20px', fontWeight: 800, letterSpacing: '-0.01em' }}>Edit Card</div>
+                <button onClick={() => triggerSave(localDrill)} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.95)', color: 'var(--brand-1)', border: 'none', borderRadius: 'var(--r-md)', padding: '11px 18px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}><FaSave /> Save</button>
             </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '120px' }}>
-        <div style={{ background: 'white', padding: '15px', borderRadius: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #E5E7EB' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px', paddingBottom: '120px' }}>
+        <div style={{ background: 'var(--surface)', padding: '16px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
-              <button onClick={capturePhoto} style={{ height: '55px', background: '#EBFBEE', color: '#166534', border: '1px solid #D1FAE5', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Camera"><FaCamera size={22} /></button>
-              <button onClick={captureVideo} style={{ height: '55px', background: '#F3E8FF', color: '#7E22CE', border: '1px solid #E9D5FF', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Video"><FaVideo size={22} /></button>
-              <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '55px', background: isRecording ? '#FFE4E6' : '#E11D48', color: isRecording ? '#E11D48' : '#1D4ED8', border: `1px solid ${isRecording ? '#FECDD3' : '#DBEAFE'}`, borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Voice Record"><FaMicrophone size={22} /></button>
-              <button onClick={startDictation} style={{ height: '55px', background: '#FFF7ED', color: '#9A3412', border: '1px solid #FFEDD5', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Dictation"><FaKeyboard size={22} /></button>
-              <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '55px', background: '#F1F5F9', color: '#334155', border: '1px solid #E2E8F0', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Gallery"><FaFolderOpen size={22} /></button>
+              <button onClick={capturePhoto} style={{ height: '56px', background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Camera"><FaCamera size={22} /></button>
+              <button onClick={captureVideo} style={{ height: '56px', background: 'var(--brand-gradient-soft)', color: 'var(--brand-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Video"><FaVideo size={22} /></button>
+              <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '56px', background: isRecording ? 'var(--rose-soft)' : 'var(--rose)', color: isRecording ? 'var(--rose)' : 'white', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Voice Record"><FaMicrophone size={22} /></button>
+              <button onClick={startDictation} style={{ height: '56px', background: 'var(--amber-soft)', color: 'var(--amber-strong)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Dictation"><FaKeyboard size={22} /></button>
+              <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '56px', background: 'var(--sky-soft)', color: 'var(--sky)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Gallery"><FaFolderOpen size={22} /></button>
             </div>
             <input type="file" accept="video/*" capture={"camcorder" as any} id="native-video-input" style={{ display: 'none' }} onChange={handleFileChange} />
             <input type="file" id="gallery-upload" style={{ display: 'none' }} onChange={handleFileChange} />
         </div>
 
         {localDrill.image_url && (
-          <img src={getSourceUrl(localDrill.image_url, 'image')} alt="Drill Asset" style={{ width: '100%', height: '150px', borderRadius: '12px', objectFit: 'cover' }} />
+          <img src={getSourceUrl(localDrill.image_url, 'image')} alt="Drill Asset" style={{ width: '100%', height: '150px', borderRadius: 'var(--r-lg)', objectFit: 'cover', border: '1px solid var(--border)' }} />
         )}
 
         {localDrill.video_url && (
-          <div style={{ background: '#000', borderRadius: '24px', overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', marginBottom: '15px' }}>
+          <div style={{ background: '#000', borderRadius: 'var(--r-xl)', overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: 'var(--shadow-lg)', marginBottom: '0', border: '1px solid var(--border-strong)' }}>
             <video 
                 ref={videoRef}
                 key={getSourceUrl(localDrill.video_url, 'video')}
@@ -467,20 +466,20 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                   }
                 }}
             />
-            <div style={{ width: '100%', padding: '15px', background: '#111', color: 'white' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '12px', fontWeight: 'bold' }}>
-                    <button 
+            <div style={{ width: '100%', padding: '14px 16px', background: '#0f172a', color: 'white' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', fontSize: '12px', fontWeight: 700 }}>
+                    <button
                         onClick={() => {
                             if (videoRef.current) setTrimTimes(prev => ({ ...prev, start: videoRef.current!.currentTime }));
                         }}
-                        style={{ background: '#333', color: '#10B981', border: '1px solid #444', borderRadius: '4px', padding: '2px 6px', fontSize: '10px' }}
+                        style={{ background: 'rgba(255,255,255,0.1)', color: 'var(--emerald)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 'var(--r-sm)', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
                     >INICI</button>
-                    <span style={{ color: '#9CA3AF' }}>{trimTimes.start.toFixed(1)}s - {trimTimes.end.toFixed(1)}s</span>
-                    <button 
+                    <span style={{ color: 'var(--text-muted)' }}>{trimTimes.start.toFixed(1)}s - {trimTimes.end.toFixed(1)}s</span>
+                    <button
                         onClick={() => {
                             if (videoRef.current) setTrimTimes(prev => ({ ...prev, end: videoRef.current!.currentTime }));
                         }}
-                        style={{ background: '#333', color: '#EF4444', border: '1px solid #444', borderRadius: '4px', padding: '2px 6px', fontSize: '10px' }}
+                        style={{ background: 'rgba(255,255,255,0.1)', color: 'var(--rose)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 'var(--r-sm)', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
                     >FINAL</button>
                 </div>
                 <input 
@@ -490,29 +489,29 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                     step="0.1" 
                     value={trimTimes.start} 
                     onChange={e => setTrimTimes(prev => ({ ...prev, start: Math.min(parseFloat(e.target.value), prev.end - 0.1) }))}
-                    style={{ width: '100%', marginBottom: '10px' }}
+                    style={{ width: '100%', marginBottom: '10px', accentColor: 'var(--brand-1)' }}
                 />
-                <input 
-                    type="range" 
-                    min="0" 
-                    max={videoDuration} 
-                    step="0.1" 
-                    value={trimTimes.end} 
+                <input
+                    type="range"
+                    min="0"
+                    max={videoDuration}
+                    step="0.1"
+                    value={trimTimes.end}
                     onChange={e => setTrimTimes(prev => ({ ...prev, end: Math.max(parseFloat(e.target.value), prev.start + 0.1) }))}
-                    style={{ width: '100%', marginBottom: '15px' }}
+                    style={{ width: '100%', marginBottom: '15px', accentColor: 'var(--brand-1)' }}
                 />
                 <div style={{ display: 'flex', gap: '10px' }}>
-                  <button 
+                  <button
                       onClick={() => handleTrimVideo('video')}
                       disabled={aiLoadingKey !== null}
-                      style={{ flex: 1, padding: '12px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                      style={{ flex: 1, padding: '12px', background: 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow-brand)' }}
                   >
                       <FaScissors /> Retallar Vídeo
                   </button>
-                  <button 
+                  <button
                       onClick={() => handleTrimVideo('audio')}
                       disabled={aiLoadingKey !== null}
-                      style={{ flex: 1, padding: '12px', background: '#E11D48', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                      style={{ flex: 1, padding: '12px', background: 'var(--rose)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
                   >
                       <FaScissors /> Extreure Àudio
                   </button>
@@ -522,7 +521,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         )}
 
         {localDrill.audio_url && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'white', padding: '15px', borderRadius: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #E5E7EB' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: 'var(--surface)', padding: '16px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)' }}>
             <audio 
                 id="editor-audio-preview"
                 src={getSourceUrl(localDrill.audio_url, 'audio')} 
@@ -542,41 +541,41 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                     const a = document.getElementById('editor-audio-preview') as HTMLAudioElement;
                     if (a) a.play();
                 }} 
-                style={{ width: '100%', padding: '12px', background: '#F3F4F6', border: 'none', borderRadius: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#1F2937' }}
+                style={{ width: '100%', padding: '14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: 'var(--text)', cursor: 'pointer' }}
             >
               Play Àudio
             </button>
-            <div style={{ padding: '10px', background: '#F9FAFB', borderRadius: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '11px', fontWeight: 'bold', color: '#6B7280' }}>
-                    <button 
+            <div style={{ padding: '12px', background: 'var(--surface-2)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '11px', fontWeight: 700, color: 'var(--text-soft)' }}>
+                    <button
                         onClick={() => {
                             const a = document.getElementById('editor-audio-preview') as HTMLAudioElement;
                             if (a) setTrimTimes(prev => ({ ...prev, start: a.currentTime }));
                         }}
-                        style={{ background: '#ddd', border: 'none', borderRadius: '4px', padding: '2px 6px' }}
+                        style={{ background: 'var(--surface)', color: 'var(--emerald)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '4px 10px', fontWeight: 700, cursor: 'pointer' }}
                     >INICI</button>
                     <span>{trimTimes.start.toFixed(1)}s - {trimTimes.end.toFixed(1)}s</span>
-                    <button 
+                    <button
                         onClick={() => {
                             const a = document.getElementById('editor-audio-preview') as HTMLAudioElement;
                             if (a) setTrimTimes(prev => ({ ...prev, end: a.currentTime }));
                         }}
-                        style={{ background: '#ddd', border: 'none', borderRadius: '4px', padding: '2px 6px' }}
+                        style={{ background: 'var(--surface)', color: 'var(--rose)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '4px 10px', fontWeight: 700, cursor: 'pointer' }}
                     >FINAL</button>
                 </div>
-                <input type="range" min="0" max={audioDuration} step="0.1" value={trimTimes.start} onChange={e => setTrimTimes(p => ({...p, start: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '8px' }} />
-                <input type="range" min="0" max={audioDuration} step="0.1" value={trimTimes.end} onChange={e => setTrimTimes(p => ({...p, end: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '12px' }} />
-                <button onClick={handleTrimAudio} disabled={aiLoadingKey !== null} style={{ width: '100%', padding: '10px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px' }}>
+                <input type="range" min="0" max={audioDuration} step="0.1" value={trimTimes.start} onChange={e => setTrimTimes(p => ({...p, start: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '8px', accentColor: 'var(--brand-1)' }} />
+                <input type="range" min="0" max={audioDuration} step="0.1" value={trimTimes.end} onChange={e => setTrimTimes(p => ({...p, end: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '12px', accentColor: 'var(--brand-1)' }} />
+                <button onClick={handleTrimAudio} disabled={aiLoadingKey !== null} style={{ width: '100%', padding: '11px', background: 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer', boxShadow: 'var(--shadow-brand)' }}>
                     <FaScissors /> Retallar Àudio
                 </button>
             </div>
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', background: 'white', padding: '15px', borderRadius: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #E5E7EB' }}>
-          <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '8px 4px', fontSize: '9px', fontWeight: 700, background: '#EEF2FF', color: '#4338CA', border: 'none', borderRadius: '12px' }}><FaLanguage size={18} /> CA➔SH</button>
-          <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '8px 4px', fontSize: '9px', fontWeight: 700, background: '#ECFDF5', color: '#059669', border: 'none', borderRadius: '12px' }}><FaLanguage size={18} /> SH➔CA</button>
-          <button onClick={handleTachelhitTTS} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '8px 4px', fontSize: '9px', fontWeight: 700, background: '#FEF3C7', color: '#B45309', border: 'none', borderRadius: '12px' }}><FaRobot size={18} /> TTS</button>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', background: 'var(--surface)', padding: '16px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)' }}>
+          <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}><FaLanguage size={18} /> CA➔SH</button>
+          <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}><FaLanguage size={18} /> SH➔CA</button>
+          <button onClick={handleTachelhitTTS} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: 'var(--amber-soft)', color: 'var(--amber-strong)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}><FaRobot size={18} /> TTS</button>
           <button 
                 onClick={() => {
                     const hasAudio = localDrill.audio_url;
@@ -597,24 +596,19 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                     }
                 }} 
                 disabled={!(localDrill.audio_url || localDrill.video_url) || aiLoadingKey !== null} 
-                style={{ padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: '#fff7ed', color: '#ea580c', border: 'none', borderRadius: '8px', opacity: (localDrill.audio_url || localDrill.video_url) ? 1 : 0.5 }}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: 'var(--sky-soft)', color: 'var(--sky)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer', opacity: (localDrill.audio_url || localDrill.video_url) ? 1 : 0.5 }}
             >🪄 Trans</button>
         </div>
 
-                <div style={{ background: 'white', padding: '20px', borderRadius: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                  <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: '#6B7280', marginBottom: '8px', textTransform: 'uppercase' }}>Català</label><textarea value={localDrill.text_catalan || ''} onChange={(e) => handleFieldChange('text_catalan', e.target.value)} rows={3} style={{ width: '100%', padding: '14px', border: '1px solid #D1D5DB', borderRadius: '14px', fontSize: '16px', color: '#1F2937', outline: 'none', background: '#F9FAFB' }} /></div>
-                  <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: '#6B7280', marginBottom: '8px', textTransform: 'uppercase' }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label><textarea value={localDrill.text_tachelhit || ''} onChange={(e) => handleFieldChange('text_tachelhit', e.target.value)} rows={3} style={{ width: '100%', padding: '14px', border: '1px solid #D1D5DB', borderRadius: '14px', fontSize: '16px', color: '#4F46E5', fontWeight: 700, outline: 'none', background: '#F9FAFB' }} /></div>
-                  <div><label style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: '#6B7280', marginBottom: '8px', textTransform: 'uppercase' }}>Tag</label><input type="text" value={localDrill.tag || ''} onChange={(e) => handleFieldChange('tag', e.target.value)} style={{ width: '100%', padding: '14px', border: '1px solid #D1D5DB', borderRadius: '14px', fontSize: '16px', color: '#1F2937', outline: 'none', background: '#F9FAFB' }} /></div>
+                <div style={{ background: 'var(--surface)', padding: '20px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Català</label><textarea value={localDrill.text_catalan || ''} onChange={(e) => handleFieldChange('text_catalan', e.target.value)} rows={3} style={{ width: '100%', padding: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '16px', color: 'var(--text)', outline: 'none', background: 'var(--surface-2)', fontFamily: 'var(--font-sans)' }} /></div>
+                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label><textarea value={localDrill.text_tachelhit || ''} onChange={(e) => handleFieldChange('text_tachelhit', e.target.value)} rows={3} style={{ width: '100%', padding: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '16px', color: 'var(--brand-1)', fontWeight: 700, outline: 'none', background: 'var(--surface-2)', fontFamily: 'var(--font-tifinagh)' }} /></div>
+                  <div><label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tag</label><input type="text" value={localDrill.tag || ''} onChange={(e) => handleFieldChange('tag', e.target.value)} style={{ width: '100%', padding: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '16px', color: 'var(--text)', outline: 'none', background: 'var(--surface-2)', fontFamily: 'var(--font-sans)' }} /></div>
                 </div>
-
-        <div style={{ background: '#111', color: '#0f0', padding: '10px', borderRadius: '8px', fontSize: '10px', fontFamily: 'monospace', height: '100px', overflowY: 'auto' }}>
-          <div style={{ color: '#fff', borderBottom: '1px solid #333', paddingBottom: '4px', marginBottom: '4px' }}>LIVE DEBUGGER</div>
-          {debugLogs.map((log, i) => <div key={i}>{log}</div>)}
-        </div>
       </div>
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', padding: '16px 20px', background: 'white', justifyContent: 'space-between', borderTop: '1px solid #E5E7EB', gap: '15px' }}>
-        <button onClick={() => onNavigate('prev')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', background: '#F3F4F6', color: '#374151', border: 'none', borderRadius: '16px', fontWeight: 600, fontSize: '15px' }}><FaChevronLeft /> Previous</button>
-        <button onClick={() => onNavigate('next')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', background: '#374151', color: 'white', border: 'none', borderRadius: '16px', fontWeight: 600, fontSize: '15px' }}>Next <FaChevronRight /></button>
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', padding: '16px 20px', background: 'var(--surface)', justifyContent: 'space-between', borderTop: '1px solid var(--border)', gap: '15px' }}>
+        <button onClick={() => onNavigate('prev')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: '15px', cursor: 'pointer' }}><FaChevronLeft /> Previous</button>
+        <button onClick={() => onNavigate('next')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', background: 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: '15px', cursor: 'pointer' }}>Next <FaChevronRight /></button>
       </div>
     </div>
   );

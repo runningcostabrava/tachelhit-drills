@@ -56,9 +56,9 @@ export default function VideoLibraryPage() {
             headerName: 'Action',
             width: 150,
             cellRenderer: (params: any) => (
-                <button 
+                <button
                     onClick={() => setActiveLibraryVideo(params.data)}
-                    style={{ padding: '6px 12px', background: '#9C27B0', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                    style={{ padding: '8px 16px', background: 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontWeight: 700, fontSize: '13px', boxShadow: 'var(--shadow-brand)' }}
                 >
                     ▶ Play Full Video
                 </button>
@@ -67,13 +67,13 @@ export default function VideoLibraryPage() {
     ];
 
     return (
-        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f5f5f5' }}>
-            <div style={{ padding: '20px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
-                <h2 style={{ margin: 0 }}>📚 Drill-Driven Video Library Nou</h2>
-                <p style={{ margin: '5px 0 0 0', opacity: 0.8 }}>Full videos synced with your existing drill translations.</p>
+        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
+            <div style={{ padding: '28px 32px', background: 'var(--brand-gradient)', color: 'white', borderBottomLeftRadius: 'var(--r-2xl)', borderBottomRightRadius: 'var(--r-2xl)', boxShadow: 'var(--shadow-md)' }}>
+                <h2 style={{ margin: 0, color: 'white', fontSize: '26px', display: 'flex', alignItems: 'center', gap: '10px' }}>📚 Drill-Driven Video Library</h2>
+                <p style={{ margin: '6px 0 0 0', opacity: 0.85 }}>Full videos synced with your existing drill translations.</p>
             </div>
-            
-            <div className="ag-theme-alpine" style={{ flex: 1, width: '100%', padding: '20px' }}>
+
+            <div className="ag-theme-alpine" style={{ flex: 1, width: '100%', padding: '24px 32px' }}>
                 <AgGridReact 
                     rowData={libraryVideos} 
                     columnDefs={columnDefs} 
