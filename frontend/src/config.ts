@@ -15,29 +15,50 @@ export const API_BASE =
   envApiUrl ||
   (import.meta.env.DEV && !isNativeApp ? `http://${window.location.hostname}:8000` : PROD_API);
 
-// Optional API key, must match the backend's API_KEY env var. Sent as
-// X-API-Key on every request to API_BASE (mutating requests are rejected
-// with 401 by the backend when its key is set and the header is absent).
+// ---- Identity & API-key header injection ----
 // Components call axios and fetch directly all over the codebase, so until
-// there is a shared API client the key is injected globally here.
+// there is a shared API client both headers are injected globally here:
+// - X-API-Key: must match the backend's API_KEY env var (bot lock)
+// - X-User-Token: the personal token from /users/register (multi-tenancy);
+//   read from localStorage on every request so login applies immediately.
 const API_KEY = import.meta.env.VITE_API_KEY as string | undefined;
-if (API_KEY) {
-  axios.defaults.headers.common['X-API-Key'] = API_KEY;
 
-  const originalFetch = window.fetch.bind(window);
-  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-    const url =
-      typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-    if (url.startsWith(API_BASE)) {
-      const headers = new Headers(
-        init?.headers ?? (input instanceof Request ? input.headers : undefined)
-      );
-      headers.set('X-API-Key', API_KEY);
-      init = { ...init, headers };
-    }
-    return originalFetch(input, init);
-  };
-}
+export const getUserToken = () => localStorage.getItem('user_token') || '';
+export const getUserName = () => localStorage.getItem('user_name') || '';
+export const setUserIdentity = (token: string, username: string) => {
+  localStorage.setItem('user_token', token);
+  if (username) localStorage.setItem('user_name', username);
+};
+export const clearUserIdentity = () => {
+  localStorage.removeItem('user_token');
+  localStorage.removeItem('user_name');
+};
+
+axios.interceptors.request.use((cfg) => {
+  const url = typeof cfg.url === 'string' ? cfg.url : '';
+  if (url.startsWith(API_BASE) || url.startsWith('/')) {
+    if (API_KEY) (cfg.headers as any)['X-API-Key'] = API_KEY;
+    const t = getUserToken();
+    if (t) (cfg.headers as any)['X-User-Token'] = t;
+  }
+  return cfg;
+});
+
+const originalFetch = window.fetch.bind(window);
+window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+  const url =
+    typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+  if (url.startsWith(API_BASE)) {
+    const headers = new Headers(
+      init?.headers ?? (input instanceof Request ? input.headers : undefined)
+    );
+    if (API_KEY) headers.set('X-API-Key', API_KEY);
+    const t = getUserToken();
+    if (t) headers.set('X-User-Token', t);
+    init = { ...init, headers };
+  }
+  return originalFetch(input, init);
+};
 
 if (import.meta.env.DEV) {
   console.log('[config] API_BASE:', API_BASE, '| mode:', import.meta.env.MODE);

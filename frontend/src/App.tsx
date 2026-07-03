@@ -13,6 +13,8 @@ import MediaRecorderTest from './components/MediaRecorderTest';
 import VideoDrillCreator from './components/VideoDrillCreator';
 import SrtImport from './components/SrtImport';
 import VideoLibraryPage from './components/VideoLibraryPage';
+import ProfilePage from './components/ProfilePage';
+import { getUserName, getUserToken } from './config';
 import './App.css';
 
 // Floating spaced-repetition entry point, shown on the home screen when
@@ -100,6 +102,20 @@ function App() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {location.pathname === '/' && <ReviewFab />}
+      {location.pathname === '/' && (
+        <button
+          onClick={() => navigate('/profile')}
+          title={getUserToken() ? 'El teu perfil' : 'Crea el teu compte'}
+          style={{
+            position: 'fixed', top: '12px', right: '12px', zIndex: 900,
+            padding: '9px 14px', background: 'var(--surface)', color: 'var(--text)',
+            border: '1px solid var(--border)', borderRadius: 'var(--r-pill)',
+            fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)', cursor: 'pointer'
+          }}
+        >
+          👤 {getUserName() || 'Entra'}
+        </button>
+      )}
       <Routes>
         <Route path="/" element={<DrillsResponsive />} />
         <Route path="/tests" element={<TestsDashboard onBackToDrills={() => navigate('/')} />} />
@@ -111,6 +127,7 @@ function App() {
         <Route path="/media-test" element={<MediaRecorderTest />} />
         <Route path="/demo-videos" element={<DemoVideosPage />} />
         <Route path="/library" element={<VideoLibraryPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Routes>
     </div>
   );
