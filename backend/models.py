@@ -25,6 +25,7 @@ class Drill(Base):
     video_end_time = Column(Float, nullable=True)    # End time in seconds
     # --- Documentation / variation layer (auditor Phase 2) ---
     text_tachelhit_latin = Column(String, nullable=True)  # Latin romanization
+    created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # contributor attribution
     variety = Column(String, nullable=True)   # e.g. "tashelhit", "central-atlas", "tarifit"
     region = Column(String, nullable=True)    # e.g. "Souss", "Tafraout", "diaspora-BCN"
     speaker = Column(String, nullable=True)   # speaker/contributor label (with consent)
@@ -132,7 +133,8 @@ class DrillReview(Base):
     __tablename__ = "drill_reviews"
 
     id = Column(Integer, primary_key=True, index=True)
-    drill_id = Column(Integer, ForeignKey("drills.id"), unique=True, nullable=False, index=True)
+    drill_id = Column(Integer, ForeignKey("drills.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # NULL = anonymous/legacy
     ease = Column(Float, default=2.5, nullable=False)
     interval_days = Column(Float, default=0.0, nullable=False)
     repetitions = Column(Integer, default=0, nullable=False)
@@ -141,3 +143,13 @@ class DrillReview(Base):
     last_reviewed = Column(DateTime, nullable=True)
     total_reviews = Column(Integer, default=0, nullable=False)
     lapses = Column(Integer, default=0, nullable=False)
+
+class User(Base):
+    """Contributor/learner identity (auditor Phase 1: multi-tenancy)."""
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, nullable=False, index=True)
+    display_name = Column(String, nullable=True)
+    token = Column(String, unique=True, nullable=False, index=True)
+    date_created = Column(DateTime, default=datetime.utcnow, nullable=False)

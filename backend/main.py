@@ -8,7 +8,7 @@ import shutil
 import yt_dlp
 from datetime import datetime, timedelta
 from urllib.parse import quote
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Body, Form, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Body, Form, BackgroundTasks, Request
 from pydantic import BaseModel
 from typing import Optional, List, Dict
 import re
@@ -35,7 +35,7 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
 
-from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel  # ← Alias for ORM models
+from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel  # ← Alias for ORM models
 from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort, VideoProcessingJobCreate, VideoProcessingJob, VideoSegmentCreate, VideoSegment, TranscribeRequest, TranscribeResponse, TranslateRequest, TranslateResponse, DrillPairInfo, GlossaryItem, GlossaryItemCreate, SrtImportRequest, SrtImportResponse, SrtSegment, BulkVideoUrlUpdateRequest, BulkVideoUrlUpdateResponse  # ← Pydantic schemas
 from correction_service import get_correction_service
 from srt_parser import parse_srt_content, create_youtube_url_with_timestamp
@@ -678,6 +678,13 @@ def get_db():
     finally:
         db.close()
 
+def get_current_user(request: Request, db: Session = Depends(get_db)) -> Optional[UserModel]:
+    """Resolve the requesting user from the X-User-Token header (None = anonymous)."""
+    token = (request.headers.get("x-user-token") or "").strip()
+    if not token:
+        return None
+    return db.query(UserModel).filter(UserModel.token == token).first()
+
 # ===================== CRUD =====================
 @app.get("/drills/", response_model=list[Drill])
 def get_drills(tag: Optional[str] = None, author: Optional[str] = None, db: Session = Depends(get_db)):
@@ -727,7 +734,8 @@ def get_drills(tag: Optional[str] = None, author: Optional[str] = None, db: Sess
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 @app.post("/drills/", response_model=Drill)
-def create_drill(drill: DrillCreate = None, db: Session = Depends(get_db)):
+def create_drill(drill: DrillCreate = None, db: Session = Depends(get_db),
+                 user: Optional[UserModel] = Depends(get_current_user)):
     try:
         # If no data is provided, create an empty drill
         if drill is None:
@@ -736,6 +744,12 @@ def create_drill(drill: DrillCreate = None, db: Session = Depends(get_db)):
             # Create drill with provided data
             drill_data = drill.model_dump(exclude_unset=True)
             db_drill = DrillModel(**drill_data)
+
+        # Contributor attribution
+        if user:
+            db_drill.created_by_user_id = user.id
+            if not db_drill.author:
+                db_drill.author = user.display_name or user.username
 
         db.add(db_drill)
         db.commit()
@@ -2422,6 +2436,48 @@ async def create_drills_from_video(
             db.commit()
         raise HTTPException(status_code=500, detail=str(e))
 
+# ===================== USERS (multi-tenancy, auditor Phase 1) =====================
+# (get_current_user lives next to get_db near the top of the file)
+
+@app.post("/users/register")
+def register_user(
+    username: str = Body(..., embed=True),
+    display_name: Optional[str] = Body(None, embed=True),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a contributor/learner identity. Returns a personal token the client
+    must send as the X-User-Token header on every request; it is shown once.
+    """
+    uname = (username or "").strip().lower()
+    if not re.fullmatch(r"[a-z0-9_\-\.]{3,32}", uname):
+        raise HTTPException(status_code=400, detail="Username must be 3-32 chars: a-z 0-9 _ - .")
+    if db.query(UserModel).filter(UserModel.username == uname).first():
+        raise HTTPException(status_code=409, detail="Username already taken")
+    user = UserModel(
+        username=uname,
+        display_name=(display_name or uname).strip(),
+        token=secrets.token_hex(16)
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return {"username": user.username, "display_name": user.display_name, "token": user.token}
+
+@app.get("/users/me")
+def get_me(user: Optional[UserModel] = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user:
+        raise HTTPException(status_code=401, detail="Missing or invalid X-User-Token")
+    drills_contributed = db.query(DrillModel).filter(DrillModel.created_by_user_id == user.id).count()
+    cards_learning = db.query(DrillReviewModel).filter(DrillReviewModel.user_id == user.id).count()
+    return {
+        "username": user.username,
+        "display_name": user.display_name,
+        "date_created": user.date_created.isoformat(),
+        "drills_contributed": drills_contributed,
+        "cards_learning": cards_learning
+    }
+
 # ===================== CORPUS (documentation & research) =====================
 
 CORPUS_EXPORT_FIELDS = [
@@ -2605,25 +2661,29 @@ async def pronunciation_check(
 # SM-2 style scheduling. Grades: 0=again, 1=hard, 2=good, 3=easy.
 
 @app.get("/reviews/due", response_model=list[Drill])
-def get_due_reviews(limit: int = 20, db: Session = Depends(get_db)):
+def get_due_reviews(limit: int = 20, db: Session = Depends(get_db),
+                    user: Optional[UserModel] = Depends(get_current_user)):
     """
-    Drills due for spaced-repetition review: overdue cards first (most
-    overdue first), then never-reviewed drills (newest first) to fill up.
+    Drills due for spaced-repetition review for THIS user (anonymous requests
+    get the shared legacy schedule): overdue cards first, then never-reviewed
+    drills (newest first) to fill up.
     """
+    uid = user.id if user else None
     now = datetime.utcnow()
     due_rows = (
         db.query(DrillModel)
         .join(DrillReviewModel, DrillReviewModel.drill_id == DrillModel.id)
-        .filter(DrillReviewModel.due_date <= now)
+        .filter(DrillReviewModel.user_id == uid, DrillReviewModel.due_date <= now)
         .order_by(DrillReviewModel.due_date.asc())
         .limit(limit)
         .all()
     )
     drills = list(due_rows)
     if len(drills) < limit:
+        seen = db.query(DrillReviewModel.drill_id).filter(DrillReviewModel.user_id == uid)
         new_drills = (
             db.query(DrillModel)
-            .filter(~DrillModel.id.in_(db.query(DrillReviewModel.drill_id)))
+            .filter(~DrillModel.id.in_(seen))
             .order_by(DrillModel.date_created.desc())
             .limit(limit - len(drills))
             .all()
@@ -2632,19 +2692,23 @@ def get_due_reviews(limit: int = 20, db: Session = Depends(get_db)):
     return drills
 
 @app.post("/reviews/{drill_id}/grade")
-def grade_review(drill_id: int, grade: int = Body(..., embed=True), db: Session = Depends(get_db)):
-    """Record a review grade and reschedule the drill (SM-2)."""
+def grade_review(drill_id: int, grade: int = Body(..., embed=True), db: Session = Depends(get_db),
+                 user: Optional[UserModel] = Depends(get_current_user)):
+    """Record a review grade for this user and reschedule the drill (SM-2)."""
     if grade not in (0, 1, 2, 3):
         raise HTTPException(status_code=400, detail="grade must be 0 (again), 1 (hard), 2 (good) or 3 (easy)")
     drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found")
 
+    uid = user.id if user else None
     now = datetime.utcnow()
-    review = db.query(DrillReviewModel).filter(DrillReviewModel.drill_id == drill_id).first()
+    review = db.query(DrillReviewModel).filter(
+        DrillReviewModel.drill_id == drill_id, DrillReviewModel.user_id == uid
+    ).first()
     if not review:
         review = DrillReviewModel(
-            drill_id=drill_id, ease=2.5, interval_days=0.0,
+            drill_id=drill_id, user_id=uid, ease=2.5, interval_days=0.0,
             repetitions=0, total_reviews=0, lapses=0, due_date=now
         )
         db.add(review)
@@ -2691,12 +2755,16 @@ def grade_review(drill_id: int, grade: int = Body(..., embed=True), db: Session 
     }
 
 @app.get("/reviews/stats")
-def review_stats(db: Session = Depends(get_db)):
-    """Counts for the home-screen review badge."""
+def review_stats(db: Session = Depends(get_db),
+                 user: Optional[UserModel] = Depends(get_current_user)):
+    """Counts for the home-screen review badge, scoped to the requesting user."""
+    uid = user.id if user else None
     now = datetime.utcnow()
     total = db.query(DrillModel).count()
-    tracked = db.query(DrillReviewModel).count()
-    due = db.query(DrillReviewModel).filter(DrillReviewModel.due_date <= now).count()
+    tracked = db.query(DrillReviewModel).filter(DrillReviewModel.user_id == uid).count()
+    due = db.query(DrillReviewModel).filter(
+        DrillReviewModel.user_id == uid, DrillReviewModel.due_date <= now
+    ).count()
     return {
         "total_drills": total,
         "new": max(0, total - tracked),
