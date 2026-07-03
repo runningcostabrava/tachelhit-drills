@@ -2730,10 +2730,18 @@ def get_due_reviews(limit: int = 20, db: Session = Depends(get_db),
     )
     drills = list(due_rows)
     if len(drills) < limit:
+        from sqlalchemy import or_, and_
         seen = db.query(DrillReviewModel.drill_id).filter(DrillReviewModel.user_id == uid)
         new_drills = (
             db.query(DrillModel)
-            .filter(~DrillModel.id.in_(seen))
+            .filter(
+                ~DrillModel.id.in_(seen),
+                # Only practiceable cards: there must be a voice or a text to recall
+                or_(
+                    and_(DrillModel.text_tachelhit != None, DrillModel.text_tachelhit != ''),
+                    and_(DrillModel.audio_url != None, DrillModel.audio_url != '')
+                )
+            )
             .order_by(DrillModel.date_created.desc())
             .limit(limit - len(drills))
             .all()
