@@ -8,12 +8,13 @@ class CorrectionService:
     def __init__(self, api_key: str = None):
         self.api_key = api_key or os.getenv("DEEPSEEK_API_KEY")
         if not self.api_key:
-            print("[CORRECTION] Warning: DEEPSEEK_API_KEY not set.")
-        
-        self.client = OpenAI(
-            api_key=self.api_key,
-            base_url="https://api.deepseek.com/v1"
-        )
+            print("[CORRECTION] Warning: DEEPSEEK_API_KEY not set. Falling back to local fuzzy matching.")
+            self.client = None
+        else:
+            self.client = OpenAI(
+                api_key=self.api_key,
+                base_url="https://api.deepseek.com/v1"
+            )
 
     def correct_transcription(self, transcription: str, phrases: List[str]) -> Tuple[str, float]:
         """

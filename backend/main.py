@@ -11,6 +11,8 @@ from urllib.parse import quote
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Body, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional, List, Dict
+import re
+import secrets
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine
@@ -315,7 +317,9 @@ if DATABASE_URL.startswith("sqlite"):
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 else:
     # PostgreSQL (from Render or other services)
-    engine = create_engine(DATABASE_URL)
+    # pool_pre_ping revalidates pooled connections; Render's Postgres proxy
+    # drops idle ones, which otherwise 500s the first request after idle.
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=300)
 
 SessionLocal = sessionmaker(bind=engine)
 
@@ -412,6 +416,21 @@ async def validation_exception_handler(request, exc):
 # Development mode flag - enable automatically for SQLite (local dev)
 DEVELOPMENT_MODE = DATABASE_URL.startswith("sqlite") or os.getenv("DEVELOPMENT_MODE", "false").lower() == "true"
 
+# Optional API-key gate for all mutating requests. When the API_KEY env var is
+# set, POST/PUT/DELETE/PATCH require a matching X-API-Key header (the frontend
+# sends it when VITE_API_KEY is set). When unset, the API stays open as before.
+# Registered before CORSMiddleware so CORS wraps it and 401s carry CORS headers.
+API_KEY = (os.getenv("API_KEY") or "").strip()
+PROTECTED_METHODS = {"POST", "PUT", "DELETE", "PATCH"}
+
+@app.middleware("http")
+async def require_api_key(request, call_next):
+    if API_KEY and request.method in PROTECTED_METHODS:
+        provided = request.headers.get("x-api-key", "")
+        if not secrets.compare_digest(provided, API_KEY):
+            return JSONResponse(status_code=401, content={"detail": "Missing or invalid API key"})
+    return await call_next(request)
+
 # CORS configuration - allow frontend URL
 allowed_origins_base = [
     "http://localhost:5173",
@@ -442,8 +461,7 @@ print(f"DEVELOPMENT_MODE: {DEVELOPMENT_MODE}")
 print(f"Allowed origins: {allowed_origins}")
 print("=" * 80)
 
-app.add_middleware(
-    CORSMiddleware,
+cors_kwargs = dict(
     allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
@@ -451,6 +469,13 @@ app.add_middleware(
     expose_headers=["*"],
     max_age=600,  # Cache preflight requests for 10 minutes
 )
+if DEVELOPMENT_MODE:
+    # Allow dev-server pages served over the LAN (e.g. phone testing against
+    # `npm run dev --host`); private-range IPs only, dev mode only.
+    cors_kwargs["allow_origin_regex"] = (
+        r"http://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d+)?"
+    )
+app.add_middleware(CORSMiddleware, **cors_kwargs)
 
 import mimetypes
 
@@ -1354,11 +1379,18 @@ def delete_short(short_id: int, db: Session = Depends(get_db)):
     if not short:
         raise HTTPException(status_code=404, detail="Short not found")
 
-    # Delete video file
+    # Delete the underlying media asset (Cloudinary for vaulted shorts,
+    # local media/ dir for legacy ones)
     try:
-        video_path = f"media/{short.video_path.replace('/media/', '')}"
-        if os.path.exists(video_path):
-            os.remove(video_path)
+        if short.video_path and short.video_path.startswith("http"):
+            public_id = extract_cloudinary_public_id(short.video_path)
+            if public_id:
+                cloudinary.uploader.destroy(public_id, resource_type="video")
+                print(f"[API] Deleted Cloudinary asset: {public_id}")
+        elif short.video_path:
+            video_path = f"media/{short.video_path.replace('/media/', '')}"
+            if os.path.exists(video_path):
+                os.remove(video_path)
     except Exception as e:
         print(f"[API] Error deleting video file: {e}")
 
@@ -1368,149 +1400,70 @@ def delete_short(short_id: int, db: Session = Depends(get_db)):
 
 # ===================== VIDEO PROCESSING =====================
 
-# Placeholder for background task that would offload to external service
-async def process_video_background_task(job_id: int, source_url: Optional[str], source_filepath: Optional[str], db_session: Session):
-    # In a real scenario, this function would:
-    # 1. Update job status to IN_PROGRESS
-    # 2. Call external services (serverless functions) for:
-    #    a. Video download (if YouTube URL) from source_url
-    #    b. Storing the video in a temporary location.
-    # 3. Update job status to COMPLETED (ready for clipping) or FAILED
+# NOTE: the old placeholder /video-processing/* endpoints (simulated jobs that
+# wrote fake res.cloudinary.com/demo/... URLs into real drills) were removed.
+# The real pipeline lives under /video-analysis/*.
 
-    print(f"[VIDEO_PROCESSOR] Started background task for Job ID: {job_id}")
-    print(f"[VIDEO_PROCESSOR] Source URL: {source_url}, Source Filepath: {source_filepath}")
+from video_utils import get_video_metadata, get_video_segments, process_and_upload_segment, remote_process_and_upload_segment, get_yt_dlp_cookie_file, download_video_to_dir, process_and_upload_audio_segment, is_audio_file
 
-    job = db_session.query(VideoProcessingJobModel).filter(VideoProcessingJobModel.id == job_id).first()
-    if job:
-        job.status = "IN_PROGRESS"
-        db_session.add(job)
-        db_session.commit()
-        db_session.refresh(job)
+# All video uploads live under one parent dir so that (a) stale files from the
+# two-step upload -> create-drills flow can be purged by age instead of leaking
+# forever, and (b) create-drills can verify a client-supplied video_path really
+# is one of our uploads and not an arbitrary server file.
+UPLOADS_TMP_ROOT = os.path.join(tempfile.gettempdir(), "tachelhit_uploads")
+os.makedirs(UPLOADS_TMP_ROOT, exist_ok=True)
 
-    # For now, immediately mark as completed for demonstration
-    if job:
-        job.status = "COMPLETED"
-        job.processing_log = "Simulated successful video download."
-        db_session.add(job)
-        db_session.commit()
-        db_session.refresh(job)
-        print(f"[VIDEO_PROCESSOR] Job {job_id} simulated completion (ready for clipping).")
+def purge_stale_uploads(max_age_hours: float = 6):
+    cutoff = datetime.utcnow().timestamp() - max_age_hours * 3600
+    try:
+        for name in os.listdir(UPLOADS_TMP_ROOT):
+            path = os.path.join(UPLOADS_TMP_ROOT, name)
+            try:
+                if os.path.getmtime(path) < cutoff:
+                    shutil.rmtree(path, ignore_errors=True)
+                    print(f"[UPLOADS] Purged stale upload dir: {path}")
+            except OSError:
+                pass
+    except OSError as e:
+        print(f"[UPLOADS] Purge scan failed: {e}")
 
+def is_managed_upload_path(path: str) -> bool:
+    real = os.path.realpath(path)
+    return real.startswith(os.path.realpath(UPLOADS_TMP_ROOT) + os.sep)
 
-@app.post("/video-processing/submit", response_model=VideoProcessingJob)
-async def submit_video_for_processing(
-    background_tasks: BackgroundTasks,
-    source_url: Optional[str] = None,
-    file: Optional[UploadFile] = File(None),
-    db: Session = Depends(get_db)
-):
-    if not source_url and not file:
-        raise HTTPException(status_code=400, detail="Either source_url or a file must be provided.")
-    if source_url and file:
-        raise HTTPException(status_code=400, detail="Cannot provide both source_url and a file.")
+def extract_cloudinary_public_id(url: str) -> Optional[str]:
+    """Derive the Cloudinary public_id from a delivery URL so the asset can be
+    destroyed. Returns None for non-Cloudinary URLs."""
+    try:
+        if "res.cloudinary.com" not in url or "/upload/" not in url:
+            return None
+        path = url.split("/upload/", 1)[1].split("?")[0]
+        parts = [p for p in path.split("/") if p]
+        if parts and re.fullmatch(r"v\d+", parts[0]):
+            parts = parts[1:]
+        if not parts:
+            return None
+        return os.path.splitext("/".join(parts))[0]
+    except Exception:
+        return None
 
-    source_filepath = None
-    if file:
-        # In a real scenario, upload file to temporary storage (e.g., S3)
-        # For this demo, just note the filename
-        source_filepath = os.path.join("temp_uploads", file.filename) # Conceptual path
-        print(f"[VIDEO_PROCESSING] File uploaded conceptually: {source_filepath}")
-
-    # Create initial job entry
-    job = VideoProcessingJobModel(
-        source_url=source_url,
-        source_filepath=source_filepath,
-        status="PENDING",
-        date_submitted=datetime.utcnow()
-    )
-    db.add(job)
-    db.commit()
-    db.refresh(job)
-
-    # Add the processing task to background
-    # Pass a new session to the background task to avoid session conflicts
-    background_tasks.add_task(process_video_background_task, job.id, job.source_url, job.source_filepath, SessionLocal())
-
-    return job
-
-@app.get("/video-processing/{job_id}/status", response_model=VideoProcessingJob)
-def get_video_processing_status(job_id: int, db: Session = Depends(get_db)):
-    job = db.query(VideoProcessingJobModel).filter(VideoProcessingJobModel.id == job_id).first()
-    if not job:
-        raise HTTPException(status_code=404, detail="Video processing job not found.")
-    return job
-
-@app.get("/video-processing/{job_id}/segments", response_model=List[VideoSegment])
-def get_video_segments_for_job(job_id: int, db: Session = Depends(get_db)):
-    job = db.query(VideoProcessingJobModel).filter(VideoProcessingJobModel.id == job_id).first()
-    if not job:
-        raise HTTPException(status_code=404, detail="Video processing job not found.")
-    return job.segments
-
-@app.post("/video-processing/clip", response_model=VideoSegment)
-async def clip_video_segment(
-    job_id: int = Body(...),
-    start_time: float = Body(...),
-    end_time: float = Body(...),
-    drill_id: int = Body(...),
-    output_type: str = Body("both"), # 'video', 'audio', or 'both'
-    db: Session = Depends(get_db)
-):
-    job = db.query(VideoProcessingJobModel).filter(VideoProcessingJobModel.id == job_id).first()
-    if not job:
-        raise HTTPException(status_code=404, detail="Video processing job not found.")
-
-    drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
-    if not drill:
-        raise HTTPException(status_code=404, detail="Drill not found.")
-
-    if output_type not in ["video", "audio", "both"]:
-        raise HTTPException(status_code=400, detail="Invalid output_type. Must be 'video', 'audio', or 'both'.")
-
-    # Create segment entry in DB
-    segment = VideoSegmentModel(
-        job_id=job.id,
-        segment_start_time=start_time,
-        segment_end_time=end_time
-    )
-    db.add(segment)
-    db.commit()
-    db.refresh(segment)
-
-    # In a real scenario, this would trigger an external worker
-    # that uses FFmpeg to clip the video and/or extract audio.
-    # The worker would then update the segment and drill with the new URLs.
-
-    # Simulate the clipping and update for now
-    print(f"[CLIPPER] Simulating clipping for segment {segment.id} and updating drill {drill.id}")
-
-    # Placeholder URLs
-    clipped_video_url = f"https://res.cloudinary.com/demo/video/upload/sample_clipped_{segment.id}.mp4"
-    extracted_audio_url = f"https://res.cloudinary.com/demo/video/upload/sample_audio_{segment.id}.mp3"
-
-    segment.video_url = clipped_video_url if output_type in ["video", "both"] else None
-    segment.audio_url = extracted_audio_url if output_type in ["audio", "both"] else None
-
-    if output_type in ["video", "both"]:
-        drill.video_url = clipped_video_url
-    if output_type in ["audio", "both"]:
-        drill.audio_url = extracted_audio_url
-
-    db.add(segment)
-    db.add(drill)
-    db.commit()
-    db.refresh(segment)
-
-    return segment
-
-
-from video_utils import get_video_metadata, get_video_segments, process_and_upload_segment, remote_process_and_upload_segment, get_yt_dlp_cookie_file
+def resolve_hf_space_host(url: str) -> str:
+    """Convert a huggingface.co/spaces/<owner>/<name> page URL into the direct
+    <owner>-<name>.hf.space API host; anything else passes through unchanged."""
+    if "huggingface.co/spaces/" in url:
+        space_id = url.split("huggingface.co/spaces/")[-1].strip("/")
+        owner, _, name = space_id.partition("/")
+        if owner and name:
+            sub = f"{owner}-{name}".lower().replace("_", "-").replace(".", "-")
+            return f"https://{sub}.hf.space"
+    return url.rstrip("/")
 
 # ===================== NEW VIDEO ANALYSIS ENDPOINTS =====================
 
-async def process_video_analysis_task(job_id: int, video_path: str, tmp_dir: str):
+async def process_video_analysis_task(job_id: int, video_path: str, tmp_dir: str, language: Optional[str] = None):
     """
     Background task to extract audio, upload to Cloudinary, call ASR Space, and update job.
+    `language` is an optional Whisper language hint forwarded to the ASR Space.
     """
     db = SessionLocal()
     try:
@@ -1525,7 +1478,8 @@ async def process_video_analysis_task(job_id: int, video_path: str, tmp_dir: str
         if not asr_space_url:
             raise Exception("HUGGINGFACE_ASR_SPACE_URL not configured")
 
-        asr_endpoint = asr_space_url.rstrip("/") + "/transcribe"
+        # A huggingface.co/spaces/... page URL is not an API host; convert it
+        asr_endpoint = resolve_hf_space_host(asr_space_url) + "/transcribe"
         print(f"[WORKER] Proxying video file for Job {job_id} to ASR Space...")
 
         hf_token = os.getenv("HUGGINGFACE_API_KEY")
@@ -1535,6 +1489,7 @@ async def process_video_analysis_task(job_id: int, video_path: str, tmp_dir: str
             resp = requests.post(
                 asr_endpoint,
                 files={"audio_file": (os.path.basename(video_path), f, "video/mp4")},
+                data={"language": language} if language else None,
                 headers=headers,
                 timeout=600
             )
@@ -1543,6 +1498,18 @@ async def process_video_analysis_task(job_id: int, video_path: str, tmp_dir: str
         asr_data = resp.json()
 
         segments = asr_data.get("segments", [])
+
+        # Glossary normalization (word sound -> curated spelling) for
+        # Tachelhit-ish sources; other languages pass through untouched
+        if language in (None, "", "auto", "shi", "ber"):
+            glossary = db.query(GlossaryItemModel).all()
+            if glossary:
+                for seg in segments:
+                    text = seg.get("text") or ""
+                    for g in glossary:
+                        if g.word_sound:
+                            text = text.replace(g.word_sound, g.correct_spelling)
+                    seg["text"] = text
 
         # 4. Save segments to DB
         for seg in segments:
@@ -1582,9 +1549,14 @@ async def analyze_uploaded_video(
     """
     print(f"[API] Received video upload request: {video.filename}")
     try:
-        # Create temp directory
-        tmp_dir = tempfile.mkdtemp()
-        video_path = os.path.join(tmp_dir, video.filename)
+        # Drop uploads older than the purge window, then create this upload's dir.
+        # The file must outlive this request: /video-analysis/create-drills reads
+        # it in a later request, so cleanup is age-based rather than immediate.
+        purge_stale_uploads()
+        tmp_dir = tempfile.mkdtemp(dir=UPLOADS_TMP_ROOT)
+        # basename() strips any client-supplied path components (../ traversal)
+        safe_filename = os.path.basename((video.filename or "").replace("\\", "/")) or "upload.mp4"
+        video_path = os.path.join(tmp_dir, safe_filename)
 
         # Save video
         content = await video.read()
@@ -1618,13 +1590,9 @@ async def analyze_uploaded_video(
 
             job.status = "COMPLETED"
             db.commit()
-            # Cleanup temp directory after immediate processing
-            try:
-                if os.path.exists(tmp_dir):
-                    shutil.rmtree(tmp_dir)
-                    print(f"[API] Cleaned up temp directory after immediate processing: {tmp_dir}")
-            except Exception as e:
-                print(f"[API] Error cleaning temp directory: {e}")
+            # NOTE: the temp video is intentionally kept — the client sends
+            # video_path back to /video-analysis/create-drills for clipping.
+            # purge_stale_uploads() reclaims it later.
             return {
                 "job_id": job.id,
                 "status": "COMPLETED",
@@ -1675,11 +1643,22 @@ def get_video_analysis_job_status(job_id: int, db: Session = Depends(get_db)):
                 "text": seg.text_original
             })
 
+    # Auto-pipeline jobs record their created drill ids in processing_log
+    drills_created = None
+    if job.processing_log:
+        try:
+            log = json.loads(job.processing_log)
+            if isinstance(log, dict):
+                drills_created = log.get("drills_created")
+        except (ValueError, TypeError):
+            pass
+
     return {
         "id": job.id,
         "status": job.status,
         "error_message": job.error_message,
-        "segments": segments
+        "segments": segments,
+        "drills_created": drills_created
     }
 
 @app.post("/video-analysis/analyze")
@@ -1746,40 +1725,469 @@ async def analyze_video(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/video-analysis/import-url")
+async def import_video_from_url(
+    background_tasks: BackgroundTasks,
+    url: str = Body(...),
+    cookies: Optional[str] = Body(None),
+    language: Optional[str] = Body(None),
+    audio_only: Optional[bool] = Body(False),
+    db: Session = Depends(get_db)
+):
+    """
+    Server-side capture for any yt-dlp-supported site (YouTube, Instagram,
+    TikTok, podcasts, ...): downloads the media into the managed uploads dir,
+    then reuses the local-file pipeline — platform subtitles when available,
+    background Whisper ASR otherwise. Because the file ends up local,
+    create-drills clips it directly (no remote YouTube-only clip path, no
+    repeat bot checks). audio_only grabs just the audio track (podcasts,
+    voice content) and yields audio drills.
+    """
+    tmp_dir = None
+    try:
+        purge_stale_uploads()
+        tmp_dir = tempfile.mkdtemp(dir=UPLOADS_TMP_ROOT)
+        print(f"[IMPORT-URL] Downloading {url} (audio_only={audio_only}) ...")
+        video_path, info = await asyncio.to_thread(download_video_to_dir, url, tmp_dir, cookies, bool(audio_only))
+
+        job = VideoProcessingJobModel(
+            source_url=url,
+            source_filepath=video_path,
+            status="PENDING",
+            date_submitted=datetime.utcnow()
+        )
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+
+        meta = {
+            "title": info.get("title"),
+            "thumbnail": info.get("thumbnail"),
+            "duration": info.get("duration"),
+        }
+
+        # Cheap path first: platform-provided subtitles/captions
+        segments = []
+        lang_to_use = None
+        try:
+            subs_langs = list((info.get('subtitles') or {}).keys()) + \
+                         list((info.get('automatic_captions') or {}).keys())
+            lang_priority = ([language] if language else []) + ['shi', 'ber', 'ar', 'ca', 'fr', 'es', 'en']
+            lang_to_use = next((l for l in lang_priority if l and l in subs_langs), None)
+            if lang_to_use:
+                segments = get_video_segments(url, lang_to_use, cookies_str=cookies)
+        except Exception as sub_err:
+            print(f"[IMPORT-URL] Subtitle fetch failed, falling back to ASR: {sub_err}")
+
+        if segments:
+            for seg in segments:
+                db.add(VideoSegmentModel(
+                    job_id=job.id,
+                    segment_start_time=seg["start"],
+                    segment_end_time=seg["end"],
+                    text_original=seg["text"]
+                ))
+            job.status = "COMPLETED"
+            db.commit()
+            return {
+                **meta,
+                "job_id": job.id,
+                "status": "COMPLETED",
+                "original_language": lang_to_use or language or "auto",
+                "video_path": video_path,
+                "segments": segments
+            }
+
+        # No usable subtitles: transcribe the downloaded file with Whisper
+        print(f"[IMPORT-URL] No subtitles found; starting background ASR for job {job.id}")
+        background_tasks.add_task(process_video_analysis_task, job.id, video_path, tmp_dir, language)
+        return {
+            **meta,
+            "job_id": job.id,
+            "status": "PENDING",
+            "original_language": language or "auto",
+            "video_path": video_path,
+            "message": "Video downloaded. Background transcription started."
+        }
+
+    except Exception as e:
+        print(f"[IMPORT-URL] ERROR: {e}")
+        traceback.print_exc()
+        if tmp_dir and os.path.exists(tmp_dir):
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def auto_drills_pipeline_task(job_id: int, url: Optional[str], video_path: str, tmp_dir: str,
+                                    language: Optional[str], tag: Optional[str],
+                                    apply_correction: bool, has_segments: bool):
+    """
+    Fully server-side capture pipeline: (ASR if needed) -> correction ->
+    translation into all drill languages -> drill creation with media clips.
+    Survives the user closing the page; progress is exposed through the job's
+    status (TRANSCRIBING / CORRECTING / TRANSLATING / CREATING_DRILLS) and the
+    final drill ids land in processing_log as JSON.
+    """
+    db = SessionLocal()
+    try:
+        job = db.query(VideoProcessingJobModel).filter(VideoProcessingJobModel.id == job_id).first()
+        if not job:
+            return
+
+        # Phase 1: transcription (skipped when platform subtitles already gave segments)
+        if not has_segments:
+            job.status = "TRANSCRIBING"
+            db.commit()
+            await process_video_analysis_task(job_id, video_path, tmp_dir, language)
+            db.expire_all()
+            job = db.query(VideoProcessingJobModel).filter(VideoProcessingJobModel.id == job_id).first()
+            if not job or job.status != "COMPLETED":
+                return  # ASR failed; its task already recorded the error
+
+        segments = [{
+            "start": s.segment_start_time,
+            "end": s.segment_end_time,
+            "text": s.text_original
+        } for s in job.segments]
+
+        if not segments:
+            job.status = "FAILED"
+            job.error_message = "No segments found to build drills from."
+            db.commit()
+            return
+
+        effective_source = language if language not in (None, "", "auto") else "shi"
+        src_name = LANGUAGE_CODE_MAP.get(effective_source, effective_source)
+
+        # Phase 2: correction layer (Tachelhit-ish sources only)
+        if apply_correction and effective_source in ("shi", "ber"):
+            job.status = "CORRECTING"
+            db.commit()
+            ds = db.query(DrillModel).filter(DrillModel.is_correction_dataset == True).all()
+            if not ds:
+                ds = db.query(DrillModel).filter(
+                    DrillModel.text_tachelhit != None,
+                    DrillModel.text_tachelhit != ''
+                ).limit(100).all()
+            phrases = [d.text_tachelhit for d in ds if d.text_tachelhit]
+            svc = get_correction_service()
+            for seg in segments:
+                text = (seg.get("text") or "").strip()
+                if text:
+                    try:
+                        corrected, _ = await asyncio.to_thread(svc.correct_transcription, text, phrases)
+                        seg["text"] = corrected
+                    except Exception as e:
+                        print(f"[AUTO] Correction failed for a segment: {e}")
+
+        # Phase 3: translate into every drill language the source isn't
+        job.status = "TRANSLATING"
+        db.commit()
+        for seg in segments:
+            text = (seg.get("text") or "").strip()
+            if not text:
+                continue
+            for tgt, field in TRANSLATE_TARGET_FIELDS.items():
+                if LANGUAGE_CODE_MAP.get(tgt) == src_name:
+                    continue
+                try:
+                    seg[field] = await asyncio.to_thread(
+                        translate_with_hf, text, src_name, LANGUAGE_CODE_MAP[tgt]
+                    )
+                except Exception as e:
+                    print(f"[AUTO] Translation ({tgt}) failed for a segment: {e}")
+
+        # Phase 4: create drills with clipped media
+        job.status = "CREATING_DRILLS"
+        db.commit()
+        drills_created = []
+        audio_src = is_audio_file(video_path)
+        for seg in segments:
+            original_text = seg.get("text")
+            drill_tachelhit = seg.get("text_tachelhit") or (original_text if effective_source in ("shi", "ber") else None)
+            drill_arabic = seg.get("text_arabic") or (original_text if effective_source == "ar" else None)
+
+            db_drill = DrillModel(
+                text_catalan=seg.get("text_catalan"),
+                text_tachelhit=drill_tachelhit,
+                text_arabic=drill_arabic,
+                tag=tag or "auto_capture",
+                author="Auto Capture"
+            )
+            db.add(db_drill)
+            db.commit()
+            db.refresh(db_drill)
+            try:
+                if audio_src:
+                    res = await asyncio.to_thread(process_and_upload_audio_segment, video_path, seg["start"], seg["end"], db_drill.id)
+                    db_drill.audio_url = normalize_media_url(res["audio_url"])
+                else:
+                    res = await asyncio.to_thread(process_and_upload_segment, video_path, seg["start"], seg["end"], db_drill.id)
+                    db_drill.video_url = normalize_media_url(res["video_url"])
+                    db_drill.image_url = normalize_media_url(res["image_url"])
+                try:
+                    db_drill.audio_tts_url = generate_catalan_tts(seg.get("text_catalan"), db_drill.id)
+                except Exception:
+                    pass
+                db.commit()
+                drills_created.append(db_drill.id)
+            except Exception as e:
+                print(f"[AUTO] Media clipping failed for a segment: {e}")
+                db.rollback()
+
+        job.status = "COMPLETED"
+        job.processing_log = json.dumps({"drills_created": drills_created})
+        db.commit()
+        print(f"[AUTO] Job {job_id}: created {len(drills_created)} drills.")
+
+    except Exception as e:
+        print(f"[AUTO] Pipeline error in job {job_id}: {e}")
+        traceback.print_exc()
+        try:
+            job = db.query(VideoProcessingJobModel).filter(VideoProcessingJobModel.id == job_id).first()
+            if job:
+                job.status = "FAILED"
+                job.error_message = str(e)
+                db.commit()
+        except Exception:
+            pass
+    finally:
+        db.close()
+
+@app.post("/video-analysis/auto-drills")
+async def auto_drills_from_url(
+    background_tasks: BackgroundTasks,
+    url: str = Body(...),
+    cookies: Optional[str] = Body(None),
+    language: Optional[str] = Body(None),
+    audio_only: Optional[bool] = Body(False),
+    tag: Optional[str] = Body(None),
+    apply_correction: Optional[bool] = Body(True),
+    db: Session = Depends(get_db)
+):
+    """
+    One-shot capture: download -> transcribe -> correct -> translate -> create
+    drills, all server-side in the background. Returns a job_id to poll via
+    /video-analysis/job/{id}; the final response there carries drills_created.
+    """
+    tmp_dir = None
+    try:
+        purge_stale_uploads()
+        tmp_dir = tempfile.mkdtemp(dir=UPLOADS_TMP_ROOT)
+        print(f"[AUTO] Downloading {url} (audio_only={audio_only}) ...")
+        video_path, info = await asyncio.to_thread(download_video_to_dir, url, tmp_dir, cookies, bool(audio_only))
+
+        job = VideoProcessingJobModel(
+            source_url=url,
+            source_filepath=video_path,
+            status="PENDING",
+            date_submitted=datetime.utcnow()
+        )
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+
+        # Platform subtitles fast path (same as import-url)
+        segments = []
+        lang_to_use = None
+        try:
+            subs_langs = list((info.get('subtitles') or {}).keys()) + \
+                         list((info.get('automatic_captions') or {}).keys())
+            lang_priority = ([language] if language else []) + ['shi', 'ber', 'ar', 'ca', 'fr', 'es', 'en']
+            lang_to_use = next((l for l in lang_priority if l and l in subs_langs), None)
+            if lang_to_use:
+                segments = get_video_segments(url, lang_to_use, cookies_str=cookies)
+        except Exception as sub_err:
+            print(f"[AUTO] Subtitle fetch failed, will use ASR: {sub_err}")
+
+        if segments:
+            for seg in segments:
+                db.add(VideoSegmentModel(
+                    job_id=job.id,
+                    segment_start_time=seg["start"],
+                    segment_end_time=seg["end"],
+                    text_original=seg["text"]
+                ))
+            db.commit()
+
+        background_tasks.add_task(
+            auto_drills_pipeline_task,
+            job.id, url, video_path, tmp_dir,
+            lang_to_use or language, tag, bool(apply_correction), bool(segments)
+        )
+
+        return {
+            "job_id": job.id,
+            "status": "PENDING",
+            "title": info.get("title"),
+            "thumbnail": info.get("thumbnail"),
+            "duration": info.get("duration"),
+            "message": "Auto pipeline started. Poll /video-analysis/job/{job_id} until drills_created appears."
+        }
+    except Exception as e:
+        print(f"[AUTO] ERROR: {e}")
+        traceback.print_exc()
+        if tmp_dir and os.path.exists(tmp_dir):
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/video-analysis/correct")
+async def correct_video_segments(
+    segments: List[Dict] = Body(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Run each segment's text through the correction layer: glossary
+    sound->spelling fixes, then mapping onto the user's curated phrase dataset
+    (DeepSeek when configured, local fuzzy matching otherwise). Opt-in — the
+    review table stays the human checkpoint.
+    """
+    try:
+        drills = db.query(DrillModel).filter(DrillModel.is_correction_dataset == True).all()
+        if not drills:
+            drills = db.query(DrillModel).filter(
+                DrillModel.text_tachelhit != None,
+                DrillModel.text_tachelhit != ''
+            ).limit(100).all()
+        phrases = [d.text_tachelhit for d in drills if d.text_tachelhit]
+        glossary = db.query(GlossaryItemModel).all()
+        svc = get_correction_service()
+
+        for seg in segments:
+            text = (seg.get("text") or "").strip()
+            if not text:
+                continue
+            fixed = text
+            for g in glossary:
+                if g.word_sound:
+                    fixed = fixed.replace(g.word_sound, g.correct_spelling)
+            try:
+                corrected, score = await asyncio.to_thread(svc.correct_transcription, fixed, phrases)
+                seg["text"] = corrected
+                seg["correction_score"] = score
+            except Exception as e:
+                print(f"[API] Correction error for segment: {e}")
+                seg["text"] = fixed
+
+        return segments
+    except Exception as e:
+        print(f"[API] Error in correct_video_segments: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/video-analysis/ocr")
+def ocr_video_segments(
+    video_path: str = Body(...),
+    segments: List[Dict] = Body(...),
+    band_ratio: float = Body(0.28)
+):
+    """
+    Read burned-in subtitles off a captured video: samples one frame per
+    segment (midpoint), crops the bottom subtitle band, and sends it to the
+    OCR Space (EasyOCR: Latin + Arabic). Results land in seg["text_ocr"] for
+    mandatory human review — nothing is written to drills directly.
+    See docs/OCR_FEATURE_SCOPE.md.
+    """
+    if not is_managed_upload_path(video_path):
+        raise HTTPException(status_code=400, detail="video_path is not a managed upload")
+    if not os.path.exists(video_path):
+        raise HTTPException(status_code=400, detail="Video file no longer available; re-import the URL")
+
+    ocr_space_url = os.getenv("HUGGINGFACE_OCR_SPACE_URL")
+    if not ocr_space_url:
+        raise HTTPException(status_code=500, detail="HUGGINGFACE_OCR_SPACE_URL not configured")
+    ocr_endpoint = resolve_hf_space_host(ocr_space_url) + "/ocr"
+
+    hf_token = os.getenv("HUGGINGFACE_API_KEY")
+    headers = {"Authorization": f"Bearer {hf_token}"} if hf_token else {}
+
+    from moviepy.video.io.VideoFileClip import VideoFileClip
+    from PIL import Image
+
+    band_ratio = min(max(band_ratio, 0.1), 0.6)
+    clip = VideoFileClip(video_path)
+    try:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            for i, seg in enumerate(segments):
+                try:
+                    midpoint = (float(seg["start"]) + float(seg["end"])) / 2
+                    t = min(max(midpoint, 0), max(clip.duration - 0.05, 0))
+                    frame_path = os.path.join(tmp_dir, f"frame_{i}.jpg")
+                    clip.save_frame(frame_path, t=t)
+
+                    # Crop the bottom band where burned-in subtitles live
+                    img = Image.open(frame_path)
+                    w, h = img.size
+                    band = img.crop((0, int(h * (1 - band_ratio)), w, h))
+                    band_path = os.path.join(tmp_dir, f"band_{i}.jpg")
+                    band.save(band_path, "JPEG", quality=90)
+
+                    with open(band_path, "rb") as f:
+                        resp = requests.post(
+                            ocr_endpoint,
+                            files={"image": (f"band_{i}.jpg", f, "image/jpeg")},
+                            headers=headers,
+                            timeout=120
+                        )
+                    resp.raise_for_status()
+                    results = resp.json().get("results", [])
+                    texts = [r["text"] for r in results if r.get("confidence", 0) >= 0.35]
+                    seg["text_ocr"] = " ".join(texts).strip()
+                except Exception as seg_err:
+                    print(f"[OCR] Segment {i} failed: {seg_err}")
+                    seg["text_ocr"] = seg.get("text_ocr", "")
+    finally:
+        clip.close()
+
+    return segments
+
+# Which segment field each translation target fills; these are the three
+# text fields a Drill actually stores.
+TRANSLATE_TARGET_FIELDS = {
+    "ca": "text_catalan",
+    "ar": "text_arabic",
+    "shi": "text_tachelhit",
+}
+
 @app.post("/video-analysis/translate")
 async def translate_video_segments(
     segments: List[Dict] = Body(...),
-    source_lang: str = Body("auto")
+    source_lang: str = Body("auto"),
+    target_langs: Optional[List[str]] = Body(None)
 ):
     """
-    Translate a list of video segments to Catalan using the fine-tuned NLLB
-    Hugging Face Space. Google Translate has no Tachelhit/Tamazight support, so
-    it cannot translate ASR output; the NLLB space (same one used by /translate)
-    can.
+    Translate a list of video segments using the fine-tuned NLLB Hugging Face
+    Space (Google Translate has no Tachelhit/Tamazight support). By default
+    translates to Catalan; pass target_langs (subset of ca/ar/shi) to fill
+    several drill languages in one call. Targets equal to the source language
+    are skipped.
     """
     try:
         # Map the caller's language code to the friendly name translate_with_hf
         # expects. ASR output (and unknown/"auto") is treated as Tachelhit, the
         # primary language of this app's source videos.
-        if source_lang in (None, "", "auto"):
-            src_name = "Tachelhit/Central Atlas Tamazight"
-        else:
-            src_name = LANGUAGE_CODE_MAP.get(source_lang, source_lang)
-        tgt_name = "Catalan"
+        effective_source = source_lang if source_lang not in (None, "", "auto") else "shi"
+        src_name = LANGUAGE_CODE_MAP.get(effective_source, effective_source)
+
+        targets = [t for t in (target_langs or ["ca"]) if t in TRANSLATE_TARGET_FIELDS]
+        if not targets:
+            targets = ["ca"]
 
         translated_segments = []
         for seg in segments:
             original_text = (seg.get("text") or "").strip()
             if original_text:
-                try:
-                    catalan_text = await asyncio.to_thread(
-                        translate_with_hf, original_text, src_name, tgt_name
-                    )
-                    seg["text_catalan"] = catalan_text
-                except Exception as e:
-                    print(f"[API] Translation error for segment: {e}")
-                    # Preserve any existing value rather than blanking it out
-                    seg["text_catalan"] = seg.get("text_catalan", "")
+                for tgt in targets:
+                    # Same language as the source: the original text already is it
+                    if LANGUAGE_CODE_MAP.get(tgt) == src_name:
+                        continue
+                    field = TRANSLATE_TARGET_FIELDS[tgt]
+                    try:
+                        seg[field] = await asyncio.to_thread(
+                            translate_with_hf, original_text, src_name, LANGUAGE_CODE_MAP[tgt]
+                        )
+                    except Exception as e:
+                        print(f"[API] Translation error ({tgt}) for segment: {e}")
+                        # Preserve any existing value rather than blanking it out
+                        seg[field] = seg.get(field, "")
             translated_segments.append(seg)
 
         return translated_segments
@@ -1800,6 +2208,11 @@ async def create_drills_from_video(
     """
     Take selected segments, clip them, and create drills. Works with URL or Local Path.
     """
+    # Only accept paths pointing at files this API created via
+    # /video-analysis/upload — never arbitrary server files
+    if video_path and not is_managed_upload_path(video_path):
+        raise HTTPException(status_code=400, detail="video_path is not a managed upload")
+
     try:
         job = VideoProcessingJobModel(
             source_url=url or video_path,
@@ -1816,9 +2229,10 @@ async def create_drills_from_video(
             # Path A: Local file upload
             for seg in segments:
                 original_text = seg.get("text")
-                # Smart mapping: Only put in Tachelhit if it's Berber (shi) or if we don't know
-                drill_tachelhit = original_text if source_lang in [None, 'shi', 'ber'] else None
-                drill_arabic = original_text if source_lang == 'ar' else None
+                # Prefer explicit per-language translations from the review
+                # table; otherwise route the original text by source language
+                drill_tachelhit = seg.get("text_tachelhit") or (original_text if source_lang in [None, 'shi', 'ber'] else None)
+                drill_arabic = seg.get("text_arabic") or (original_text if source_lang == 'ar' else None)
 
                 db_drill = DrillModel(
                     text_catalan=seg.get("text_catalan"),
@@ -1832,9 +2246,15 @@ async def create_drills_from_video(
                 db.refresh(db_drill)
 
                 try:
-                    res = process_and_upload_segment(video_path, seg["start"], seg["end"], db_drill.id)
-                    db_drill.video_url = normalize_media_url(res["video_url"])
-                    db_drill.image_url = normalize_media_url(res["image_url"])
+                    if is_audio_file(video_path):
+                        # Audio source (podcast / voice note): the clip becomes
+                        # the drill's Tachelhit audio, no video/thumbnail
+                        res = process_and_upload_audio_segment(video_path, seg["start"], seg["end"], db_drill.id)
+                        db_drill.audio_url = normalize_media_url(res["audio_url"])
+                    else:
+                        res = process_and_upload_segment(video_path, seg["start"], seg["end"], db_drill.id)
+                        db_drill.video_url = normalize_media_url(res["video_url"])
+                        db_drill.image_url = normalize_media_url(res["image_url"])
                     try:
                         tts_url = generate_catalan_tts(seg.get("text_catalan"), db_drill.id)
                         db_drill.audio_tts_url = tts_url
@@ -1850,9 +2270,9 @@ async def create_drills_from_video(
             print(f"[API] Offloading YouTube clipping to HF Space: {url}")
             for seg in segments:
                 original_text = seg.get("text")
-                # Smart mapping
-                drill_tachelhit = original_text if source_lang in [None, 'shi', 'ber'] else None
-                drill_arabic = original_text if source_lang == 'ar' else None
+                # Prefer explicit per-language translations when present
+                drill_tachelhit = seg.get("text_tachelhit") or (original_text if source_lang in [None, 'shi', 'ber'] else None)
+                drill_arabic = seg.get("text_arabic") or (original_text if source_lang == 'ar' else None)
 
                 db_drill = DrillModel(
                     text_catalan=seg.get("text_catalan"),
@@ -2002,7 +2422,7 @@ def debug_db(db: Session = Depends(get_db)):
         "drill_count": drill_count,
         "test_count": test_count,
         "short_count": short_count,
-        "database_url": DATABASE_URL,
+        "database_url": engine.url.render_as_string(hide_password=True),
         "development_mode": DEVELOPMENT_MODE
     }
 
@@ -2040,7 +2460,7 @@ def debug_populate_sample(token: Optional[str] = Body(None, embed=True), db: Ses
                 tag="courtesy"
             )
         ]
-        added = 0
+        added_samples = []
         for sample in samples:
             # Check if a drill with same text exists (optional)
             existing = db.query(DrillModel).filter(
@@ -2048,12 +2468,13 @@ def debug_populate_sample(token: Optional[str] = Body(None, embed=True), db: Ses
             ).first()
             if not existing:
                 db.add(sample)
-                added += 1
+                added_samples.append(sample)
         db.commit()
-        # Refresh IDs
-        for sample in samples:
-            if sample.id is None:
-                db.refresh(sample)
+        # Refresh IDs — only for instances actually inserted; refreshing a
+        # transient (skipped duplicate) instance raises InvalidRequestError
+        for sample in added_samples:
+            db.refresh(sample)
+        added = len(added_samples)
         return {
             "status": "success",
             "added": added,
@@ -2099,18 +2520,19 @@ def debug_seed(token: Optional[str] = None, db: Session = Depends(get_db)):
                 tag="courtesy"
             )
         ]
-        added = 0
+        added_samples = []
         for sample in samples:
             existing = db.query(DrillModel).filter(
                 DrillModel.text_catalan == sample.text_catalan
             ).first()
             if not existing:
                 db.add(sample)
-                added += 1
+                added_samples.append(sample)
         db.commit()
-        for sample in samples:
-            if sample.id is None:
-                db.refresh(sample)
+        # Only refresh inserted instances; refreshing a transient one raises
+        for sample in added_samples:
+            db.refresh(sample)
+        added = len(added_samples)
         return {
             "status": "success",
             "added": added,
@@ -2363,9 +2785,24 @@ async def transcribe_audio(
             api_name="/predict"
         )
 
-        # Since this space only returns the transcription string, we set rough and corrected to the same
+        # Correction layer: apply glossary sound->spelling fixes, then map the
+        # rough transcription onto the curated phrase dataset (DeepSeek when
+        # DEEPSEEK_API_KEY is set, local fuzzy matching otherwise).
         corrected = rough
         score = 1.0
+        if isinstance(rough, str) and rough.strip():
+            fixed = rough
+            for g in glossary_data:
+                if g["s"]:
+                    fixed = fixed.replace(g["s"], g["c"])
+            phrases = [p["t"] for p in dataset_pairs]
+            try:
+                corrected, score = await asyncio.to_thread(
+                    get_correction_service().correct_transcription, fixed, phrases
+                )
+            except Exception as corr_err:
+                print(f"[CORRECTION] Failed, returning rough transcription: {corr_err}")
+                corrected, score = fixed, 0.0
 
         return TranscribeResponse(
             rough_transcription=rough,
@@ -2471,7 +2908,11 @@ async def trim_drill_audio(
     drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
     if not drill or not drill.audio_url:
         raise HTTPException(status_code=404, detail="Drill or audio not found")
+    if start_time < 0 or end_time <= start_time:
+        raise HTTPException(status_code=400, detail="Invalid trim range")
 
+    tmp_in_path = None
+    tmp_out_path = None
     try:
         from moviepy.audio.io.AudioFileClip import AudioFileClip
 
@@ -2486,7 +2927,7 @@ async def trim_drill_audio(
 
         # Trim audio
         with AudioFileClip(tmp_in_path) as audio:
-            trimmed = audio.subclip(start_time, min(end_time, audio.duration))
+            trimmed = audio.subclipped(start_time, min(end_time, audio.duration))
             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_out:
                 tmp_out_path = tmp_out.name
                 trimmed.write_audiofile(tmp_out_path, logger=None)
@@ -2503,16 +2944,18 @@ async def trim_drill_audio(
         drill.audio_url = url
         db.commit()
 
-        # Cleanup
-        os.unlink(tmp_in_path)
-        os.unlink(tmp_out_path)
-
         return {"url": url}
 
     except Exception as e:
         print(f"[TRIM] Error: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Temp files are removed on success AND failure
+        for p in (tmp_in_path, tmp_out_path):
+            if p and os.path.exists(p):
+                try: os.unlink(p)
+                except OSError: pass
 
 @app.post("/drills/{drill_id}/trim-video")
 async def trim_drill_video(
@@ -2527,7 +2970,11 @@ async def trim_drill_video(
     drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
     if not drill or not drill.video_url:
         raise HTTPException(status_code=404, detail="Drill or video not found")
+    if start_time < 0 or end_time <= start_time:
+        raise HTTPException(status_code=400, detail="Invalid trim range")
 
+    tmp_in_path = None
+    tmp_out_path = None
     try:
         from moviepy.video.io.VideoFileClip import VideoFileClip
 
@@ -2547,7 +2994,7 @@ async def trim_drill_video(
 
         # Trim video
         with VideoFileClip(tmp_in_path) as video:
-            trimmed = video.subclip(start_time, min(end_time, video.duration))
+            trimmed = video.subclipped(start_time, min(end_time, video.duration))
             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_out:
                 tmp_out_path = tmp_out.name
                 # We use a fast preset and avoid heavy encoding if possible
@@ -2565,16 +3012,18 @@ async def trim_drill_video(
         drill.video_url = url
         db.commit()
 
-        # Cleanup
-        os.unlink(tmp_in_path)
-        os.unlink(tmp_out_path)
-
         return {"url": url}
 
     except Exception as e:
         print(f"[TRIM VIDEO] Error: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Temp files are removed on success AND failure
+        for p in (tmp_in_path, tmp_out_path):
+            if p and os.path.exists(p):
+                try: os.unlink(p)
+                except OSError: pass
 
 # ===================== SRT IMPORT =====================
 @app.post("/srt/import", response_model=SrtImportResponse)
