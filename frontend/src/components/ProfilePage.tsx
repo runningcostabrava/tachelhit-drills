@@ -161,6 +161,11 @@ export default function ProfilePage() {
                 Amb un compte, el teu repàs (SRS) és només teu i els drills que creïs
                 porten el teu nom com a contribuïdor.
               </p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.5 }}>
+                En registrar-te dónes el teu consentiment perquè les gravacions i textos
+                que aportis es conservin al corpus per documentar i ensenyar la llengua.
+                Pots indicar la llicència de cada contribució al camp «license».
+              </p>
               <input style={inputStyle} placeholder="Nom d'usuari (a-z, 0-9, _-.)" value={username} onChange={(e) => setUsername(e.target.value)} />
               <input style={inputStyle} placeholder="Nom per mostrar (opcional)" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
               <button
