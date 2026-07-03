@@ -88,6 +88,20 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
   useEffect(() => { isLoopingRef.current = videoControls.isLooping; }, [videoControls.isLooping]);
   useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
 
+  // Recall-first (review mode): the answer stays hidden and only the Catalan
+  // prompt plays until the user reveals — recall practice, not recognition
+  const [answerRevealed, setAnswerRevealed] = useState(false);
+  const answerRevealedRef = useRef(false);
+  const hideAnswer = !!reviewMode && !answerRevealed;
+
+  const revealAnswer = () => {
+    setAnswerRevealed(true);
+    answerRevealedRef.current = true;
+    stopAllAudio();
+    setIsPlaying(true);
+    playTachelhitAudio().catch(() => setIsPlaying(false));
+  };
+
   // Pronunciation check (review mode): record -> ASR -> similarity score
   const pronunciationRecorderRef = useRef<MediaRecorder | null>(null);
   const [isCheckingRecording, setIsCheckingRecording] = useState(false);
@@ -217,6 +231,9 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
     if (pronunciationRecorderRef.current?.state === 'recording') {
       try { pronunciationRecorderRef.current.stop(); } catch { /* already stopped */ }
     }
+    // New card starts hidden again (recall-first)
+    setAnswerRevealed(false);
+    answerRevealedRef.current = false;
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -352,6 +369,12 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
     try {
       // 1. Catalan (1x)
       await handleSpeakCatalan();
+
+      // Recall-first: stop after the prompt until the user reveals the answer
+      if (reviewMode && !answerRevealedRef.current) {
+        setIsPlaying(false);
+        return;
+      }
 
       // 2. Tachelhit (2x)
       await playTachelhitAudio();
@@ -646,7 +669,11 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            {currentDrill?.text_tachelhit || 'No Tachelhit text'}
+            {hideAnswer ? (
+              <span style={{ letterSpacing: '8px', opacity: 0.35 }}>· · ·</span>
+            ) : (
+              currentDrill?.text_tachelhit || 'No Tachelhit text'
+            )}
           </div>
 
           {/* Image */}
@@ -671,7 +698,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
           {/* Translations */}
           <div style={{ padding: '0 24px 8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {/* Arabic */}
-            {currentDrill?.text_arabic && (
+            {!hideAnswer && currentDrill?.text_arabic && (
               <div style={{
                 padding: '14px 16px',
                 background: 'var(--emerald-soft)',
@@ -1359,6 +1386,19 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
           background: 'rgba(15, 23, 42, 0.85)', padding: '10px 14px',
           borderRadius: 'var(--r-pill)', backdropFilter: 'blur(8px)', boxShadow: 'var(--shadow-lg)'
         }}>
+          {hideAnswer ? (
+            <button
+              onClick={revealAnswer}
+              style={{
+                padding: '12px 28px', background: 'var(--brand-gradient)', color: 'white',
+                border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 800,
+                fontSize: '15px', cursor: 'pointer'
+              }}
+            >
+              👁 Mostra la resposta
+            </button>
+          ) : (
+          <>
           <button
             onClick={togglePronunciationRecording}
             disabled={pronunciationBusy}
@@ -1404,6 +1444,8 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               {label}
             </button>
           ))}
+          </>
+          )}
         </div>
       )}
     </div>
