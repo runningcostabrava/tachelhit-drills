@@ -69,9 +69,9 @@ export default function VideoLibraryPage() {
 
     return (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
-            <div style={{ padding: '28px 32px', background: 'var(--brand-gradient)', color: 'white', borderBottomLeftRadius: 'var(--r-2xl)', borderBottomRightRadius: 'var(--r-2xl)', boxShadow: 'var(--shadow-md)' }}>
-                <h2 style={{ margin: 0, color: 'white', fontSize: '26px', display: 'flex', alignItems: 'center', gap: '10px' }}>📚 Drill-Driven Video Library</h2>
-                <p style={{ margin: '6px 0 0 0', opacity: 0.85 }}>Full videos synced with your existing drill translations.</p>
+            <div style={{ padding: '18px 24px', background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+                <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Biblioteca de vídeos</h1>
+                <p style={{ margin: '4px 0 0 0', color: 'var(--text-soft)', fontSize: '14px' }}>Vídeos complets sincronitzats amb les traduccions dels teus drills.</p>
             </div>
 
             <div className="ag-theme-alpine" style={{ flex: 1, width: '100%', padding: '24px 32px' }}>
