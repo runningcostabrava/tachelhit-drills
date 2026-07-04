@@ -113,7 +113,7 @@ export default function TestsDashboard() {
         console.error('Error polling for demo video:', error);
         clearInterval(interval);
         setGeneratingDemoVideoId(null);
-        alert('Failed to get demo video status. Please try again or check logs.');
+        alert('No s\'ha pogut obtenir l\'estat del vídeo de demostració. Torna-ho a provar o revisa els registres.');
       }
     }, 10000); // Poll every 10 seconds
 
@@ -122,7 +122,7 @@ export default function TestsDashboard() {
       if (generatingDemoVideoId === testId) {
         clearInterval(interval);
         setGeneratingDemoVideoId(null);
-        alert('Demo video generation is taking longer than expected. Please check back later.');
+        alert('La generació del vídeo de demostració està trigant més del que s\'esperava. Torna-hi més tard.');
       }
     }, 5 * 60 * 1000); // 5 minutes timeout
   };
@@ -140,7 +140,7 @@ export default function TestsDashboard() {
   };
 
   const handleDeleteTest = async (testId: number) => {
-    if (!confirm('Are you sure you want to delete this test?')) return;
+    if (!confirm('Segur que vols eliminar aquest test?')) return;
 
     try {
       await axios.delete(`${API_BASE}/tests/${testId}`);
@@ -149,27 +149,27 @@ export default function TestsDashboard() {
         setSelectedTest(null);
         setStats(null);
       }
-      alert('Test deleted successfully!');
+      alert('Test eliminat correctament!');
     } catch (error) {
       console.error('Error deleting test:', error);
-      alert('Failed to delete test');
+      alert('No s\'ha pogut eliminar el test');
     }
   };
 
   const getQuestionTypeLabel = (type: string) => {
     const labels: any = {
-      'text_input': 'Text Input',
-      'audio': 'Audio Recognition',
-      'video': 'Video'
+      'text_input': 'Entrada de text',
+      'audio': 'Reconeixement d\'àudio',
+      'video': 'Vídeo'
     };
     return labels[type] || type;
   };
 
   const getHintLevelLabel = (level: string) => {
     const labels: any = {
-      'none': 'No Hints',
-      'partial': 'Partial Letters',
-      'full_after_tries': 'Full Reveal After Tries'
+      'none': 'Sense pistes',
+      'partial': 'Lletres parcials',
+      'full_after_tries': 'Revelació completa després d\'intents'
     };
     return labels[level] || level;
   };
@@ -195,7 +195,7 @@ export default function TestsDashboard() {
           borderLeftColor: 'var(--brand-1)',
           animation: 'spin 1s linear infinite'
         }}></div>
-        <p style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Loading tests…</p>
+        <p style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>Carregant els tests…</p>
       </div>
     );
   }
@@ -330,7 +330,7 @@ export default function TestsDashboard() {
                     boxShadow: 'var(--shadow-xs)'
                   }}
                 >
-                  Close
+                  Tanca
                 </button>
               </div>
             )}
@@ -355,8 +355,8 @@ export default function TestsDashboard() {
                   justifyContent: 'center',
                   fontSize: '30px'
                 }}>📝</div>
-                <p style={{ fontSize: '18px', marginBottom: '8px', fontWeight: 800, color: 'var(--text)' }}>No tests created yet</p>
-                <p style={{ fontSize: '14px', margin: 0 }}>Go back to drills and select some to create a test</p>
+                <p style={{ fontSize: '18px', marginBottom: '8px', fontWeight: 800, color: 'var(--text)' }}>Encara no has creat cap test</p>
+                <p style={{ fontSize: '14px', margin: 0 }}>Torna als drills i selecciona'n uns quants per crear un test</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -446,7 +446,7 @@ export default function TestsDashboard() {
                               background: 'var(--emerald-soft)',
                               color: 'var(--emerald)'
                             }}>
-                              🎬 Video ready
+                              🎬 Vídeo a punt
                             </span>
                           )}
                         </div>
@@ -458,7 +458,7 @@ export default function TestsDashboard() {
                           e.stopPropagation(); // Prevent triggering handleViewTest
                           const url = `${window.location.origin}/tests/${test.id}`;
                           navigator.clipboard.writeText(url);
-                          alert(`Test link copied to clipboard!\n${url}`);
+                          alert(`Enllaç del test copiat al porta-retalls!\n${url}`);
                         }}
                         style={{
                           padding: isMobile ? '9px 12px' : '7px 10px',
@@ -476,14 +476,14 @@ export default function TestsDashboard() {
                           flexGrow: 1,
                           boxShadow: 'var(--shadow-xs)'
                         }}
-                        title="Copy link to this test"
+                        title="Copia l'enllaç d'aquest test"
                       >
-                        🔗 Copy Link
+                        🔗 Copia l'enllaç
                       </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (confirm(`Are you sure you want to delete test "${test.title}"? This action cannot be undone.`)) {
+                          if (confirm(`Segur que vols eliminar el test "${test.title}"? Aquesta acció no es pot desfer.`)) {
                             handleDeleteTest(test.id);
                           }
                         }}
@@ -500,9 +500,9 @@ export default function TestsDashboard() {
                           alignItems: 'center',
                           gap: '5px'
                         }}
-                        title="Delete test"
+                        title="Elimina el test"
                       >
-                        🗑️ Delete
+                        🗑️ Elimina
                       </button>
                     </div>
                   </div>
@@ -543,7 +543,7 @@ export default function TestsDashboard() {
                   boxShadow: 'var(--shadow-xs)'
                 }}
               >
-                ← Back to Tests
+                ← Torna als tests
               </button>
             )}
             {/* Title banner */}
@@ -594,7 +594,7 @@ export default function TestsDashboard() {
                 alignItems: 'center',
                 gap: '8px'
               }}>
-                <span>⚙️</span> Test Configuration
+                <span>⚙️</span> Configuració del test
               </h3>
               <div style={{
                 display: 'grid',
@@ -603,11 +603,11 @@ export default function TestsDashboard() {
                 fontSize: isMobile ? '13px' : '14px'
               }}>
                 <div style={{ padding: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Type</div>
+                  <div style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tipus</div>
                   <div style={{ color: 'var(--text)', fontWeight: 600 }}>{getQuestionTypeLabel(selectedTest.question_type)}</div>
                 </div>
                 <div style={{ padding: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Hints</div>
+                  <div style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Pistes</div>
                   <div style={{ color: 'var(--text)', fontWeight: 600 }}>
                     {getHintLevelLabel(selectedTest.hint_level)}
                     {selectedTest.hint_level === 'partial' && ` (${selectedTest.hint_percentage ?? 0}%)`}
@@ -615,11 +615,11 @@ export default function TestsDashboard() {
                   </div>
                 </div>
                 <div style={{ padding: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Time</div>
-                  <div style={{ color: 'var(--text)', fontWeight: 600 }}>{(selectedTest.time_limit_seconds ?? 0) > 0 ? `${selectedTest.time_limit_seconds ?? 0}s` : 'No limit'}</div>
+                  <div style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Temps</div>
+                  <div style={{ color: 'var(--text)', fontWeight: 600 }}>{(selectedTest.time_limit_seconds ?? 0) > 0 ? `${selectedTest.time_limit_seconds ?? 0}s` : 'Sense límit'}</div>
                 </div>
                 <div style={{ padding: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Passing</div>
+                  <div style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Aprovat</div>
                   <div style={{ color: 'var(--text)', fontWeight: 600 }}>{selectedTest.passing_score}%</div>
                 </div>
                 <div style={{ padding: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', gridColumn: isMobile ? 'span 2' : 'span 1' }}>
@@ -649,7 +649,7 @@ export default function TestsDashboard() {
                   alignItems: 'center',
                   gap: '8px'
                 }}>
-                  <span>📊</span> Statistics
+                  <span>📊</span> Estadístiques
                 </h3>
                 <div style={{
                   display: 'grid',
@@ -658,23 +658,23 @@ export default function TestsDashboard() {
                   fontSize: isMobile ? '13px' : '14px'
                 }}>
                   <div style={{ padding: '12px', background: 'var(--surface)', borderRadius: 'var(--r-md)' }}>
-                    <div style={{ fontWeight: 700, color: 'var(--emerald)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Attempts</div>
+                    <div style={{ fontWeight: 700, color: 'var(--emerald)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Intents</div>
                     <div style={{ color: 'var(--text)', fontWeight: 800, fontSize: '18px' }}>{stats.total_attempts}</div>
                   </div>
                   <div style={{ padding: '12px', background: 'var(--surface)', borderRadius: 'var(--r-md)' }}>
-                    <div style={{ fontWeight: 700, color: 'var(--emerald)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Avg Score</div>
+                    <div style={{ fontWeight: 700, color: 'var(--emerald)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Nota mitjana</div>
                     <div style={{ color: 'var(--text)', fontWeight: 800, fontSize: '18px' }}>{stats.average_score}%</div>
                   </div>
                   <div style={{ padding: '12px', background: 'var(--surface)', borderRadius: 'var(--r-md)' }}>
-                    <div style={{ fontWeight: 700, color: 'var(--emerald)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Completion</div>
+                    <div style={{ fontWeight: 700, color: 'var(--emerald)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Compleció</div>
                     <div style={{ color: 'var(--text)', fontWeight: 800, fontSize: '18px' }}>{stats.completion_rate}%</div>
                   </div>
                   <div style={{ padding: '12px', background: 'var(--surface)', borderRadius: 'var(--r-md)' }}>
-                    <div style={{ fontWeight: 700, color: 'var(--emerald)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Passed</div>
+                    <div style={{ fontWeight: 700, color: 'var(--emerald)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Aprovats</div>
                     <div style={{ color: 'var(--text)', fontWeight: 800, fontSize: '18px' }}>{stats.passed_attempts}/{stats.total_attempts}</div>
                   </div>
                   <div style={{ padding: '12px', background: 'var(--surface)', borderRadius: 'var(--r-md)', gridColumn: isMobile ? 'span 2' : 'span 1' }}>
-                    <div style={{ fontWeight: 700, color: 'var(--emerald)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Avg Time</div>
+                    <div style={{ fontWeight: 700, color: 'var(--emerald)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Temps mitjà</div>
                     <div style={{ color: 'var(--text)', fontWeight: 800, fontSize: '18px' }}>{stats.average_time}s</div>
                   </div>
                 </div>
@@ -704,7 +704,7 @@ export default function TestsDashboard() {
                   boxShadow: 'var(--shadow-brand)'
                 }}
               >
-                🎯 Take Test
+                🎯 Fes el test
               </button>
               <button
                 onClick={() => setEditingTestId(selectedTest.id)}
@@ -721,7 +721,7 @@ export default function TestsDashboard() {
                   boxShadow: 'var(--shadow-xs)'
                 }}
               >
-                ✏️ Edit Test
+                ✏️ Edita el test
               </button>
               <button
                 onClick={async () => {
@@ -733,7 +733,7 @@ export default function TestsDashboard() {
                     setPlayingDrills(testDrills);
                   } catch (error) {
                     console.error('Error loading drills:', error);
-                    alert('Failed to load drills');
+                    alert('No s\'han pogut carregar els drills');
                   }
                 }}
                 style={{
@@ -749,24 +749,24 @@ export default function TestsDashboard() {
                   boxShadow: 'var(--shadow-xs)'
                 }}
               >
-                ▶️ Play Drills
+                ▶️ Reprodueix els drills
               </button>
               <button
                 onClick={async () => {
                   if (!selectedTest) return;
-                  if (!confirm('This will generate a demo video showing the Drill Player interface for this test. It may take a a few minutes. Continue?')) {
+                  if (!confirm('Això generarà un vídeo de demostració que mostra la interfície del reproductor de drills per a aquest test. Pot trigar uns quants minuts. Vols continuar?')) {
                     return;
                   }
                   // Start the background generation
                   try {
                     setGeneratingDemoVideoId(selectedTest.id); // Set state to show loading
                     const response = await axios.post(`${API_BASE}/generate-drillplayer-demo/${selectedTest.id}`);
-                    alert(response.data.message || 'Video generation started. Polling for completion...');
+                    alert(response.data.message || 'S\'ha iniciat la generació del vídeo. Comprovant si ha acabat...');
                     startPollingForDemoVideo(selectedTest.id); // Start polling
                   } catch (error: any) {
                     console.error('Error generating demo video:', error);
                     setGeneratingDemoVideoId(null); // Clear loading state on error
-                    alert(`Failed to generate demo video: ${error.response?.data?.detail || error.message}`);
+                    alert(`No s'ha pogut generar el vídeo de demostració: ${error.response?.data?.detail || error.message}`);
                   }
                 }}
                 style={{
@@ -799,7 +799,7 @@ export default function TestsDashboard() {
                 gap: '12px',
                 alignItems: 'flex-start'
               }}>
-                <h3 style={{ margin: 0, color: 'var(--emerald)', fontSize: '18px', fontWeight: 800 }}>✅ Video Ready!</h3>
+                <h3 style={{ margin: 0, color: 'var(--emerald)', fontSize: '18px', fontWeight: 800 }}>✅ Vídeo a punt!</h3>
                 <button
                   onClick={() => setViewingVideoUrl(selectedTest.video_url ?? null)}
                   style={{
@@ -814,7 +814,7 @@ export default function TestsDashboard() {
                     boxShadow: 'var(--shadow-sm)'
                   }}
                 >
-                  ▶ View Video in Loop Player
+                  ▶ Mira el vídeo al reproductor en bucle
                 </button>
               </div>
             )}
@@ -832,7 +832,7 @@ export default function TestsDashboard() {
                 gap: '12px'
               }}>
                 <div className="spinner" style={{ border: '4px solid var(--border)', width: '24px', height: '24px', borderRadius: '50%', borderLeftColor: 'var(--amber)', animation: 'spin 1s ease infinite', flexShrink: 0 }}></div>
-                <p style={{ margin: 0, color: 'var(--amber-strong)', fontSize: '15px', fontWeight: 600 }}>Generating demo video… This may take a few minutes. Please keep this page open.</p>
+                <p style={{ margin: 0, color: 'var(--amber-strong)', fontSize: '15px', fontWeight: 600 }}>Generant el vídeo de demostració… Pot trigar uns quants minuts. Mantén aquesta pàgina oberta.</p>
               </div>
             )}
           </div>
@@ -862,8 +862,8 @@ export default function TestsDashboard() {
                 justifyContent: 'center',
                 fontSize: '34px'
               }}>👈</div>
-              <p style={{ fontSize: '18px', margin: 0, fontWeight: 800, color: 'var(--text)' }}>Select a test to view details</p>
-              <p style={{ fontSize: '14px', marginTop: '8px', marginBottom: 0 }}>Pick a test from the list to see its configuration, stats and actions.</p>
+              <p style={{ fontSize: '18px', margin: 0, fontWeight: 800, color: 'var(--text)' }}>Selecciona un test per veure'n els detalls</p>
+              <p style={{ fontSize: '14px', marginTop: '8px', marginBottom: 0 }}>Tria un test de la llista per veure'n la configuració, les estadístiques i les accions.</p>
             </div>
           </div>
         )}
@@ -879,7 +879,7 @@ export default function TestsDashboard() {
               borderRadius: 'var(--r-xl)',
               boxShadow: 'var(--shadow-sm)'
             }}>
-              <p style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)' }}>No test selected</p>
+              <p style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)' }}>Cap test seleccionat</p>
               <button
                 onClick={() => setShowTestList(true)}
                 style={{
@@ -895,7 +895,7 @@ export default function TestsDashboard() {
                   boxShadow: 'var(--shadow-brand)'
                 }}
               >
-                Show Tests List
+                Mostra la llista de tests
               </button>
             </div>
           </div>

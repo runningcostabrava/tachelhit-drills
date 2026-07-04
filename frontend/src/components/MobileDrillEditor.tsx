@@ -250,10 +250,10 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         else if (sourceType === 'video') mediaSource = localDrill.video_url || '';
         else mediaSource = localDrill.audio_url || localDrill.video_url || '';
 
-        if (!mediaSource) return alert('Please record and save media first.');
+        if (!mediaSource) return alert('Primer enregistra i desa el contingut.');
         
         const status = await Network.getStatus();
-        if (!status.connected) return alert('Transcription requires internet connection.');
+        if (!status.connected) return alert('La transcripció requereix connexió a internet.');
 
         setAiLoadingKey('transcribe-voice');
         addLog(`Transcribing ${sourceType || 'media'}...`);
@@ -268,7 +268,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
             addLog('Transcription success');
         } catch (err: any) {
             const msg = err.response?.data?.detail || err.message;
-            alert(`Transcription failed: ${msg}`);
+            alert(`La transcripció ha fallat: ${msg}`);
             addLog(`ASR Error: ${msg}`);
         } finally {
             setAiLoadingKey(null);
@@ -277,10 +277,10 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
   const handleTachelhitTTS = async () => {
     const text = localDrill.text_tachelhit;
-    if (!text) return alert('Tachelhit field is empty.');
+    if (!text) return alert('El camp de tachelhit és buit.');
     
     const status = await Network.getStatus();
-    if (!status.connected) return alert('TTS requires internet connection.');
+    if (!status.connected) return alert('El TTS requereix connexió a internet.');
 
     setAiLoadingKey('tts-shi');
     addLog('Generating Tachelhit TTS...');
@@ -292,7 +292,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         }
     } catch (err: any) {
         const msg = err.response?.data?.detail || err.message;
-        alert(`TTS failed: ${msg}`);
+        alert(`El TTS ha fallat: ${msg}`);
         addLog(`TTS Error: ${msg}`);
     } finally {
         setAiLoadingKey(null);
@@ -301,10 +301,10 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
   const handleTranslateAction = async (source: 'ca' | 'shi', target: 'ca' | 'shi') => {
     const status = await Network.getStatus();
-    if (!status.connected) return alert('Translation requires internet.');
+    if (!status.connected) return alert('La traducció requereix internet.');
 
     const sourceText = source === 'ca' ? localDrill.text_catalan : localDrill.text_tachelhit;
-    if (!sourceText) return alert('Field is empty.');
+    if (!sourceText) return alert('El camp és buit.');
     
     const targetField = target === 'shi' ? 'text_tachelhit' : 'text_catalan';
     setAiLoadingKey(`trans-${targetField}`);
@@ -317,7 +317,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       setLocalDrill(updated);
       triggerSave(updated);
     } catch (err) { 
-      alert('Translation failed.'); 
+      alert('La traducció ha fallat.');
     } finally { 
       setAiLoadingKey(null); 
     }
@@ -450,18 +450,18 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px', paddingBottom: '120px' }}>
         <div style={{ background: 'var(--surface)', padding: '16px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
-              <button onClick={capturePhoto} style={{ height: '56px', background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Camera"><FaCamera size={22} /></button>
-              <button onClick={captureVideo} style={{ height: '56px', background: 'var(--brand-gradient-soft)', color: 'var(--brand-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Video"><FaVideo size={22} /></button>
-              <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '56px', background: isRecording ? 'var(--rose-soft)' : 'var(--rose)', color: isRecording ? 'var(--rose)' : 'white', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Voice Record"><FaMicrophone size={22} /></button>
-              <button onClick={startDictation} style={{ height: '56px', background: 'var(--amber-soft)', color: 'var(--amber-strong)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Dictation"><FaKeyboard size={22} /></button>
-              <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '56px', background: 'var(--sky-soft)', color: 'var(--sky)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Gallery"><FaFolderOpen size={22} /></button>
+              <button onClick={capturePhoto} style={{ height: '56px', background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Càmera"><FaCamera size={22} /></button>
+              <button onClick={captureVideo} style={{ height: '56px', background: 'var(--brand-gradient-soft)', color: 'var(--brand-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Vídeo"><FaVideo size={22} /></button>
+              <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '56px', background: isRecording ? 'var(--rose-soft)' : 'var(--rose)', color: isRecording ? 'var(--rose)' : 'white', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Enregistra veu"><FaMicrophone size={22} /></button>
+              <button onClick={startDictation} style={{ height: '56px', background: 'var(--amber-soft)', color: 'var(--amber-strong)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Dictat"><FaKeyboard size={22} /></button>
+              <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '56px', background: 'var(--sky-soft)', color: 'var(--sky)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Galeria"><FaFolderOpen size={22} /></button>
             </div>
             <input type="file" accept="video/*" capture={"camcorder" as any} id="native-video-input" style={{ display: 'none' }} onChange={handleFileChange} />
             <input type="file" id="gallery-upload" style={{ display: 'none' }} onChange={handleFileChange} />
         </div>
 
         {localDrill.image_url && (
-          <img src={getSourceUrl(localDrill.image_url, 'image')} alt="Drill Asset" style={{ width: '100%', height: '150px', borderRadius: 'var(--r-lg)', objectFit: 'cover', border: '1px solid var(--border)' }} />
+          <img src={getSourceUrl(localDrill.image_url, 'image')} alt="Recurs del drill" style={{ width: '100%', height: '150px', borderRadius: 'var(--r-lg)', objectFit: 'cover', border: '1px solid var(--border)' }} />
         )}
 
         {localDrill.video_url && (
@@ -563,7 +563,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                 }} 
                 style={{ width: '100%', padding: '14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: 'var(--text)', cursor: 'pointer' }}
             >
-              Play Àudio
+              Reprodueix l'àudio
             </button>
             <div style={{ padding: '12px', background: 'var(--surface-2)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '11px', fontWeight: 700, color: 'var(--text-soft)' }}>
@@ -602,7 +602,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                     const hasVideo = localDrill.video_url;
 
                     if (hasAudio && hasVideo) {
-                        if (confirm('Transcribe from VIDEO? (Cancel for AUDIO)')) {
+                        if (confirm('Transcriure des del VÍDEO? (Cancel·la per a l\'ÀUDIO)')) {
                             handleAutoTranscribe('video');
                         } else {
                             handleAutoTranscribe('audio');
@@ -612,7 +612,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                     } else if (hasAudio) {
                         handleAutoTranscribe('audio');
                     } else {
-                        alert('Please record and save media first.');
+                        alert('Primer enregistra i desa el contingut.');
                     }
                 }} 
                 disabled={!(localDrill.audio_url || localDrill.video_url) || aiLoadingKey !== null} 
@@ -698,8 +698,8 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                 </div>
       </div>
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', padding: '16px 20px', background: 'var(--surface)', justifyContent: 'space-between', borderTop: '1px solid var(--border)', gap: '15px' }}>
-        <button onClick={() => onNavigate('prev')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: '15px', cursor: 'pointer' }}><FaChevronLeft /> Previous</button>
-        <button onClick={() => onNavigate('next')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', background: 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: '15px', cursor: 'pointer' }}>Next <FaChevronRight /></button>
+        <button onClick={() => onNavigate('prev')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: '15px', cursor: 'pointer' }}><FaChevronLeft /> Anterior</button>
+        <button onClick={() => onNavigate('next')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', background: 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: '15px', cursor: 'pointer' }}>Següent <FaChevronRight /></button>
       </div>
       {showAi && (
         <AiAssistant

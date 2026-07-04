@@ -658,12 +658,12 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
         },
         {
             headerName: 'Eines IA',
-            width: 380,
+            width: 430,
             cellRenderer: (params: any) => (
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center', height: '100%' }}>
-                    <button onClick={() => handleTranslate(params.data, 'ca', 'shi')} disabled={actionLoadingId !== null} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 10px', fontSize: '11px', fontWeight: 700, background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}><FaLanguage /> CA➔SH</button>
-                    <button onClick={() => handleTranslate(params.data, 'shi', 'ca')} disabled={actionLoadingId !== null} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 10px', fontSize: '11px', fontWeight: 700, background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid var(--emerald)', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}><FaLanguage /> SH➔CA</button>
-                    <button onClick={() => handleTachelhitTTS(params.data)} disabled={actionLoadingId !== null} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 10px', fontSize: '11px', fontWeight: 700, background: 'var(--amber-soft)', color: 'var(--amber-strong)', border: '1px solid var(--amber)', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}><FaRobot /> TTS</button>
+                    <button onClick={() => handleTranslate(params.data, 'ca', 'shi')} disabled={actionLoadingId !== null} title="Tradueix del català al taixelhit" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}><span style={{ color: 'var(--brand-1)', display: 'flex' }}><FaLanguage /></span> CA→Ta</button>
+                    <button onClick={() => handleTranslate(params.data, 'shi', 'ca')} disabled={actionLoadingId !== null} title="Tradueix del taixelhit al català" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}><span style={{ color: 'var(--emerald)', display: 'flex' }}><FaLanguage /></span> Ta→CA</button>
+                    <button onClick={() => handleTachelhitTTS(params.data)} disabled={actionLoadingId !== null} title="Genera veu en taixelhit" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}><span style={{ color: 'var(--saffron)', display: 'flex' }}><FaRobot /></span> Veu</button>
                     {(params.data.audio_url || params.data.video_url) && (
                         <button
                             onClick={() => {
@@ -682,8 +682,9 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                 }
                             }}
                             disabled={actionLoadingId !== null}
-                            style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 10px', fontSize: '11px', fontWeight: 700, background: 'var(--sky-soft)', color: 'var(--sky)', border: '1px solid var(--sky)', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}
-                        ><FaMagic /> Trans</button>
+                            title="Transcriu l'àudio o el vídeo (ASR)"
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}
+                        ><span style={{ color: 'var(--sky)', display: 'flex' }}><FaMagic /></span> Transcriu</button>
                     )}
                     <button
                         onClick={async () => {
@@ -699,8 +700,9 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                             }
                         }}
                         disabled={actionLoadingId !== null || !(params.data.audio_url || params.data.video_url)}
-                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 10px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}
-                    ><FaSave /> Cache</button>
+                        title="Desa el mèdia per a ús fora de línia"
+                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}
+                    ><span style={{ color: 'var(--text-muted)', display: 'flex' }}><FaSave /></span> Desa</button>
                 </div>
             )
         },
@@ -732,28 +734,31 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', padding: '20px' }}>
-            <div style={{ marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center', background: 'var(--surface)', padding: '16px 18px', borderRadius: 'var(--r-xl)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-soft)', marginRight: '10px' }}><FaCheckSquare style={{ verticalAlign: 'middle', marginTop: '-3px', marginRight: '5px', color: 'var(--brand-1)' }} /> {selectedRows.length} elements seleccionats</span>
+            <div style={{ marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'center', background: 'var(--surface)', padding: '12px 16px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)' }}>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: selectedRows.length ? 'var(--text)' : 'var(--text-muted)', marginRight: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FaCheckSquare style={{ color: selectedRows.length ? 'var(--brand-1)' : 'var(--text-muted)' }} /> {selectedRows.length} seleccionats
+                </span>
                 <button
-                    onClick={handleBulkDelete}
+                    onClick={() => setShowTestConfig(true)}
                     disabled={selectedRows.length === 0}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'var(--rose)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', cursor: 'pointer', opacity: selectedRows.length ? 1 : 0.5, fontWeight: 700, boxShadow: 'var(--shadow-sm)', transition: 'all 0.2s' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 16px', background: 'var(--brand-1)', color: '#fff', border: '1px solid transparent', borderRadius: 'var(--r-md)', cursor: selectedRows.length ? 'pointer' : 'not-allowed', opacity: selectedRows.length ? 1 : 0.45, fontWeight: 700, fontSize: '13px' }}
                 >
-                    <FaTrash /> Esborrar selecció
+                    <FaPlus /> Crea pràctica
                 </button>
                 <button
                     onClick={handleBulkEditTags}
                     disabled={selectedRows.length === 0}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', cursor: 'pointer', opacity: selectedRows.length ? 1 : 0.5, fontWeight: 700, boxShadow: 'var(--shadow-brand)', transition: 'all 0.2s' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 16px', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: selectedRows.length ? 'pointer' : 'not-allowed', opacity: selectedRows.length ? 1 : 0.45, fontWeight: 700, fontSize: '13px' }}
                 >
-                    <FaTag /> Editar etiquetes
+                    <FaTag /> Edita etiquetes
                 </button>
                 <button
-                    onClick={() => setShowTestConfig(true)}
+                    onClick={handleBulkDelete}
                     disabled={selectedRows.length === 0}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'var(--emerald)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', cursor: 'pointer', opacity: selectedRows.length ? 1 : 0.5, fontWeight: 700, boxShadow: 'var(--shadow-sm)', transition: 'all 0.2s' }}
+                    title="Elimina els drills seleccionats"
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 16px', background: 'var(--surface)', color: 'var(--rose)', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', cursor: selectedRows.length ? 'pointer' : 'not-allowed', opacity: selectedRows.length ? 1 : 0.45, fontWeight: 700, fontSize: '13px' }}
                 >
-                    <FaPlus /> Crear Pràctica
+                    <FaTrash /> Elimina
                 </button>
             </div>
             <div className="ag-theme-alpine" style={{ flex: 1 }}>

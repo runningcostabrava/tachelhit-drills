@@ -44,24 +44,24 @@ export default function VideoLibraryPage() {
                 id: videoId,
                 url: data.url,
                 drillCount: sortedDrills.length,
-                title: sortedDrills[0]?.tag || sortedDrills[0]?.author || `Video: ${videoId}`,
+                title: sortedDrills[0]?.tag || sortedDrills[0]?.author || `Vídeo: ${videoId}`,
                 drills: sortedDrills
             };
         }).filter(video => video.drillCount > 0);
     }, [drills]);
 
     const columnDefs: ColDef[] = [
-        { field: 'title', headerName: 'Video Profile', flex: 1 },
-        { field: 'drillCount', headerName: 'Number of Drills (Subtitles)', width: 250 },
+        { field: 'title', headerName: 'Perfil del vídeo', flex: 1 },
+        { field: 'drillCount', headerName: 'Nombre de drills (subtítols)', width: 250 },
         {
-            headerName: 'Action',
+            headerName: 'Acció',
             width: 150,
             cellRenderer: (params: any) => (
                 <button
                     onClick={() => setActiveLibraryVideo(params.data)}
                     style={{ padding: '8px 16px', background: 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontWeight: 700, fontSize: '13px', boxShadow: 'var(--shadow-brand)' }}
                 >
-                    ▶ Play Full Video
+                    ▶ Reprodueix el vídeo sencer
                 </button>
             )
         }

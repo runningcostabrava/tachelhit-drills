@@ -8,8 +8,10 @@ export default function MobileBottomNav({}: {}) {
 
   const items: { path: string; icon: string; label: string }[] = [
     { path: '/', icon: '📚', label: 'Drills' },
-    { path: '/tests', icon: '🎯', label: 'Practica' },
-    { path: '/library', icon: '🎥', label: 'Library' },
+    { path: '/video-creator', icon: '🎬', label: 'Captura' },
+    { path: '/corpus', icon: '📖', label: 'Corpus' },
+    { path: '/tests', icon: '📝', label: 'Tests' },
+    { path: '/profile', icon: '👤', label: 'Perfil' },
   ];
 
   return (

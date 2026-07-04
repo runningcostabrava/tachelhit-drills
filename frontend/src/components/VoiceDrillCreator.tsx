@@ -66,7 +66,7 @@ export default function VoiceDrillCreator({ onClose, onDrillCreated }: VoiceDril
     };
 
     const startVoiceRecording = () => {
-        if (!recognitionRef.current) return alert('Speech recognition not supported.');
+        if (!recognitionRef.current) return alert('El reconeixement de veu no és compatible.');
         setTranscribing(true);
         recognitionRef.current.start();
     };
@@ -136,7 +136,7 @@ export default function VoiceDrillCreator({ onClose, onDrillCreated }: VoiceDril
     };
 
     const handleSave = async () => {
-        if (!textCatalan.trim()) return alert('Please provide Catalan text.');
+        if (!textCatalan.trim()) return alert('Introdueix el text en català.');
         setSaving(true);
         try {
             const createResponse = await axios.post(`${API_BASE}/drills/`, {
@@ -169,7 +169,7 @@ export default function VoiceDrillCreator({ onClose, onDrillCreated }: VoiceDril
             onDrillCreated();
             onClose();
         } catch (error) {
-            alert('Failed to save drill.');
+            alert('No s\'ha pogut desar el drill.');
         } finally {
             setSaving(false);
         }
@@ -178,9 +178,9 @@ export default function VoiceDrillCreator({ onClose, onDrillCreated }: VoiceDril
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ background: 'var(--surface-2)', padding: '20px', borderRadius: 'var(--r-xl)', border: '1px solid var(--border)' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: 'var(--text-soft)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Catalan Voice Input</label>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: 'var(--text-soft)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Entrada de veu en català</label>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                    <textarea value={textCatalan} onChange={e => setTextCatalan(e.target.value)} placeholder="Tap mic and speak..." rows={2} style={{ flex: 1, padding: '12px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', fontSize: '16px', color: 'var(--text)', outline: 'none' }} />
+                    <textarea value={textCatalan} onChange={e => setTextCatalan(e.target.value)} placeholder="Toca el micròfon i parla..." rows={2} style={{ flex: 1, padding: '12px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', fontSize: '16px', color: 'var(--text)', outline: 'none' }} />
                     <button onClick={transcribing ? stopVoiceRecording : startVoiceRecording} style={{ width: '60px', height: '60px', borderRadius: 'var(--r-md)', border: 'none', background: transcribing ? 'var(--rose)' : 'var(--brand-gradient)', color: 'white', boxShadow: transcribing ? 'none' : 'var(--shadow-brand)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {transcribing ? <div className="pulse-ring" /> : <FaMicrophone size={24} />}
                     </button>
@@ -203,12 +203,12 @@ export default function VoiceDrillCreator({ onClose, onDrillCreated }: VoiceDril
                 <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                     {!cameraMode ? (
                         <>
-                            <button onClick={() => startCamera('photo')} style={{ padding: '12px 20px', background: 'var(--surface)', color: 'var(--text-soft)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}><FaCamera /> Photo</button>
-                            <button onClick={() => startCamera('video')} style={{ padding: '12px 20px', background: 'var(--surface)', color: 'var(--text-soft)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}><FaVideo /> Video</button>
-                            <button onClick={() => fileInputRef.current?.click()} style={{ padding: '12px 20px', background: 'var(--surface)', color: 'var(--text-soft)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}><FaFolderOpen /> Files</button>
+                            <button onClick={() => startCamera('photo')} style={{ padding: '12px 20px', background: 'var(--surface)', color: 'var(--text-soft)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}><FaCamera /> Foto</button>
+                            <button onClick={() => startCamera('video')} style={{ padding: '12px 20px', background: 'var(--surface)', color: 'var(--text-soft)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}><FaVideo /> Vídeo</button>
+                            <button onClick={() => fileInputRef.current?.click()} style={{ padding: '12px 20px', background: 'var(--surface)', color: 'var(--text-soft)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}><FaFolderOpen /> Fitxers</button>
                         </>
                     ) : (
-                        <button onClick={stopCamera} style={{ padding: '12px 20px', background: 'var(--text)', color: 'white', borderRadius: 'var(--r-md)', border: 'none', fontWeight: 700 }}>Cancel Camera</button>
+                        <button onClick={stopCamera} style={{ padding: '12px 20px', background: 'var(--text)', color: 'white', borderRadius: 'var(--r-md)', border: 'none', fontWeight: 700 }}>Cancel·la la càmera</button>
                     )}
                 </div>
 
@@ -217,10 +217,10 @@ export default function VoiceDrillCreator({ onClose, onDrillCreated }: VoiceDril
                         <video ref={previewRef} autoPlay muted playsInline style={{ width: '100%', borderRadius: 'var(--r-lg)', background: '#000' }} />
                         <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
                             {cameraMode === 'photo' ? (
-                                <button onClick={capturePhoto} style={{ flex: 1, padding: '12px', background: 'var(--emerald)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 'bold' }}>Capture</button>
+                                <button onClick={capturePhoto} style={{ flex: 1, padding: '12px', background: 'var(--emerald)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 'bold' }}>Captura</button>
                             ) : (
                                 <button onClick={recording ? stopVideoRecording : startVideoRecording} style={{ flex: 1, padding: '12px', background: recording ? 'var(--rose)' : 'var(--emerald)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 'bold' }}>
-                                    {recording ? 'Stop Recording' : 'Start Recording'}
+                                    {recording ? 'Atura la gravació' : 'Comença a gravar'}
                                 </button>
                             )}
                         </div>
@@ -230,8 +230,8 @@ export default function VoiceDrillCreator({ onClose, onDrillCreated }: VoiceDril
 
             {(capturedImage || pastedImage || (uploadedFile && uploadedFile.type.startsWith('image/'))) && (
                 <div style={{ marginTop: '15px', background: 'var(--surface)', padding: '12px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
-                    <p style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: 'bold', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>IMAGE PREVIEW</p>
-                    <img src={capturedImage || pastedImage || (uploadedFile ? URL.createObjectURL(uploadedFile) : '')} alt="Media" style={{ width: '100%', maxHeight: '200px', borderRadius: 'var(--r-md)', objectFit: 'cover' }} />
+                    <p style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: 'bold', color: 'var(--text-muted)', letterSpacing: '0.04em' }}>VISTA PRÈVIA DE LA IMATGE</p>
+                    <img src={capturedImage || pastedImage || (uploadedFile ? URL.createObjectURL(uploadedFile) : '')} alt="Contingut" style={{ width: '100%', maxHeight: '200px', borderRadius: 'var(--r-md)', objectFit: 'cover' }} />
                 </div>
             )}
             {(capturedVideo || (uploadedFile && uploadedFile.type.startsWith('video/'))) && (
@@ -239,8 +239,8 @@ export default function VoiceDrillCreator({ onClose, onDrillCreated }: VoiceDril
                     <video src={capturedVideo || (uploadedFile ? URL.createObjectURL(uploadedFile) : '')} controls playsInline style={{ width: '100%', maxHeight: '250px' }} />
                     <div style={{ padding: '15px', background: '#0f172a' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                            <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 'bold' }}>START: {trimTimes.start}s</span>
-                            <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 'bold' }}>END: {trimTimes.end}s</span>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 'bold' }}>INICI: {trimTimes.start}s</span>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 'bold' }}>FINAL: {trimTimes.end}s</span>
                         </div>
                         <input type="range" min="0" max="60" step="0.5" value={trimTimes.start} onChange={e => setTrimTimes(p => ({...p, start: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '10px' }} />
                         <input type="range" min="0" max="60" step="0.5" value={trimTimes.end} onChange={e => setTrimTimes(p => ({...p, end: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '15px' }} />
@@ -249,9 +249,9 @@ export default function VoiceDrillCreator({ onClose, onDrillCreated }: VoiceDril
             )}
 
             <div style={{ display: 'flex', gap: '12px' }}>
-                <button onClick={onClose} style={{ flex: 1, padding: '15px', background: 'var(--surface)', color: 'var(--text-soft)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', fontWeight: 700 }}>Cancel</button>
+                <button onClick={onClose} style={{ flex: 1, padding: '15px', background: 'var(--surface)', color: 'var(--text-soft)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', fontWeight: 700 }}>Cancel·la</button>
                 <button onClick={handleSave} disabled={saving} style={{ flex: 2, padding: '15px', background: 'var(--brand-gradient)', color: 'white', borderRadius: 'var(--r-lg)', border: 'none', fontWeight: 700, boxShadow: 'var(--shadow-brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                    <FaSave /> {saving ? 'Creating...' : 'Create Drill'}
+                    <FaSave /> {saving ? 'Creant…' : 'Crea el drill'}
                 </button>
             </div>
         </div>
