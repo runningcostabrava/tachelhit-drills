@@ -243,6 +243,10 @@ def test_version_endpoint():
 
 def test_flywheel_jsonl_export():
     import json as _json
+    token = register("jsonluser")
+    client.post("/drills/", json={"text_tachelhit": "ⴰⵣⵓⵍ ⴼⵍⴰⵡⵉⵍ",
+                                  "audio_url": "https://res.cloudinary.com/demo/video/upload/fw.mp3"},
+                headers={"X-User-Token": token})
     r = client.get("/corpus/flywheel", params={"format": "jsonl"})
     assert r.status_code == 200
     assert "x-ndjson" in r.headers["content-type"]
