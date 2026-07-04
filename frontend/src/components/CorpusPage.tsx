@@ -18,6 +18,7 @@ export default function CorpusPage() {
   const PAGE = 50;
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  const [appending, setAppending] = useState(false);
 
   const runSearch = useCallback(async (nextOffset: number, append: boolean) => {
     setLoading(true);
@@ -175,7 +176,7 @@ export default function CorpusPage() {
               ))}
           </select>
           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-soft)', cursor: 'pointer' }}>
-            <input type="checkbox" checked={onlyUnverified} onChange={(e) => setOnlyUnverified(e.target.checked)} />
+            <input type="checkbox" checked={onlyUnverified} onChange={(e) => setOnlyUnverified(e.target.checked)} style={{ accentColor: 'var(--brand-1)' }} />
             Només pendents de revisar
           </label>
         </div>
@@ -211,7 +212,7 @@ export default function CorpusPage() {
           </div>
         )}
 
-        {loading && <p style={{ color: 'var(--text-soft)' }}>Cercant…</p>}
+        {loading && !appending && <p style={{ color: 'var(--text-soft)' }}>Cercant…</p>}
         {!loading && results.length === 0 && (
           <p style={{ color: 'var(--text-muted)' }}>
             {q || variety || activeGap ? 'Cap resultat per a la cerca.' : 'Encara no hi ha entrades al corpus.'}
@@ -265,13 +266,18 @@ export default function CorpusPage() {
           ))}
         </div>
 
-        {hasMore && !loading && (
+        {hasMore && (!loading || appending) && (
           <div style={{ textAlign: 'center', marginTop: '18px' }}>
             <button
-              onClick={() => runSearch(offset + PAGE, true)}
-              style={{ padding: '11px 26px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}
+              onClick={async () => {
+                setAppending(true);
+                try { await runSearch(offset + PAGE, true); }
+                finally { setAppending(false); }
+              }}
+              disabled={appending}
+              style={{ padding: '11px 26px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', cursor: appending ? 'default' : 'pointer', opacity: appending ? 0.6 : 1, fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}
             >
-              ⬇ Carrega'n més
+              {appending ? 'Carregant…' : '⬇ Carrega\'n més'}
             </button>
           </div>
         )}
