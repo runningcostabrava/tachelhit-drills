@@ -82,7 +82,7 @@ export default function YouTubeShorts() {
       }
     } catch (error) {
       console.error('Error deleting short:', error);
-      alert('Error eliminant el short');
+      toast.error('Error eliminant el short');
     }
   };
 
@@ -179,20 +179,21 @@ export default function YouTubeShorts() {
                 </div>
                 <button
                   onClick={() => handleGenerateShort(drill.id)}
-                  disabled={generating === drill.id}
+                  disabled={generating !== null}
                   aria-label={`Genera Short per ${drill.text_catalan}`}
                   aria-busy={generating === drill.id}
                   style={{
                     padding: '8px 12px',
                     fontSize: '13px',
-                    background: generating === drill.id ? 'var(--border)' : 'var(--brand-gradient)',
+                    background: generating !== null ? 'var(--border)' : 'var(--brand-gradient)',
                     color: 'white',
                     border: 'none',
                     borderRadius: 'var(--r-md)',
-                    cursor: generating === drill.id ? 'not-allowed' : 'pointer',
+                    cursor: generating !== null ? 'not-allowed' : 'pointer',
                     fontWeight: 700,
                     width: '100%',
-                    boxShadow: generating === drill.id ? 'none' : 'var(--shadow-brand)',
+                    opacity: generating !== null && generating !== drill.id ? 0.6 : 1,
+                    boxShadow: generating !== null ? 'none' : 'var(--shadow-brand)',
                   }}
                 >
                   {generating === drill.id ? '⏳ Generant...' : '🎬 Generar Short'}
