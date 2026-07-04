@@ -77,6 +77,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ verified }),
     }),
+  corpusGapsSummary: () =>
+    request<{ total: number; gaps: { kind: string; label: string; count: number }[] }>('/corpus/gaps'),
+  corpusGapDrills: (kind: string, limit = 100) =>
+    request<{ kind: string; drills: Drill[] }>(`/corpus/gaps?kind=${encodeURIComponent(kind)}&limit=${limit}`),
 
   // --- identity ---
   register: (username: string, display_name?: string | null) =>

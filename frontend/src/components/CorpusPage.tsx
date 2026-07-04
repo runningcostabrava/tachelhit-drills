@@ -12,10 +12,8 @@ export default function CorpusPage() {
   const [results, setResults] = useState<Drill[]>([]);
   const [stats, setStats] = useState<CorpusStats | null>(null);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    api.corpusStats().then(setStats).catch(() => {});
-  }, []);
+  const [gaps, setGaps] = useState<{ kind: string; label: string; count: number }[]>([]);
+  const [activeGap, setActiveGap] = useState<string | null>(null);
 
   const PAGE = 50;
   const [offset, setOffset] = useState(0);
@@ -38,8 +36,30 @@ export default function CorpusPage() {
     }
   }, [q, variety, onlyUnverified]);
 
-  useEffect(() => { runSearch(0, false); }, [runSearch]);
-  const search = () => runSearch(0, false);
+  useEffect(() => {
+    api.corpusStats().then(setStats).catch(() => {});
+    api.corpusGapsSummary().then(r => setGaps(r.gaps)).catch(() => {});
+  }, []);
+
+  // Search only drives results when no gap filter is active
+  useEffect(() => { if (!activeGap) runSearch(0, false); }, [runSearch, activeGap]);
+  const search = () => { setActiveGap(null); runSearch(0, false); };
+
+  const loadGap = async (kind: string) => {
+    setActiveGap(kind);
+    setLoading(true);
+    try {
+      const r = await api.corpusGapDrills(kind, 100);
+      setResults(r.drills);
+      setHasMore(false);
+    } catch (e) {
+      console.error('Gap load failed', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearGap = () => { setActiveGap(null); runSearch(0, false); };
 
   const playAudio = (d: Drill) => {
     const url = d.audio_url ? getMediaUrl(d.audio_url) : '';
@@ -105,6 +125,36 @@ export default function CorpusPage() {
             Només pendents de revisar
           </label>
         </div>
+
+        {/* Documentation-gaps work-list: what the corpus still needs */}
+        {gaps.some(g => g.count > 0) && (
+          <div style={{ marginBottom: '18px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
+              🛠 Necessita feina
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {gaps.filter(g => g.count > 0).map(g => (
+                <button
+                  key={g.kind}
+                  onClick={() => (activeGap === g.kind ? clearGap() : loadGap(g.kind))}
+                  style={{
+                    padding: '6px 12px', borderRadius: 'var(--r-pill)', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                    background: activeGap === g.kind ? 'var(--amber)' : 'var(--amber-soft)',
+                    color: activeGap === g.kind ? '#fff' : 'var(--amber-strong)',
+                    border: '1px solid var(--amber)'
+                  }}
+                >
+                  {g.label} · {g.count}
+                </button>
+              ))}
+              {activeGap && (
+                <button onClick={clearGap} style={{ padding: '6px 12px', borderRadius: 'var(--r-pill)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)' }}>
+                  ✕ Neteja
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {loading && <p style={{ color: 'var(--text-soft)' }}>Cercant…</p>}
         {!loading && results.length === 0 && <p style={{ color: 'var(--text-muted)' }}>Cap resultat.</p>}

@@ -2673,6 +2673,50 @@ def corpus_stats(db: Session = Depends(get_db)):
         "by_region": by_region,
     }
 
+# Documentation-gap definitions: (key, human label, SQLAlchemy filter builder).
+# A "gap" is a drill that has Tachelhit content but is missing some dimension a
+# complete corpus entry should have — the work-list for contributors.
+def _gap_filters():
+    from sqlalchemy import or_, and_
+    has_tachelhit = and_(DrillModel.text_tachelhit != None, DrillModel.text_tachelhit != '')
+    empty = lambda col: or_(col == None, col == '')
+    return {
+        "no_audio":   ("Sense àudio (cal una gravació)", and_(has_tachelhit, empty(DrillModel.audio_url))),
+        "no_latin":   ("Sense romanització llatina", and_(has_tachelhit, empty(DrillModel.text_tachelhit_latin))),
+        "no_catalan": ("Sense traducció catalana", and_(has_tachelhit, empty(DrillModel.text_catalan))),
+        "no_arabic":  ("Sense àrab", and_(has_tachelhit, empty(DrillModel.text_arabic))),
+        "no_variety": ("Sense varietat/regió", and_(has_tachelhit, empty(DrillModel.variety))),
+        "unverified": ("Pendent de verificar", and_(has_tachelhit, DrillModel.verified != True)),
+    }
+
+@app.get("/corpus/gaps")
+def corpus_gaps(kind: Optional[str] = None, limit: int = 100, offset: int = 0,
+                db: Session = Depends(get_db)):
+    """
+    Documentation completeness. Without `kind`: a count per gap type (the
+    work-list summary). With `kind`: the actual drills needing that work,
+    so contributors can jump straight to filling them.
+    """
+    filters = _gap_filters()
+    if kind is None:
+        return {
+            "total": db.query(DrillModel).count(),
+            "gaps": [
+                {"kind": k, "label": label,
+                 "count": db.query(DrillModel).filter(flt).count()}
+                for k, (label, flt) in filters.items()
+            ]
+        }
+    if kind not in filters:
+        raise HTTPException(status_code=400, detail=f"Unknown gap kind. Options: {list(filters)}")
+    _, flt = filters[kind]
+    rows = (
+        db.query(DrillModel).filter(flt)
+        .order_by(DrillModel.date_created.desc())
+        .offset(max(0, offset)).limit(min(limit, 500)).all()
+    )
+    return {"kind": kind, "drills": [Drill.model_validate(r, from_attributes=True) for r in rows]}
+
 # ===================== PRONUNCIATION CHECK =====================
 
 def _normalize_for_comparison(text: str) -> str:
