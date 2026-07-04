@@ -723,7 +723,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
       {/* Header */}
       <div style={{
         padding: '12px 18px',
-        background: 'var(--brand-gradient)',
+        background: 'var(--brand-1)',
         color: 'white',
         display: 'flex',
         justifyContent: 'space-between',
@@ -733,7 +733,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
         gap: '8px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <button onClick={onExit} style={cleanButtonStyle} aria-label="Close">✕</button>
+          <button onClick={onExit} style={cleanButtonStyle} aria-label="Tanca">✕</button>
           <span style={{
             fontWeight: 800,
             fontSize: '14px',
@@ -932,7 +932,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
         <button
           onClick={handlePrev}
           disabled={currentIndex === 0}
-          aria-label="Previous"
+          aria-label="Anterior"
           style={{
             width: '48px',
             height: '48px',
@@ -979,12 +979,29 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               const time = percent * audioDuration;
               handleSeek(time);
             }}
+            onKeyDown={(e) => {
+              const step = 1; // seconds
+              const clamp = (t: number) => Math.max(0, Math.min(audioDuration, t));
+              if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                handleSeek(clamp(audioProgress - step));
+              } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                handleSeek(clamp(audioProgress + step));
+              } else if (e.key === 'Home') {
+                e.preventDefault();
+                handleSeek(0);
+              } else if (e.key === 'End') {
+                e.preventDefault();
+                handleSeek(audioDuration);
+              }
+            }}
           >
             <div
               style={{
                 width: `${audioDuration ? (audioProgress / audioDuration) * 100 : 0}%`,
                 height: '100%',
-                background: 'var(--brand-gradient)',
+                background: 'var(--brand-1)',
                 borderRadius: 'var(--r-pill)',
                 transition: 'width 0.1s'
               }}
@@ -1022,7 +1039,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
 
           <button
             onClick={goToNextDrill}
-            aria-label="Next"
+            aria-label="Següent"
             style={{
               width: '48px',
               height: '48px',
@@ -1082,7 +1099,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <button
                   onClick={() => setShowVideo(false)}
-                  aria-label="Close"
+                  aria-label="Tanca"
                   style={{
                     background: 'rgba(255,255,255,0.1)',
                     border: '1px solid rgba(255,255,255,0.18)',
@@ -1373,7 +1390,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <button
                   onClick={() => setShowVideoLibrary(false)}
-                  aria-label="Close"
+                  aria-label="Tanca"
                   style={{
                     background: 'rgba(255,255,255,0.1)',
                     border: '1px solid rgba(255,255,255,0.18)',
@@ -1578,7 +1595,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                 fontSize: '15px', cursor: 'pointer'
               }}
             >
-              👁 Mostra la resposta
+              👁 Mostra la resposta (Espai)
             </button>
           ) : (
           <>
@@ -1612,10 +1629,12 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               style={{
                 padding: '10px 16px', background: bg, color: 'white', border: 'none',
                 borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
                 boxShadow: suggestedGrade === g ? '0 0 0 3px rgba(255,255,255,0.85)' : undefined,
                 transform: suggestedGrade === g ? 'scale(1.08)' : undefined
               }}
             >
+              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.85)', borderRadius: 'var(--r-sm)', padding: '1px 5px', lineHeight: 1.4 }}>{i + 1}</span>
               {suggestedGrade === g ? '✨ ' : ''}{label}
             </button>
           ))}
