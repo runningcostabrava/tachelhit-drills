@@ -11,11 +11,15 @@ import VideoLibraryPlayer from './VideoLibraryPlayer';
 export default function VideoLibraryPage() {
     const [drills, setDrills] = useState<any[]>([]);
     const [activeLibraryVideo, setActiveLibraryVideo] = useState<{url: string, drills: any[]} | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(false);
 
     useEffect(() => {
+        setLoading(true);
+        setError(false);
         axios.get(`${API_BASE}/drills/`)
-            .then(res => setDrills(res.data))
-            .catch(err => console.error('Failed to load drills:', err));
+            .then(res => { setDrills(res.data); setLoading(false); })
+            .catch(err => { console.error('Failed to load drills:', err); setError(true); setLoading(false); });
     }, []);
 
     const libraryVideos = useMemo(() => {
@@ -59,9 +63,10 @@ export default function VideoLibraryPage() {
             cellRenderer: (params: any) => (
                 <button
                     onClick={() => setActiveLibraryVideo(params.data)}
+                    aria-label={`Reprodueix el vídeo sencer: ${params.data.title}`}
                     style={{ padding: '8px 16px', background: 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontWeight: 700, fontSize: '13px', boxShadow: 'var(--shadow-brand)' }}
                 >
-                    ▶ Reprodueix el vídeo sencer
+                    <span aria-hidden="true">▶</span> Reprodueix el vídeo sencer
                 </button>
             )
         }
@@ -69,18 +74,31 @@ export default function VideoLibraryPage() {
 
     return (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
-            <div style={{ padding: '18px 24px', background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
-                <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Biblioteca de vídeos</h1>
+            <div style={{ padding: 'clamp(12px, 4vw, 24px)', background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
+                <h1 id="library-title" style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: 'clamp(20px, 5vw, 24px)', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Biblioteca de vídeos</h1>
                 <p style={{ margin: '4px 0 0 0', color: 'var(--text-soft)', fontSize: '14px' }}>Vídeos complets sincronitzats amb les traduccions dels teus drills.</p>
             </div>
 
-            <div className="ag-theme-alpine" style={{ flex: 1, width: '100%', padding: '24px 32px' }}>
-                <AgGridReact 
-                    rowData={libraryVideos} 
-                    columnDefs={columnDefs} 
-                    rowHeight={60} 
+            {error && (
+                <div style={{ margin: 'clamp(12px, 4vw, 32px)', marginBottom: 0, padding: '12px 16px', background: 'var(--surface)', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', color: 'var(--rose)', fontSize: '14px' }}>
+                    No s'han pogut carregar els vídeos. Torna-ho a provar més tard.
+                </div>
+            )}
+
+            <div
+                className="ag-theme-alpine"
+                role="region"
+                aria-labelledby="library-title"
+                style={{ flex: 1, width: '100%', padding: 'clamp(12px, 4vw, 32px)' }}
+            >
+                <AgGridReact
+                    rowData={libraryVideos}
+                    columnDefs={columnDefs}
+                    rowHeight={60}
                     theme="legacy"
-                    rowSelection={{ mode: 'multiRow', checkboxes: false, headerCheckbox: false }}
+                    loading={loading}
+                    overlayLoadingTemplate="<span style='padding:16px;color:var(--text-soft)'>S'estan carregant els vídeos…</span>"
+                    overlayNoRowsTemplate="<span style='padding:16px;color:var(--text-soft)'>Encara no hi ha vídeos sincronitzats amb els teus drills. Afegeix marques de temps als drills per veure'ls aquí.</span>"
                     defaultColDef={{ resizable: true, sortable: true, filter: true }}
                 />
             </div>

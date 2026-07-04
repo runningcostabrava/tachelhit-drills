@@ -102,7 +102,11 @@ export default function VideoLibraryPlayer({ videoUrl, drills, onClose }: { vide
     });
 
     return createPortal(
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'black', zIndex: 10000, display: 'flex', flexDirection: 'column' }}>
+        <div
+            role="region"
+            aria-label="Reproductor de vídeo"
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'black', zIndex: 10000, display: 'flex', flexDirection: 'column' }}
+        >
             <div style={{ flex: 1, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
                 <div id={containerId} style={{ width: '100%', height: '100%' }} />
                 
@@ -133,12 +137,12 @@ export default function VideoLibraryPlayer({ videoUrl, drills, onClose }: { vide
             </div>
             
             <div style={{ height: '100px', backgroundColor: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                <button onClick={goBack2Seconds} style={btnStyle}>↺ 2s</button>
-                <button onClick={togglePlayPause} style={{...btnStyle, background: playing ? 'var(--rose)' : 'var(--emerald)', border: 'none', minWidth: '120px'}}>
-                    {playing ? '⏸ Pause' : '▶ Play'}
+                <button onClick={goBack2Seconds} aria-label="Retrocedeix 2 segons" style={btnStyle}><span aria-hidden="true">↺</span> 2s</button>
+                <button onClick={togglePlayPause} aria-label={playing ? 'Pausa' : 'Reprodueix'} style={{...btnStyle, background: playing ? 'var(--rose)' : 'var(--emerald)', border: 'none', minWidth: '120px'}}>
+                    {playing ? <><span aria-hidden="true">⏸</span> Pausa</> : <><span aria-hidden="true">▶</span> Reprodueix</>}
                 </button>
-                <button onClick={togglePlaybackRate} style={btnStyle}>{playbackRate}x</button>
-                <button onClick={onClose} style={{...btnStyle, marginLeft: '40px'}}>✕ Close</button>
+                <button onClick={togglePlaybackRate} aria-label={`Velocitat de reproducció: ${playbackRate}x`} style={btnStyle}>{playbackRate}x</button>
+                <button onClick={onClose} aria-label="Tanca el reproductor" style={{...btnStyle, marginLeft: '40px'}}><span aria-hidden="true">✕</span> Tanca</button>
             </div>
         </div>,
         document.body
