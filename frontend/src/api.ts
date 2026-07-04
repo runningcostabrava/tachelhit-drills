@@ -82,6 +82,14 @@ export const api = {
   corpusGapDrills: (kind: string, limit = 100) =>
     request<{ kind: string; drills: Drill[] }>(`/corpus/gaps?kind=${encodeURIComponent(kind)}&limit=${limit}`),
 
+  // --- AI grammar tutor ---
+  aiStatus: () => request<{ available: boolean; grammar_chars: number }>('/ai/status'),
+  aiAsk: (question: string, drillId?: number, history?: { role: string; text: string }[]) =>
+    request<{ answer: string; used_drill: boolean }>('/ai/ask', {
+      method: 'POST',
+      body: JSON.stringify({ question, drill_id: drillId ?? null, history: history ?? [] }),
+    }),
+
   // --- identity ---
   register: (username: string, display_name?: string | null) =>
     request<{ username: string; display_name: string; token: string }>('/users/register', {

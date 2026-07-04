@@ -6,6 +6,7 @@ import { api } from './api';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { syncManager } from './services/OfflineSyncManager';
 import ToastHost from './components/ToastHost';
+import AiAssistant from './components/AiAssistant';
 import './App.css';
 
 // Route-level code splitting: each page loads its chunk on first visit,
@@ -76,6 +77,7 @@ const DemoVideosPage = () => (
 function App() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [aiOpen, setAiOpen] = useState(false);
 
   // Offline sync bootstrap. All queue processing lives in OfflineSyncManager;
   // this effect just pushes pending actions and refreshes the local caches on
@@ -118,6 +120,21 @@ function App() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <ToastHost />
+      {aiOpen && <AiAssistant onClose={() => setAiOpen(false)} />}
+      {location.pathname === '/' && (
+        <button
+          onClick={() => setAiOpen(true)}
+          title="Assistent de gramàtica (IA)"
+          style={{
+            position: 'fixed', bottom: '18px', left: '16px', zIndex: 900,
+            padding: '13px 20px', background: 'var(--brand-gradient)', color: '#fff',
+            border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 800, fontSize: '15px',
+            boxShadow: 'var(--shadow-brand)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'
+          }}
+        >
+          🤖 Assistent
+        </button>
+      )}
       {location.pathname === '/' && <ReviewFab />}
       {location.pathname === '/' && (
         <button
