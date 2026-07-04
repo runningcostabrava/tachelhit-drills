@@ -1099,6 +1099,18 @@ export default function DrillCard({ drill, onUpdate, onDelete, onSelect, isSelec
             <span style={{ fontSize: '14px', color: 'var(--text-muted)', fontWeight: 600 }}>
               #{drill.id}
             </span>
+            {drill.verified && (
+              <span style={{
+                fontSize: '12px',
+                background: 'var(--emerald-soft)',
+                color: 'var(--emerald)',
+                padding: '4px 10px',
+                borderRadius: 'var(--r-pill)',
+                fontWeight: 700
+              }}>
+                ✓ verificat
+              </span>
+            )}
             {drill.tag && (
               <span style={{
                 fontSize: '12px',

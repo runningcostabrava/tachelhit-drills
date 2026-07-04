@@ -20,6 +20,7 @@ import { VoiceRecorder } from 'capacitor-voice-recorder';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { API_BASE, getMediaUrl } from '../config';
 import { syncManager, type Drill } from '../services/OfflineSyncManager';
+import { api } from '../api';
 
 interface MobileDrillEditorProps {
   drill: Drill;
@@ -609,6 +610,24 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                     <div style={{ flex: 1 }}><label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Regió</label><input type="text" value={localDrill.region || ''} onChange={(e) => handleFieldChange('region', e.target.value)} placeholder="Souss" style={{ width: '100%', padding: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '15px', color: 'var(--text)', outline: 'none', background: 'var(--surface-2)', fontFamily: 'var(--font-sans)' }} /></div>
                   </div>
                   <div><label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tag</label><input type="text" value={localDrill.tag || ''} onChange={(e) => handleFieldChange('tag', e.target.value)} style={{ width: '100%', padding: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '16px', color: 'var(--text)', outline: 'none', background: 'var(--surface-2)', fontFamily: 'var(--font-sans)' }} /></div>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await api.verifyDrill(localDrill.id, !localDrill.verified);
+                        setLocalDrill(prev => ({ ...prev, verified: res.verified }));
+                      } catch (e: any) {
+                        alert(e.message || 'Cal un compte per verificar (👤 Perfil)');
+                      }
+                    }}
+                    style={{
+                      padding: '12px', borderRadius: 'var(--r-md)', fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+                      background: localDrill.verified ? 'var(--emerald-soft)' : 'var(--surface-2)',
+                      color: localDrill.verified ? 'var(--emerald)' : 'var(--text-soft)',
+                      border: localDrill.verified ? '1px solid var(--emerald)' : '1px solid var(--border)'
+                    }}
+                  >
+                    {localDrill.verified ? '✓ Verificat — toca per desverificar' : '☐ Marca com a verificat (revisió humana)'}
+                  </button>
                 </div>
       </div>
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', padding: '16px 20px', background: 'var(--surface)', justifyContent: 'space-between', borderTop: '1px solid var(--border)', gap: '15px' }}>
