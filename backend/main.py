@@ -14,7 +14,7 @@ from typing import Optional, List, Dict
 import hashlib
 import re
 import secrets
-from gemini_client import gemini_generate, gemini_available
+from gemini_client import gemini_generate, gemini_available, gemini_agent
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine
@@ -2742,6 +2742,146 @@ def ai_suggest_translation(drill_id: int, db: Session = Depends(get_db)):
         return {"drill_id": drill_id, "field": target_field, "suggestion": suggestion}
     except Exception as e:
         print(f"[AI] suggest-translation failed: {e}")
+        raise HTTPException(status_code=502, detail=f"AI assistant error: {str(e)[:200]}")
+
+AGENT_TOOLS = [
+    {
+        "name": "create_drill",
+        "description": "Crea un drill nou. Omple els camps que sàpigues; deixa buits els que no.",
+        "parameters": {"type": "object", "properties": {
+            "text_catalan": {"type": "string"},
+            "text_tachelhit": {"type": "string", "description": "forma en taixelhit (tifinag o llatí)"},
+            "text_tachelhit_latin": {"type": "string"},
+            "text_arabic": {"type": "string"},
+            "variety": {"type": "string"},
+            "region": {"type": "string"},
+            "tag": {"type": "string"},
+        }},
+    },
+    {
+        "name": "update_drill",
+        "description": "Modifica camps d'un drill existent pel seu id. Envia només els camps a canviar.",
+        "parameters": {"type": "object", "properties": {
+            "drill_id": {"type": "integer"},
+            "text_catalan": {"type": "string"},
+            "text_tachelhit": {"type": "string"},
+            "text_tachelhit_latin": {"type": "string"},
+            "text_arabic": {"type": "string"},
+            "variety": {"type": "string"},
+            "region": {"type": "string"},
+            "tag": {"type": "string"},
+        }, "required": ["drill_id"]},
+    },
+    {
+        "name": "search_drills",
+        "description": "Cerca drills al corpus per text (qualsevol llengua) o etiqueta. Retorna coincidències.",
+        "parameters": {"type": "object", "properties": {
+            "query": {"type": "string"},
+            "limit": {"type": "integer"},
+        }, "required": ["query"]},
+    },
+    {
+        "name": "speak_tachelhit",
+        "description": "Sintetitza veu en taixelhit d'un text perquè l'usuari el pugui escoltar. Retorna una URL d'àudio.",
+        "parameters": {"type": "object", "properties": {
+            "text": {"type": "string"},
+        }, "required": ["text"]},
+    },
+]
+
+def _agent_executor(db):
+    """Return a function(name, args)->dict that runs the agent's tool calls."""
+    ALLOWED = {"text_catalan", "text_tachelhit", "text_tachelhit_latin", "text_arabic", "variety", "region", "tag"}
+
+    def run(name, args):
+        if name == "create_drill":
+            data = {k: v for k, v in (args or {}).items() if k in ALLOWED and v}
+            if not data:
+                return {"error": "cap camp per crear el drill"}
+            d = DrillModel(**data, author="AI Copilot")
+            db.add(d); db.commit(); db.refresh(d)
+            return {"created_drill_id": d.id, "fields": data}
+        if name == "update_drill":
+            did = args.get("drill_id")
+            d = db.query(DrillModel).filter(DrillModel.id == did).first()
+            if not d:
+                return {"error": f"no existeix el drill {did}"}
+            changed = {}
+            for k, v in (args or {}).items():
+                if k in ALLOWED and v is not None:
+                    setattr(d, k, v); changed[k] = v
+            db.commit()
+            return {"updated_drill_id": did, "changed": changed}
+        if name == "search_drills":
+            from sqlalchemy import or_
+            q = (args.get("query") or "").strip()
+            lim = min(int(args.get("limit") or 10), 25)
+            like = f"%{q}%"
+            rows = (db.query(DrillModel).filter(or_(
+                DrillModel.text_tachelhit.ilike(like), DrillModel.text_tachelhit_latin.ilike(like),
+                DrillModel.text_catalan.ilike(like), DrillModel.text_arabic.ilike(like),
+                DrillModel.tag.ilike(like))).limit(lim).all())
+            return {"count": len(rows), "drills": [
+                {"id": r.id, "catalan": r.text_catalan, "tachelhit": r.text_tachelhit,
+                 "latin": r.text_tachelhit_latin} for r in rows]}
+        if name == "speak_tachelhit":
+            text = (args.get("text") or "").strip()
+            if not text:
+                return {"error": "text buit"}
+            try:
+                url = generate_tachelhit_tts_hf(text, 0)
+                return {"audio_url": normalize_media_url(url), "text": text}
+            except Exception as e:
+                return {"error": f"TTS ha fallat: {str(e)[:120]}"}
+        return {"error": f"eina desconeguda: {name}"}
+    return run
+
+@app.post("/ai/agent")
+def ai_agent(
+    message: str = Body(..., embed=True),
+    drill_ids: Optional[List[int]] = Body(None, embed=True),
+    history: Optional[List[Dict]] = Body(None, embed=True),
+    db: Session = Depends(get_db)
+):
+    """
+    Agentic copilot: chat that can act on the app (create/update/search drills,
+    speak Tachelhit) via Gemini function-calling, grounded in the grammar and
+    the learner's corpus, aware of the currently-selected drill(s).
+    """
+    if not gemini_available():
+        raise HTTPException(status_code=503, detail="AI assistant not configured (GEMINI_API_KEY missing)")
+    if not (message or "").strip():
+        raise HTTPException(status_code=400, detail="Empty message")
+
+    system = _build_system_instruction(db) + (
+        "\n\nEts un COPILOT que pot ACTUAR a l'aplicació amb les eines disponibles: "
+        "crear i modificar drills, cercar-los i sintetitzar veu en taixelhit. "
+        "Fes servir les eines quan l'usuari demani una acció (crea, edita, tradueix i desa, "
+        "cerca/filtra, fes exemples per escoltar). Per a traduir i desar, actualitza el drill. "
+        "Per a exemples parlats, crida speak_tachelhit. Confirma breument què has fet."
+    )
+
+    contents = []
+    for turn in (history or [])[-8:]:
+        contents.append({"role": turn.get("role", "user"), "text": turn.get("text", "")})
+
+    # Selected-drill context
+    selected = []
+    for did in (drill_ids or [])[:10]:
+        d = db.query(DrillModel).filter(DrillModel.id == did).first()
+        if d:
+            selected.append(f"#{d.id}: cat='{d.text_catalan}' tam='{d.text_tachelhit}' "
+                            f"llatí='{d.text_tachelhit_latin}' àrab='{d.text_arabic}'")
+    msg = message.strip()
+    if selected:
+        msg = "DRILLS SELECCIONATS:\n" + "\n".join(selected) + "\n\nMISSATGE: " + msg
+    contents.append({"role": "user", "text": msg})
+
+    try:
+        result = gemini_agent(system, contents, AGENT_TOOLS, _agent_executor(db))
+        return {"answer": result["text"], "actions": result["actions"]}
+    except Exception as e:
+        print(f"[AI] agent failed: {e}")
         raise HTTPException(status_code=502, detail=f"AI assistant error: {str(e)[:200]}")
 
 @app.post("/ai/review-drill/{drill_id}")

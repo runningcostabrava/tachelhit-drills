@@ -192,6 +192,13 @@ export default function DrillsResponsive() {
 
   useEffect(() => { fetchDrills(); }, [location.search]);
 
+  // Refresh when the AI copilot creates/edits drills
+  useEffect(() => {
+    const onChanged = () => fetchDrills();
+    window.addEventListener('drills-changed', onChanged);
+    return () => window.removeEventListener('drills-changed', onChanged);
+  }, []);
+
   useEffect(() => {
     if (drills.length === 0) {
       const timer = setTimeout(() => {
