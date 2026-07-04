@@ -46,7 +46,7 @@ const VideoDrillCreator: React.FC = () => {
   const [tempVideoPath, setTempVideoPath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const errorRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (error) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, [error]);
+  useEffect(() => { if (error) errorRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' }); }, [error]);
   const [tag, setTag] = useState('video_capture');
   const [audioOnly, setAudioOnly] = useState(false);
   const [autoMode, setAutoMode] = useState(false);
@@ -621,11 +621,13 @@ const VideoDrillCreator: React.FC = () => {
       {videoInfo && (
         <div className="video-info" style={{ background: 'var(--surface)', border: '1px solid var(--border)', padding: '24px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)' }}>
           <div style={{ display: 'flex', gap: '20px', marginBottom: '24px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <img
-              src={videoInfo.thumbnail}
-              alt={videoInfo.title}
-              style={{ width: '180px', borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-md)' }}
-            />
+            {videoInfo.thumbnail && (
+              <img
+                src={videoInfo.thumbnail}
+                alt={videoInfo.title}
+                style={{ width: '180px', borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-md)' }}
+              />
+            )}
             <div style={{ flex: 1, minWidth: '220px' }}>
               <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', fontFamily: 'var(--font-display)' }}>{videoInfo.title}</h3>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
@@ -654,7 +656,7 @@ const VideoDrillCreator: React.FC = () => {
                   disabled={loading}
                   aria-busy={loading}
                   title="Substitueix el text aproximat de l'ASR per les línies de lletra enganxades, mantenint les marques de temps"
-                  style={{ padding: '9px 18px', background: 'var(--brand-1)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
+                  style={{ padding: '9px 18px', background: 'var(--brand-1)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.5 : 1, fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
                 >
                   {loading ? '⏳ Alineant…' : '🎼 Alinea la lletra'}
                 </button>
@@ -664,7 +666,7 @@ const VideoDrillCreator: React.FC = () => {
                 disabled={loading}
                 aria-busy={loading}
                 title="Correccions del glossari + mapatge sobre el teu conjunt de frases curat"
-                style={{ padding: '9px 18px', background: 'var(--emerald)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
+                style={{ padding: '9px 18px', background: 'var(--emerald)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.5 : 1, fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
               >
                 {loading ? '⏳ Corregint…' : '✨ Corregeix'}
               </button>
@@ -674,7 +676,7 @@ const VideoDrillCreator: React.FC = () => {
                   disabled={loading}
                   aria-busy={loading}
                   title="Llegeix els subtítols incrustats als fotogrames del vídeo"
-                  style={{ padding: '9px 18px', background: 'var(--sky)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
+                  style={{ padding: '9px 18px', background: 'var(--sky)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.5 : 1, fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
                 >
                   {loading ? '⏳ OCR…' : '🔤 OCR'}
                 </button>
@@ -683,15 +685,15 @@ const VideoDrillCreator: React.FC = () => {
                 onClick={handleTranslateAll}
                 disabled={loading}
                 aria-busy={loading}
-                style={{ padding: '9px 18px', background: 'var(--brand-2)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
+                style={{ padding: '9px 18px', background: 'var(--brand-2)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.5 : 1, fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
               >
                 {loading ? '⏳ Traduint…' : 'Tradueix-ho tot (Català · العربية · ⵜⴰⵛⵍⵃⵉⵜ)'}
               </button>
             </div>
           </div>
 
-          <div className="segments-list" style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', background: 'var(--surface)' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="segments-list" style={{ maxHeight: '400px', overflowY: 'auto', overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', background: 'var(--surface)' }}>
+            <table style={{ width: '100%', minWidth: '640px', borderCollapse: 'collapse' }}>
               <thead style={{ position: 'sticky', top: 0, background: 'var(--surface-2)', zIndex: 1 }}>
                 <tr>
                   <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>
@@ -711,6 +713,13 @@ const VideoDrillCreator: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
+                {videoInfo.segments.length === 0 && (
+                  <tr>
+                    <td colSpan={5} style={{ padding: '32px 18px', textAlign: 'center', color: 'var(--text-muted)', fontWeight: 600 }}>
+                      No s'ha detectat cap segment — prova amb subtítols o un altre vídeo.
+                    </td>
+                  </tr>
+                )}
                 {videoInfo.segments.map((seg, idx) => (
                   <tr key={idx} style={{ borderBottom: '1px solid var(--border)', background: seg.selected ? 'var(--brand-gradient-soft)' : 'var(--surface)' }}>
                     <td style={{ padding: '12px' }}>
