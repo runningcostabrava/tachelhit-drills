@@ -2571,8 +2571,37 @@ El teu paper:
 - Si el compendi no cobreix una cosa, digues-ho clarament i aporta el teu millor coneixement lingüístic, marcant-ho com a complement.
 - Respon en la llengua de la pregunta (per defecte català). Sigues clar, concret i pedagògic. Fes servir exemples.
 
+PRINCIPI DE VARIETAT (molt important): qui aprèn documenta una varietat regional concreta (sovint tamazight de l'Atles central, zona Azilal–Kalaat Mgouna), que NO és idèntica al taixelhit del Sus ni al tamazight estàndard de l'IRCAM. Quan la forma ATTESTADA (recollida per l'usuari d'un parlant real) difereixi de l'estàndard o del compendi, la forma attestada és la correcta per a aquella varietat: explica la diferència, no la "corregeixis" cap a l'estàndard. Tracta les formes recollides per l'usuari com a dades de camp valuoses.
+
 === COMPENDI DE GRAMÀTICA AMAZIGA (font: amazic.cat) ===
 """
+
+def _attested_forms_context(db, limit: int = 40) -> str:
+    """
+    A compact block of the learner's own collected forms (preferring verified),
+    so the AI grounds in the actual variety being documented, not just the
+    general grammar.
+    """
+    from sqlalchemy import and_
+    q = (db.query(DrillModel)
+         .filter(and_(DrillModel.text_tachelhit != None, DrillModel.text_tachelhit != ''))
+         .order_by(DrillModel.verified.isnot(None).desc(), DrillModel.date_created.desc())
+         .limit(limit).all())
+    if not q:
+        return ""
+    lines = []
+    for d in q:
+        parts = [f"tam: {d.text_tachelhit}"]
+        if d.text_tachelhit_latin: parts.append(f"llatí: {d.text_tachelhit_latin}")
+        if d.text_catalan: parts.append(f"cat: {d.text_catalan}")
+        if d.variety: parts.append(f"varietat: {d.variety}")
+        lines.append("- " + " | ".join(parts))
+    return ("\n\n=== FORMES ATTESTADES RECOLLIDES PER L'USUARI (dades de camp, prioritàries) ===\n"
+            + "\n".join(lines))
+
+def _build_system_instruction(db) -> str:
+    """Role + grammar compendium + the learner's attested corpus."""
+    return AI_SYSTEM_ROLE + _load_grammar() + _attested_forms_context(db)
 
 def _drill_context(drill) -> str:
     if not drill:
@@ -2611,7 +2640,7 @@ def ai_ask(
     if not (question or "").strip():
         raise HTTPException(status_code=400, detail="Empty question")
 
-    system_instruction = AI_SYSTEM_ROLE + _load_grammar()
+    system_instruction = _build_system_instruction(db)
 
     contents = []
     for turn in (history or [])[-8:]:  # keep the last few turns for context
@@ -2629,6 +2658,78 @@ def ai_ask(
         return {"answer": answer, "used_drill": bool(drill)}
     except Exception as e:
         print(f"[AI] ask failed: {e}")
+        raise HTTPException(status_code=502, detail=f"AI assistant error: {str(e)[:200]}")
+
+@app.post("/ai/analyze-drill/{drill_id}")
+def ai_analyze_drill(drill_id: int, db: Session = Depends(get_db)):
+    """
+    Morphological/grammatical analysis of the ATTESTED Tachelhit form the user
+    collected in this drill — grounded in the grammar and the learner's own
+    corpus. This is documentation, not correction: it explains the form as it
+    is, and notes how it differs from the standard.
+    """
+    if not gemini_available():
+        raise HTTPException(status_code=503, detail="AI assistant not configured (GEMINI_API_KEY missing)")
+    drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+    if not drill:
+        raise HTTPException(status_code=404, detail="Drill not found")
+    if not (drill.text_tachelhit or "").strip():
+        raise HTTPException(status_code=400, detail="Aquest drill no té text en taixelhit per analitzar")
+
+    prompt = (
+        _drill_context(drill) + "\n\n"
+        "Analitza la forma en taixelhit ATTESTADA d'aquest drill (és una dada de camp d'un parlant real). "
+        "Estructura la resposta així:\n"
+        "1. **Transcripció i lectura** (tifinag + llatí, pronunciació aproximada).\n"
+        "2. **Anàlisi morfològica**: arrel, tema, aspecte verbal si és verb (aorist/perfectiu/imperfectiu), "
+        "estat (lliure/annexió) i marques de gènere/nombre si és nom, pronoms/afixos, etc. Cita seccions del compendi (§).\n"
+        "3. **Sintaxi i significat**: com es construeix i què vol dir, amb el paral·lel català.\n"
+        "4. **Variació**: si la forma difereix de l'estàndard IRCAM o del taixelhit del Sus, indica-ho SENSE corregir-la "
+        "(la forma recollida és correcta per a la seva varietat).\n"
+        "Sigues concís i pedagògic."
+    )
+    try:
+        analysis = gemini_generate(_build_system_instruction(db),
+                                   [{"role": "user", "text": prompt}], max_output_tokens=1400)
+        return {"drill_id": drill_id, "analysis": analysis}
+    except Exception as e:
+        print(f"[AI] analyze-drill failed: {e}")
+        raise HTTPException(status_code=502, detail=f"AI assistant error: {str(e)[:200]}")
+
+@app.post("/ai/suggest-translation/{drill_id}")
+def ai_suggest_translation(drill_id: int, db: Session = Depends(get_db)):
+    """
+    Generate an AI *draft* Tachelhit form from the drill's Catalan (or a Catalan
+    draft from the Tachelhit) and store it in the *_suggested column — never in
+    the human-attested gold field. The learner reviews and, if right, accepts it.
+    """
+    if not gemini_available():
+        raise HTTPException(status_code=503, detail="AI assistant not configured (GEMINI_API_KEY missing)")
+    drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+    if not drill:
+        raise HTTPException(status_code=404, detail="Drill not found")
+
+    if (drill.text_catalan or "").strip():
+        direction, target_field = "del català al taixelhit", "text_tachelhit_suggested"
+        source = drill.text_catalan
+    elif (drill.text_tachelhit or "").strip():
+        direction, target_field = "del taixelhit al català", "text_catalan_suggested"
+        source = drill.text_tachelhit
+    else:
+        raise HTTPException(status_code=400, detail="El drill necessita text en català o taixelhit")
+
+    prompt = (
+        f"Tradueix {direction} el següent, tenint en compte la varietat documentada. "
+        f"Respon NOMÉS amb la traducció, sense explicacions ni cometes:\n\n{source}"
+    )
+    try:
+        suggestion = gemini_generate(_build_system_instruction(db),
+                                     [{"role": "user", "text": prompt}], max_output_tokens=200).strip()
+        setattr(drill, target_field, suggestion)
+        db.commit()
+        return {"drill_id": drill_id, "field": target_field, "suggestion": suggestion}
+    except Exception as e:
+        print(f"[AI] suggest-translation failed: {e}")
         raise HTTPException(status_code=502, detail=f"AI assistant error: {str(e)[:200]}")
 
 # ===================== CORPUS (documentation & research) =====================
