@@ -7,6 +7,7 @@ export interface Drill {
   text_arabic?: string;
   audio_url?: string;
   audio_tts_url?: string;
+  audio_tts_shi_url?: string; // synthesized Tachelhit voice (fallback when no recording)
   video_url?: string;
   image_url?: string;
   tag?: string;

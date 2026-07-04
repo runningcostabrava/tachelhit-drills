@@ -637,20 +637,46 @@ async def translate_text_endpoint(request: TranslateRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Translation failed: {str(e)}")
 
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def _hash_token(raw: str) -> str:
+    """Tokens are stored hashed; only the user ever holds the raw value."""
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+def get_current_user(request: Request, db: Session = Depends(get_db)) -> Optional[UserModel]:
+    """Resolve the requesting user from the X-User-Token header (None = anonymous)."""
+    token = (request.headers.get("x-user-token") or "").strip()
+    if not token:
+        return None
+    return db.query(UserModel).filter(UserModel.token == _hash_token(token)).first()
+
 class TtsRequest(BaseModel):
     text: str
     drill_id: Optional[int] = 0
 
 @app.post("/tts/tachelhit")
 @app.post("/tts/tachelhit/")
-async def tachelhit_tts_endpoint(request: TtsRequest):
+async def tachelhit_tts_endpoint(request: TtsRequest, db: Session = Depends(get_db)):
     """
-    Generate Tachelhit TTS for given Tifinagh text.
+    Generate Tachelhit TTS for given Tifinagh text. When a drill_id is given,
+    the synthesized voice is stored on the drill (audio_tts_shi_url) so the
+    player can voice text-only cards without re-synthesizing — synthetic
+    audio is scaffolding for cards that lack a native recording.
     """
     if not request.text:
         raise HTTPException(status_code=400, detail="Text is required")
     try:
         url = await asyncio.to_thread(generate_tachelhit_tts_hf, request.text, request.drill_id or 0)
+        if request.drill_id:
+            drill = db.query(DrillModel).filter(DrillModel.id == request.drill_id).first()
+            if drill:
+                drill.audio_tts_shi_url = url
+                db.commit()
         return {"url": url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -671,24 +697,6 @@ async def import_link_endpoint(request: ImportLinkRequest):
         return {"url": url}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-def _hash_token(raw: str) -> str:
-    """Tokens are stored hashed; only the user ever holds the raw value."""
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
-
-def get_current_user(request: Request, db: Session = Depends(get_db)) -> Optional[UserModel]:
-    """Resolve the requesting user from the X-User-Token header (None = anonymous)."""
-    token = (request.headers.get("x-user-token") or "").strip()
-    if not token:
-        return None
-    return db.query(UserModel).filter(UserModel.token == _hash_token(token)).first()
 
 # ===================== CRUD =====================
 @app.get("/drills/", response_model=list[Drill])
@@ -1556,12 +1564,9 @@ async def process_video_analysis_task(job_id: int, video_path: str, tmp_dir: str
         if language in (None, "", "auto", "shi", "ber"):
             glossary = db.query(GlossaryItemModel).all()
             if glossary:
+                pairs = [(g.word_sound, g.correct_spelling) for g in glossary]
                 for seg in segments:
-                    text = seg.get("text") or ""
-                    for g in glossary:
-                        if g.word_sound:
-                            text = text.replace(g.word_sound, g.correct_spelling)
-                    seg["text"] = text
+                    seg["text"] = apply_glossary(seg.get("text") or "", pairs)
 
         # 4. Save segments to DB
         for seg in segments:
@@ -2143,10 +2148,7 @@ async def correct_video_segments(
             text = (seg.get("text") or "").strip()
             if not text:
                 continue
-            fixed = text
-            for g in glossary:
-                if g.word_sound:
-                    fixed = fixed.replace(g.word_sound, g.correct_spelling)
+            fixed = apply_glossary(text, [(g.word_sound, g.correct_spelling) for g in glossary])
             try:
                 corrected, score = await asyncio.to_thread(svc.correct_transcription, fixed, phrases)
                 seg["text"] = corrected
@@ -2517,6 +2519,28 @@ def verify_drill(drill_id: int, verified: bool = Body(True, embed=True),
     db.commit()
     return {"drill_id": drill_id, "verified": drill.verified, "verified_by": user.username if verified else None}
 
+@app.get("/version")
+def get_version():
+    """
+    Deploy verification: Render injects RENDER_GIT_COMMIT automatically, so
+    this answers 'which code is production actually running?' at a glance.
+    """
+    return {
+        "commit": os.getenv("RENDER_GIT_COMMIT", "local"),
+        "features": {
+            "capture_import_url": True,
+            "auto_drills_pipeline": True,
+            "lyrics_alignment": True,
+            "ocr": bool(os.getenv("HUGGINGFACE_OCR_SPACE_URL")),
+            "srs": True,
+            "pronunciation_check": True,
+            "tachelhit_tts_fallback": True,
+            "users": True,
+            "corpus": True,
+            "api_key_gate": bool((os.getenv("API_KEY") or "").strip()),
+        }
+    }
+
 # ===================== CORPUS (documentation & research) =====================
 
 CORPUS_EXPORT_FIELDS = [
@@ -2587,7 +2611,7 @@ def corpus_export(format: str = "json", db: Session = Depends(get_db)):
     return {"count": len(rows), "drills": rows}
 
 @app.get("/corpus/flywheel")
-def corpus_flywheel(verified_only: bool = False, db: Session = Depends(get_db)):
+def corpus_flywheel(verified_only: bool = False, format: str = "json", db: Session = Depends(get_db)):
     """
     (audio, text) pairs for fine-tuning ASR/translation models — the data
     flywheel: every human-verified drill improves the models that power
@@ -2615,6 +2639,17 @@ def corpus_flywheel(verified_only: bool = False, db: Session = Depends(get_db)):
         "region": d.region,
         "license": d.license,
     } for d in drills]
+
+    if format == "jsonl":
+        # One JSON object per line — directly loadable with
+        # datasets.load_dataset("json", data_files=...) for fine-tuning
+        from fastapi.responses import Response
+        lines = "\n".join(json.dumps(p, ensure_ascii=False) for p in pairs)
+        return Response(
+            content=lines,
+            media_type="application/x-ndjson",
+            headers={"Content-Disposition": "attachment; filename=tachelhit_flywheel.jsonl"}
+        )
     return {"count": len(pairs), "pairs": pairs}
 
 @app.get("/corpus/stats")
@@ -2638,12 +2673,89 @@ def corpus_stats(db: Session = Depends(get_db)):
         "by_region": by_region,
     }
 
+# Documentation-gap definitions: (key, human label, SQLAlchemy filter builder).
+# A "gap" is a drill that has Tachelhit content but is missing some dimension a
+# complete corpus entry should have — the work-list for contributors.
+def _gap_filters():
+    from sqlalchemy import or_, and_
+    has_tachelhit = and_(DrillModel.text_tachelhit != None, DrillModel.text_tachelhit != '')
+    empty = lambda col: or_(col == None, col == '')
+    return {
+        "no_audio":   ("Sense àudio (cal una gravació)", and_(has_tachelhit, empty(DrillModel.audio_url))),
+        "no_latin":   ("Sense romanització llatina", and_(has_tachelhit, empty(DrillModel.text_tachelhit_latin))),
+        "no_catalan": ("Sense traducció catalana", and_(has_tachelhit, empty(DrillModel.text_catalan))),
+        "no_arabic":  ("Sense àrab", and_(has_tachelhit, empty(DrillModel.text_arabic))),
+        "no_variety": ("Sense varietat/regió", and_(has_tachelhit, empty(DrillModel.variety))),
+        "unverified": ("Pendent de verificar", and_(has_tachelhit, DrillModel.verified != True)),
+    }
+
+@app.get("/corpus/gaps")
+def corpus_gaps(kind: Optional[str] = None, limit: int = 100, offset: int = 0,
+                db: Session = Depends(get_db)):
+    """
+    Documentation completeness. Without `kind`: a count per gap type (the
+    work-list summary). With `kind`: the actual drills needing that work,
+    so contributors can jump straight to filling them.
+    """
+    filters = _gap_filters()
+    if kind is None:
+        return {
+            "total": db.query(DrillModel).count(),
+            "gaps": [
+                {"kind": k, "label": label,
+                 "count": db.query(DrillModel).filter(flt).count()}
+                for k, (label, flt) in filters.items()
+            ]
+        }
+    if kind not in filters:
+        raise HTTPException(status_code=400, detail=f"Unknown gap kind. Options: {list(filters)}")
+    _, flt = filters[kind]
+    rows = (
+        db.query(DrillModel).filter(flt)
+        .order_by(DrillModel.date_created.desc())
+        .offset(max(0, offset)).limit(min(limit, 500)).all()
+    )
+    return {"kind": kind, "drills": [Drill.model_validate(r, from_attributes=True) for r in rows]}
+
 # ===================== PRONUNCIATION CHECK =====================
 
 def _normalize_for_comparison(text: str) -> str:
     """Lowercase, strip punctuation/extra whitespace for fuzzy comparison."""
     cleaned = re.sub(r"[^\w\sⴰ-⵿]", "", (text or "").lower(), flags=re.UNICODE)
     return re.sub(r"\s+", " ", cleaned).strip()
+
+def apply_glossary(text: str, pairs) -> str:
+    """
+    Word-boundary-aware sound->spelling normalization. `pairs` is an iterable
+    of (word_sound, correct_spelling). Boundaries matter: flat substring
+    replacement would also rewrite matches *inside* longer words (\\w covers
+    Tifinagh and Arabic letters in Python's Unicode mode).
+    """
+    for sound, spelling in pairs:
+        if sound:
+            text = re.sub(rf"(?<!\w){re.escape(sound)}(?!\w)", spelling, text)
+    return text
+
+def _best_pronunciation_match(heard_fixed: str, drill) -> tuple:
+    """
+    Script-aware pronunciation scoring: the ASR may emit either script, so
+    compare against the Tifinagh text AND the Latin romanization and keep the
+    best match. Returns (matched_script, target_text, score).
+    """
+    import difflib
+    candidates = []
+    if drill.text_tachelhit:
+        candidates.append(("tifinagh", drill.text_tachelhit))
+    if drill.text_tachelhit_latin:
+        candidates.append(("latin", drill.text_tachelhit_latin))
+    best = ("", "", -1.0)
+    for script, target in candidates:
+        s = difflib.SequenceMatcher(
+            None, _normalize_for_comparison(heard_fixed), _normalize_for_comparison(target)
+        ).ratio()
+        if s > best[2]:
+            best = (script, target, s)
+    return best
 
 @app.post("/pronunciation/check")
 async def pronunciation_check(
@@ -2654,15 +2766,13 @@ async def pronunciation_check(
     """
     Pronunciation feedback: transcribe the user's recording with the ASR
     Space and fuzzy-compare it against the drill's Tachelhit text (after
-    glossary sound->spelling normalization). Returns what was heard and a
-    0-1 similarity score. Nothing is stored.
+    word-boundary glossary normalization). Script-aware: scores against both
+    the Tifinagh text and the Latin romanization, keeping the best match, so
+    the ASR's output script never collapses the score. Nothing is stored.
     """
-    import difflib
-
     drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
-    if not drill or not drill.text_tachelhit:
-        raise HTTPException(status_code=404, detail="Drill not found or has no Tachelhit text")
-    target = drill.text_tachelhit
+    if not drill or not (drill.text_tachelhit or drill.text_tachelhit_latin):
+        raise HTTPException(status_code=404, detail="Drill not found or has no Tachelhit text in any script")
 
     suffix = os.path.splitext(os.path.basename(audio.filename or ""))[1] or ".webm"
     tmp_path = None
@@ -2681,20 +2791,17 @@ async def pronunciation_check(
         heard = str(rough or "").strip()
 
         # Glossary normalization so known sound->spelling quirks don't penalize
-        fixed = heard
-        for g in db.query(GlossaryItemModel).all():
-            if g.word_sound:
-                fixed = fixed.replace(g.word_sound, g.correct_spelling)
+        pairs = [(g.word_sound, g.correct_spelling) for g in db.query(GlossaryItemModel).all()]
+        fixed = apply_glossary(heard, pairs)
 
-        score = difflib.SequenceMatcher(
-            None, _normalize_for_comparison(fixed), _normalize_for_comparison(target)
-        ).ratio()
+        matched_script, target, score = _best_pronunciation_match(fixed, drill)
 
         return {
             "drill_id": drill_id,
             "target": target,
+            "matched_script": matched_script,
             "heard": fixed,
-            "score": round(score, 3)
+            "score": round(max(score, 0.0), 3)
         }
     except HTTPException:
         raise
@@ -2730,10 +2837,18 @@ def get_due_reviews(limit: int = 20, db: Session = Depends(get_db),
     )
     drills = list(due_rows)
     if len(drills) < limit:
+        from sqlalchemy import or_, and_
         seen = db.query(DrillReviewModel.drill_id).filter(DrillReviewModel.user_id == uid)
         new_drills = (
             db.query(DrillModel)
-            .filter(~DrillModel.id.in_(seen))
+            .filter(
+                ~DrillModel.id.in_(seen),
+                # Only practiceable cards: there must be a voice or a text to recall
+                or_(
+                    and_(DrillModel.text_tachelhit != None, DrillModel.text_tachelhit != ''),
+                    and_(DrillModel.audio_url != None, DrillModel.audio_url != '')
+                )
+            )
             .order_by(DrillModel.date_created.desc())
             .limit(limit - len(drills))
             .all()
@@ -3382,10 +3497,7 @@ async def transcribe_audio(
         corrected = rough
         score = 1.0
         if isinstance(rough, str) and rough.strip():
-            fixed = rough
-            for g in glossary_data:
-                if g["s"]:
-                    fixed = fixed.replace(g["s"], g["c"])
+            fixed = apply_glossary(rough, [(g["s"], g["c"]) for g in glossary_data])
             phrases = [p["t"] for p in dataset_pairs]
             try:
                 corrected, score = await asyncio.to_thread(

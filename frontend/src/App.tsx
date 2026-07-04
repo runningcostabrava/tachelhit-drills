@@ -2,8 +2,10 @@ import { useEffect, useState, lazy, Suspense } from 'react';
 import { Network } from '@capacitor/network';
 import axios from 'axios';
 import { API_BASE, getUserName, getUserToken } from './config';
+import { api } from './api';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { syncManager } from './services/OfflineSyncManager';
+import ToastHost from './components/ToastHost';
 import './App.css';
 
 // Route-level code splitting: each page loads its chunk on first visit,
@@ -34,11 +36,11 @@ const ReviewFab = () => {
   const [streak, setStreak] = useState(0);
 
   useEffect(() => {
-    axios.get(`${API_BASE}/reviews/stats`)
-      .then(r => setCounts({ due: r.data.due, new: r.data.new }))
+    api.reviewStats()
+      .then(s => setCounts({ due: s.due, new: s.new }))
       .catch(() => {});
-    axios.get(`${API_BASE}/reviews/streak`)
-      .then(r => setStreak(r.data.streak_days || 0))
+    api.reviewStreak()
+      .then(s => setStreak(s.streak_days || 0))
       .catch(() => {});
   }, []);
 
@@ -115,6 +117,7 @@ function App() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <ToastHost />
       {location.pathname === '/' && <ReviewFab />}
       {location.pathname === '/' && (
         <button

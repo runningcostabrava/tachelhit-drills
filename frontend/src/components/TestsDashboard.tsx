@@ -7,6 +7,7 @@ import TestEditPanel from './TestEditPanel';
 import DrillPlayer from './DrillPlayer';
 import VideoLoopPlayer from './VideoLoopPlayer';
 import { API_BASE } from '../config';
+import { toast } from '../toast';
 
 // Hook para detectar móvil
 const useIsMobile = () => {
@@ -283,9 +284,9 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
             try {
               const res = await axios.post(`${API_BASE}/tests/from-weakest`, { count: 10 });
               await fetchTests();
-              alert(`💪 ${res.data.title}: ${res.data.drill_count} preguntes creades amb les teves targetes més difícils!`);
+              toast.success(`💪 ${res.data.title}: ${res.data.drill_count} preguntes creades!`);
             } catch (e: any) {
-              alert(e?.response?.data?.detail || 'No s\'ha pogut crear el test');
+              toast.error(e?.response?.data?.detail || 'No s\'ha pogut crear el test');
             }
           }}
           title="Crea un test automàtic amb les teves targetes més difícils (SRS)"

@@ -102,11 +102,23 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
     playTachelhitAudio().catch(() => setIsPlaying(false));
   };
 
+  // Synthetic-voice scaffold state (marks TTS fallback playback)
+  const [usingSyntheticVoice, setUsingSyntheticVoice] = useState(false);
+  const [synthesizingVoice, setSynthesizingVoice] = useState(false);
+
   // Pronunciation check (review mode): record -> ASR -> similarity score
   const pronunciationRecorderRef = useRef<MediaRecorder | null>(null);
   const [isCheckingRecording, setIsCheckingRecording] = useState(false);
   const [pronunciationBusy, setPronunciationBusy] = useState(false);
   const [pronunciationResult, setPronunciationResult] = useState<{ heard: string; score: number } | null>(null);
+
+  // Voice understanding guides scheduling: the score suggests a self-grade
+  // (learner still decides — the highlight is advice, not automation)
+  const suggestedGrade = pronunciationResult && pronunciationResult.score >= 0
+    ? (pronunciationResult.score >= 0.85 ? 3
+      : pronunciationResult.score >= 0.65 ? 2
+      : pronunciationResult.score >= 0.4 ? 1 : 0)
+    : null;
 
   const togglePronunciationRecording = async () => {
     if (isCheckingRecording) {
@@ -234,6 +246,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
     // New card starts hidden again (recall-first)
     setAnswerRevealed(false);
     answerRevealedRef.current = false;
+    setUsingSyntheticVoice(false);
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -394,14 +407,40 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
   };
 
   const playTachelhitAudio = async (): Promise<void> => {
-    if (!currentDrill?.audio_url) {
+    // Voice-source chain: native recording (gold) -> stored synthetic voice
+    // (scaffold) -> synthesize on demand for text-only cards (the backend
+    // stores the result so this only happens once per drill)
+    let sourceUrl = currentDrill?.audio_url || currentDrill?.audio_tts_shi_url || '';
+    let synthetic = !currentDrill?.audio_url && !!sourceUrl;
+
+    if (!sourceUrl && currentDrill?.text_tachelhit) {
+      try {
+        setSynthesizingVoice(true);
+        const res = await fetch(`${API_BASE}/tts/tachelhit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: currentDrill.text_tachelhit, drill_id: currentDrill.id }),
+        });
+        if (res.ok) {
+          sourceUrl = (await res.json()).url || '';
+          synthetic = !!sourceUrl;
+        }
+      } catch (e) {
+        console.warn('Tachelhit TTS synthesis failed:', e);
+      } finally {
+        setSynthesizingVoice(false);
+      }
+    }
+
+    if (!sourceUrl) {
       if (autoPlayEnabled && !reviewMode) goToNextDrill();
       return;
     }
+    setUsingSyntheticVoice(synthetic);
 
     try {
       // Get audio URL with offline fallback
-      const audioUrl = await getMediaWithOfflineFallback(currentDrill.audio_url, getMediaUrl);
+      const audioUrl = await getMediaWithOfflineFallback(sourceUrl, getMediaUrl);
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
       let internalCount = 0;
@@ -675,6 +714,31 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               currentDrill?.text_tachelhit || 'No Tachelhit text'
             )}
           </div>
+
+          {/* Latin romanization (shown with the answer) */}
+          {!hideAnswer && currentDrill?.text_tachelhit_latin && (
+            <div style={{
+              padding: '0 24px 14px',
+              textAlign: 'center',
+              fontSize: '17px',
+              fontStyle: 'italic',
+              color: 'var(--text-soft)'
+            }}>
+              {currentDrill.text_tachelhit_latin}
+            </div>
+          )}
+
+          {/* Synthetic-voice scaffold marker: learners must know sketch from gold */}
+          {(synthesizingVoice || usingSyntheticVoice) && (
+            <div style={{ textAlign: 'center', paddingBottom: '10px' }}>
+              <span style={{
+                fontSize: '11px', fontWeight: 700, padding: '3px 10px',
+                borderRadius: 'var(--r-pill)', background: 'var(--sky-soft)', color: 'var(--sky)'
+              }}>
+                {synthesizingVoice ? '🤖 Sintetitzant la veu…' : '🤖 Veu sintètica — encara sense gravació nativa'}
+              </span>
+            </div>
+          )}
 
           {/* Image */}
           {imageUrl && (
@@ -1436,12 +1500,15 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                   goToNextDrill();
                 }
               }}
+              title={suggestedGrade === g ? 'Suggerit per la teva pronunciació' : undefined}
               style={{
                 padding: '10px 16px', background: bg, color: 'white', border: 'none',
-                borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '14px', cursor: 'pointer'
+                borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+                boxShadow: suggestedGrade === g ? '0 0 0 3px rgba(255,255,255,0.85)' : undefined,
+                transform: suggestedGrade === g ? 'scale(1.08)' : undefined
               }}
             >
-              {label}
+              {suggestedGrade === g ? '✨ ' : ''}{label}
             </button>
           ))}
           </>

@@ -55,6 +55,7 @@ class DrillBase(BaseModel):
     text_arabic: Optional[str] = None
     audio_url: Optional[str] = None
     audio_tts_url: Optional[str] = None  # Generated TTS for Catalan text
+    audio_tts_shi_url: Optional[str] = None  # Synthesized Tachelhit voice (fallback)
     video_url: Optional[str] = None
     image_url: Optional[str] = None
     is_correction_dataset: Optional[bool] = None
@@ -70,7 +71,7 @@ class DrillBase(BaseModel):
     verified: Optional[bool] = None
 
     # Validators for URL fields
-    @field_validator('audio_url', 'audio_tts_url', 'video_url', 'image_url')
+    @field_validator('audio_url', 'audio_tts_url', 'audio_tts_shi_url', 'video_url', 'image_url')
     @classmethod
     def normalize_urls(cls, v: str | None) -> str | None:
         if not v:

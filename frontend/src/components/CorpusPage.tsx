@@ -1,15 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE, getMediaUrl, getUserToken } from '../config';
+import { getMediaUrl, getUserToken } from '../config';
+import { api, type CorpusStats } from '../api';
+import { toast } from '../toast';
 import type { Drill } from '../types';
-
-interface CorpusStats {
-  total_drills: number;
-  with_audio: number;
-  verified: number;
-  by_variety: Record<string, number>;
-  by_region: Record<string, number>;
-}
 
 export default function CorpusPage() {
   const navigate = useNavigate();
@@ -19,24 +13,24 @@ export default function CorpusPage() {
   const [results, setResults] = useState<Drill[]>([]);
   const [stats, setStats] = useState<CorpusStats | null>(null);
   const [loading, setLoading] = useState(false);
+  const [gaps, setGaps] = useState<{ kind: string; label: string; count: number }[]>([]);
+  const [activeGap, setActiveGap] = useState<string | null>(null);
+  const [showCoverage, setShowCoverage] = useState(false);
 
-  useEffect(() => {
-    fetch(`${API_BASE}/corpus/stats`).then(async r => { if (r.ok) setStats(await r.json()); }).catch(() => {});
-  }, []);
+  const PAGE = 50;
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
 
-  const search = useCallback(async () => {
+  const runSearch = useCallback(async (nextOffset: number, append: boolean) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (q.trim()) params.set('q', q.trim());
-      if (variety.trim()) params.set('variety', variety.trim());
-      params.set('limit', '100');
-      const r = await fetch(`${API_BASE}/corpus/search?${params}`);
-      if (r.ok) {
-        let rows: Drill[] = await r.json();
-        if (onlyUnverified) rows = rows.filter(d => !d.verified);
-        setResults(rows);
-      }
+      let rows = await api.corpusSearch({
+        q: q.trim(), variety: variety.trim(), limit: PAGE, offset: nextOffset,
+      });
+      setHasMore(rows.length === PAGE);
+      if (onlyUnverified) rows = rows.filter(d => !d.verified);
+      setResults(prev => (append ? [...prev, ...rows] : rows));
+      setOffset(nextOffset);
     } catch (e) {
       console.error('Corpus search failed', e);
     } finally {
@@ -44,7 +38,30 @@ export default function CorpusPage() {
     }
   }, [q, variety, onlyUnverified]);
 
-  useEffect(() => { search(); }, [search]);
+  useEffect(() => {
+    api.corpusStats().then(setStats).catch(() => {});
+    api.corpusGapsSummary().then(r => setGaps(r.gaps)).catch(() => {});
+  }, []);
+
+  // Search only drives results when no gap filter is active
+  useEffect(() => { if (!activeGap) runSearch(0, false); }, [runSearch, activeGap]);
+  const search = () => { setActiveGap(null); runSearch(0, false); };
+
+  const loadGap = async (kind: string) => {
+    setActiveGap(kind);
+    setLoading(true);
+    try {
+      const r = await api.corpusGapDrills(kind, 100);
+      setResults(r.drills);
+      setHasMore(false);
+    } catch (e) {
+      console.error('Gap load failed', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearGap = () => { setActiveGap(null); runSearch(0, false); };
 
   const playAudio = (d: Drill) => {
     const url = d.audio_url ? getMediaUrl(d.audio_url) : '';
@@ -53,19 +70,15 @@ export default function CorpusPage() {
 
   const toggleVerify = async (d: Drill) => {
     if (!getUserToken()) {
-      alert('Per verificar contribucions necessites un compte — crea\'l a 👤 Perfil.');
+      toast.info('Per verificar contribucions necessites un compte — crea\'l a 👤 Perfil.');
       return;
     }
     try {
-      const r = await fetch(`${API_BASE}/drills/${d.id}/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ verified: !d.verified }),
-      });
-      if (!r.ok) throw new Error((await r.json()).detail || 'Verification failed');
+      await api.verifyDrill(d.id, !d.verified);
       setResults(prev => prev.map(x => x.id === d.id ? { ...x, verified: !d.verified } : x));
+      toast.success(d.verified ? 'Verificació retirada' : '✓ Verificat');
     } catch (e: any) {
-      alert(e.message);
+      toast.error(e.message);
     }
   };
 
@@ -75,6 +88,22 @@ export default function CorpusPage() {
     </span>
   );
 
+  // Horizontal proportion bar used across the coverage dashboard
+  const bar = (label: string, value: number, total: number, color: string) => {
+    const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+    return (
+      <div key={label} style={{ marginBottom: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
+          <span style={{ color: 'var(--text-soft)', fontWeight: 600 }}>{label}</span>
+          <span style={{ color: 'var(--text-muted)' }}>{value}{total ? ` · ${pct}%` : ''}</span>
+        </div>
+        <div style={{ height: '8px', borderRadius: 'var(--r-pill)', background: 'var(--surface-2)', overflow: 'hidden' }}>
+          <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 'var(--r-pill)', transition: 'width 0.3s' }} />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: '48px' }}>
       <div style={{ background: 'var(--brand-gradient)', borderRadius: '0 0 var(--r-2xl) var(--r-2xl)', padding: '24px 24px 28px', color: '#fff' }}>
@@ -82,12 +111,45 @@ export default function CorpusPage() {
           <button onClick={() => navigate('/')} style={{ marginBottom: '14px', padding: '8px 16px', background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontWeight: 600, fontSize: '14px' }}>← Back</button>
           <h2 style={{ color: '#fff', fontSize: '26px', margin: 0 }}>📖 Corpus</h2>
           {stats && (
-            <p style={{ margin: '8px 0 0', color: 'rgba(255,255,255,0.85)', fontSize: '14px' }}>
-              {stats.total_drills} entrades · {stats.with_audio} amb àudio · {stats.verified} verificades
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '8px', flexWrap: 'wrap' }}>
+              <p style={{ margin: 0, color: 'rgba(255,255,255,0.85)', fontSize: '14px' }}>
+                {stats.total_drills} entrades · {stats.with_audio} amb àudio · {stats.verified} verificades
+              </p>
+              <button
+                onClick={() => setShowCoverage(v => !v)}
+                style={{ padding: '5px 12px', background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontWeight: 700, fontSize: '13px' }}
+              >
+                📊 {showCoverage ? 'Amaga' : 'Cobertura'}
+              </button>
+            </div>
           )}
         </div>
       </div>
+
+      {/* Coverage dashboard — the atlas view: what's documented, by variety/region */}
+      {showCoverage && stats && (
+        <div style={{ maxWidth: '860px', margin: '20px auto 0', padding: '0 24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '18px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '14px', color: 'var(--text)' }}>Cobertura de mitjans</div>
+              {bar('🔊 Àudio', stats.with_audio, stats.total_drills, 'var(--emerald)')}
+              {bar('🎬 Vídeo', stats.with_video, stats.total_drills, 'var(--sky)')}
+              {bar('Aa Llatí', stats.with_latin_script, stats.total_drills, 'var(--brand-1)')}
+              {bar('✓ Verificat', stats.verified, stats.total_drills, 'var(--amber)')}
+            </div>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '18px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '14px', color: 'var(--text)' }}>Per varietat</div>
+              {Object.entries(stats.by_variety).sort((a, b) => b[1] - a[1]).slice(0, 8)
+                .map(([k, n]) => bar(k === 'unspecified' ? '— sense especificar' : k, n, stats.total_drills, 'var(--brand-2)'))}
+            </div>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '18px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '14px', color: 'var(--text)' }}>Per regió</div>
+              {Object.entries(stats.by_region).sort((a, b) => b[1] - a[1]).slice(0, 8)
+                .map(([k, n]) => bar(k === 'unspecified' ? '— sense especificar' : k, n, stats.total_drills, 'var(--sky)'))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div style={{ maxWidth: '860px', margin: '0 auto', padding: '20px 24px' }}>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '18px' }}>
@@ -98,17 +160,53 @@ export default function CorpusPage() {
             placeholder="Cerca en ⵜⵉⴼⵉⵏⴰⵖ, llatí, català o àrab…"
             style={{ flex: 2, minWidth: '220px', padding: '12px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', fontSize: '15px', color: 'var(--text)' }}
           />
-          <input
+          <select
             value={variety}
             onChange={(e) => setVariety(e.target.value)}
-            placeholder="Varietat (p.ex. tashelhit)"
             style={{ flex: 1, minWidth: '140px', padding: '12px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', fontSize: '14px', color: 'var(--text)' }}
-          />
+          >
+            <option value="">Totes les varietats</option>
+            {Object.entries(stats?.by_variety || {})
+              .filter(([k]) => k !== 'unspecified')
+              .map(([k, n]) => (
+                <option key={k} value={k}>{k} ({n})</option>
+              ))}
+          </select>
           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-soft)', cursor: 'pointer' }}>
             <input type="checkbox" checked={onlyUnverified} onChange={(e) => setOnlyUnverified(e.target.checked)} />
             Només pendents de revisar
           </label>
         </div>
+
+        {/* Documentation-gaps work-list: what the corpus still needs */}
+        {gaps.some(g => g.count > 0) && (
+          <div style={{ marginBottom: '18px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
+              🛠 Necessita feina
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {gaps.filter(g => g.count > 0).map(g => (
+                <button
+                  key={g.kind}
+                  onClick={() => (activeGap === g.kind ? clearGap() : loadGap(g.kind))}
+                  style={{
+                    padding: '6px 12px', borderRadius: 'var(--r-pill)', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                    background: activeGap === g.kind ? 'var(--amber)' : 'var(--amber-soft)',
+                    color: activeGap === g.kind ? '#fff' : 'var(--amber-strong)',
+                    border: '1px solid var(--amber)'
+                  }}
+                >
+                  {g.label} · {g.count}
+                </button>
+              ))}
+              {activeGap && (
+                <button onClick={clearGap} style={{ padding: '6px 12px', borderRadius: 'var(--r-pill)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)' }}>
+                  ✕ Neteja
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {loading && <p style={{ color: 'var(--text-soft)' }}>Cercant…</p>}
         {!loading && results.length === 0 && <p style={{ color: 'var(--text-muted)' }}>Cap resultat.</p>}
@@ -158,6 +256,17 @@ export default function CorpusPage() {
             </div>
           ))}
         </div>
+
+        {hasMore && !loading && (
+          <div style={{ textAlign: 'center', marginTop: '18px' }}>
+            <button
+              onClick={() => runSearch(offset + PAGE, true)}
+              style={{ padding: '11px 26px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}
+            >
+              ⬇ Carrega'n més
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
