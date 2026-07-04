@@ -31,7 +31,17 @@ export default function ProfilePage() {
   const [newToken, setNewToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
   const hasToken = !!getUserToken();
+  const initialLoading = hasToken && !me && !newToken && !error;
+
+  const copyToken = () => {
+    if (!newToken) return;
+    navigator.clipboard.writeText(newToken).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
 
   useEffect(() => {
     if (!hasToken) return;
@@ -67,6 +77,7 @@ export default function ProfilePage() {
   };
 
   const logout = () => {
+    if (!window.confirm('Segur que vols tancar la sessió? Necessitaràs el teu token per tornar a entrar.')) return;
     clearUserIdentity();
     window.location.reload();
   };
@@ -92,7 +103,7 @@ export default function ProfilePage() {
 
         {newToken && (
           <div style={cardStyle}>
-            <h3 style={{ marginTop: 0 }}>✅ Compte creat!</h3>
+            <h3 style={{ marginTop: 0, fontFamily: 'var(--font-display)', fontSize: '20px' }}>✅ Compte creat!</h3>
             <p style={{ color: 'var(--text-soft)', fontSize: '14px' }}>
               Aquest és el teu <strong>token personal</strong>. Guarda&apos;l en un lloc segur —
               és l&apos;única manera d&apos;iniciar sessió en altres dispositius i només es mostra ara.
@@ -101,6 +112,15 @@ export default function ProfilePage() {
               {newToken}
             </code>
             <button
+              type="button"
+              onClick={copyToken}
+              style={{ marginTop: '12px', padding: '10px 20px', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: 'pointer' }}
+            >
+              {copied ? 'Copiat!' : 'Copia el token'}
+            </button>
+            <br />
+            <button
+              type="button"
               onClick={() => window.location.reload()}
               style={{ marginTop: '16px', padding: '12px 24px', background: 'var(--brand-gradient)', color: '#fff', border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: 'pointer' }}
             >
@@ -109,9 +129,15 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {initialLoading && (
+          <div style={cardStyle}>
+            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '15px' }}>Carregant el teu perfil…</p>
+          </div>
+        )}
+
         {!newToken && hasToken && me && (
           <div style={cardStyle}>
-            <h3 style={{ marginTop: 0, fontSize: '22px' }}>{me.display_name || me.username}</h3>
+            <h3 style={{ marginTop: 0, fontFamily: 'var(--font-display)', fontSize: '22px' }}>{me.display_name || me.username}</h3>
             <p style={{ color: 'var(--text-muted)', margin: '0 0 16px', fontSize: '14px' }}>@{me.username}</p>
             <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '18px' }}>
               <div style={{ padding: '12px 18px', background: 'var(--brand-gradient-soft)', borderRadius: 'var(--r-lg)', fontWeight: 700, color: 'var(--brand-1)' }}>
@@ -138,7 +164,7 @@ export default function ProfilePage() {
         {!newToken && !hasToken && (
           <>
             <div style={cardStyle}>
-              <h3 style={{ marginTop: 0 }}>Crea el teu compte</h3>
+              <h3 style={{ marginTop: 0, fontFamily: 'var(--font-display)', fontSize: '20px' }}>Crea el teu compte</h3>
               <p style={{ color: 'var(--text-soft)', fontSize: '14px' }}>
                 Amb un compte, el teu repàs (SRS) és només teu i els drills que creïs
                 porten el teu nom com a contribuïdor.
@@ -148,27 +174,60 @@ export default function ProfilePage() {
                 que aportis es conservin al corpus per documentar i ensenyar la llengua.
                 Pots indicar la llicència de cada contribució al camp «license».
               </p>
-              <input style={inputStyle} placeholder="Nom d'usuari (a-z, 0-9, _-.)" value={username} onChange={(e) => setUsername(e.target.value)} />
-              <input style={inputStyle} placeholder="Nom per mostrar (opcional)" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-              <button
-                onClick={register}
-                disabled={busy || username.trim().length < 3}
-                style={{ padding: '12px 26px', background: 'var(--brand-gradient)', color: '#fff', border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: busy ? 'wait' : 'pointer', opacity: username.trim().length < 3 ? 0.6 : 1 }}
-              >
-                {busy ? 'Creant…' : 'Registra\'m'}
-              </button>
+              <form onSubmit={(e) => { e.preventDefault(); register(); }}>
+                <label htmlFor="profile-username" style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-soft)', marginBottom: '4px' }}>Nom d&apos;usuari</label>
+                <input
+                  id="profile-username"
+                  style={inputStyle}
+                  autoComplete="username"
+                  placeholder="Nom d'usuari (a-z, 0-9, _-.)"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+                <p style={{ margin: '-8px 0 12px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                  Mínim 3 caràcters · lletres, xifres, _ - .
+                </p>
+                <label htmlFor="profile-display-name" style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-soft)', marginBottom: '4px' }}>Nom per mostrar (opcional)</label>
+                <input
+                  id="profile-display-name"
+                  style={inputStyle}
+                  autoComplete="nickname"
+                  placeholder="Nom per mostrar (opcional)"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                />
+                <button
+                  type="submit"
+                  disabled={busy || username.trim().length < 3}
+                  style={{ padding: '12px 26px', background: 'var(--brand-gradient)', color: '#fff', border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: busy ? 'wait' : 'pointer', opacity: username.trim().length < 3 ? 0.6 : 1 }}
+                >
+                  {busy ? 'Creant…' : 'Registra\'m'}
+                </button>
+              </form>
             </div>
 
             <div style={cardStyle}>
-              <h3 style={{ marginTop: 0 }}>Ja tens un token?</h3>
-              <input style={inputStyle} placeholder="Enganxa el teu token personal" value={tokenInput} onChange={(e) => setTokenInput(e.target.value)} />
-              <button
-                onClick={loginWithToken}
-                disabled={!tokenInput.trim()}
-                style={{ padding: '10px 22px', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: 'pointer' }}
-              >
-                Inicia sessió
-              </button>
+              <h3 style={{ marginTop: 0, fontFamily: 'var(--font-display)', fontSize: '20px' }}>Ja tens un token?</h3>
+              <form onSubmit={(e) => { e.preventDefault(); loginWithToken(); }}>
+                <label htmlFor="profile-token" style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-soft)', marginBottom: '4px' }}>El teu token personal</label>
+                <input
+                  id="profile-token"
+                  style={inputStyle}
+                  autoComplete="off"
+                  spellCheck={false}
+                  autoCapitalize="none"
+                  placeholder="Enganxa el teu token personal"
+                  value={tokenInput}
+                  onChange={(e) => setTokenInput(e.target.value)}
+                />
+                <button
+                  type="submit"
+                  disabled={!tokenInput.trim()}
+                  style={{ padding: '10px 22px', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Inicia sessió
+                </button>
+              </form>
             </div>
           </>
         )}
