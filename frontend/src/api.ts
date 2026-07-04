@@ -93,6 +93,11 @@ export const api = {
     request<{ analysis: string }>(`/ai/analyze-drill/${drillId}`, { method: 'POST' }),
   aiReviewDrill: (drillId: number) =>
     request<{ review: string }>(`/ai/review-drill/${drillId}`, { method: 'POST' }),
+  aiAgent: (message: string, drillIds?: number[], history?: { role: string; text: string }[]) =>
+    request<{ answer: string; actions: { name: string; args: any; result: any }[] }>('/ai/agent', {
+      method: 'POST',
+      body: JSON.stringify({ message, drill_ids: drillIds ?? [], history: history ?? [] }),
+    }),
   aiSuggestTranslation: (drillId: number) =>
     request<{ field: string; suggestion: string }>(`/ai/suggest-translation/${drillId}`, { method: 'POST' }),
 

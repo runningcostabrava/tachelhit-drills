@@ -10,6 +10,7 @@ import { Network } from '@capacitor/network';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { VoiceRecorder } from 'capacitor-voice-recorder';
 import { API_BASE, getMediaUrl } from '../config';
+import { setSelectedDrillIds } from '../selection';
 import {
     FaVolumeUp,
     FaVideo,
@@ -770,7 +771,9 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                         headerCheckbox: true
                     }}
                     onSelectionChanged={(event) => {
-                        setSelectedRows(event.api.getSelectedRows());
+                        const rows = event.api.getSelectedRows();
+                        setSelectedRows(rows);
+                        setSelectedDrillIds(rows.map((r: Drill) => r.id));
                     }}
                     onCellValueChanged={onCellValueChanged}
                     defaultColDef={{

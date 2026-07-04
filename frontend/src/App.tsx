@@ -6,7 +6,7 @@ import { api } from './api';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { syncManager } from './services/OfflineSyncManager';
 import ToastHost from './components/ToastHost';
-import AiAssistant from './components/AiAssistant';
+import AiCopilot from './components/AiCopilot';
 import './App.css';
 
 // Route-level code splitting: each page loads its chunk on first visit,
@@ -120,7 +120,7 @@ function App() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <ToastHost />
-      {aiOpen && <AiAssistant onClose={() => setAiOpen(false)} />}
+      {aiOpen && <AiCopilot onClose={() => setAiOpen(false)} />}
       {location.pathname === '/' && (
         <button
           onClick={() => setAiOpen(true)}
