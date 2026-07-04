@@ -268,31 +268,26 @@ export default function DrillsResponsive() {
   return (
     <>
       <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', paddingBottom: isMobile ? '64px' : '0' }}>
-        <div style={{ background: 'var(--brand-gradient)', padding: isMobile ? '18px 16px' : '22px 28px', boxShadow: 'var(--shadow-lg)', borderBottomLeftRadius: '26px', borderBottomRightRadius: '26px', position: 'relative', overflow: 'hidden' }}>
-          {/* decorative glow */}
-          <div style={{ position: 'absolute', top: '-60px', right: '-40px', width: '200px', height: '200px', background: 'rgba(255,255,255,0.12)', borderRadius: '50%', filter: 'blur(8px)', pointerEvents: 'none' }} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', position: 'relative', gap: '12px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.25)' }}>📚</div>
-              <div>
-                <h1 style={{ margin: 0, fontSize: isMobile ? '20px' : '24px', fontWeight: 800, color: 'white', letterSpacing: '-0.02em', lineHeight: 1.1, fontFamily: 'var(--font-display)' }}>Tamazight Drills</h1>
-                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>{filteredDrills.length} drill{filteredDrills.length === 1 ? '' : 's'}</div>
-              </div>
+        <div style={{ background: 'var(--surface)', padding: isMobile ? '12px 14px' : '14px 24px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
+              <h1 style={{ margin: 0, fontSize: isMobile ? '19px' : '22px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', fontFamily: 'var(--font-display)' }}>Drills</h1>
+              <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600 }}>{filteredDrills.length}</span>
             </div>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <button
                 onClick={() => setShowMobileDrillCreator(true)}
-                style={{ padding: '11px 18px', background: 'white', color: 'var(--brand-1)', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: 'var(--shadow-md)' }}
+                style={{ padding: '10px 16px', background: 'var(--brand-1)', color: '#fff', border: 'none', borderRadius: 'var(--r-md)', fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
               >
-                <FaPlus /> {isMobile ? '' : 'New Drill'}
+                <FaPlus /> {isMobile ? '' : 'Nou drill'}
               </button>
 
               {!isMobile && (
                 <button
                   onClick={() => navigate('/tests')}
-                  style={{ padding: '11px 18px', background: 'var(--emerald)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 6px 16px rgba(16,185,129,0.4)' }}
+                  style={{ padding: '10px 16px', background: 'var(--surface)', color: 'var(--emerald)', border: '1px solid var(--emerald)', borderRadius: 'var(--r-md)', fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
                 >
-                  📊 Practica
+                  Practica
                 </button>
               )}
 
@@ -300,10 +295,10 @@ export default function DrillsResponsive() {
                 onClick={() => {
                   const url = window.location.href;
                   navigator.clipboard.writeText(url);
-                  alert(`Filtered link copied to clipboard!\n${url}`);
+                  alert(`Enllaç filtrat copiat!\n${url}`);
                 }}
-                title="Copy filtered link"
-                style={{ width: '44px', height: '44px', background: 'rgba(255,255,255,0.16)', color: 'white', border: '1px solid rgba(255,255,255,0.22)', borderRadius: '12px', fontSize: '17px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}
+                title="Copia l'enllaç filtrat"
+                style={{ width: '40px', height: '40px', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <FaLink />
               </button>
@@ -311,9 +306,9 @@ export default function DrillsResponsive() {
                 <button
                   disabled={isCreating}
                   onClick={() => setShowNewDrillOptions(!showNewDrillOptions)}
-                  style={{ padding: '11px 16px', background: 'rgba(255,255,255,0.16)', color: 'white', border: '1px solid rgba(255,255,255,0.22)', borderRadius: '12px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', opacity: isCreating ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '8px', backdropFilter: 'blur(8px)' }}
+                  style={{ padding: '10px 14px', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '14px', fontWeight: 700, cursor: 'pointer', opacity: isCreating ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '8px' }}
                 >
-                  {isCreating ? 'Creating…' : 'More'} <FaChevronDown size={11} />
+                  {isCreating ? 'Creant…' : 'Més'} <FaChevronDown size={11} />
                 </button>
                 {showNewDrillOptions && (
                   <div style={{ position: 'absolute', top: 'calc(100% + 10px)', right: 0, backgroundColor: 'white', borderRadius: '16px', boxShadow: 'var(--shadow-xl)', zIndex: 1000, minWidth: '230px', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--border)' }}>
@@ -334,28 +329,28 @@ export default function DrillsResponsive() {
               </div>
             </div>
           </div>
-          <div style={{ width: '100%', display: 'flex', gap: '10px', alignItems: 'center', background: 'rgba(255, 255, 255, 0.16)', borderRadius: '14px', padding: '11px 16px', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.22)', position: 'relative', boxSizing: 'border-box' }}>
-            <div style={{ color: 'white', opacity: 0.85, fontSize: '16px', flexShrink: 0 }}><FaSearch /></div>
+          <div style={{ width: '100%', display: 'flex', gap: '10px', alignItems: 'center', background: 'var(--surface-2)', borderRadius: 'var(--r-md)', padding: '10px 14px', border: '1px solid var(--border)', position: 'relative', boxSizing: 'border-box' }}>
+            <div style={{ color: 'var(--text-muted)', fontSize: '15px', flexShrink: 0 }}><FaSearch /></div>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search drills…"
-              style={{ flex: 1, background: 'transparent', border: 'none', color: 'white', fontSize: '15px', outline: 'none', minWidth: '0', fontWeight: 500 }}
+              placeholder="Cerca drills…"
+              style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text)', fontSize: '15px', outline: 'none', minWidth: '0', fontWeight: 500 }}
             />
             <select
               value={searchCategory}
               onChange={(e) => setSearchCategory(e.target.value)}
-              style={{ background: 'rgba(255, 255, 255, 0.22)', border: '1px solid rgba(255, 255, 255, 0.3)', color: 'white', borderRadius: '8px', padding: '7px 9px', fontSize: '12px', fontWeight: 600, outline: 'none', cursor: 'pointer', flexShrink: 0 }}
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-soft)', borderRadius: 'var(--r-sm)', padding: '6px 9px', fontSize: '12px', fontWeight: 600, outline: 'none', cursor: 'pointer', flexShrink: 0 }}
             >
-              <option style={{ color: '#111' }} value="all">All</option>
-              <option style={{ color: '#111' }} value="catalan">Català</option>
-              <option style={{ color: '#111' }} value="tachelhit">Tachelhit</option>
-              <option style={{ color: '#111' }} value="arabic">Arabic</option>
-              <option style={{ color: '#111' }} value="tag">Tag</option>
-              <option style={{ color: '#111' }} value="author">Author</option>
+              <option value="all">Totes</option>
+              <option value="catalan">Català</option>
+              <option value="tachelhit">Tachelhit</option>
+              <option value="arabic">Àrab</option>
+              <option value="tag">Etiqueta</option>
+              <option value="author">Autor</option>
             </select>
-            {searchQuery && <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', color: 'white', fontSize: '16px', cursor: 'pointer', padding: '0 6px', flexShrink: 0 }}>✕</button>}
+            {searchQuery && <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '16px', cursor: 'pointer', padding: '0 6px', flexShrink: 0 }}>✕</button>}
           </div>
         </div>
         <div style={{ flex: 1, width: '100%', overflowX: 'hidden', overflowY: 'auto', padding: isMobile ? '12px 4px' : '0', position: 'relative', boxSizing: 'border-box' }}>

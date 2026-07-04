@@ -43,7 +43,7 @@ interface TestStats {
   passed_attempts: number;
 }
 
-export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () => void }) {
+export default function TestsDashboard() {
   const isMobile = useIsMobile();
   const [tests, setTests] = useState<Test[]>([]);
   const [selectedTest, setSelectedTest] = useState<Test | null>(null);
@@ -236,47 +236,27 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', fontFamily: 'var(--font-sans)' }}>
       {/* Header */}
       <div style={{
-        padding: '20px 24px 26px',
-        background: 'var(--brand-gradient)',
-        borderBottomLeftRadius: '26px',
-        borderBottomRightRadius: '26px',
-        boxShadow: 'var(--shadow-brand)',
+        padding: '16px 24px',
+        background: 'var(--surface)',
+        borderBottom: '1px solid var(--border)',
         display: 'flex',
         alignItems: 'center',
         gap: '16px',
         flexWrap: 'wrap'
       }}>
-        <button
-          onClick={onBackToDrills}
-          style={{
-            padding: '9px 16px',
-            fontSize: '14px',
-            background: 'rgba(255,255,255,0.18)',
-            color: 'white',
-            border: '1px solid rgba(255,255,255,0.55)',
-            borderRadius: 'var(--r-pill)',
-            cursor: 'pointer',
-            fontWeight: 700,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            backdropFilter: 'blur(4px)'
-          }}
-        >
-          ← Back to Drills
-        </button>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
           <h1 style={{
             margin: 0,
-            fontSize: '24px',
-            fontWeight: 800,
-            color: 'white',
+            fontFamily: 'var(--font-display)',
+            fontSize: '22px',
+            fontWeight: 700,
+            color: 'var(--text)',
             letterSpacing: '-0.02em'
           }}>
-            Tests Dashboard
+            Tests
           </h1>
-          <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: '14px', fontWeight: 500 }}>
-            Manage tests, generate demo videos and start practice
+          <span style={{ color: 'var(--text-soft)', fontSize: '14px', fontWeight: 500 }}>
+            Gestiona tests i comença a practicar
           </span>
         </div>
         <button
@@ -293,9 +273,9 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
           style={{
             marginLeft: 'auto',
             padding: '8px 16px',
-            background: 'rgba(255,255,255,0.18)',
-            color: 'white',
-            border: '1px solid rgba(255,255,255,0.4)',
+            background: 'var(--saffron-soft)',
+            color: 'var(--saffron-strong)',
+            border: '1px solid var(--saffron)',
             borderRadius: 'var(--r-pill)',
             fontWeight: 700,
             fontSize: '13px',
@@ -305,11 +285,12 @@ export default function TestsDashboard({ onBackToDrills }: { onBackToDrills: () 
           💪 Test dels punts febles
         </button>
         <span style={{
-          color: 'white',
+          color: 'var(--text-soft)',
           fontSize: '13px',
           fontWeight: 700,
           padding: '6px 14px',
-          background: 'rgba(255,255,255,0.18)',
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border)',
           borderRadius: 'var(--r-pill)'
         }}>
           {tests.length} {tests.length === 1 ? 'test' : 'tests'}
