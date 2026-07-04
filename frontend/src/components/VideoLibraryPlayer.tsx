@@ -10,6 +10,7 @@ export default function VideoLibraryPlayer({ videoUrl, drills, onClose }: { vide
     const [currentTime, setCurrentTime] = useState(0);
 
     const ytPlayerRef = useRef<any>(null);
+    const closeBtnRef = useRef<HTMLButtonElement>(null);
     // Stable for the component's lifetime — a per-render id would detach the
     // rendered div from the element the YT player was bound to
     const containerIdRef = useRef(`lib-player-${++libPlayerCounter}`);
@@ -68,6 +69,16 @@ export default function VideoLibraryPlayer({ videoUrl, drills, onClose }: { vide
         };
     }, [videoUrl]); // Only recreate if URL changes
 
+    // Modal-like behaviour: close on Escape, move focus into the player on open
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        closeBtnRef.current?.focus();
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []); // mount-only
+
     // Controls
     const togglePlayPause = () => {
         if (!ytPlayerRef.current || typeof ytPlayerRef.current.pauseVideo !== 'function') return;
@@ -118,17 +129,17 @@ export default function VideoLibraryPlayer({ videoUrl, drills, onClose }: { vide
                         pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.12)'
                     }}>
                         {activeDrill.text_arabic && (
-                            <div style={{ fontSize: '32px', direction: 'rtl', fontWeight: 'bold', marginBottom: '8px', color: '#f472b6' }}>
+                            <div style={{ fontSize: '32px', direction: 'rtl', fontWeight: 'bold', marginBottom: '8px', color: '#fbcfe8' }}>
                                 {activeDrill.text_arabic}
                             </div>
                         )}
                         {activeDrill.text_tachelhit && (
-                            <div style={{ fontSize: '26px', fontWeight: 'bold', marginBottom: '6px', color: 'var(--amber)', fontFamily: 'var(--font-tifinagh)' }}>
+                            <div style={{ fontSize: '26px', fontWeight: 'bold', marginBottom: '6px', color: '#c7d2fe', fontFamily: 'var(--font-tifinagh)' }}>
                                 {activeDrill.text_tachelhit}
                             </div>
                         )}
                         {activeDrill.text_catalan && (
-                            <div style={{ fontSize: '22px', color: 'var(--emerald)', fontWeight: '500' }}>
+                            <div style={{ fontSize: '22px', color: '#bbf7d0', fontWeight: '500' }}>
                                 {activeDrill.text_catalan}
                             </div>
                         )}
@@ -136,13 +147,13 @@ export default function VideoLibraryPlayer({ videoUrl, drills, onClose }: { vide
                 )}
             </div>
             
-            <div style={{ height: '100px', backgroundColor: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ minHeight: '100px', backgroundColor: '#0f172a', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                 <button onClick={goBack2Seconds} aria-label="Retrocedeix 2 segons" style={btnStyle}><span aria-hidden="true">↺</span> 2s</button>
                 <button onClick={togglePlayPause} aria-label={playing ? 'Pausa' : 'Reprodueix'} style={{...btnStyle, background: playing ? 'var(--rose)' : 'var(--emerald)', border: 'none', minWidth: '120px'}}>
                     {playing ? <><span aria-hidden="true">⏸</span> Pausa</> : <><span aria-hidden="true">▶</span> Reprodueix</>}
                 </button>
                 <button onClick={togglePlaybackRate} aria-label={`Velocitat de reproducció: ${playbackRate}x`} style={btnStyle}>{playbackRate}x</button>
-                <button onClick={onClose} aria-label="Tanca el reproductor" style={{...btnStyle, marginLeft: '40px'}}><span aria-hidden="true">✕</span> Tanca</button>
+                <button ref={closeBtnRef} onClick={onClose} aria-label="Tanca el reproductor" style={{...btnStyle, marginLeft: '8px'}}><span aria-hidden="true">✕</span> Tanca</button>
             </div>
         </div>,
         document.body
