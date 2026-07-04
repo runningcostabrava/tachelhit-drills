@@ -275,7 +275,7 @@ export default function DrillsResponsive() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ width: '44px', height: '44px', borderRadius: '14px', background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.25)' }}>📚</div>
               <div>
-                <h1 style={{ margin: 0, fontSize: isMobile ? '20px' : '24px', fontWeight: 900, color: 'white', letterSpacing: '-0.03em', lineHeight: 1.1 }}>Tachelhit Drills</h1>
+                <h1 style={{ margin: 0, fontSize: isMobile ? '20px' : '24px', fontWeight: 800, color: 'white', letterSpacing: '-0.02em', lineHeight: 1.1, fontFamily: 'var(--font-display)' }}>Tamazight Drills</h1>
                 <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>{filteredDrills.length} drill{filteredDrills.length === 1 ? '' : 's'}</div>
               </div>
             </div>
