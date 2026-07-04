@@ -283,8 +283,8 @@ This is the second line.`}
             style={{
               marginTop: '16px',
               padding: '11px 22px',
-              background: srtContent.trim() ? 'var(--brand-gradient)' : 'var(--border)',
-              color: '#fff',
+              background: srtContent.trim() ? 'var(--brand-gradient)' : 'var(--surface-2)',
+              color: srtContent.trim() ? '#fff' : 'var(--text-muted)',
               border: 'none',
               borderRadius: 'var(--r-md)',
               cursor: srtContent.trim() ? 'pointer' : 'not-allowed',
@@ -432,7 +432,7 @@ This is the second line.`}
               <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: 'var(--r-pill)', fontSize: '12px', fontWeight: 700, background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)' }}>{parsedSegments.length} segments trobats</span>
             </h3>
 
-            <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', background: 'var(--surface)' }}>
+            <div style={{ maxHeight: '300px', overflowY: 'auto', overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', background: 'var(--surface)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <caption style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>Segments SRT analitzats</caption>
                 <thead style={{ position: 'sticky', top: 0, background: 'var(--surface-2)', zIndex: 1 }}>
@@ -459,7 +459,7 @@ This is the second line.`}
               {parsedSegments.length > 20 && (
                 <div style={{ padding: '12px', textAlign: 'center', background: 'var(--surface-2)', borderTop: '1px solid var(--border)' }}>
                   <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '14px' }}>
-                    ... i {parsedSegments.length - 20} segments més
+                    ... i {parsedSegments.length - 20} segments més (tots s'importaran)
                   </p>
                 </div>
               )}
@@ -474,8 +474,8 @@ This is the second line.`}
             aria-busy={loading}
             style={{
               padding: '15px 40px',
-              background: (loading || !srtContent.trim() || !videoUrl.trim()) ? 'var(--border)' : 'var(--brand-gradient)',
-              color: '#fff',
+              background: (loading || !srtContent.trim() || !videoUrl.trim()) ? 'var(--surface-2)' : 'var(--brand-gradient)',
+              color: (loading || !srtContent.trim() || !videoUrl.trim()) ? 'var(--text-muted)' : '#fff',
               border: 'none',
               borderRadius: 'var(--r-md)',
               fontSize: '16px',
