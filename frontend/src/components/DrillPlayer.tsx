@@ -94,6 +94,10 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
   const answerRevealedRef = useRef(false);
   const hideAnswer = !!reviewMode && !answerRevealed;
 
+  // Session-finished state (review mode): shown once the last due card is graded
+  const [finished, setFinished] = useState(false);
+  const [reviewedCount, setReviewedCount] = useState(0);
+
   const revealAnswer = () => {
     setAnswerRevealed(true);
     answerRevealedRef.current = true;
@@ -536,6 +540,9 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
       setCurrentIndex(idx + 1);
     } else if (loopEnabled) {
       setCurrentIndex(0);
+    } else if (reviewMode) {
+      // Recap the session before leaving instead of dropping straight out
+      setFinished(true);
     } else {
       onExit();
     }
@@ -544,6 +551,50 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
   const handlePrev = () => {
     if (currentIndex > 0) setCurrentIndex(currentIndex - 1);
   };
+
+  // Shared grade action so the on-screen buttons and keyboard shortcuts stay in
+  // sync (does not alter grade integers or the grading call)
+  const gradeAndAdvance = async (g: number) => {
+    if (!currentDrill || !onGrade) return;
+    const drillId = currentDrill.id;
+    try {
+      await onGrade(drillId, g);
+    } catch (e) {
+      console.error('Failed to record grade', e);
+    }
+    // "Again" replays the same card; any other grade moves on
+    if (g === 0) {
+      playCurrentAudio();
+    } else {
+      setReviewedCount(c => c + 1);
+      goToNextDrill();
+    }
+  };
+
+  // Keyboard operability (review mode only): reveal with Space/Enter, then grade
+  // with 1-4. Ignored while typing in a field.
+  useEffect(() => {
+    if (!reviewMode || finished) return;
+    const onKey = (e: KeyboardEvent) => {
+      const el = document.activeElement as HTMLElement | null;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+      if (hideAnswer) {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          revealAnswer();
+        }
+      } else if (onGrade) {
+        // Same order as the on-screen grade buttons: 0=again 1=hard 2=good 3=easy
+        const map: Record<string, number> = { '1': 0, '2': 1, '3': 2, '4': 3 };
+        if (e.key in map) {
+          e.preventDefault();
+          gradeAndAdvance(map[e.key]);
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [reviewMode, finished, hideAnswer, onGrade, currentDrill]);
 
   // Helper function to format time in seconds to MM:SS format
   const formatTime = (seconds: number) => {
@@ -597,6 +648,65 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
   // Get video drills (drills with video URLs)
   const videoDrills = drills.filter(drill => drill.video_url);
 
+  // Session-finished recap (review mode) — mirrors the empty-state card styling
+  if (finished) {
+    return (
+      <div style={{
+        height: '100vh',
+        width: '100vw',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--bg)',
+        padding: '20px',
+        textAlign: 'center',
+        fontFamily: 'var(--font-sans)',
+        position: 'fixed',
+        top: 0, left: 0, right: 0, bottom: 0,
+        zIndex: 1000
+      }}>
+        <div style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--r-2xl)',
+          boxShadow: 'var(--shadow-lg)',
+          padding: '40px 36px',
+          maxWidth: '420px'
+        }}>
+          <div style={{
+            width: '72px',
+            height: '72px',
+            margin: '0 auto 22px',
+            borderRadius: 'var(--r-xl)',
+            background: 'var(--brand-gradient-soft)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '36px'
+          }}>🎉</div>
+          <h2 style={{ margin: '0 0 10px', fontSize: '22px', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Repàs completat!</h2>
+          <p style={{ color: 'var(--text-soft)', margin: '0 0 24px', fontSize: '15px', lineHeight: 1.5 }}>Has repassat {reviewedCount} drills.</p>
+          <button
+            onClick={onExit}
+            style={{
+              padding: '12px 28px',
+              background: 'var(--brand-1)',
+              color: 'white',
+              border: 'none',
+              borderRadius: 'var(--r-pill)',
+              fontWeight: 700,
+              fontSize: '15px',
+              cursor: 'pointer',
+              boxShadow: 'var(--shadow-brand)'
+            }}
+          >
+            Torna a l'inici
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       height: '100vh',
@@ -637,13 +747,13 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={() => setAutoPlayEnabled(!autoPlayEnabled)}
-            style={{ ...pillButtonStyle, background: autoPlayEnabled ? 'var(--amber)' : 'rgba(255,255,255,0.18)', color: autoPlayEnabled ? '#3a2a00' : 'white' }}
+            style={{ ...pillButtonStyle, background: autoPlayEnabled ? 'var(--saffron)' : 'rgba(255,255,255,0.18)', color: autoPlayEnabled ? '#3a2a00' : 'white' }}
           >
             AUTO {autoPlayEnabled ? 'ON' : 'OFF'}
           </button>
           <button
             onClick={() => setLoopEnabled(!loopEnabled)}
-            style={{ ...pillButtonStyle, background: loopEnabled ? 'var(--amber)' : 'rgba(255,255,255,0.18)', color: loopEnabled ? '#3a2a00' : 'white' }}
+            style={{ ...pillButtonStyle, background: loopEnabled ? 'var(--saffron)' : 'rgba(255,255,255,0.18)', color: loopEnabled ? '#3a2a00' : 'white' }}
           >
             LOOP {loopEnabled ? 'ON' : 'OFF'}
           </button>
@@ -654,7 +764,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               onClick={() => setShowVideoLibrary(true)}
               style={{ ...pillButtonStyle, background: 'rgba(255,255,255,0.18)', color: 'white' }}
             >
-              📹 LIBRARY
+              📹 BIBLIOTECA
             </button>
           )}
         </div>
@@ -667,7 +777,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: '24px 16px'
+        padding: '24px 16px 132px'
       }}>
         <div style={{
           width: '100%',
@@ -688,7 +798,8 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               fontSize: '26px',
               fontWeight: 800,
               color: 'var(--text)',
-              lineHeight: 1.35
+              lineHeight: 1.35,
+              fontFamily: 'var(--font-display)'
             }}>
               {currentDrill.text_catalan}
             </div>
@@ -711,7 +822,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
             {hideAnswer ? (
               <span style={{ letterSpacing: '8px', opacity: 0.35 }}>· · ·</span>
             ) : (
-              currentDrill?.text_tachelhit || 'No Tachelhit text'
+              currentDrill?.text_tachelhit || 'Sense text tachelhit'
             )}
           </div>
 
@@ -799,7 +910,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                 }}
               >
                 <span>▶️</span>
-                Watch Video with Subtitles
+                Mira el vídeo amb subtítols
               </button>
             </div>
           )}
@@ -848,6 +959,12 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
             {formatTime(audioProgress)}
           </span>
           <div
+            role="slider"
+            tabIndex={0}
+            aria-label="Progrés de l'àudio"
+            aria-valuemin={0}
+            aria-valuemax={Math.round(audioDuration)}
+            aria-valuenow={Math.round(audioProgress)}
             style={{
               flex: 1,
               height: '8px',
@@ -882,12 +999,12 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
           <button
             onClick={playCurrentAudio}
             disabled={isPlaying}
-            aria-label={isPlaying ? 'Playing' : 'Play audio'}
+            aria-label={isPlaying ? 'Reproduint' : 'Reprodueix l\'àudio'}
             style={{
               width: '60px',
               height: '60px',
               borderRadius: 'var(--r-pill)',
-              background: 'var(--brand-gradient)',
+              background: 'var(--brand-1)',
               color: 'white',
               border: 'none',
               fontSize: '24px',
@@ -991,7 +1108,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                 {/* Playback Speed */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <span style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600 }}>Speed</span>
+                  <span style={{ color: 'rgba(255,255,255,0.72)', fontSize: '12px', fontWeight: 600 }}>Velocitat</span>
                   {[0.5, 0.75, 1.0, 1.25, 1.5].map(rate => (
                     <button
                       key={rate}
@@ -1017,7 +1134,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                   onClick={handleToggleLoop}
                   style={{
                     padding: '7px 14px',
-                    background: videoControls.isLooping ? 'var(--amber)' : 'rgba(255,255,255,0.08)',
+                    background: videoControls.isLooping ? 'var(--saffron)' : 'rgba(255,255,255,0.08)',
                     color: videoControls.isLooping ? '#3a2a00' : 'white',
                     border: 'none',
                     borderRadius: 'var(--r-pill)',
@@ -1029,7 +1146,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                     gap: '5px'
                   }}
                 >
-                  🔁 {videoControls.isLooping ? 'Looping ON' : 'Loop'}
+                  🔁 {videoControls.isLooping ? 'Bucle ACTIU' : 'Bucle'}
                 </button>
               </div>
             </div>
@@ -1096,7 +1213,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                 {/* Tachelhit Subtitle */}
                 {currentDrill?.text_tachelhit && (
                   <div style={{
-                    background: 'rgba(99, 102, 241, 0.85)',
+                    background: 'var(--brand-1)',
                     color: 'white',
                     padding: '10px 16px',
                     borderRadius: 'var(--r-md)',
@@ -1112,7 +1229,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                 {/* Catalan Subtitle */}
                 {currentDrill?.text_catalan && (
                   <div style={{
-                    background: 'rgba(14, 165, 233, 0.9)',
+                    background: 'var(--sky)',
                     color: 'white',
                     padding: '8px 16px',
                     borderRadius: 'var(--r-md)',
@@ -1157,11 +1274,11 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                     gap: '4px'
                   }}
                 >
-                  ← Previous
+                  ← Anterior
                 </button>
 
-                <div style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600 }}>
-                  Subtitle {videoControls.currentSubtitleIndex + 1} of {videoControls.subtitleSections.length}
+                <div style={{ color: 'rgba(255,255,255,0.72)', fontSize: '13px', fontWeight: 600 }}>
+                  Subtítol {videoControls.currentSubtitleIndex + 1} de {videoControls.subtitleSections.length}
                 </div>
 
                 <button
@@ -1182,13 +1299,13 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                     gap: '4px'
                   }}
                 >
-                  Next →
+                  Següent →
                 </button>
               </div>
 
               {/* Subtitle Timeline */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600 }}>Timeline</span>
+                <span style={{ color: 'rgba(255,255,255,0.72)', fontSize: '12px', fontWeight: 600 }}>Línia de temps</span>
                 <div style={{ display: 'flex', gap: '5px' }}>
                   {videoControls.subtitleSections.map((section, index) => (
                     <button
@@ -1196,7 +1313,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                       onClick={() => handleJumpToSubtitle(index)}
                       style={{
                         padding: '5px 10px',
-                        background: videoControls.currentSubtitleIndex === index ? 'var(--amber)' : 'rgba(255,255,255,0.08)',
+                        background: videoControls.currentSubtitleIndex === index ? 'var(--saffron)' : 'rgba(255,255,255,0.08)',
                         color: videoControls.currentSubtitleIndex === index ? '#3a2a00' : 'white',
                         border: 'none',
                         borderRadius: 'var(--r-pill)',
@@ -1273,12 +1390,12 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                 >
                   ✕
                 </button>
-                <span style={{ color: 'white', fontWeight: 800, fontSize: '18px' }}>
-                  📹 Video Library ({videoDrills.length} videos)
+                <span style={{ color: 'white', fontWeight: 800, fontSize: '18px', fontFamily: 'var(--font-display)' }}>
+                  📹 Biblioteca de vídeos ({videoDrills.length} vídeos)
                 </span>
               </div>
-              <div style={{ color: 'var(--text-muted)', fontSize: '14px', fontWeight: 600 }}>
-                Click any video to play with subtitles
+              <div style={{ color: 'rgba(255,255,255,0.72)', fontSize: '14px', fontWeight: 600 }}>
+                Fes clic a qualsevol vídeo per reproduir-lo amb subtítols
               </div>
             </div>
 
@@ -1347,12 +1464,12 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                       background: 'rgba(0,0,0,0.7)',
                       color: 'white',
                       padding: '4px 8px',
-                      borderRadius: '4px',
+                      borderRadius: 'var(--r-sm)',
                       fontSize: '12px'
                     }}>
-                      {drill.video_start_time !== undefined && drill.video_end_time !== undefined 
+                      {drill.video_start_time !== undefined && drill.video_end_time !== undefined
                         ? `${formatTime(drill.video_start_time)}-${formatTime(drill.video_end_time)}`
-                        : 'Full video'
+                        : 'Vídeo complet'
                       }
                     </div>
                   </div>
@@ -1373,13 +1490,13 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                       lineHeight: 1.4,
                       height: '48px'
                     }}>
-                      {drill.text_tachelhit || 'No title'}
+                      {drill.text_tachelhit || 'Sense títol'}
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       {drill.text_arabic && (
                         <div style={{
-                          color: 'var(--text-muted)',
+                          color: 'rgba(255,255,255,0.72)',
                           fontSize: '14px',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -1393,7 +1510,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
 
                       {drill.text_catalan && (
                         <div style={{
-                          color: 'var(--text-muted)',
+                          color: 'rgba(255,255,255,0.72)',
                           fontSize: '12px',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -1428,7 +1545,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               <span style={{
                 fontWeight: 800,
                 color: pronunciationResult.score >= 0.8 ? 'var(--emerald)'
-                  : pronunciationResult.score >= 0.5 ? 'var(--amber)' : 'var(--rose)'
+                  : pronunciationResult.score >= 0.5 ? 'var(--saffron)' : 'var(--rose)'
               }}>
                 {pronunciationResult.score >= 0.8 ? '🎯' : pronunciationResult.score >= 0.5 ? '👍' : '🔁'}{' '}
                 {Math.round(pronunciationResult.score * 100)}%
@@ -1447,14 +1564,16 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
         <div style={{
           position: 'fixed', bottom: '18px', left: '50%', transform: 'translateX(-50%)',
           display: 'flex', gap: '10px', zIndex: 10001,
+          flexWrap: 'wrap', justifyContent: 'center', maxWidth: '96vw',
           background: 'rgba(15, 23, 42, 0.85)', padding: '10px 14px',
           borderRadius: 'var(--r-pill)', backdropFilter: 'blur(8px)', boxShadow: 'var(--shadow-lg)'
         }}>
           {hideAnswer ? (
             <button
               onClick={revealAnswer}
+              aria-label="Mostra la resposta"
               style={{
-                padding: '12px 28px', background: 'var(--brand-gradient)', color: 'white',
+                padding: '12px 28px', background: 'var(--brand-1)', color: 'white',
                 border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 800,
                 fontSize: '15px', cursor: 'pointer'
               }}
@@ -1466,6 +1585,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
           <button
             onClick={togglePronunciationRecording}
             disabled={pronunciationBusy}
+            aria-label={isCheckingRecording ? 'Atura i comprova la pronunciació' : 'Comprova la teva pronunciació'}
             title={isCheckingRecording ? 'Atura i comprova' : 'Comprova la teva pronunciació'}
             style={{
               padding: '10px 14px',
@@ -1480,26 +1600,14 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
           </button>
           {[
             { g: 0, label: 'Un altre cop', bg: 'var(--rose)' },
-            { g: 1, label: 'Difícil', bg: 'var(--amber)' },
+            { g: 1, label: 'Difícil', bg: 'var(--saffron)' },
             { g: 2, label: 'Bé', bg: 'var(--emerald)' },
             { g: 3, label: 'Fàcil', bg: 'var(--sky)' },
-          ].map(({ g, label, bg }) => (
+          ].map(({ g, label, bg }, i) => (
             <button
               key={g}
-              onClick={async () => {
-                const drillId = currentDrill.id;
-                try {
-                  await onGrade(drillId, g);
-                } catch (e) {
-                  console.error('Failed to record grade', e);
-                }
-                // "Again" replays the same card; any other grade moves on
-                if (g === 0) {
-                  playCurrentAudio();
-                } else {
-                  goToNextDrill();
-                }
-              }}
+              onClick={() => gradeAndAdvance(g)}
+              aria-label={`${label} (tecla ${i + 1})`}
               title={suggestedGrade === g ? 'Suggerit per la teva pronunciació' : undefined}
               style={{
                 padding: '10px 16px', background: bg, color: 'white', border: 'none',
