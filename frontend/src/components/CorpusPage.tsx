@@ -31,6 +31,7 @@ export default function CorpusPage() {
       setOffset(nextOffset);
     } catch (e) {
       console.error('Corpus search failed', e);
+      toast.error('No s\'ha pogut carregar el corpus.');
     } finally {
       setLoading(false);
     }
@@ -54,6 +55,7 @@ export default function CorpusPage() {
       setHasMore(false);
     } catch (e) {
       console.error('Gap load failed', e);
+      toast.error('No s\'ha pogut carregar el corpus.');
     } finally {
       setLoading(false);
     }
@@ -114,6 +116,7 @@ export default function CorpusPage() {
               </p>
               <button
                 onClick={() => setShowCoverage(v => !v)}
+                aria-pressed={showCoverage}
                 style={{ padding: '5px 12px', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontWeight: 700, fontSize: '13px' }}
               >
                 {showCoverage ? 'Amaga cobertura' : 'Cobertura'}
@@ -128,19 +131,19 @@ export default function CorpusPage() {
         <div style={{ maxWidth: '860px', margin: '20px auto 0', padding: '0 24px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '18px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '14px', color: 'var(--text)' }}>Cobertura de mitjans</div>
+              <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '14px', color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Cobertura de mitjans</div>
               {bar('🔊 Àudio', stats.with_audio, stats.total_drills, 'var(--emerald)')}
               {bar('🎬 Vídeo', stats.with_video, stats.total_drills, 'var(--sky)')}
               {bar('Aa Llatí', stats.with_latin_script, stats.total_drills, 'var(--brand-1)')}
-              {bar('✓ Verificat', stats.verified, stats.total_drills, 'var(--amber)')}
+              {bar('✓ Verificat', stats.verified, stats.total_drills, 'var(--saffron)')}
             </div>
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '18px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '14px', color: 'var(--text)' }}>Per varietat</div>
+              <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '14px', color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Per varietat</div>
               {Object.entries(stats.by_variety).sort((a, b) => b[1] - a[1]).slice(0, 8)
                 .map(([k, n]) => bar(k === 'unspecified' ? '— sense especificar' : k, n, stats.total_drills, 'var(--brand-2)'))}
             </div>
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '18px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '14px', color: 'var(--text)' }}>Per regió</div>
+              <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '14px', color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Per regió</div>
               {Object.entries(stats.by_region).sort((a, b) => b[1] - a[1]).slice(0, 8)
                 .map(([k, n]) => bar(k === 'unspecified' ? '— sense especificar' : k, n, stats.total_drills, 'var(--sky)'))}
             </div>
@@ -152,6 +155,7 @@ export default function CorpusPage() {
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '18px' }}>
           <input
             value={q}
+            aria-label="Cerca al corpus"
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') search(); }}
             placeholder="Cerca en ⵜⵉⴼⵉⵏⴰⵖ, llatí, català o àrab…"
@@ -159,6 +163,7 @@ export default function CorpusPage() {
           />
           <select
             value={variety}
+            aria-label="Filtra per varietat"
             onChange={(e) => setVariety(e.target.value)}
             style={{ flex: 1, minWidth: '140px', padding: '12px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', fontSize: '14px', color: 'var(--text)' }}
           >
@@ -178,7 +183,7 @@ export default function CorpusPage() {
         {/* Documentation-gaps work-list: what the corpus still needs */}
         {gaps.some(g => g.count > 0) && (
           <div style={{ marginBottom: '18px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px', fontFamily: 'var(--font-display)' }}>
               🛠 Necessita feina
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -186,11 +191,12 @@ export default function CorpusPage() {
                 <button
                   key={g.kind}
                   onClick={() => (activeGap === g.kind ? clearGap() : loadGap(g.kind))}
+                  aria-pressed={activeGap === g.kind}
                   style={{
                     padding: '6px 12px', borderRadius: 'var(--r-pill)', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
-                    background: activeGap === g.kind ? 'var(--amber)' : 'var(--amber-soft)',
-                    color: activeGap === g.kind ? '#fff' : 'var(--amber-strong)',
-                    border: '1px solid var(--amber)'
+                    background: activeGap === g.kind ? 'var(--saffron-strong)' : 'var(--saffron-soft)',
+                    color: activeGap === g.kind ? '#fff' : 'var(--saffron-strong)',
+                    border: '1px solid var(--saffron)'
                   }}
                 >
                   {g.label} · {g.count}
@@ -206,7 +212,11 @@ export default function CorpusPage() {
         )}
 
         {loading && <p style={{ color: 'var(--text-soft)' }}>Cercant…</p>}
-        {!loading && results.length === 0 && <p style={{ color: 'var(--text-muted)' }}>Cap resultat.</p>}
+        {!loading && results.length === 0 && (
+          <p style={{ color: 'var(--text-muted)' }}>
+            {q || variety || activeGap ? 'Cap resultat per a la cerca.' : 'Encara no hi ha entrades al corpus.'}
+          </p>
+        )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {results.map((d) => (
@@ -233,16 +243,17 @@ export default function CorpusPage() {
                     {d.author && chip(`👤 ${d.author}`, 'var(--surface-2)', 'var(--text-soft)')}
                     {d.verified
                       ? chip('✓ verificat', 'var(--emerald-soft)', 'var(--emerald)')
-                      : chip('pendent', 'var(--amber-soft)', 'var(--amber-strong)')}
+                      : chip('pendent', 'var(--saffron-soft)', 'var(--saffron-strong)')}
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     {d.audio_url && (
-                      <button onClick={() => playAudio(d)} style={{ padding: '7px 14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
+                      <button onClick={() => playAudio(d)} aria-label="Reprodueix l'àudio" style={{ padding: '7px 14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
                         ▶ Àudio
                       </button>
                     )}
                     <button
                       onClick={() => toggleVerify(d)}
+                      aria-pressed={d.verified}
                       style={{ padding: '7px 14px', background: d.verified ? 'var(--surface-2)' : 'var(--emerald)', border: d.verified ? '1px solid var(--border)' : 'none', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: d.verified ? 'var(--text-soft)' : '#fff' }}
                     >
                       {d.verified ? 'Desverifica' : '✓ Verifica'}
