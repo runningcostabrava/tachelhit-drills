@@ -29,20 +29,16 @@ const RouteLoader = () => (
   </div>
 );
 
-// Floating spaced-repetition entry point, shown on the home screen when
-// there are cards due or new drills to learn
-const ReviewFab = () => {
+// Spaced-repetition entry point in the top nav (saffron signature accent).
+// Self-hides when there's nothing due or new to learn.
+const ReviewNavButton = () => {
   const navigate = useNavigate();
   const [counts, setCounts] = useState<{ due: number; new: number } | null>(null);
   const [streak, setStreak] = useState(0);
 
   useEffect(() => {
-    api.reviewStats()
-      .then(s => setCounts({ due: s.due, new: s.new }))
-      .catch(() => {});
-    api.reviewStreak()
-      .then(s => setStreak(s.streak_days || 0))
-      .catch(() => {});
+    api.reviewStats().then(s => setCounts({ due: s.due, new: s.new })).catch(() => {});
+    api.reviewStreak().then(s => setStreak(s.streak_days || 0)).catch(() => {});
   }, []);
 
   const pending = (counts?.due || 0) + (counts?.new || 0);
@@ -51,16 +47,15 @@ const ReviewFab = () => {
   return (
     <button
       onClick={() => navigate('/player?mode=review')}
+      title="Repàs espaiat"
       style={{
-        position: 'fixed', bottom: '86px', right: '16px', zIndex: 900,
-        padding: '13px 20px', background: 'var(--brand-gradient)', color: 'white',
-        border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 800, fontSize: '15px',
-        boxShadow: 'var(--shadow-brand)', cursor: 'pointer',
-        display: 'flex', alignItems: 'center', gap: '8px'
+        flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap',
+        padding: '8px 14px', background: 'var(--saffron)', color: '#fff',
+        border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '14px', cursor: 'pointer'
       }}
     >
-      🧠 Repàs {counts!.due > 0 ? `(${counts!.due})` : `(${counts!.new} nous)`}
-      {streak > 0 && <span style={{ marginLeft: '4px' }}>🔥{streak}</span>}
+      🧠 {counts!.due > 0 ? counts!.due : `${counts!.new} nous`}
+      {streak > 0 && <span>🔥{streak}</span>}
     </button>
   );
 };
@@ -137,7 +132,6 @@ function App() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <ToastHost />
       {aiOpen && <AiCopilot onClose={() => setAiOpen(false)} />}
-      {location.pathname === '/' && <ReviewFab />}
 
       {showNav && (
         <nav style={{
@@ -149,7 +143,7 @@ function App() {
             <span style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'var(--brand-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>ⵣ</span>
             <span style={{ fontWeight: 800, fontSize: '16px', color: 'var(--text)', letterSpacing: '-0.01em' }}>Tamazight</span>
           </button>
-          <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', flex: 1, padding: '2px 0', scrollbarWidth: 'none' }}>
+          <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', flex: 1, minWidth: 0, padding: '2px 0', scrollbarWidth: 'none' }}>
             {navLinks.map(l => (
               <button key={l.to} onClick={() => navigate(l.to)}
                 style={navBtn(l.to === '/' ? location.pathname === '/' : location.pathname.startsWith(l.to))}>
@@ -157,6 +151,7 @@ function App() {
               </button>
             ))}
           </div>
+          <ReviewNavButton />
           <button onClick={() => setAiOpen(v => !v)} title="Copilot IA" style={{ flexShrink: 0, padding: '8px 12px', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '14px', cursor: 'pointer', border: 'none', background: aiOpen ? 'var(--brand-1)' : 'var(--brand-gradient)', color: '#fff' }}>🤖</button>
           <button onClick={() => navigate('/profile')} title="Perfil" style={{ flexShrink: 0, padding: '8px 12px', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '14px', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}>👤</button>
         </nav>
