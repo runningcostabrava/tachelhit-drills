@@ -54,7 +54,7 @@ export default function TestsDashboard() {
   const [playingDrills, setPlayingDrills] = useState<any[] | null>(null);
   const [generatingDemoVideoId, setGeneratingDemoVideoId] = useState<number | null>(null);
   const [viewingVideoUrl, setViewingVideoUrl] = useState<string | null>(null);
-  const [showTestList, setShowTestList] = useState(isMobile ? true : true);
+  const [showTestList, setShowTestList] = useState(true);
 
 
   useEffect(() => {
@@ -113,7 +113,7 @@ export default function TestsDashboard() {
         console.error('Error polling for demo video:', error);
         clearInterval(interval);
         setGeneratingDemoVideoId(null);
-        alert('No s\'ha pogut obtenir l\'estat del vídeo de demostració. Torna-ho a provar o revisa els registres.');
+        toast.error('No s\'ha pogut obtenir l\'estat del vídeo de demostració. Torna-ho a provar o revisa els registres.');
       }
     }, 10000); // Poll every 10 seconds
 
@@ -122,7 +122,7 @@ export default function TestsDashboard() {
       if (generatingDemoVideoId === testId) {
         clearInterval(interval);
         setGeneratingDemoVideoId(null);
-        alert('La generació del vídeo de demostració està trigant més del que s\'esperava. Torna-hi més tard.');
+        toast.error('La generació del vídeo de demostració està trigant més del que s\'esperava. Torna-hi més tard.');
       }
     }, 5 * 60 * 1000); // 5 minutes timeout
   };
@@ -149,10 +149,10 @@ export default function TestsDashboard() {
         setSelectedTest(null);
         setStats(null);
       }
-      alert('Test eliminat correctament!');
+      toast.success('Test eliminat correctament!');
     } catch (error) {
       console.error('Error deleting test:', error);
-      alert('No s\'ha pogut eliminar el test');
+      toast.error('No s\'ha pogut eliminar el test');
     }
   };
 
@@ -315,7 +315,7 @@ export default function TestsDashboard() {
           }}>
             {isMobile && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text)', fontWeight: 800 }}>Tests</h2>
+                <h2 style={{ margin: 0, fontSize: '20px', color: 'var(--text)', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Tests</h2>
                 <button
                   onClick={() => setShowTestList(false)}
                   style={{
@@ -355,7 +355,7 @@ export default function TestsDashboard() {
                   justifyContent: 'center',
                   fontSize: '30px'
                 }}>📝</div>
-                <p style={{ fontSize: '18px', marginBottom: '8px', fontWeight: 800, color: 'var(--text)' }}>Encara no has creat cap test</p>
+                <p style={{ fontSize: '18px', marginBottom: '8px', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Encara no has creat cap test</p>
                 <p style={{ fontSize: '14px', margin: 0 }}>Torna als drills i selecciona'n uns quants per crear un test</p>
               </div>
             ) : (
@@ -363,6 +363,9 @@ export default function TestsDashboard() {
                 {tests.map(test => (
                   <div
                     key={test.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Obre el test ${test.title}`}
                     onClick={() => {
                       setSelectedTest(test);
                       fetchStats(test.id);
@@ -370,6 +373,16 @@ export default function TestsDashboard() {
                         setShowTestList(false);
                       }
                       // Remove navigate(`/tests/${test.id}`); as it would trigger the TestTaking view
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelectedTest(test);
+                        fetchStats(test.id);
+                        if (isMobile) {
+                          setShowTestList(false);
+                        }
+                      }
                     }}
                     style={{
                       padding: isMobile ? '18px' : '16px',
@@ -405,7 +418,7 @@ export default function TestsDashboard() {
                           {test.title}
                         </h3>
                         <p style={{ margin: '0 0 10px 0', fontSize: isMobile ? '14px' : '13px', color: 'var(--text-soft)', lineHeight: 1.4 }}>
-                          {test.description || 'No description'}
+                          {test.description || 'Sense descripció'}
                         </p>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                           <span style={{
@@ -458,7 +471,7 @@ export default function TestsDashboard() {
                           e.stopPropagation(); // Prevent triggering handleViewTest
                           const url = `${window.location.origin}/tests/${test.id}`;
                           navigator.clipboard.writeText(url);
-                          alert(`Enllaç del test copiat al porta-retalls!\n${url}`);
+                          toast.success(`Enllaç del test copiat al porta-retalls!\n${url}`);
                         }}
                         style={{
                           padding: isMobile ? '9px 12px' : '7px 10px',
@@ -477,15 +490,14 @@ export default function TestsDashboard() {
                           boxShadow: 'var(--shadow-xs)'
                         }}
                         title="Copia l'enllaç d'aquest test"
+                        aria-label="Copia l'enllaç"
                       >
                         🔗 Copia l'enllaç
                       </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (confirm(`Segur que vols eliminar el test "${test.title}"? Aquesta acció no es pot desfer.`)) {
-                            handleDeleteTest(test.id);
-                          }
+                          handleDeleteTest(test.id);
                         }}
                         style={{
                           padding: isMobile ? '9px 12px' : '7px 10px',
@@ -501,6 +513,7 @@ export default function TestsDashboard() {
                           gap: '5px'
                         }}
                         title="Elimina el test"
+                        aria-label="Elimina"
                       >
                         🗑️ Elimina
                       </button>
@@ -590,6 +603,7 @@ export default function TestsDashboard() {
                 fontSize: '16px',
                 fontWeight: 800,
                 color: 'var(--text)',
+                fontFamily: 'var(--font-display)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px'
@@ -603,11 +617,11 @@ export default function TestsDashboard() {
                 fontSize: isMobile ? '13px' : '14px'
               }}>
                 <div style={{ padding: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tipus</div>
+                  <div style={{ fontWeight: 700, color: 'var(--text-soft)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tipus</div>
                   <div style={{ color: 'var(--text)', fontWeight: 600 }}>{getQuestionTypeLabel(selectedTest.question_type)}</div>
                 </div>
                 <div style={{ padding: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Pistes</div>
+                  <div style={{ fontWeight: 700, color: 'var(--text-soft)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Pistes</div>
                   <div style={{ color: 'var(--text)', fontWeight: 600 }}>
                     {getHintLevelLabel(selectedTest.hint_level)}
                     {selectedTest.hint_level === 'partial' && ` (${selectedTest.hint_percentage ?? 0}%)`}
@@ -615,15 +629,15 @@ export default function TestsDashboard() {
                   </div>
                 </div>
                 <div style={{ padding: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Temps</div>
+                  <div style={{ fontWeight: 700, color: 'var(--text-soft)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Temps</div>
                   <div style={{ color: 'var(--text)', fontWeight: 600 }}>{(selectedTest.time_limit_seconds ?? 0) > 0 ? `${selectedTest.time_limit_seconds ?? 0}s` : 'Sense límit'}</div>
                 </div>
                 <div style={{ padding: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Aprovat</div>
+                  <div style={{ fontWeight: 700, color: 'var(--text-soft)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Aprovat</div>
                   <div style={{ color: 'var(--text)', fontWeight: 600 }}>{selectedTest.passing_score}%</div>
                 </div>
                 <div style={{ padding: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', gridColumn: isMobile ? 'span 2' : 'span 1' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Drills</div>
+                  <div style={{ fontWeight: 700, color: 'var(--text-soft)', marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Drills</div>
                   <div style={{ color: 'var(--text)', fontWeight: 600 }}>{selectedTest.drill_ids.split(',').length} drills</div>
                 </div>
               </div>
@@ -645,6 +659,7 @@ export default function TestsDashboard() {
                   fontSize: '16px',
                   fontWeight: 800,
                   color: 'var(--emerald)',
+                  fontFamily: 'var(--font-display)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px'
@@ -691,6 +706,8 @@ export default function TestsDashboard() {
             }}>
               <button
                 onClick={() => setTakingTestId(selectedTest.id)}
+                aria-label="Fes el test"
+                title="Fes el test"
                 style={{
                   padding: isMobile ? '14px 20px' : '13px 24px',
                   fontSize: '15px',
@@ -733,9 +750,11 @@ export default function TestsDashboard() {
                     setPlayingDrills(testDrills);
                   } catch (error) {
                     console.error('Error loading drills:', error);
-                    alert('No s\'han pogut carregar els drills');
+                    toast.error('No s\'han pogut carregar els drills');
                   }
                 }}
+                aria-label="Reprodueix els drills"
+                title="Reprodueix els drills"
                 style={{
                   padding: isMobile ? '14px 20px' : '13px 24px',
                   fontSize: '15px',
@@ -761,14 +780,16 @@ export default function TestsDashboard() {
                   try {
                     setGeneratingDemoVideoId(selectedTest.id); // Set state to show loading
                     const response = await axios.post(`${API_BASE}/generate-drillplayer-demo/${selectedTest.id}`);
-                    alert(response.data.message || 'S\'ha iniciat la generació del vídeo. Comprovant si ha acabat...');
+                    toast.success(response.data.message || 'S\'ha iniciat la generació del vídeo. Comprovant si ha acabat...');
                     startPollingForDemoVideo(selectedTest.id); // Start polling
                   } catch (error: any) {
                     console.error('Error generating demo video:', error);
                     setGeneratingDemoVideoId(null); // Clear loading state on error
-                    alert(`No s'ha pogut generar el vídeo de demostració: ${error.response?.data?.detail || error.message}`);
+                    toast.error(`No s'ha pogut generar el vídeo de demostració: ${error.response?.data?.detail || error.message}`);
                   }
                 }}
+                aria-label="Crea el vídeo"
+                title="Crea el vídeo"
                 style={{
                   padding: isMobile ? '14px 20px' : '13px 24px',
                   fontSize: '15px',
@@ -782,7 +803,7 @@ export default function TestsDashboard() {
                   boxShadow: 'var(--shadow-xs)'
                 }}
               >
-                🎬 Crear Vidi
+                🎬 Crea el vídeo
               </button>
             </div>
 
@@ -799,7 +820,7 @@ export default function TestsDashboard() {
                 gap: '12px',
                 alignItems: 'flex-start'
               }}>
-                <h3 style={{ margin: 0, color: 'var(--emerald)', fontSize: '18px', fontWeight: 800 }}>✅ Vídeo a punt!</h3>
+                <h3 style={{ margin: 0, color: 'var(--emerald)', fontSize: '18px', fontWeight: 800, fontFamily: 'var(--font-display)' }}>✅ Vídeo a punt!</h3>
                 <button
                   onClick={() => setViewingVideoUrl(selectedTest.video_url ?? null)}
                   style={{
@@ -862,7 +883,7 @@ export default function TestsDashboard() {
                 justifyContent: 'center',
                 fontSize: '34px'
               }}>👈</div>
-              <p style={{ fontSize: '18px', margin: 0, fontWeight: 800, color: 'var(--text)' }}>Selecciona un test per veure'n els detalls</p>
+              <p style={{ fontSize: '18px', margin: 0, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Selecciona un test per veure'n els detalls</p>
               <p style={{ fontSize: '14px', marginTop: '8px', marginBottom: 0 }}>Tria un test de la llista per veure'n la configuració, les estadístiques i les accions.</p>
             </div>
           </div>
@@ -879,7 +900,7 @@ export default function TestsDashboard() {
               borderRadius: 'var(--r-xl)',
               boxShadow: 'var(--shadow-sm)'
             }}>
-              <p style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)' }}>Cap test seleccionat</p>
+              <p style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Cap test seleccionat</p>
               <button
                 onClick={() => setShowTestList(true)}
                 style={{
