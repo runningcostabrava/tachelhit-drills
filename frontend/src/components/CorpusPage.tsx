@@ -17,12 +17,20 @@ export default function CorpusPage() {
     api.corpusStats().then(setStats).catch(() => {});
   }, []);
 
-  const search = useCallback(async () => {
+  const PAGE = 50;
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+
+  const runSearch = useCallback(async (nextOffset: number, append: boolean) => {
     setLoading(true);
     try {
-      let rows = await api.corpusSearch({ q: q.trim(), variety: variety.trim(), limit: 100 });
+      let rows = await api.corpusSearch({
+        q: q.trim(), variety: variety.trim(), limit: PAGE, offset: nextOffset,
+      });
+      setHasMore(rows.length === PAGE);
       if (onlyUnverified) rows = rows.filter(d => !d.verified);
-      setResults(rows);
+      setResults(prev => (append ? [...prev, ...rows] : rows));
+      setOffset(nextOffset);
     } catch (e) {
       console.error('Corpus search failed', e);
     } finally {
@@ -30,7 +38,8 @@ export default function CorpusPage() {
     }
   }, [q, variety, onlyUnverified]);
 
-  useEffect(() => { search(); }, [search]);
+  useEffect(() => { runSearch(0, false); }, [runSearch]);
+  const search = () => runSearch(0, false);
 
   const playAudio = (d: Drill) => {
     const url = d.audio_url ? getMediaUrl(d.audio_url) : '';
@@ -79,12 +88,18 @@ export default function CorpusPage() {
             placeholder="Cerca en ⵜⵉⴼⵉⵏⴰⵖ, llatí, català o àrab…"
             style={{ flex: 2, minWidth: '220px', padding: '12px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', fontSize: '15px', color: 'var(--text)' }}
           />
-          <input
+          <select
             value={variety}
             onChange={(e) => setVariety(e.target.value)}
-            placeholder="Varietat (p.ex. tashelhit)"
             style={{ flex: 1, minWidth: '140px', padding: '12px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', fontSize: '14px', color: 'var(--text)' }}
-          />
+          >
+            <option value="">Totes les varietats</option>
+            {Object.entries(stats?.by_variety || {})
+              .filter(([k]) => k !== 'unspecified')
+              .map(([k, n]) => (
+                <option key={k} value={k}>{k} ({n})</option>
+              ))}
+          </select>
           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-soft)', cursor: 'pointer' }}>
             <input type="checkbox" checked={onlyUnverified} onChange={(e) => setOnlyUnverified(e.target.checked)} />
             Només pendents de revisar
@@ -139,6 +154,17 @@ export default function CorpusPage() {
             </div>
           ))}
         </div>
+
+        {hasMore && !loading && (
+          <div style={{ textAlign: 'center', marginTop: '18px' }}>
+            <button
+              onClick={() => runSearch(offset + PAGE, true)}
+              style={{ padding: '11px 26px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}
+            >
+              ⬇ Carrega'n més
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
