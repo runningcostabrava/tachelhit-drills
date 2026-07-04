@@ -8,13 +8,11 @@ import { useNavigate } from 'react-router-dom';
 import { syncManager } from '../services/OfflineSyncManager';
 import { Network } from '@capacitor/network';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
-import { VoiceRecorder } from 'capacitor-voice-recorder';
 import { API_BASE, getMediaUrl } from '../config';
 import { setSelectedDrillIds } from '../selection';
 import {
     FaVolumeUp,
     FaVideo,
-    FaRobot,
     FaLanguage,
     FaMagic,
     FaSave,
@@ -22,8 +20,11 @@ import {
     FaTrash,
     FaCheckSquare,
     FaTag,
-    FaPlus
+    FaPlus,
+    FaMicrophone,
+    FaCamera
 } from 'react-icons/fa';
+import RecordAudioModal from './RecordAudioModal';
 
 // Import CSS structural definitions
 import 'ag-grid-community/styles/ag-grid.css';
@@ -44,6 +45,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
     const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
     const [selectedRows, setSelectedRows] = useState<Drill[]>([]);
     const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+    const [recordDrill, setRecordDrill] = useState<Drill | null>(null);
     const [showTestConfig, setShowTestConfig] = useState(false);
     const [pendingMedia, setPendingMedia] = useState<Record<number, { image?: string, audio?: Blob, audioUrl?: string, video?: Blob, videoUrl?: string }>>({});
     const navigate = useNavigate();
@@ -291,31 +293,6 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
         }
     };
 
-    const handleQuickAudio = async (drillId: number) => {
-        try {
-            const isRecording = actionLoadingId === `rec-${drillId}`;
-            if (isRecording) {
-                const result = await VoiceRecorder.stopRecording();
-                setActionLoadingId(null);
-                if (result.value && result.value.recordDataBase64) {
-                    const base64Response = await fetch(`data:${result.value.mimeType};base64,${result.value.recordDataBase64}`);
-                    const blob = await base64Response.blob();
-                    setPendingMedia(prev => ({
-                        ...prev,
-                        [drillId]: { ...prev[drillId], audio: blob, audioUrl: URL.createObjectURL(blob) }
-                    }));
-                }
-            } else {
-                await VoiceRecorder.requestAudioRecordingPermission();
-                await VoiceRecorder.startRecording();
-                setActionLoadingId(`rec-${drillId}`);
-            }
-        } catch (e) {
-            console.error('Quick audio failed', e);
-            setActionLoadingId(null);
-        }
-    };
-
     const handleQuickSave = async (drill: Drill) => {
         const pending = pendingMedia[drill.id];
         if (!pending) return;
@@ -503,7 +480,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                         gap: '8px'
                                     }}
                                 >
-                                    <FaRobot /> {actionLoadingId === `tts-${drill.id}` ? '...' : 'TTS'}
+                                    <FaVolumeUp />{actionLoadingId === `tts-${drill.id}` ? '...' : 'TTS'}
                                 </button>
                             )}
                             {drill.video_url && (
@@ -539,14 +516,12 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                             <button
                                 onClick={() => handleQuickPhoto(drill.id)}
-                                style={{ flex: 1, padding: '11px', background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid var(--emerald)', borderRadius: 'var(--r-md)', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
-                            >📷 Foto</button>
+                                style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '11px', background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid var(--emerald)', borderRadius: 'var(--r-md)', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
+                            ><FaCamera /> Foto</button>
                             <button
-                                onClick={() => handleQuickAudio(drill.id)}
-                                style={{ flex: 1, padding: '11px', background: actionLoadingId === `rec-${drill.id}` ? 'var(--rose-soft)' : 'var(--sky-soft)', color: actionLoadingId === `rec-${drill.id}` ? 'var(--rose)' : 'var(--sky)', border: `1px solid ${actionLoadingId === `rec-${drill.id}` ? 'var(--rose)' : 'var(--sky)'}`, borderRadius: 'var(--r-md)', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
-                            >
-                                {actionLoadingId === `rec-${drill.id}` ? '⏹ Atura' : '🎙 Àudio'}
-                            </button>
+                                onClick={() => setRecordDrill(drill)}
+                                style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '11px', background: 'var(--rose-soft)', color: 'var(--rose)', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
+                            ><FaMicrophone /> Grava</button>
                         </div>
 
                         {/* Previews for pending media */}
@@ -555,8 +530,8 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                 <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--amber-strong)', marginBottom: '6px' }}>Canvis pendents:</div>
                                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                     {pendingMedia[drill.id].image && <img src={pendingMedia[drill.id].image} alt="" style={{ width: '40px', height: '40px', borderRadius: 'var(--r-sm)', objectFit: 'cover' }} />}
-                                    {pendingMedia[drill.id].audioUrl && <button onClick={() => new Audio(pendingMedia[drill.id].audioUrl).play()} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>🔊</button>}
-                                    {pendingMedia[drill.id].videoUrl && <button onClick={() => window.open(pendingMedia[drill.id].videoUrl, '_blank')} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>🎬</button>}
+                                    {pendingMedia[drill.id].audioUrl && <button onClick={() => new Audio(pendingMedia[drill.id].audioUrl).play()} aria-label="Reprodueix l'àudio" style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--sky)' }}><FaVolumeUp /></button>}
+                                    {pendingMedia[drill.id].videoUrl && <button onClick={() => window.open(pendingMedia[drill.id].videoUrl, '_blank')} aria-label="Obre el vídeo" style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: 'var(--brand-1)' }}><FaVideo /></button>}
                                     <div style={{ flex: 1 }}></div>
                                     <button
                                         onClick={() => handleQuickSave(drill)}
@@ -664,7 +639,8 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center', height: '100%' }}>
                     <button onClick={() => handleTranslate(params.data, 'ca', 'shi')} disabled={actionLoadingId !== null} title="Tradueix del català al taixelhit" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', opacity: actionLoadingId ? 0.5 : 1, cursor: actionLoadingId ? 'not-allowed' : 'pointer' }}><span style={{ color: 'var(--brand-1)', display: 'flex' }}><FaLanguage /></span> CA→Ta</button>
                     <button onClick={() => handleTranslate(params.data, 'shi', 'ca')} disabled={actionLoadingId !== null} title="Tradueix del taixelhit al català" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', opacity: actionLoadingId ? 0.5 : 1, cursor: actionLoadingId ? 'not-allowed' : 'pointer' }}><span style={{ color: 'var(--emerald)', display: 'flex' }}><FaLanguage /></span> Ta→CA</button>
-                    <button onClick={() => handleTachelhitTTS(params.data)} disabled={actionLoadingId !== null} title="Genera veu en taixelhit" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', opacity: actionLoadingId ? 0.5 : 1, cursor: actionLoadingId ? 'not-allowed' : 'pointer' }}><span style={{ color: 'var(--saffron)', display: 'flex' }}><FaRobot /></span> Veu</button>
+                    <button onClick={() => handleTachelhitTTS(params.data)} disabled={actionLoadingId !== null} title="Genera veu en taixelhit" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', opacity: actionLoadingId ? 0.5 : 1, cursor: actionLoadingId ? 'not-allowed' : 'pointer' }}><span style={{ color: 'var(--saffron)', display: 'flex' }}><FaVolumeUp /></span> Veu</button>
+                    <button onClick={() => setRecordDrill(params.data)} disabled={actionLoadingId !== null} title="Torna a gravar l'àudio" aria-label="Torna a gravar l'àudio" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}><span style={{ color: 'var(--rose)', display: 'flex' }}><FaMicrophone /></span> Grava</button>
                     {(params.data.audio_url || params.data.video_url) && (
                         <button
                             onClick={() => {
@@ -818,6 +794,13 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                         />
                     </div>
                 </div>
+            )}
+            {recordDrill && (
+                <RecordAudioModal
+                    drill={recordDrill}
+                    onClose={() => setRecordDrill(null)}
+                    onSaved={() => { refreshData(); }}
+                />
             )}
         </div>
     );
