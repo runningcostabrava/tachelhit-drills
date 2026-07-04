@@ -1,5 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { API_BASE } from '../config';
+
+// Turn raw backend/yt-dlp errors into clear, actionable Catalan guidance
+function friendlyCaptureError(msg: string): string {
+  const m = (msg || '').toLowerCase();
+  if (/bot|sign in to confirm|cookies|403|forbidden/.test(m)) {
+    return "⚠️ YouTube està bloquejant la descàrrega des del servidor (detecció de bots). "
+      + "Dues solucions: (1) descarrega el vídeo al teu ordinador i puja'l amb «Puja fitxers» aquí sota, "
+      + "o (2) enganxa les teves cookies de YouTube (format Netscape) al camp «Cookies».";
+  }
+  if (/timeout|timed out|excedit/.test(m)) {
+    return "⚠️ La descàrrega ha trigat massa. Prova amb un vídeo més curt o puja el fitxer manualment.";
+  }
+  return msg || 'Hi ha hagut un error.';
+}
 
 interface VideoSegment {
   start: number;
@@ -31,6 +45,8 @@ const VideoDrillCreator: React.FC = () => {
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
   const [tempVideoPath, setTempVideoPath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (error) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, [error]);
   const [tag, setTag] = useState('video_capture');
   const [audioOnly, setAudioOnly] = useState(false);
   const [autoMode, setAutoMode] = useState(false);
@@ -280,7 +296,7 @@ const VideoDrillCreator: React.FC = () => {
         }
       }
     } catch (err: any) {
-      setError(err.message);
+      setError(friendlyCaptureError(err.message));
       setLoading(false);
     }
   };
@@ -595,8 +611,9 @@ const VideoDrillCreator: React.FC = () => {
       </div>
 
       {error && (
-        <div style={{ padding: '14px 16px', background: 'var(--rose-soft)', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', marginBottom: '24px' }}>
-          <p style={{ color: 'var(--rose)', margin: 0, fontWeight: 600 }}>{error}</p>
+        <div ref={errorRef} style={{ padding: '16px 18px', background: 'var(--rose-soft)', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', marginBottom: '24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+          <p style={{ color: 'var(--rose)', margin: 0, fontWeight: 600, lineHeight: 1.5 }}>{error}</p>
+          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', color: 'var(--rose)', cursor: 'pointer', fontSize: '18px', lineHeight: 1, flexShrink: 0 }}>✕</button>
         </div>
       )}
 
