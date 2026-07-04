@@ -11,7 +11,37 @@ GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
 
 def gemini_available() -> bool:
-    return bool((os.getenv("GEMINI_API_KEY") or "").strip())
+    # Available if we can reach Gemini directly (key) OR via the egress proxy.
+    # (Render's free-tier IP is blocked by Google, so prod routes through a
+    #  small Vercel function set via GEMINI_PROXY_URL.)
+    return bool((os.getenv("GEMINI_API_KEY") or "").strip()
+                or (os.getenv("GEMINI_PROXY_URL") or "").strip())
+
+
+def _generate_content(payload: dict, timeout: int) -> dict:
+    """
+    POST a generateContent payload to Gemini and return the parsed JSON.
+    If GEMINI_PROXY_URL is set, forward through that proxy (which holds the
+    API key and calls Google from an un-blocked IP); otherwise call Google
+    directly with GEMINI_API_KEY. Raises on non-200.
+    """
+    proxy = (os.getenv("GEMINI_PROXY_URL") or "").strip()
+    if proxy:
+        headers = {"Content-Type": "application/json"}
+        secret = (os.getenv("GEMINI_PROXY_SECRET") or "").strip()
+        if secret:
+            headers["X-Proxy-Secret"] = secret
+        resp = requests.post(proxy, json={"model": GEMINI_MODEL, "payload": payload},
+                             headers=headers, timeout=timeout)
+    else:
+        key = (os.getenv("GEMINI_API_KEY") or "").strip()
+        if not key:
+            raise RuntimeError("GEMINI_API_KEY not configured")
+        url = f"{GEMINI_BASE}/models/{GEMINI_MODEL}:generateContent?key={key}"
+        resp = requests.post(url, json=payload, timeout=timeout)
+    if resp.status_code != 200:
+        raise RuntimeError(f"Gemini API {resp.status_code}: {resp.text[:300]}")
+    return resp.json()
 
 
 def gemini_generate(system_instruction: str, contents: list, *,
@@ -23,11 +53,6 @@ def gemini_generate(system_instruction: str, contents: list, *,
     - contents: [{"role": "user"|"model", "text": "..."}] conversation turns.
     Returns the model's text answer. Raises on API error.
     """
-    key = (os.getenv("GEMINI_API_KEY") or "").strip()
-    if not key:
-        raise RuntimeError("GEMINI_API_KEY not configured")
-
-    url = f"{GEMINI_BASE}/models/{GEMINI_MODEL}:generateContent?key={key}"
     payload = {
         "systemInstruction": {"parts": [{"text": system_instruction}]},
         "contents": [
@@ -43,10 +68,7 @@ def gemini_generate(system_instruction: str, contents: list, *,
             "thinkingConfig": {"thinkingBudget": thinking_budget},
         },
     }
-    resp = requests.post(url, json=payload, timeout=timeout)
-    if resp.status_code != 200:
-        raise RuntimeError(f"Gemini API {resp.status_code}: {resp.text[:300]}")
-    data = resp.json()
+    data = _generate_content(payload, timeout)
     candidates = data.get("candidates", [])
     if not candidates:
         raise RuntimeError(f"Gemini returned no candidates: {str(data)[:300]}")
@@ -69,11 +91,6 @@ def gemini_agent(system_instruction: str, contents: list, tools: list, executor,
     - contents: [{"role": "user"|"model", "text": "..."}] conversation turns.
     - tools: list of function declarations (name/description/parameters JSON schema).
     """
-    key = (os.getenv("GEMINI_API_KEY") or "").strip()
-    if not key:
-        raise RuntimeError("GEMINI_API_KEY not configured")
-    url = f"{GEMINI_BASE}/models/{GEMINI_MODEL}:generateContent?key={key}"
-
     g_contents = [
         {"role": ("model" if c.get("role") == "model" else "user"),
          "parts": [{"text": c.get("text", "")}]}
@@ -93,10 +110,7 @@ def gemini_agent(system_instruction: str, contents: list, tools: list, executor,
                 "thinkingConfig": {"thinkingBudget": 0},
             },
         }
-        resp = requests.post(url, json=payload, timeout=timeout)
-        if resp.status_code != 200:
-            raise RuntimeError(f"Gemini API {resp.status_code}: {resp.text[:300]}")
-        cand = (resp.json().get("candidates") or [{}])[0]
+        cand = (_generate_content(payload, timeout).get("candidates") or [{}])[0]
         parts = cand.get("content", {}).get("parts", [])
         fcalls = [p["functionCall"] for p in parts if "functionCall" in p]
         text = "".join(p.get("text", "") for p in parts if "text" in p).strip()
