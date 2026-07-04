@@ -96,7 +96,7 @@ export default function ProfilePage() {
 
       <div style={{ maxWidth: '560px', margin: '0 auto', padding: '24px' }}>
         {error && (
-          <div style={{ padding: '12px 16px', background: 'var(--rose-soft)', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', marginBottom: '16px', color: 'var(--rose)', fontWeight: 600 }}>
+          <div role="alert" style={{ padding: '12px 16px', background: 'var(--rose-soft)', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', marginBottom: '16px', color: 'var(--rose)', fontWeight: 600 }}>
             {error}
           </div>
         )}
@@ -199,7 +199,7 @@ export default function ProfilePage() {
                 <button
                   type="submit"
                   disabled={busy || username.trim().length < 3}
-                  style={{ padding: '12px 26px', background: 'var(--brand-gradient)', color: '#fff', border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: busy ? 'wait' : 'pointer', opacity: username.trim().length < 3 ? 0.6 : 1 }}
+                  style={{ padding: '12px 26px', background: 'var(--brand-gradient)', color: '#fff', border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: busy ? 'wait' : (username.trim().length < 3 ? 'not-allowed' : 'pointer'), opacity: username.trim().length < 3 ? 0.6 : 1 }}
                 >
                   {busy ? 'Creant…' : 'Registra\'m'}
                 </button>
@@ -223,7 +223,7 @@ export default function ProfilePage() {
                 <button
                   type="submit"
                   disabled={!tokenInput.trim()}
-                  style={{ padding: '10px 22px', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ padding: '10px 22px', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: tokenInput.trim() ? 'pointer' : 'not-allowed' }}
                 >
                   Inicia sessió
                 </button>
