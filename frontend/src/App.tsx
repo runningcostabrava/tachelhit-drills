@@ -162,7 +162,7 @@ function App() {
         <Route path="/" element={<DrillsResponsive />} />
         <Route path="/tests" element={<TestsDashboard />} />
         <Route path="/tests/:testId" element={<PublicTestView />} />
-        <Route path="/shorts" element={<YouTubeShorts onBackToDrills={() => navigate('/')} />} />
+        <Route path="/shorts" element={<YouTubeShorts />} />
         <Route path="/video-creator" element={<VideoDrillCreator />} />
         <Route path="/srt-import" element={<SrtImport />} />
         <Route path="/player" element={<DrillPlayerPage />} />

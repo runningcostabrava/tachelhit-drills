@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { getUserToken, setUserIdentity, clearUserIdentity } from '../config';
 import { api, type Me } from '../api';
 
@@ -24,7 +23,6 @@ const inputStyle: React.CSSProperties = {
 };
 
 export default function ProfilePage() {
-  const navigate = useNavigate();
   const [me, setMe] = useState<Me | null>(null);
   const [streak, setStreak] = useState<{ streak_days: number; reviews_week: number } | null>(null);
   const [username, setUsername] = useState('');
@@ -76,19 +74,12 @@ export default function ProfilePage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <div style={{
-        background: 'var(--brand-gradient)',
-        borderRadius: '0 0 var(--r-2xl) var(--r-2xl)',
-        padding: '24px 24px 32px',
-        color: '#fff',
+        background: 'var(--surface)',
+        borderBottom: '1px solid var(--border)',
+        padding: '18px 24px',
       }}>
         <div style={{ maxWidth: '560px', margin: '0 auto' }}>
-          <button
-            onClick={() => navigate('/')}
-            style={{ marginBottom: '16px', padding: '8px 16px', background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontWeight: 600, fontSize: '14px' }}
-          >
-            ← Back
-          </button>
-          <h2 style={{ color: '#fff', fontSize: '26px', margin: 0 }}>👤 Perfil</h2>
+          <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Perfil</h1>
         </div>
       </div>
 

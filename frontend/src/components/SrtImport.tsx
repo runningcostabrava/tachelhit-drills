@@ -215,34 +215,12 @@ const SrtImport: React.FC = () => {
 
   return (
     <div className="srt-import" style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: '48px' }}>
-      {/* Gradient header banner */}
-      <div style={{
-        background: 'var(--brand-gradient)',
-        borderRadius: '0 0 var(--r-2xl) var(--r-2xl)',
-        padding: '24px 24px 32px',
-        boxShadow: 'var(--shadow-brand)',
-        color: '#fff',
-      }}>
+      {/* Section header */}
+      <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '18px 24px' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          <button
-            onClick={() => navigate('/')}
-            style={{
-              marginBottom: '20px',
-              padding: '8px 16px',
-              background: 'rgba(255,255,255,0.18)',
-              color: '#fff',
-              border: '1px solid rgba(255,255,255,0.4)',
-              borderRadius: 'var(--r-pill)',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '14px',
-            }}
-          >
-            ← Back to Drills
-          </button>
-          <h2 style={{ color: '#fff', fontSize: '28px', margin: 0 }}>📝 Import Drills from SRT Subtitles</h2>
-          <p style={{ margin: '8px 0 0 0', color: 'rgba(255,255,255,0.85)', fontSize: '15px' }}>
-            Turn an SRT subtitle file into a set of timestamped drills
+          <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Importa des de SRT</h1>
+          <p style={{ margin: '4px 0 0 0', color: 'var(--text-soft)', fontSize: '14px' }}>
+            Converteix un fitxer de subtítols SRT en drills amb marques de temps.
           </p>
         </div>
       </div>

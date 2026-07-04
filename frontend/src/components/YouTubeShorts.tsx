@@ -22,7 +22,7 @@ interface Drill {
   video_url: string;
 }
 
-export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () => void }) {
+export default function YouTubeShorts() {
   const [shorts, setShorts] = useState<Short[]>([]);
   const [drills, setDrills] = useState<Drill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,46 +98,33 @@ export default function YouTubeShorts({ onBackToDrills }: { onBackToDrills: () =
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
       {/* Header */}
       <div style={{
-        padding: '20px 24px',
-        background: 'var(--brand-gradient)',
-        borderRadius: '0 0 var(--r-2xl) var(--r-2xl)',
-        boxShadow: 'var(--shadow-brand)',
+        padding: '16px 24px',
+        background: 'var(--surface)',
+        borderBottom: '1px solid var(--border)',
         display: 'flex',
         alignItems: 'center',
-        gap: '16px'
+        gap: '14px'
       }}>
-        <button
-          onClick={onBackToDrills}
-          style={{
-            padding: '8px 16px',
-            fontSize: '14px',
-            background: 'rgba(255,255,255,0.18)',
-            color: 'white',
-            border: '1px solid rgba(255,255,255,0.4)',
-            borderRadius: 'var(--r-pill)',
-            cursor: 'pointer',
-            fontWeight: 600,
-          }}
-        >
-          ← Tornar als Drills
-        </button>
         <h1 style={{
           margin: 0,
-          fontSize: '24px',
-          fontWeight: 800,
-          color: 'white',
+          fontFamily: 'var(--font-display)',
+          fontSize: '22px',
+          fontWeight: 700,
+          color: 'var(--text)',
+          letterSpacing: '-0.02em',
         }}>
-          📱 YouTube Shorts
+          Reels
         </h1>
         <span style={{
-          color: 'white',
+          color: 'var(--text-soft)',
           fontSize: '13px',
           fontWeight: 700,
-          background: 'rgba(255,255,255,0.18)',
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border)',
           padding: '4px 12px',
           borderRadius: 'var(--r-pill)',
         }}>
-          {shorts.length} shorts generats
+          {shorts.length} generats
         </span>
       </div>
 

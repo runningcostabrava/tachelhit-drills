@@ -441,10 +441,10 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--bg)', zIndex: 11000, display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)' }}>
-            <div style={{ background: 'var(--brand-gradient)', padding: '20px 20px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'white', borderBottomLeftRadius: 'var(--r-2xl)', borderBottomRightRadius: 'var(--r-2xl)', boxShadow: 'var(--shadow-brand)' }}>
-                <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.18)', border: 'none', color: 'white', borderRadius: 'var(--r-pill)', width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaTimes size={20} /></button>
-                <div style={{ color: 'white', fontSize: '20px', fontWeight: 800, letterSpacing: '-0.01em' }}>Edit Card</div>
-                <button onClick={() => triggerSave(localDrill)} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.95)', color: 'var(--brand-1)', border: 'none', borderRadius: 'var(--r-md)', padding: '11px 18px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}><FaSave /> Save</button>
+            <div style={{ background: 'var(--surface)', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)' }}>
+                <button onClick={onClose} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-soft)', borderRadius: 'var(--r-pill)', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaTimes size={18} /></button>
+                <div style={{ color: 'var(--text)', fontSize: '18px', fontWeight: 700, letterSpacing: '-0.01em', fontFamily: 'var(--font-display)' }}>Edita</div>
+                <button onClick={() => triggerSave(localDrill)} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--brand-1)', color: '#fff', border: 'none', borderRadius: 'var(--r-md)', padding: '10px 18px', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}><FaSave /> Desa</button>
             </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px', paddingBottom: '120px' }}>
