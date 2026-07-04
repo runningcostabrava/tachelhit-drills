@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { API_BASE } from '../config';
-import { useNavigate } from 'react-router-dom';
 
 interface VideoSegment {
   start: number;
@@ -24,7 +23,6 @@ interface VideoInfo {
 }
 
 const VideoDrillCreator: React.FC = () => {
-  const navigate = useNavigate();
   const [url, setUrl] = useState('');
   const [cookies, setCookies] = useState('');
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -461,34 +459,12 @@ const VideoDrillCreator: React.FC = () => {
 
   return (
     <div className="video-drill-creator" style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: '48px' }}>
-      {/* Gradient header banner */}
-      <div style={{
-        background: 'var(--brand-gradient)',
-        borderRadius: '0 0 var(--r-2xl) var(--r-2xl)',
-        padding: '24px 24px 32px',
-        boxShadow: 'var(--shadow-brand)',
-        color: '#fff',
-      }}>
+      {/* Section header */}
+      <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '18px 24px' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          <button
-            onClick={() => navigate('/')}
-            style={{
-              marginBottom: '20px',
-              padding: '8px 16px',
-              background: 'rgba(255,255,255,0.18)',
-              color: '#fff',
-              border: '1px solid rgba(255,255,255,0.4)',
-              borderRadius: 'var(--r-pill)',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '14px',
-            }}
-          >
-            ← Back to Drills
-          </button>
-          <h2 style={{ color: '#fff', fontSize: '28px', margin: 0 }}>🎬 Create Drills from Video</h2>
-          <p style={{ margin: '8px 0 0 0', color: 'rgba(255,255,255,0.85)', fontSize: '15px' }}>
-            Capture from YouTube, Instagram or TikTok — or upload your own video — and turn it into drill segments
+          <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Captura</h1>
+          <p style={{ margin: '4px 0 0 0', color: 'var(--text-soft)', fontSize: '14px' }}>
+            Converteix un vídeo de YouTube, Instagram, TikTok o un podcast en drills.
           </p>
         </div>
       </div>

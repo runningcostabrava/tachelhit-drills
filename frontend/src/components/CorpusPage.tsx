@@ -1,12 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { getMediaUrl, getUserToken } from '../config';
 import { api, type CorpusStats } from '../api';
 import { toast } from '../toast';
 import type { Drill } from '../types';
 
 export default function CorpusPage() {
-  const navigate = useNavigate();
   const [q, setQ] = useState('');
   const [variety, setVariety] = useState('');
   const [onlyUnverified, setOnlyUnverified] = useState(false);
@@ -106,20 +104,19 @@ export default function CorpusPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: '48px' }}>
-      <div style={{ background: 'var(--brand-gradient)', borderRadius: '0 0 var(--r-2xl) var(--r-2xl)', padding: '24px 24px 28px', color: '#fff' }}>
+      <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '18px 24px' }}>
         <div style={{ maxWidth: '860px', margin: '0 auto' }}>
-          <button onClick={() => navigate('/')} style={{ marginBottom: '14px', padding: '8px 16px', background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontWeight: 600, fontSize: '14px' }}>← Back</button>
-          <h2 style={{ color: '#fff', fontSize: '26px', margin: 0 }}>📖 Corpus</h2>
+          <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Corpus</h1>
           {stats && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '8px', flexWrap: 'wrap' }}>
-              <p style={{ margin: 0, color: 'rgba(255,255,255,0.85)', fontSize: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '6px', flexWrap: 'wrap' }}>
+              <p style={{ margin: 0, color: 'var(--text-soft)', fontSize: '14px' }}>
                 {stats.total_drills} entrades · {stats.with_audio} amb àudio · {stats.verified} verificades
               </p>
               <button
                 onClick={() => setShowCoverage(v => !v)}
-                style={{ padding: '5px 12px', background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontWeight: 700, fontSize: '13px' }}
+                style={{ padding: '5px 12px', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontWeight: 700, fontSize: '13px' }}
               >
-                📊 {showCoverage ? 'Amaga' : 'Cobertura'}
+                {showCoverage ? 'Amaga cobertura' : 'Cobertura'}
               </button>
             </div>
           )}

@@ -160,7 +160,7 @@ function App() {
       <Suspense fallback={<RouteLoader />}>
       <Routes>
         <Route path="/" element={<DrillsResponsive />} />
-        <Route path="/tests" element={<TestsDashboard onBackToDrills={() => navigate('/')} />} />
+        <Route path="/tests" element={<TestsDashboard />} />
         <Route path="/tests/:testId" element={<PublicTestView />} />
         <Route path="/shorts" element={<YouTubeShorts onBackToDrills={() => navigate('/')} />} />
         <Route path="/video-creator" element={<VideoDrillCreator />} />
