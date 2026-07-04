@@ -89,6 +89,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ question, drill_id: drillId ?? null, history: history ?? [] }),
     }),
+  aiAnalyzeDrill: (drillId: number) =>
+    request<{ analysis: string }>(`/ai/analyze-drill/${drillId}`, { method: 'POST' }),
+  aiSuggestTranslation: (drillId: number) =>
+    request<{ field: string; suggestion: string }>(`/ai/suggest-translation/${drillId}`, { method: 'POST' }),
 
   // --- identity ---
   register: (username: string, display_name?: string | null) =>

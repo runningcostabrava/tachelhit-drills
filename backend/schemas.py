@@ -63,6 +63,8 @@ class DrillBase(BaseModel):
     video_end_time: Optional[float] = None    # End time in seconds
     # Documentation / variation layer (auditor Phase 2)
     text_tachelhit_latin: Optional[str] = None
+    text_tachelhit_suggested: Optional[str] = None  # machine/AI draft (not gold)
+    text_catalan_suggested: Optional[str] = None
     variety: Optional[str] = None
     region: Optional[str] = None
     speaker: Optional[str] = None

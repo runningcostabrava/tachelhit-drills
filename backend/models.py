@@ -26,6 +26,11 @@ class Drill(Base):
     video_end_time = Column(Float, nullable=True)    # End time in seconds
     # --- Documentation / variation layer (auditor Phase 2) ---
     text_tachelhit_latin = Column(String, nullable=True)  # Latin romanization
+    # Machine/AI drafts — kept SEPARATE from the human-attested gold fields
+    # above so an approximation (often a different variety) never overwrites
+    # what a real speaker collected.
+    text_tachelhit_suggested = Column(String, nullable=True)
+    text_catalan_suggested = Column(String, nullable=True)
     created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # contributor attribution
     variety = Column(String, nullable=True)   # e.g. "tashelhit", "central-atlas", "tarifit"
     region = Column(String, nullable=True)    # e.g. "Souss", "Tafraout", "diaspora-BCN"

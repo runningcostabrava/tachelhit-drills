@@ -5,19 +5,34 @@ import { api } from '../api';
 interface Msg { role: 'user' | 'model'; text: string; }
 
 // Grammar-tutor chat panel. Optionally scoped to a selected drill.
-export default function AiAssistant({ drillId, drillLabel, onClose }: {
+export default function AiAssistant({ drillId, drillLabel, autoAnalyze, onClose }: {
   drillId?: number;
   drillLabel?: string;
+  autoAnalyze?: boolean;   // on open, auto-run a morphological analysis of the drill
   onClose: () => void;
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const didAuto = useRef(false);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, busy]);
+
+  // Auto-analysis when opened from a drill's "Analitza" button
+  useEffect(() => {
+    if (autoAnalyze && drillId && !didAuto.current) {
+      didAuto.current = true;
+      setMessages([{ role: 'user', text: '🔍 Analitza la forma taixelhit d\'aquest drill' }]);
+      setBusy(true);
+      api.aiAnalyzeDrill(drillId)
+        .then(r => setMessages(m => [...m, { role: 'model', text: r.analysis }]))
+        .catch(e => setMessages(m => [...m, { role: 'model', text: `⚠️ ${e.message || 'Error'}` }]))
+        .finally(() => setBusy(false));
+    }
+  }, [autoAnalyze, drillId]);
 
   const suggestions = drillId
     ? ["Explica la gramàtica d'aquesta frase", 'Com es pronuncia?', 'Analitza el verb o els pronoms']

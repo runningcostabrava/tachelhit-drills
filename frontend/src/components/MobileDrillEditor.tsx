@@ -22,6 +22,7 @@ import { API_BASE, getMediaUrl } from '../config';
 import { syncManager, type Drill } from '../services/OfflineSyncManager';
 import { api } from '../api';
 import { toast } from '../toast';
+import AiAssistant from './AiAssistant';
 
 interface MobileDrillEditorProps {
   drill: Drill;
@@ -34,6 +35,22 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
   const [localDrill, setLocalDrill] = useState<Drill>({ ...drill });
   const [isRecording, setIsRecording] = useState(false);
   const [aiLoadingKey, setAiLoadingKey] = useState<string | null>(null);
+  const [showAi, setShowAi] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+
+  // AI draft translation → goes to the *_suggested column, never the gold field
+  const handleSuggest = async () => {
+    setSuggesting(true);
+    try {
+      const r = await api.aiSuggestTranslation(localDrill.id);
+      setLocalDrill(prev => ({ ...prev, [r.field]: r.suggestion }));
+      toast.success('Suggeriment d\'IA generat (esborrany)');
+    } catch (e: any) {
+      toast.error(e.message || 'No s\'ha pogut generar el suggeriment');
+    } finally {
+      setSuggesting(false);
+    }
+  };
     const [trimTimes, setTrimTimes] = useState({ start: 0, end: 10 });
     const [videoDuration, setVideoDuration] = useState(60);
     const [audioDuration, setAudioDuration] = useState(60);
@@ -606,6 +623,47 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                   <div><label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Català</label><textarea value={localDrill.text_catalan || ''} onChange={(e) => handleFieldChange('text_catalan', e.target.value)} rows={3} style={{ width: '100%', padding: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '16px', color: 'var(--text)', outline: 'none', background: 'var(--surface-2)', fontFamily: 'var(--font-sans)' }} /></div>
                   <div><label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label><textarea value={localDrill.text_tachelhit || ''} onChange={(e) => handleFieldChange('text_tachelhit', e.target.value)} rows={3} style={{ width: '100%', padding: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '16px', color: 'var(--brand-1)', fontWeight: 700, outline: 'none', background: 'var(--surface-2)', fontFamily: 'var(--font-tifinagh)' }} /></div>
                   <div><label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tachelhit (llatí)</label><input type="text" value={localDrill.text_tachelhit_latin || ''} onChange={(e) => handleFieldChange('text_tachelhit_latin', e.target.value)} placeholder="Romanització llatina" style={{ width: '100%', padding: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '16px', color: 'var(--text)', outline: 'none', background: 'var(--surface-2)', fontFamily: 'var(--font-sans)' }} /></div>
+
+                  {/* AI tools: analyse the attested form + generate a draft suggestion (never overwrites gold) */}
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => setShowAi(true)}
+                      disabled={!localDrill.text_tachelhit}
+                      style={{ flex: 1, minWidth: '140px', padding: '11px', borderRadius: 'var(--r-md)', fontWeight: 700, fontSize: '13px', cursor: localDrill.text_tachelhit ? 'pointer' : 'not-allowed', background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)', border: '1px solid var(--brand-1)', opacity: localDrill.text_tachelhit ? 1 : 0.5 }}
+                    >
+                      🔍 Analitza (IA)
+                    </button>
+                    <button
+                      onClick={handleSuggest}
+                      disabled={suggesting}
+                      style={{ flex: 1, minWidth: '140px', padding: '11px', borderRadius: 'var(--r-md)', fontWeight: 700, fontSize: '13px', cursor: suggesting ? 'wait' : 'pointer', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)' }}
+                    >
+                      {suggesting ? '…' : '🤖 Suggeriment IA'}
+                    </button>
+                  </div>
+
+                  {/* Draft suggestion column — kept separate from the gold field */}
+                  {localDrill.text_tachelhit_suggested && localDrill.text_tachelhit_suggested !== localDrill.text_tachelhit && (
+                    <div style={{ padding: '12px 14px', background: 'var(--sky-soft)', border: '1px dashed var(--sky)', borderRadius: 'var(--r-md)' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--sky)', marginBottom: '6px' }}>🤖 ESBORRANY D'IA (no és la forma recollida)</div>
+                      <div style={{ fontFamily: 'var(--font-tifinagh)', fontSize: '16px', color: 'var(--text)', marginBottom: '8px' }}>{localDrill.text_tachelhit_suggested}</div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => { handleFieldChange('text_tachelhit', localDrill.text_tachelhit_suggested || ''); setLocalDrill(p => ({ ...p, text_tachelhit_suggested: '' })); }}
+                          style={{ padding: '7px 14px', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '12px', cursor: 'pointer', background: 'var(--emerald)', color: '#fff', border: 'none' }}
+                        >
+                          ✓ Accepta com a forma
+                        </button>
+                        <button
+                          onClick={() => setLocalDrill(p => ({ ...p, text_tachelhit_suggested: '' }))}
+                          style={{ padding: '7px 14px', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '12px', cursor: 'pointer', background: 'var(--surface)', color: 'var(--text-soft)', border: '1px solid var(--border)' }}
+                        >
+                          Descarta
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <div style={{ flex: 1 }}><label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Varietat</label><input type="text" value={localDrill.variety || ''} onChange={(e) => handleFieldChange('variety', e.target.value)} placeholder="tashelhit" style={{ width: '100%', padding: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '15px', color: 'var(--text)', outline: 'none', background: 'var(--surface-2)', fontFamily: 'var(--font-sans)' }} /></div>
                     <div style={{ flex: 1 }}><label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Regió</label><input type="text" value={localDrill.region || ''} onChange={(e) => handleFieldChange('region', e.target.value)} placeholder="Souss" style={{ width: '100%', padding: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '15px', color: 'var(--text)', outline: 'none', background: 'var(--surface-2)', fontFamily: 'var(--font-sans)' }} /></div>
@@ -636,6 +694,14 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         <button onClick={() => onNavigate('prev')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: '15px', cursor: 'pointer' }}><FaChevronLeft /> Previous</button>
         <button onClick={() => onNavigate('next')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', background: 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: '15px', cursor: 'pointer' }}>Next <FaChevronRight /></button>
       </div>
+      {showAi && (
+        <AiAssistant
+          drillId={localDrill.id}
+          drillLabel={localDrill.text_catalan || localDrill.text_tachelhit || `Drill #${localDrill.id}`}
+          autoAnalyze
+          onClose={() => setShowAi(false)}
+        />
+      )}
     </div>
   );
 }
