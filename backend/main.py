@@ -2686,7 +2686,10 @@ def _gap_filters():
         "no_catalan": ("Sense traducció catalana", and_(has_tachelhit, empty(DrillModel.text_catalan))),
         "no_arabic":  ("Sense àrab", and_(has_tachelhit, empty(DrillModel.text_arabic))),
         "no_variety": ("Sense varietat/regió", and_(has_tachelhit, empty(DrillModel.variety))),
-        "unverified": ("Pendent de verificar", and_(has_tachelhit, DrillModel.verified != True)),
+        # verified defaults to NULL; `verified != True` excludes NULLs in SQL,
+        # so match NULL and False explicitly (both mean "not yet verified")
+        "unverified": ("Pendent de verificar", and_(has_tachelhit,
+                       or_(DrillModel.verified.is_(None), DrillModel.verified.is_(False)))),
     }
 
 @app.get("/corpus/gaps")
