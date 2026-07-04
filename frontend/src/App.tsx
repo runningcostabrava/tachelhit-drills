@@ -1,7 +1,7 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import { Network } from '@capacitor/network';
 import axios from 'axios';
-import { API_BASE, getUserName, getUserToken } from './config';
+import { API_BASE } from './config';
 import { api } from './api';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { syncManager } from './services/OfflineSyncManager';
@@ -117,53 +117,51 @@ function App() {
   }, []);
 
 
+  // Immersive routes render full-screen; the nav would collide with them
+  const showNav = !location.pathname.startsWith('/player') && !/^\/tests\/\d/.test(location.pathname);
+  const navLinks = [
+    { to: '/', label: 'Drills', icon: '📚' },
+    { to: '/video-creator', label: 'Captura', icon: '🎬' },
+    { to: '/corpus', label: 'Corpus', icon: '📖' },
+    { to: '/tests', label: 'Tests', icon: '📝' },
+    { to: '/shorts', label: 'Reels', icon: '🎞️' },
+  ];
+  const navBtn = (active: boolean): React.CSSProperties => ({
+    flexShrink: 0, padding: '8px 14px', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '14px',
+    cursor: 'pointer', border: '1px solid transparent', whiteSpace: 'nowrap',
+    background: active ? 'var(--brand-gradient-soft)' : 'transparent',
+    color: active ? 'var(--brand-1)' : 'var(--text-soft)',
+  });
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <ToastHost />
       {aiOpen && <AiCopilot onClose={() => setAiOpen(false)} />}
-      {location.pathname === '/' && (
-        <button
-          onClick={() => setAiOpen(true)}
-          title="Assistent de gramàtica (IA)"
-          style={{
-            position: 'fixed', bottom: '18px', left: '16px', zIndex: 900,
-            padding: '13px 20px', background: 'var(--brand-gradient)', color: '#fff',
-            border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 800, fontSize: '15px',
-            boxShadow: 'var(--shadow-brand)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'
-          }}
-        >
-          🤖 Assistent
-        </button>
-      )}
       {location.pathname === '/' && <ReviewFab />}
-      {location.pathname === '/' && (
-        <button
-          onClick={() => navigate('/profile')}
-          title={getUserToken() ? 'El teu perfil' : 'Crea el teu compte'}
-          style={{
-            position: 'fixed', top: '12px', right: '12px', zIndex: 900,
-            padding: '9px 14px', background: 'var(--surface)', color: 'var(--text)',
-            border: '1px solid var(--border)', borderRadius: 'var(--r-pill)',
-            fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)', cursor: 'pointer'
-          }}
-        >
-          👤 {getUserName() || 'Entra'}
-        </button>
+
+      {showNav && (
+        <nav style={{
+          position: 'sticky', top: 0, zIndex: 1000, background: 'var(--surface)',
+          borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '10px',
+          padding: '10px 14px', boxShadow: '0 1px 3px rgba(15,23,42,0.04)'
+        }}>
+          <button onClick={() => navigate('/')} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+            <span style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'var(--brand-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>ⵣ</span>
+            <span style={{ fontWeight: 800, fontSize: '16px', color: 'var(--text)', letterSpacing: '-0.01em' }}>Tamazight</span>
+          </button>
+          <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', flex: 1, padding: '2px 0', scrollbarWidth: 'none' }}>
+            {navLinks.map(l => (
+              <button key={l.to} onClick={() => navigate(l.to)}
+                style={navBtn(l.to === '/' ? location.pathname === '/' : location.pathname.startsWith(l.to))}>
+                <span style={{ marginRight: '5px' }}>{l.icon}</span>{l.label}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setAiOpen(v => !v)} title="Copilot IA" style={{ flexShrink: 0, padding: '8px 12px', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '14px', cursor: 'pointer', border: 'none', background: aiOpen ? 'var(--brand-1)' : 'var(--brand-gradient)', color: '#fff' }}>🤖</button>
+          <button onClick={() => navigate('/profile')} title="Perfil" style={{ flexShrink: 0, padding: '8px 12px', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '14px', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}>👤</button>
+        </nav>
       )}
-      {location.pathname === '/' && (
-        <button
-          onClick={() => navigate('/corpus')}
-          title="Explora i revisa el corpus"
-          style={{
-            position: 'fixed', top: '12px', right: '110px', zIndex: 900,
-            padding: '9px 14px', background: 'var(--surface)', color: 'var(--text)',
-            border: '1px solid var(--border)', borderRadius: 'var(--r-pill)',
-            fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)', cursor: 'pointer'
-          }}
-        >
-          📖 Corpus
-        </button>
-      )}
+
       <Suspense fallback={<RouteLoader />}>
       <Routes>
         <Route path="/" element={<DrillsResponsive />} />
