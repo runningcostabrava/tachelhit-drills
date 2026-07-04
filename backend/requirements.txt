@@ -19,3 +19,4 @@ alembic==1.13.2
 gradio_client>=1.3.0
 httpx
 openai
+pymupdf

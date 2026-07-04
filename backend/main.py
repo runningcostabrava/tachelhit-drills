@@ -14,6 +14,7 @@ from typing import Optional, List, Dict
 import hashlib
 import re
 import secrets
+from gemini_client import gemini_generate, gemini_available
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine
@@ -2538,6 +2539,97 @@ def get_version():
             "api_key_gate": bool((os.getenv("API_KEY") or "").strip()),
         }
     }
+
+# ===================== AI AGENT (Gemini grammar tutor) =====================
+
+_GRAMMAR_TEXT = None
+
+def _load_grammar() -> str:
+    """
+    Load the Amazigh grammar reference once (cached in memory). The text is not
+    committed to the repo (third-party material); build_grammar() generates it
+    from the public amazic.cat PDFs on first use.
+    """
+    global _GRAMMAR_TEXT
+    if _GRAMMAR_TEXT is None:
+        try:
+            from build_knowledge import build_grammar
+            path = build_grammar()  # generates the file if missing
+            with open(path, "r", encoding="utf-8") as f:
+                _GRAMMAR_TEXT = f.read()
+        except Exception as e:
+            print(f"[AI] Could not load/build grammar reference: {e}")
+            _GRAMMAR_TEXT = ""
+    return _GRAMMAR_TEXT
+
+AI_SYSTEM_ROLE = """Ets l'assistent lingüístic de "Tachelhit Drills", una aplicació per aprendre la llengua amaziga taixelhit (tachelhit/tashelhit) fent servir el català com a llengua de referència, amb l'àrab i els alfabets tifinag i llatí.
+
+El teu paper:
+- Ajudes qui aprèn a entendre la gramàtica, la pronunciació i l'ús del taixelhit i l'amazic en general.
+- Et bases SEMPRE en el "Compendi de Gramàtica Amaziga" que tens a continuació com a font principal. Cita la secció (p. ex. "§5. Morfosintaxi verbal") quan sigui rellevant.
+- Si la pregunta va sobre un drill concret de l'usuari, fes servir el seu contingut (català, taixelhit en tifinag i llatí, àrab) per explicar-lo.
+- Si el compendi no cobreix una cosa, digues-ho clarament i aporta el teu millor coneixement lingüístic, marcant-ho com a complement.
+- Respon en la llengua de la pregunta (per defecte català). Sigues clar, concret i pedagògic. Fes servir exemples.
+
+=== COMPENDI DE GRAMÀTICA AMAZIGA (font: amazic.cat) ===
+"""
+
+def _drill_context(drill) -> str:
+    if not drill:
+        return ""
+    fields = [
+        ("Català", drill.text_catalan),
+        ("Taixelhit (tifinag)", drill.text_tachelhit),
+        ("Taixelhit (llatí)", drill.text_tachelhit_latin),
+        ("Àrab", drill.text_arabic),
+        ("Etiqueta", drill.tag),
+        ("Varietat", drill.variety),
+        ("Regió", drill.region),
+    ]
+    lines = [f"- {label}: {val}" for label, val in fields if val]
+    return "DRILL SELECCIONAT:\n" + "\n".join(lines) if lines else ""
+
+@app.get("/ai/status")
+def ai_status():
+    """Whether the AI agent is configured, and the grammar corpus size."""
+    return {"available": gemini_available(), "grammar_chars": len(_load_grammar())}
+
+@app.post("/ai/ask")
+def ai_ask(
+    question: str = Body(..., embed=True),
+    drill_id: Optional[int] = Body(None, embed=True),
+    history: Optional[List[Dict]] = Body(None, embed=True),
+    db: Session = Depends(get_db)
+):
+    """
+    Ask the grammar tutor. Grounded in the Amazigh grammar compendium; can use
+    a selected drill's content and prior conversation turns as context.
+    history: [{"role": "user"|"model", "text": "..."}] (most recent last).
+    """
+    if not gemini_available():
+        raise HTTPException(status_code=503, detail="AI assistant not configured (GEMINI_API_KEY missing)")
+    if not (question or "").strip():
+        raise HTTPException(status_code=400, detail="Empty question")
+
+    system_instruction = AI_SYSTEM_ROLE + _load_grammar()
+
+    contents = []
+    for turn in (history or [])[-8:]:  # keep the last few turns for context
+        contents.append({"role": turn.get("role", "user"), "text": turn.get("text", "")})
+
+    drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first() if drill_id else None
+    user_text = question.strip()
+    ctx = _drill_context(drill)
+    if ctx:
+        user_text = f"{ctx}\n\nPREGUNTA: {question.strip()}"
+    contents.append({"role": "user", "text": user_text})
+
+    try:
+        answer = gemini_generate(system_instruction, contents, max_output_tokens=1200)
+        return {"answer": answer, "used_drill": bool(drill)}
+    except Exception as e:
+        print(f"[AI] ask failed: {e}")
+        raise HTTPException(status_code=502, detail=f"AI assistant error: {str(e)[:200]}")
 
 # ===================== CORPUS (documentation & research) =====================
 
