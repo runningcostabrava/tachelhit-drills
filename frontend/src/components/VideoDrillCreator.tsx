@@ -501,6 +501,7 @@ const VideoDrillCreator: React.FC = () => {
           type="text"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
+          aria-label="Enllaç del vídeo o podcast"
           placeholder="Enganxa aquí un enllaç de YouTube / Instagram / TikTok / podcast..."
           style={{ padding: '12px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface-2)', fontSize: '15px', color: 'var(--text)' }}
         />
@@ -527,15 +528,15 @@ const VideoDrillCreator: React.FC = () => {
         </div>
 
         <div style={{ padding: '20px', background: 'var(--surface-2)', borderRadius: 'var(--r-lg)', border: '2px dashed var(--border-strong)', textAlign: 'center' }}>
-          <h4 style={{ margin: '0 0 12px 0', color: 'var(--text)', fontSize: '15px' }}>⬆️ O puja fitxers <span style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: '13px' }}>(Evita els bloquejos de YouTube)</span></h4>
+          <h4 style={{ margin: '0 0 12px 0', color: 'var(--text)', fontSize: '15px', fontFamily: 'var(--font-display)' }}>⬆️ O puja fitxers <span style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: '13px' }}>(Evita els bloquejos de YouTube)</span></h4>
           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
             <div style={{ textAlign: 'left' }}>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-soft)', marginBottom: '6px' }}>Vídeo o àudio</label>
-              <input type="file" accept="video/mp4,video/webm,audio/*" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} style={{ fontSize: '13px' }} />
+              <input type="file" accept="video/mp4,video/webm,audio/*" aria-label="Fitxer de vídeo o àudio" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} style={{ fontSize: '13px' }} />
             </div>
             <div style={{ textAlign: 'left' }}>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-soft)', marginBottom: '6px' }}>Subtítols (.vtt)</label>
-              <input type="file" accept=".vtt" onChange={(e) => setVttFile(e.target.files?.[0] || null)} style={{ fontSize: '13px' }} />
+              <input type="file" accept=".vtt" aria-label="Fitxer de subtítols (.vtt)" onChange={(e) => setVttFile(e.target.files?.[0] || null)} style={{ fontSize: '13px' }} />
             </div>
           </div>
         </div>
@@ -611,9 +612,9 @@ const VideoDrillCreator: React.FC = () => {
       </div>
 
       {error && (
-        <div ref={errorRef} style={{ padding: '16px 18px', background: 'var(--rose-soft)', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', marginBottom: '24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+        <div ref={errorRef} role="alert" aria-live="assertive" style={{ padding: '16px 18px', background: 'var(--rose-soft)', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', marginBottom: '24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
           <p style={{ color: 'var(--rose)', margin: 0, fontWeight: 600, lineHeight: 1.5 }}>{error}</p>
-          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', color: 'var(--rose)', cursor: 'pointer', fontSize: '18px', lineHeight: 1, flexShrink: 0 }}>✕</button>
+          <button onClick={() => setError(null)} aria-label="Tanca l'avís" style={{ background: 'none', border: 'none', color: 'var(--rose)', cursor: 'pointer', fontSize: '18px', lineHeight: 1, flexShrink: 0 }}>✕</button>
         </div>
       )}
 
@@ -626,7 +627,7 @@ const VideoDrillCreator: React.FC = () => {
               style={{ width: '180px', borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-md)' }}
             />
             <div style={{ flex: 1, minWidth: '220px' }}>
-              <h3 style={{ margin: '0 0 10px 0', fontSize: '20px' }}>{videoInfo.title}</h3>
+              <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', fontFamily: 'var(--font-display)' }}>{videoInfo.title}</h3>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 12px', borderRadius: 'var(--r-pill)', fontSize: '12px', fontWeight: 700, background: 'var(--sky-soft)', color: 'var(--sky)' }}>⏱ {formatTime(videoInfo.duration)}</span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 12px', borderRadius: 'var(--r-pill)', fontSize: '12px', fontWeight: 700, background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)' }}>🌐 {videoInfo.original_language}</span>
@@ -637,6 +638,7 @@ const VideoDrillCreator: React.FC = () => {
                   type="text"
                   value={tag}
                   onChange={(e) => setTag(e.target.value)}
+                  aria-label="Etiqueta per als drills"
                   style={{ padding: '7px 12px', borderRadius: 'var(--r-sm)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)' }}
                 />
               </div>
@@ -644,42 +646,46 @@ const VideoDrillCreator: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '12px' }}>
-            <h4 style={{ margin: 0, fontSize: '16px' }}>Segments del vídeo <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>({videoInfo.segments.length})</span></h4>
+            <h4 style={{ margin: 0, fontSize: '16px', fontFamily: 'var(--font-display)' }}>Segments del vídeo <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>({videoInfo.segments.length})</span></h4>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               {lyrics.trim() && (
                 <button
                   onClick={handleAlignLyrics}
                   disabled={loading}
+                  aria-busy={loading}
                   title="Substitueix el text aproximat de l'ASR per les línies de lletra enganxades, mantenint les marques de temps"
                   style={{ padding: '9px 18px', background: 'var(--brand-1)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
                 >
-                  🎼 Alinea la lletra
+                  {loading ? '⏳ Alineant…' : '🎼 Alinea la lletra'}
                 </button>
               )}
               <button
                 onClick={handleCorrectAll}
                 disabled={loading}
+                aria-busy={loading}
                 title="Correccions del glossari + mapatge sobre el teu conjunt de frases curat"
                 style={{ padding: '9px 18px', background: 'var(--emerald)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
               >
-                ✨ Corregeix
+                {loading ? '⏳ Corregint…' : '✨ Corregeix'}
               </button>
               {tempVideoPath && (
                 <button
                   onClick={handleOcrAll}
                   disabled={loading}
+                  aria-busy={loading}
                   title="Llegeix els subtítols incrustats als fotogrames del vídeo"
                   style={{ padding: '9px 18px', background: 'var(--sky)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
                 >
-                  🔤 OCR
+                  {loading ? '⏳ OCR…' : '🔤 OCR'}
                 </button>
               )}
               <button
                 onClick={handleTranslateAll}
                 disabled={loading}
+                aria-busy={loading}
                 style={{ padding: '9px 18px', background: 'var(--brand-2)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
               >
-                Tradueix-ho tot (Català · العربية · ⵜⴰⵛⵍⵃⵉⵜ)
+                {loading ? '⏳ Traduint…' : 'Tradueix-ho tot (Català · العربية · ⵜⴰⵛⵍⵃⵉⵜ)'}
               </button>
             </div>
           </div>
@@ -691,6 +697,7 @@ const VideoDrillCreator: React.FC = () => {
                   <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>
                     <input
                       type="checkbox"
+                      aria-label="Selecciona tots els segments"
                       onChange={(e) => {
                         const newSegments = videoInfo.segments.map(s => ({ ...s, selected: e.target.checked }));
                         setVideoInfo({ ...videoInfo, segments: newSegments });
@@ -710,17 +717,19 @@ const VideoDrillCreator: React.FC = () => {
                       <input
                         type="checkbox"
                         checked={seg.selected}
+                        aria-label={`Selecciona el segment ${idx + 1}`}
                         onChange={() => toggleSegmentSelection(idx)}
                       />
                     </td>
                     <td style={{ padding: '12px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>S:</span>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>I:</span>
                           <input
                             type="number"
                             value={seg.start}
                             step="0.1"
+                            aria-label="Inici (segons)"
                             onChange={(e) => {
                               const newSegments = [...videoInfo.segments];
                               newSegments[idx].start = parseFloat(e.target.value);
@@ -730,11 +739,12 @@ const VideoDrillCreator: React.FC = () => {
                           />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>E:</span>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>F:</span>
                           <input
                             type="number"
                             value={seg.end}
                             step="0.1"
+                            aria-label="Fi (segons)"
                             onChange={(e) => {
                               const newSegments = [...videoInfo.segments];
                               newSegments[idx].end = parseFloat(e.target.value);
@@ -795,7 +805,7 @@ const VideoDrillCreator: React.FC = () => {
                           newSegments[idx].text_catalan = e.target.value;
                           setVideoInfo({ ...videoInfo, segments: newSegments });
                         }}
-                        placeholder="Pendent..."
+                        placeholder="Pendent…"
                         style={{ width: '100%', minHeight: '44px', padding: '8px', fontSize: '13px', borderRadius: 'var(--r-sm)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--emerald)' }}
                       />
                     </td>
@@ -807,7 +817,7 @@ const VideoDrillCreator: React.FC = () => {
                           newSegments[idx].text_arabic = e.target.value;
                           setVideoInfo({ ...videoInfo, segments: newSegments });
                         }}
-                        placeholder="..."
+                        placeholder="Pendent…"
                         dir="rtl"
                         style={{ width: '100%', minHeight: '44px', padding: '8px', fontSize: '13px', borderRadius: 'var(--r-sm)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
                       />
