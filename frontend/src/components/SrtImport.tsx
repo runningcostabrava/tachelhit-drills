@@ -90,13 +90,13 @@ const SrtImport: React.FC = () => {
       setPreviewMode(true);
     } catch (err) {
       console.error('Error parsing SRT:', err);
-      setError('Failed to parse SRT file. Please check the format.');
+      setError('No s\'ha pogut analitzar el fitxer SRT. Comprova\'n el format.');
     }
   };
 
   const handleParse = () => {
     if (!srtContent.trim()) {
-      setError('Please provide SRT content');
+      setError('Cal proporcionar contingut SRT');
       return;
     }
     parseSrtContent(srtContent);
@@ -104,11 +104,11 @@ const SrtImport: React.FC = () => {
 
   const handleImport = async () => {
     if (!srtContent.trim()) {
-      setError('Please provide SRT content');
+      setError('Cal proporcionar contingut SRT');
       return;
     }
     if (!videoUrl.trim()) {
-      setError('Please provide YouTube video URL');
+      setError('Cal proporcionar l\'URL del vídeo de YouTube');
       return;
     }
 
@@ -184,6 +184,7 @@ const SrtImport: React.FC = () => {
     marginTop: 0,
     marginBottom: '16px',
     fontSize: '17px',
+    fontFamily: 'var(--font-display)',
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
@@ -228,28 +229,30 @@ const SrtImport: React.FC = () => {
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px' }}>
       <div className="import-form" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div className="input-section" style={sectionCardStyle}>
-          <h3 style={sectionHeadingStyle}><span style={stepBadgeStyle}>1</span> SRT File</h3>
+          <h3 style={sectionHeadingStyle}><span style={stepBadgeStyle}>1</span> Fitxer SRT</h3>
 
           <div style={{ marginBottom: '16px', padding: '20px', background: 'var(--surface-2)', borderRadius: 'var(--r-lg)', border: '2px dashed var(--border-strong)', textAlign: 'center' }}>
-            <label style={{ display: 'block', marginBottom: '10px', fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}>
-              ⬆️ Upload SRT File
+            <label htmlFor="srt-file" style={{ display: 'block', marginBottom: '10px', fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}>
+              ⬆️ Puja un fitxer SRT
             </label>
             <input
+              id="srt-file"
               type="file"
               accept=".srt,.txt"
               onChange={handleFileUpload}
               style={{ fontSize: '13px' }}
             />
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px', marginBottom: 0 }}>
-              Or paste SRT content below
+              O enganxa el contingut SRT a sota
             </p>
           </div>
 
           <div>
-            <label style={labelStyle}>
-              SRT Content
+            <label htmlFor="srt-content" style={labelStyle}>
+              Contingut SRT
             </label>
             <textarea
+              id="srt-content"
               value={srtContent}
               onChange={(e) => setSrtContent(e.target.value)}
               placeholder={`1
@@ -291,18 +294,19 @@ This is the second line.`}
               boxShadow: srtContent.trim() ? 'var(--shadow-brand)' : 'none',
             }}
           >
-            {previewMode ? 'Update Preview' : 'Preview Segments'}
+            {previewMode ? 'Actualitza la previsualització' : 'Previsualitza els segments'}
           </button>
         </div>
 
         <div className="input-section" style={sectionCardStyle}>
-          <h3 style={sectionHeadingStyle}><span style={stepBadgeStyle}>2</span> Video Configuration</h3>
+          <h3 style={sectionHeadingStyle}><span style={stepBadgeStyle}>2</span> Configuració del vídeo</h3>
 
           <div style={{ marginBottom: '16px' }}>
-            <label style={labelStyle}>
-              YouTube Video URL
+            <label htmlFor="video-url" style={labelStyle}>
+              URL del vídeo de YouTube
             </label>
             <input
+              id="video-url"
               type="text"
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
@@ -310,16 +314,17 @@ This is the second line.`}
               style={inputStyle}
             />
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
-              Each drill will link to this video with the appropriate timestamp
+              Cada drill enllaçarà amb aquest vídeo a la marca de temps corresponent
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
             <div>
-              <label style={labelStyle}>
-                Tag
+              <label htmlFor="srt-tag" style={labelStyle}>
+                Etiqueta
               </label>
               <input
+                id="srt-tag"
                 type="text"
                 value={tag}
                 onChange={(e) => setTag(e.target.value)}
@@ -329,14 +334,15 @@ This is the second line.`}
             </div>
 
             <div>
-              <label style={labelStyle}>
-                Author <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Optional)</span>
+              <label htmlFor="srt-author" style={labelStyle}>
+                Autor <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(opcional)</span>
               </label>
               <input
+                id="srt-author"
                 type="text"
                 value={author}
                 onChange={(e) => setAuthor(e.target.value)}
-                placeholder="Your name"
+                placeholder="El teu nom"
                 style={inputStyle}
               />
             </div>
@@ -344,32 +350,34 @@ This is the second line.`}
         </div>
 
         <div className="input-section" style={sectionCardStyle}>
-          <h3 style={sectionHeadingStyle}><span style={stepBadgeStyle}>3</span> Test Configuration</h3>
+          <h3 style={sectionHeadingStyle}><span style={stepBadgeStyle}>3</span> Configuració del test</h3>
 
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+            <label htmlFor="create-test" style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
               <input
+                id="create-test"
                 type="checkbox"
                 checked={createTest}
                 onChange={(e) => setCreateTest(e.target.checked)}
               />
-              <span style={{ fontWeight: 700, color: 'var(--text)' }}>Create a test with all drills</span>
+              <span style={{ fontWeight: 700, color: 'var(--text)' }}>Crea un test amb tots els drills</span>
             </label>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '30px', marginTop: '5px' }}>
-              Creates a test containing all the imported drills for practice
+              Crea un test amb tots els drills importats per practicar
             </p>
           </div>
 
           {createTest && (
             <div>
-              <label style={labelStyle}>
-                Test Title <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Optional)</span>
+              <label htmlFor="test-title" style={labelStyle}>
+                Títol del test <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(opcional)</span>
               </label>
               <input
+                id="test-title"
                 type="text"
                 value={testTitle}
                 onChange={(e) => setTestTitle(e.target.value)}
-                placeholder="e.g., 'Episode 1 Vocabulary Practice'"
+                placeholder="p. ex., 'Vocabulari de l'episodi 1'"
                 style={inputStyle}
               />
             </div>
@@ -377,19 +385,19 @@ This is the second line.`}
         </div>
 
         {error && (
-          <div style={{ padding: '15px', background: 'var(--rose-soft)', borderRadius: 'var(--r-md)', border: '1px solid var(--rose)' }}>
+          <div role="alert" style={{ padding: '15px', background: 'var(--rose-soft)', borderRadius: 'var(--r-md)', border: '1px solid var(--rose)' }}>
             <p style={{ color: 'var(--rose)', margin: 0, fontWeight: 600 }}>Error: {error}</p>
           </div>
         )}
 
         {success && (
-          <div style={{ padding: '16px', background: 'var(--emerald-soft)', borderRadius: 'var(--r-md)', border: '1px solid var(--emerald)' }}>
+          <div role="status" aria-live="polite" style={{ padding: '16px', background: 'var(--emerald-soft)', borderRadius: 'var(--r-md)', border: '1px solid var(--emerald)' }}>
             <p style={{ color: 'var(--emerald)', margin: 0, fontWeight: 700 }}>
-              ✅ Successfully created {success.drills_created} drills!
+              ✅ S'han creat {success.drills_created} drills correctament!
             </p>
             {success.test_id && (
               <p style={{ color: 'var(--emerald)', margin: '5px 0 0 0' }}>
-                Test created with ID: {success.test_id}
+                Test creat amb ID: {success.test_id}
               </p>
             )}
             <button
@@ -406,26 +414,33 @@ This is the second line.`}
                 fontSize: '14px',
               }}
             >
-              View Tests
+              Mostra els tests
             </button>
+          </div>
+        )}
+
+        {previewMode && parsedSegments.length === 0 && (
+          <div className="preview-empty" role="status" style={{ background: 'var(--surface)', border: '1px solid var(--border)', padding: '24px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', textAlign: 'center', color: 'var(--text-muted)' }}>
+            No s'ha trobat cap segment. Comprova el format SRT.
           </div>
         )}
 
         {previewMode && parsedSegments.length > 0 && (
           <div className="preview-section" style={{ background: 'var(--surface)', border: '1px solid var(--border)', padding: '24px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '17px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              Preview
-              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: 'var(--r-pill)', fontSize: '12px', fontWeight: 700, background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)' }}>{parsedSegments.length} segments found</span>
+            <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '17px', fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              Previsualització
+              <span style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 12px', borderRadius: 'var(--r-pill)', fontSize: '12px', fontWeight: 700, background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)' }}>{parsedSegments.length} segments trobats</span>
             </h3>
 
             <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', background: 'var(--surface)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <caption style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>Segments SRT analitzats</caption>
                 <thead style={{ position: 'sticky', top: 0, background: 'var(--surface-2)', zIndex: 1 }}>
                   <tr>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>#</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>Start Time</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>End Time</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>Text</th>
+                    <th scope="col" style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>#</th>
+                    <th scope="col" style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>Inici</th>
+                    <th scope="col" style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>Fi</th>
+                    <th scope="col" style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>Text</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -444,7 +459,7 @@ This is the second line.`}
               {parsedSegments.length > 20 && (
                 <div style={{ padding: '12px', textAlign: 'center', background: 'var(--surface-2)', borderTop: '1px solid var(--border)' }}>
                   <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '14px' }}>
-                    ... and {parsedSegments.length - 20} more segments
+                    ... i {parsedSegments.length - 20} segments més
                   </p>
                 </div>
               )}
@@ -456,6 +471,7 @@ This is the second line.`}
           <button
             onClick={handleImport}
             disabled={loading || !srtContent.trim() || !videoUrl.trim()}
+            aria-busy={loading}
             style={{
               padding: '15px 40px',
               background: (loading || !srtContent.trim() || !videoUrl.trim()) ? 'var(--border)' : 'var(--brand-gradient)',
@@ -469,10 +485,10 @@ This is the second line.`}
               boxShadow: (loading || !srtContent.trim() || !videoUrl.trim()) ? 'none' : 'var(--shadow-brand)',
             }}
           >
-            {loading ? '⏳ Importing...' : 'Import SRT and Create Drills'}
+            {loading ? '⏳ Important...' : 'Importa l\'SRT i crea els drills'}
           </button>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '10px' }}>
-            This will create one drill for each SRT segment with video timestamps
+            Es crearà un drill per cada segment SRT amb marques de temps
           </p>
         </div>
       </div>
