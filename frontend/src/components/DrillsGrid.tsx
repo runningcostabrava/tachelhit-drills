@@ -60,7 +60,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
         console.log(`[DrillsGrid] Starting translation: ${source} -> ${target} for drill ${drill.id}`);
         const sourceText = source === 'ca' ? drill.text_catalan : drill.text_tachelhit;
         if (!sourceText) {
-            alert(`Please enter text in ${source === 'ca' ? 'Catalan' : 'Tachelhit'} first.`);
+            alert(`Introdueix primer el text en ${source === 'ca' ? 'català' : 'taixelhit'}.`);
             return;
         }
 
@@ -71,7 +71,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
         try {
             const status = await Network.getStatus();
             if (!status.connected) {
-                alert("⚠️ Translation requires an active internet connection.");
+                alert("⚠️ La traducció requereix una connexió a internet activa.");
                 return;
             }
 
@@ -96,7 +96,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
             await refreshData();
         } catch (err) {
             console.error('Translation workflow crashed:', err);
-            alert('Failed to complete AI translation.');
+            alert("No s'ha pogut completar la traducció amb IA.");
         } finally {
             setActionLoadingId(null);
         }
@@ -112,7 +112,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
         console.log(`[Transcribe] Starting for drill ${drill.id}, source type: ${sourceType || 'auto'}, url: ${mediaSource}`);
 
         if (!mediaSource) {
-            alert('No media available to transcribe.');
+            alert('No hi ha cap mèdia per transcriure.');
             return;
         }
 
@@ -123,7 +123,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
             const status = await Network.getStatus();
             if (!status.connected) {
                 console.warn('[Transcribe] Offline. Aborting.');
-                alert("⚠️ Voice transcription requires an internet connection.");
+                alert("⚠️ La transcripció de veu requereix una connexió a internet.");
                 return;
             }
 
@@ -157,7 +157,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
             console.log('[Transcribe] Success.');
         } catch (error) {
             console.error('[Transcribe] Transcription loop error:', error);
-            alert('AI Transcription process failed.');
+            alert('El procés de transcripció amb IA ha fallat.');
         } finally {
             setActionLoadingId(null);
         }
@@ -167,7 +167,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
     const handleTachelhitTTS = async (drill: Drill) => {
         const text = drill.text_tachelhit;
         if (!text) {
-            alert('Tachelhit field is empty.');
+            alert('El camp de taixelhit és buit.');
             return;
         }
 
@@ -177,7 +177,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
         try {
             const status = await Network.getStatus();
             if (!status.connected) {
-                alert("⚠️ TTS requires an active internet connection.");
+                alert("⚠️ El TTS requereix una connexió a internet activa.");
                 return;
             }
 
@@ -192,7 +192,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
             }
         } catch (err) {
             console.error('TTS workflow crashed:', err);
-            alert('Failed to generate TTS audio.');
+            alert("No s'ha pogut generar l'àudio de TTS.");
         } finally {
             setActionLoadingId(null);
         }
@@ -211,7 +211,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
 
     const handleBulkDelete = async () => {
         if (selectedRows.length === 0) return;
-        if (!window.confirm(`Are you sure you want to delete ${selectedRows.length} drills?`)) return;
+        if (!window.confirm(`Segur que vols eliminar ${selectedRows.length} drills?`)) return;
 
         try {
             const status = await Network.getStatus();
@@ -220,26 +220,26 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                     await axios.delete(`${API_BASE}/drills/${drill.id}`);
                 }
             }
-            alert('Bulk delete complete.');
+            alert('Eliminació massiva completada.');
             await refreshData();
         } catch (error) {
-            alert('One or more deletes failed.');
+            alert('Una o més eliminacions han fallat.');
         }
     };
 
     const handleBulkEditTags = async () => {
         if (selectedRows.length === 0) return;
-        const newTag = prompt('Enter new tag for selected drills (prefix with + to append, - to remove):');
+        const newTag = prompt("Introdueix una etiqueta nova per als drills seleccionats (afegeix + per afegir-la, - per treure-la):");
         if (newTag === null) return;
 
         try {
             for (const drill of selectedRows) {
                 await axios.put(`${API_BASE}/drills/${drill.id}`, { tag: newTag });
             }
-            alert('Bulk tag update complete.');
+            alert("Actualització massiva d'etiquetes completada.");
             await refreshData();
         } catch (error) {
-            alert('Tag update failed.');
+            alert("L'actualització d'etiquetes ha fallat.");
         }
     };
 
@@ -265,7 +265,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                 executeDeletePipeline(pendingDeleteId);
             }
         } else {
-            alert('❌ Incorrect password. Access denied.');
+            alert('❌ Contrasenya incorrecta. Accés denegat.');
             setPasswordInput('');
         }
     };
@@ -371,14 +371,14 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
             // Artificial delay to allow Preferences to settle before refresh
             setTimeout(() => refreshData(), 100);
         } catch (err) {
-            alert('Failed to save media');
+            alert("No s'ha pogut desar el mèdia.");
         } finally {
             setActionLoadingId(null);
         }
     };
 
     const executeDeletePipeline = async (id: number) => {
-        const confirmDelete = window.confirm('Are you sure you want to permanently delete this drill?');
+        const confirmDelete = window.confirm('Segur que vols eliminar aquest drill de manera permanent?');
         if (!confirmDelete) return;
 
         try {
@@ -386,11 +386,11 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
             // and waits for a sync attempt so refreshData sees the result.
             await syncManager.deleteDrill(id);
 
-            alert('🗑️ Drill removed successfully.');
+            alert('🗑️ Drill eliminat correctament.');
             await refreshData();
         } catch (error) {
             console.error('Failed to complete delete request:', error);
-            alert('Error trying to drop record entity.');
+            alert("S'ha produït un error en intentar eliminar el registre.");
         } finally {
             setPendingDeleteId(null);
         }
@@ -403,8 +403,8 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                 {rowData.length === 0 && (
                     <div style={{ textAlign: 'center', padding: '48px 20px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', color: 'var(--text-soft)' }}>
                         <div style={{ fontSize: '44px', marginBottom: '12px' }}>📭</div>
-                        <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)', marginBottom: '4px' }}>No drills yet</div>
-                        <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Create your first drill to see it here.</div>
+                        <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)', marginBottom: '4px', fontFamily: 'var(--font-display)' }}>Encara no hi ha cap drill</div>
+                        <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Crea el teu primer drill per veure'l aquí.</div>
                     </div>
                 )}
                 {rowData.map((drill) => (
@@ -425,7 +425,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                         {/* Header Row */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>
-                                #{drill.id >= 1000000 ? 'Offline Sync' : drill.id}
+                                #{drill.id >= 1000000 ? 'Sinc. pendent' : drill.id}
                             </span>
                             {drill.tag && (
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)', padding: '5px 12px', borderRadius: 'var(--r-pill)', fontSize: '12px', fontWeight: 700 }}>
@@ -436,8 +436,8 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
 
                         {/* Content text blocks */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <div style={{ fontSize: '16px', color: 'var(--text)', fontWeight: 600, lineHeight: 1.4 }}>{drill.text_catalan || <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>No Catalan</span>}</div>
-                            <div style={{ fontSize: '17px', color: 'var(--brand-1)', fontWeight: 700, fontFamily: 'var(--font-tifinagh)', lineHeight: 1.5 }}>{drill.text_tachelhit || <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontFamily: 'var(--font-sans)' }}>No Tachelhit</span>}</div>
+                            <div style={{ fontSize: '16px', color: 'var(--text)', fontWeight: 600, lineHeight: 1.4 }}>{drill.text_catalan || <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>Sense català</span>}</div>
+                            <div style={{ fontSize: '17px', color: 'var(--brand-1)', fontWeight: 700, fontFamily: 'var(--font-tifinagh)', lineHeight: 1.5 }}>{drill.text_tachelhit || <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontFamily: 'var(--font-sans)' }}>Sense taixelhit</span>}</div>
                             {drill.text_arabic && (
                                 <div style={{ fontSize: '16px', color: 'var(--emerald)', direction: 'rtl', textAlign: 'right', fontWeight: 600, lineHeight: 1.5 }}>{drill.text_arabic}</div>
                             )}
@@ -448,7 +448,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                             <div style={{ position: 'relative' }}>
                                 <img
                                     src={pendingMedia[drill.id]?.image || getMediaUrl(drill.image_url)}
-                                    alt="Media thumbnail"
+                                    alt="Imatge del drill"
                                     style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)' }}
                                 />
                                 <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', borderRadius: 'var(--r-pill)', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '14px' }}>🖼️</div>
@@ -479,7 +479,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                         gap: '8px'
                                     }}
                                 >
-                                    <FaVolumeUp /> Audio
+                                    <FaVolumeUp /> Àudio
                                 </button>
                             )}
                             {drill.text_tachelhit && (
@@ -526,7 +526,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                         gap: '8px'
                                     }}
                                 >
-                                    <FaVideo /> Video
+                                    <FaVideo /> Vídeo
                                 </button>
                             )}
                         </div>
@@ -539,21 +539,21 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                             <button
                                 onClick={() => handleQuickPhoto(drill.id)}
                                 style={{ flex: 1, padding: '11px', background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid var(--emerald)', borderRadius: 'var(--r-md)', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
-                            >📷 Photo</button>
+                            >📷 Foto</button>
                             <button
                                 onClick={() => handleQuickAudio(drill.id)}
                                 style={{ flex: 1, padding: '11px', background: actionLoadingId === `rec-${drill.id}` ? 'var(--rose-soft)' : 'var(--sky-soft)', color: actionLoadingId === `rec-${drill.id}` ? 'var(--rose)' : 'var(--sky)', border: `1px solid ${actionLoadingId === `rec-${drill.id}` ? 'var(--rose)' : 'var(--sky)'}`, borderRadius: 'var(--r-md)', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
                             >
-                                {actionLoadingId === `rec-${drill.id}` ? '⏹ Stop' : '🎙 Audio'}
+                                {actionLoadingId === `rec-${drill.id}` ? '⏹ Atura' : '🎙 Àudio'}
                             </button>
                         </div>
 
                         {/* Previews for pending media */}
                         {pendingMedia[drill.id] && (
                             <div style={{ background: 'var(--amber-soft)', padding: '12px', borderRadius: 'var(--r-md)', border: '1px dashed var(--amber)', marginBottom: '8px' }}>
-                                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--amber-strong)', marginBottom: '6px' }}>Pending Updates:</div>
+                                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--amber-strong)', marginBottom: '6px' }}>Canvis pendents:</div>
                                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                    {pendingMedia[drill.id].image && <img src={pendingMedia[drill.id].image} style={{ width: '40px', height: '40px', borderRadius: 'var(--r-sm)', objectFit: 'cover' }} />}
+                                    {pendingMedia[drill.id].image && <img src={pendingMedia[drill.id].image} alt="" style={{ width: '40px', height: '40px', borderRadius: 'var(--r-sm)', objectFit: 'cover' }} />}
                                     {pendingMedia[drill.id].audioUrl && <button onClick={() => new Audio(pendingMedia[drill.id].audioUrl).play()} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>🔊</button>}
                                     {pendingMedia[drill.id].videoUrl && <button onClick={() => window.open(pendingMedia[drill.id].videoUrl, '_blank')} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>🎬</button>}
                                     <div style={{ flex: 1 }}></div>
@@ -562,7 +562,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                         disabled={actionLoadingId !== null}
                                         style={{ background: 'var(--emerald)', color: 'white', border: 'none', borderRadius: 'var(--r-sm)', padding: '8px 14px', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
                                     >
-                                        {actionLoadingId === `save-${drill.id}` ? '...' : '💾 Save Now'}
+                                        {actionLoadingId === `save-${drill.id}` ? '...' : '💾 Desa ara'}
                                     </button>
                                 </div>
                             </div>
@@ -576,14 +576,14 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                         onClick={() => onEditDrill(drill)}
                                         style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', padding: '10px 18px', fontSize: '14px', fontWeight: 700, cursor: 'pointer', boxShadow: 'var(--shadow-brand)' }}
                                     >
-                                        <FaEdit /> Edit
+                                        <FaEdit /> Edita
                                     </button>
                                 )}
                                 <button
                                     onClick={() => handleDeleteIntent(drill.id)}
                                     style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--rose-soft)', color: 'var(--rose)', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', padding: '10px 18px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
                                 >
-                                    <FaTrash /> Delete
+                                    <FaTrash /> Elimina
                                 </button>
                             </div>
                         </div>
@@ -595,12 +595,12 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
                         <div style={{ background: 'var(--surface)', padding: '28px', borderRadius: 'var(--r-xl)', width: '100%', maxWidth: '360px', boxShadow: 'var(--shadow-xl)', textAlign: 'center' }}>
                             <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔒</div>
-                            <h3 style={{ margin: '0 0 8px 0', fontSize: '19px', fontWeight: 800, color: 'var(--text)' }}>Security Verification</h3>
-                            <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: 'var(--text-soft)' }}>Enter the deletion password to proceed.</p>
+                            <h3 style={{ margin: '0 0 8px 0', fontSize: '19px', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Verificació de seguretat</h3>
+                            <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: 'var(--text-soft)' }}>Introdueix la contrasenya d'eliminació per continuar.</p>
 
                             <input
                                 type="password"
-                                placeholder="Enter password"
+                                placeholder="Introdueix la contrasenya"
                                 value={passwordInput}
                                 onChange={(e) => setPasswordInput(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && verifyPasswordAndConfirm()}
@@ -613,13 +613,13 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                     onClick={() => { setShowPasswordModal(false); setPasswordInput(''); }}
                                     style={{ flex: 1, padding: '12px', background: 'var(--surface)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 700, cursor: 'pointer' }}
                                 >
-                                    Cancel
+                                    Cancel·la
                                 </button>
                                 <button
                                     onClick={verifyPasswordAndConfirm}
                                     style={{ flex: 1, padding: '12px', background: 'var(--rose)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 700, cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}
                                 >
-                                    Confirm
+                                    Confirma
                                 </button>
                             </div>
                         </div>
@@ -636,10 +636,10 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
             field: 'image_url',
             headerName: 'Preview',
             width: 90,
-            cellRenderer: (p: any) => p.value ? <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}><img src={getMediaUrl(p.value)} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: 'var(--r-sm)', border: '1px solid var(--border)' }} /></div> : null
+            cellRenderer: (p: any) => p.value ? <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}><img src={getMediaUrl(p.value)} alt="Imatge del drill" style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: 'var(--r-sm)', border: '1px solid var(--border)' }} /></div> : null
         },
         { field: 'text_catalan', headerName: 'Català', flex: 2, minWidth: 150, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px', 'color': 'var(--text)', 'font-weight': '600' } },
-        { field: 'text_tachelhit', headerName: 'Tachelhit', flex: 2, minWidth: 150, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px', 'font-family': 'var(--font-tifinagh)', 'color': 'var(--brand-1)', 'font-weight': '700' } },
+        { field: 'text_tachelhit', headerName: 'Tamazight', flex: 2, minWidth: 150, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px', 'font-family': 'var(--font-tifinagh)', 'color': 'var(--brand-1)', 'font-weight': '700' } },
         { field: 'text_arabic', headerName: 'العربية', flex: 2, minWidth: 150, filter: true, wrapText: true, autoHeight: true, editable: true, cellStyle: { 'line-height': '20px', 'padding-top': '10px', 'padding-bottom': '10px', 'direction': 'rtl', 'color': 'var(--emerald)', 'font-weight': '600' } },
         { field: 'tag', headerName: 'Etiqueta', width: 120, filter: true, editable: true },
         {
@@ -648,10 +648,10 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
             cellRenderer: (params: any) => (
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                     {params.data.audio_url && (
-                        <button onClick={() => new Audio(getMediaUrl(params.data.audio_url)).play()} style={{ background: 'var(--brand-gradient-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px', cursor: 'pointer', color: 'var(--brand-1)' }} title="Play Audio"><FaVolumeUp size={16} /></button>
+                        <button onClick={() => new Audio(getMediaUrl(params.data.audio_url)).play()} style={{ background: 'var(--brand-gradient-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px', cursor: 'pointer', color: 'var(--brand-1)' }} title="Reprodueix l'àudio" aria-label="Reprodueix l'àudio"><FaVolumeUp size={16} /></button>
                     )}
                     {params.data.video_url && (
-                        <button onClick={() => window.open(getMediaUrl(params.data.video_url), '_blank')} style={{ background: 'var(--brand-gradient-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px', cursor: 'pointer', color: 'var(--brand-2)' }} title="Play Video"><FaVideo size={16} /></button>
+                        <button onClick={() => window.open(getMediaUrl(params.data.video_url), '_blank')} style={{ background: 'var(--brand-gradient-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px', cursor: 'pointer', color: 'var(--brand-2)' }} title="Reprodueix el vídeo" aria-label="Reprodueix el vídeo"><FaVideo size={16} /></button>
                     )}
                 </div>
             )
@@ -715,7 +715,8 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                         <button
                             onClick={() => onEditDrill(params.data)}
                             style={{ background: 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-sm)', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', boxShadow: 'var(--shadow-brand)' }}
-                            title="Edit"
+                            title="Edita"
+                            aria-label="Edita"
                         >
                             <FaEdit size={16} />
                         </button>
@@ -723,7 +724,8 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                     <button
                         onClick={() => handleDeleteIntent(params.data.id)}
                         style={{ background: 'var(--rose-soft)', color: 'var(--rose)', border: '1px solid var(--rose)', borderRadius: 'var(--r-sm)', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                        title="Delete"
+                        title="Elimina"
+                        aria-label="Elimina"
                     >
                         <FaTrash size={16} />
                     </button>
@@ -761,6 +763,15 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                     <FaTrash /> Elimina
                 </button>
             </div>
+            {rowData.length === 0 ? (
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ textAlign: 'center', padding: '56px 40px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', maxWidth: '420px' }}>
+                        <div style={{ fontSize: '52px', marginBottom: '16px' }}>📭</div>
+                        <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Encara no hi ha cap drill</h3>
+                        <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-muted)' }}>Crea el teu primer drill per veure'l aquí.</p>
+                    </div>
+                </div>
+            ) : (
             <div className="ag-theme-alpine" style={{ flex: 1 }}>
                 <AgGridReact
                     rowData={rowData}
@@ -789,6 +800,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                     }}
                 />
             </div>
+            )}
 
             {showTestConfig && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(4px)', zIndex: 30000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

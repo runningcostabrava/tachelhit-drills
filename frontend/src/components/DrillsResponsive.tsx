@@ -40,7 +40,7 @@ const GlossaryModal = ({ onClose }: { onClose: () => void }) => {
 
   const columnDefs: any[] = [
     { field: 'word_sound', headerName: 'So', flex: 1, cellStyle: { fontWeight: 600 } },
-    { field: 'correct_spelling', headerName: 'Ortografia', flex: 1, cellStyle: { color: '#4F46E5', fontWeight: 700 } },
+    { field: 'correct_spelling', headerName: 'Ortografia', flex: 1, cellStyle: { color: 'var(--brand-1)', fontWeight: 700 } },
     {
       field: 'id',
       headerName: '',
@@ -48,7 +48,7 @@ const GlossaryModal = ({ onClose }: { onClose: () => void }) => {
       cellRenderer: (p: any) => (
         <button
           onClick={() => handleDelete(p.value)}
-          style={{ color: '#EF4444', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%' }}
+          style={{ color: 'var(--rose)', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%' }}
         >
           <FaTrash size={14} />
         </button>
@@ -58,20 +58,20 @@ const GlossaryModal = ({ onClose }: { onClose: () => void }) => {
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(17, 24, 39, 0.8)', zIndex: 30000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}>
-      <div style={{ background: 'white', padding: '30px', borderRadius: '24px', width: '100%', maxWidth: '500px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+      <div style={{ background: 'var(--surface)', padding: '30px', borderRadius: 'var(--r-xl)', width: '100%', maxWidth: '500px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <FaBook style={{ color: '#4F46E5' }} />
-            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#111827' }}>Glossari (IA)</h3>
+            <FaBook style={{ color: 'var(--brand-1)' }} />
+            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Glossari (IA)</h3>
           </div>
-          <button onClick={onClose} style={{ background: '#F3F4F6', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6B7280' }}><FaTimes /></button>
+          <button onClick={onClose} style={{ background: 'var(--surface-2)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-soft)' }}><FaTimes /></button>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px', padding: '15px', background: '#F9FAFB', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
-          <input placeholder="So (p. ex. anayr)" value={newWord.sound} onChange={e => setNewWord({ ...newWord, sound: e.target.value })} style={{ padding: '12px', borderRadius: '10px', border: '1px solid #D1D5DB', fontSize: '14px', outline: 'none' }} />
-          <input placeholder="Ortografia correcta" value={newWord.spelling} onChange={e => setNewWord({ ...newWord, spelling: e.target.value })} style={{ padding: '12px', borderRadius: '10px', border: '1px solid #D1D5DB', fontSize: '14px', outline: 'none' }} />
-          <button onClick={handleAdd} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', background: '#4F46E5', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' }}><FaPlus /> Afegeix a l'aprenentatge de la IA</button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px', padding: '15px', background: 'var(--surface-2)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)' }}>
+          <input placeholder="So (p. ex. anayr)" value={newWord.sound} onChange={e => setNewWord({ ...newWord, sound: e.target.value })} style={{ padding: '12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: '14px', outline: 'none' }} />
+          <input placeholder="Ortografia correcta" value={newWord.spelling} onChange={e => setNewWord({ ...newWord, spelling: e.target.value })} style={{ padding: '12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: '14px', outline: 'none' }} />
+          <button onClick={handleAdd} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', background: 'var(--brand-1)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 'bold' }}><FaPlus /> Afegeix a l'aprenentatge de la IA</button>
         </div>
-        <div className="ag-theme-alpine" style={{ flex: 1, width: '100%', minHeight: '250px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #E5E7EB' }}>
+        <div className="ag-theme-alpine" style={{ flex: 1, width: '100%', minHeight: '250px', borderRadius: 'var(--r-md)', overflow: 'hidden', border: '1px solid var(--border)' }}>
           <AgGridReact
             rowData={rowData}
             columnDefs={columnDefs}
@@ -81,7 +81,7 @@ const GlossaryModal = ({ onClose }: { onClose: () => void }) => {
             rowSelection={{ mode: 'multiRow', checkboxes: false, headerCheckbox: false }}
           />
         </div>
-        <button onClick={onClose} style={{ marginTop: '20px', padding: '14px', background: 'white', border: '1px solid #D1D5DB', borderRadius: '12px', cursor: 'pointer', fontWeight: 600, color: '#374151' }}>Tanca</button>
+        <button onClick={onClose} style={{ marginTop: '20px', padding: '14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 600, color: 'var(--text-soft)' }}>Tanca</button>
       </div>
     </div>
   );
@@ -205,7 +205,7 @@ export default function DrillsResponsive() {
           const popup = document.createElement('div');
           popup.id = 'loading-drills-popup';
           popup.innerHTML = `
-            <div style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; borderRadius: 30px; zIndex: 99999; boxShadow: 0 4px 12px rgba(0,0,0,0.3); fontWeight: bold; fontSize: 14px; display: flex; alignItems: center; gap: 8px;">
+            <div style="position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; border-radius: 30px; z-index: 99999; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px;">
               <span class="spinner">⏳</span> Carregant els drills de l'emmagatzematge local...
             </div>
           `;
@@ -276,6 +276,7 @@ export default function DrillsResponsive() {
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <button
                 onClick={() => setShowMobileDrillCreator(true)}
+                aria-label="Nou drill"
                 style={{ padding: '10px 16px', background: 'var(--brand-1)', color: '#fff', border: 'none', borderRadius: 'var(--r-md)', fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
               >
                 <FaPlus /> {isMobile ? '' : 'Nou drill'}
@@ -297,6 +298,7 @@ export default function DrillsResponsive() {
                   alert(`Enllaç filtrat copiat!\n${url}`);
                 }}
                 title="Copia l'enllaç filtrat"
+                aria-label="Copia l'enllaç filtrat"
                 style={{ width: '40px', height: '40px', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <FaLink />
@@ -335,21 +337,23 @@ export default function DrillsResponsive() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cerca drills…"
+              aria-label="Cerca drills"
               style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text)', fontSize: '15px', outline: 'none', minWidth: '0', fontWeight: 500 }}
             />
             <select
               value={searchCategory}
               onChange={(e) => setSearchCategory(e.target.value)}
+              aria-label="Filtra per camp"
               style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-soft)', borderRadius: 'var(--r-sm)', padding: '6px 9px', fontSize: '12px', fontWeight: 600, outline: 'none', cursor: 'pointer', flexShrink: 0 }}
             >
               <option value="all">Totes</option>
               <option value="catalan">Català</option>
-              <option value="tachelhit">Tachelhit</option>
+              <option value="tachelhit">Tamazight</option>
               <option value="arabic">Àrab</option>
               <option value="tag">Etiqueta</option>
               <option value="author">Autor</option>
             </select>
-            {searchQuery && <button onClick={() => setSearchQuery('')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '16px', cursor: 'pointer', padding: '0 6px', flexShrink: 0 }}>✕</button>}
+            {searchQuery && <button onClick={() => setSearchQuery('')} aria-label="Esborra la cerca" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '16px', cursor: 'pointer', padding: '0 6px', flexShrink: 0 }}>✕</button>}
           </div>
         </div>
         <div style={{ flex: 1, width: '100%', overflowX: 'hidden', overflowY: 'auto', padding: isMobile ? '12px 4px' : '0', position: 'relative', boxSizing: 'border-box' }}>
@@ -381,15 +385,15 @@ export default function DrillsResponsive() {
 
       {showVoiceCreator && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(17, 24, 39, 0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20000, backdropFilter: 'blur(8px)' }}>
-          <div style={{ backgroundColor: 'white', padding: '40px', borderRadius: '24px', width: '600px', maxWidth: '90vw', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+          <div style={{ backgroundColor: 'var(--surface)', padding: '40px', borderRadius: 'var(--r-xl)', width: '600px', maxWidth: '90vw', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                <div style={{ background: '#EEF2FF', color: '#4F46E5', width: '50px', height: '50px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)', width: '50px', height: '50px', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <FaMicrophone size={24} />
                 </div>
-                <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 800, color: '#111827' }}>Creador de drills per veu</h2>
+                <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Creador de drills per veu</h2>
               </div>
-              <button onClick={() => setShowVoiceCreator(false)} style={{ background: '#F3F4F6', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6B7280' }}><FaTimes size={20} /></button>
+              <button onClick={() => setShowVoiceCreator(false)} style={{ background: 'var(--surface-2)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-soft)' }}><FaTimes size={20} /></button>
             </div>
             <VoiceDrillCreator onClose={() => setShowVoiceCreator(false)} onDrillCreated={() => { fetchDrills(); setShowVoiceCreator(false); }} />
           </div>
