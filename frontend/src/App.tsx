@@ -4,6 +4,7 @@ import axios from 'axios';
 import { API_BASE } from './config';
 import { api } from './api';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { FaLayerGroup, FaVideo, FaBookOpen, FaGraduationCap, FaFilm, FaComments, FaUser, FaRedo, FaFire } from 'react-icons/fa';
 import { syncManager } from './services/OfflineSyncManager';
 import ToastHost from './components/ToastHost';
 import AiCopilot from './components/AiCopilot';
@@ -54,8 +55,8 @@ const ReviewNavButton = () => {
         border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '14px', cursor: 'pointer'
       }}
     >
-      🧠 {counts!.due > 0 ? counts!.due : `${counts!.new} nous`}
-      {streak > 0 && <span>🔥{streak}</span>}
+      <FaRedo size={13} /> {counts!.due > 0 ? counts!.due : `${counts!.new} nous`}
+      {streak > 0 && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaFire size={12} />{streak}</span>}
     </button>
   );
 };
@@ -115,14 +116,15 @@ function App() {
   // Immersive routes render full-screen; the nav would collide with them
   const showNav = !location.pathname.startsWith('/player') && !/^\/tests\/\d/.test(location.pathname);
   const navLinks = [
-    { to: '/', label: 'Drills', icon: '📚' },
-    { to: '/video-creator', label: 'Captura', icon: '🎬' },
-    { to: '/corpus', label: 'Corpus', icon: '📖' },
-    { to: '/tests', label: 'Tests', icon: '📝' },
-    { to: '/shorts', label: 'Reels', icon: '🎞️' },
+    { to: '/', label: 'Drills', Icon: FaLayerGroup },
+    { to: '/video-creator', label: 'Captura', Icon: FaVideo },
+    { to: '/corpus', label: 'Corpus', Icon: FaBookOpen },
+    { to: '/tests', label: 'Tests', Icon: FaGraduationCap },
+    { to: '/shorts', label: 'Reels', Icon: FaFilm },
   ];
   const navBtn = (active: boolean): React.CSSProperties => ({
-    flexShrink: 0, padding: '8px 14px', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '14px',
+    flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '6px',
+    padding: '8px 14px', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '14px',
     cursor: 'pointer', border: '1px solid transparent', whiteSpace: 'nowrap',
     background: active ? 'var(--brand-gradient-soft)' : 'transparent',
     color: active ? 'var(--brand-1)' : 'var(--text-soft)',
@@ -147,13 +149,13 @@ function App() {
             {navLinks.map(l => (
               <button key={l.to} onClick={() => navigate(l.to)}
                 style={navBtn(l.to === '/' ? location.pathname === '/' : location.pathname.startsWith(l.to))}>
-                <span style={{ marginRight: '5px' }}>{l.icon}</span>{l.label}
+                <l.Icon size={14} />{l.label}
               </button>
             ))}
           </div>
           <ReviewNavButton />
-          <button onClick={() => setAiOpen(v => !v)} title="Copilot IA" style={{ flexShrink: 0, padding: '8px 12px', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '14px', cursor: 'pointer', border: 'none', background: aiOpen ? 'var(--brand-1)' : 'var(--brand-gradient)', color: '#fff' }}>🤖</button>
-          <button onClick={() => navigate('/profile')} title="Perfil" style={{ flexShrink: 0, padding: '8px 12px', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '14px', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}>👤</button>
+          <button onClick={() => setAiOpen(v => !v)} title="Copilot" aria-label="Copilot" style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '9px 12px', borderRadius: 'var(--r-pill)', cursor: 'pointer', border: 'none', background: aiOpen ? 'var(--brand-1)' : 'var(--brand-gradient)', color: '#fff' }}><FaComments size={15} /></button>
+          <button onClick={() => navigate('/profile')} title="Perfil" aria-label="Perfil" style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '9px 12px', borderRadius: 'var(--r-pill)', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)' }}><FaUser size={15} /></button>
         </nav>
       )}
 
