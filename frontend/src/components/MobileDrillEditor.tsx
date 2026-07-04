@@ -36,6 +36,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
   const [isRecording, setIsRecording] = useState(false);
   const [aiLoadingKey, setAiLoadingKey] = useState<string | null>(null);
   const [showAi, setShowAi] = useState(false);
+  const [aiAction, setAiAction] = useState<'analyze' | 'review'>('analyze');
   const [suggesting, setSuggesting] = useState(false);
 
   // AI draft translation → goes to the *_suggested column, never the gold field
@@ -627,18 +628,24 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                   {/* AI tools: analyse the attested form + generate a draft suggestion (never overwrites gold) */}
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                     <button
-                      onClick={() => setShowAi(true)}
+                      onClick={() => { setAiAction('analyze'); setShowAi(true); }}
                       disabled={!localDrill.text_tachelhit}
-                      style={{ flex: 1, minWidth: '140px', padding: '11px', borderRadius: 'var(--r-md)', fontWeight: 700, fontSize: '13px', cursor: localDrill.text_tachelhit ? 'pointer' : 'not-allowed', background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)', border: '1px solid var(--brand-1)', opacity: localDrill.text_tachelhit ? 1 : 0.5 }}
+                      style={{ flex: 1, minWidth: '120px', padding: '11px', borderRadius: 'var(--r-md)', fontWeight: 700, fontSize: '13px', cursor: localDrill.text_tachelhit ? 'pointer' : 'not-allowed', background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)', border: '1px solid var(--brand-1)', opacity: localDrill.text_tachelhit ? 1 : 0.5 }}
                     >
-                      🔍 Analitza (IA)
+                      🔍 Analitza
+                    </button>
+                    <button
+                      onClick={() => { setAiAction('review'); setShowAi(true); }}
+                      style={{ flex: 1, minWidth: '120px', padding: '11px', borderRadius: 'var(--r-md)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', background: 'var(--amber-soft)', color: 'var(--amber-strong)', border: '1px solid var(--amber)' }}
+                    >
+                      🔎 Revisa
                     </button>
                     <button
                       onClick={handleSuggest}
                       disabled={suggesting}
-                      style={{ flex: 1, minWidth: '140px', padding: '11px', borderRadius: 'var(--r-md)', fontWeight: 700, fontSize: '13px', cursor: suggesting ? 'wait' : 'pointer', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)' }}
+                      style={{ flex: 1, minWidth: '120px', padding: '11px', borderRadius: 'var(--r-md)', fontWeight: 700, fontSize: '13px', cursor: suggesting ? 'wait' : 'pointer', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)' }}
                     >
-                      {suggesting ? '…' : '🤖 Suggeriment IA'}
+                      {suggesting ? '…' : '🤖 Suggeriment'}
                     </button>
                   </div>
 
@@ -698,7 +705,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         <AiAssistant
           drillId={localDrill.id}
           drillLabel={localDrill.text_catalan || localDrill.text_tachelhit || `Drill #${localDrill.id}`}
-          autoAnalyze
+          autoAction={aiAction}
           onClose={() => setShowAi(false)}
         />
       )}
