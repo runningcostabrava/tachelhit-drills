@@ -435,19 +435,44 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
   const getSourceUrl = (url: string | undefined, type: 'audio'|'video'|'image') => {
     if (!url) return '';
     if (url.startsWith('blob:') || url.startsWith('data:')) return url;
-    
+
     const local = localMediaUrls[type];
     if (local) return local;
-    
+
     return getMediaUrl(url);
   };
 
+  // Guard against discarding unsaved edits when closing or navigating away.
+  const isDirty = JSON.stringify(localDrill) !== JSON.stringify(drill);
+  const confirmDiscard = () =>
+    !isDirty || window.confirm('Tens canvis sense desar. Vols sortir igualment?');
+
+  const handleClose = () => {
+    if (!confirmDiscard()) return;
+    onClose();
+  };
+
+  const handleNavigate = (dir: 'next' | 'prev') => {
+    if (!confirmDiscard()) return;
+    onNavigate(dir);
+  };
+
+  // Escape-to-close (goes through the same dirty-check guard).
+  const handleCloseRef = useRef(handleClose);
+  handleCloseRef.current = handleClose;
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleCloseRef.current();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--bg)', zIndex: 11000, display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)' }}>
+    <div role="dialog" aria-modal="true" aria-labelledby="editor-title" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--bg)', zIndex: 11000, display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)' }}>
             <div style={{ background: 'var(--surface)', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)' }}>
-                <button onClick={onClose} aria-label="Tanca" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-soft)', borderRadius: 'var(--r-pill)', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaTimes size={18} /></button>
-                <div style={{ color: 'var(--text)', fontSize: '18px', fontWeight: 700, letterSpacing: '-0.01em', fontFamily: 'var(--font-display)' }}>Edita</div>
+                <button onClick={handleClose} aria-label="Tanca" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', color: 'var(--text-soft)', borderRadius: 'var(--r-pill)', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaTimes size={18} /></button>
+                <div id="editor-title" style={{ color: 'var(--text)', fontSize: '18px', fontWeight: 700, letterSpacing: '-0.01em', fontFamily: 'var(--font-display)' }}>Edita</div>
                 <button onClick={() => triggerSave(localDrill)} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--brand-1)', color: '#fff', border: 'none', borderRadius: 'var(--r-md)', padding: '10px 18px', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}><FaSave /> Desa</button>
             </div>
 
@@ -532,14 +557,14 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                       disabled={aiLoadingKey !== null}
                       style={{ flex: 1, padding: '12px', background: 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: 'var(--shadow-brand)' }}
                   >
-                      <FaScissors /> Retallar Vídeo
+                      <FaScissors /> {aiLoadingKey === 'trim-video' ? '…' : 'Retallar Vídeo'}
                   </button>
                   <button
                       onClick={() => handleTrimVideo('audio')}
                       disabled={aiLoadingKey !== null}
                       style={{ flex: 1, padding: '12px', background: 'var(--rose)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
                   >
-                      <FaScissors /> Extreure Àudio
+                      <FaScissors /> {aiLoadingKey === 'trim-audio' ? '…' : 'Extreure Àudio'}
                   </button>
                 </div>
             </div>
@@ -592,7 +617,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                 <input type="range" aria-label="Temps d'inici" min="0" max={audioDuration} step="0.1" value={trimTimes.start} onChange={e => setTrimTimes(p => ({...p, start: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '8px', accentColor: 'var(--brand-1)' }} />
                 <input type="range" aria-label="Temps final" min="0" max={audioDuration} step="0.1" value={trimTimes.end} onChange={e => setTrimTimes(p => ({...p, end: parseFloat(e.target.value)}))} style={{ width: '100%', marginBottom: '12px', accentColor: 'var(--brand-1)' }} />
                 <button onClick={handleTrimAudio} disabled={aiLoadingKey !== null} style={{ width: '100%', padding: '11px', background: 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer', boxShadow: 'var(--shadow-brand)' }}>
-                    <FaScissors /> Retallar Àudio
+                    <FaScissors /> {aiLoadingKey === 'trim-audio' ? '…' : 'Retallar Àudio'}
                 </button>
             </div>
           </div>
@@ -705,8 +730,8 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                 </div>
       </div>
       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, display: 'flex', padding: '16px 20px', background: 'var(--surface)', justifyContent: 'space-between', borderTop: '1px solid var(--border)', gap: '15px' }}>
-        <button onClick={() => onNavigate('prev')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: '15px', cursor: 'pointer' }}><FaChevronLeft /> Anterior</button>
-        <button onClick={() => onNavigate('next')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', background: 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: '15px', cursor: 'pointer' }}>Següent <FaChevronRight /></button>
+        <button onClick={() => handleNavigate('prev')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: '15px', cursor: 'pointer' }}><FaChevronLeft /> Anterior</button>
+        <button onClick={() => handleNavigate('next')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '14px', background: 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 600, fontSize: '15px', cursor: 'pointer' }}>Següent <FaChevronRight /></button>
       </div>
       {showAi && (
         <AiAssistant
