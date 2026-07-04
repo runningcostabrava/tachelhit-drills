@@ -8,6 +8,7 @@ import DrillPlayer from './DrillPlayer';
 import VideoLoopPlayer from './VideoLoopPlayer';
 import { API_BASE } from '../config';
 import { toast } from '../toast';
+import { FaDumbbell, FaLayerGroup, FaCalendarAlt, FaVideo, FaLink, FaTrash, FaCog, FaChartBar, FaBullseye, FaPen, FaPlay, FaCheck, FaGraduationCap, FaHandPointLeft } from 'react-icons/fa';
 
 // Hook para detectar móvil
 const useIsMobile = () => {
@@ -282,7 +283,7 @@ export default function TestsDashboard() {
             cursor: 'pointer'
           }}
         >
-          💪 Test dels punts febles
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaDumbbell /> Test dels punts febles</span>
         </button>
         <span style={{
           color: 'var(--text-soft)',
@@ -354,7 +355,7 @@ export default function TestsDashboard() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '30px'
-                }}>📝</div>
+                }}><FaGraduationCap /></div>
                 <p style={{ fontSize: '18px', marginBottom: '8px', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Encara no has creat cap test</p>
                 <p style={{ fontSize: '14px', margin: 0 }}>Torna als drills i selecciona'n uns quants per crear un test</p>
               </div>
@@ -436,7 +437,7 @@ export default function TestsDashboard() {
                             background: 'var(--brand-gradient-soft)',
                             color: 'var(--brand-1)'
                           }}>
-                            📚 {test.drill_ids.split(',').length} drills
+                            <FaLayerGroup /> {test.drill_ids.split(',').length} drills
                           </span>
                           <span style={{
                             display: 'inline-flex',
@@ -449,7 +450,7 @@ export default function TestsDashboard() {
                             background: 'var(--surface-2)',
                             color: 'var(--text-muted)'
                           }}>
-                            📅 {new Date(test.date_created).toLocaleDateString()}
+                            <FaCalendarAlt /> {new Date(test.date_created).toLocaleDateString()}
                           </span>
                           {test.video_url && (
                             <span style={{
@@ -463,7 +464,7 @@ export default function TestsDashboard() {
                               background: 'var(--emerald-soft)',
                               color: 'var(--emerald)'
                             }}>
-                              🎬 Vídeo a punt
+                              <FaVideo /> Vídeo a punt
                             </span>
                           )}
                         </div>
@@ -496,7 +497,7 @@ export default function TestsDashboard() {
                         title="Copia l'enllaç d'aquest test"
                         aria-label="Copia l'enllaç"
                       >
-                        🔗 Copia l'enllaç
+                        <FaLink /> Copia l'enllaç
                       </button>
                       <button
                         onClick={(e) => {
@@ -519,7 +520,7 @@ export default function TestsDashboard() {
                         title="Elimina el test"
                         aria-label="Elimina"
                       >
-                        🗑️ Elimina
+                        <FaTrash /> Elimina
                       </button>
                     </div>
                   </div>
@@ -612,7 +613,7 @@ export default function TestsDashboard() {
                 alignItems: 'center',
                 gap: '8px'
               }}>
-                <span>⚙️</span> Configuració del test
+                <FaCog /> Configuració del test
               </h3>
               <div style={{
                 display: 'grid',
@@ -668,7 +669,7 @@ export default function TestsDashboard() {
                   alignItems: 'center',
                   gap: '8px'
                 }}>
-                  <span>📊</span> Estadístiques
+                  <FaChartBar /> Estadístiques
                 </h3>
                 <div style={{
                   display: 'grid',
@@ -725,7 +726,7 @@ export default function TestsDashboard() {
                   boxShadow: 'var(--shadow-brand)'
                 }}
               >
-                🎯 Fes el test
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaBullseye /> Fes el test</span>
               </button>
               <button
                 onClick={() => setEditingTestId(selectedTest.id)}
@@ -742,7 +743,7 @@ export default function TestsDashboard() {
                   boxShadow: 'var(--shadow-xs)'
                 }}
               >
-                ✏️ Edita el test
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaPen /> Edita el test</span>
               </button>
               <button
                 onClick={async () => {
@@ -772,7 +773,7 @@ export default function TestsDashboard() {
                   boxShadow: 'var(--shadow-xs)'
                 }}
               >
-                ▶️ Reprodueix els drills
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaPlay /> Reprodueix els drills</span>
               </button>
               <button
                 onClick={async () => {
@@ -809,7 +810,7 @@ export default function TestsDashboard() {
                   opacity: generatingDemoVideoId === selectedTest.id ? 0.6 : 1
                 }}
               >
-                🎬 Crea el vídeo
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaVideo /> Crea el vídeo</span>
               </button>
             </div>
 
@@ -826,7 +827,7 @@ export default function TestsDashboard() {
                 gap: '12px',
                 alignItems: 'flex-start'
               }}>
-                <h3 style={{ margin: 0, color: 'var(--emerald)', fontSize: '18px', fontWeight: 800, fontFamily: 'var(--font-display)' }}>✅ Vídeo a punt!</h3>
+                <h3 style={{ margin: 0, color: 'var(--emerald)', fontSize: '18px', fontWeight: 800, fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: '8px' }}><FaCheck /> Vídeo a punt!</h3>
                 <button
                   onClick={() => setViewingVideoUrl(selectedTest.video_url ?? null)}
                   style={{
@@ -841,7 +842,7 @@ export default function TestsDashboard() {
                     boxShadow: 'var(--shadow-sm)'
                   }}
                 >
-                  ▶ Mira el vídeo al reproductor en bucle
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaPlay /> Mira el vídeo al reproductor en bucle</span>
                 </button>
               </div>
             )}
@@ -888,7 +889,7 @@ export default function TestsDashboard() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '34px'
-              }}>👈</div>
+              }}><FaHandPointLeft /></div>
               <p style={{ fontSize: '18px', margin: 0, fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Selecciona un test per veure'n els detalls</p>
               <p style={{ fontSize: '14px', marginTop: '8px', marginBottom: 0 }}>Tria un test de la llista per veure'n la configuració, les estadístiques i les accions.</p>
             </div>

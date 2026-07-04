@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { api } from '../api';
 import { getMediaUrl } from '../config';
 import { subscribeSelection, notifyDrillsChanged } from '../selection';
+import { FaComments, FaPlay, FaRedo, FaChevronRight, FaPaperPlane, FaCheck, FaSearch, FaExclamationTriangle } from 'react-icons/fa';
 
 interface Action { name: string; args: any; result: any; }
 interface Msg { role: 'user' | 'model'; text: string; actions?: Action[]; }
@@ -59,14 +60,14 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
     return (
       <div role="group" aria-label="Accions realitzades" style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
         {actions.map((a, i) => {
-          if (a.result?.error) return <span key={i} style={chip('var(--rose-soft)', 'var(--rose)')}>⚠ {a.name}: {a.result.error}</span>;
-          if (a.name === 'create_drill') return <span key={i} style={chip('var(--emerald-soft)', 'var(--emerald)')}>✓ Drill #{a.result.created_drill_id} creat</span>;
-          if (a.name === 'update_drill') return <span key={i} style={chip('var(--emerald-soft)', 'var(--emerald)')}>✓ Drill #{a.result.updated_drill_id} actualitzat</span>;
-          if (a.name === 'search_drills') return <span key={i} style={chip('var(--surface-2)', 'var(--text-soft)')}>🔎 {a.result.count} resultats</span>;
+          if (a.result?.error) return <span key={i} style={chip('var(--rose-soft)', 'var(--rose)')}><FaExclamationTriangle style={{ marginRight: '4px', verticalAlign: '-1px' }} />{a.name}: {a.result.error}</span>;
+          if (a.name === 'create_drill') return <span key={i} style={chip('var(--emerald-soft)', 'var(--emerald)')}><FaCheck style={{ marginRight: '4px', verticalAlign: '-1px' }} />Drill #{a.result.created_drill_id} creat</span>;
+          if (a.name === 'update_drill') return <span key={i} style={chip('var(--emerald-soft)', 'var(--emerald)')}><FaCheck style={{ marginRight: '4px', verticalAlign: '-1px' }} />Drill #{a.result.updated_drill_id} actualitzat</span>;
+          if (a.name === 'search_drills') return <span key={i} style={chip('var(--surface-2)', 'var(--text-soft)')}><FaSearch style={{ marginRight: '4px', verticalAlign: '-1px' }} />{a.result.count} resultats</span>;
           if (a.name === 'speak_tachelhit' && a.result?.audio_url)
             return (
               <button key={i} onClick={() => play(a.result.audio_url)} style={{ ...chip('var(--sky-soft)', 'var(--sky)'), cursor: 'pointer', border: '1px solid var(--sky)' }}>
-                ▶ Escolta «{a.result.text}»
+                <FaPlay style={{ marginRight: '4px', verticalAlign: '-1px' }} />Escolta «{a.result.text}»
               </button>
             );
           return null;
@@ -83,16 +84,16 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
     }}>
       <div style={{ background: 'var(--brand-gradient)', color: '#fff', padding: 'calc(14px + env(safe-area-inset-top)) 18px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ fontWeight: 800, fontSize: '16px', fontFamily: 'var(--font-display)' }}>🤖 Copilot</div>
+          <div style={{ fontWeight: 800, fontSize: '16px', fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: '8px' }}><FaComments /> Copilot</div>
           <div style={{ fontSize: '11px', opacity: 0.85 }}>
             {selected.length ? `${selected.length} drill(s) seleccionats` : 'crea · tradueix · cerca · escolta'}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           {messages.length > 0 && (
-            <button onClick={() => setMessages([])} title="Nova conversa" aria-label="Nova conversa" style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontSize: '16px' }}>↺</button>
+            <button onClick={() => setMessages([])} title="Nova conversa" aria-label="Nova conversa" style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FaRedo /></button>
           )}
-          <button onClick={onClose} title="Amaga" aria-label="Amaga el copilot" style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontSize: '18px' }}>⟩</button>
+          <button onClick={onClose} title="Amaga" aria-label="Amaga el copilot" style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FaChevronRight /></button>
         </div>
       </div>
 
@@ -134,7 +135,7 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
           disabled={busy}
           style={{ flex: 1, padding: '12px 14px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', fontSize: '14px', color: 'var(--text)' }}
         />
-        <button onClick={() => send(input)} disabled={busy || !input.trim()} aria-label="Envia" style={{ padding: '12px 18px', background: 'var(--brand-gradient)', color: '#fff', border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: (busy || !input.trim()) ? 'not-allowed' : 'pointer', opacity: (busy || !input.trim()) ? 0.5 : 1 }}>↑</button>
+        <button onClick={() => send(input)} disabled={busy || !input.trim()} aria-label="Envia" style={{ padding: '12px 18px', background: 'var(--brand-gradient)', color: '#fff', border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: (busy || !input.trim()) ? 'not-allowed' : 'pointer', opacity: (busy || !input.trim()) ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FaPaperPlane /></button>
       </div>
     </div>
   );

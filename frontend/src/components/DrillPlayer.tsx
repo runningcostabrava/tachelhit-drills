@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { API_BASE, getMediaUrl } from '../config';
 import { getMediaWithOfflineFallback } from '../utils/offlineCache';
 import { getYouTubeVideoId, loadYouTubeApi } from '../utils/youtubeUtils';
+import { FaVideo, FaVolumeUp, FaPlay, FaPause, FaSync, FaTimes, FaStepBackward, FaStepForward, FaBullseye, FaThumbsUp, FaRedo, FaExclamationTriangle, FaEye, FaStop, FaMicrophone, FaStar } from 'react-icons/fa';
 
 declare global {
   interface Window {
@@ -733,7 +734,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
         gap: '8px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <button onClick={onExit} style={cleanButtonStyle} aria-label="Tanca">✕</button>
+          <button onClick={onExit} style={cleanButtonStyle} aria-label="Tanca"><FaTimes /></button>
           <span style={{
             fontWeight: 800,
             fontSize: '14px',
@@ -764,7 +765,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               onClick={() => setShowVideoLibrary(true)}
               style={{ ...pillButtonStyle, background: 'rgba(255,255,255,0.18)', color: 'white' }}
             >
-              📹 BIBLIOTECA
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaVideo /> BIBLIOTECA</span>
             </button>
           )}
         </div>
@@ -846,7 +847,9 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                 fontSize: '11px', fontWeight: 700, padding: '3px 10px',
                 borderRadius: 'var(--r-pill)', background: 'var(--sky-soft)', color: 'var(--sky)'
               }}>
-                {synthesizingVoice ? '🤖 Sintetitzant la veu…' : '🤖 Veu sintètica — encara sense gravació nativa'}
+                {synthesizingVoice
+                  ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><FaVolumeUp /> Sintetitzant la veu…</span>
+                  : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><FaVolumeUp /> Veu sintètica — encara sense gravació nativa</span>}
               </span>
             </div>
           )}
@@ -909,7 +912,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                   boxShadow: 'var(--shadow-brand)'
                 }}
               >
-                <span>▶️</span>
+                <FaPlay />
                 Mira el vídeo amb subtítols
               </button>
             </div>
@@ -950,7 +953,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
             flexShrink: 0
           }}
         >
-          ⏮
+          <FaStepBackward />
         </button>
 
         {/* Audio Progress Bar */}
@@ -1034,7 +1037,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               transition: 'all 0.2s'
             }}
           >
-            {isPlaying ? '❚❚' : '▶'}
+            {isPlaying ? <FaPause /> : <FaPlay />}
           </button>
 
           <button
@@ -1055,7 +1058,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               transition: 'all 0.2s'
             }}
           >
-            ⏭
+            <FaStepForward />
           </button>
         </div>
       </div>
@@ -1114,7 +1117,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                     justifyContent: 'center'
                   }}
                 >
-                  ✕
+                  <FaTimes />
                 </button>
                 <span style={{ color: 'white', fontWeight: 700, fontFamily: 'var(--font-tifinagh)', fontSize: '15px' }}>
                   {currentDrill.text_tachelhit?.substring(0, 50)}…
@@ -1163,7 +1166,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                     gap: '5px'
                   }}
                 >
-                  🔁 {videoControls.isLooping ? 'Bucle ACTIU' : 'Bucle'}
+                  <FaSync /> {videoControls.isLooping ? 'Bucle ACTIU' : 'Bucle'}
                 </button>
               </div>
             </div>
@@ -1405,10 +1408,10 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                     justifyContent: 'center'
                   }}
                 >
-                  ✕
+                  <FaTimes />
                 </button>
-                <span style={{ color: 'white', fontWeight: 800, fontSize: '18px', fontFamily: 'var(--font-display)' }}>
-                  📹 Biblioteca de vídeos ({videoDrills.length} vídeos)
+                <span style={{ color: 'white', fontWeight: 800, fontSize: '18px', fontFamily: 'var(--font-display)', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <FaVideo /> Biblioteca de vídeos ({videoDrills.length} vídeos)
                 </span>
               </div>
               <div style={{ color: 'rgba(255,255,255,0.72)', fontSize: '14px', fontWeight: 600 }}>
@@ -1472,7 +1475,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                       justifyContent: 'center',
                       background: 'var(--brand-gradient)'
                     }}>
-                      <span style={{ color: 'white', fontSize: '28px' }}>▶️</span>
+                      <span style={{ color: 'white', fontSize: '28px', display: 'inline-flex' }}><FaPlay /></span>
                     </div>
                     <div style={{
                       position: 'absolute',
@@ -1561,17 +1564,20 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
             <>
               <span style={{
                 fontWeight: 800,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
                 color: pronunciationResult.score >= 0.8 ? 'var(--emerald)'
                   : pronunciationResult.score >= 0.5 ? 'var(--saffron)' : 'var(--rose)'
               }}>
-                {pronunciationResult.score >= 0.8 ? '🎯' : pronunciationResult.score >= 0.5 ? '👍' : '🔁'}{' '}
+                {pronunciationResult.score >= 0.8 ? <FaBullseye /> : pronunciationResult.score >= 0.5 ? <FaThumbsUp /> : <FaRedo />}
                 {Math.round(pronunciationResult.score * 100)}%
               </span>
               <span style={{ margin: '0 8px', opacity: 0.5 }}>·</span>
               <span style={{ fontFamily: 'var(--font-tifinagh)' }}>He sentit: “{pronunciationResult.heard}”</span>
             </>
           ) : (
-            <span style={{ color: 'var(--rose)' }}>⚠️ {pronunciationResult?.heard}</span>
+            <span style={{ color: 'var(--rose)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaExclamationTriangle /> {pronunciationResult?.heard}</span>
           )}
         </div>
       )}
@@ -1592,10 +1598,11 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               style={{
                 padding: '12px 28px', background: 'var(--brand-1)', color: 'white',
                 border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 800,
-                fontSize: '15px', cursor: 'pointer'
+                fontSize: '15px', cursor: 'pointer',
+                display: 'inline-flex', alignItems: 'center', gap: '8px'
               }}
             >
-              👁 Mostra la resposta (Espai)
+              <FaEye /> Mostra la resposta (Espai)
             </button>
           ) : (
           <>
@@ -1610,10 +1617,11 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               color: 'white', border: '1px solid rgba(255,255,255,0.3)',
               borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '15px',
               cursor: pronunciationBusy ? 'wait' : 'pointer',
-              animation: isCheckingRecording ? 'pulse 1s infinite' : undefined
+              animation: isCheckingRecording ? 'pulse 1s infinite' : undefined,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center'
             }}
           >
-            {isCheckingRecording ? '⏹' : '🎤'}
+            {isCheckingRecording ? <FaStop /> : <FaMicrophone />}
           </button>
           {[
             { g: 0, label: 'Un altre cop', bg: 'var(--rose)' },
@@ -1635,7 +1643,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               }}
             >
               <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.85)', borderRadius: 'var(--r-sm)', padding: '1px 5px', lineHeight: 1.4 }}>{i + 1}</span>
-              {suggestedGrade === g ? '✨ ' : ''}{label}
+              {suggestedGrade === g ? <FaStar /> : null}{label}
             </button>
           ))}
           </>

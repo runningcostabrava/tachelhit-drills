@@ -3,6 +3,7 @@ import { getMediaUrl, getUserToken } from '../config';
 import { api, type CorpusStats } from '../api';
 import { toast } from '../toast';
 import type { Drill } from '../types';
+import { FaTools, FaTimes, FaPlay, FaCheck, FaChevronDown } from 'react-icons/fa';
 
 export default function CorpusPage() {
   const [q, setQ] = useState('');
@@ -185,7 +186,7 @@ export default function CorpusPage() {
         {gaps.some(g => g.count > 0) && (
           <div style={{ marginBottom: '18px' }}>
             <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px', fontFamily: 'var(--font-display)' }}>
-              🛠 Necessita feina
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaTools /> Necessita feina</span>
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {gaps.filter(g => g.count > 0).map(g => (
@@ -205,7 +206,7 @@ export default function CorpusPage() {
               ))}
               {activeGap && (
                 <button onClick={clearGap} style={{ padding: '6px 12px', borderRadius: 'var(--r-pill)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)' }}>
-                  ✕ Neteja
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaTimes /> Neteja</span>
                 </button>
               )}
             </div>
@@ -249,7 +250,7 @@ export default function CorpusPage() {
                   <div style={{ display: 'flex', gap: '8px' }}>
                     {d.audio_url && (
                       <button onClick={() => playAudio(d)} aria-label="Reprodueix l'àudio" style={{ padding: '7px 14px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
-                        ▶ Àudio
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaPlay /> Àudio</span>
                       </button>
                     )}
                     <button
@@ -257,7 +258,7 @@ export default function CorpusPage() {
                       aria-pressed={d.verified}
                       style={{ padding: '7px 14px', background: d.verified ? 'var(--surface-2)' : 'var(--emerald)', border: d.verified ? '1px solid var(--border)' : 'none', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: d.verified ? 'var(--text-soft)' : '#fff' }}
                     >
-                      {d.verified ? 'Desverifica' : '✓ Verifica'}
+                      {d.verified ? 'Desverifica' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaCheck /> Verifica</span>}
                     </button>
                   </div>
                 </div>
@@ -277,7 +278,7 @@ export default function CorpusPage() {
               disabled={appending}
               style={{ padding: '11px 26px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', cursor: appending ? 'default' : 'pointer', opacity: appending ? 0.6 : 1, fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}
             >
-              {appending ? 'Carregant…' : '⬇ Carrega\'n més'}
+              {appending ? 'Carregant…' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaChevronDown /> Carrega'n més</span>}
             </button>
           </div>
         )}

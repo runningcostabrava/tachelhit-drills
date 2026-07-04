@@ -6,9 +6,15 @@ import {
   FaVideo, 
   FaMicrophone, 
   FaKeyboard, 
-  FaFolderOpen, 
-  FaRobot, 
-  FaLanguage, 
+  FaFolderOpen,
+  FaVolumeUp,
+  FaFileAlt,
+  FaMicroscope,
+  FaClipboardCheck,
+  FaComments,
+  FaCheck,
+  FaRegSquare,
+  FaLanguage,
   FaChevronLeft, 
   FaChevronRight,
   FaCut as FaScissors
@@ -626,7 +632,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', background: 'var(--surface)', padding: '16px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)' }}>
           <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}><FaLanguage size={18} /> {aiLoadingKey === 'trans-text_tachelhit' ? '…' : 'CA➔SH'}</button>
           <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}><FaLanguage size={18} /> {aiLoadingKey === 'trans-text_catalan' ? '…' : 'SH➔CA'}</button>
-          <button onClick={handleTachelhitTTS} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: 'var(--amber-soft)', color: 'var(--amber-strong)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}><FaRobot size={18} /> {aiLoadingKey === 'tts-shi' ? '…' : 'TTS'}</button>
+          <button onClick={handleTachelhitTTS} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: 'var(--amber-soft)', color: 'var(--amber-strong)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}><FaVolumeUp size={18} /> {aiLoadingKey === 'tts-shi' ? '…' : 'TTS'}</button>
           <button 
                 onClick={() => {
                     const hasAudio = localDrill.audio_url;
@@ -649,7 +655,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                 disabled={!(localDrill.audio_url || localDrill.video_url) || aiLoadingKey !== null}
                 aria-label="Transcriu automàticament"
                 style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: 'var(--sky-soft)', color: 'var(--sky)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer', opacity: (localDrill.audio_url || localDrill.video_url) ? 1 : 0.5 }}
-            >{aiLoadingKey === 'transcribe-voice' ? '…' : '🪄 Transcriu'}</button>
+            ><FaFileAlt size={18} /> {aiLoadingKey === 'transcribe-voice' ? '…' : 'Transcriu'}</button>
         </div>
 
                 <div style={{ background: 'var(--surface)', padding: '20px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -664,34 +670,34 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                       disabled={!localDrill.text_tachelhit}
                       style={{ flex: 1, minWidth: '120px', padding: '11px', borderRadius: 'var(--r-md)', fontWeight: 700, fontSize: '13px', cursor: localDrill.text_tachelhit ? 'pointer' : 'not-allowed', background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)', border: '1px solid var(--brand-1)', opacity: localDrill.text_tachelhit ? 1 : 0.5 }}
                     >
-                      🔍 Analitza
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaMicroscope /> Analitza</span>
                     </button>
                     <button
                       onClick={() => { setAiAction('review'); setShowAi(true); }}
                       style={{ flex: 1, minWidth: '120px', padding: '11px', borderRadius: 'var(--r-md)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', background: 'var(--amber-soft)', color: 'var(--amber-strong)', border: '1px solid var(--amber)' }}
                     >
-                      🔎 Revisa
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaClipboardCheck /> Revisa</span>
                     </button>
                     <button
                       onClick={handleSuggest}
                       disabled={suggesting}
                       style={{ flex: 1, minWidth: '120px', padding: '11px', borderRadius: 'var(--r-md)', fontWeight: 700, fontSize: '13px', cursor: suggesting ? 'wait' : 'pointer', background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)' }}
                     >
-                      {suggesting ? '…' : '🤖 Suggeriment'}
+                      {suggesting ? '…' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaComments /> Suggeriment</span>}
                     </button>
                   </div>
 
                   {/* Draft suggestion column — kept separate from the gold field */}
                   {localDrill.text_tachelhit_suggested && localDrill.text_tachelhit_suggested !== localDrill.text_tachelhit && (
                     <div style={{ padding: '12px 14px', background: 'var(--sky-soft)', border: '1px dashed var(--sky)', borderRadius: 'var(--r-md)' }}>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--sky)', marginBottom: '6px' }}>🤖 ESBORRANY D'IA (no és la forma recollida)</div>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--sky)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}><FaComments /> ESBORRANY D'IA (no és la forma recollida)</div>
                       <div style={{ fontFamily: 'var(--font-tifinagh)', fontSize: '16px', color: 'var(--text)', marginBottom: '8px' }}>{localDrill.text_tachelhit_suggested}</div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button
                           onClick={() => { handleFieldChange('text_tachelhit', localDrill.text_tachelhit_suggested || ''); setLocalDrill(p => ({ ...p, text_tachelhit_suggested: '' })); }}
                           style={{ padding: '7px 14px', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '12px', cursor: 'pointer', background: 'var(--emerald)', color: '#fff', border: 'none' }}
                         >
-                          ✓ Accepta com a forma
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaCheck /> Accepta com a forma</span>
                         </button>
                         <button
                           onClick={() => setLocalDrill(p => ({ ...p, text_tachelhit_suggested: '' }))}
@@ -725,7 +731,9 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                       border: localDrill.verified ? '1px solid var(--emerald)' : '1px solid var(--border)'
                     }}
                   >
-                    {localDrill.verified ? '✓ Verificat — toca per desverificar' : '☐ Marca com a verificat (revisió humana)'}
+                    {localDrill.verified
+                      ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaCheck /> Verificat — toca per desverificar</span>
+                      : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaRegSquare /> Marca com a verificat (revisió humana)</span>}
                   </button>
                 </div>
       </div>
