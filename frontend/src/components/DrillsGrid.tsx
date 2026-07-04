@@ -495,7 +495,8 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                         fontSize: '14px',
                                         fontWeight: 700,
                                         color: 'var(--amber-strong)',
-                                        cursor: 'pointer',
+                                        opacity: actionLoadingId === `tts-${drill.id}` ? 0.5 : 1,
+                                        cursor: actionLoadingId === `tts-${drill.id}` ? 'not-allowed' : 'pointer',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
@@ -560,7 +561,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                                     <button
                                         onClick={() => handleQuickSave(drill)}
                                         disabled={actionLoadingId !== null}
-                                        style={{ background: 'var(--emerald)', color: 'white', border: 'none', borderRadius: 'var(--r-sm)', padding: '8px 14px', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
+                                        style={{ background: 'var(--emerald)', color: 'white', border: 'none', borderRadius: 'var(--r-sm)', padding: '8px 14px', fontWeight: 700, fontSize: '13px', opacity: actionLoadingId ? 0.5 : 1, cursor: actionLoadingId ? 'not-allowed' : 'pointer' }}
                                     >
                                         {actionLoadingId === `save-${drill.id}` ? '...' : '💾 Desa ara'}
                                     </button>
@@ -661,9 +662,9 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
             width: 430,
             cellRenderer: (params: any) => (
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center', height: '100%' }}>
-                    <button onClick={() => handleTranslate(params.data, 'ca', 'shi')} disabled={actionLoadingId !== null} title="Tradueix del català al taixelhit" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}><span style={{ color: 'var(--brand-1)', display: 'flex' }}><FaLanguage /></span> CA→Ta</button>
-                    <button onClick={() => handleTranslate(params.data, 'shi', 'ca')} disabled={actionLoadingId !== null} title="Tradueix del taixelhit al català" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}><span style={{ color: 'var(--emerald)', display: 'flex' }}><FaLanguage /></span> Ta→CA</button>
-                    <button onClick={() => handleTachelhitTTS(params.data)} disabled={actionLoadingId !== null} title="Genera veu en taixelhit" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}><span style={{ color: 'var(--saffron)', display: 'flex' }}><FaRobot /></span> Veu</button>
+                    <button onClick={() => handleTranslate(params.data, 'ca', 'shi')} disabled={actionLoadingId !== null} title="Tradueix del català al taixelhit" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', opacity: actionLoadingId ? 0.5 : 1, cursor: actionLoadingId ? 'not-allowed' : 'pointer' }}><span style={{ color: 'var(--brand-1)', display: 'flex' }}><FaLanguage /></span> CA→Ta</button>
+                    <button onClick={() => handleTranslate(params.data, 'shi', 'ca')} disabled={actionLoadingId !== null} title="Tradueix del taixelhit al català" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', opacity: actionLoadingId ? 0.5 : 1, cursor: actionLoadingId ? 'not-allowed' : 'pointer' }}><span style={{ color: 'var(--emerald)', display: 'flex' }}><FaLanguage /></span> Ta→CA</button>
+                    <button onClick={() => handleTachelhitTTS(params.data)} disabled={actionLoadingId !== null} title="Genera veu en taixelhit" style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', opacity: actionLoadingId ? 0.5 : 1, cursor: actionLoadingId ? 'not-allowed' : 'pointer' }}><span style={{ color: 'var(--saffron)', display: 'flex' }}><FaRobot /></span> Veu</button>
                     {(params.data.audio_url || params.data.video_url) && (
                         <button
                             onClick={() => {
@@ -683,7 +684,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                             }}
                             disabled={actionLoadingId !== null}
                             title="Transcriu l'àudio o el vídeo (ASR)"
-                            style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', opacity: actionLoadingId ? 0.5 : 1, cursor: actionLoadingId ? 'not-allowed' : 'pointer' }}
                         ><span style={{ color: 'var(--sky)', display: 'flex' }}><FaMagic /></span> Transcriu</button>
                     )}
                     <button
@@ -701,7 +702,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                         }}
                         disabled={actionLoadingId !== null || !(params.data.audio_url || params.data.video_url)}
                         title="Desa el mèdia per a ús fora de línia"
-                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 9px', fontSize: '11px', fontWeight: 700, background: 'var(--surface-2)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', opacity: (actionLoadingId !== null || !(params.data.audio_url || params.data.video_url)) ? 0.5 : 1, cursor: (actionLoadingId !== null || !(params.data.audio_url || params.data.video_url)) ? 'not-allowed' : 'pointer' }}
                     ><span style={{ color: 'var(--text-muted)', display: 'flex' }}><FaSave /></span> Desa</button>
                 </div>
             )
