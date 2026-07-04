@@ -114,45 +114,23 @@ def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tac
     # If custom space URL is provided, use it
     if HUGGINGFACE_TRANSLATION_SPACE_URL:
         try:
-            # Use the official Gradio Client for robust communication
             # Remove /translate suffix if present as Client expects the base URL
             space_url = HUGGINGFACE_TRANSLATION_SPACE_URL.split('/translate')[0].rstrip('/')
+            print(f"[TRANSLATE] Connecting to Gradio Space: {space_url}")
 
-            # Extract just the repository ID if it's a full huggingface.co URL
-            client_id = space_url
-            if "huggingface.co/spaces/" in space_url:
-                client_id = space_url.split("huggingface.co/spaces/")[-1]
+            # hf_predict waits out cold-boot and retries with a pause between
+            # attempts (a sleeping free-tier Space needs time to wake)
+            result = hf_predict(
+                space_url,
+                text, src_lang, tgt_lang, 237, 4, 1.0,
+                api_name="/predict"
+            )
 
-            print(f"[TRANSLATE] Connecting to Gradio Space: {client_id}")
-
-            api_token = os.getenv("HUGGINGFACE_API_KEY")
-            import httpx
-            # A sleeping free-tier Space wakes and loads the model on first
-            # request; the default httpx read timeout aborts mid-wake, so give
-            # it a long one and retry once.
-            client = Client(client_id, token=api_token,
-                            httpx_kwargs={"timeout": httpx.Timeout(180.0, connect=30.0)})
-            # The app.py has fn=translate_text with inputs [text, src_lang, tgt_lang]
-            result = None
-            for attempt in (1, 2):
-                try:
-                    result = client.predict(
-                        text,
-                        src_lang,
-                        tgt_lang,
-                        237,
-                        4,
-                        1.0,
-                        api_name="/predict"
-                    )
-                    break
-                except Exception as retry_err:
-                    print(f"[TRANSLATE] Space attempt {attempt} failed: {retry_err}")
-                    if attempt == 2:
-                        raise
-
-            # The Space returns "Tifinagh: ...\nLatín: ..." for ber_Tfng
-            translation = str(result)
+            translation = str(result).strip()
+            # An empty result means the Space answered but produced nothing —
+            # treat as failure so the caller can fall back rather than storing ""
+            if not translation:
+                raise ValueError("Translation Space returned an empty result")
             print(f"[TRANSLATE] Success (Gradio Space): '{text[:30]}...' -> '{translation[:30]}...'")
             return translation
 
@@ -274,22 +252,42 @@ def generate_catalan_tts(text: str, drill_id: int) -> str:
         print(f"[TTS] Error generating TTS: {e}")
         raise
 
+def hf_predict(space_id: str, *args, api_name: str = "/predict", token: str = None,
+               retries: int = 3, timeout: float = 180.0, **kwargs):
+    """
+    Call a Gradio Space's predict with a generous timeout and automatic retries.
+    Free-tier Spaces spin down when idle and cold-boot on the next call — the
+    first attempt wakes the Space (and may time out), later attempts succeed.
+    Raises the last error only if every attempt fails.
+    """
+    import httpx
+    import time as _time
+    token = token or os.getenv("HUGGINGFACE_API_KEY")
+    if "huggingface.co/spaces/" in space_id:
+        space_id = space_id.split("huggingface.co/spaces/")[-1].strip("/")
+    last_err = None
+    for attempt in range(1, retries + 1):
+        try:
+            client = Client(space_id, token=token,
+                            httpx_kwargs={"timeout": httpx.Timeout(timeout, connect=30.0)})
+            return client.predict(*args, api_name=api_name, **kwargs)
+        except Exception as e:
+            last_err = e
+            print(f"[HF] {space_id} attempt {attempt}/{retries} failed: {e}")
+            if attempt < retries:
+                _time.sleep(min(20, 5 * attempt))  # give the Space time to finish booting
+    raise last_err
+
 def generate_tachelhit_tts_hf(text: str, drill_id: int) -> str:
     """
     Generate Tachelhit TTS using a Hugging Face Space (HUGGINGFACE_TTS_SPACE_URL,
     default Tamazight-NLP/TTS).
     """
     try:
-        from gradio_client import Client
-        # Accept either a "user/space" id or a full huggingface.co/spaces URL.
-        tts_space = HUGGINGFACE_TTS_SPACE_URL
-        if "huggingface.co/spaces/" in tts_space:
-            tts_space = tts_space.split("huggingface.co/spaces/")[-1].rstrip("/")
-        print(f"[TACHELHIT TTS] Using Space: {tts_space}")
-        client = Client(tts_space, token=os.getenv("HUGGINGFACE_API_KEY"))
-
+        print(f"[TACHELHIT TTS] Using Space: {HUGGINGFACE_TTS_SPACE_URL}")
         # predict(text, variant, speaker, split_sentences, speaker_wav, voice_cv_model, api_name="/predict")
-        result_path = client.predict(
+        result_path = hf_predict(
+            HUGGINGFACE_TTS_SPACE_URL,
             text,
             "shi",
             "yan",
@@ -2786,11 +2784,7 @@ async def pronunciation_check(
             tmp_path = tmp.name
 
         asr_space_url = os.getenv("HUGGINGFACE_ASR_SPACE_URL", "https://huggingface.co/spaces/Tamazight-NLP/ASR")
-        client_id = asr_space_url
-        if "huggingface.co/spaces/" in asr_space_url:
-            client_id = asr_space_url.split("huggingface.co/spaces/")[-1]
-        client = Client(client_id, token=os.getenv("HUGGINGFACE_API_KEY"))
-        rough = await asyncio.to_thread(client.predict, handle_file(tmp_path), api_name="/predict")
+        rough = await asyncio.to_thread(hf_predict, asr_space_url, handle_file(tmp_path), api_name="/predict")
         heard = str(rough or "").strip()
 
         # Glossary normalization so known sound->spelling quirks don't penalize
@@ -3476,22 +3470,10 @@ async def transcribe_audio(
         raise HTTPException(status_code=500, detail="HUGGINGFACE_ASR_SPACE_URL not configured in environment")
 
     try:
-        client_id = asr_space_url
-        if "huggingface.co/spaces/" in asr_space_url:
-            client_id = asr_space_url.split("huggingface.co/spaces/")[-1]
-
-        print(f"[API] Calling ASR Space at {client_id}")
-        hf_token = os.getenv("HUGGINGFACE_API_KEY")
-        client = Client(client_id, token=hf_token)
-
-        # For Tamazight-NLP/ASR, we use /predict which takes the audio URL using handle_file
-        # Note: If it's a URL, handle_file might work or we can pass the URL string directly if the space accepts it
-        # Actually, gradio_client allows passing the URL string for Audio inputs.
-
+        print(f"[API] Calling ASR Space at {asr_space_url}")
+        # hf_predict waits out cold-boot and retries (free Spaces sleep when idle)
         rough = await asyncio.to_thread(
-            client.predict,
-            handle_file(audio_url),
-            api_name="/predict"
+            hf_predict, asr_space_url, handle_file(audio_url), api_name="/predict"
         )
 
         # Correction layer: apply glossary sound->spelling fixes, then map the
