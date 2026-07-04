@@ -1,5 +1,5 @@
 import '../agGridSetup';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FaMicrophone, FaPlus, FaTimes, FaLink, FaChevronDown, FaSearch, FaBook, FaTrash } from 'react-icons/fa';
 import axios from 'axios';
 import { API_BASE } from '../config';
@@ -67,8 +67,8 @@ const GlossaryModal = ({ onClose }: { onClose: () => void }) => {
           <button onClick={onClose} style={{ background: 'var(--surface-2)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-soft)' }}><FaTimes /></button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px', padding: '15px', background: 'var(--surface-2)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)' }}>
-          <input placeholder="So (p. ex. anayr)" value={newWord.sound} onChange={e => setNewWord({ ...newWord, sound: e.target.value })} style={{ padding: '12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: '14px', outline: 'none' }} />
-          <input placeholder="Ortografia correcta" value={newWord.spelling} onChange={e => setNewWord({ ...newWord, spelling: e.target.value })} style={{ padding: '12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: '14px', outline: 'none' }} />
+          <input placeholder="So (p. ex. anayr)" value={newWord.sound} onChange={e => setNewWord({ ...newWord, sound: e.target.value })} style={{ padding: '12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: '14px' }} />
+          <input placeholder="Ortografia correcta" value={newWord.spelling} onChange={e => setNewWord({ ...newWord, spelling: e.target.value })} style={{ padding: '12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: '14px' }} />
           <button onClick={handleAdd} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', background: 'var(--brand-1)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', cursor: 'pointer', fontWeight: 'bold' }}><FaPlus /> Afegeix a l'aprenentatge de la IA</button>
         </div>
         <div className="ag-theme-alpine" style={{ flex: 1, width: '100%', minHeight: '250px', borderRadius: 'var(--r-md)', overflow: 'hidden', border: '1px solid var(--border)' }}>
@@ -102,6 +102,26 @@ export default function DrillsResponsive() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCategory, setSearchCategory] = useState('all');
   const [filteredDrills, setFilteredDrills] = useState<Drill[]>([]);
+  const newDrillOptionsRef = useRef<HTMLDivElement>(null);
+
+  // Dismiss the "Més" dropdown on outside-click or Escape
+  useEffect(() => {
+    if (!showNewDrillOptions) return;
+    const handleMouseDown = (e: MouseEvent) => {
+      if (newDrillOptionsRef.current && !newDrillOptionsRef.current.contains(e.target as Node)) {
+        setShowNewDrillOptions(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowNewDrillOptions(false);
+    };
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showNewDrillOptions]);
 
   useEffect(() => {
     let result = [...drills];
@@ -303,7 +323,7 @@ export default function DrillsResponsive() {
               >
                 <FaLink />
               </button>
-              <div style={{ position: 'relative' }}>
+              <div ref={newDrillOptionsRef} style={{ position: 'relative' }}>
                 <button
                   disabled={isCreating}
                   onClick={() => setShowNewDrillOptions(!showNewDrillOptions)}
@@ -312,7 +332,7 @@ export default function DrillsResponsive() {
                   {isCreating ? 'Creant…' : 'Més'} <FaChevronDown size={11} />
                 </button>
                 {showNewDrillOptions && (
-                  <div style={{ position: 'absolute', top: 'calc(100% + 10px)', right: 0, backgroundColor: 'white', borderRadius: '16px', boxShadow: 'var(--shadow-xl)', zIndex: 1000, minWidth: '230px', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                  <div style={{ position: 'absolute', top: 'calc(100% + 10px)', right: 0, backgroundColor: 'var(--surface)', borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-xl)', zIndex: 1000, minWidth: '230px', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--border)' }}>
                     <button
                       onClick={() => { addNewDrill(); setShowNewDrillOptions(false); }}
                       style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', fontSize: '14px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', color: 'var(--text)', fontWeight: 600, whiteSpace: 'nowrap' }}
@@ -338,13 +358,13 @@ export default function DrillsResponsive() {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cerca drills…"
               aria-label="Cerca drills"
-              style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text)', fontSize: '15px', outline: 'none', minWidth: '0', fontWeight: 500 }}
+              style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text)', fontSize: '15px', minWidth: '0', fontWeight: 500 }}
             />
             <select
               value={searchCategory}
               onChange={(e) => setSearchCategory(e.target.value)}
               aria-label="Filtra per camp"
-              style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-soft)', borderRadius: 'var(--r-sm)', padding: '6px 9px', fontSize: '12px', fontWeight: 600, outline: 'none', cursor: 'pointer', flexShrink: 0 }}
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-soft)', borderRadius: 'var(--r-sm)', padding: '6px 9px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
             >
               <option value="all">Totes</option>
               <option value="catalan">Català</option>
