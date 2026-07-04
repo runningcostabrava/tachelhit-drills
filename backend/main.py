@@ -2611,7 +2611,7 @@ def corpus_export(format: str = "json", db: Session = Depends(get_db)):
     return {"count": len(rows), "drills": rows}
 
 @app.get("/corpus/flywheel")
-def corpus_flywheel(verified_only: bool = False, db: Session = Depends(get_db)):
+def corpus_flywheel(verified_only: bool = False, format: str = "json", db: Session = Depends(get_db)):
     """
     (audio, text) pairs for fine-tuning ASR/translation models — the data
     flywheel: every human-verified drill improves the models that power
@@ -2639,6 +2639,17 @@ def corpus_flywheel(verified_only: bool = False, db: Session = Depends(get_db)):
         "region": d.region,
         "license": d.license,
     } for d in drills]
+
+    if format == "jsonl":
+        # One JSON object per line — directly loadable with
+        # datasets.load_dataset("json", data_files=...) for fine-tuning
+        from fastapi.responses import Response
+        lines = "\n".join(json.dumps(p, ensure_ascii=False) for p in pairs)
+        return Response(
+            content=lines,
+            media_type="application/x-ndjson",
+            headers={"Content-Disposition": "attachment; filename=tachelhit_flywheel.jsonl"}
+        )
     return {"count": len(pairs), "pairs": pairs}
 
 @app.get("/corpus/stats")

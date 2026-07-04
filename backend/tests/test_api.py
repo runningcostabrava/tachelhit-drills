@@ -239,3 +239,14 @@ def test_version_endpoint():
     data = r.json()
     assert "commit" in data
     assert data["features"]["srs"] is True
+
+
+def test_flywheel_jsonl_export():
+    import json as _json
+    r = client.get("/corpus/flywheel", params={"format": "jsonl"})
+    assert r.status_code == 200
+    assert "x-ndjson" in r.headers["content-type"]
+    lines = [l for l in r.text.splitlines() if l.strip()]
+    assert lines, "expected at least one training pair"
+    first = _json.loads(lines[0])
+    assert "audio_url" in first and "text_tachelhit" in first
