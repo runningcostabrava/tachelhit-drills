@@ -15,6 +15,7 @@ export default function CorpusPage() {
   const [loading, setLoading] = useState(false);
   const [gaps, setGaps] = useState<{ kind: string; label: string; count: number }[]>([]);
   const [activeGap, setActiveGap] = useState<string | null>(null);
+  const [showCoverage, setShowCoverage] = useState(false);
 
   const PAGE = 50;
   const [offset, setOffset] = useState(0);
@@ -87,6 +88,22 @@ export default function CorpusPage() {
     </span>
   );
 
+  // Horizontal proportion bar used across the coverage dashboard
+  const bar = (label: string, value: number, total: number, color: string) => {
+    const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+    return (
+      <div key={label} style={{ marginBottom: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
+          <span style={{ color: 'var(--text-soft)', fontWeight: 600 }}>{label}</span>
+          <span style={{ color: 'var(--text-muted)' }}>{value}{total ? ` · ${pct}%` : ''}</span>
+        </div>
+        <div style={{ height: '8px', borderRadius: 'var(--r-pill)', background: 'var(--surface-2)', overflow: 'hidden' }}>
+          <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 'var(--r-pill)', transition: 'width 0.3s' }} />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: '48px' }}>
       <div style={{ background: 'var(--brand-gradient)', borderRadius: '0 0 var(--r-2xl) var(--r-2xl)', padding: '24px 24px 28px', color: '#fff' }}>
@@ -94,12 +111,45 @@ export default function CorpusPage() {
           <button onClick={() => navigate('/')} style={{ marginBottom: '14px', padding: '8px 16px', background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontWeight: 600, fontSize: '14px' }}>← Back</button>
           <h2 style={{ color: '#fff', fontSize: '26px', margin: 0 }}>📖 Corpus</h2>
           {stats && (
-            <p style={{ margin: '8px 0 0', color: 'rgba(255,255,255,0.85)', fontSize: '14px' }}>
-              {stats.total_drills} entrades · {stats.with_audio} amb àudio · {stats.verified} verificades
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '8px', flexWrap: 'wrap' }}>
+              <p style={{ margin: 0, color: 'rgba(255,255,255,0.85)', fontSize: '14px' }}>
+                {stats.total_drills} entrades · {stats.with_audio} amb àudio · {stats.verified} verificades
+              </p>
+              <button
+                onClick={() => setShowCoverage(v => !v)}
+                style={{ padding: '5px 12px', background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontWeight: 700, fontSize: '13px' }}
+              >
+                📊 {showCoverage ? 'Amaga' : 'Cobertura'}
+              </button>
+            </div>
           )}
         </div>
       </div>
+
+      {/* Coverage dashboard — the atlas view: what's documented, by variety/region */}
+      {showCoverage && stats && (
+        <div style={{ maxWidth: '860px', margin: '20px auto 0', padding: '0 24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '18px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '14px', color: 'var(--text)' }}>Cobertura de mitjans</div>
+              {bar('🔊 Àudio', stats.with_audio, stats.total_drills, 'var(--emerald)')}
+              {bar('🎬 Vídeo', stats.with_video, stats.total_drills, 'var(--sky)')}
+              {bar('Aa Llatí', stats.with_latin_script, stats.total_drills, 'var(--brand-1)')}
+              {bar('✓ Verificat', stats.verified, stats.total_drills, 'var(--amber)')}
+            </div>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '18px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '14px', color: 'var(--text)' }}>Per varietat</div>
+              {Object.entries(stats.by_variety).sort((a, b) => b[1] - a[1]).slice(0, 8)
+                .map(([k, n]) => bar(k === 'unspecified' ? '— sense especificar' : k, n, stats.total_drills, 'var(--brand-2)'))}
+            </div>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '18px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 800, marginBottom: '14px', color: 'var(--text)' }}>Per regió</div>
+              {Object.entries(stats.by_region).sort((a, b) => b[1] - a[1]).slice(0, 8)
+                .map(([k, n]) => bar(k === 'unspecified' ? '— sense especificar' : k, n, stats.total_drills, 'var(--sky)'))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div style={{ maxWidth: '860px', margin: '0 auto', padding: '20px 24px' }}>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '18px' }}>
