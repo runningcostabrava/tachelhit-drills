@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE, getMediaUrl } from '../config';
+import { toast } from '../toast';
 
 interface Short {
   id: number;
@@ -46,7 +47,7 @@ export default function YouTubeShorts() {
       setLoading(false);
     } catch (error: any) {
       console.error('Error loading data:', error);
-      setError(`No se pudieron cargar los datos: ${error.message}`);
+      setError(`No s'han pogut carregar les dades: ${error.message}`);
       setLoading(false);
     }
   };
@@ -58,13 +59,13 @@ export default function YouTubeShorts() {
     setError(null);
     try {
       await axios.post(`${API_BASE}/generate-short/${drillId}`);
-      alert('Short generat correctament!');
+      toast.success('Short generat correctament!');
       await loadData();
     } catch (error: any) {
       console.error('Error generating short:', error);
-      const errMsg = error.response?.data?.detail || error.message || 'Error desconocido';
+      const errMsg = error.response?.data?.detail || error.message || 'Error desconegut';
       setError(`Error generant el short: ${errMsg}`);
-      alert(`Error generant el short: ${errMsg}`);
+      toast.error(`Error generant el short: ${errMsg}`);
     } finally {
       setGenerating(null);
     }
@@ -124,20 +125,22 @@ export default function YouTubeShorts() {
           padding: '4px 12px',
           borderRadius: 'var(--r-pill)',
         }}>
-          {shorts.length} generats
+          {shorts.length} shorts
         </span>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', overflow: 'hidden' }}>
         {/* Left: Drills list for generation */}
         <div style={{
-          width: '350px',
+          flex: '1 1 320px',
+          minWidth: '280px',
+          maxWidth: '100%',
           borderRight: '1px solid var(--border)',
           overflowY: 'auto',
           padding: '20px',
           background: 'var(--surface-2)'
         }}>
-          <h3 style={{ marginTop: 0, fontSize: '17px' }}>Generar Shorts</h3>
+          <h3 style={{ marginTop: 0, fontSize: '17px', fontFamily: 'var(--font-display)' }}>Generar Shorts</h3>
           <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
             Selecciona un drill per generar un YouTube Short
           </p>
@@ -177,6 +180,8 @@ export default function YouTubeShorts() {
                 <button
                   onClick={() => handleGenerateShort(drill.id)}
                   disabled={generating === drill.id}
+                  aria-label={`Genera Short per ${drill.text_catalan}`}
+                  aria-busy={generating === drill.id}
                   style={{
                     padding: '8px 12px',
                     fontSize: '13px',
@@ -199,13 +204,15 @@ export default function YouTubeShorts() {
 
         {/* Middle: Shorts list */}
         <div style={{
-          width: '400px',
+          flex: '1 1 400px',
+          minWidth: '300px',
+          maxWidth: '100%',
           borderRight: '1px solid var(--border)',
           overflowY: 'auto',
           padding: '20px',
           background: 'var(--bg)'
         }}>
-          <h3 style={{ marginTop: 0, fontSize: '17px' }}>Shorts Generats</h3>
+          <h3 style={{ marginTop: 0, fontSize: '17px', fontFamily: 'var(--font-display)' }}>Shorts Generats</h3>
 
           {error && (
             <div style={{
@@ -230,7 +237,7 @@ export default function YouTubeShorts() {
                   fontSize: '13px',
                 }}
               >
-                Dismiss
+                Descarta
               </button>
             </div>
           )}
@@ -246,6 +253,10 @@ export default function YouTubeShorts() {
               <div
                 key={short.id}
                 onClick={() => setSelectedVideo(short)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedVideo(short); } }}
+                aria-label={`Short: ${short.text_catalan}`}
                 style={{
                   padding: '16px',
                   border: selectedVideo?.id === short.id ? '1.5px solid var(--brand-1)' : '1px solid var(--border)',
@@ -274,6 +285,7 @@ export default function YouTubeShorts() {
                       e.stopPropagation();
                       setSelectedVideo(short);
                     }}
+                    aria-label="Veure el short"
                     style={{
                       flex: 1,
                       padding: '8px 12px',
@@ -293,6 +305,7 @@ export default function YouTubeShorts() {
                       e.stopPropagation();
                       handleDeleteShort(short.id);
                     }}
+                    aria-label="Elimina el short"
                     style={{
                       padding: '8px 12px',
                       fontSize: '13px',
@@ -316,7 +329,7 @@ export default function YouTubeShorts() {
         <div style={{ flex: 1, padding: '30px', background: 'var(--surface-2)', overflowY: 'auto' }}>
           {selectedVideo ? (
             <div>
-              <h2 style={{ marginTop: 0, fontSize: '22px' }}>Preview del Short</h2>
+              <h2 style={{ marginTop: 0, fontSize: '22px', fontFamily: 'var(--font-display)' }}>Preview del Short</h2>
 
               <div style={{
                 marginBottom: '20px',
@@ -353,13 +366,14 @@ export default function YouTubeShorts() {
                   aspectRatio: '9/16',
                   borderRadius: 'var(--r-md)',
                   overflow: 'hidden',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
+                  boxShadow: 'var(--shadow-lg)'
                 }}>
                   <video
                     key={selectedVideo.id}
                     controls
                     loop
                     playsInline
+                    aria-label={`Vídeo del short: ${selectedVideo.text_catalan}`}
                     style={{
                       width: '100%',
                       height: '100%',
@@ -383,6 +397,7 @@ export default function YouTubeShorts() {
                 <a
                   href={getMediaUrl(selectedVideo.video_path)}
                   download={`tachelhit_short_${selectedVideo.drill_id}.mp4`}
+                  aria-label="Descarrega el Short"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -398,7 +413,7 @@ export default function YouTubeShorts() {
                   }}
                 >
                   <span style={{ fontSize: '18px' }}>⬇</span>
-                  Download Short
+                  Descarrega el Short
                 </a>
 
                 <button
@@ -412,8 +427,9 @@ export default function YouTubeShorts() {
 
                     // Copy description to clipboard
                     navigator.clipboard.writeText(`${title}\n\n${description}\n\n#Tachelhit #LanguageLearning #Shorts`);
-                    alert('Title and description copied to clipboard! Paste them when uploading to YouTube.');
+                    toast.success("Títol i descripció copiats al porta-retalls! Enganxa'ls en pujar a YouTube.");
                   }}
+                  aria-label="Puja a YouTube"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -430,7 +446,7 @@ export default function YouTubeShorts() {
                   }}
                 >
                   <span style={{ fontSize: '18px' }}>📤</span>
-                  Upload to YouTube
+                  Puja a YouTube
                 </button>
 
                 <button
@@ -439,6 +455,7 @@ export default function YouTubeShorts() {
                     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&hashtags=Tachelhit,LanguageLearning`;
                     window.open(shareUrl, '_blank');
                   }}
+                  aria-label="Comparteix a X"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -455,7 +472,7 @@ export default function YouTubeShorts() {
                   }}
                 >
                   <span style={{ fontSize: '18px' }}>🐦</span>
-                  Share on X
+                  Comparteix a X
                 </button>
               </div>
             </div>
