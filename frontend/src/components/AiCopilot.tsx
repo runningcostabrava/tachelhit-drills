@@ -24,7 +24,7 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }, [messages, busy]);
 
   const play = (url: string) => { const a = new Audio(getMediaUrl(url)); a.play().catch(() => {}); };
@@ -88,7 +88,12 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
             {selected.length ? `${selected.length} drill(s) seleccionats` : 'crea · tradueix · cerca · escolta'}
           </div>
         </div>
-        <button onClick={onClose} title="Amaga" aria-label="Amaga el copilot" style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontSize: '18px' }}>⟩</button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {messages.length > 0 && (
+            <button onClick={() => setMessages([])} title="Nova conversa" aria-label="Nova conversa" style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontSize: '16px' }}>↺</button>
+          )}
+          <button onClick={onClose} title="Amaga" aria-label="Amaga el copilot" style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontSize: '18px' }}>⟩</button>
+        </div>
       </div>
 
       <div ref={scrollRef} role="log" aria-live="polite" aria-atomic="false" style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -105,7 +110,7 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
         {messages.map((m, i) => (
           <div key={i} style={{ alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '90%' }}>
             <div style={{
-              padding: '10px 14px', borderRadius: 'var(--r-lg)', fontSize: '14px', lineHeight: 1.5, whiteSpace: 'pre-wrap',
+              padding: '10px 14px', borderRadius: 'var(--r-lg)', fontSize: '14px', lineHeight: 1.5, whiteSpace: 'pre-wrap', overflowWrap: 'break-word',
               background: m.role === 'user' ? 'var(--brand-1)' : 'var(--surface)',
               color: m.role === 'user' ? '#fff' : 'var(--text)',
               border: m.role === 'user' ? 'none' : '1px solid var(--border)',
@@ -127,14 +132,14 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
           placeholder={selected.length ? 'Demana una acció sobre la selecció…' : 'Demana crear, cercar, traduir…'}
           aria-label="Missatge al copilot"
           disabled={busy}
-          style={{ flex: 1, padding: '12px 14px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', fontSize: '14px', color: 'var(--text)', outline: 'none' }}
+          style={{ flex: 1, padding: '12px 14px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', fontSize: '14px', color: 'var(--text)' }}
         />
-        <button onClick={() => send(input)} disabled={busy || !input.trim()} aria-label="Envia" style={{ padding: '12px 18px', background: 'var(--brand-gradient)', color: '#fff', border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: busy ? 'wait' : 'pointer' }}>↑</button>
+        <button onClick={() => send(input)} disabled={busy || !input.trim()} aria-label="Envia" style={{ padding: '12px 18px', background: 'var(--brand-gradient)', color: '#fff', border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: (busy || !input.trim()) ? 'not-allowed' : 'pointer', opacity: (busy || !input.trim()) ? 0.5 : 1 }}>↑</button>
       </div>
     </div>
   );
 }
 
 function chip(bg: string, color: string): React.CSSProperties {
-  return { display: 'inline-block', padding: '5px 11px', borderRadius: 'var(--r-pill)', fontSize: '12px', fontWeight: 700, background: bg, color };
+  return { display: 'inline-block', padding: '5px 11px', borderRadius: 'var(--r-pill)', fontSize: '12px', fontWeight: 700, background: bg, color, overflowWrap: 'break-word', maxWidth: '100%' };
 }
