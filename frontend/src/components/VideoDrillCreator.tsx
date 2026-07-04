@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { API_BASE } from '../config';
+import { FaHeadphones, FaBolt, FaGlobe, FaVideo, FaUpload, FaMusic, FaTimes, FaClock, FaSpellCheck, FaFont, FaComments } from 'react-icons/fa';
 
 // Turn raw backend/yt-dlp errors into clear, actionable Catalan guidance
 function friendlyCaptureError(msg: string): string {
@@ -509,26 +510,26 @@ const VideoDrillCreator: React.FC = () => {
         <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-soft)', fontWeight: 600, cursor: 'pointer' }}>
             <input type="checkbox" checked={audioOnly} onChange={(e) => setAudioOnly(e.target.checked)} />
-            🎧 Només àudio (podcast / veu — els drills tenen clips d'àudio en lloc de vídeo)
+            <FaHeadphones /> Només àudio (podcast / veu — els drills tenen clips d'àudio en lloc de vídeo)
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-soft)', fontWeight: 600, cursor: 'pointer' }}>
             <input type="checkbox" checked={autoMode} onChange={(e) => setAutoMode(e.target.checked)} />
-            ⚡ Mode automàtic (corregeix + tradueix + crea drills de TOTS els segments)
+            <FaBolt /> Mode automàtic (corregeix + tradueix + crea drills de TOTS els segments)
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-soft)', fontWeight: 600, cursor: 'pointer' }}>
             <input type="checkbox" checked={foreignSource} onChange={(e) => setForeignSource(e.target.checked)} />
-            🌍 Font en una altra llengua (p. ex. anglès) → genera el taixelhit com a ESBORRANY per corregir
+            <FaGlobe /> Font en una altra llengua (p. ex. anglès) → genera el taixelhit com a ESBORRANY per corregir
           </label>
           {autoMode && (
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-soft)', fontWeight: 600, cursor: 'pointer' }}>
               <input type="checkbox" checked={makeReels} onChange={(e) => setMakeReels(e.target.checked)} />
-              🎬 Genera també un reel vertical per cada drill
+              <FaVideo /> Genera també un reel vertical per cada drill
             </label>
           )}
         </div>
 
         <div style={{ padding: '20px', background: 'var(--surface-2)', borderRadius: 'var(--r-lg)', border: '2px dashed var(--border-strong)', textAlign: 'center' }}>
-          <h4 style={{ margin: '0 0 12px 0', color: 'var(--text)', fontSize: '15px', fontFamily: 'var(--font-display)' }}>⬆️ O puja fitxers <span style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: '13px' }}>(Evita els bloquejos de YouTube)</span></h4>
+          <h4 style={{ margin: '0 0 12px 0', color: 'var(--text)', fontSize: '15px', fontFamily: 'var(--font-display)' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaUpload /> O puja fitxers</span> <span style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: '13px' }}>(Evita els bloquejos de YouTube)</span></h4>
           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
             <div style={{ textAlign: 'left' }}>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-soft)', marginBottom: '6px' }}>Vídeo o àudio</label>
@@ -543,7 +544,7 @@ const VideoDrillCreator: React.FC = () => {
 
         <div>
           <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--text-soft)', fontWeight: 600 }}>
-            🎼 Lletra de la cançó <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Opcional · una línia per frase · després de l'anàlisi, fes servir "Alinea la lletra" per substituir el text aproximat de l'ASR mantenint-ne les marques de temps)</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaMusic /> Lletra de la cançó</span> <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Opcional · una línia per frase · després de l'anàlisi, fes servir "Alinea la lletra" per substituir el text aproximat de l'ASR mantenint-ne les marques de temps)</span>
           </label>
           <textarea
             value={lyrics}
@@ -606,7 +607,7 @@ const VideoDrillCreator: React.FC = () => {
         </button>
         {autoStatus && (
           <div style={{ padding: '10px 14px', background: 'var(--brand-gradient-soft)', borderRadius: 'var(--r-md)', fontSize: '14px', fontWeight: 600, color: 'var(--brand-1)' }}>
-            ⚡ {autoStatus} <span style={{ fontWeight: 400, color: 'var(--text-soft)' }}>(continua executant-se al servidor si surts d'aquesta pàgina)</span>
+            <FaBolt style={{ marginRight: '6px', verticalAlign: '-2px' }} />{autoStatus} <span style={{ fontWeight: 400, color: 'var(--text-soft)' }}>(continua executant-se al servidor si surts d'aquesta pàgina)</span>
           </div>
         )}
       </div>
@@ -614,7 +615,7 @@ const VideoDrillCreator: React.FC = () => {
       {error && (
         <div ref={errorRef} role="alert" aria-live="assertive" style={{ padding: '16px 18px', background: 'var(--rose-soft)', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', marginBottom: '24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
           <p style={{ color: 'var(--rose)', margin: 0, fontWeight: 600, lineHeight: 1.5 }}>{error}</p>
-          <button onClick={() => setError(null)} aria-label="Tanca l'avís" style={{ background: 'none', border: 'none', color: 'var(--rose)', cursor: 'pointer', fontSize: '18px', lineHeight: 1, flexShrink: 0 }}>✕</button>
+          <button onClick={() => setError(null)} aria-label="Tanca l'avís" style={{ background: 'none', border: 'none', color: 'var(--rose)', cursor: 'pointer', fontSize: '18px', lineHeight: 1, flexShrink: 0, display: 'inline-flex' }}><FaTimes /></button>
         </div>
       )}
 
@@ -631,8 +632,8 @@ const VideoDrillCreator: React.FC = () => {
             <div style={{ flex: 1, minWidth: '220px' }}>
               <h3 style={{ margin: '0 0 10px 0', fontSize: '20px', fontFamily: 'var(--font-display)' }}>{videoInfo.title}</h3>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 12px', borderRadius: 'var(--r-pill)', fontSize: '12px', fontWeight: 700, background: 'var(--sky-soft)', color: 'var(--sky)' }}>⏱ {formatTime(videoInfo.duration)}</span>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 12px', borderRadius: 'var(--r-pill)', fontSize: '12px', fontWeight: 700, background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)' }}>🌐 {videoInfo.original_language}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 12px', borderRadius: 'var(--r-pill)', fontSize: '12px', fontWeight: 700, background: 'var(--sky-soft)', color: 'var(--sky)' }}><FaClock /> {formatTime(videoInfo.duration)}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 12px', borderRadius: 'var(--r-pill)', fontSize: '12px', fontWeight: 700, background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)' }}><FaGlobe /> {videoInfo.original_language}</span>
               </div>
               <div style={{ marginTop: '8px' }}>
                 <label style={{ marginRight: '10px', fontSize: '13px', fontWeight: 700, color: 'var(--text-soft)' }}>Etiqueta per als drills:</label>
@@ -658,7 +659,7 @@ const VideoDrillCreator: React.FC = () => {
                   title="Substitueix el text aproximat de l'ASR per les línies de lletra enganxades, mantenint les marques de temps"
                   style={{ padding: '9px 18px', background: 'var(--brand-1)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.5 : 1, fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
                 >
-                  {loading ? '⏳ Alineant…' : '🎼 Alinea la lletra'}
+                  {loading ? '⏳ Alineant…' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaMusic /> Alinea la lletra</span>}
                 </button>
               )}
               <button
@@ -668,7 +669,7 @@ const VideoDrillCreator: React.FC = () => {
                 title="Correccions del glossari + mapatge sobre el teu conjunt de frases curat"
                 style={{ padding: '9px 18px', background: 'var(--emerald)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.5 : 1, fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
               >
-                {loading ? '⏳ Corregint…' : '✨ Corregeix'}
+                {loading ? '⏳ Corregint…' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaSpellCheck /> Corregeix</span>}
               </button>
               {tempVideoPath && (
                 <button
@@ -678,7 +679,7 @@ const VideoDrillCreator: React.FC = () => {
                   title="Llegeix els subtítols incrustats als fotogrames del vídeo"
                   style={{ padding: '9px 18px', background: 'var(--sky)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'wait' : 'pointer', opacity: loading ? 0.5 : 1, fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
                 >
-                  {loading ? '⏳ OCR…' : '🔤 OCR'}
+                  {loading ? '⏳ OCR…' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaFont /> OCR</span>}
                 </button>
               )}
               <button
@@ -776,7 +777,7 @@ const VideoDrillCreator: React.FC = () => {
                       />
                       {(foreignSource || seg.text_tachelhit_suggested) && (
                         <div style={{ marginTop: '6px' }}>
-                          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--sky)', marginBottom: '3px' }}>🤖 Taixelhit (esborrany — corregeix-lo)</div>
+                          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--sky)', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '5px' }}><FaComments /> Taixelhit (esborrany — corregeix-lo)</div>
                           <textarea
                             value={seg.text_tachelhit_suggested || ''}
                             onChange={(e) => { const ns = [...videoInfo.segments]; ns[idx].text_tachelhit_suggested = e.target.value; setVideoInfo({ ...videoInfo, segments: ns }); }}
@@ -787,7 +788,7 @@ const VideoDrillCreator: React.FC = () => {
                       )}
                       {seg.text_ocr && seg.text_ocr !== seg.text && (
                         <div style={{ fontSize: '11px', marginTop: '4px', color: 'var(--text-muted)' }}>
-                          🔤 OCR: <em>{seg.text_ocr}</em>{' '}
+                          <FaFont style={{ marginRight: '4px', verticalAlign: '-1px' }} />OCR: <em>{seg.text_ocr}</em>{' '}
                           <button
                             onClick={() => {
                               const newSegments = [...videoInfo.segments];
@@ -802,7 +803,7 @@ const VideoDrillCreator: React.FC = () => {
                       )}
                       {typeof seg.correction_score === 'number' && (
                         <div style={{ fontSize: '11px', marginTop: '4px', color: 'var(--text-muted)' }}>
-                          ✨ confiança de coincidència: {(seg.correction_score * 100).toFixed(0)}%
+                          <FaSpellCheck style={{ marginRight: '4px', verticalAlign: '-1px' }} />confiança de coincidència: {(seg.correction_score * 100).toFixed(0)}%
                         </div>
                       )}
                     </td>

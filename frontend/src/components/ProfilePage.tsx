@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getUserToken, setUserIdentity, clearUserIdentity } from '../config';
 import { api, type Me } from '../api';
+import { FaCheck, FaLayerGroup, FaRedo, FaFire } from 'react-icons/fa';
 
 const cardStyle: React.CSSProperties = {
   background: 'var(--surface)',
@@ -103,7 +104,7 @@ export default function ProfilePage() {
 
         {newToken && (
           <div style={cardStyle}>
-            <h3 style={{ marginTop: 0, fontFamily: 'var(--font-display)', fontSize: '20px' }}>✅ Compte creat!</h3>
+            <h3 style={{ marginTop: 0, fontFamily: 'var(--font-display)', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}><FaCheck /> Compte creat!</h3>
             <p style={{ color: 'var(--text-soft)', fontSize: '14px' }}>
               Aquest és el teu <strong>token personal</strong>. Guarda&apos;l en un lloc segur —
               és l&apos;única manera d&apos;iniciar sessió en altres dispositius i només es mostra ara.
@@ -141,14 +142,14 @@ export default function ProfilePage() {
             <p style={{ color: 'var(--text-muted)', margin: '0 0 16px', fontSize: '14px' }}>@{me.username}</p>
             <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '18px' }}>
               <div style={{ padding: '12px 18px', background: 'var(--brand-gradient-soft)', borderRadius: 'var(--r-lg)', fontWeight: 700, color: 'var(--brand-1)' }}>
-                📚 {me.drills_contributed} drills aportats
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaLayerGroup /> {me.drills_contributed} drills aportats</span>
               </div>
               <div style={{ padding: '12px 18px', background: 'var(--emerald-soft)', borderRadius: 'var(--r-lg)', fontWeight: 700, color: 'var(--emerald)' }}>
-                🧠 {me.cards_learning} targetes en aprenentatge
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaRedo /> {me.cards_learning} targetes en aprenentatge</span>
               </div>
               {streak && streak.streak_days > 0 && (
                 <div style={{ padding: '12px 18px', background: 'var(--amber-soft)', borderRadius: 'var(--r-lg)', fontWeight: 700, color: 'var(--amber-strong)' }}>
-                  🔥 {streak.streak_days} {streak.streak_days === 1 ? 'dia' : 'dies'} seguits · {streak.reviews_week} repassos aquesta setmana
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaFire /> {streak.streak_days} {streak.streak_days === 1 ? 'dia' : 'dies'} seguits · {streak.reviews_week} repassos aquesta setmana</span>
                 </div>
               )}
             </div>

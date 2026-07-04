@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE, getMediaUrl } from '../config';
 import { toast } from '../toast';
+import { FaCheck, FaVideo, FaFilm, FaPlay, FaTrash, FaDownload, FaUpload, FaShareAlt, FaTv } from 'react-icons/fa';
 
 interface Short {
   id: number;
@@ -170,7 +171,7 @@ export default function YouTubeShorts() {
                       padding: '2px 8px',
                       borderRadius: 'var(--r-pill)',
                     }}>
-                      ✓ Generat
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><FaCheck /> Generat</span>
                     </span>
                   )}
                 </div>
@@ -196,7 +197,7 @@ export default function YouTubeShorts() {
                     boxShadow: generating !== null ? 'none' : 'var(--shadow-brand)',
                   }}
                 >
-                  {generating === drill.id ? '⏳ Generant...' : '🎬 Generar Short'}
+                  {generating === drill.id ? '⏳ Generant...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaVideo /> Generar Short</span>}
                 </button>
               </div>
             );
@@ -245,7 +246,7 @@ export default function YouTubeShorts() {
 
           {shorts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)', background: 'var(--surface)', border: '1px dashed var(--border-strong)', borderRadius: 'var(--r-xl)' }}>
-              <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎞️</div>
+              <div style={{ fontSize: '32px', marginBottom: '8px' }}><FaFilm /></div>
               <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: 'var(--text-soft)' }}>Cap short generat encara</p>
               <p style={{ fontSize: '13px', margin: 0 }}>Selecciona un drill a l'esquerra per començar</p>
             </div>
@@ -299,7 +300,7 @@ export default function YouTubeShorts() {
                       fontWeight: 700,
                     }}
                   >
-                    ▶ Veure
+                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><FaPlay /> Veure</span>
                   </button>
                   <button
                     onClick={(e) => {
@@ -318,7 +319,7 @@ export default function YouTubeShorts() {
                       fontWeight: 700,
                     }}
                   >
-                    🗑 Eliminar
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaTrash /> Eliminar</span>
                   </button>
                 </div>
               </div>
@@ -413,7 +414,7 @@ export default function YouTubeShorts() {
                     boxShadow: 'var(--shadow-md)'
                   }}
                 >
-                  <span style={{ fontSize: '18px' }}>⬇</span>
+                  <span style={{ fontSize: '18px', display: 'inline-flex' }}><FaDownload /></span>
                   Descarrega el Short
                 </a>
 
@@ -446,7 +447,7 @@ export default function YouTubeShorts() {
                     boxShadow: 'var(--shadow-md)'
                   }}
                 >
-                  <span style={{ fontSize: '18px' }}>📤</span>
+                  <span style={{ fontSize: '18px', display: 'inline-flex' }}><FaUpload /></span>
                   Puja a YouTube
                 </button>
 
@@ -472,14 +473,14 @@ export default function YouTubeShorts() {
                     boxShadow: 'var(--shadow-md)'
                   }}
                 >
-                  <span style={{ fontSize: '18px' }}>🐦</span>
+                  <span style={{ fontSize: '18px', display: 'inline-flex' }}><FaShareAlt /></span>
                   Comparteix a X
                 </button>
               </div>
             </div>
           ) : (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: '40px', marginBottom: '12px' }}>📺</div>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}><FaTv /></div>
               <p style={{ fontSize: '17px', fontWeight: 600, color: 'var(--text-soft)' }}>Selecciona un short per veure'l</p>
             </div>
           )}

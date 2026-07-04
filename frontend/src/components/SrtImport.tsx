@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { API_BASE } from '../config';
 import { useNavigate } from 'react-router-dom';
+import { FaUpload, FaCheck } from 'react-icons/fa';
 
 interface SrtSegment {
   sequence: number;
@@ -233,7 +234,7 @@ const SrtImport: React.FC = () => {
 
           <div style={{ marginBottom: '16px', padding: '20px', background: 'var(--surface-2)', borderRadius: 'var(--r-lg)', border: '2px dashed var(--border-strong)', textAlign: 'center' }}>
             <label htmlFor="srt-file" style={{ display: 'block', marginBottom: '10px', fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}>
-              ⬆️ Puja un fitxer SRT
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaUpload /> Puja un fitxer SRT</span>
             </label>
             <input
               id="srt-file"
@@ -392,8 +393,8 @@ This is the second line.`}
 
         {success && (
           <div role="status" aria-live="polite" style={{ padding: '16px', background: 'var(--emerald-soft)', borderRadius: 'var(--r-md)', border: '1px solid var(--emerald)' }}>
-            <p style={{ color: 'var(--emerald)', margin: 0, fontWeight: 700 }}>
-              ✅ S'han creat {success.drills_created} drills correctament!
+            <p style={{ color: 'var(--emerald)', margin: 0, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FaCheck /> S'han creat {success.drills_created} drills correctament!
             </p>
             {success.test_id && (
               <p style={{ color: 'var(--emerald)', margin: '5px 0 0 0' }}>
