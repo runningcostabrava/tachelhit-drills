@@ -9,7 +9,6 @@ import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 import MobileDrillEditor from './MobileDrillEditor';
 import DrillsGrid from './DrillsGrid';
-import MobileBottomNav from './MobileBottomNav';
 import VoiceDrillCreator from './VoiceDrillCreator';
 import MobileDrillCreator from './MobileDrillCreator';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -267,7 +266,7 @@ export default function DrillsResponsive() {
 
   return (
     <>
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', paddingBottom: isMobile ? '64px' : '0' }}>
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', paddingBottom: isMobile ? 'env(safe-area-inset-bottom, 0px)' : '0' }}>
         <div style={{ background: 'var(--surface)', padding: isMobile ? '12px 14px' : '14px 24px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', gap: '12px', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
@@ -361,7 +360,6 @@ export default function DrillsResponsive() {
           )}
           <DrillsGrid rowData={filteredDrills} refreshData={fetchDrills} onEditDrill={(drill) => setEditingDrill(drill)} />
         </div>
-        {isMobile && <MobileBottomNav />}
       </div>
 
       {editingDrill && (
