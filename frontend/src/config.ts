@@ -11,9 +11,14 @@ const PROD_API = 'https://tachelhit-drills-api.onrender.com';
 const envApiUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
 const isNativeApp = !!((window as any).Capacitor?.isNativePlatform?.() ?? (window as any).Capacitor?.isNative);
 
-export const API_BASE =
+const rawApiBase =
   envApiUrl ||
   (import.meta.env.DEV && !isNativeApp ? `http://${window.location.hostname}:8000` : PROD_API);
+
+// Strip trailing slashes: a trailing slash in VITE_API_URL turns every
+// `${API_BASE}/drills/` into a double-slash `//drills/`, which the backend
+// 404s. This makes the base robust regardless of how the env var is written.
+export const API_BASE = rawApiBase.replace(/\/+$/, '');
 
 // ---- Identity & API-key header injection ----
 // Components call axios and fetch directly all over the codebase, so until

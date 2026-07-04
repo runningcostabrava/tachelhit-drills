@@ -2,7 +2,6 @@ import '../agGridSetup';
 import { useState, useEffect } from 'react';
 import { FaMicrophone, FaPlus, FaTimes, FaLink, FaChevronDown, FaSearch, FaBook, FaTrash } from 'react-icons/fa';
 import axios from 'axios';
-import { Network } from '@capacitor/network';
 import { API_BASE } from '../config';
 import { syncManager } from '../services/OfflineSyncManager';
 import { AgGridReact } from 'ag-grid-react';
@@ -150,17 +149,21 @@ export default function DrillsResponsive() {
 
   const fetchDrills = async () => {
     try {
-      const status = await Network.getStatus();
       let allDrills: Drill[] = [];
 
-      if (status.connected) {
-        await syncManager.sync();
+      // Always try the server first — Capacitor's Network.getStatus() can
+      // misreport "offline" on the web, which used to strand the app on an
+      // empty local cache. The cache is only a fallback when the request
+      // genuinely fails (real offline / native app without connectivity).
+      try {
+        syncManager.sync().catch(() => {});
         const response = await axios.get(`${API_BASE}/drills/`);
         allDrills = response.data || [];
         await syncManager.saveDrillsToCache(allDrills);
         // Trigger media sync (audio & images only; videos are large and cached on-demand)
         syncManager.syncAllMedia({ includeVideos: false });
-      } else {
+      } catch (netErr) {
+        console.warn('Server fetch failed, falling back to cached drills:', netErr);
         allDrills = await syncManager.getDrills();
       }
 
