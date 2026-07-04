@@ -9,6 +9,7 @@ interface VideoSegment {
   text_catalan?: string;
   text_arabic?: string;
   text_tachelhit?: string;
+  text_tachelhit_suggested?: string; // machine draft (foreign-source mode)
   text_ocr?: string;
   correction_score?: number;
   selected?: boolean;
@@ -36,6 +37,7 @@ const VideoDrillCreator: React.FC = () => {
   const [audioOnly, setAudioOnly] = useState(false);
   const [autoMode, setAutoMode] = useState(false);
   const [makeReels, setMakeReels] = useState(false);
+  const [foreignSource, setForeignSource] = useState(false);
   const [lyrics, setLyrics] = useState('');
   const [autoStatus, setAutoStatus] = useState<string | null>(null);
 
@@ -296,7 +298,10 @@ const VideoDrillCreator: React.FC = () => {
           segments: videoInfo.segments,
           source_lang: videoInfo.original_language || 'auto',
           // Fill every drill language; the backend skips targets equal to the source
-          target_langs: ['ca', 'ar', 'shi']
+          target_langs: ['ca', 'ar', 'shi'],
+          // Foreign source: the machine Tachelhit is a DRAFT (goes to _suggested),
+          // never the gold field — a human corrects it into the real variety.
+          draft_tachelhit: foreignSource,
         }),
       });
       if (!response.ok) throw new Error('Translation failed');
@@ -516,6 +521,10 @@ const VideoDrillCreator: React.FC = () => {
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-soft)', fontWeight: 600, cursor: 'pointer' }}>
             <input type="checkbox" checked={autoMode} onChange={(e) => setAutoMode(e.target.checked)} />
             ⚡ Auto mode (correct + translate + create drills from ALL segments)
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-soft)', fontWeight: 600, cursor: 'pointer' }}>
+            <input type="checkbox" checked={foreignSource} onChange={(e) => setForeignSource(e.target.checked)} />
+            🌍 Font en una altra llengua (p. ex. anglès) → genera el taixelhit com a ESBORRANY per corregir
           </label>
           {autoMode && (
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-soft)', fontWeight: 600, cursor: 'pointer' }}>
@@ -753,6 +762,17 @@ const VideoDrillCreator: React.FC = () => {
                         }}
                         style={{ width: '100%', minHeight: '44px', padding: '8px', fontSize: '13px', borderRadius: 'var(--r-sm)', border: '1px solid var(--border)', background: 'var(--surface)', fontFamily: 'var(--font-tifinagh)', color: 'var(--text)' }}
                       />
+                      {(foreignSource || seg.text_tachelhit_suggested) && (
+                        <div style={{ marginTop: '6px' }}>
+                          <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--sky)', marginBottom: '3px' }}>🤖 Taixelhit (esborrany — corregeix-lo)</div>
+                          <textarea
+                            value={seg.text_tachelhit_suggested || ''}
+                            onChange={(e) => { const ns = [...videoInfo.segments]; ns[idx].text_tachelhit_suggested = e.target.value; setVideoInfo({ ...videoInfo, segments: ns }); }}
+                            placeholder="esborrany en taixelhit…"
+                            style={{ width: '100%', minHeight: '40px', padding: '8px', fontSize: '13px', borderRadius: 'var(--r-sm)', border: '1px dashed var(--sky)', background: 'var(--sky-soft)', fontFamily: 'var(--font-tifinagh)', color: 'var(--text)' }}
+                          />
+                        </div>
+                      )}
                       {seg.text_ocr && seg.text_ocr !== seg.text && (
                         <div style={{ fontSize: '11px', marginTop: '4px', color: 'var(--text-muted)' }}>
                           🔤 OCR: <em>{seg.text_ocr}</em>{' '}

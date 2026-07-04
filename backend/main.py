@@ -2280,7 +2280,8 @@ TRANSLATE_TARGET_FIELDS = {
 async def translate_video_segments(
     segments: List[Dict] = Body(...),
     source_lang: str = Body("auto"),
-    target_langs: Optional[List[str]] = Body(None)
+    target_langs: Optional[List[str]] = Body(None),
+    draft_tachelhit: Optional[bool] = Body(False)
 ):
     """
     Translate a list of video segments using the fine-tuned NLLB Hugging Face
@@ -2288,6 +2289,11 @@ async def translate_video_segments(
     translates to Catalan; pass target_langs (subset of ca/ar/shi) to fill
     several drill languages in one call. Targets equal to the source language
     are skipped.
+
+    draft_tachelhit=True (foreign-language source, e.g. an English video):
+    the machine Tachelhit goes to text_tachelhit_suggested (a DRAFT), never the
+    gold text_tachelhit — because MT into this low-resource variety is only a
+    starting point a human must correct.
     """
     try:
         # Map the caller's language code to the friendly name translate_with_hf
@@ -2308,7 +2314,9 @@ async def translate_video_segments(
                     # Same language as the source: the original text already is it
                     if LANGUAGE_CODE_MAP.get(tgt) == src_name:
                         continue
-                    field = TRANSLATE_TARGET_FIELDS[tgt]
+                    # Foreign source: route machine Tachelhit to the draft column
+                    field = ("text_tachelhit_suggested" if (draft_tachelhit and tgt == "shi")
+                             else TRANSLATE_TARGET_FIELDS[tgt])
                     try:
                         seg[field] = await asyncio.to_thread(
                             translate_with_hf, original_text, src_name, LANGUAGE_CODE_MAP[tgt]
@@ -2367,6 +2375,8 @@ async def create_drills_from_video(
                     text_catalan=seg.get("text_catalan"),
                     text_tachelhit=drill_tachelhit,
                     text_arabic=drill_arabic,
+                    text_tachelhit_suggested=seg.get("text_tachelhit_suggested"),
+                    text_catalan_suggested=seg.get("text_catalan_suggested"),
                     tag=tag or "file_import",
                     author="Manual Upload",
                     source_url=url
@@ -2408,6 +2418,8 @@ async def create_drills_from_video(
                     text_catalan=seg.get("text_catalan"),
                     text_tachelhit=drill_tachelhit,
                     text_arabic=drill_arabic,
+                    text_tachelhit_suggested=seg.get("text_tachelhit_suggested"),
+                    text_catalan_suggested=seg.get("text_catalan_suggested"),
                     tag=tag or "video_capture",
                     source_url=url
                 )
@@ -2730,6 +2742,38 @@ def ai_suggest_translation(drill_id: int, db: Session = Depends(get_db)):
         return {"drill_id": drill_id, "field": target_field, "suggestion": suggestion}
     except Exception as e:
         print(f"[AI] suggest-translation failed: {e}")
+        raise HTTPException(status_code=502, detail=f"AI assistant error: {str(e)[:200]}")
+
+@app.post("/ai/review-drill/{drill_id}")
+def ai_review_drill(drill_id: int, db: Session = Depends(get_db)):
+    """
+    Contradiction-flagging: the AI checks a drill for likely transcription
+    errors, Catalan↔Tachelhit mismatches, or spelling inconsistencies vs the
+    glossary/grammar. It flags things to REVIEW — it does not "correct" the
+    attested form (which is authoritative for its variety).
+    """
+    if not gemini_available():
+        raise HTTPException(status_code=503, detail="AI assistant not configured (GEMINI_API_KEY missing)")
+    drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+    if not drill:
+        raise HTTPException(status_code=404, detail="Drill not found")
+
+    prompt = (
+        _drill_context(drill) + "\n\n"
+        "Revisa aquest drill com a lingüista i marca possibles problemes PER REVISAR "
+        "(no corregeixis la forma attestada, només assenyala coses a comprovar):\n"
+        "- El taixelhit i el català es corresponen realment?\n"
+        "- Hi ha errors probables de transcripció (ASR), lletres barrejades o inconsistències d'ortografia?\n"
+        "- La transliteració llatina concorda amb el tifinag?\n"
+        "Respon amb un breu veredicte ('sembla correcte' / 'cal revisar') i una llista curta de punts concrets. "
+        "Sigues concís."
+    )
+    try:
+        review = gemini_generate(_build_system_instruction(db),
+                                 [{"role": "user", "text": prompt}], max_output_tokens=600)
+        return {"drill_id": drill_id, "review": review}
+    except Exception as e:
+        print(f"[AI] review-drill failed: {e}")
         raise HTTPException(status_code=502, detail=f"AI assistant error: {str(e)[:200]}")
 
 # ===================== CORPUS (documentation & research) =====================

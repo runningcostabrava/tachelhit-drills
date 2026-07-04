@@ -5,10 +5,10 @@ import { api } from '../api';
 interface Msg { role: 'user' | 'model'; text: string; }
 
 // Grammar-tutor chat panel. Optionally scoped to a selected drill.
-export default function AiAssistant({ drillId, drillLabel, autoAnalyze, onClose }: {
+export default function AiAssistant({ drillId, drillLabel, autoAction, onClose }: {
   drillId?: number;
   drillLabel?: string;
-  autoAnalyze?: boolean;   // on open, auto-run a morphological analysis of the drill
+  autoAction?: 'analyze' | 'review';  // on open, auto-run this on the drill
   onClose: () => void;
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -21,18 +21,20 @@ export default function AiAssistant({ drillId, drillLabel, autoAnalyze, onClose 
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, busy]);
 
-  // Auto-analysis when opened from a drill's "Analitza" button
+  // Auto-run analysis/review when opened from a drill button
   useEffect(() => {
-    if (autoAnalyze && drillId && !didAuto.current) {
+    if (autoAction && drillId && !didAuto.current) {
       didAuto.current = true;
-      setMessages([{ role: 'user', text: '🔍 Analitza la forma taixelhit d\'aquest drill' }]);
+      const isReview = autoAction === 'review';
+      setMessages([{ role: 'user', text: isReview ? '🔎 Revisa aquest drill' : '🔍 Analitza la forma taixelhit d\'aquest drill' }]);
       setBusy(true);
-      api.aiAnalyzeDrill(drillId)
-        .then(r => setMessages(m => [...m, { role: 'model', text: r.analysis }]))
+      const call = isReview ? api.aiReviewDrill(drillId).then(r => r.review) : api.aiAnalyzeDrill(drillId).then(r => r.analysis);
+      call
+        .then(text => setMessages(m => [...m, { role: 'model', text }]))
         .catch(e => setMessages(m => [...m, { role: 'model', text: `⚠️ ${e.message || 'Error'}` }]))
         .finally(() => setBusy(false));
     }
-  }, [autoAnalyze, drillId]);
+  }, [autoAction, drillId]);
 
   const suggestions = drillId
     ? ["Explica la gramàtica d'aquesta frase", 'Com es pronuncia?', 'Analitza el verb o els pronoms']

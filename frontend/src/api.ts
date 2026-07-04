@@ -91,6 +91,8 @@ export const api = {
     }),
   aiAnalyzeDrill: (drillId: number) =>
     request<{ analysis: string }>(`/ai/analyze-drill/${drillId}`, { method: 'POST' }),
+  aiReviewDrill: (drillId: number) =>
+    request<{ review: string }>(`/ai/review-drill/${drillId}`, { method: 'POST' }),
   aiSuggestTranslation: (drillId: number) =>
     request<{ field: string; suggestion: string }>(`/ai/suggest-translation/${drillId}`, { method: 'POST' }),
 
