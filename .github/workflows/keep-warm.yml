@@ -1,0 +1,32 @@
+name: Keep services warm
+
+# Free HuggingFace Spaces and the Render free instance spin down when idle,
+# which makes the first request after inactivity slow (or time out). This
+# pings them every ~12 minutes so they stay awake and the AI tools respond
+# fast on the first click. Runs on GitHub's free Actions (repo is public).
+on:
+  schedule:
+    - cron: '*/12 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend and HF Spaces
+        run: |
+          urls=(
+            "https://tachelhit-drills-api.onrender.com/health"
+            "https://tamazight-nlp-asr.hf.space"
+            "https://tamazight-nlp-tts.hf.space"
+            "https://tamazight-nlp-finetuned-quantized-nllb.hf.space"
+            "https://josepabloucr-tachelhit-ocr.hf.space"
+            "https://josepabloucr-tachelhit-video-generator.hf.space"
+            "https://josepabloucr-creadordrillplayvideo.hf.space"
+          )
+          for u in "${urls[@]}"; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 "$u" || echo "timeout")
+            echo "$u -> $code"
+          done
+          # Always succeed — a cold/booting service is fine, the ping did its job
+          exit 0
