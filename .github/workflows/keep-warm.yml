@@ -14,7 +14,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping backend and HF Spaces
+        env:
+          # Optional: add an HF_TOKEN repo secret so gated Spaces get an
+          # authenticated 200 (otherwise anonymous pings still reset the
+          # inactivity timer, but may return 403 on gated Spaces).
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          auth=()
+          if [ -n "$HF_TOKEN" ]; then auth=(-H "Authorization: Bearer $HF_TOKEN"); fi
           urls=(
             "https://tachelhit-drills-api.onrender.com/health"
             "https://tamazight-nlp-asr.hf.space"
@@ -25,7 +32,7 @@ jobs:
             "https://josepabloucr-creadordrillplayvideo.hf.space"
           )
           for u in "${urls[@]}"; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 "$u" || echo "timeout")
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 "${auth[@]}" "$u" || echo "timeout")
             echo "$u -> $code"
           done
           # Always succeed — a cold/booting service is fine, the ping did its job
