@@ -42,13 +42,13 @@ const VideoDrillCreator: React.FC = () => {
   // Polls a fully server-side auto-drills job (URL captures). The pipeline
   // keeps running on the server even if this page is closed.
   const AUTO_STATUS_LABELS: Record<string, string> = {
-    PENDING: 'Queued…',
-    IN_PROGRESS: 'Transcribing (Whisper)…',
-    TRANSCRIBING: 'Transcribing (Whisper)…',
-    CORRECTING: 'Correcting with your phrase dataset…',
-    TRANSLATING: 'Translating to Català · العربية · ⵜⴰⵛⵍⵃⵉⵜ…',
-    CREATING_DRILLS: 'Clipping media & creating drills…',
-    GENERATING_REELS: 'Rendering vertical reels…',
+    PENDING: 'A la cua…',
+    IN_PROGRESS: 'Transcrivint (Whisper)…',
+    TRANSCRIBING: 'Transcrivint (Whisper)…',
+    CORRECTING: 'Corregint amb el teu conjunt de frases…',
+    TRANSLATING: 'Traduint a Català · العربية · ⵜⴰⵛⵍⵃⵉⵜ…',
+    CREATING_DRILLS: 'Retallant el contingut i creant els drills…',
+    GENERATING_REELS: 'Generant els reels verticals…',
   };
 
   const pollAutoJob = (jobId: number, title: string) => {
@@ -57,7 +57,7 @@ const VideoDrillCreator: React.FC = () => {
 
     const poll = async () => {
       if (attempts >= maxAttempts) {
-        setError('Auto pipeline is taking long — it keeps running on the server; check your drills later.');
+        setError('El procés automàtic està trigant — continua executant-se al servidor; revisa els teus drills més tard.');
         setAutoStatus(null);
         setLoading(false);
         return;
@@ -68,11 +68,11 @@ const VideoDrillCreator: React.FC = () => {
         const data = await res.json();
 
         if (data.status === 'FAILED') {
-          setError(`Auto pipeline failed: ${data.error_message}`);
+          setError(`El procés automàtic ha fallat: ${data.error_message}`);
           setAutoStatus(null);
           setLoading(false);
         } else if (data.drills_created) {
-          alert(`⚡ Auto capture: created ${data.drills_created.length} drills from "${title}"!`);
+          alert(`⚡ Captura automàtica: s'han creat ${data.drills_created.length} drills de "${title}"!`);
           setUrl('');
           setVideoInfo(null);
           setTempVideoPath(null);
@@ -135,16 +135,16 @@ const VideoDrillCreator: React.FC = () => {
           cookies: cookies || null,
         }),
       });
-      if (!cd.ok) throw new Error('Drill creation failed');
+      if (!cd.ok) throw new Error('No s\'han pogut crear els drills');
       const result = await cd.json();
-      alert(`⚡ Auto mode: created ${result.drills_created.length} drills from "${meta.title}"!`);
+      alert(`⚡ Mode automàtic: s'han creat ${result.drills_created.length} drills de "${meta.title}"!`);
       setVideoInfo(null);
       setUrl('');
       setVideoFile(null);
       setVttFile(null);
       setTempVideoPath(null);
     } catch (err: any) {
-      setError(`Auto mode stopped: ${err.message} — review the segments manually below.`);
+      setError(`El mode automàtic s'ha aturat: ${err.message} — revisa els segments manualment a sota.`);
       setVideoInfo({ ...meta, segments: rawSegments.map((s: any) => ({ ...s, selected: false })) });
     } finally {
       setLoading(false);
@@ -168,7 +168,7 @@ const VideoDrillCreator: React.FC = () => {
 
     const pollJob = async () => {
       if (attempts >= maxAttempts) {
-        setError('Analysis timed out. Try a shorter video.');
+        setError('L\'anàlisi ha excedit el temps. Prova amb un vídeo més curt.');
         setLoading(false);
         return;
       }
@@ -181,7 +181,7 @@ const VideoDrillCreator: React.FC = () => {
         if (pollData.status === 'COMPLETED') {
           handleSegmentsReady(meta, pollData.segments, videoPath);
         } else if (pollData.status === 'FAILED') {
-          setError(`Analysis failed: ${pollData.error_message}`);
+          setError(`L'anàlisi ha fallat: ${pollData.error_message}`);
           setLoading(false);
         } else {
           // Still processing, wait 3s
@@ -211,7 +211,7 @@ const VideoDrillCreator: React.FC = () => {
           method: 'POST',
           body: formData,
         });
-        if (!response.ok) throw new Error('File upload failed');
+        if (!response.ok) throw new Error('La pujada del fitxer ha fallat');
         const data = await response.json();
 
         setTempVideoPath(data.video_path);
@@ -245,10 +245,10 @@ const VideoDrillCreator: React.FC = () => {
         });
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.detail || 'Auto pipeline failed to start');
+          throw new Error(errorData.detail || 'No s\'ha pogut iniciar el procés automàtic');
         }
         const data = await response.json();
-        setAutoStatus('Downloaded — starting transcription…');
+        setAutoStatus('Descarregat — iniciant la transcripció…');
         pollAutoJob(data.job_id, data.title || url);
       } else {
         // URL capture: server downloads the media (YouTube / Instagram /
@@ -261,7 +261,7 @@ const VideoDrillCreator: React.FC = () => {
         });
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.detail || 'Failed to import video');
+          throw new Error(errorData.detail || 'No s\'ha pogut importar el vídeo');
         }
         const data = await response.json();
 
@@ -302,7 +302,7 @@ const VideoDrillCreator: React.FC = () => {
           draft_tachelhit: foreignSource,
         }),
       });
-      if (!response.ok) throw new Error('Translation failed');
+      if (!response.ok) throw new Error('La traducció ha fallat');
       const translatedSegments = await response.json();
       setVideoInfo({
         ...videoInfo,
@@ -328,7 +328,7 @@ const VideoDrillCreator: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ segments: videoInfo.segments, lyrics }),
       });
-      if (!response.ok) throw new Error('Lyrics alignment failed');
+      if (!response.ok) throw new Error('L\'alineació de la lletra ha fallat');
       const aligned = await response.json();
       setVideoInfo({
         ...videoInfo,
@@ -354,7 +354,7 @@ const VideoDrillCreator: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ segments: videoInfo.segments }),
       });
-      if (!response.ok) throw new Error('Correction failed');
+      if (!response.ok) throw new Error('La correcció ha fallat');
       const corrected = await response.json();
       setVideoInfo({
         ...videoInfo,
@@ -383,7 +383,7 @@ const VideoDrillCreator: React.FC = () => {
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'OCR failed');
+        throw new Error(errorData.detail || 'L\'OCR ha fallat');
       }
       const withOcr = await response.json();
       setVideoInfo({
@@ -415,7 +415,7 @@ const VideoDrillCreator: React.FC = () => {
     if (!videoInfo || (!url && !tempVideoPath)) return;
     const selectedSegments = videoInfo.segments.filter(s => s.selected);
     if (!selectedSegments.length) {
-      alert('Please select at least one segment');
+      alert('Selecciona almenys un segment');
       return;
     }
 
@@ -433,9 +433,9 @@ const VideoDrillCreator: React.FC = () => {
           cookies: cookies || null,
         }),
       });
-      if (!response.ok) throw new Error('Drill creation failed');
+      if (!response.ok) throw new Error('No s\'han pogut crear els drills');
       const result = await response.json();
-      alert(`Successfully created ${result.drills_created.length} drills!`);
+      alert(`S'han creat ${result.drills_created.length} drills correctament!`);
       // Reset after success
       setVideoInfo(null);
       setUrl('');
@@ -485,18 +485,18 @@ const VideoDrillCreator: React.FC = () => {
           type="text"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="Paste a YouTube / Instagram / TikTok / podcast URL here..."
+          placeholder="Enganxa aquí un enllaç de YouTube / Instagram / TikTok / podcast..."
           style={{ padding: '12px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface-2)', fontSize: '15px', color: 'var(--text)' }}
         />
 
         <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-soft)', fontWeight: 600, cursor: 'pointer' }}>
             <input type="checkbox" checked={audioOnly} onChange={(e) => setAudioOnly(e.target.checked)} />
-            🎧 Audio only (podcast / voice — drills get audio clips instead of video)
+            🎧 Només àudio (podcast / veu — els drills tenen clips d'àudio en lloc de vídeo)
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-soft)', fontWeight: 600, cursor: 'pointer' }}>
             <input type="checkbox" checked={autoMode} onChange={(e) => setAutoMode(e.target.checked)} />
-            ⚡ Auto mode (correct + translate + create drills from ALL segments)
+            ⚡ Mode automàtic (corregeix + tradueix + crea drills de TOTS els segments)
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-soft)', fontWeight: 600, cursor: 'pointer' }}>
             <input type="checkbox" checked={foreignSource} onChange={(e) => setForeignSource(e.target.checked)} />
@@ -505,20 +505,20 @@ const VideoDrillCreator: React.FC = () => {
           {autoMode && (
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-soft)', fontWeight: 600, cursor: 'pointer' }}>
               <input type="checkbox" checked={makeReels} onChange={(e) => setMakeReels(e.target.checked)} />
-              🎬 Also render a vertical reel per drill
+              🎬 Genera també un reel vertical per cada drill
             </label>
           )}
         </div>
 
         <div style={{ padding: '20px', background: 'var(--surface-2)', borderRadius: 'var(--r-lg)', border: '2px dashed var(--border-strong)', textAlign: 'center' }}>
-          <h4 style={{ margin: '0 0 12px 0', color: 'var(--text)', fontSize: '15px' }}>⬆️ OR Upload Files <span style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: '13px' }}>(Bypass YouTube blocks)</span></h4>
+          <h4 style={{ margin: '0 0 12px 0', color: 'var(--text)', fontSize: '15px' }}>⬆️ O puja fitxers <span style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: '13px' }}>(Evita els bloquejos de YouTube)</span></h4>
           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
             <div style={{ textAlign: 'left' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-soft)', marginBottom: '6px' }}>Video or Audio</label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-soft)', marginBottom: '6px' }}>Vídeo o àudio</label>
               <input type="file" accept="video/mp4,video/webm,audio/*" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} style={{ fontSize: '13px' }} />
             </div>
             <div style={{ textAlign: 'left' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-soft)', marginBottom: '6px' }}>Subtitles (.vtt)</label>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-soft)', marginBottom: '6px' }}>Subtítols (.vtt)</label>
               <input type="file" accept=".vtt" onChange={(e) => setVttFile(e.target.files?.[0] || null)} style={{ fontSize: '13px' }} />
             </div>
           </div>
@@ -526,12 +526,12 @@ const VideoDrillCreator: React.FC = () => {
 
         <div>
           <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--text-soft)', fontWeight: 600 }}>
-            🎼 Song lyrics <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Optional · one line per phrase · after analysis, use "Alinea la lletra" to replace the rough ASR text while keeping its timestamps)</span>
+            🎼 Lletra de la cançó <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Opcional · una línia per frase · després de l'anàlisi, fes servir "Alinea la lletra" per substituir el text aproximat de l'ASR mantenint-ne les marques de temps)</span>
           </label>
           <textarea
             value={lyrics}
             onChange={(e) => setLyrics(e.target.value)}
-            placeholder="Paste the song lyrics here..."
+            placeholder="Enganxa aquí la lletra de la cançó..."
             style={{
               width: '100%',
               height: '80px',
@@ -548,7 +548,7 @@ const VideoDrillCreator: React.FC = () => {
 
         <div className="cookies-section">
           <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', color: 'var(--text-soft)', fontWeight: 600 }}>
-            Cookies <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Optional · Netscape format · needed for private content or when blocked by bot detection)</span>
+            Cookies <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(Opcional · format Netscape · calen per a contingut privat o quan la detecció de bots et bloqueja)</span>
           </label>
           <textarea
             value={cookies}
@@ -585,11 +585,11 @@ const VideoDrillCreator: React.FC = () => {
             boxShadow: canAnalyze ? 'var(--shadow-brand)' : 'none',
           }}
         >
-          {loading ? (videoFile ? '⏳ Uploading & Analyzing...' : '⏳ Analyzing...') : 'Analyze Video / Upload'}
+          {loading ? (videoFile ? '⏳ Pujant i analitzant...' : '⏳ Analitzant...') : 'Analitza el vídeo / la pujada'}
         </button>
         {autoStatus && (
           <div style={{ padding: '10px 14px', background: 'var(--brand-gradient-soft)', borderRadius: 'var(--r-md)', fontSize: '14px', fontWeight: 600, color: 'var(--brand-1)' }}>
-            ⚡ {autoStatus} <span style={{ fontWeight: 400, color: 'var(--text-soft)' }}>(keeps running on the server if you leave this page)</span>
+            ⚡ {autoStatus} <span style={{ fontWeight: 400, color: 'var(--text-soft)' }}>(continua executant-se al servidor si surts d'aquesta pàgina)</span>
           </div>
         )}
       </div>
@@ -615,7 +615,7 @@ const VideoDrillCreator: React.FC = () => {
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 12px', borderRadius: 'var(--r-pill)', fontSize: '12px', fontWeight: 700, background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)' }}>🌐 {videoInfo.original_language}</span>
               </div>
               <div style={{ marginTop: '8px' }}>
-                <label style={{ marginRight: '10px', fontSize: '13px', fontWeight: 700, color: 'var(--text-soft)' }}>Tag for drills:</label>
+                <label style={{ marginRight: '10px', fontSize: '13px', fontWeight: 700, color: 'var(--text-soft)' }}>Etiqueta per als drills:</label>
                 <input
                   type="text"
                   value={tag}
@@ -627,13 +627,13 @@ const VideoDrillCreator: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '12px' }}>
-            <h4 style={{ margin: 0, fontSize: '16px' }}>Video Segments <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>({videoInfo.segments.length})</span></h4>
+            <h4 style={{ margin: 0, fontSize: '16px' }}>Segments del vídeo <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>({videoInfo.segments.length})</span></h4>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               {lyrics.trim() && (
                 <button
                   onClick={handleAlignLyrics}
                   disabled={loading}
-                  title="Replace the rough ASR text with the pasted lyric lines, keeping the timestamps"
+                  title="Substitueix el text aproximat de l'ASR per les línies de lletra enganxades, mantenint les marques de temps"
                   style={{ padding: '9px 18px', background: 'var(--brand-1)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
                 >
                   🎼 Alinea la lletra
@@ -642,16 +642,16 @@ const VideoDrillCreator: React.FC = () => {
               <button
                 onClick={handleCorrectAll}
                 disabled={loading}
-                title="Glossary fixes + map onto your curated phrase dataset"
+                title="Correccions del glossari + mapatge sobre el teu conjunt de frases curat"
                 style={{ padding: '9px 18px', background: 'var(--emerald)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
               >
-                ✨ Correct
+                ✨ Corregeix
               </button>
               {tempVideoPath && (
                 <button
                   onClick={handleOcrAll}
                   disabled={loading}
-                  title="Read burned-in subtitles from the video frames"
+                  title="Llegeix els subtítols incrustats als fotogrames del vídeo"
                   style={{ padding: '9px 18px', background: 'var(--sky)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
                 >
                   🔤 OCR
@@ -662,7 +662,7 @@ const VideoDrillCreator: React.FC = () => {
                 disabled={loading}
                 style={{ padding: '9px 18px', background: 'var(--brand-2)', color: '#fff', borderRadius: 'var(--r-md)', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '14px', boxShadow: 'var(--shadow-sm)' }}
               >
-                Translate All (Català · العربية · ⵜⴰⵛⵍⵃⵉⵜ)
+                Tradueix-ho tot (Català · العربية · ⵜⴰⵛⵍⵃⵉⵜ)
               </button>
             </div>
           </div>
@@ -680,9 +680,9 @@ const VideoDrillCreator: React.FC = () => {
                       }}
                     />
                   </th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>Time & Trim</th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>Original Text (Video)</th>
-                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>Translation (Català)</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>Temps i retall</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>Text original (vídeo)</th>
+                  <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>Traducció (Català)</th>
                   <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', borderBottom: '1px solid var(--border)' }}>العربية</th>
                 </tr>
               </thead>
@@ -760,13 +760,13 @@ const VideoDrillCreator: React.FC = () => {
                             }}
                             style={{ padding: '2px 8px', fontSize: '10px', fontWeight: 700, background: 'var(--sky-soft)', color: 'var(--sky)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', cursor: 'pointer' }}
                           >
-                            apply
+                            aplica
                           </button>
                         </div>
                       )}
                       {typeof seg.correction_score === 'number' && (
                         <div style={{ fontSize: '11px', marginTop: '4px', color: 'var(--text-muted)' }}>
-                          ✨ match confidence: {(seg.correction_score * 100).toFixed(0)}%
+                          ✨ confiança de coincidència: {(seg.correction_score * 100).toFixed(0)}%
                         </div>
                       )}
                     </td>
@@ -778,7 +778,7 @@ const VideoDrillCreator: React.FC = () => {
                           newSegments[idx].text_catalan = e.target.value;
                           setVideoInfo({ ...videoInfo, segments: newSegments });
                         }}
-                        placeholder="Pending..."
+                        placeholder="Pendent..."
                         style={{ width: '100%', minHeight: '44px', padding: '8px', fontSize: '13px', borderRadius: 'var(--r-sm)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--emerald)' }}
                       />
                     </td>
@@ -818,7 +818,7 @@ const VideoDrillCreator: React.FC = () => {
                 boxShadow: 'var(--shadow-brand)',
               }}
             >
-              {loading ? '⏳ Creating Drills...' : 'Create Drills from Selected Segments'}
+              {loading ? '⏳ Creant els drills...' : 'Crea drills dels segments seleccionats'}
             </button>
           </div>
         </div>

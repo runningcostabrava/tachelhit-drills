@@ -253,12 +253,12 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         else mediaSource = drill.audio_url || drill.video_url || capturedAudio || capturedVideo || '';
 
         if (!mediaSource) {
-            return alert('Please record and save media first.');
+            return alert('Primer enregistra i desa el contingut.');
         }
         
         const status = await Network.getStatus();
         if (!status.connected) {
-            return alert('Transcription requires internet connection.');
+            return alert('La transcripció requereix connexió a internet.');
         }
 
         setAiLoadingKey('transcribe-voice');
@@ -273,7 +273,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             addLog('Transcription success');
         } catch (err: any) {
             const msg = err.response?.data?.detail || err.message;
-            alert(`Transcription failed: ${msg}`);
+            alert(`La transcripció ha fallat: ${msg}`);
         } finally {
             setAiLoadingKey(null);
         }
@@ -281,10 +281,10 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
     const handleTachelhitTTS = async () => {
         const text = drill.text_tachelhit;
-        if (!text) return alert('Tachelhit field is empty.');
+        if (!text) return alert('El camp de tachelhit és buit.');
         
         const status = await Network.getStatus();
-        if (!status.connected) return alert('TTS requires internet connection.');
+        if (!status.connected) return alert('El TTS requereix connexió a internet.');
 
         setAiLoadingKey('tts-shi');
         try {
@@ -294,7 +294,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             }
         } catch (err: any) {
             const msg = err.response?.data?.detail || err.message;
-            alert(`TTS failed: ${msg}`);
+            alert(`El TTS ha fallat: ${msg}`);
         } finally {
             setAiLoadingKey(null);
         }
@@ -303,12 +303,12 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const handleTranslateAction = async (source: 'ca' | 'shi', target: 'ca' | 'shi') => {
         const status = await Network.getStatus();
         if (!status.connected) {
-            return alert('Translation requires internet connection.');
+            return alert('La traducció requereix connexió a internet.');
         }
 
         const sourceText = source === 'ca' ? drill.text_catalan : drill.text_tachelhit;
         if (!sourceText) {
-            return alert('Source field is empty.');
+            return alert('El camp d\'origen és buit.');
         }
         
         const targetField = target === 'shi' ? 'text_tachelhit' : 'text_catalan';
@@ -324,7 +324,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             triggerSave(updated);
             addLog('Translation success');
         } catch (err: any) {
-            alert('Translation failed.');
+            alert('La traducció ha fallat.');
         } finally {
             setAiLoadingKey(null);
         }
@@ -336,11 +336,11 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const handleVoiceToDrill = async () => {
         const mediaSource = drill.audio_url || drill.video_url || capturedAudio || capturedVideo || '';
         if (!mediaSource) {
-            return alert('Please record or capture audio/video first.');
+            return alert('Primer enregistra o captura àudio/vídeo.');
         }
         const status = await Network.getStatus();
         if (!status.connected) {
-            return alert('Voice → Drill requires an internet connection.');
+            return alert('Veu → Drill requereix connexió a internet.');
         }
 
         setAiLoadingKey('voice-to-drill');
@@ -349,7 +349,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             const tRes = await axios.post(`${API_BASE}/transcribe/`, { audio_url: mediaSource });
             const tachelhit = (tRes.data.corrected_transcription || '').trim();
             if (!tachelhit) {
-                alert('Transcription returned empty text.');
+                alert('La transcripció ha retornat un text buit.');
                 return;
             }
 
@@ -369,7 +369,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             addLog('Voice→Drill complete');
         } catch (err: any) {
             const msg = err.response?.data?.detail || err.message;
-            alert(`Voice → Drill failed: ${msg}`);
+            alert(`Veu → Drill ha fallat: ${msg}`);
         } finally {
             setAiLoadingKey(null);
         }
@@ -403,24 +403,24 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--bg)', zIndex: 10000, display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)' }}>
             <div style={{ background: 'var(--brand-gradient)', padding: '20px 20px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottomLeftRadius: 'var(--r-2xl)', borderBottomRightRadius: 'var(--r-2xl)', boxShadow: 'var(--shadow-brand)' }}>
                 <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.18)', color: 'white', border: 'none', borderRadius: 'var(--r-pill)', width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><FaTimes size={20} /></button>
-                <div style={{ color: 'white', fontSize: '20px', fontWeight: 800, letterSpacing: '-0.01em' }}>New Drill</div>
-                <button onClick={() => { triggerSave(drill); onDrillCreated(); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.95)', color: 'var(--brand-1)', border: 'none', borderRadius: 'var(--r-md)', padding: '11px 18px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}><FaSave /> Save</button>
+                <div style={{ color: 'white', fontSize: '20px', fontWeight: 800, letterSpacing: '-0.01em' }}>Nou drill</div>
+                <button onClick={() => { triggerSave(drill); onDrillCreated(); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.95)', color: 'var(--brand-1)', border: 'none', borderRadius: 'var(--r-md)', padding: '11px 18px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}><FaSave /> Desa</button>
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px', paddingBottom: '120px' }}>
                 <div style={{ background: 'var(--surface)', padding: '16px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)' }}>
                     <div style={{ gridTemplateColumns: 'repeat(5, 1fr)', display: 'grid', gap: '10px' }}>
-                        <button onClick={capturePhoto} style={{ height: '56px', background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Camera"><FaCamera size={22} /></button>
-                        <button onClick={captureVideo} style={{ height: '56px', background: 'var(--brand-gradient-soft)', color: 'var(--brand-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Video"><FaVideo size={22} /></button>
-                        <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '56px', background: isRecording ? 'var(--rose-soft)' : 'var(--rose)', color: isRecording ? 'var(--rose)' : 'white', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Voice Record"><FaMicrophone size={22} /></button>
-                        <button onClick={startDictation} style={{ height: '56px', background: 'var(--amber-soft)', color: 'var(--amber-strong)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Dictation"><FaKeyboard size={22} /></button>
-                        <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '56px', background: 'var(--sky-soft)', color: 'var(--sky)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Gallery"><FaFolderOpen size={22} /></button>
+                        <button onClick={capturePhoto} style={{ height: '56px', background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Càmera"><FaCamera size={22} /></button>
+                        <button onClick={captureVideo} style={{ height: '56px', background: 'var(--brand-gradient-soft)', color: 'var(--brand-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Vídeo"><FaVideo size={22} /></button>
+                        <button onClick={isRecording ? stopVoiceRecording : startVoiceRecording} style={{ height: '56px', background: isRecording ? 'var(--rose-soft)' : 'var(--rose)', color: isRecording ? 'var(--rose)' : 'white', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Enregistra veu"><FaMicrophone size={22} /></button>
+                        <button onClick={startDictation} style={{ height: '56px', background: 'var(--amber-soft)', color: 'var(--amber-strong)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Dictat"><FaKeyboard size={22} /></button>
+                        <button onClick={() => document.getElementById('gallery-upload')?.click()} style={{ height: '56px', background: 'var(--sky-soft)', color: 'var(--sky)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Galeria"><FaFolderOpen size={22} /></button>
                     </div>
                     <input type="file" accept="video/*" capture={"camcorder" as any} id="native-video-input" style={{ display: 'none' }} onChange={handleFileChange} />
                     <input type="file" id="gallery-upload" style={{ display: 'none' }} onChange={handleFileChange} />
                 </div>
 
-                {capturedImage && <img src={capturedImage} alt="Preview" style={{ width: '100%', height: '150px', borderRadius: 'var(--r-lg)', objectFit: 'cover', border: '1px solid var(--border)' }} />}
+                {capturedImage && <img src={capturedImage} alt="Vista prèvia" style={{ width: '100%', height: '150px', borderRadius: 'var(--r-lg)', objectFit: 'cover', border: '1px solid var(--border)' }} />}
                 {capturedVideo && (
                     <div style={{ background: '#000', borderRadius: 'var(--r-xl)', overflow: 'hidden', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: 'var(--shadow-lg)', marginBottom: '0', border: '1px solid var(--border-strong)' }}>
                         <div style={{ width: '100%', position: 'relative', paddingTop: '56.25%', background: '#000' }}>
@@ -538,9 +538,9 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                     onClick={handleVoiceToDrill}
                     disabled={!(drill.audio_url || drill.video_url || capturedAudio || capturedVideo) || aiLoadingKey !== null}
                     style={{ width: '100%', padding: '16px', marginBottom: '0', background: aiLoadingKey === 'voice-to-drill' ? 'var(--text-muted)' : 'var(--brand-gradient)', color: 'white', border: 'none', borderRadius: 'var(--r-lg)', fontWeight: 800, fontSize: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', cursor: 'pointer', opacity: (drill.audio_url || drill.video_url || capturedAudio || capturedVideo) ? 1 : 0.5, boxShadow: 'var(--shadow-brand)' }}
-                    title="Transcribe the recording to Tachelhit and translate it to Catalan in one tap"
+                    title="Transcriu la gravació a tachelhit i tradueix-la al català amb un sol toc"
                 >
-                    <FaMicrophone size={18} /> {aiLoadingKey === 'voice-to-drill' ? 'Working…' : 'Voice → Drill (auto)'}
+                    <FaMicrophone size={18} /> {aiLoadingKey === 'voice-to-drill' ? 'Treballant…' : 'Veu → Drill (auto)'}
                 </button>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', background: 'var(--surface)', padding: '16px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)' }}>
@@ -553,7 +553,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                             const hasVideo = drill.video_url || capturedVideo;
 
                             if (hasAudio && hasVideo) {
-                                if (confirm('Transcribe from VIDEO? (Cancel for AUDIO)')) {
+                                if (confirm('Transcriure des del VÍDEO? (Cancel·la per a l\'ÀUDIO)')) {
                                     handleAutoTranscribe('video');
                                 } else {
                                     handleAutoTranscribe('audio');
@@ -563,7 +563,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                             } else if (hasAudio) {
                                 handleAutoTranscribe('audio');
                             } else {
-                                alert('Please record or pick media first.');
+                                alert('Primer enregistra o tria contingut.');
                             }
                         }} 
                         disabled={!(drill.audio_url || drill.video_url || capturedAudio || capturedVideo) || aiLoadingKey !== null} 
