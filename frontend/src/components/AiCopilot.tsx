@@ -14,8 +14,15 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => subscribeSelection(setSelected), []);
+  useEffect(() => {
+    inputRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, busy]);
@@ -37,7 +44,7 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
         notifyDrillsChanged();
       }
     } catch (e: any) {
-      setMessages(m => [...m, { role: 'model', text: `⚠️ ${e.message || 'Error'}. Comprova la clau GEMINI al servidor.` }]);
+      setMessages(m => [...m, { role: 'model', text: `⚠️ No he pogut respondre ara mateix. Torna-ho a provar d'aquí a un moment.` }]);
     } finally {
       setBusy(false);
     }
@@ -50,7 +57,7 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
   const renderActions = (actions?: Action[]) => {
     if (!actions?.length) return null;
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
+      <div role="group" aria-label="Accions realitzades" style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
         {actions.map((a, i) => {
           if (a.result?.error) return <span key={i} style={chip('var(--rose-soft)', 'var(--rose)')}>⚠ {a.name}: {a.result.error}</span>;
           if (a.name === 'create_drill') return <span key={i} style={chip('var(--emerald-soft)', 'var(--emerald)')}>✓ Drill #{a.result.created_drill_id} creat</span>;
@@ -69,28 +76,28 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div style={{
+    <div role="dialog" aria-label="Copilot" style={{
       position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(440px, 100vw)', zIndex: 15000,
       background: 'var(--bg)', borderLeft: '1px solid var(--border)', boxShadow: '-8px 0 32px rgba(15,23,42,0.12)',
       display: 'flex', flexDirection: 'column'
     }}>
-      <div style={{ background: 'var(--brand-gradient)', color: '#fff', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ background: 'var(--brand-gradient)', color: '#fff', padding: 'calc(14px + env(safe-area-inset-top)) 18px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <div style={{ fontWeight: 800, fontSize: '16px' }}>🤖 Copilot</div>
+          <div style={{ fontWeight: 800, fontSize: '16px', fontFamily: 'var(--font-display)' }}>🤖 Copilot</div>
           <div style={{ fontSize: '11px', opacity: 0.85 }}>
             {selected.length ? `${selected.length} drill(s) seleccionats` : 'crea · tradueix · cerca · escolta'}
           </div>
         </div>
-        <button onClick={onClose} title="Amaga" style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontSize: '18px' }}>⟩</button>
+        <button onClick={onClose} title="Amaga" aria-label="Amaga el copilot" style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontSize: '18px' }}>⟩</button>
       </div>
 
-      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div ref={scrollRef} role="log" aria-live="polite" aria-atomic="false" style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {messages.length === 0 && (
           <div style={{ color: 'var(--text-soft)', fontSize: '14px' }}>
             <p style={{ marginTop: 0 }}>Sóc el teu copilot. Puc crear i editar drills, cercar-los, i fer exemples parlats — selecciona drills a la graella per parlar-ne.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {suggestions.map((s, i) => (
-                <button key={i} onClick={() => send(s)} style={{ textAlign: 'left', padding: '10px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>{s}</button>
+                <button key={i} onClick={() => send(s)} aria-label={`Suggeriment: ${s}`} style={{ textAlign: 'left', padding: '10px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: '13px', color: 'var(--text)' }}>{s}</button>
               ))}
             </div>
           </div>
@@ -111,16 +118,18 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
         {busy && <div style={{ alignSelf: 'flex-start', padding: '10px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', color: 'var(--text-muted)', fontSize: '14px' }}>treballant…</div>}
       </div>
 
-      <div style={{ padding: '12px', borderTop: '1px solid var(--border)', display: 'flex', gap: '8px' }}>
+      <div style={{ padding: '12px', paddingBottom: 'calc(12px + env(safe-area-inset-bottom))', borderTop: '1px solid var(--border)', display: 'flex', gap: '8px' }}>
         <input
+          ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') send(input); }}
           placeholder={selected.length ? 'Demana una acció sobre la selecció…' : 'Demana crear, cercar, traduir…'}
+          aria-label="Missatge al copilot"
           disabled={busy}
           style={{ flex: 1, padding: '12px 14px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', fontSize: '14px', color: 'var(--text)', outline: 'none' }}
         />
-        <button onClick={() => send(input)} disabled={busy || !input.trim()} style={{ padding: '12px 18px', background: 'var(--brand-gradient)', color: '#fff', border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: busy ? 'wait' : 'pointer' }}>↑</button>
+        <button onClick={() => send(input)} disabled={busy || !input.trim()} aria-label="Envia" style={{ padding: '12px 18px', background: 'var(--brand-gradient)', color: '#fff', border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: busy ? 'wait' : 'pointer' }}>↑</button>
       </div>
     </div>
   );
