@@ -363,9 +363,6 @@ export default function TestsDashboard() {
                 {tests.map(test => (
                   <div
                     key={test.id}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Obre el test ${test.title}`}
                     onClick={() => {
                       setSelectedTest(test);
                       fetchStats(test.id);
@@ -373,16 +370,6 @@ export default function TestsDashboard() {
                         setShowTestList(false);
                       }
                       // Remove navigate(`/tests/${test.id}`); as it would trigger the TestTaking view
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setSelectedTest(test);
-                        fetchStats(test.id);
-                        if (isMobile) {
-                          setShowTestList(false);
-                        }
-                      }
                     }}
                     style={{
                       padding: isMobile ? '18px' : '16px',
@@ -408,15 +395,32 @@ export default function TestsDashboard() {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px', gap: '8px' }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <h3 style={{
-                          margin: '0 0 6px 0',
-                          fontSize: isMobile ? '18px' : '16px',
-                          color: 'var(--text)',
-                          fontWeight: 800,
-                          fontFamily: 'var(--font-tifinagh)'
-                        }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTest(test);
+                            fetchStats(test.id);
+                            if (isMobile) {
+                              setShowTestList(false);
+                            }
+                          }}
+                          aria-label={`Obre el test ${test.title}`}
+                          style={{
+                            display: 'block',
+                            margin: '0 0 6px 0',
+                            padding: 0,
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            fontSize: isMobile ? '18px' : '16px',
+                            color: 'var(--text)',
+                            fontWeight: 800,
+                            fontFamily: 'var(--font-tifinagh)'
+                          }}
+                        >
                           {test.title}
-                        </h3>
+                        </button>
                         <p style={{ margin: '0 0 10px 0', fontSize: isMobile ? '14px' : '13px', color: 'var(--text-soft)', lineHeight: 1.4 }}>
                           {test.description || 'Sense descripció'}
                         </p>
@@ -790,6 +794,7 @@ export default function TestsDashboard() {
                 }}
                 aria-label="Crea el vídeo"
                 title="Crea el vídeo"
+                disabled={generatingDemoVideoId === selectedTest.id}
                 style={{
                   padding: isMobile ? '14px 20px' : '13px 24px',
                   fontSize: '15px',
@@ -797,10 +802,11 @@ export default function TestsDashboard() {
                   color: 'var(--amber-strong)',
                   border: '1px solid var(--amber)',
                   borderRadius: 'var(--r-md)',
-                  cursor: 'pointer',
+                  cursor: generatingDemoVideoId === selectedTest.id ? 'not-allowed' : 'pointer',
                   fontWeight: 700,
                   width: '100%',
-                  boxShadow: 'var(--shadow-xs)'
+                  boxShadow: 'var(--shadow-xs)',
+                  opacity: generatingDemoVideoId === selectedTest.id ? 0.6 : 1
                 }}
               >
                 🎬 Crea el vídeo
