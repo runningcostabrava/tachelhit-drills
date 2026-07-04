@@ -21,6 +21,7 @@ import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { API_BASE, getMediaUrl } from '../config';
 import { syncManager, type Drill } from '../services/OfflineSyncManager';
 import { api } from '../api';
+import { toast } from '../toast';
 
 interface MobileDrillEditorProps {
   drill: Drill;
@@ -615,8 +616,9 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                       try {
                         const res = await api.verifyDrill(localDrill.id, !localDrill.verified);
                         setLocalDrill(prev => ({ ...prev, verified: res.verified }));
+                        toast.success(res.verified ? '✓ Verificat' : 'Verificació retirada');
                       } catch (e: any) {
-                        alert(e.message || 'Cal un compte per verificar (👤 Perfil)');
+                        toast.error(e.message || 'Cal un compte per verificar (👤 Perfil)');
                       }
                     }}
                     style={{

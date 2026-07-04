@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getMediaUrl, getUserToken } from '../config';
 import { api, type CorpusStats } from '../api';
+import { toast } from '../toast';
 import type { Drill } from '../types';
 
 export default function CorpusPage() {
@@ -68,14 +69,15 @@ export default function CorpusPage() {
 
   const toggleVerify = async (d: Drill) => {
     if (!getUserToken()) {
-      alert('Per verificar contribucions necessites un compte — crea\'l a 👤 Perfil.');
+      toast.info('Per verificar contribucions necessites un compte — crea\'l a 👤 Perfil.');
       return;
     }
     try {
       await api.verifyDrill(d.id, !d.verified);
       setResults(prev => prev.map(x => x.id === d.id ? { ...x, verified: !d.verified } : x));
+      toast.success(d.verified ? 'Verificació retirada' : '✓ Verificat');
     } catch (e: any) {
-      alert(e.message);
+      toast.error(e.message);
     }
   };
 

@@ -5,6 +5,7 @@ import { API_BASE, getUserName, getUserToken } from './config';
 import { api } from './api';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { syncManager } from './services/OfflineSyncManager';
+import ToastHost from './components/ToastHost';
 import './App.css';
 
 // Route-level code splitting: each page loads its chunk on first visit,
@@ -116,6 +117,7 @@ function App() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <ToastHost />
       {location.pathname === '/' && <ReviewFab />}
       {location.pathname === '/' && (
         <button
