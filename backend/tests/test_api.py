@@ -264,6 +264,9 @@ def test_corpus_gaps():
     kinds = {g["kind"]: g["count"] for g in summary["gaps"]}
     assert kinds["no_audio"] >= 1
     assert kinds["no_latin"] >= 1
+    # verified defaults to NULL -> must count as unverified (regression: SQL
+    # `!= True` excludes NULLs, which zeroed the review queue in production)
+    assert kinds["unverified"] >= 1
     # kind filter returns the drills, serialized cleanly (no _sa_instance_state)
     r = client.get("/corpus/gaps", params={"kind": "no_audio"}).json()
     assert r["kind"] == "no_audio"
