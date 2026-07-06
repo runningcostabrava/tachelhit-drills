@@ -48,8 +48,10 @@ _TIFINAGH = {
     "w": "ⵡ", "y": "ⵢ", "z": "ⵣ", "ẓ": "ⵥ",
 }
 
-# phoneme -> clean academic Latin (schwa is written 'e'; rest is identity)
-_CLEAN = {"ə": "e"}
+# phoneme -> clean academic Latin. Schwa is 'e'; labialization is written with
+# an ASCII 'w' (gw/kw/qw) rather than the superscript ʷ, so clean_latin re-parses
+# losslessly back to the same phonemes/key (the input map knows gw/kw/qw).
+_CLEAN = {"ə": "e", "gʷ": "gw", "kʷ": "kw", "qʷ": "qw"}
 
 # Accept Tifinagh as input too, so the phonemic key is script-INDEPENDENT
 # (ASR may emit either script; the gold field is often Tifinagh). Longest-match
