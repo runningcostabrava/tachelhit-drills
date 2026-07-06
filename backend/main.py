@@ -1044,9 +1044,7 @@ async def generate_image(
 
                 # 4. Predicció (Uses api_name="generate")
                 result_path = await asyncio.to_thread(
-                    client.predict,
-                    final_prompt,
-                    api_name="/generate"
+                    _image_api_predict, client, final_prompt
                 )
 
                 with open(result_path, "rb") as f:
@@ -1073,6 +1071,107 @@ async def generate_image(
         print(f"[IMAGE] ERROR: {str(e)}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---- Bulk image fill (background job) --------------------------------------
+# Auto-illustrate drills that lack an image. Per the quality probe, SD-Turbo
+# only produces usable images for DEPICTABLE content (concrete nouns / actions
+# / scenes / full sentences); abstract drills (grammar labels, interjections)
+# render garbled text, so they are skipped by default.
+_image_fill_job = {"running": False, "total": 0, "done": 0, "failed": 0, "skipped": 0, "current": ""}
+
+
+def _image_api_predict(client, prompt):
+    # The Space may expose the endpoint as //generate or /generate depending on
+    # how api_name was registered by gradio; try the known variants.
+    for name in ("//generate", "/generate", "generate"):
+        try:
+            return client.predict(prompt, api_name=name)
+        except ValueError:
+            continue
+    return client.predict(prompt)
+
+
+def _is_depictable(drill) -> bool:
+    text = (drill.text_catalan or "").strip()
+    if not text:
+        return False
+    tag = (drill.tag or "").lower()
+    if any(k in tag for k in ("srt", "gramat", "grammar", "lyric")):
+        return False
+    lowered = [w.strip(".,!?¡¿…-").lower() for w in text.split()]
+    lowered = [w for w in lowered if w]
+    # single word or repeated interjection ("sí sí sí", "no, no, no")
+    if len(set(lowered)) <= 1 and len(text) <= 14:
+        return False
+    return True
+
+
+def _run_image_fill(only_depictable: bool = True):
+    import time as _t
+    from sqlalchemy import or_ as _or
+    db = SessionLocal()
+    client = None
+    try:
+        drills = db.query(DrillModel).filter(
+            _or(DrillModel.image_url == None, DrillModel.image_url == ""),  # noqa: E711
+            DrillModel.text_catalan != None, DrillModel.text_catalan != "",  # noqa: E711
+        ).all()
+        _image_fill_job["total"] = len(drills)
+        space = os.getenv("HUGGINGFACE_IMAGE_SPACE_URL", "josepabloucr/huggingface-image-space")
+        for d in drills:
+            if not _image_fill_job["running"]:
+                break
+            if only_depictable and not _is_depictable(d):
+                _image_fill_job["skipped"] += 1
+                continue
+            _image_fill_job["current"] = (d.text_catalan or "")[:40]
+            try:
+                if client is None:
+                    client = Client(space)
+                prompt = translator_ca_to_en.translate(d.text_catalan)
+                result_path = _image_api_predict(client, prompt)
+                with open(result_path, "rb") as f:
+                    image_bytes = f.read()
+                up = cloudinary.uploader.upload(
+                    image_bytes, folder="tachelhit/images",
+                    public_id=f"img_{d.id}_{int(datetime.utcnow().timestamp())}",
+                )
+                d.image_url = normalize_media_url(up["secure_url"])
+                db.commit()
+                _image_fill_job["done"] += 1
+            except Exception as e:
+                db.rollback()
+                _image_fill_job["failed"] += 1
+                print(f"[IMG_FILL] drill {d.id} failed: {e}")
+            _t.sleep(0.4)
+    finally:
+        _image_fill_job["running"] = False
+        _image_fill_job["current"] = ""
+        db.close()
+
+
+@app.post("/generate-image/fill-missing")
+def fill_missing_images(only_depictable: bool = True):
+    if _image_fill_job["running"]:
+        return {"status": "already_running", **_image_fill_job}
+    import threading
+    for k in ("total", "done", "failed", "skipped"):
+        _image_fill_job[k] = 0
+    _image_fill_job["running"] = True
+    threading.Thread(target=_run_image_fill, args=(only_depictable,), daemon=True).start()
+    return {"status": "started", "only_depictable": only_depictable}
+
+
+@app.get("/generate-image/fill-missing/status")
+def fill_missing_status():
+    return dict(_image_fill_job)
+
+
+@app.post("/generate-image/fill-missing/stop")
+def fill_missing_stop():
+    _image_fill_job["running"] = False
+    return {"status": "stopping"}
 
 
 @app.get("/upload-media/{drill_id}/{media_type}")
