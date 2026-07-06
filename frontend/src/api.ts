@@ -54,6 +54,16 @@ export interface Me {
   cards_learning: number;
 }
 
+export interface Recording {
+  id: number;
+  audio_url: string;
+  variety?: string | null;
+  region?: string | null;
+  speaker?: string | null;
+  license?: string | null;
+  date_created?: string;
+}
+
 export interface TransliterationForms {
   input: string;
   clean_latin: string;
@@ -118,6 +128,12 @@ export const api = {
     }),
   aiSuggestTranslation: (drillId: number) =>
     request<{ field: string; suggestion: string }>(`/ai/suggest-translation/${drillId}`, { method: 'POST' }),
+
+  // --- multi-speaker recordings (many takes per drill) ---
+  drillRecordings: (drillId: number) =>
+    request<Recording[]>(`/drills/${drillId}/recordings`),
+  deleteRecording: (recordingId: number) =>
+    request<{ deleted: number }>(`/recordings/${recordingId}`, { method: 'DELETE' }),
 
   // --- Berber transliteration (phone-Latin -> Tifinagh / clean Latin / key) ---
   transliterate: (text: string) =>
