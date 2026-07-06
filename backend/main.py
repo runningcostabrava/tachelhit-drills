@@ -1151,7 +1151,7 @@ def _run_image_fill(only_depictable: bool = True):
         db.close()
 
 
-@app.post("/generate-image/fill-missing")
+@app.post("/images/fill-missing")
 def fill_missing_images(only_depictable: bool = True):
     if _image_fill_job["running"]:
         return {"status": "already_running", **_image_fill_job}
@@ -1163,12 +1163,12 @@ def fill_missing_images(only_depictable: bool = True):
     return {"status": "started", "only_depictable": only_depictable}
 
 
-@app.get("/generate-image/fill-missing/status")
+@app.get("/images/fill-missing/status")
 def fill_missing_status():
     return dict(_image_fill_job)
 
 
-@app.post("/generate-image/fill-missing/stop")
+@app.post("/images/fill-missing/stop")
 def fill_missing_stop():
     _image_fill_job["running"] = False
     return {"status": "stopping"}
