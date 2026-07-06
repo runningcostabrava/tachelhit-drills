@@ -25,8 +25,8 @@ export default function ServiceStatusBanner({ services = ['asr', 'translation', 
       const h = await api.spacesHealth();
       if (!alive.current) return;
       setHealth(h);
-      const anyNotUp = services.some((s) => h[s] && h[s].state !== 'up' && h[s].state !== 'unset');
-      schedule(anyNotUp ? 12000 : 45000); // watch closely while waking; relax when healthy
+      const anyBusy = services.some((s) => h[s] && (h[s].state === 'waking' || h[s].state === 'down'));
+      schedule(anyBusy ? 12000 : 45000); // watch closely while waking; relax when healthy
     } catch {
       schedule(30000);
     }
@@ -38,9 +38,11 @@ export default function ServiceStatusBanner({ services = ['asr', 'translation', 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // only alarm on genuinely busy/broken public Spaces — never on private ones
+  // (which a public probe reports as private_or_missing) or unset ones.
   const relevant = services
     .map((s) => ({ key: s, st: health?.[s]?.state }))
-    .filter((x) => x.st && x.st !== 'up' && x.st !== 'unset');
+    .filter((x) => x.st === 'waking' || x.st === 'down');
   if (!health || relevant.length === 0) return null;
 
   const wakingList = relevant.filter((x) => x.st === 'waking').map((x) => LABELS[x.key] || x.key);

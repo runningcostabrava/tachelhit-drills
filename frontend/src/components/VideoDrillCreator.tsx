@@ -488,7 +488,7 @@ const VideoDrillCreator: React.FC = () => {
       </div>
 
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px' }}>
-      <ServiceStatusBanner services={['asr', 'translation', 'ocr']} />
+      <ServiceStatusBanner services={['asr', 'translation']} />
       <div className="input-group" style={{
         display: 'flex',
         flexDirection: 'column',

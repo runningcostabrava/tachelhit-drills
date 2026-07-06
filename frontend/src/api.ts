@@ -55,7 +55,7 @@ export interface Me {
 }
 
 export interface SpaceState {
-  state: 'up' | 'waking' | 'down' | 'unset';
+  state: 'up' | 'waking' | 'down' | 'private_or_missing' | 'unset';
   id?: string;
   code?: number;
 }
