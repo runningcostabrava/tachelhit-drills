@@ -4,6 +4,7 @@ import { api, type CorpusStats } from '../api';
 import { toast } from '../toast';
 import type { Drill } from '../types';
 import { FaTools, FaTimes, FaPlay, FaCheck, FaChevronDown } from 'react-icons/fa';
+import ImageFillPanel from './ImageFillPanel';
 
 export default function CorpusPage() {
   const [q, setQ] = useState('');
@@ -126,6 +127,10 @@ export default function CorpusPage() {
             </div>
           )}
         </div>
+      </div>
+
+      <div style={{ maxWidth: '860px', margin: '20px auto 0', padding: '0 24px' }}>
+        <ImageFillPanel />
       </div>
 
       {/* Coverage dashboard — the atlas view: what's documented, by variety/region */}

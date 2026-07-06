@@ -52,6 +52,15 @@ export interface Me {
   cards_learning: number;
 }
 
+export interface ImageFillStatus {
+  running: boolean;
+  total: number;
+  done: number;
+  failed: number;
+  skipped: number;
+  current: string;
+}
+
 export const api = {
   // --- spaced repetition ---
   dueReviews: (limit = 30) => request<Drill[]>(`/reviews/due?limit=${limit}`),
@@ -100,6 +109,14 @@ export const api = {
     }),
   aiSuggestTranslation: (drillId: number) =>
     request<{ field: string; suggestion: string }>(`/ai/suggest-translation/${drillId}`, { method: 'POST' }),
+
+  // --- bulk image fill (background job) ---
+  imageFillStart: (onlyDepictable = true) =>
+    request<{ status: string }>(`/images/fill-missing?only_depictable=${onlyDepictable}`, { method: 'POST' }),
+  imageFillStatus: () =>
+    request<ImageFillStatus>('/images/fill-missing/status'),
+  imageFillStop: () =>
+    request<{ status: string }>('/images/fill-missing/stop', { method: 'POST' }),
 
   // --- identity ---
   register: (username: string, display_name?: string | null) =>
