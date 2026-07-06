@@ -1232,12 +1232,19 @@ def _hf_space_state(space_id: str) -> dict:
     if not url:
         return {"state": "unset"}
     try:
-        r = requests.get(url, timeout=6)
+        r = requests.get(url, timeout=10)
         if r.status_code == 200:
             return {"state": "up"}
         if r.status_code == 503:
             return {"state": "waking"}
+        # 401/404 to an unauthenticated probe usually means the Space is PRIVATE
+        # (works via token from the backend) — don't cry wolf; flag separately.
+        if r.status_code in (401, 403, 404):
+            return {"state": "private_or_missing", "code": r.status_code}
         return {"state": "down", "code": r.status_code}
+    except requests.exceptions.Timeout:
+        # a hung request to a sleeping Space almost always means it's spinning up
+        return {"state": "waking"}
     except Exception:
         return {"state": "down"}
 
@@ -1252,9 +1259,9 @@ def health_spaces():
         futs = {k: ex.submit(_hf_space_state, v) for k, v in ids.items()}
         for k, f in futs.items():
             try:
-                out[k] = f.result(timeout=8)
+                out[k] = f.result(timeout=13)
             except Exception:
-                out[k] = {"state": "down"}
+                out[k] = {"state": "waking"}
             out[k]["id"] = ids[k]
     return out
 
