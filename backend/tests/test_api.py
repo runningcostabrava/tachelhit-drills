@@ -33,6 +33,37 @@ def register(username: str) -> str:
     return r.json()["token"]
 
 
+def test_varieties_vocabulary():
+    r = client.get("/varieties")
+    assert r.status_code == 200
+    codes = {v["code"] for v in r.json()}
+    # the varieties stay distinct — Tarifit is present, not collapsed into zgh
+    assert {"shi", "tzm", "rif", "zgh"} <= codes
+
+
+def test_profile_variety_defaults_onto_new_drill():
+    main._register_attempts.clear()
+    reg = client.post("/users/register", json={"username": "rifi.speaker", "variety": "rif", "region": "Nador"})
+    assert reg.status_code == 200
+    token = reg.json()["token"]
+    hdr = {"X-User-Token": token}
+    me = client.get("/users/me", headers=hdr).json()
+    assert me["variety"] == "rif" and me["region"] == "Nador"
+    # a drill this contributor creates inherits their variety/region
+    d = client.post("/drills/", json={"text_catalan": "hola"}, headers=hdr).json()
+    assert d["variety"] == "rif" and d["region"] == "Nador"
+    # they can update their declared variety
+    upd = client.put("/users/me", json={"variety": "tzm"}, headers=hdr).json()
+    assert upd["variety"] == "tzm"
+
+
+def test_recordings_multi_speaker_listing_empty_then_404_delete():
+    # a fresh drill has no extra takes yet; deleting a missing take 404s
+    d = client.post("/drills/", json={"text_catalan": "x"}).json()
+    assert client.get(f"/drills/{d['id']}/recordings").json() == []
+    assert client.delete("/recordings/99999999").status_code == 404
+
+
 # ---------- basics ----------
 
 def test_health():

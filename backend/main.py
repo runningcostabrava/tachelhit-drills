@@ -37,7 +37,7 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
 
-from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel  # ← Alias for ORM models
+from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel  # ← Alias for ORM models
 from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort, VideoProcessingJobCreate, VideoProcessingJob, VideoSegmentCreate, VideoSegment, TranscribeRequest, TranscribeResponse, TranslateRequest, TranslateResponse, DrillPairInfo, GlossaryItem, GlossaryItemCreate, SrtImportRequest, SrtImportResponse, SrtSegment, BulkVideoUrlUpdateRequest, BulkVideoUrlUpdateResponse  # ← Pydantic schemas
 from correction_service import get_correction_service
 from srt_parser import parse_srt_content, create_youtube_url_with_timestamp
@@ -766,11 +766,17 @@ def create_drill(drill: DrillCreate = None, db: Session = Depends(get_db),
             drill_data = drill.model_dump(exclude_unset=True)
             db_drill = DrillModel(**drill_data)
 
-        # Contributor attribution
+        # Contributor attribution + variety provenance
         if user:
             db_drill.created_by_user_id = user.id
             if not db_drill.author:
                 db_drill.author = user.display_name or user.username
+            # default the drill's variety/region from the contributor's declared
+            # origin, so we know which variety this form was collected in
+            if not db_drill.variety and user.variety:
+                db_drill.variety = user.variety
+            if not db_drill.region and getattr(user, "region", None):
+                db_drill.region = user.region
 
         db.add(db_drill)
         db.commit()
@@ -2579,11 +2585,32 @@ async def create_drills_from_video(
 # Naive in-memory rate limit for registration (per process; resets on deploy)
 _register_attempts: Dict[str, List[float]] = {}
 
+# Canonical variety vocabulary (ISO 639-3). Kept small + honest: the speaker's
+# variety stays distinct and is never silently defaulted to the standard (zgh).
+VARIETIES = [
+    {"code": "shi", "label": "Taixelhit (Tashelhit)"},
+    {"code": "tzm", "label": "Tamazight de l'Atles Central"},
+    {"code": "rif", "label": "Tarifit (Rif)"},
+    {"code": "zgh", "label": "Amazic estàndard marroquí (IRCAM)"},
+    {"code": "kab", "label": "Cabilenc (Kabyle)"},
+    {"code": "other", "label": "Altra / no ho sé"},
+]
+_VARIETY_CODES = {v["code"] for v in VARIETIES}
+
+
+@app.get("/varieties")
+def list_varieties():
+    """The controlled variety vocabulary (code + Catalan label)."""
+    return VARIETIES
+
+
 @app.post("/users/register")
 def register_user(
     request: Request,
     username: str = Body(..., embed=True),
     display_name: Optional[str] = Body(None, embed=True),
+    variety: Optional[str] = Body(None, embed=True),
+    region: Optional[str] = Body(None, embed=True),
     db: Session = Depends(get_db)
 ):
     """
@@ -2609,12 +2636,15 @@ def register_user(
     user = UserModel(
         username=uname,
         display_name=(display_name or uname).strip(),
-        token=_hash_token(raw_token)
+        token=_hash_token(raw_token),
+        variety=(variety or None),
+        region=(region or "").strip() or None,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
-    return {"username": user.username, "display_name": user.display_name, "token": raw_token}
+    return {"username": user.username, "display_name": user.display_name,
+            "variety": user.variety, "region": user.region, "token": raw_token}
 
 @app.get("/users/me")
 def get_me(user: Optional[UserModel] = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -2625,10 +2655,98 @@ def get_me(user: Optional[UserModel] = Depends(get_current_user), db: Session = 
     return {
         "username": user.username,
         "display_name": user.display_name,
+        "variety": user.variety,
+        "region": user.region,
         "date_created": user.date_created.isoformat(),
         "drills_contributed": drills_contributed,
         "cards_learning": cards_learning
     }
+
+
+@app.put("/users/me")
+def update_me(
+    display_name: Optional[str] = Body(None, embed=True),
+    variety: Optional[str] = Body(None, embed=True),
+    region: Optional[str] = Body(None, embed=True),
+    user: Optional[UserModel] = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update the contributor's own profile (display name, variety, region).
+    Only fields that are sent are changed."""
+    if not user:
+        raise HTTPException(status_code=401, detail="Missing or invalid X-User-Token")
+    if display_name is not None:
+        user.display_name = display_name.strip() or user.username
+    if variety is not None:
+        user.variety = variety or None
+    if region is not None:
+        user.region = region.strip() or None
+    db.commit()
+    db.refresh(user)
+    return {"username": user.username, "display_name": user.display_name,
+            "variety": user.variety, "region": user.region}
+
+
+@app.post("/drills/{drill_id}/recordings")
+async def add_recording(
+    drill_id: int,
+    file: UploadFile = File(...),
+    variety: Optional[str] = Form(None),
+    region: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+    user: Optional[UserModel] = Depends(get_current_user),
+):
+    """Add one speaker's audio take of a drill. The take keeps the speaker's
+    variety/region (defaulting to their declared profile), so the same drill can
+    hold recordings from different people/varieties."""
+    drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+    if not drill:
+        raise HTTPException(status_code=404, detail="Drill not found")
+    content = await file.read()
+    up = cloudinary.uploader.upload(
+        content, resource_type="auto", folder="tachelhit/recordings",
+        public_id=f"rec_{drill_id}_{int(datetime.utcnow().timestamp())}",
+    )
+    url = normalize_media_url(up["secure_url"])
+    rec = RecordingModel(
+        drill_id=drill_id,
+        user_id=user.id if user else None,
+        audio_url=url,
+        variety=(variety or (user.variety if user else None)),
+        region=((region or "").strip() or (user.region if user else None)),
+        speaker=((user.display_name or user.username) if user else None),
+    )
+    db.add(rec)
+    # promote to the drill's primary audio if it has none yet
+    if not (drill.audio_url or "").strip():
+        drill.audio_url = url
+    db.commit()
+    db.refresh(rec)
+    return {"id": rec.id, "audio_url": rec.audio_url, "variety": rec.variety,
+            "region": rec.region, "speaker": rec.speaker,
+            "date_created": rec.date_created.isoformat()}
+
+
+@app.get("/drills/{drill_id}/recordings")
+def list_recordings(drill_id: int, db: Session = Depends(get_db)):
+    """All takes of a drill, oldest first, each with its speaker/variety."""
+    recs = (db.query(RecordingModel)
+            .filter(RecordingModel.drill_id == drill_id)
+            .order_by(RecordingModel.date_created.asc()).all())
+    return [{"id": r.id, "audio_url": normalize_media_url(r.audio_url),
+             "variety": r.variety, "region": r.region, "speaker": r.speaker,
+             "license": r.license, "date_created": r.date_created.isoformat()} for r in recs]
+
+
+@app.delete("/recordings/{recording_id}")
+def delete_recording(recording_id: int, db: Session = Depends(get_db),
+                     user: Optional[UserModel] = Depends(get_current_user)):
+    r = db.query(RecordingModel).filter(RecordingModel.id == recording_id).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="Recording not found")
+    db.delete(r)
+    db.commit()
+    return {"deleted": recording_id}
 
 @app.post("/drills/{drill_id}/verify")
 def verify_drill(drill_id: int, verified: bool = Body(True, embed=True),
