@@ -1267,10 +1267,14 @@ def health_spaces():
 
 
 @app.post("/health/spaces/wake")
-def wake_spaces():
-    """Fire-and-forget warm-up pings so sleeping Spaces start booting."""
+def wake_spaces(only: Optional[str] = None):
+    """Fire-and-forget warm-up pings so sleeping Spaces start booting. Pass
+    ?only=asr,translation to wake ONLY those — waking every Space at once can
+    blow the free HuggingFace CPU quota (which only runs a few Spaces at a time)."""
     import threading
-    ids = {k: os.getenv(env, default) for k, (env, default) in _HF_SPACES.items()}
+    keys = [k.strip() for k in (only or "").split(",") if k.strip() in _HF_SPACES]
+    if not keys:
+        keys = list(_HF_SPACES.keys())
 
     def _ping(u):
         try:
@@ -1279,8 +1283,9 @@ def wake_spaces():
             pass
 
     woken = []
-    for k, v in ids.items():
-        u = _hf_space_url(v)
+    for k in keys:
+        env, default = _HF_SPACES[k]
+        u = _hf_space_url(os.getenv(env, default))
         if u:
             threading.Thread(target=_ping, args=(u,), daemon=True).start()
             woken.append(k)

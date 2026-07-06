@@ -138,7 +138,8 @@ export const api = {
 
   // --- AI Space health (reliability) ---
   spacesHealth: () => request<SpacesHealth>('/health/spaces'),
-  wakeSpaces: () => request<{ waking: string[] }>('/health/spaces/wake', { method: 'POST' }),
+  wakeSpaces: (only?: string[]) =>
+    request<{ waking: string[] }>(`/health/spaces/wake${only && only.length ? `?only=${only.join(',')}` : ''}`, { method: 'POST' }),
 
   // --- multi-speaker recordings (many takes per drill) ---
   drillRecordings: (drillId: number) =>
