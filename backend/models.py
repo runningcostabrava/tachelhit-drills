@@ -165,6 +165,28 @@ class User(Base):
     username = Column(String, unique=True, nullable=False, index=True)
     display_name = Column(String, nullable=True)
     token = Column(String, unique=True, nullable=False, index=True)
+    # The contributor's own variety/region, declared once and used to prefill
+    # (and label) the drills they collect — so their variety stays sovereign
+    # instead of being defaulted to a standard. e.g. "rif" / "diaspora-BCN".
+    variety = Column(String, nullable=True)
+    region = Column(String, nullable=True)
+    date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+class Recording(Base):
+    """One audio take of a drill by one speaker. Lets the SAME drill carry
+    recordings from different people/varieties (multi-attestation) — each take
+    keeps its speaker's variety/region so we know how it's being said and by
+    whom. The drill's own audio_url stays as the primary/first take."""
+    __tablename__ = "recordings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    drill_id = Column(Integer, ForeignKey("drills.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    audio_url = Column(String, nullable=False)
+    variety = Column(String, nullable=True)
+    region = Column(String, nullable=True)
+    speaker = Column(String, nullable=True)                 # display label
+    license = Column(String, nullable=True, default="CC-BY-SA")
     date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 class ReviewLog(Base):
