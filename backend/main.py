@@ -1200,6 +1200,86 @@ def transliterate(text: str = ""):
     return to_forms(text)
 
 
+# ---- HuggingFace Space health (reliability) --------------------------------
+# The AI features run on free HF Spaces that sleep after inactivity and wake
+# slowly. Surfacing their state lets the UI say "waking up… ~30s" + offer to
+# pre-warm, instead of a capture silently failing.
+_HF_SPACES = {
+    "asr": ("HUGGINGFACE_ASR_SPACE_URL", "https://huggingface.co/spaces/Tamazight-NLP/ASR"),
+    "tts": ("HUGGINGFACE_TTS_SPACE_URL", "Tamazight-NLP/TTS"),
+    "translation": ("HUGGINGFACE_TRANSLATION_SPACE_URL", "https://huggingface.co/spaces/josepabloucr/Finetuned-Quantized-NLLB"),
+    "ocr": ("HUGGINGFACE_OCR_SPACE_URL", ""),
+    "image": ("HUGGINGFACE_IMAGE_SPACE_URL", "josepabloucr/huggingface-image-space"),
+}
+
+
+def _hf_space_url(space_id: str) -> str:
+    """Normalize a Space id / URL to its runnable https://<sub>.hf.space/ URL."""
+    s = (space_id or "").strip()
+    if not s:
+        return ""
+    if ".hf.space" in s:
+        return s if s.startswith("http") else "https://" + s
+    m = re.search(r"huggingface\.co/spaces/([^/?#]+/[^/?#]+)", s)
+    if m:
+        s = m.group(1)
+    sub = re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
+    return f"https://{sub}.hf.space/" if sub else ""
+
+
+def _hf_space_state(space_id: str) -> dict:
+    url = _hf_space_url(space_id)
+    if not url:
+        return {"state": "unset"}
+    try:
+        r = requests.get(url, timeout=6)
+        if r.status_code == 200:
+            return {"state": "up"}
+        if r.status_code == 503:
+            return {"state": "waking"}
+        return {"state": "down", "code": r.status_code}
+    except Exception:
+        return {"state": "down"}
+
+
+@app.get("/health/spaces")
+def health_spaces():
+    """Reachability/state of each AI Space: up | waking | down | unset."""
+    import concurrent.futures
+    ids = {k: os.getenv(env, default) for k, (env, default) in _HF_SPACES.items()}
+    out = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
+        futs = {k: ex.submit(_hf_space_state, v) for k, v in ids.items()}
+        for k, f in futs.items():
+            try:
+                out[k] = f.result(timeout=8)
+            except Exception:
+                out[k] = {"state": "down"}
+            out[k]["id"] = ids[k]
+    return out
+
+
+@app.post("/health/spaces/wake")
+def wake_spaces():
+    """Fire-and-forget warm-up pings so sleeping Spaces start booting."""
+    import threading
+    ids = {k: os.getenv(env, default) for k, (env, default) in _HF_SPACES.items()}
+
+    def _ping(u):
+        try:
+            requests.get(u, timeout=4)
+        except Exception:
+            pass
+
+    woken = []
+    for k, v in ids.items():
+        u = _hf_space_url(v)
+        if u:
+            threading.Thread(target=_ping, args=(u,), daemon=True).start()
+            woken.append(k)
+    return {"waking": woken}
+
+
 @app.get("/upload-media/{drill_id}/{media_type}")
 async def test_upload_endpoint(drill_id: int, media_type: str):
     print(f"[UPLOAD TEST] GET request for drill {drill_id}, media_type {media_type}")
