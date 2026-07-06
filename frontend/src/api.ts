@@ -52,6 +52,13 @@ export interface Me {
   cards_learning: number;
 }
 
+export interface TransliterationForms {
+  input: string;
+  clean_latin: string;
+  tifinagh: string;
+  key: string;
+}
+
 export interface ImageFillStatus {
   running: boolean;
   total: number;
@@ -109,6 +116,10 @@ export const api = {
     }),
   aiSuggestTranslation: (drillId: number) =>
     request<{ field: string; suggestion: string }>(`/ai/suggest-translation/${drillId}`, { method: 'POST' }),
+
+  // --- Berber transliteration (phone-Latin -> Tifinagh / clean Latin / key) ---
+  transliterate: (text: string) =>
+    request<TransliterationForms>(`/transliterate?text=${encodeURIComponent(text)}`),
 
   // --- bulk image fill (background job) ---
   imageFillStart: (onlyDepictable = true) =>

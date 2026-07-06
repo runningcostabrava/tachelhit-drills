@@ -23,6 +23,7 @@ import axios from 'axios';
 import { Network } from '@capacitor/network';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { VoiceRecorder } from 'capacitor-voice-recorder';
+import TransliterationPreview from './TransliterationPreview';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { API_BASE, getMediaUrl } from '../config';
 import { syncManager, type Drill } from '../services/OfflineSyncManager';
@@ -661,7 +662,15 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
                 <div style={{ background: 'var(--surface)', padding: '20px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div><label htmlFor="fld-catalan" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Català</label><textarea id="fld-catalan" value={localDrill.text_catalan || ''} onChange={(e) => handleFieldChange('text_catalan', e.target.value)} rows={3} style={{ width: '100%', padding: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '16px', color: 'var(--text)', background: 'var(--surface-2)', fontFamily: 'var(--font-sans)' }} /></div>
                   <div><label htmlFor="fld-tachelhit" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label><textarea id="fld-tachelhit" value={localDrill.text_tachelhit || ''} onChange={(e) => handleFieldChange('text_tachelhit', e.target.value)} rows={3} style={{ width: '100%', padding: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '16px', color: 'var(--brand-1)', fontWeight: 700, background: 'var(--surface-2)', fontFamily: 'var(--font-tifinagh)' }} /></div>
-                  <div><label htmlFor="fld-tachelhit-latin" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tachelhit (llatí)</label><input id="fld-tachelhit-latin" type="text" value={localDrill.text_tachelhit_latin || ''} onChange={(e) => handleFieldChange('text_tachelhit_latin', e.target.value)} placeholder="Romanització llatina" style={{ width: '100%', padding: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '16px', color: 'var(--text)', background: 'var(--surface-2)', fontFamily: 'var(--font-sans)' }} /></div>
+                  <div>
+                    <label htmlFor="fld-tachelhit-latin" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tachelhit (llatí)</label>
+                    <input id="fld-tachelhit-latin" type="text" value={localDrill.text_tachelhit_latin || ''} onChange={(e) => handleFieldChange('text_tachelhit_latin', e.target.value)} placeholder="Escriu com al mòbil: aghrum, ta7anut, 3ad…" style={{ width: '100%', padding: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '16px', color: 'var(--text)', background: 'var(--surface-2)', fontFamily: 'var(--font-sans)' }} />
+                    <TransliterationPreview
+                      text={localDrill.text_tachelhit_latin || localDrill.text_tachelhit || ''}
+                      onUseTifinagh={(tif) => handleFieldChange('text_tachelhit', tif)}
+                      onUseLatin={(clean) => handleFieldChange('text_tachelhit_latin', clean)}
+                    />
+                  </div>
 
                   {/* AI tools: analyse the attested form + generate a draft suggestion (never overwrites gold) */}
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
