@@ -38,8 +38,6 @@ _DEMOTIC = {
     "s": "s", "t": "t", "u": "u", "v": "f", "w": "w", "x": "x",
     "y": "y", "z": "z",
 }
-_KEYS_BY_LEN = sorted(_DEMOTIC.keys(), key=len, reverse=True)
-
 # phoneme -> Neo-Tifinagh (IRCAM, Unicode Tifinagh block)
 _TIFINAGH = {
     "a": "ⴰ", "b": "ⴱ", "g": "ⴳ", "gʷ": "ⴳⵯ", "d": "ⴷ", "ḍ": "ⴹ",
@@ -53,6 +51,14 @@ _TIFINAGH = {
 # phoneme -> clean academic Latin (schwa is written 'e'; rest is identity)
 _CLEAN = {"ə": "e"}
 
+# Accept Tifinagh as input too, so the phonemic key is script-INDEPENDENT
+# (ASR may emit either script; the gold field is often Tifinagh). Longest-match
+# first, so labialized digraphs (ⴳⵯ) beat their base letter (ⴳ).
+_INPUT = dict(_DEMOTIC)
+for _ph, _tif in _TIFINAGH.items():
+    _INPUT.setdefault(_tif, _ph)
+_KEYS_BY_LEN = sorted(_INPUT.keys(), key=len, reverse=True)
+
 
 def _tokenize(text_lower):
     """Greedy longest-match over the demotic table. Returns [(kind, value)]
@@ -61,7 +67,7 @@ def _tokenize(text_lower):
     while i < len(s):
         for k in _KEYS_BY_LEN:
             if s.startswith(k, i):
-                out.append(("phon", _DEMOTIC[k]))
+                out.append(("phon", _INPUT[k]))
                 i += len(k)
                 break
         else:

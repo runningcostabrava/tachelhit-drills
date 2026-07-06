@@ -26,6 +26,10 @@ class Drill(Base):
     video_end_time = Column(Float, nullable=True)    # End time in seconds
     # --- Documentation / variation layer (auditor Phase 2) ---
     text_tachelhit_latin = Column(String, nullable=True)  # Latin romanization
+    # Script-independent phonemic key (de-geminated, schwa-stripped) computed
+    # from the Latin/Tifinagh form via transliteration.phonemic_key. Lets search
+    # and dedup match across spellings/scripts. Populated on create/update.
+    text_key = Column(String, nullable=True, index=True)
     # Machine/AI drafts — kept SEPARATE from the human-attested gold fields
     # above so an approximation (often a different variety) never overwrites
     # what a real speaker collected.
