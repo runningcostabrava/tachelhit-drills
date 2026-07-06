@@ -2338,6 +2338,59 @@ async def auto_drills_from_url(
             shutil.rmtree(tmp_dir, ignore_errors=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/video-analysis/auto-drills-upload")
+async def auto_drills_from_upload(
+    background_tasks: BackgroundTasks,
+    video: UploadFile = File(...),
+    language: Optional[str] = Form(None),
+    tag: Optional[str] = Form(None),
+    apply_correction: Optional[bool] = Form(True),
+    lyrics: Optional[str] = Form(None),
+    generate_reels: Optional[bool] = Form(False),
+    db: Session = Depends(get_db),
+):
+    """One-shot capture from an ALREADY-DOWNLOADED file — download the video on
+    your own computer (residential IP, so YouTube doesn't block it) and POST it
+    here; Render does the rest server-side: transcribe -> correct -> translate
+    -> create drills. Returns a job_id to poll via /video-analysis/job/{id}."""
+    tmp_dir = None
+    try:
+        purge_stale_uploads()
+        tmp_dir = tempfile.mkdtemp(dir=UPLOADS_TMP_ROOT)
+        suffix = os.path.splitext(video.filename or "")[1] or ".mp4"
+        video_path = os.path.join(tmp_dir, f"upload{suffix}")
+        with open(video_path, "wb") as f:
+            f.write(await video.read())
+
+        job = VideoProcessingJobModel(
+            source_url=f"local-upload:{video.filename or 'video'}",
+            source_filepath=video_path,
+            status="PENDING",
+            date_submitted=datetime.utcnow(),
+        )
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+
+        # No URL -> no platform subtitles; the pipeline runs ASR on the uploaded file.
+        background_tasks.add_task(
+            auto_drills_pipeline_task,
+            job.id, None, video_path, tmp_dir,
+            language, tag, bool(apply_correction), False,
+            lyrics, bool(generate_reels),
+        )
+        return {
+            "job_id": job.id,
+            "status": "PENDING",
+            "message": "Auto pipeline started. Poll /video-analysis/job/{job_id} until drills_created appears.",
+        }
+    except Exception as e:
+        if tmp_dir and os.path.exists(tmp_dir):
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/video-analysis/correct")
 async def correct_video_segments(
     segments: List[Dict] = Body(...),
