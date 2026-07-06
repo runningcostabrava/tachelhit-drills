@@ -57,6 +57,14 @@ def test_key_is_script_independent():
     assert k == "aɣrum"
 
 
+def test_labialization_roundtrips_via_ascii_w():
+    # labialized k (Tifinagh ⴽⵯ) renders as ASCII "kw" so it re-parses to the
+    # same phonemic key — search/dedup stay consistent across scripts.
+    f = to_forms("ⴽⵯ")
+    assert f["clean_latin"] == "kw"
+    assert phonemic_key(f["clean_latin"]) == phonemic_key("ⴽⵯ")
+
+
 def test_tifinagh_input_roundtrips():
     f = to_forms("ⵜⵉⴼⵉⵏⴰⵖ")
     assert f["clean_latin"] == "tifinaɣ"
