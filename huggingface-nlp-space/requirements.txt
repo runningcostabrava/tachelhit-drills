@@ -1,0 +1,17 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchaudio
+torchvision
+transformers
+sentencepiece
+sacremoses
+protobuf
+accelerate
+librosa
+numpy
+pillow
+easyocr
+fastapi
+uvicorn[standard]
+python-multipart
+gradio
