@@ -745,6 +745,15 @@ def get_drills(tag: Optional[str] = None, author: Optional[str] = None, db: Sess
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
+def _set_drill_key(db_drill) -> None:
+    """Recompute the script-independent phonemic key from the Latin (preferred)
+    or Tifinagh form, so search/dedup match across spellings and scripts."""
+    from transliteration import phonemic_key
+    src = (getattr(db_drill, "text_tachelhit_latin", "") or "").strip() \
+        or (getattr(db_drill, "text_tachelhit", "") or "").strip()
+    db_drill.text_key = phonemic_key(src) if src else None
+
+
 @app.post("/drills/", response_model=Drill)
 def create_drill(drill: DrillCreate = None, db: Session = Depends(get_db),
                  user: Optional[UserModel] = Depends(get_current_user)):
@@ -783,6 +792,7 @@ def create_drill(drill: DrillCreate = None, db: Session = Depends(get_db),
             except Exception as e:
                 print(f"[TTS] Failed to generate TTS for new drill: {e}")
 
+        _set_drill_key(db_drill)
         db.commit()
         db.refresh(db_drill)
         return db_drill
@@ -860,6 +870,7 @@ def update_drill(drill_id: int, update_data: DrillUpdate, db: Session = Depends(
             print(f"[TTS] Failed to generate TTS: {e}")
             # Don't raise exception to avoid breaking the update
 
+    _set_drill_key(drill)
     db.commit()
     db.refresh(drill)
     return drill
@@ -3033,6 +3044,21 @@ CORPUS_EXPORT_FIELDS = [
     "video_url", "image_url", "video_start_time", "video_end_time"
 ]
 
+@app.post("/corpus/reindex-keys")
+def reindex_keys(db: Session = Depends(get_db)):
+    """Backfill the phonemic key for every drill (one-time / after import)."""
+    from transliteration import phonemic_key
+    updated = 0
+    for d in db.query(DrillModel).all():
+        src = (d.text_tachelhit_latin or "").strip() or (d.text_tachelhit or "").strip()
+        new_key = phonemic_key(src) if src else None
+        if new_key != d.text_key:
+            d.text_key = new_key
+            updated += 1
+    db.commit()
+    return {"reindexed": updated}
+
+
 @app.get("/corpus/search", response_model=list[Drill])
 def corpus_search(
     q: Optional[str] = None,
@@ -3049,12 +3075,19 @@ def corpus_search(
     query = db.query(DrillModel)
     if q:
         like = f"%{q}%"
-        query = query.filter(or_(
+        from transliteration import phonemic_key as _pk
+        conds = [
             DrillModel.text_tachelhit.ilike(like),
             DrillModel.text_tachelhit_latin.ilike(like),
             DrillModel.text_catalan.ilike(like),
             DrillModel.text_arabic.ilike(like),
-        ))
+        ]
+        # cross-spelling / cross-script match via the phonemic key (so a query
+        # typed as "aghrum", "aɣrum" or "ⴰⵖⵔⵓⵎ" all find the same drill)
+        qkey = _pk(q)
+        if qkey.strip():
+            conds.append(DrillModel.text_key.ilike(f"%{qkey}%"))
+        query = query.filter(or_(*conds))
     if variety:
         query = query.filter(DrillModel.variety == variety)
     if region:
@@ -3222,11 +3255,22 @@ def apply_glossary(text: str, pairs) -> str:
             text = re.sub(rf"(?<!\w){re.escape(sound)}(?!\w)", spelling, text)
     return text
 
+def _phonetic_compare_key(text: str) -> str:
+    """Reduce text to the script-independent phonemic key (de-geminated,
+    schwa-stripped) so pronunciation scoring reflects SOUND, not spelling or
+    script. Falls back to orthographic normalization if nothing is mappable."""
+    from transliteration import phonemic_key
+    k = phonemic_key(text or "")
+    return k if k.strip() else _normalize_for_comparison(text)
+
 def _best_pronunciation_match(heard_fixed: str, drill) -> tuple:
     """
-    Script-aware pronunciation scoring: the ASR may emit either script, so
-    compare against the Tifinagh text AND the Latin romanization and keep the
-    best match. Returns (matched_script, target_text, score).
+    Phoneme-level pronunciation scoring. Both the ASR output and the target are
+    reduced to a script-independent phonemic KEY, so the score reflects how the
+    utterance SOUNDS rather than which script/spelling the ASR happened to emit
+    (a correct pronunciation spelled in a different convention no longer tanks
+    the score). Still compares against the Tifinagh gold AND the Latin
+    romanization and keeps the best. Returns (matched_script, target_text, score).
     """
     import difflib
     candidates = []
@@ -3234,11 +3278,10 @@ def _best_pronunciation_match(heard_fixed: str, drill) -> tuple:
         candidates.append(("tifinagh", drill.text_tachelhit))
     if drill.text_tachelhit_latin:
         candidates.append(("latin", drill.text_tachelhit_latin))
+    heard_key = _phonetic_compare_key(heard_fixed)
     best = ("", "", -1.0)
     for script, target in candidates:
-        s = difflib.SequenceMatcher(
-            None, _normalize_for_comparison(heard_fixed), _normalize_for_comparison(target)
-        ).ratio()
+        s = difflib.SequenceMatcher(None, heard_key, _phonetic_compare_key(target)).ratio()
         if s > best[2]:
             best = (script, target, s)
     return best

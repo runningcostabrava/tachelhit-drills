@@ -48,6 +48,21 @@ def test_key_collapses_gemination_and_matches_variant():
     assert phonemic_key("azzul") == phonemic_key("azul") == "azul"
 
 
+def test_key_is_script_independent():
+    # the whole point: three spellings of "bread" share ONE phonemic key,
+    # so search / dedup / pronunciation-scoring match across scripts.
+    k = phonemic_key("aghrum")            # phone-Latin
+    assert phonemic_key("aɣrum") == k     # academic Latin
+    assert phonemic_key("ⴰⵖⵔⵓⵎ") == k     # Tifinagh
+    assert k == "aɣrum"
+
+
+def test_tifinagh_input_roundtrips():
+    f = to_forms("ⵜⵉⴼⵉⵏⴰⵖ")
+    assert f["clean_latin"] == "tifinaɣ"
+    assert f["key"] == "tifinaɣ"
+
+
 def test_academic_input_is_idempotent():
     # feeding the clean Latin back in reproduces the same Tifinagh
     once = to_forms("aghrum")
