@@ -54,6 +54,13 @@ export interface Me {
   cards_learning: number;
 }
 
+export interface SpaceState {
+  state: 'up' | 'waking' | 'down' | 'unset';
+  id?: string;
+  code?: number;
+}
+export type SpacesHealth = Record<string, SpaceState>;
+
 export interface Recording {
   id: number;
   audio_url: string;
@@ -128,6 +135,10 @@ export const api = {
     }),
   aiSuggestTranslation: (drillId: number) =>
     request<{ field: string; suggestion: string }>(`/ai/suggest-translation/${drillId}`, { method: 'POST' }),
+
+  // --- AI Space health (reliability) ---
+  spacesHealth: () => request<SpacesHealth>('/health/spaces'),
+  wakeSpaces: () => request<{ waking: string[] }>('/health/spaces/wake', { method: 'POST' }),
 
   // --- multi-speaker recordings (many takes per drill) ---
   drillRecordings: (drillId: number) =>
