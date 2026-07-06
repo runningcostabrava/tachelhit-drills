@@ -1174,6 +1174,15 @@ def fill_missing_stop():
     return {"status": "stopping"}
 
 
+@app.get("/transliterate")
+def transliterate(text: str = ""):
+    """Berber phone-Latin (or academic Latin) -> its faces:
+    {input, clean_latin, tifinagh, key}. Deterministic, no external service.
+    The forms are suggestions to confirm, never gold — see transliteration.py."""
+    from transliteration import to_forms
+    return to_forms(text)
+
+
 @app.get("/upload-media/{drill_id}/{media_type}")
 async def test_upload_endpoint(drill_id: int, media_type: str):
     print(f"[UPLOAD TEST] GET request for drill {drill_id}, media_type {media_type}")
