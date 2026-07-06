@@ -50,12 +50,14 @@ export default function ServiceStatusBanner({ services = ['asr', 'translation', 
 
   const wake = async () => {
     setWaking(true);
-    try { await api.wakeSpaces(); } catch { /* fire and forget */ }
+    // wake ONLY the services this banner is about — waking all at once can hit
+    // HuggingFace's free CPU quota.
+    try { await api.wakeSpaces(relevant.map((r) => r.key)); } catch { /* fire and forget */ }
     setTimeout(() => { setWaking(false); poll(); }, 1500);
   };
 
   const msg = downList.length
-    ? `Alguns serveis d'IA no responen (${[...downList, ...wakingList].join(', ')}). Prova de despertar-los i torna-ho a intentar en un moment.`
+    ? `Alguns serveis d'IA no responen (${[...downList, ...wakingList].join(', ')}). El pla gratuït de HuggingFace només manté uns quants Spaces actius alhora — potser cal pausar-ne d'altres. Prova de despertar-lo i torna-ho a intentar en un moment.`
     : `S'estan despertant els serveis d'IA (${wakingList.join(', ')})… pot trigar ~30 s.`;
 
   return (
