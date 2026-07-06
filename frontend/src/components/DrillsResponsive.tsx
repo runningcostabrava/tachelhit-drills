@@ -1,5 +1,6 @@
 import '../agGridSetup';
 import { useState, useEffect, useRef } from 'react';
+import { VARIETIES } from '../varieties';
 import { FaMicrophone, FaPlus, FaTimes, FaLink, FaChevronDown, FaSearch, FaBook, FaTrash } from 'react-icons/fa';
 import axios from 'axios';
 import { API_BASE } from '../config';
@@ -102,6 +103,7 @@ export default function DrillsResponsive() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCategory, setSearchCategory] = useState('all');
   const [filteredDrills, setFilteredDrills] = useState<Drill[]>([]);
+  const [varietyFilter, setVarietyFilter] = useState('');
   const newDrillOptionsRef = useRef<HTMLDivElement>(null);
 
   // Dismiss the "Més" dropdown on outside-click or Escape
@@ -157,8 +159,12 @@ export default function DrillsResponsive() {
       });
     }
 
+    if (varietyFilter) {
+      result = result.filter((drill: Drill) => (drill.variety || '') === varietyFilter);
+    }
+
     setFilteredDrills(result);
-  }, [drills, searchQuery, searchCategory, location.search]);
+  }, [drills, searchQuery, searchCategory, varietyFilter, location.search]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
@@ -372,6 +378,16 @@ export default function DrillsResponsive() {
               <option value="arabic">Àrab</option>
               <option value="tag">Etiqueta</option>
               <option value="author">Autor</option>
+            </select>
+            <select
+              value={varietyFilter}
+              onChange={(e) => setVarietyFilter(e.target.value)}
+              aria-label="Filtra per varietat"
+              title="Filtra per varietat"
+              style={{ background: 'var(--surface)', border: `1px solid ${varietyFilter ? 'var(--saffron)' : 'var(--border)'}`, color: varietyFilter ? 'var(--saffron-strong)' : 'var(--text-soft)', borderRadius: 'var(--r-sm)', padding: '6px 9px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+            >
+              <option value="">Totes les varietats</option>
+              {VARIETIES.map((v) => <option key={v.code} value={v.code}>{v.label}</option>)}
             </select>
             {searchQuery && <button onClick={() => setSearchQuery('')} aria-label="Esborra la cerca" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '16px', cursor: 'pointer', padding: '0 6px', flexShrink: 0 }}>✕</button>}
           </div>

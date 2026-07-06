@@ -3,6 +3,7 @@ import { API_BASE, getMediaUrl } from '../config';
 import { getMediaWithOfflineFallback } from '../utils/offlineCache';
 import { getYouTubeVideoId, loadYouTubeApi } from '../utils/youtubeUtils';
 import { FaVideo, FaVolumeUp, FaPlay, FaPause, FaSync, FaTimes, FaStepBackward, FaStepForward, FaBullseye, FaThumbsUp, FaRedo, FaExclamationTriangle, FaEye, FaStop, FaMicrophone, FaStar } from 'react-icons/fa';
+import DrillVoices from './DrillVoices';
 
 declare global {
   interface Window {
@@ -839,6 +840,9 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               {currentDrill.text_tachelhit_latin}
             </div>
           )}
+
+          {/* Different speakers' takes, each with its variety — hear the phrase across varieties */}
+          {!hideAnswer && currentDrill && <DrillVoices drillId={currentDrill.id} />}
 
           {/* Synthetic-voice scaffold marker: learners must know sketch from gold */}
           {(synthesizingVoice || usingSyntheticVoice) && (
