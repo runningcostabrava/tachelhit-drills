@@ -25,6 +25,7 @@ import {
     FaCamera
 } from 'react-icons/fa';
 import RecordAudioModal from './RecordAudioModal';
+import { varietyShort, varietyLabel } from '../varieties';
 
 // Import CSS structural definitions
 import 'ag-grid-community/styles/ag-grid.css';
@@ -407,6 +408,11 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill }: Drills
                             {drill.tag && (
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)', padding: '5px 12px', borderRadius: 'var(--r-pill)', fontSize: '12px', fontWeight: 700 }}>
                                     <FaTag size={11} /> {drill.tag}
+                                </span>
+                            )}
+                            {drill.variety && (
+                                <span title={varietyLabel(drill.variety)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'var(--saffron-soft)', color: 'var(--saffron-strong)', padding: '5px 10px', borderRadius: 'var(--r-pill)', fontSize: '11px', fontWeight: 800, letterSpacing: '0.03em' }}>
+                                    {varietyShort(drill.variety)}{drill.region ? ` · ${drill.region}` : ''}
                                 </span>
                             )}
                         </div>

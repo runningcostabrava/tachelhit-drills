@@ -47,6 +47,8 @@ export interface CorpusStats {
 export interface Me {
   username: string;
   display_name: string;
+  variety?: string | null;
+  region?: string | null;
   date_created: string;
   drills_contributed: number;
   cards_learning: number;
@@ -130,10 +132,10 @@ export const api = {
     request<{ status: string }>('/images/fill-missing/stop', { method: 'POST' }),
 
   // --- identity ---
-  register: (username: string, display_name?: string | null) =>
+  register: (username: string, display_name?: string | null, variety?: string | null, region?: string | null) =>
     request<{ username: string; display_name: string; token: string }>('/users/register', {
       method: 'POST',
-      body: JSON.stringify({ username, display_name }),
+      body: JSON.stringify({ username, display_name, variety, region }),
     }),
   // Returns null when the stored token is invalid (401) so callers can log out
   me: async (): Promise<Me | null> => {
@@ -142,4 +144,10 @@ export const api = {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
   },
+  updateMe: (patch: { display_name?: string; variety?: string | null; region?: string | null }) =>
+    request<{ username: string; display_name: string; variety: string | null; region: string | null }>('/users/me', {
+      method: 'PUT',
+      body: JSON.stringify(patch),
+    }),
+  varieties: () => request<{ code: string; label: string }[]>('/varieties'),
 };

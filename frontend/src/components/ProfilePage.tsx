@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getUserToken, setUserIdentity, clearUserIdentity } from '../config';
 import { api, type Me } from '../api';
+import { VARIETIES } from '../varieties';
 import { FaCheck, FaLayerGroup, FaRedo, FaFire } from 'react-icons/fa';
 
 const cardStyle: React.CSSProperties = {
@@ -33,6 +34,10 @@ export default function ProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [variety, setVariety] = useState('');
+  const [region, setRegion] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savedProfile, setSavedProfile] = useState(false);
   const hasToken = !!getUserToken();
   const initialLoading = hasToken && !me && !newToken && !error;
 
@@ -48,7 +53,7 @@ export default function ProfilePage() {
     if (!hasToken) return;
     api.me()
       .then((data) => {
-        if (data) setMe(data);
+        if (data) { setMe(data); setVariety(data.variety || ''); setRegion(data.region || ''); }
         else clearUserIdentity(); // token no longer valid
       })
       .catch(() => {});
@@ -59,7 +64,7 @@ export default function ProfilePage() {
     setBusy(true);
     setError(null);
     try {
-      const data = await api.register(username.trim(), displayName.trim() || null);
+      const data = await api.register(username.trim(), displayName.trim() || null, variety || null, region.trim() || null);
       setUserIdentity(data.token, data.username);
       setNewToken(data.token);
       setMe(null); // will refetch via effect on next mount; show token first
@@ -82,6 +87,38 @@ export default function ProfilePage() {
     clearUserIdentity();
     window.location.reload();
   };
+
+  const saveProfile = async () => {
+    setSavingProfile(true);
+    setSavedProfile(false);
+    try {
+      const updated = await api.updateMe({ variety: variety || null, region: region.trim() || null });
+      setMe((m) => (m ? { ...m, variety: updated.variety, region: updated.region } : m));
+      setSavedProfile(true);
+      setTimeout(() => setSavedProfile(false), 1800);
+    } catch {
+      /* transient */
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  // A reusable "where you're from" editor (variety + region)
+  const originFields = (
+    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+      <div style={{ flex: 1, minWidth: '180px' }}>
+        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-soft)', marginBottom: '4px' }}>La meva varietat</label>
+        <select value={variety} onChange={(e) => setVariety(e.target.value)} style={{ ...inputStyle, marginBottom: 0 }}>
+          <option value="">— Tria la teva varietat —</option>
+          {VARIETIES.map((v) => <option key={v.code} value={v.code}>{v.label}</option>)}
+        </select>
+      </div>
+      <div style={{ flex: 1, minWidth: '180px' }}>
+        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-soft)', marginBottom: '4px' }}>Regió / origen</label>
+        <input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="p. ex. Nador, Souss, diàspora-BCN" style={{ ...inputStyle, marginBottom: 0 }} />
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -153,6 +190,15 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
+            <div style={{ marginBottom: '18px', paddingTop: '18px', borderTop: '1px solid var(--border)' }}>
+              {originFields}
+              <button onClick={saveProfile} disabled={savingProfile} style={{ marginTop: '12px', padding: '10px 20px', background: 'var(--brand-gradient)', color: '#fff', border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: savingProfile ? 'wait' : 'pointer' }}>
+                {savingProfile ? 'Desant…' : savedProfile ? 'Desat ✓' : "Desa l'origen"}
+              </button>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px', marginBottom: 0 }}>
+                Els drills que aportis prendran aquesta varietat i regió per defecte, així sabem com es parla.
+              </p>
+            </div>
             <button
               onClick={logout}
               style={{ padding: '10px 20px', background: 'var(--rose-soft)', color: 'var(--rose)', border: '1px solid var(--rose)', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: 'pointer' }}
@@ -197,6 +243,10 @@ export default function ProfilePage() {
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                 />
+                <div style={{ margin: '4px 0 16px' }}>{originFields}</div>
+                <p style={{ margin: '-8px 0 14px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                  D&apos;on ets ho fem servir per saber en quina varietat parles — mai per corregir-la.
+                </p>
                 <button
                   type="submit"
                   disabled={busy || username.trim().length < 3}
