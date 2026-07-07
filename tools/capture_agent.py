@@ -39,7 +39,12 @@ HDRS = {"X-API-Key": API_KEY} if API_KEY else {}
 
 
 def log(msg):
-    print(time.strftime("%H:%M:%S"), msg, flush=True)
+    line = time.strftime("%H:%M:%S") + " " + str(msg)
+    try:
+        print(line, flush=True)
+    except UnicodeEncodeError:
+        # Windows consoles (cp1252) can't print some chars — never crash on a log
+        print(line.encode("ascii", "replace").decode("ascii"), flush=True)
 
 
 def download(url, out_dir, audio_only):
@@ -76,7 +81,7 @@ def handle(req):
             r.raise_for_status()
             job_id = r.json().get("job_id")
             requests.post(f"{API}/capture/{rid}/done", json={"job_id": job_id}, headers=HDRS, timeout=60)
-            log(f"  uploaded → pipeline job {job_id}. Render is making drills.")
+            log(f"  uploaded -> pipeline job {job_id}. Render is making drills.")
         except Exception as e:
             log(f"  FAILED: {e}")
             try:
@@ -86,7 +91,7 @@ def handle(req):
 
 
 def main():
-    log(f"agent started · backend {API} · polling every {POLL}s. Leave this running.")
+    log(f"agent started - backend {API} - polling every {POLL}s. Leave this running.")
     while True:
         try:
             r = requests.get(f"{API}/capture/pending", headers=HDRS, timeout=40)
