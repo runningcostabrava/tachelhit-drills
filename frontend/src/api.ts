@@ -54,6 +54,16 @@ export interface Me {
   cards_learning: number;
 }
 
+export interface CaptureStatus {
+  id: number;
+  status: string;                 // pending | claimed | processing | done | failed
+  url: string;
+  job_id: number | null;
+  job_status: string | null;
+  drills_created: number[] | null;
+  error: string | null;
+}
+
 export interface SpaceState {
   state: 'up' | 'waking' | 'down' | 'private_or_missing' | 'unset';
   id?: string;
@@ -135,6 +145,14 @@ export const api = {
     }),
   aiSuggestTranslation: (drillId: number) =>
     request<{ field: string; suggestion: string }>(`/ai/suggest-translation/${drillId}`, { method: 'POST' }),
+
+  // --- autonomous local capture (queue a URL for your local agent) ---
+  captureRequest: (url: string, opts?: { tag?: string; language?: string; audio_only?: boolean; apply_correction?: boolean }) =>
+    request<{ request_id: number; status: string }>('/capture/request', {
+      method: 'POST',
+      body: JSON.stringify({ url, ...(opts || {}) }),
+    }),
+  captureStatus: (id: number) => request<CaptureStatus>(`/capture/${id}`),
 
   // --- AI Space health (reliability) ---
   spacesHealth: () => request<SpacesHealth>('/health/spaces'),
