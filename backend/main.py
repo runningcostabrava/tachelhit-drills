@@ -37,7 +37,7 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
 
-from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel  # ← Alias for ORM models
+from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel, CaptureRequest as CaptureRequestModel  # ← Alias for ORM models
 from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort, VideoProcessingJobCreate, VideoProcessingJob, VideoSegmentCreate, VideoSegment, TranscribeRequest, TranscribeResponse, TranslateRequest, TranslateResponse, DrillPairInfo, GlossaryItem, GlossaryItemCreate, SrtImportRequest, SrtImportResponse, SrtSegment, BulkVideoUrlUpdateRequest, BulkVideoUrlUpdateResponse  # ← Pydantic schemas
 from correction_service import get_correction_service
 from srt_parser import parse_srt_content, create_youtube_url_with_timestamp
@@ -2445,6 +2445,100 @@ async def auto_drills_from_upload(
             shutil.rmtree(tmp_dir, ignore_errors=True)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---- Autonomous local capture queue ---------------------------------------
+# The web app queues a URL here; a local agent (tools/capture_agent.py) running
+# on the user's machine polls, downloads it on their residential IP (dodging
+# YouTube's block of Render's IP), and uploads the file back — no manual step.
+@app.post("/capture/request")
+def capture_request(
+    url: str = Body(..., embed=True),
+    tag: Optional[str] = Body(None, embed=True),
+    language: Optional[str] = Body(None, embed=True),
+    audio_only: bool = Body(True, embed=True),
+    apply_correction: bool = Body(True, embed=True),
+    db: Session = Depends(get_db),
+):
+    """Queue a URL for the local agent to download. Poll GET /capture/{id}."""
+    req = CaptureRequestModel(
+        url=url.strip(), tag=tag, language=language,
+        audio_only=bool(audio_only), apply_correction=bool(apply_correction),
+        status="pending",
+    )
+    db.add(req)
+    db.commit()
+    db.refresh(req)
+    return {"request_id": req.id, "status": "pending"}
+
+
+@app.get("/capture/pending")
+def capture_pending(db: Session = Depends(get_db)):
+    """The local agent polls this: returns and CLAIMS the oldest pending
+    request, or {request: null} when the queue is empty."""
+    req = (db.query(CaptureRequestModel)
+           .filter(CaptureRequestModel.status == "pending")
+           .order_by(CaptureRequestModel.created_at.asc()).first())
+    if not req:
+        return {"request": None}
+    req.status = "claimed"
+    req.claimed_at = datetime.utcnow()
+    db.commit()
+    db.refresh(req)
+    return {"request": {
+        "id": req.id, "url": req.url, "tag": req.tag, "language": req.language,
+        "audio_only": req.audio_only, "apply_correction": req.apply_correction,
+    }}
+
+
+@app.post("/capture/{request_id}/done")
+def capture_done(request_id: int, job_id: int = Body(..., embed=True), db: Session = Depends(get_db)):
+    """Agent reports it uploaded the file; links the resulting pipeline job."""
+    req = db.query(CaptureRequestModel).filter(CaptureRequestModel.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Capture request not found")
+    req.status = "processing"
+    req.job_id = job_id
+    db.commit()
+    return {"ok": True}
+
+
+@app.post("/capture/{request_id}/fail")
+def capture_fail(request_id: int, error: str = Body("", embed=True), db: Session = Depends(get_db)):
+    req = db.query(CaptureRequestModel).filter(CaptureRequestModel.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Capture request not found")
+    req.status = "failed"
+    req.error = (error or "")[:500]
+    db.commit()
+    return {"ok": True}
+
+
+@app.get("/capture/{request_id}")
+def capture_status(request_id: int, db: Session = Depends(get_db)):
+    """Web-app polling: request status + drills_created once processing finishes."""
+    req = db.query(CaptureRequestModel).filter(CaptureRequestModel.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Capture request not found")
+    drills_created = None
+    job_status = None
+    if req.job_id:
+        job = db.query(VideoProcessingJobModel).filter(VideoProcessingJobModel.id == req.job_id).first()
+        if job:
+            job_status = job.status
+            if job.processing_log:
+                try:
+                    drills_created = json.loads(job.processing_log).get("drills_created")
+                except (ValueError, TypeError):
+                    pass
+            if job.status == "COMPLETED" and req.status != "done":
+                req.status = "done"
+                db.commit()
+    return {
+        "id": req.id, "status": req.status, "url": req.url,
+        "job_id": req.job_id, "job_status": job_status,
+        "drills_created": drills_created, "error": req.error,
+    }
 
 
 @app.post("/video-analysis/correct")
