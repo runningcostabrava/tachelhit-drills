@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { API_BASE } from '../config';
 import { FaHeadphones, FaBolt, FaGlobe, FaVideo, FaUpload, FaMusic, FaTimes, FaClock, FaSpellCheck, FaFont, FaComments } from 'react-icons/fa';
 import ServiceStatusBanner from './ServiceStatusBanner';
+import AutoCapturePanel from './AutoCapturePanel';
 
 // Turn raw backend/yt-dlp errors into clear, actionable Catalan guidance
 function friendlyCaptureError(msg: string): string {
@@ -489,6 +490,7 @@ const VideoDrillCreator: React.FC = () => {
 
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px' }}>
       <ServiceStatusBanner services={['asr', 'translation']} />
+      <AutoCapturePanel />
       <div className="input-group" style={{
         display: 'flex',
         flexDirection: 'column',
