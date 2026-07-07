@@ -86,6 +86,9 @@ translator_ca_to_en = GoogleTranslator(source='ca', target='en')
 HF_TRANSLATION_MODEL = os.getenv("HF_TRANSLATION_MODEL", "facebook/nllb-200-distilled-600M")
 HF_TRANSLATION_SPACE_DEFAULT = "https://huggingface.co/spaces/josepabloucr/Finetuned-Quantized-NLLB"
 HUGGINGFACE_TRANSLATION_SPACE_URL = os.getenv("HUGGINGFACE_TRANSLATION_SPACE_URL", HF_TRANSLATION_SPACE_DEFAULT)
+# Configured (non-default) Spaces that turned out deleted/unreachable — cached so
+# a dead env var doesn't make EVERY translation retry it (which crippled speed).
+_dead_translation_spaces = set()
 # TTS (read Tachelhit/Tifinagh text aloud). Configurable like ASR/translation so
 # it can point at your own Space instead of the hardcoded upstream one. Accepts
 # either a "user/space" id or a full huggingface.co/spaces URL.
@@ -118,7 +121,7 @@ def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tac
     # silently breaking translation (as happened when tamazight-translation-space
     # was deleted but the env var still pointed at it).
     candidates = []
-    if HUGGINGFACE_TRANSLATION_SPACE_URL:
+    if HUGGINGFACE_TRANSLATION_SPACE_URL and HUGGINGFACE_TRANSLATION_SPACE_URL not in _dead_translation_spaces:
         candidates.append(HUGGINGFACE_TRANSLATION_SPACE_URL)
     if HF_TRANSLATION_SPACE_DEFAULT not in candidates:
         candidates.append(HF_TRANSLATION_SPACE_DEFAULT)
@@ -148,6 +151,10 @@ def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tac
 
         except Exception as e:
             print(f"[TRANSLATE] Space {space} failed: {e}")
+            # remember a dead CONFIGURED space so later calls skip straight to
+            # the default (never cache the default itself — it may be transient)
+            if space != HF_TRANSLATION_SPACE_DEFAULT:
+                _dead_translation_spaces.add(space)
             if idx < len(candidates) - 1:
                 print("[TRANSLATE] Trying the default Space next.")
             else:
