@@ -274,8 +274,37 @@ def get_video_segments(url: str, lang: str = 'en', cookies_str: str = None) -> L
 
 AUDIO_EXTENSIONS = {'.mp3', '.m4a', '.wav', '.ogg', '.opus', '.aac', '.flac'}
 
+def _has_video_stream(path: str) -> bool:
+    """True if the media file actually contains a (non-cover-art) video stream.
+    Uses the ffmpeg exe MoviePy ships (ffprobe isn't bundled)."""
+    try:
+        import subprocess
+        try:
+            import imageio_ffmpeg
+            exe = imageio_ffmpeg.get_ffmpeg_exe()
+        except Exception:
+            exe = "ffmpeg"
+        r = subprocess.run([exe, "-hide_banner", "-i", path], capture_output=True, timeout=30)
+        err = r.stderr.decode("utf-8", "ignore")
+        # A real video stream shows "Video: <codec>"; cover-art shows mjpeg/png.
+        for line in err.splitlines():
+            if "Video:" in line and not any(a in line.lower() for a in ("mjpeg", "png", "bmp")):
+                return True
+        return False
+    except Exception:
+        return False
+
+
 def is_audio_file(path: str) -> bool:
-    return os.path.splitext(path)[1].lower() in AUDIO_EXTENSIONS
+    ext = os.path.splitext(path)[1].lower()
+    if ext in AUDIO_EXTENSIONS:
+        return True
+    # Ambiguous containers (.webm/.mkv/.mov/.mp4) can be audio-only — e.g. yt-dlp
+    # bestaudio produces webm/opus. Probe for a real video stream; if there's
+    # none, treat it as audio so it goes to the (ffmpeg) audio clipper.
+    if ext in (".webm", ".mkv", ".mov", ".mp4", ".ogg", ".m4v"):
+        return not _has_video_stream(path)
+    return False
 
 def process_and_upload_audio_segment(
     audio_path: str,
