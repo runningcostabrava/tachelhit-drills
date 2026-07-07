@@ -435,6 +435,28 @@ async def lifespan(app: FastAPI):
                 db.rollback()
                 print(f"[INIT] ERROR adding sample drills: {e}")
 
+    # Pre-check the configured translation Space. If it's a dead override (a
+    # deleted/renamed Space, e.g. a stale HUGGINGFACE_TRANSLATION_SPACE_URL env
+    # var), mark it dead now so NO translation call ever wastes time retrying it
+    # — the built-in default Space is used from the very first request. Runs in
+    # the background so it never delays startup.
+    import threading as _threading
+
+    def _probe_translation_space():
+        cfg = HUGGINGFACE_TRANSLATION_SPACE_URL
+        if not cfg or cfg == HF_TRANSLATION_SPACE_DEFAULT:
+            return
+        try:
+            r = requests.get(_hf_space_url(cfg), timeout=8)
+            if r.status_code in (401, 403, 404):
+                _dead_translation_spaces.add(cfg)
+                print(f"[INIT] Configured translation Space unreachable ({r.status_code}); using default.")
+        except Exception:
+            _dead_translation_spaces.add(cfg)
+            print("[INIT] Configured translation Space unreachable; using default.")
+
+    _threading.Thread(target=_probe_translation_space, daemon=True).start()
+
     yield
     # This runs ON SHUTDOWN
     print("[INIT] Shutdown lifespan events...")
