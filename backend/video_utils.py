@@ -333,11 +333,17 @@ def process_and_upload_audio_segment(
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         clip_path = os.path.join(tmp_dir, f"audio_clip_{drill_id}.m4a")
-        proc = subprocess.run(
-            [ffmpeg_exe, "-y", "-ss", f"{ss:.3f}", "-i", audio_path, "-t", f"{dur:.3f}",
-             "-vn", "-acodec", "aac", "-b:a", "128k", clip_path],
-            capture_output=True,
-        )
+        # -nostdin + stdin=DEVNULL: ffmpeg otherwise reads stdin and can hang
+        # forever inside a background worker; timeout is a hard backstop so one
+        # bad segment can never wedge the whole capture pipeline.
+        try:
+            proc = subprocess.run(
+                [ffmpeg_exe, "-nostdin", "-y", "-ss", f"{ss:.3f}", "-i", audio_path, "-t", f"{dur:.3f}",
+                 "-vn", "-acodec", "aac", "-b:a", "128k", clip_path],
+                capture_output=True, stdin=subprocess.DEVNULL, timeout=120,
+            )
+        except subprocess.TimeoutExpired:
+            raise OSError("ffmpeg audio clip timed out (segment skipped)")
         if proc.returncode != 0 or not os.path.exists(clip_path):
             raise OSError(f"ffmpeg audio clip failed: {proc.stderr.decode('utf-8', 'ignore')[-300:]}")
 
