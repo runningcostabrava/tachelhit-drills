@@ -2201,11 +2201,16 @@ async def auto_drills_pipeline_task(job_id: int, url: Optional[str], video_path:
         job.status = "CREATING_DRILLS"
         db.commit()
         drills_created = []
+        media_errors = []
         audio_src = is_audio_file(video_path)
         for seg in segments:
             original_text = seg.get("text")
             drill_tachelhit = seg.get("text_tachelhit") or (original_text if effective_source in ("shi", "ber") else None)
             drill_arabic = seg.get("text_arabic") or (original_text if effective_source == "ar" else None)
+
+            # Skip empty segments (no text in any language) — nothing to learn.
+            if not (drill_tachelhit or drill_arabic or seg.get("text_catalan")):
+                continue
 
             db_drill = DrillModel(
                 text_catalan=seg.get("text_catalan"),
@@ -2218,6 +2223,9 @@ async def auto_drills_pipeline_task(job_id: int, url: Optional[str], video_path:
             db.add(db_drill)
             db.commit()
             db.refresh(db_drill)
+            # Count the drill now — a text drill is valid even if media clipping
+            # fails; the audio/video clip is best-effort enrichment on top.
+            drills_created.append(db_drill.id)
             try:
                 if audio_src:
                     res = await asyncio.to_thread(process_and_upload_audio_segment, video_path, seg["start"], seg["end"], db_drill.id)
@@ -2231,9 +2239,11 @@ async def auto_drills_pipeline_task(job_id: int, url: Optional[str], video_path:
                 except Exception:
                     pass
                 db.commit()
-                drills_created.append(db_drill.id)
             except Exception as e:
-                print(f"[AUTO] Media clipping failed for a segment: {e}")
+                # Keep the text drill; record why the clip failed so it's visible.
+                if len(media_errors) < 3:
+                    media_errors.append(f"{type(e).__name__}: {str(e)[:200]}")
+                print(f"[AUTO] Media clipping failed for drill {db_drill.id}: {e}")
                 db.rollback()
 
         # Phase 5 (optional): render a vertical reel for every created drill
@@ -2260,9 +2270,9 @@ async def auto_drills_pipeline_task(job_id: int, url: Optional[str], video_path:
                     print(f"[AUTO] Reel generation failed for drill {did}: {reel_err}")
 
         job.status = "COMPLETED"
-        job.processing_log = json.dumps({"drills_created": drills_created})
+        job.processing_log = json.dumps({"drills_created": drills_created, "media_errors": media_errors})
         db.commit()
-        print(f"[AUTO] Job {job_id}: created {len(drills_created)} drills (reels={generate_reels}).")
+        print(f"[AUTO] Job {job_id}: created {len(drills_created)} drills, {len(media_errors)} media errors (reels={generate_reels}).")
 
     except Exception as e:
         print(f"[AUTO] Pipeline error in job {job_id}: {e}")
