@@ -1939,11 +1939,13 @@ def get_video_analysis_job_status(job_id: int, db: Session = Depends(get_db)):
 
     # Auto-pipeline jobs record their created drill ids in processing_log
     drills_created = None
+    media_errors = None
     if job.processing_log:
         try:
             log = json.loads(job.processing_log)
             if isinstance(log, dict):
                 drills_created = log.get("drills_created")
+                media_errors = log.get("media_errors")
         except (ValueError, TypeError):
             pass
 
@@ -1952,7 +1954,8 @@ def get_video_analysis_job_status(job_id: int, db: Session = Depends(get_db)):
         "status": job.status,
         "error_message": job.error_message,
         "segments": segments,
-        "drills_created": drills_created
+        "drills_created": drills_created,
+        "media_errors": media_errors
     }
 
 @app.post("/video-analysis/analyze")
