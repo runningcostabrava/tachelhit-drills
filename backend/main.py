@@ -84,7 +84,8 @@ translator_ca_to_en = GoogleTranslator(source='ca', target='en')
 
 # HF Translation
 HF_TRANSLATION_MODEL = os.getenv("HF_TRANSLATION_MODEL", "facebook/nllb-200-distilled-600M")
-HUGGINGFACE_TRANSLATION_SPACE_URL = os.getenv("HUGGINGFACE_TRANSLATION_SPACE_URL", "https://huggingface.co/spaces/josepabloucr/Finetuned-Quantized-NLLB")
+HF_TRANSLATION_SPACE_DEFAULT = "https://huggingface.co/spaces/josepabloucr/Finetuned-Quantized-NLLB"
+HUGGINGFACE_TRANSLATION_SPACE_URL = os.getenv("HUGGINGFACE_TRANSLATION_SPACE_URL", HF_TRANSLATION_SPACE_DEFAULT)
 # TTS (read Tachelhit/Tifinagh text aloud). Configurable like ASR/translation so
 # it can point at your own Space instead of the hardcoded upstream one. Accepts
 # either a "user/space" id or a full huggingface.co/spaces URL.
@@ -112,12 +113,22 @@ def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tac
     """
     from gradio_client import Client
 
-    # If custom space URL is provided, use it
+    # Try the configured Space, then the built-in default Space, so a deleted or
+    # renamed configured Space auto-falls-back to a working one instead of
+    # silently breaking translation (as happened when tamazight-translation-space
+    # was deleted but the env var still pointed at it).
+    candidates = []
     if HUGGINGFACE_TRANSLATION_SPACE_URL:
+        candidates.append(HUGGINGFACE_TRANSLATION_SPACE_URL)
+    if HF_TRANSLATION_SPACE_DEFAULT not in candidates:
+        candidates.append(HF_TRANSLATION_SPACE_DEFAULT)
+
+    for idx, space in enumerate(candidates):
         try:
             # Remove /translate suffix if present as Client expects the base URL
-            space_url = HUGGINGFACE_TRANSLATION_SPACE_URL.split('/translate')[0].rstrip('/')
-            print(f"[TRANSLATE] Connecting to Gradio Space: {space_url}")
+            space_url = space.split('/translate')[0].rstrip('/')
+            note = " (default fallback)" if idx > 0 else ""
+            print(f"[TRANSLATE] Connecting to Gradio Space{note}: {space_url}")
 
             # hf_predict waits out cold-boot and retries with a pause between
             # attempts (a sleeping free-tier Space needs time to wake)
@@ -132,14 +143,17 @@ def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tac
             # treat as failure so the caller can fall back rather than storing ""
             if not translation:
                 raise ValueError("Translation Space returned an empty result")
-            print(f"[TRANSLATE] Success (Gradio Space): '{text[:30]}...' -> '{translation[:30]}...'")
+            print(f"[TRANSLATE] Success (Gradio Space{note}): '{text[:30]}...' -> '{translation[:30]}...'")
             return translation
 
         except Exception as e:
-            print(f"[TRANSLATE] Gradio Space error details: {e}")
-            import traceback
-            traceback.print_exc()
-            print(f"[TRANSLATE] Falling back to Inference API.")
+            print(f"[TRANSLATE] Space {space} failed: {e}")
+            if idx < len(candidates) - 1:
+                print("[TRANSLATE] Trying the default Space next.")
+            else:
+                import traceback
+                traceback.print_exc()
+                print("[TRANSLATE] All Spaces failed; falling back to Inference API.")
 
     # Fallback to Inference API
     api_token = os.getenv("HUGGINGFACE_API_KEY")
