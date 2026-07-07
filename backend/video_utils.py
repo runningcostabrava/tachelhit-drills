@@ -286,14 +286,31 @@ def process_and_upload_audio_segment(
     """
     Clip an audio segment and upload it to Cloudinary. The audio counterpart of
     process_and_upload_segment for podcast / voice-note sources.
+
+    Uses ffmpeg directly (via the exe MoviePy ships) rather than MoviePy's
+    AudioFileClip: MoviePy fails to read webm/opus audio (as produced by yt-dlp
+    bestaudio) with "failed to read the first frame", whereas ffmpeg handles it
+    — so every audio-only capture would otherwise land drills with no audio.
     """
-    from moviepy.audio.io.AudioFileClip import AudioFileClip
+    import subprocess
+    try:
+        import imageio_ffmpeg
+        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        ffmpeg_exe = "ffmpeg"
+
+    ss = max(0.0, float(start) - 0.1)
+    dur = max(0.2, (float(end) + 0.1) - ss)
 
     with tempfile.TemporaryDirectory() as tmp_dir:
-        clip_path = os.path.join(tmp_dir, f"audio_clip_{drill_id}.mp3")
-        with AudioFileClip(audio_path) as audio:
-            sub = audio.subclipped(max(0, start - 0.1), min(audio.duration, end + 0.1))
-            sub.write_audiofile(clip_path, logger=None)
+        clip_path = os.path.join(tmp_dir, f"audio_clip_{drill_id}.m4a")
+        proc = subprocess.run(
+            [ffmpeg_exe, "-y", "-ss", f"{ss:.3f}", "-i", audio_path, "-t", f"{dur:.3f}",
+             "-vn", "-acodec", "aac", "-b:a", "128k", clip_path],
+            capture_output=True,
+        )
+        if proc.returncode != 0 or not os.path.exists(clip_path):
+            raise OSError(f"ffmpeg audio clip failed: {proc.stderr.decode('utf-8', 'ignore')[-300:]}")
 
         result = cloudinary.uploader.upload(
             clip_path,
