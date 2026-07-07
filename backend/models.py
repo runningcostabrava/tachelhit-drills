@@ -172,6 +172,28 @@ class User(Base):
     region = Column(String, nullable=True)
     date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
 
+class CaptureRequest(Base):
+    """A queued 'download this URL' request. Because YouTube blocks yt-dlp from
+    Render's IP, the download is done by a local agent on the user's machine
+    (residential IP): the web app queues a request here, the agent polls, grabs
+    it, downloads locally and uploads the file back for processing. Fully
+    autonomous once the agent is running."""
+    __tablename__ = "capture_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    url = Column(String, nullable=False)
+    tag = Column(String, nullable=True)
+    language = Column(String, nullable=True)
+    audio_only = Column(Boolean, default=True, nullable=False)
+    apply_correction = Column(Boolean, default=True, nullable=False)
+    # pending -> claimed -> processing -> done | failed
+    status = Column(String, default="pending", nullable=False, index=True)
+    job_id = Column(Integer, nullable=True)      # the resulting VideoProcessingJob
+    error = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    claimed_at = Column(DateTime, nullable=True)
+
+
 class Recording(Base):
     """One audio take of a drill by one speaker. Lets the SAME drill carry
     recordings from different people/varieties (multi-attestation) — each take
