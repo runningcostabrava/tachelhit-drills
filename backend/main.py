@@ -1142,14 +1142,16 @@ def merge_subtitle_frames(items: List[Dict[str, Any]], every: float = 1.0, min_l
 def detect_text_mode(frames: List[Tuple[float, str]]) -> str:
     """Sample a few frames and ask what kind of on-screen text the video has:
     'subtitles' (burned-in lines, usually at the bottom), 'lesson' (vocabulary / letters
-    shown as teaching material) or 'none'."""
+    shown as teaching material), 'page' (a whole page or paragraph of Amazigh text that stays
+    on screen while it is read: a tale, a text, a poem) or 'none'."""
     import base64
     from gemini_client import _generate_content
     sample = frames[:: max(1, len(frames) // 6)][:6]
     parts: List[Dict[str, Any]] = [{"text": (
         "Look at these sample frames from one video and answer with ONE word: 'subtitles' if the video has subtitle "
         "lines burned into the picture (text that changes with the speech/singing, often several languages), 'lesson' if "
-        "it shows vocabulary, letters or words as teaching material, or 'none'.")}]
+        "it shows vocabulary, letters or words as teaching material, 'page' if it shows a whole page or paragraph of "
+        "running text (several lines of Tifinagh or Latin Amazigh, a story or a text being read aloud), or 'none'.")}]
     for t, path in sample:
         with open(path, "rb") as fh:
             parts.append({"inline_data": {"mime_type": "image/jpeg", "data": base64.b64encode(fh.read()).decode()}})
@@ -1159,12 +1161,60 @@ def detect_text_mode(frames: List[Tuple[float, str]]) -> str:
     try:
         data = _generate_content(payload, 120)
         ans = "".join(pp.get("text", "") for pp in data["candidates"][0]["content"]["parts"]).strip().lower()
-        for k in ("subtitles", "lesson", "none"):
+        for k in ("subtitles", "lesson", "page", "none"):
             if k in ans:
                 return k
     except Exception as e:
         print(f"[TEXTMODE] detection failed: {e}")
     return "none"
+
+
+def read_page_text(video_path: str, tmp_dir: str, every: float = 6.0) -> List[str]:
+    """A narrated page: transcribe the Amazigh text shown on screen, in reading order, one
+    sentence per line, with its Catalan meaning («line | meaning»). Pages change rarely, so
+    frames are sampled every `every` seconds and the model is told to merge repeats.
+    Returns [] when nothing readable is on screen or Gemini is unavailable."""
+    if not gemini_available():
+        return []
+    import base64
+    from gemini_client import _generate_content
+    frames = extract_frames(video_path, os.path.join(tmp_dir, "pageframes"), every=every, width=1024)
+    if not frames:
+        return []
+    frames = frames[:24]
+    parts: List[Dict[str, Any]] = [{"text": (
+        "These frames come from ONE video in which a page or paragraph of Amazigh (Tamazight) text is shown while a "
+        "narrator reads it. The same page appears in many frames; a long text may be shown as several pages in order. "
+        "Transcribe the WHOLE text exactly as written (Tifinagh stays Tifinagh, Latin stays Latin), in reading order, "
+        "ONE SENTENCE PER LINE, without repeating a page that was already transcribed, and skip titles, logos, "
+        "watermarks and any Arabic/French/English translation shown next to it. After each sentence add ' | ' and its "
+        "Catalan meaning. Answer ONLY with those lines, nothing else; answer with an empty line if there is no Amazigh "
+        "text on screen.")}]
+    for t, path in frames:
+        parts.append({"text": f"[frame t={t:.0f}s]"})
+        with open(path, "rb") as fh:
+            parts.append({"inline_data": {"mime_type": "image/jpeg", "data": base64.b64encode(fh.read()).decode()}})
+    payload = {"systemInstruction": {"parts": [{"text": "You transcribe Amazigh text exactly, sentence by sentence."}]},
+               "contents": [{"role": "user", "parts": parts}],
+               "generationConfig": {"maxOutputTokens": 6000, "temperature": 0.0, "thinkingConfig": {"thinkingBudget": 0}}}
+    try:
+        data = _generate_content(payload, 240)
+        text = "".join(pp.get("text", "") for pp in data["candidates"][0]["content"]["parts"])
+    except Exception as e:
+        print(f"[PAGE] reading failed: {e}")
+        return []
+    lines, seen = [], set()
+    for raw in text.splitlines():
+        l = raw.strip().strip("-•*").strip()
+        if not l or "|" not in l:
+            continue
+        line = l.split("|", 1)[0].strip()
+        if not line or not re.search(r"[\u2D30-\u2D7F\w]", line) or line in seen:
+            continue
+        seen.add(line)
+        lines.append(l)
+    print(f"[PAGE] {len(frames)} frames -> {len(lines)} lines of page text")
+    return lines
 
 
 def read_burned_subtitles(video_path: str, tmp_dir: str, every: float = 1.0, batch: int = 10) -> List[Dict[str, Any]]:
@@ -3407,9 +3457,16 @@ async def auto_drills_pipeline_task(job_id: int, url: Optional[str], video_path:
                 probe_frames = await asyncio.to_thread(extract_frames, video_path, os.path.join(tmp_dir, "probe"), 10.0, 640)
                 mode = await asyncio.to_thread(detect_text_mode, probe_frames) if probe_frames else "none"
                 print(f"[AUTO] on-screen text mode: {mode}")
+                if mode == "page":
+                    # A narrated page: its lines are KNOWN text; they go down the lyrics path
+                    # (forced alignment gives their times) instead of machine listening.
+                    page_lines = await asyncio.to_thread(read_page_text, video_path, tmp_dir)
+                    if page_lines:
+                        lyrics = "\n".join(page_lines)
+                        print(f"[AUTO] page text: {len(page_lines)} lines -> aligned like lyrics")
                 if mode == "subtitles":
                     lesson_segments = await asyncio.to_thread(read_burned_subtitles, video_path, tmp_dir)
-                if not lesson_segments:
+                if not lesson_segments and not (lyrics and lyrics.strip()):
                     lesson_segments = await asyncio.to_thread(read_onscreen_vocabulary, video_path, tmp_dir,
                                                               2.0, 12, meta.get("channel"))
             except Exception as e:
