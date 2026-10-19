@@ -1337,7 +1337,7 @@ def _space_transcribe_text(media_path: str) -> str:
 _REPEATED_WORD = re.compile(r"^(\S+)(\s+\1){2,}$")
 
 
-def read_page_text(video_path: str, tmp_dir: str, frame_at: float = 0.4) -> List[str]:
+def read_page_text(video_path: str, tmp_dir: str, n_frames: int = 8) -> List[str]:
     """A narrated page -> «unit | Catalan meaning» lines (units of <= 10 words).
     The narration is transcribed by the ASR Space (the WORDS); Gemini then reads the page
     frame holding that transcript as a prior (the LETTERS). Measured on «La cavalleria»
@@ -1356,21 +1356,34 @@ def read_page_text(video_path: str, tmp_dir: str, frame_at: float = 0.4) -> List
                                    capture_output=True, text=True, timeout=60).stdout.strip() or 0)
     except Exception:
         dur = 0.0
-    frame = os.path.join(tmp_dir, "page_frame.jpg")
-    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-ss", f"{max(0.0, dur * frame_at):.2f}", "-i", video_path,
-                    "-frames:v", "1", "-vf", "scale=1280:-2", frame], check=True, capture_output=True, timeout=120)
-    with open(frame, "rb") as fh:
-        img = base64.b64encode(fh.read()).decode()
-    prompt = ("This frame shows a page of Amazigh (Tamazight) text in Tifinagh that a narrator reads aloud. A speech "
-              "recogniser heard the narration as:\n«" + asr_text[:4000] + "»\n\nUsing the page as the authority for the "
-              "LETTERS and the recognised speech as a guide to the WORDS, write the page's text exactly, in standard IRCAM "
-              "Tifinagh orthography, split into short units of at most 10 words (break at sentence ends and commas), one "
-              "per line, each followed by ' | ' and its Catalan meaning. Keep every word of the page in reading order; do "
-              "not invent words that are on neither the page nor the recording; skip titles, logos and watermarks. "
-              "Answer with the lines only.")
+    # A story turns pages: sample frames across the whole video (never the first/last 4 %,
+    # which are title cards and credits) and give them all to the model, in order.
+    n = max(1, min(n_frames, int(dur // 6) if dur else n_frames))
+    parts: List[Dict[str, Any]] = []
+    for i in range(n):
+        at = dur * (0.04 + 0.92 * (i + 0.5) / n) if dur else 1.0
+        frame = os.path.join(tmp_dir, f"page_frame_{i:02d}.jpg")
+        try:
+            subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-ss", f"{max(0.0, at):.2f}", "-i", video_path,
+                            "-frames:v", "1", "-vf", "scale=1280:-2", frame], check=True, capture_output=True, timeout=120)
+            with open(frame, "rb") as fh:
+                parts.append({"text": f"[frame at {at:.0f}s]"})
+                parts.append({"inline_data": {"mime_type": "image/jpeg", "data": base64.b64encode(fh.read()).decode()}})
+        except Exception as e:
+            print(f"[PAGE] frame {i} failed: {e}")
+    if not parts:
+        return []
+    prompt = ("These frames, in time order, come from ONE video in which pages of Amazigh (Tamazight) text in Tifinagh "
+              "are shown while a narrator reads them; the same page appears in several frames and a story may turn "
+              "pages. A speech recogniser heard the whole narration as:\n«" + asr_text[:6000] + "»\n\nUsing the pages as the "
+              "authority for the LETTERS and the recognised speech as a guide to the WORDS and to the ORDER, write the "
+              "whole text exactly once, in standard IRCAM Tifinagh orthography, split into short units of at most 10 "
+              "words (break at sentence ends and commas), one per line, each followed by ' | ' and its Catalan meaning. "
+              "Never repeat a page that was already written; do not invent words that are on neither the pages nor the "
+              "recording; skip titles, logos, channel names and watermarks. Answer with the lines only.")
     payload = {"systemInstruction": {"parts": [{"text": "You read Tifinagh pages carefully and never invent text."}]},
-               "contents": [{"role": "user", "parts": [{"inline_data": {"mime_type": "image/jpeg", "data": img}}, {"text": prompt}]}],
-               "generationConfig": {"maxOutputTokens": 4000, "temperature": 0.0, "thinkingConfig": {"thinkingBudget": 0}}}
+               "contents": [{"role": "user", "parts": parts + [{"text": prompt}]}],
+               "generationConfig": {"maxOutputTokens": 6000, "temperature": 0.0, "thinkingConfig": {"thinkingBudget": 0}}}
     try:
         data = _generate_content(payload, 240)
         text = "".join(pp.get("text", "") for pp in data["candidates"][0]["content"]["parts"])
@@ -1387,7 +1400,7 @@ def read_page_text(video_path: str, tmp_dir: str, frame_at: float = 0.4) -> List
             continue
         seen.add(unit)
         lines.append(unit + " | " + l.split("|", 1)[1].strip())
-    print(f"[PAGE] narration {len(asr_text)} chars + page frame -> {len(lines)} units")
+    print(f"[PAGE] narration {len(asr_text)} chars + {n} page frames -> {len(lines)} units")
     return lines
 
 
