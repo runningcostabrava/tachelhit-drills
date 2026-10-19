@@ -82,6 +82,9 @@ export interface VerifyQueue {
 }
 
 export interface Me {
+  email?: string | null;
+  is_admin?: boolean;
+  has_password?: boolean;
   username: string;
   display_name: string;
   variety?: string | null;
@@ -264,4 +267,28 @@ export const api = {
       body: JSON.stringify(patch),
     }),
   varieties: () => request<{ code: string; label: string }[]>('/varieties'),
+
+  // --- accounts (e-mail + password on top of the token identity) ---
+  signup: (body: { email: string; password: string; username: string; display_name?: string | null; variety?: string | null; region?: string | null; device?: string }) =>
+    request<AuthUser & { token: string }>('/auth/signup', { method: 'POST', body: JSON.stringify(body) }),
+  login: (login: string, password: string, device?: string) =>
+    request<AuthUser & { token: string }>('/auth/login', { method: 'POST', body: JSON.stringify({ login, password, device }) }),
+  logout: () => request<{ ok: boolean }>('/auth/logout', { method: 'POST', body: '{}' }),
+  attachCredentials: (email: string, password: string) =>
+    request<AuthUser>('/auth/attach', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  changePassword: (old_password: string, new_password: string) =>
+    request<{ ok: boolean }>('/auth/password', { method: 'POST', body: JSON.stringify({ old_password, new_password }) }),
+  forgotPassword: (email: string) => request<{ ok: boolean }>('/auth/forgot', { method: 'POST', body: JSON.stringify({ email }) }),
+  resetPassword: (email: string, code: string, new_password: string, device?: string) =>
+    request<AuthUser & { token: string }>('/auth/reset', { method: 'POST', body: JSON.stringify({ email, code, new_password, device }) }),
 };
+
+export interface AuthUser {
+  username: string;
+  display_name: string;
+  email: string | null;
+  variety: string | null;
+  region: string | null;
+  is_admin: boolean;
+  has_password: boolean;
+}

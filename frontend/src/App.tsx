@@ -22,6 +22,7 @@ const VideoDrillCreator = lazy(() => import('./components/VideoDrillCreator'));
 const SrtImport = lazy(() => import('./components/SrtImport'));
 const VideoLibraryPage = lazy(() => import('./components/VideoLibraryPage'));
 const ProfilePage = lazy(() => import('./components/ProfilePage'));
+const AuthPage = lazy(() => import('./components/AuthPage'));
 const CorpusPage = lazy(() => import('./components/CorpusPage'));
 const VerifyQueue = lazy(() => import('./components/VerifyQueue'));
 
@@ -182,6 +183,7 @@ function App() {
         <Route path="/player" element={<DrillPlayerPage />} />
         <Route path="/library" element={<VideoLibraryPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/signin" element={<AuthPage />} />
         <Route path="/corpus" element={<CorpusPage />} />
         <Route path="/verify" element={<VerifyQueue />} />
       </Routes>

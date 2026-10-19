@@ -96,10 +96,37 @@ export default function ProfilePage() {
     window.location.reload();
   };
 
-  const logout = () => {
-    if (!window.confirm('Segur que vols tancar la sessió? Necessitaràs el teu token per tornar a entrar.')) return;
+  const logout = async () => {
+    const msg = me?.has_password
+      ? 'Tancar la sessió en aquest dispositiu? Podràs tornar a entrar amb el correu i la contrasenya.'
+      : 'Segur que vols tancar la sessió? Aquest compte no té contrasenya: necessitaràs el teu token per tornar a entrar.';
+    if (!window.confirm(msg)) return;
+    try { await api.logout(); } catch { /* the token may already be gone */ }
     clearUserIdentity();
-    window.location.reload();
+    window.location.href = '/signin';
+  };
+
+  // Account: attach e-mail + password to a token identity, or change the password.
+  const [accEmail, setAccEmail] = useState('');
+  const [accPw, setAccPw] = useState('');
+  const [accOld, setAccOld] = useState('');
+  const [accBusy, setAccBusy] = useState(false);
+  const [accMsg, setAccMsg] = useState<string | null>(null);
+  const attach = async () => {
+    setAccBusy(true); setAccMsg(null);
+    try {
+      const r = await api.attachCredentials(accEmail.trim(), accPw);
+      setMe((m) => (m ? { ...m, email: r.email, has_password: true, is_admin: r.is_admin } : m));
+      setAccMsg('Fet: ara pots entrar amb el correu i la contrasenya des de qualsevol dispositiu.');
+      setAccPw('');
+    } catch (e: any) { setAccMsg(e?.message || 'Error'); } finally { setAccBusy(false); }
+  };
+  const changePw = async () => {
+    setAccBusy(true); setAccMsg(null);
+    try {
+      await api.changePassword(accOld, accPw);
+      setAccMsg('Contrasenya canviada.'); setAccOld(''); setAccPw('');
+    } catch (e: any) { setAccMsg(e?.message || 'Error'); } finally { setAccBusy(false); }
   };
 
   const saveProfile = async () => {
@@ -206,6 +233,23 @@ export default function ProfilePage() {
             </div>
             <div style={{ marginBottom: '18px', paddingTop: '18px', borderTop: '1px solid var(--border)' }}>
               {originFields}
+              <div style={{ marginTop: '18px', paddingTop: '14px', borderTop: '1px solid var(--border)' }}>
+                <div style={{ fontWeight: 700, marginBottom: '6px' }}>Compte</div>
+                {me.email ? (
+                  <div style={{ fontSize: '14px', color: 'var(--text-soft)', marginBottom: '8px' }}>{me.email}{me.is_admin ? ' · administrador' : ''}</div>
+                ) : (
+                  <div style={{ fontSize: '14px', color: 'var(--text-soft)', marginBottom: '8px' }}>Aquest compte només té un token. Afegeix-hi un correu i una contrasenya per entrar des de qualsevol dispositiu.</div>
+                )}
+                <form onSubmit={(e) => { e.preventDefault(); me.has_password ? changePw() : attach(); }} style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxWidth: '380px' }}>
+                  {!me.has_password && <input type="email" placeholder="Correu electrònic" value={accEmail} onChange={(e) => setAccEmail(e.target.value)} style={inputStyle} autoComplete="email" />}
+                  {me.has_password && <input type="password" placeholder="Contrasenya actual" value={accOld} onChange={(e) => setAccOld(e.target.value)} style={inputStyle} autoComplete="current-password" />}
+                  <input type="password" placeholder={me.has_password ? 'Contrasenya nova (mínim 8)' : 'Contrasenya (mínim 8)'} value={accPw} onChange={(e) => setAccPw(e.target.value)} style={inputStyle} autoComplete="new-password" />
+                  <button type="submit" disabled={accBusy || accPw.length < 8 || (!me.has_password && !accEmail)} style={{ padding: '10px 16px', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: 'pointer', minHeight: '44px', opacity: accBusy || accPw.length < 8 ? 0.6 : 1 }}>
+                    {accBusy ? '…' : me.has_password ? 'Canvia la contrasenya' : 'Afegeix correu i contrasenya'}
+                  </button>
+                  {accMsg && <div style={{ fontSize: '13px', color: 'var(--text-soft)' }}>{accMsg}</div>}
+                </form>
+              </div>
               <button onClick={saveProfile} disabled={savingProfile} style={{ marginTop: '12px', padding: '10px 20px', background: 'var(--brand-gradient)', color: '#fff', border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: savingProfile ? 'wait' : 'pointer' }}>
                 {savingProfile ? 'Desant…' : savedProfile ? 'Desat ✓' : "Desa l'origen"}
               </button>
@@ -257,7 +301,15 @@ export default function ProfilePage() {
         {!newToken && !hasToken && (
           <>
             <div style={cardStyle}>
-              <h3 style={{ marginTop: 0, fontFamily: 'var(--font-display)', fontSize: '20px' }}>Crea el teu compte</h3>
+              <div style={{ marginBottom: '16px', padding: '14px', borderRadius: 'var(--r-lg)', background: 'var(--brand-gradient-soft)', border: '1px solid var(--brand-1)' }}>
+                <div style={{ fontWeight: 800, fontFamily: 'var(--font-display)', fontSize: '18px', marginBottom: '6px' }}>Entra amb el teu compte</div>
+                <div style={{ fontSize: '14px', color: 'var(--text-soft)', marginBottom: '10px' }}>Correu i contrasenya: el teu progrés et segueix a qualsevol dispositiu.</div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <a href="/signin" style={{ padding: '10px 18px', background: 'var(--brand-gradient)', color: '#fff', borderRadius: 'var(--r-pill)', fontWeight: 700, textDecoration: 'none' }}>Inicia sessió</a>
+                  <a href="/signin?mode=signup" style={{ padding: '10px 18px', background: 'var(--surface)', color: 'var(--brand-1)', border: '1px solid var(--brand-1)', borderRadius: 'var(--r-pill)', fontWeight: 700, textDecoration: 'none' }}>Crea un compte</a>
+                </div>
+              </div>
+              <h3 style={{ marginTop: 0, fontFamily: 'var(--font-display)', fontSize: '20px' }}>O crea només una identitat amb token</h3>
               <p style={{ color: 'var(--text-soft)', fontSize: '14px' }}>
                 Amb un compte, el teu repàs (SRS) és només teu i els drills que creïs
                 porten el teu nom com a contribuïdor.
