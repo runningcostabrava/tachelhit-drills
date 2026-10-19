@@ -193,6 +193,12 @@ class User(Base):
     region = Column(String, nullable=True)
     # IANA zone used to compute "today" for streaks (P4.10). NULL = Europe/Madrid.
     tz = Column(String, nullable=True, default="Europe/Madrid")
+    # Accounts (2026-10-19): e-mail + password sign-in on top of the token identity.
+    email = Column(String, nullable=True, unique=True, index=True)
+    password_hash = Column(String, nullable=True)        # pbkdf2_sha256$iters$salt$hash
+    is_admin = Column(Boolean, nullable=True, default=False)
+    reset_code_hash = Column(String, nullable=True)      # password reset code (hashed), 30 min
+    reset_expires = Column(DateTime, nullable=True)
     date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 class CaptureRequest(Base):
@@ -255,3 +261,16 @@ class DrillTombstone(Base):
     id = Column(Integer, primary_key=True, index=True)
     drill_id = Column(Integer, nullable=False, index=True)
     deleted_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+
+class UserSession(Base):
+    """A signed-in device: the X-User-Token presented by a browser or phone after sign-in.
+    The legacy users.token (shown once at registration) still works as a session too."""
+    __tablename__ = "user_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    token_hash = Column(String, unique=True, nullable=False, index=True)
+    device = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    last_used = Column(DateTime, default=datetime.utcnow, nullable=True)

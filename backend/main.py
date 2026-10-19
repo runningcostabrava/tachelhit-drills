@@ -61,7 +61,7 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
 
-from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel, CaptureRequest as CaptureRequestModel, DrillTombstone as DrillTombstoneModel  # ← Alias for ORM models
+from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel, CaptureRequest as CaptureRequestModel, DrillTombstone as DrillTombstoneModel, UserSession as UserSessionModel  # ← Alias for ORM models
 from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort, VideoProcessingJobCreate, VideoProcessingJob, VideoSegmentCreate, VideoSegment, TranscribeRequest, TranscribeResponse, TranslateRequest, TranslateResponse, DrillPairInfo, GlossaryItem, GlossaryItemCreate, SrtImportRequest, SrtImportResponse, SrtSegment, BulkVideoUrlUpdateRequest, BulkVideoUrlUpdateResponse, iso_z  # ← Pydantic schemas
 from correction_service import get_correction_service
 from srt_parser import parse_srt_content, create_youtube_url_with_timestamp
@@ -1847,10 +1847,108 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> Optiona
     token = (request.headers.get("x-user-token") or "").strip()
     if not token:
         return None
-    user = db.query(UserModel).filter(UserModel.token == _hash_token(token)).first()
+    h = _hash_token(token)
+    user = db.query(UserModel).filter(UserModel.token == h).first()
+    if user is None:
+        sess = db.query(UserSessionModel).filter(UserSessionModel.token_hash == h).first()
+        if sess is not None:
+            user = db.query(UserModel).filter(UserModel.id == sess.user_id).first()
+            if user is not None:
+                sess.last_used = datetime.utcnow()
+                db.commit()
     if user is None:
         raise HTTPException(status_code=401, detail="invalid token")
     return user
+
+
+def require_user(user: Optional[UserModel] = Depends(get_current_user)) -> UserModel:
+    if user is None:
+        raise HTTPException(status_code=401, detail="Sign in first (X-User-Token)")
+    return user
+
+
+def require_admin(user: UserModel = Depends(require_user)) -> UserModel:
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin only")
+    return user
+
+
+# ---- Accounts: e-mail + password on top of the token identity -------------------------
+_PW_ITERS = 200_000
+_login_attempts: Dict[str, List[float]] = {}
+
+
+def _hash_password(pw: str) -> str:
+    import hashlib
+    salt = secrets.token_hex(16)
+    dk = hashlib.pbkdf2_hmac("sha256", pw.encode("utf-8"), salt.encode("utf-8"), _PW_ITERS)
+    return f"pbkdf2_sha256${_PW_ITERS}${salt}${dk.hex()}"
+
+
+def _verify_password(pw: str, stored: Optional[str]) -> bool:
+    import hashlib, hmac
+    try:
+        algo, iters, salt, digest = (stored or "").split("$", 3)
+        if algo != "pbkdf2_sha256":
+            return False
+        dk = hashlib.pbkdf2_hmac("sha256", pw.encode("utf-8"), salt.encode("utf-8"), int(iters))
+        return hmac.compare_digest(dk.hex(), digest)
+    except (ValueError, AttributeError):
+        return False
+
+
+def _admin_emails() -> set:
+    return {e.strip().lower() for e in (os.getenv("ADMIN_EMAILS") or "").split(",") if e.strip()}
+
+
+def _valid_email(e: str) -> bool:
+    return bool(re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", e or ""))
+
+
+def _check_password_strength(pw: str) -> None:
+    if len(pw or "") < 8:
+        raise HTTPException(status_code=400, detail="La contrasenya ha de tenir almenys 8 caràcters")
+
+
+def _new_session(db: Session, user: UserModel, device: Optional[str]) -> str:
+    raw = secrets.token_hex(24)
+    db.add(UserSessionModel(user_id=user.id, token_hash=_hash_token(raw), device=(device or "")[:120] or None))
+    db.commit()
+    return raw
+
+
+def _rate_limit(bucket: Dict[str, List[float]], key: str, limit: int, window: int) -> None:
+    now_ts = datetime.utcnow().timestamp()
+    attempts = [t for t in bucket.get(key, []) if now_ts - t < window]
+    if len(attempts) >= limit:
+        raise HTTPException(status_code=429, detail="Massa intents; torna-ho a provar més tard")
+    attempts.append(now_ts)
+    bucket[key] = attempts
+
+
+def _user_payload(user: UserModel) -> dict:
+    return {"username": user.username, "display_name": user.display_name, "email": user.email,
+            "variety": user.variety, "region": user.region, "is_admin": bool(user.is_admin),
+            "has_password": bool(user.password_hash)}
+
+
+def _send_email(to: str, subject: str, body: str) -> bool:
+    """SMTP sender from env (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM). False when not configured."""
+    host, user_, pw = os.getenv("SMTP_HOST"), os.getenv("SMTP_USER"), os.getenv("SMTP_PASS")
+    if not (host and user_ and pw):
+        return False
+    import smtplib
+    from email.message import EmailMessage
+    msg = EmailMessage()
+    msg["From"] = os.getenv("SMTP_FROM") or user_
+    msg["To"] = to
+    msg["Subject"] = subject
+    msg.set_content(body)
+    with smtplib.SMTP(host, int(os.getenv("SMTP_PORT") or 587), timeout=30) as smtp:
+        smtp.starttls()
+        smtp.login(user_, pw)
+        smtp.send_message(msg)
+    return True
 
 # ---- Pagination + delta-sync helpers (P4.1-4.3)
 DEFAULT_PAGE_LIMIT = 100
@@ -4838,6 +4936,119 @@ def register_user(
     return {"username": user.username, "display_name": user.display_name,
             "variety": user.variety, "region": user.region, "token": raw_token}
 
+@app.post("/auth/signup")
+def auth_signup(request: Request, email: str = Body(..., embed=True), password: str = Body(..., embed=True),
+                username: str = Body(..., embed=True), display_name: Optional[str] = Body(None, embed=True),
+                variety: Optional[str] = Body(None, embed=True), region: Optional[str] = Body(None, embed=True),
+                device: Optional[str] = Body(None, embed=True), db: Session = Depends(get_db)):
+    """Create an account (e-mail + password + username). Returns a session token for this
+    device (X-User-Token) and the profile. Admins are the ADMIN_EMAILS env list."""
+    ip = request.client.host if request.client else "unknown"
+    _rate_limit(_register_attempts, ip, 5, 3600)
+    email_n = (email or "").strip().lower()
+    if not _valid_email(email_n):
+        raise HTTPException(status_code=400, detail="Adreça de correu no vàlida")
+    _check_password_strength(password)
+    uname = (username or "").strip().lower()
+    if not re.fullmatch(r"[a-z0-9_\-\.]{3,32}", uname):
+        raise HTTPException(status_code=400, detail="Username must be 3-32 chars: a-z 0-9 _ - .")
+    if db.query(UserModel).filter(UserModel.email == email_n).first():
+        raise HTTPException(status_code=409, detail="Ja hi ha un compte amb aquest correu")
+    if db.query(UserModel).filter(UserModel.username == uname).first():
+        raise HTTPException(status_code=409, detail="Username already taken")
+    user = UserModel(username=uname, display_name=(display_name or uname).strip(), token=_hash_token(secrets.token_hex(16)),
+                     email=email_n, password_hash=_hash_password(password), is_admin=email_n in _admin_emails(),
+                     variety=(variety or None), region=(region or "").strip() or None)
+    db.add(user); db.commit(); db.refresh(user)
+    return {**_user_payload(user), "token": _new_session(db, user, device)}
+
+
+@app.post("/auth/login")
+def auth_login(request: Request, login: str = Body(..., embed=True), password: str = Body(..., embed=True),
+               device: Optional[str] = Body(None, embed=True), db: Session = Depends(get_db)):
+    """Sign in with e-mail (or username) + password; returns a new session token for this device."""
+    ip = request.client.host if request.client else "unknown"
+    _rate_limit(_login_attempts, ip, 10, 900)
+    key = (login or "").strip().lower()
+    user = db.query(UserModel).filter((UserModel.email == key) | (UserModel.username == key)).first()
+    if user is None or not _verify_password(password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Correu o contrasenya incorrectes")
+    if user.email and user.email in _admin_emails() and not user.is_admin:
+        user.is_admin = True; db.commit()
+    return {**_user_payload(user), "token": _new_session(db, user, device)}
+
+
+@app.post("/auth/logout")
+def auth_logout(request: Request, db: Session = Depends(get_db)):
+    """Forget this device's session (the legacy registration token is not affected)."""
+    token = (request.headers.get("x-user-token") or "").strip()
+    if token:
+        db.query(UserSessionModel).filter(UserSessionModel.token_hash == _hash_token(token)).delete()
+        db.commit()
+    return {"ok": True}
+
+
+@app.post("/auth/attach")
+def auth_attach(email: str = Body(..., embed=True), password: str = Body(..., embed=True),
+                user: UserModel = Depends(require_user), db: Session = Depends(get_db)):
+    """A token identity (registered before accounts existed) adds an e-mail and a password."""
+    email_n = (email or "").strip().lower()
+    if not _valid_email(email_n):
+        raise HTTPException(status_code=400, detail="Adreça de correu no vàlida")
+    _check_password_strength(password)
+    other = db.query(UserModel).filter(UserModel.email == email_n, UserModel.id != user.id).first()
+    if other:
+        raise HTTPException(status_code=409, detail="Ja hi ha un compte amb aquest correu")
+    user.email = email_n; user.password_hash = _hash_password(password); user.is_admin = user.is_admin or email_n in _admin_emails()
+    db.commit()
+    return _user_payload(user)
+
+
+@app.post("/auth/password")
+def auth_change_password(old_password: str = Body(..., embed=True), new_password: str = Body(..., embed=True),
+                         user: UserModel = Depends(require_user), db: Session = Depends(get_db)):
+    if user.password_hash and not _verify_password(old_password, user.password_hash):
+        raise HTTPException(status_code=401, detail="La contrasenya actual no és correcta")
+    _check_password_strength(new_password)
+    user.password_hash = _hash_password(new_password)
+    db.commit()
+    return {"ok": True}
+
+
+@app.post("/auth/forgot")
+def auth_forgot(request: Request, email: str = Body(..., embed=True), db: Session = Depends(get_db)):
+    """E-mail a 6-digit reset code (30 min). Always answers ok, so addresses cannot be probed;
+    503 only when no SMTP sender is configured."""
+    ip = request.client.host if request.client else "unknown"
+    _rate_limit(_login_attempts, ip, 10, 900)
+    if not (os.getenv("SMTP_HOST") and os.getenv("SMTP_USER") and os.getenv("SMTP_PASS")):
+        raise HTTPException(status_code=503, detail="No hi ha cap servidor de correu configurat; demana el restabliment a l'administrador")
+    user = db.query(UserModel).filter(UserModel.email == (email or "").strip().lower()).first()
+    if user:
+        code = f"{secrets.randbelow(10**6):06d}"
+        user.reset_code_hash = _hash_token(code); user.reset_expires = datetime.utcnow() + timedelta(minutes=30)
+        db.commit()
+        try:
+            _send_email(user.email, "Tamazight Drills: codi per restablir la contrasenya",
+                        f"Hola {user.display_name or user.username},\n\nEl teu codi és: {code}\nCaduca en 30 minuts.\n")
+        except Exception as e:
+            print(f"[AUTH] reset e-mail failed: {e}")
+    return {"ok": True}
+
+
+@app.post("/auth/reset")
+def auth_reset(email: str = Body(..., embed=True), code: str = Body(..., embed=True), new_password: str = Body(..., embed=True),
+               device: Optional[str] = Body(None, embed=True), db: Session = Depends(get_db)):
+    user = db.query(UserModel).filter(UserModel.email == (email or "").strip().lower()).first()
+    if not user or not user.reset_code_hash or not user.reset_expires or user.reset_expires < datetime.utcnow() \
+            or user.reset_code_hash != _hash_token((code or "").strip()):
+        raise HTTPException(status_code=400, detail="Codi incorrecte o caducat")
+    _check_password_strength(new_password)
+    user.password_hash = _hash_password(new_password); user.reset_code_hash = None; user.reset_expires = None
+    db.commit()
+    return {**_user_payload(user), "token": _new_session(db, user, device)}
+
+
 @app.get("/users/me")
 def get_me(user: Optional[UserModel] = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user:
@@ -4847,6 +5058,9 @@ def get_me(user: Optional[UserModel] = Depends(get_current_user), db: Session = 
     return {
         "username": user.username,
         "display_name": user.display_name,
+        "email": user.email,
+        "is_admin": bool(user.is_admin),
+        "has_password": bool(user.password_hash),
         "variety": user.variety,
         "region": user.region,
         "tz": user.tz or DEFAULT_TZ,
