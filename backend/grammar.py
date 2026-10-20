@@ -266,7 +266,7 @@ def _clean_prose(s: Optional[str]) -> str:
     t = re.sub(r"\s*\([^()]*[\u0600-\u06FF][^()]*\)", "", t)          # (مرحبا)
     t = re.sub(r"[\u0600-\u06FF][\u0600-\u06FF\s\-؟]*", "", t)         # bare Arabic script
     t = re.sub(r"\s*\((?:exemples?|ids?)\s*[\d,\s]+(?:i\s*\d+)?\)", "", t, flags=re.I)
-    t = re.sub(r"\b(?:als?|els?|en\s+l'|l')\s*exemples?\s+\d+(?:\s*(?:,|i)\s*\d+)*", "", t, flags=re.I)
+    t = re.sub(r"\b(?:en\s+|a\s+)?(?:als?|els?|l')\s*exemples?\s+\d+(?:\s*(?:,|i)\s*\d+)*", "", t, flags=re.I)
     t = re.sub(r"\bexemples?\s+\d+(?:\s*(?:,|i)\s*\d+)*", "", t, flags=re.I)
     return re.sub(r"\s+", " ", t).replace(" ,", ",").replace(" .", ".").strip()
 
