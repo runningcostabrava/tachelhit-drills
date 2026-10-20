@@ -295,15 +295,15 @@ export const api = {
 
 export interface GrammarUnit { slug: string; title: string; level: number }
 /** A drill as a lesson quotes it: both texts plus its picture and a voice (the speaker's when recorded). */
-export interface LessonExample { id: number; shi: string; ca: string; image_url?: string | null; audio_url?: string | null; recorded: boolean; author?: string | null; region?: string | null }
+export interface LessonExample { id: number; shi: string; ca: string; image_url?: string | null; audio_url?: string | null; recorded: boolean; author?: string | null; region?: string | null; origin?: string | null; focus?: string | null }
 export type LessonStep =
   | { type: 'explain'; title: string; text: string; examples: LessonExample[] }
   | { type: 'pattern'; title: string; rows: string[][] }
-  | { type: 'quiz'; question: string; options: string[]; answer: number; example: LessonExample }
+  | { type: 'quiz'; kind: 'meaning' | 'listen' | 'picture'; question: string; options: string[]; answer: number; example: LessonExample }
   | { type: 'tip'; text: string }
   | { type: 'dialect'; text: string }
   | { type: 'end' };
-export interface GrammarLesson { intro: string; steps: LessonStep[]; error?: string }
+export interface GrammarLesson { intro: string; steps: LessonStep[]; study?: string; error?: string }
 export interface GrammarUnitPage extends GrammarUnit { lesson: GrammarLesson; total: number; drills: Drill[] }
 
 export interface AiUsage {

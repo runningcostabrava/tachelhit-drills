@@ -228,9 +228,9 @@ function Example({ e, highlight }: { e: LessonExample; highlight?: 'ok' | 'ko' }
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'var(--surface-2)', border: `1px solid ${border}`, borderRadius: 'var(--r-lg)' }}>
       {e.image_url && <img src={getMediaUrl(e.image_url)} alt="" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 'var(--r-md)', flexShrink: 0 }} onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = 'none'; }} />}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 800, fontSize: '17px', color: 'var(--text)', lineHeight: 1.3 }}>{e.shi}</div>
+        <div style={{ fontWeight: 800, fontSize: '17px', color: 'var(--text)', lineHeight: 1.3 }}>{withFocus(e.shi, e.focus)}</div>
         <div style={{ fontSize: '14px', color: 'var(--text-soft)' }}>{e.ca}</div>
-        {(e.recorded || e.region) && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>{e.recorded ? `veu de ${e.author || 'parlant'}` : 'veu sintètica'}{e.region ? ` · ${e.region}` : ''}</div>}
+        {(e.recorded || e.origin || e.region) && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>{e.recorded ? `veu de ${e.author || 'parlant'}` : 'veu sintètica'}{e.origin || e.region ? ` · ${e.origin || e.region}` : ''}</div>}
       </div>
       <button onClick={play} disabled={!e.audio_url} aria-label="Escolta" style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 'var(--r-pill)', border: 'none', background: e.audio_url ? (e.recorded ? 'var(--brand-1)' : 'var(--sky)') : 'var(--surface)', color: e.audio_url ? '#fff' : 'var(--text-muted)', cursor: e.audio_url ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={15} /></button>
     </div>
@@ -258,15 +258,24 @@ function PatternCard({ step }: { step: Extract<LessonStep, { type: 'pattern' }> 
 
 function QuizCard({ step, chosen, onChoose }: { step: Extract<LessonStep, { type: 'quiz' }>; chosen?: number; onChoose: (k: number) => void }) {
   const answered = chosen !== undefined;
+  const kind = step.kind || 'meaning';
+  const play = useCallback(() => { if (step.example.audio_url) new Audio(getMediaUrl(step.example.audio_url)).play().catch(() => {}); }, [step.example.audio_url]);
+  useEffect(() => { if (kind === 'listen' && !answered) play(); }, [kind, answered, play]);
   const choose = (k: number) => {
     if (answered) return;
     onChoose(k);
-    if (k === step.answer && step.example.audio_url) new Audio(getMediaUrl(step.example.audio_url)).play().catch(() => {});
+    if (k === step.answer && kind !== 'listen') play();
   };
   return (
     <div>
-      <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--saffron-strong)', marginBottom: 6 }}>Pregunta ràpida</div>
+      <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--saffron-strong)', marginBottom: 6 }}>{kind === 'listen' ? 'Escolta' : kind === 'picture' ? 'Mira' : 'Pregunta ràpida'}</div>
       <h2 style={{ fontSize: '18px', margin: '0 0 12px', lineHeight: 1.3 }}>{step.question}</h2>
+      {kind === 'listen' && (
+        <button onClick={play} aria-label="Torna a escoltar" style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 auto 14px', padding: '14px 22px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 700, fontSize: '15px', cursor: 'pointer', boxShadow: 'var(--shadow-brand)' }}><FaVolumeUp size={20} /> Torna a escoltar</button>
+      )}
+      {kind === 'picture' && step.example.image_url && (
+        <img src={getMediaUrl(step.example.image_url)} alt="" style={{ display: 'block', width: '100%', maxHeight: 240, objectFit: 'cover', borderRadius: 'var(--r-lg)', marginBottom: 14 }} onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {step.options.map((o, k) => {
           const isAnswer = k === step.answer; const isChosen = k === chosen;
@@ -321,6 +330,7 @@ function EndCard({ page, answers, cards, onTest, isAdmin, onRewrite, rewriting, 
         {nextUnit && <button onClick={() => navigate(`/grammar/${nextUnit.slug}`)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Següent unitat: {nextUnit.title} <FaChevronRight /></button>}
         {page.drills.length > 0 && <button onClick={onTest} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: 'var(--r-pill)', border: nextUnit ? '1px solid var(--brand-1)' : 'none', background: nextUnit ? 'var(--surface)' : 'var(--brand-gradient)', color: nextUnit ? 'var(--brand-1)' : '#fff', fontWeight: 700, cursor: 'pointer' }}><FaBullseye /> Practica aquesta unitat</button>}
         <button onClick={() => setShowAll((v) => !v)} style={{ padding: '10px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, cursor: 'pointer' }}>{showAll ? 'Amaga els exemples' : `Tots els exemples · ${page.total}`}</button>
+        {isAdmin && page.lesson.study && <details style={{ width: '100%', order: 9 }}><summary style={{ cursor: 'pointer', fontSize: '13px', color: 'var(--text-soft)', fontWeight: 700 }}>Full d’estudi (del compendi, només administradors)</summary><pre style={{ whiteSpace: 'pre-wrap', fontSize: '13px', lineHeight: 1.5, color: 'var(--text)', fontFamily: 'var(--font-sans)', margin: '8px 0 0' }}>{page.lesson.study}</pre></details>}
         {isAdmin && <button onClick={onRewrite} disabled={rewriting} title="Torna a escriure la lliçó (administrador)" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)', fontWeight: 700, cursor: rewriting ? 'default' : 'pointer' }}><FaRedo /> {rewriting ? 'Reescrivint…' : 'Reescriu la lliçó'}</button>}
       </div>
       {showAll && (
@@ -339,6 +349,14 @@ function EndCard({ page, answers, cards, onTest, isAdmin, onRewrite, rewriting, 
       )}
     </div>
   );
+}
+
+// The piece of the sentence that shows the rule, marked in the speaker's own spelling.
+function withFocus(shi: string, focus?: string | null) {
+  if (!focus) return shi;
+  const k = shi.toLowerCase().indexOf(focus.toLowerCase());
+  if (k < 0) return shi;
+  return <>{shi.slice(0, k)}<mark style={{ background: 'var(--saffron-soft)', color: 'var(--saffron-strong)', borderRadius: 4, padding: '0 3px' }}>{shi.slice(k, k + focus.length)}</mark>{shi.slice(k + focus.length)}</>;
 }
 
 // **bold** is the only mark-up a lesson text carries.

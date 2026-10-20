@@ -68,7 +68,7 @@ UNITS: List[dict] = [
 SLUGS = [u["slug"] for u in UNITS]
 TITLES = {u["slug"]: u["title"] for u in UNITS}
 BATCH = 40
-LESSON_VERSION = 2  # bump when the lesson format or prompt changes: old rows are rewritten on next open
+LESSON_VERSION = 3  # bump when the lesson format or prompt changes: old rows are rewritten on next open
 
 # Drills whose tag names another language are never part of the course (the owner's old Irish tests).
 EXCLUDED_TAGS = ("irish",)
@@ -265,7 +265,24 @@ def example_dict(d) -> dict:
     audio = d.audio_url or getattr(d, "audio_tts_shi_url", None) or getattr(d, "audio_tts_url", None)
     return {"id": d.id, "shi": _clean_text(d.text_tachelhit), "ca": _clean_text(d.text_catalan),
             "image_url": d.image_url, "audio_url": audio, "recorded": bool(d.audio_url),
-            "author": (d.author or "").strip() or None, "region": d.region}
+            "author": (d.author or "").strip() or None, "region": d.region, "origin": origin(d)}
+
+
+AIT_MRAW = "Aït Mraw (Boutharar, Azilal)"
+
+def origin(d) -> str:
+    """Where a drill's sentence comes from, for the lesson writer and the card."""
+    author = (d.author or "").strip(); tag = (d.tag or "").lower(); region = (d.region or "").strip()
+    if author in ("Halima", "Driss") or "mraw" in region.lower():
+        return AIT_MRAW
+    if "benimellal" in tag or region.lower().startswith("beni mellal"):
+        return "Beni Mellal"
+    return region or ("gravació" if d.audio_url else "")
+
+
+def origin_rank(e: dict) -> int:
+    o = e.get("origin") or ""
+    return 0 if o == AIT_MRAW else 1 if o == "Beni Mellal" else 2
 
 
 def pick_examples(rows: List, limit: int = 40) -> List[dict]:
@@ -279,7 +296,9 @@ def pick_examples(rows: List, limit: int = 40) -> List[dict]:
         if "//" in shi or shi.count(",") >= 3 or shi.count("/") >= 2:
             continue  # the deck's conjugation lists and alternatives are not sentences
         cands.append(example_dict(d))
-    cands.sort(key=lambda e: (not (e["image_url"] and e["audio_url"]), not e["audio_url"], not e["image_url"], e["id"]))
+    # our own speakers from Aït Mraw first, then the Beni Mellal deck, then the rest; within each, the
+    # pictured-and-voiced sentences first
+    cands.sort(key=lambda e: (origin_rank(e), not (e["image_url"] and e["audio_url"]), not e["audio_url"], not e["image_url"], e["id"]))
     seen, out = set(), []
     for e in cands:
         k = e["shi"].lower()
@@ -294,35 +313,75 @@ def pick_examples(rows: List, limit: int = 40) -> List[dict]:
 BANNED_TERMS = ("apofonia", "díctic", "diàtesi", "morfema", "lexema", "radical", "acomplert", "inacomplert",
                 "sintagma", "tema verbal", "al·lomorf", "clític")
 
-def _lesson_prompt(unit: dict, examples: List[dict], reference: str) -> str:
-    ex = "\n".join(f"- id {e['id']}: «{e['shi']}» — {e['ca']}" for e in examples)
+def _study_prompt(unit: dict, reference: str) -> str:
     return (
-        f"Write the lesson «{unit['title']}» of a Tamazight course (Tachelhit and the Central Atlas / Beni Mellal "
-        "variety) for Catalan-speaking adults who are NOT linguists: a curious traveller, a partner of a Tamazight "
-        "speaker. Plain, warm Catalan; short sentences; explain every grammatical word the first time you use it "
-        "(«el perfectiu, la forma que es fa servir per a accions acabades…»). Never use these words: "
-        + ", ".join(BANNED_TERMS) + ". Say «pronom enganxat al verb» instead of clític, «forma de passat / acció "
-        "acabada» instead of acomplert, and so on.\n\n"
+        f"Study these sections of an Amazigh grammar reference (amazic.cat compendium, in Catalan, centred on the "
+        f"Souss Tachelhit with notes on other varieties) for the lesson «{unit['title']}». Write a STUDY SHEET in "
+        "Catalan, at most 600 words, that a teacher will use to explain this point with real sentences from the "
+        "Central Atlas (Aït Mraw near Boutharar, Azilal; Beni Mellal):\n"
+        "1. RULES: the rules of this point, numbered, one or two sentences each, in plain words.\n"
+        "2. FORMS: the forms (prefixes, suffixes, particles, pronouns…) as a compact table in standard Latin "
+        "spelling (ɣ, ḥ, ṣ, ṭ, ẓ, ɛ, š), with what each one means.\n"
+        "3. VARIETIES: which rules or forms the reference marks as Souss-only, Central Atlas (tamazight) or "
+        "general; what the reference says the Central Atlas does differently, if anything.\n"
+        "4. WHAT TO LOOK FOR in a sentence to recognise this point (the visible clues).\n"
+        "Keep only what the reference says; do not add rules from elsewhere.\n\n"
+        f"REFERENCE:\n{reference}"
+    )
+
+
+def study(slug: str, grammar_md: str) -> str:
+    """The rule sheet for a unit: the compendium's sections read and condensed once."""
+    unit = next((u for u in UNITS if u["slug"] == slug), None)
+    reference = reference_text(slug, grammar_md) if unit else ""
+    if not reference:
+        return ""
+    from gemini_client import gemini_generate
+    return _clean_sheet(gemini_generate("You are a careful reader of Amazigh grammar, writing notes in Catalan.",
+                                        [{"role": "user", "text": _study_prompt(unit, reference)}],
+                                        max_output_tokens=2500, temperature=0.2, timeout=240))
+
+
+def _clean_sheet(s: Optional[str]) -> str:
+    return (s or "").replace("\r", "").strip()
+
+
+def _lesson_prompt(unit: dict, examples: List[dict], sheet: str) -> str:
+    ex = "\n".join(f"- id {e['id']} ({e.get('origin') or 'origen desconegut'}{', gravat' if e.get('recorded') else ''}): «{e['shi']}» — {e['ca']}" for e in examples)
+    return (
+        f"Write the lesson «{unit['title']}» of a course of Central Atlas Tamazight (the speech of Aït Mraw near "
+        "Boutharar, Azilal, and of Beni Mellal) for Catalan-speaking adults who are NOT linguists: a curious "
+        "traveller, a partner of a Tamazight speaker. Plain, warm Catalan; short sentences; explain every grammatical "
+        "word the first time you use it («el perfectiu, la forma que es fa servir per a accions acabades…»). Never use "
+        "these words: " + ", ".join(BANNED_TERMS) + ". Say «pronom enganxat al verb» instead of clític, «forma de "
+        "passat / acció acabada» instead of acomplert, and so on.\n\n"
+        "METHOD. The study sheet below condenses the grammar reference. The sentences below are what OUR speakers "
+        "actually say. Your job is to show how the rules of the sheet appear in OUR sentences: every explanation "
+        "states one rule, quotes 1-3 of our sentences that show it, and names the exact piece of each sentence that "
+        "shows the rule (the \"focus\": a substring copied character for character from the sentence as written). "
+        "Prefer the sentences from Aït Mraw (our own recorded speakers), then Beni Mellal. If our sentences show "
+        "the rule differently from the sheet (another form, another spelling, a particle missing), say so plainly: "
+        "the speakers are right about their own speech, and the sheet describes mainly the Souss. If no sentence of "
+        "ours shows a rule, leave that rule out or say we have no example yet; never invent a sentence.\n\n"
         "Build the lesson as STEPS, each one a card the learner reads in a few seconds:\n"
-        "- 4 to 6 steps of type \"explain\": a title (3-6 words), a text of 35-70 words, and 1 to 3 example_ids "
-        "taken ONLY from the examples below (the examples that best show the point; quote nothing else). Start with "
-        "the simplest idea and build up.\n"
-        "- 1 step of type \"pattern\" (optional, when a table helps): a title and 3-7 rows of [form, meaning, example], "
-        "with the forms in standard Latin spelling (ɣ, ḥ, ṣ, ṭ, ẓ, ɛ, š).\n"
+        "- 4 to 6 steps of type \"explain\": a title (3-6 words), a text of 35-70 words, example_ids (1-3, ONLY from "
+        "the sentences below) and \"focus\": {id: substring} for each quoted sentence. Start with the simplest "
+        "idea and build up.\n"
+        "- 1 step of type \"pattern\" (optional, when a table helps): a title and 3-7 rows of [form, meaning, "
+        "example], the forms in standard Latin spelling (ɣ, ḥ, ṣ, ṭ, ẓ, ɛ, š), the example taken from our sentences "
+        "when one exists.\n"
         "- 1 step of type \"tip\": a text of 30-60 words on the mistake Catalan speakers make most, or a memory trick.\n"
-        "- 1 step of type \"dialect\" (only when it matters): 25-60 words on how Beni Mellal / Azilal speakers say it "
-        "versus the Souss (Tachelhit).\n"
+        "- 1 step of type \"dialect\": 25-70 words on how our speakers (Aït Mraw, Beni Mellal) do it versus what the "
+        "sheet says for the Souss, with the evidence from our sentences; leave it out only if there is no difference.\n"
         "Also an \"intro\" of 25-45 words: what the learner will be able to do after this unit.\n"
-        "Examples are quoted by id; the app shows them with their picture and voice. The examples are written as "
-        "their speakers wrote them (spelling varies: 3 for ɛ, gh for ɣ, kh for x): when your text names a form, "
-        "give the standard spelling and, if an example spells it differently, say so in a few words.\n"
-        "Never invent words or forms. If the reference and the examples disagree, trust the examples and say the "
-        "reference describes the Souss.\n\n"
+        "The sentences are written as their speakers wrote them (spelling varies: 3 for ɛ, gh for ɣ, kh for x, "
+        "capitals for emphatics): when your text names a form, give the standard spelling and, if the sentence spells "
+        "it differently, say so in a few words.\n\n"
         "Answer ONLY with a JSON object: {\"intro\": str, \"steps\": [{\"type\": \"explain\", \"title\": str, \"text\": str, "
-        "\"example_ids\": [int]}, {\"type\": \"pattern\", \"title\": str, \"rows\": [[str, str, str]]}, {\"type\": \"tip\", "
-        "\"text\": str}, {\"type\": \"dialect\", \"text\": str}]}.\n\n"
-        f"EXAMPLES FROM THE LIBRARY (real speakers):\n{ex}\n\n"
-        f"REFERENCE (grammar compendium, amazic.cat; describes mainly the Souss):\n{reference}"
+        "\"example_ids\": [int], \"focus\": {\"<id>\": str}}, {\"type\": \"pattern\", \"title\": str, \"rows\": [[str, str, str]]}, "
+        "{\"type\": \"tip\", \"text\": str}, {\"type\": \"dialect\", \"text\": str}]}.\n\n"
+        f"OUR SENTENCES (real speakers; origin in brackets):\n{ex}\n\n"
+        f"STUDY SHEET (from the amazic.cat compendium):\n{sheet}"
     )
 
 
@@ -339,8 +398,14 @@ def _parse_lesson(answer: str, examples: List[dict]) -> dict:
             ids = [int(i) for i in (s.get("example_ids") or []) if str(i).strip().lstrip("-").isdigit() and int(i) in by_id]
             if not _clean_text(s.get("text")):
                 continue
-            steps.append({"type": "explain", "title": _clean_text(s.get("title")) or "", "text": _clean_text(s.get("text")),
-                          "examples": [by_id[i] for i in dict.fromkeys(ids)][:3]})
+            focus = s.get("focus") if isinstance(s.get("focus"), dict) else {}
+            exs = []
+            for i in list(dict.fromkeys(ids))[:3]:
+                e = dict(by_id[i]); frag = _clean_text(str(focus.get(str(i)) or focus.get(i) or ""))
+                if frag and frag.lower() in e["shi"].lower() and len(frag) < len(e["shi"]):
+                    e["focus"] = frag
+                exs.append(e)
+            steps.append({"type": "explain", "title": _clean_text(s.get("title")) or "", "text": _clean_text(s.get("text")), "examples": exs})
         elif t == "pattern":
             rows = [[_clean_text(c) for c in r][:3] for r in (s.get("rows") or []) if isinstance(r, list) and r]
             if rows:
@@ -353,10 +418,13 @@ def _parse_lesson(answer: str, examples: List[dict]) -> dict:
 
 
 def _with_quizzes(lesson: dict, examples: List[dict]) -> dict:
-    """A quick check after every second explanation: «Com es diu …?» with 3 wrong answers from the same unit."""
+    """A quick check after every second explanation, three kinds in turn: read the meaning and pick
+    the sentence; listen to the voice and pick the meaning; look at the picture and pick the
+    sentence. Wrong answers come from the same unit and never mean the same thing."""
     import random
     pool = [e for e in examples if e["shi"] and e["ca"]]
-    out, n_explain, used = [], 0, set()
+    same = lambda a, b: a[:10].lower() == b[:10].lower()
+    out, n_explain, n_quiz, used = [], 0, 0, set()
     for s in lesson["steps"]:
         out.append(s)
         if s["type"] != "explain":
@@ -364,19 +432,27 @@ def _with_quizzes(lesson: dict, examples: List[dict]) -> dict:
         n_explain += 1
         if n_explain % 2 or len(pool) < 4:
             continue
-        target = next((e for e in s["examples"] if e["id"] not in used and e["shi"] and e["ca"]), None) or \
-                 next((e for e in pool if e["id"] not in used), None)
-        if not target:
+        kind = ("meaning", "listen", "picture")[n_quiz % 3]
+        need = {"listen": "audio_url", "picture": "image_url"}.get(kind)
+        fresh = [e for e in s["examples"] if e["id"] not in used] + [e for e in pool if e["id"] not in used]
+        target = next((e for e in fresh if e in pool and (not need or e.get(need))), None)
+        if target is None:
+            kind, target = "meaning", next((e for e in fresh if e in pool), None)
+        if target is None:
             continue
-        used.add(target["id"])
+        used.add(target["id"]); n_quiz += 1
         rnd = random.Random(target["id"])
-        same = lambda a, b: a[:10].lower() == b[:10].lower()  # a wrong answer must not mean the same thing
-        wrong = [e["shi"] for e in pool if e["id"] != target["id"] and e["shi"].lower() != target["shi"].lower() and not same(e["ca"], target["ca"])]
+        field = "ca" if kind == "listen" else "shi"
+        wrong = [e[field] for e in pool if e["id"] != target["id"] and e["shi"].lower() != target["shi"].lower() and not same(e["ca"], target["ca"])]
+        wrong = list(dict.fromkeys(wrong))
+        if len(wrong) < 3:
+            continue
         rnd.shuffle(wrong)
-        options = [target["shi"]] + wrong[:3]
+        options = [target[field]] + wrong[:3]
         rnd.shuffle(options)
-        out.append({"type": "quiz", "question": f"Com es diu «{target['ca']}»?", "options": options,
-                    "answer": options.index(target["shi"]), "example": target})
+        question = {"meaning": f"Com es diu «{target['ca']}»?", "listen": "Escolta. Què vol dir?", "picture": "Quina frase va amb la imatge?"}[kind]
+        out.append({"type": "quiz", "kind": kind, "question": question, "options": options,
+                    "answer": options.index(target[field]), "example": target})
     out.append({"type": "end"})
     return {**lesson, "steps": out}
 
@@ -387,10 +463,12 @@ def write_lesson(slug: str, grammar_md: str, examples: List[dict]) -> dict:
     if unit is None:
         raise ValueError("unknown unit")
     from gemini_client import gemini_generate
+    sheet = study(slug, grammar_md)
     answer = gemini_generate("You are a patient, clear teacher of Amazigh for beginners, writing in Catalan.",
-                             [{"role": "user", "text": _lesson_prompt(unit, examples, reference_text(slug, grammar_md))}],
-                             max_output_tokens=4000, temperature=0.3, timeout=240)
+                             [{"role": "user", "text": _lesson_prompt(unit, examples, sheet)}],
+                             max_output_tokens=4500, temperature=0.3, timeout=240)
     lesson = _parse_lesson(answer, examples)
+    lesson["study"] = sheet  # the rule sheet travels with the lesson (shown to admins)
     return _with_quizzes(lesson, examples)
 
 
