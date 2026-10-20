@@ -138,15 +138,18 @@ def load(force: bool = False) -> bool:
             gl: Dict[str, List[dict]] = {}
             try:
                 raw = json.load(open(_fetch(DGLAI_REPO, DGLAI_FILE), encoding="utf-8"))
+                def _s(v) -> str:  # fields come as strings or lists of strings
+                    if isinstance(v, (list, tuple)):
+                        return "; ".join(str(x).strip() for x in v if x)
+                    return str(v or "").strip()
                 for rec in (raw.values() if isinstance(raw, dict) else raw):
-                    tif, lat = (rec.get("tifinagh") or "").strip(), (rec.get("latin") or "").strip()
+                    if not isinstance(rec, dict):
+                        continue
+                    tif, lat = _s(rec.get("tifinagh")), _s(rec.get("latin"))
                     if not (tif or lat):
                         continue
-                    fr = rec.get("meaning_fr")
-                    if isinstance(fr, list):
-                        fr = "; ".join(str(x) for x in fr if x)
-                    e = {"tifinagh": tif, "latin": lat, "grammar": rec.get("grammar") or "", "french": (fr or "").strip(),
-                         "arabic": (rec.get("meaning_ar") or "").strip(), "construct": rec.get("construct_state") or ""}
+                    e = {"tifinagh": tif, "latin": lat, "grammar": _s(rec.get("grammar")), "french": _s(rec.get("meaning_fr")),
+                         "arabic": _s(rec.get("meaning_ar")), "construct": _s(rec.get("construct_state"))}
                     for form in {tif, lat, e["construct"]} - {""}:
                         sk, lk = _keys(form)
                         _add(gs, gl, sk, lk, e, 6)
