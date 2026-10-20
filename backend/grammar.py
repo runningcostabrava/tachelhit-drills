@@ -325,7 +325,9 @@ def _study_prompt(unit: dict, reference: str) -> str:
         "3. VARIETIES: which rules or forms the reference marks as Souss-only, Central Atlas (tamazight) or "
         "general; what the reference says the Central Atlas does differently, if anything.\n"
         "4. WHAT TO LOOK FOR in a sentence to recognise this point (the visible clues).\n"
-        "Keep only what the reference says; do not add rules from elsewhere.\n\n"
+        "Keep only what the reference says; do not add rules from elsewhere. Spell the reference's variety "
+        "abbreviations out (CLḤ = taixelhit del Souss, MZƔ = tamazight del Marroc Central, QBYL = cabilenc, RIF = "
+        "rifeny, ZNT = zenata). Start directly with «1. REGLES»: no preamble, no closing remark.\n\n"
         f"REFERENCE:\n{reference}"
     )
 
@@ -343,7 +345,10 @@ def study(slug: str, grammar_md: str) -> str:
 
 
 def _clean_sheet(s: Optional[str]) -> str:
-    return (s or "").replace("\r", "").strip()
+    """Drop a chatty preamble: the sheet starts at its first numbered or bold heading."""
+    t = (s or "").replace("\r", "")
+    m = re.search(r"(?m)^(\*\*|#+ |1\.\s)", t)
+    return (t[m.start():] if m else t).strip()
 
 
 def _lesson_prompt(unit: dict, examples: List[dict], sheet: str) -> str:
