@@ -2079,6 +2079,46 @@ class TtsRequest(BaseModel):
     drill_id: Optional[int] = 0
     meaning: Optional[str] = None  # Catalan meaning: lets the spelling be normalised for the voice
 
+def _needs_tts(drill) -> bool:
+    """A confirmed text without a current (v2) synthetic voice."""
+    t = (drill.text_tachelhit or "").strip()
+    return bool(t) and t.lower() != "text" and f"tts_{VOICE_VERSION}_" not in (drill.audio_tts_shi_url or "")
+
+
+def prefill_tts(drill, db) -> Optional[str]:
+    """Make and store the synthetic voice of a drill whose text is confirmed. Best effort:
+    returns the url or None; never raises (the drill is fine without a voice)."""
+    try:
+        if not _needs_tts(drill):
+            return drill.audio_tts_shi_url
+        spoken, _how = tts_text(drill.text_tachelhit, drill.text_catalan)
+        if not spoken:
+            return None
+        url = generate_tachelhit_tts_hf(spoken, drill.id)
+        drill.audio_tts_shi_url = url
+        db.commit()
+        return url
+    except Exception as e:
+        print(f"[TTS-PREFILL] drill {getattr(drill, 'id', '?')}: {e}")
+        return None
+
+
+@app.post("/tts/prefill")
+async def tts_prefill(limit: int = Body(25, embed=True), tag: Optional[str] = Body(None, embed=True),
+                      db: Session = Depends(get_db), _admin: UserModel = Depends(require_admin)):
+    """Admin: produce the synthetic voice of up to `limit` drills with confirmed text that
+    still lack one (oldest first; `tag` narrows). Call repeatedly until `remaining` is 0."""
+    q = db.query(DrillModel).filter(DrillModel.text_tachelhit != None, DrillModel.text_tachelhit != "")
+    if tag:
+        q = q.filter(DrillModel.tag.ilike(f"%{tag}%"))
+    todo = [d for d in q.order_by(DrillModel.id.asc()).all() if _needs_tts(d)]
+    done, failed = [], []
+    for d in todo[:max(1, min(limit, 100))]:
+        url = await asyncio.to_thread(prefill_tts, d, db)
+        (done if url else failed).append(d.id)
+    return {"made": done, "failed": failed, "remaining": max(0, len(todo) - len(done) - len(failed))}
+
+
 @app.post("/tts/tachelhit")
 @app.post("/tts/tachelhit/")
 async def tachelhit_tts_endpoint(request: TtsRequest, db: Session = Depends(get_db)):
@@ -4075,6 +4115,10 @@ async def auto_drills_pipeline_task(job_id: int, url: Optional[str], video_path:
             # Count the drill now — a text drill is valid even if media clipping
             # fails; the audio/video clip is best-effort enrichment on top.
             drills_created.append(db_drill.id)
+            if drill_tachelhit and os.getenv("TTS_PREFILL", "1") != "0":
+                # confirmed words (a subtitle track, a known lesson line): the synthetic voice is
+                # made now and stored, so the player never has to wait for it
+                await asyncio.to_thread(prefill_tts, db_drill, db)
             try:
                 if seg.get("no_media") or seg.get("start") is None:
                     media_errors.append(f"{seg.get('latin') or seg.get('text')}: spoken but not shown on screen (no clip)")

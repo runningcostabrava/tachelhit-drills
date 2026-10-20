@@ -36,3 +36,22 @@ def test_bad_gemini_answers_fall_back_to_transliteration(monkeypatch):
     monkeypatch.setattr(gemini_client, "gemini_generate", boom)
     assert tts_text.tts_text("righ srdgh ifsn", "x")[1] == "transliteration"
     assert tts_text.tts_text("righ srdgh ifsn")[1] == "transliteration"  # no meaning: no Gemini call
+
+
+def test_prefill_tts_makes_and_stores_a_voice_once(monkeypatch):
+    import main
+    from test_api import client
+    calls = []
+    monkeypatch.setattr(main, "generate_tachelhit_tts_hf", lambda spoken, did: calls.append(spoken) or f"https://res.cloudinary.com/x/tachelhit_tts_{main.VOICE_VERSION}_{did}.mp3")
+    d = client.post("/drills/", json={"text_catalan": "Ha llaurat", "text_tachelhit": "ⵉⵙ ⵉⴽⵔⵣ"}).json()
+    db = main.SessionLocal()
+    try:
+        drill = db.query(main.DrillModel).filter(main.DrillModel.id == d["id"]).first()
+        url = main.prefill_tts(drill, db)
+        assert url and f"tts_{main.VOICE_VERSION}_" in url and calls == ["ⵉⵙ ⵉⴽⵔⵣ"]
+        assert main.prefill_tts(drill, db) == url and len(calls) == 1  # already made: no second call
+        placeholder = db.query(main.DrillModel).filter(main.DrillModel.id == client.post("/drills/", json={"text_catalan": "x", "text_tachelhit": "text"}).json()["id"]).first()
+        assert main.prefill_tts(placeholder, db) is None and len(calls) == 1
+    finally:
+        db.close()
+    assert client.post("/tts/prefill", json={"limit": 5}).status_code == 401  # admin only
