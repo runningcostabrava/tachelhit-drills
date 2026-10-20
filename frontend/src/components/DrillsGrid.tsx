@@ -676,6 +676,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                                     alt="Imatge del drill"
                                     loading="lazy"
                                     decoding="async"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                     style={{ width: '100%', height: '180px', objectFit: 'contain', background: 'var(--surface-2)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)' }}
                                 />
                             </div>

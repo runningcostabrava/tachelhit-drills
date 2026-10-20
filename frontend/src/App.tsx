@@ -4,7 +4,7 @@ import { Network } from '@capacitor/network';
 import axios from 'axios';
 import { API_BASE } from './config';
 import { api } from './api';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { FaLayerGroup, FaVideo, FaBookOpen, FaGraduationCap, FaFilm, FaComments, FaUser, FaRedo, FaFire, FaPlay } from 'react-icons/fa';
 import { syncManager } from './services/OfflineSyncManager';
 import ToastHost from './components/ToastHost';
@@ -186,6 +186,8 @@ function App() {
         <Route path="/signin" element={<AuthPage />} />
         <Route path="/corpus" element={<CorpusPage />} />
         <Route path="/verify" element={<VerifyQueue />} />
+        {/* An unknown path (old link, typo, stale app shell) used to render an empty page. */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       </Suspense>
       </main>

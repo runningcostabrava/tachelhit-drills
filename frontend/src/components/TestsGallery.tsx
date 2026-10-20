@@ -114,8 +114,8 @@ export default function TestsGallery(p: Props) {
                   <span style={pill}>{p.questionTypeLabel(t.question_type)}</span>
                   {t.date_created && <span style={pill}><FaCalendarAlt /> {fmtDate(t.date_created)}</span>}
                 </div>
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '6px' }} onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => p.onTake(t)} aria-label="Fes el test" style={{ flex: 1, minHeight: '36px', padding: '0 12px', background: 'var(--brand-gradient)', color: '#fff', border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><FaBullseye /> Fes el test</button>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center', marginTop: '6px' }} onClick={(e) => e.stopPropagation()}>
+                  <button onClick={() => p.onTake(t)} aria-label="Fes el test" style={{ flex: '1 1 110px', whiteSpace: 'nowrap', minHeight: '36px', padding: '0 12px', background: 'var(--brand-gradient)', color: '#fff', border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><FaBullseye /> Fes el test</button>
                   <button onClick={() => p.onListen(t)} title="Escolta els drills del test" aria-label="Escolta" style={iconBtn()}><FaHeadphones /></button>
                   {!isMobile && <button onClick={() => p.onEdit(t)} title="Edita el test" aria-label="Edita" style={iconBtn()}><FaPen /></button>}
                   <button onClick={() => p.onDelete(t)} title="Elimina el test" aria-label="Elimina" style={iconBtn(true)}><FaTrash /></button>

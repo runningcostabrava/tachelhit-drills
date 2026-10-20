@@ -29,10 +29,18 @@ const TESTS_CACHE_KEY = 'cached_tests';
 const SYNC_QUEUE_KEY = 'sync_queue';
 const DEAD_QUEUE_KEY = 'sync_dead';
 const MAX_ATTEMPTS = 5;
+/** A media URL that failed to download is not retried before this (a 404 waits a day). */
+const MEDIA_RETRY_MS = 60 * 60 * 1000;
+const MEDIA_RETRY_404_MS = 24 * 60 * 60 * 1000;
+/** A full media walk (one Filesystem.stat per drill asset) runs at most this often. */
+const MEDIA_SYNC_MIN_INTERVAL_MS = 10 * 60 * 1000;
 const newUid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
 class OfflineSyncManager {
   private syncPromise: Promise<void> | null = null;
+  /** url -> time before which it must not be downloaded again (dead links, 404s, offline blips). */
+  private mediaRetryAfter = new Map<string, number>();
+  private lastMediaSyncAt = 0;
 
   async getDrills(): Promise<Drill[]> {
     const { value } = await Preferences.get({ key: DRILLS_CACHE_KEY });
@@ -345,6 +353,9 @@ class OfflineSyncManager {
       else if (url.includes('.mp3') || url.includes('.wav') || url.includes('.m4a')) mediaType = 'audio';
     }
 
+    const retryAt = this.mediaRetryAfter.get(url);
+    if (retryAt && retryAt > Date.now()) return url;
+
     try {
       const fileName = url.split('/').pop() || `media_${Date.now()}`;
 
@@ -385,7 +396,13 @@ class OfflineSyncManager {
 
       return (window as any).Capacitor.convertFileSrc(result.uri);
     } catch (err) {
-      console.error(`[OfflineSync] Media download failed for ${url}:`, err);
+      // Remember the failure: a dead link used to be retried on every drill-list refresh,
+      // every few seconds, for as long as the app was open (battery + data on the phone).
+      const e = err as { response?: { status?: number }; message?: string } | undefined;
+      const status = e?.response?.status;
+      const wait = status === 404 || status === 410 ? MEDIA_RETRY_404_MS : MEDIA_RETRY_MS;
+      this.mediaRetryAfter.set(url, Date.now() + wait);
+      console.warn(`[OfflineSync] Media download failed for ${url} (retry in ${Math.round(wait / 60000)} min):`, e?.message || err);
       return url;
     }
   }
@@ -404,7 +421,7 @@ class OfflineSyncManager {
     }
   }
 
-  async syncAllMedia(options?: { includeVideos?: boolean; batchSize?: number }) {
+  async syncAllMedia(options?: { includeVideos?: boolean; batchSize?: number; force?: boolean }) {
     // Only perform background sync if running in a regular web browser on localhost OR if in Capacitor environment
     // For production web (Vercel), we don't want to try downloading files to a filesystem that doesn't exist
     const isCapacitor = (window as any).Capacitor?.isNativePlatform();
@@ -417,12 +434,17 @@ class OfflineSyncManager {
     const status = await Network.getStatus();
     if (!status.connected) return;
 
+    // The drill list is refreshed often (every page visit, after every change); walking
+    // every asset each time is a native-bridge call per asset. Once per interval is plenty.
+    if (!options?.force && Date.now() - this.lastMediaSyncAt < MEDIA_SYNC_MIN_INTERVAL_MS) return;
+
     // Use a lock to prevent concurrent syncAllMedia runs
     if ((this as any).isMediaSyncing) {
       console.log('[OfflineSync] Media sync already in progress, skipping...');
       return;
     }
     (this as any).isMediaSyncing = true;
+    this.lastMediaSyncAt = Date.now();
 
     try {
       const drills = await this.getDrills();

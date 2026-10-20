@@ -489,7 +489,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         </div>
 
         {localDrill.image_url && (
-          <img src={getSourceUrl(localDrill.image_url, 'image')} alt="Recurs del drill" style={{ width: '100%', height: '180px', borderRadius: 'var(--r-lg)', objectFit: 'contain', background: 'var(--surface-2)', border: '1px solid var(--border)' }} />
+          <img src={getSourceUrl(localDrill.image_url, 'image')} alt="Recurs del drill" onError={(e) => { e.currentTarget.style.display = 'none'; }} style={{ width: '100%', height: '180px', borderRadius: 'var(--r-lg)', objectFit: 'contain', background: 'var(--surface-2)', border: '1px solid var(--border)' }} />
         )}
 
         {/* Draw the sentence: one illustration in the deck's style, replacing whatever picture is there */}

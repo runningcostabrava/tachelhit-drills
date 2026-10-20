@@ -4374,6 +4374,20 @@ def capture_fail(request_id: int, error: str = Body("", embed=True), db: Session
     return {"ok": True}
 
 
+def _drills_created_count(value) -> Optional[int]:
+    """A job's processing_log keeps the LIST of drill ids; the queue and status endpoints
+    report a COUNT (the agent-processed rows store an int). The web app once printed the
+    whole id list in one line and pushed the phone layout sideways."""
+    if value is None:
+        return None
+    if isinstance(value, (list, tuple, set)):
+        return len(value)
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 @app.get("/capture/queue")
 def capture_queue(limit: int = 40, db: Session = Depends(get_db)):
     """The last `limit` capture requests, newest first, with state, drill count and error:
@@ -4391,7 +4405,7 @@ def capture_queue(limit: int = 40, db: Session = Depends(get_db)):
                 job_status = job.status
                 if job.processing_log:
                     try:
-                        drills_created = json.loads(job.processing_log).get("drills_created")
+                        drills_created = _drills_created_count(json.loads(job.processing_log).get("drills_created"))
                     except (ValueError, TypeError):
                         pass
         out.append({"id": r.id, "url": r.url, "tag": r.tag, "variety": r.variety, "status": r.status,
@@ -4417,7 +4431,7 @@ def capture_status(request_id: int, db: Session = Depends(get_db)):
             job_status = job.status
             if job.processing_log:
                 try:
-                    drills_created = json.loads(job.processing_log).get("drills_created")
+                    drills_created = _drills_created_count(json.loads(job.processing_log).get("drills_created"))
                 except (ValueError, TypeError):
                     pass
             if job.status == "COMPLETED" and req.status != "done":

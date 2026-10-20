@@ -110,9 +110,9 @@ export default function AutoCapturePanel() {
         <input type="checkbox" checked={audioOnly} onChange={(e) => setAudioOnly(e.target.checked)} />
         Només àudio (podcast / veu) — sense marcar, cada drill porta el seu clip de vídeo
       </label>
-      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px', fontSize: '13px', color: 'var(--text-soft)' }}>
-        Varietat que ensenya el vídeo
-        <select value={variety} onChange={(e) => setVariety(e.target.value)} style={{ padding: '6px 8px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)' }}>
+      <label style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginTop: '8px', fontSize: '13px', color: 'var(--text-soft)' }}>
+        <span style={{ whiteSpace: 'nowrap' }}>Varietat que ensenya el vídeo</span>
+        <select value={variety} onChange={(e) => setVariety(e.target.value)} style={{ flex: '1 1 200px', minWidth: 0, maxWidth: '100%', padding: '6px 8px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)' }}>
           <option value="">— com les captures anteriors del canal —</option>
           {varieties.map((v) => <option key={v.code} value={v.code}>{v.label}</option>)}
         </select>
@@ -159,7 +159,7 @@ export default function AutoCapturePanel() {
                 <div key={r.id} title={r.error || r.url} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: 'var(--r-md)', background: 'var(--surface-2)', border: '1px solid var(--border)', fontSize: '12.5px' }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flex: 'none' }} aria-hidden />
                   <span style={{ fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{r.tag || r.url.replace(/^https?:\/\/(www\.)?/, '')}</span>
-                  <span style={{ color, fontWeight: 700, flex: 'none' }}>{state}{r.drills_created != null ? ` · ${r.drills_created} drills` : ''}</span>
+                  <span style={{ color, fontWeight: 700, flex: 'none', maxWidth: '45%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{state}{r.drills_created != null ? ` · ${Array.isArray(r.drills_created) ? r.drills_created.length : r.drills_created} drills` : ''}</span>
                   <span style={{ color: 'var(--text-muted)', flex: 'none' }}>{when}</span>
                 </div>
               );

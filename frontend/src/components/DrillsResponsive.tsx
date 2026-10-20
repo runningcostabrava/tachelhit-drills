@@ -229,9 +229,7 @@ export default function DrillsResponsive() {
         const response = await axios.get(`${API_BASE}/drills/`);
         allDrills = response.data || [];
         setLoadError(null);
-        await syncManager.saveDrillsToCache(allDrills);
-        // Trigger media sync (audio & images only; videos are large and cached on-demand)
-        syncManager.syncAllMedia({ includeVideos: false });
+        await syncManager.saveDrillsToCache(allDrills); // also schedules the media sync (throttled)
       } catch (netErr) {
         console.warn('Server fetch failed, falling back to cached drills:', netErr);
         allDrills = await syncManager.getDrills();
@@ -387,7 +385,7 @@ export default function DrillsResponsive() {
               </div>
             </div>
           </div>
-          <div style={{ width: '100%', display: 'flex', gap: '10px', alignItems: 'center', background: 'var(--surface-2)', borderRadius: 'var(--r-md)', padding: '10px 14px', border: '1px solid var(--border)', position: 'relative', boxSizing: 'border-box' }}>
+          <div style={{ width: '100%', display: 'flex', flexWrap: isMobile ? 'wrap' : 'nowrap', gap: '10px', alignItems: 'center', background: 'var(--surface-2)', borderRadius: 'var(--r-md)', padding: '10px 14px', border: '1px solid var(--border)', position: 'relative', boxSizing: 'border-box' }}>
             <div style={{ color: 'var(--text-muted)', fontSize: '15px', flexShrink: 0 }}><FaSearch /></div>
             <input
               type="text"
@@ -395,7 +393,7 @@ export default function DrillsResponsive() {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cerca drills…"
               aria-label="Cerca drills"
-              style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--text)', fontSize: '15px', minWidth: '0', fontWeight: 500 }}
+              style={{ flex: '1 1 140px', background: 'transparent', border: 'none', color: 'var(--text)', fontSize: '15px', minWidth: '0', fontWeight: 500 }}
             />
             <select
               value={searchCategory}
@@ -416,7 +414,7 @@ export default function DrillsResponsive() {
               onChange={(e) => setVarietyFilter(e.target.value)}
               aria-label="Filtra per varietat"
               title="Filtra per varietat"
-              style={{ background: 'var(--surface)', border: `1px solid ${varietyFilter ? 'var(--saffron)' : 'var(--border)'}`, color: varietyFilter ? 'var(--saffron-strong)' : 'var(--text-soft)', borderRadius: 'var(--r-sm)', padding: '6px 9px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+              style={{ background: 'var(--surface)', border: `1px solid ${varietyFilter ? 'var(--saffron)' : 'var(--border)'}`, color: varietyFilter ? 'var(--saffron-strong)' : 'var(--text-soft)', borderRadius: 'var(--r-sm)', padding: '6px 9px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', flexShrink: isMobile ? 1 : 0, minWidth: 0, maxWidth: '100%' }}
             >
               <option value="">Totes les varietats</option>
               {VARIETIES.map((v) => <option key={v.code} value={v.code}>{v.label}</option>)}
