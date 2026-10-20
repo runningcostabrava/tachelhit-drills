@@ -197,10 +197,10 @@ def explanation(slug: str, grammar_md: str, examples: List[dict], force: bool = 
     os.makedirs(UNITS_DIR, exist_ok=True)
     path = os.path.join(UNITS_DIR, f"{slug}.md")
     if os.path.exists(path) and not force:
-        return open(path, encoding="utf-8").read()
+        return _clean_lesson(open(path, encoding="utf-8").read())
     with _explain_lock:
         if os.path.exists(path) and not force:
-            return open(path, encoding="utf-8").read()
+            return _clean_lesson(open(path, encoding="utf-8").read())
         from gemini_client import gemini_generate
         ex = "\n".join(f"- {e.get('shi')} — {e.get('ca')}" for e in examples[:12])
         chapters = _chapter_text(grammar_md, unit["chapters"]) if grammar_md else ""
@@ -209,8 +209,19 @@ def explanation(slug: str, grammar_md: str, examples: List[dict], force: bool = 
                   "point, the forms in a small table when useful, 4-6 examples (Latin script, with the Catalan meaning), "
                   "the most common mistakes, and one line on dialect differences (Souss Tachelhit vs Central Atlas / "
                   "Beni Mellal) when they matter. Prefer the corpus examples below when they fit; never invent words.\n\n"
+                  "Answer with the Markdown lesson only, starting with its # heading: no preamble, no closing remark." + chr(10) + chr(10) +
                   f"CORPUS EXAMPLES (real speakers):\n{ex}\n\nREFERENCE (grammar compendium, amazic.cat):\n{chapters}")
         text = gemini_generate("You are a clear, careful teacher of Amazigh grammar writing in Catalan.",
                                [{"role": "user", "text": prompt}], max_output_tokens=2500, temperature=0.3, timeout=240)
+        text = _clean_lesson(text)
         open(path, "w", encoding="utf-8").write(text)
         return text
+
+
+def _clean_lesson(text: str) -> str:
+    """Drop a chatty preamble («Aquí teniu la lliçó…») and rules before the first heading."""
+    t = (text or "").replace(chr(13), "")
+    m = re.search(r"(?m)^#{1,3} ", t)
+    if m and m.start() > 0:
+        t = t[m.start():]
+    return t.strip()
