@@ -69,6 +69,7 @@ class DrillBase(BaseModel):
     audio_tts_shi_url: Optional[str] = None  # Synthesized Tachelhit voice (fallback)
     video_url: Optional[str] = None
     image_url: Optional[str] = None
+    image_credit: Optional[str] = None  # attribution of a free-licensed picture (Wikimedia Commons)
     is_correction_dataset: Optional[bool] = None
     video_start_time: Optional[float] = None  # Start time in seconds
     video_end_time: Optional[float] = None    # End time in seconds

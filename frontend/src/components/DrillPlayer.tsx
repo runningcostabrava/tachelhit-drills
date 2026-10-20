@@ -883,7 +883,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               Illustrations are square on a plain light ground, so they sit on the sand band
               uncropped; video frames and photos get the same band. */}
           {imageUrl && (
-            <div style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'center' }}>
+            <div style={{ background: 'var(--surface-2)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'center', position: 'relative' }}>
               <img
                 src={imageUrl}
                 alt=""
@@ -892,6 +892,11 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
                   ((e.target as HTMLImageElement).parentElement as HTMLElement).style.display = 'none';
                 }}
               />
+              {currentDrill?.image_credit && (
+                <div style={{ position: 'absolute', right: 6, bottom: 4, fontSize: '9px', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.75)', padding: '1px 5px', borderRadius: '4px', maxWidth: '70%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={currentDrill.image_credit}>
+                  {currentDrill.image_credit}
+                </div>
+              )}
             </div>
           )}
 

@@ -10,6 +10,8 @@ export interface Drill {
   audio_tts_shi_url?: string; // synthesized Tachelhit voice (fallback when no recording)
   video_url?: string;
   image_url?: string;
+  /** attribution of a free-licensed picture: «title · author · licence · source» */
+  image_credit?: string | null;
   tag?: string;
   author?: string;
   date_created: string;
