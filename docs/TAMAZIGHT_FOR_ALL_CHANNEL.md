@@ -1,5 +1,11 @@
 # Tamazight For All — channel sorted for learners (2026-10-19)
 
+> **Rule (owner, 2026-10-20): nothing where the creator appears on camera.** The word-of-the-day
+> videos, the alphabet lessons in English, the seasons and the new-year greeting were removed from
+> the app (259 drills, 24 videos; backup in the session scratchpad). What stays: the illustrated
+> fables, the tales and the Tifinagh text pages, where only the page or the drawing is shown.
+> Do not capture on-camera videos again; the owner is asking the creator for permission.
+
 Channel: https://www.youtube.com/channel/UCcj_j-uCnO22VSQ7KwdGMOQ (Standard Moroccan Amazigh,
 `variety = zgh`, as the 109 drills already captured from its "Learn Tamazight" playlist). Sorted
 by Gemini from title + duration (scratchpad `classify_tfa_channel.py`): what a learner can get.
