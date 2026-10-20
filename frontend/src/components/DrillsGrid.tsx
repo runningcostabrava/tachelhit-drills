@@ -301,19 +301,38 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
         }
     };
 
-    const handleBulkEditTags = async () => {
+    // Bulk tags: a dialog instead of a prompt. Adding is the default and never touches the
+    // other tags (the API's '+tag' / '-tag' forms); replacing them all is a separate, explicit
+    // action. Tags are stored comma-separated in `tag`.
+    const [showTagEditor, setShowTagEditor] = useState(false);
+    const [tagInput, setTagInput] = useState('');
+    const [tagBusy, setTagBusy] = useState(false);
+    // The drills the dialog works on: fixed when it opens, because refreshing the list after
+    // a change clears the grid selection (the dialog must survive its own refresh).
+    const [tagTargets, setTagTargets] = useState<number[]>([]);
+    const splitTags = (t?: string | null) => (t || '').split(',').map((x) => x.trim()).filter(Boolean);
+    const handleBulkEditTags = () => {
         if (selectedRows.length === 0) return;
-        const newTag = prompt("Introdueix una etiqueta nova per als drills seleccionats (afegeix + per afegir-la, - per treure-la):");
-        if (newTag === null) return;
-
+        setTagTargets(selectedRows.map((d) => d.id));
+        setTagInput('');
+        setShowTagEditor(true);
+    };
+    const applyTagChange = async (op: '+' | '-' | '=', tag: string) => {
+        const t = tag.trim();
+        if (!t && op !== '=') return;
+        setTagBusy(true);
         try {
-            for (const drill of selectedRows) {
-                await axios.put(`${API_BASE}/drills/${drill.id}`, { tag: newTag });
+            for (const id of tagTargets) {
+                await axios.put(`${API_BASE}/drills/${id}`, { tag: op === '=' ? (t || '') : `${op}${t}` });
             }
-            toast.success("Actualització massiva d'etiquetes completada.");
+            toast.success(op === '+' ? `Etiqueta «${t}» afegida a ${tagTargets.length} drills.` : op === '-' ? `Etiqueta «${t}» treta de ${tagTargets.length} drills.` : `Etiquetes substituïdes a ${tagTargets.length} drills.`);
+            setTagInput('');
             await refreshData();
+            if (op === '=') setShowTagEditor(false);
         } catch (error) {
             toast.error("L'actualització d'etiquetes ha fallat.");
+        } finally {
+            setTagBusy(false);
         }
     };
 
@@ -433,6 +452,51 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                 <div style={{ display: 'flex', gap: '10px' }}>
                     <button onClick={() => setPendingDeleteId(null)} style={{ flex: 1, padding: '12px', background: 'var(--surface)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 700, cursor: 'pointer' }}>Cancel·la</button>
                     <button autoFocus onClick={() => executeDeletePipeline(pendingDeleteId)} style={{ flex: 1, padding: '12px', background: 'var(--rose)', color: 'white', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 700, cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>Elimina</button>
+                </div>
+            </div>
+        </div>
+    );
+
+    // Tags present on the selection (with how many of the selected drills carry each) and
+    // every tag in the list, for the suggestions.
+    const targetRows = rowData.filter((d) => tagTargets.includes(d.id));
+    const selectionTags = (() => {
+        const m = new Map<string, number>();
+        for (const d of targetRows) for (const t of splitTags(d.tag)) m.set(t, (m.get(t) || 0) + 1);
+        return [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    })();
+    const allTags = [...new Set(rowData.flatMap((d) => splitTags(d.tag)))].sort((a, b) => a.localeCompare(b));
+    const tagDialog = showTagEditor && (
+        <div style={overlayStyle} onClick={() => !tagBusy && setShowTagEditor(false)}>
+            <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--surface)', padding: '24px', borderRadius: 'var(--r-xl)', width: '100%', maxWidth: '420px', boxShadow: 'var(--shadow-xl)' }}>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '19px', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Etiquetes de {tagTargets.length} drills</h3>
+                <p style={{ margin: '0 0 14px 0', fontSize: '13px', color: 'var(--text-soft)' }}>Afegir una etiqueta no toca les que ja hi són. Treu-ne una amb la ✕.</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px', minHeight: '28px' }}>
+                    {selectionTags.length === 0 && <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Cap etiqueta encara.</span>}
+                    {selectionTags.map(([t, n]) => (
+                        <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 6px 4px 10px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface-2)', fontSize: '12.5px', fontWeight: 700, color: 'var(--text)' }}>
+                            {t}{n < tagTargets.length && <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>{n}/{tagTargets.length}</span>}
+                            <button type="button" onClick={() => applyTagChange('-', t)} disabled={tagBusy} aria-label={`Treu l'etiqueta ${t}`} title={`Treu «${t}» dels drills seleccionats`} style={{ border: 'none', background: 'transparent', color: 'var(--rose)', cursor: 'pointer', fontWeight: 800, padding: '0 4px', lineHeight: 1 }}>✕</button>
+                        </span>
+                    ))}
+                </div>
+                <form onSubmit={(e) => { e.preventDefault(); applyTagChange('+', tagInput); }} style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                        autoFocus
+                        list="bulk-tag-options"
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        placeholder="Etiqueta nova o existent…"
+                        aria-label="Etiqueta a afegir"
+                        disabled={tagBusy}
+                        style={{ flex: 1, minWidth: 0, padding: '10px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: '14px' }}
+                    />
+                    <datalist id="bulk-tag-options">{allTags.map((t) => <option key={t} value={t} />)}</datalist>
+                    <button type="submit" disabled={tagBusy || !tagInput.trim()} style={{ padding: '10px 16px', background: 'var(--brand-1)', color: '#fff', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 700, cursor: 'pointer', opacity: tagBusy || !tagInput.trim() ? 0.6 : 1 }}>{tagBusy ? '…' : 'Afegeix'}</button>
+                </form>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px' }}>
+                    <button type="button" disabled={tagBusy || !tagInput.trim()} onClick={() => { if (window.confirm(`Substituir TOTES les etiquetes dels ${tagTargets.length} drills per «${tagInput.trim()}»?`)) applyTagChange('=', tagInput); }} style={{ padding: '8px 10px', background: 'transparent', color: 'var(--text-muted)', border: 'none', fontSize: '12.5px', cursor: 'pointer', textDecoration: 'underline', opacity: tagBusy || !tagInput.trim() ? 0.5 : 1 }}>Substitueix-les totes per aquesta</button>
+                    <button type="button" onClick={() => setShowTagEditor(false)} disabled={tagBusy} style={{ padding: '10px 16px', background: 'var(--surface)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 700, cursor: 'pointer' }}>Tanca</button>
                 </div>
             </div>
         </div>
@@ -832,7 +896,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                 )}
 
                 {/* Password confirmation pop-up */}
-                {deleteDialog && createPortal(deleteDialog, document.body)}
+                {deleteDialog && createPortal(deleteDialog, document.body)}{tagDialog && createPortal(tagDialog, document.body)}
                 {previewDialog && createPortal(previewDialog, document.body)}
             </div>
         );
@@ -847,7 +911,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
             field: 'image_url',
             headerName: 'Preview',
             width: 90,
-            cellRenderer: (p: any) => p.value ? <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}><img src={getMediaUrl(p.value)} alt="Imatge del drill" style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: 'var(--r-sm)', border: '1px solid var(--border)' }} /></div> : null
+            cellRenderer: (p: any) => p.value ? <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}><img src={getMediaUrl(p.value)} alt="Imatge del drill" onError={(e) => { e.currentTarget.style.display = 'none'; }} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: 'var(--r-sm)', border: '1px solid var(--border)' }} /></div> : null
         },
         { field: 'text_catalan', headerName: 'Català', flex: 2, minWidth: 150, filter: true, wrapText: true, autoHeight: true, editable: true,
           tooltipValueGetter: (p: { data?: Drill }) => p.data?.text_catalan_suggested ? `Suggeriment IA: ${p.data.text_catalan_suggested}` : undefined,
@@ -1053,7 +1117,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                     onSaved={() => { refreshData(); }}
                 />
             )}
-            {deleteDialog && createPortal(deleteDialog, document.body)}
+            {deleteDialog && createPortal(deleteDialog, document.body)}{tagDialog && createPortal(tagDialog, document.body)}
             {previewDialog && createPortal(previewDialog, document.body)}
         </div>
     );

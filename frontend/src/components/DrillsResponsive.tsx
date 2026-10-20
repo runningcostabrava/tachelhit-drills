@@ -197,8 +197,8 @@ export default function DrillsResponsive() {
   const collections = useMemo(() => {
     const counts = new Map<string, number>();
     for (const d of drills) {
-      const t = (d.tag || '').trim();
-      if (t) counts.set(t, (counts.get(t) || 0) + 1);
+      // a drill can carry several tags, comma-separated: one chip per tag
+      for (const t of (d.tag || '').split(',').map((x) => x.trim()).filter(Boolean)) counts.set(t, (counts.get(t) || 0) + 1);
     }
     return [...counts.entries()].map(([tag, count]) => ({ tag, count })).sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
   }, [drills]);
