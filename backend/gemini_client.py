@@ -10,6 +10,20 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
 
+class BudgetExceeded(RuntimeError):
+    """The monthly Gemini budget is spent (or a person's daily cap is reached)."""
+
+
+# The usage meter (ai_budget.Meter) is attached by the app at import time; every call goes
+# through it: before_call(model) may raise BudgetExceeded, after_call records the tokens.
+_meter = None
+
+
+def set_meter(meter) -> None:
+    global _meter
+    _meter = meter
+
+
 def gemini_available() -> bool:
     # Available if we can reach Gemini directly (key) OR via the egress proxy.
     # (Render's free-tier IP is blocked by Google, so prod routes through a
@@ -26,23 +40,34 @@ def _generate_content(payload: dict, timeout: int, model: str | None = None) -> 
     API key and calls Google from an un-blocked IP); otherwise call Google
     directly with GEMINI_API_KEY. Raises on non-200.
     """
+    used_model = model or GEMINI_MODEL
+    if _meter is not None:
+        _meter.before_call(used_model)
     proxy = (os.getenv("GEMINI_PROXY_URL") or "").strip()
-    if proxy:
-        headers = {"Content-Type": "application/json"}
-        secret = (os.getenv("GEMINI_PROXY_SECRET") or "").strip()
-        if secret:
-            headers["X-Proxy-Secret"] = secret
-        resp = requests.post(proxy, json={"model": model or GEMINI_MODEL, "payload": payload},
-                             headers=headers, timeout=timeout)
-    else:
-        key = (os.getenv("GEMINI_API_KEY") or "").strip()
-        if not key:
-            raise RuntimeError("GEMINI_API_KEY not configured")
-        url = f"{GEMINI_BASE}/models/{model or GEMINI_MODEL}:generateContent?key={key}"
-        resp = requests.post(url, json=payload, timeout=timeout)
-    if resp.status_code != 200:
-        raise RuntimeError(f"Gemini API {resp.status_code}: {resp.text[:300]}")
-    return resp.json()
+    try:
+        if proxy:
+            headers = {"Content-Type": "application/json"}
+            secret = (os.getenv("GEMINI_PROXY_SECRET") or "").strip()
+            if secret:
+                headers["X-Proxy-Secret"] = secret
+            resp = requests.post(proxy, json={"model": used_model, "payload": payload},
+                                 headers=headers, timeout=timeout)
+        else:
+            key = (os.getenv("GEMINI_API_KEY") or "").strip()
+            if not key:
+                raise RuntimeError("GEMINI_API_KEY not configured")
+            url = f"{GEMINI_BASE}/models/{used_model}:generateContent?key={key}"
+            resp = requests.post(url, json=payload, timeout=timeout)
+        if resp.status_code != 200:
+            raise RuntimeError(f"Gemini API {resp.status_code}: {resp.text[:300]}")
+        data = resp.json()
+    except Exception:
+        if _meter is not None:
+            _meter.after_call(used_model, None, False)
+        raise
+    if _meter is not None:
+        _meter.after_call(used_model, data, True)
+    return data
 
 
 def gemini_generate(system_instruction: str, contents: list, *,

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { api } from '../api';
 import { getMediaUrl } from '../config';
 import { subscribeSelection, notifyDrillsChanged } from '../selection';
+import AiQuota from './AiQuota';
 import { FaComments, FaPlay, FaRedo, FaChevronRight, FaPaperPlane, FaCheck, FaSearch, FaExclamationTriangle } from 'react-icons/fa';
 
 interface Action { name: string; args: any; result: any; }
@@ -16,6 +17,7 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
   const [selected, setSelected] = useState<number[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [quotaKey, setQuotaKey] = useState(0);
 
   useEffect(() => subscribeSelection(setSelected), []);
   useEffect(() => {
@@ -45,9 +47,12 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
         notifyDrillsChanged();
       }
     } catch (e: any) {
-      setMessages(m => [...m, { role: 'model', text: `⚠️ No he pogut respondre ara mateix. Torna-ho a provar d'aquí a un moment.` }]);
+      const msg: string = e?.message || '';
+      const limited = /consultes|Pressupost/i.test(msg);
+      setMessages(m => [...m, { role: 'model', text: limited ? `⏳ ${msg}` : `⚠️ No he pogut respondre ara mateix. Torna-ho a provar d'aquí a un moment.` }]);
     } finally {
       setBusy(false);
+      setQuotaKey(k => k + 1);
     }
   };
 
@@ -137,6 +142,7 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
         />
         <button onClick={() => send(input)} disabled={busy || !input.trim()} aria-label="Envia" style={{ padding: '12px 18px', background: 'var(--brand-gradient)', color: '#fff', border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: (busy || !input.trim()) ? 'not-allowed' : 'pointer', opacity: (busy || !input.trim()) ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FaPaperPlane /></button>
       </div>
+      <AiQuota refreshKey={quotaKey} />
     </div>
   );
 }

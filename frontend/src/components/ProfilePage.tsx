@@ -3,6 +3,7 @@ import { getUserToken, isNativeApp, setUserIdentity, clearUserIdentity } from '.
 import { Share } from '@capacitor/share';
 import { syncManager } from '../services/OfflineSyncManager';
 import { api, type Me } from '../api';
+import { AiSpendAdmin } from './AiQuota';
 import { VARIETIES } from '../varieties';
 import { FaCheck, FaLayerGroup, FaRedo, FaFire } from 'react-icons/fa';
 
@@ -249,6 +250,7 @@ export default function ProfilePage() {
                   </button>
                   {accMsg && <div style={{ fontSize: '13px', color: 'var(--text-soft)' }}>{accMsg}</div>}
                 </form>
+                {me.is_admin && <AiSpendAdmin />}
               </div>
               <button onClick={saveProfile} disabled={savingProfile} style={{ marginTop: '12px', padding: '10px 20px', background: 'var(--brand-gradient)', color: '#fff', border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: savingProfile ? 'wait' : 'pointer' }}>
                 {savingProfile ? 'Desant…' : savedProfile ? 'Desat ✓' : "Desa l'origen"}

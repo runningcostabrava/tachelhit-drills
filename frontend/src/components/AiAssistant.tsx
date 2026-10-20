@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../api';
 import { API_BASE, getMediaUrl } from '../config';
+import AiQuota from './AiQuota';
 
 interface Msg { role: 'user' | 'model'; text: string; }
 
@@ -22,6 +23,7 @@ export default function AiAssistant({ drillId, drillLabel, autoAction, onClose }
   const [related, setRelated] = useState<{ id: number; text_catalan?: string; text?: string; words: string[] }[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const didAuto = useRef(false);
+  const [quotaKey, setQuotaKey] = useState(0);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -41,7 +43,7 @@ export default function AiAssistant({ drillId, drillLabel, autoAction, onClose }
       call
         .then(text => setMessages(m => [...m, { role: 'model', text }]))
         .catch(e => setMessages(m => [...m, { role: 'model', text: `⚠️ ${e.message || 'Error'}` }]))
-        .finally(() => setBusy(false));
+        .finally(() => { setBusy(false); setQuotaKey(k => k + 1); });
     }
   }, [autoAction, drillId]);
 
@@ -60,9 +62,13 @@ export default function AiAssistant({ drillId, drillLabel, autoAction, onClose }
       const res = await api.aiAsk(q, drillId, history);
       setMessages(m => [...m, { role: 'model', text: res.answer }]);
     } catch (e: any) {
-      setMessages(m => [...m, { role: 'model', text: `⚠️ ${e.message || 'Error'}. Comprova que GEMINI_API_KEY estigui configurada al servidor.` }]);
+      const msg: string = e?.message || 'Error';
+      // a 429 carries a human sentence (daily cap / monthly budget); a server error gets the hint
+      const limited = /consultes|Pressupost/i.test(msg);
+      setMessages(m => [...m, { role: 'model', text: limited ? `⏳ ${msg}` : `⚠️ ${msg}. Comprova que GEMINI_API_KEY estigui configurada al servidor.` }]);
     } finally {
       setBusy(false);
+      setQuotaKey(k => k + 1);
     }
   };
 
@@ -192,6 +198,7 @@ export default function AiAssistant({ drillId, drillLabel, autoAction, onClose }
             ↑
           </button>
         </div>
+        <AiQuota refreshKey={quotaKey} />
       </div>
     </div>,
     document.body

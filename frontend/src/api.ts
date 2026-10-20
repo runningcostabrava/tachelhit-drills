@@ -189,7 +189,8 @@ export const api = {
     request<{ kind: string; drills: Drill[] }>(`/corpus/gaps?kind=${encodeURIComponent(kind)}&limit=${limit}`),
 
   // --- AI grammar tutor ---
-  aiStatus: () => request<{ available: boolean; grammar_chars: number }>('/ai/status'),
+  aiStatus: () => request<{ available: boolean; configured?: boolean; budget_ok?: boolean; budget_eur?: number; grammar_chars: number }>('/ai/status'),
+  aiUsage: () => request<AiUsage>('/ai/usage'),
   aiAsk: (question: string, drillId?: number, history?: { role: string; text: string }[]) =>
     request<{ answer: string; used_drill: boolean }>('/ai/ask', {
       method: 'POST',
@@ -282,6 +283,12 @@ export const api = {
   resetPassword: (email: string, code: string, new_password: string, device?: string) =>
     request<AuthUser & { token: string }>('/auth/reset', { method: 'POST', body: JSON.stringify({ email, code, new_password, device }) }),
 };
+
+export interface AiUsage {
+  today: { used: number; limit: number | null; remaining: number | null };
+  month: { spent_eur: number; budget_eur: number; remaining_eur: number; resets_at: string; by_feature?: Record<string, { calls: number; eur: number }> };
+  available: boolean;
+}
 
 export interface AuthUser {
   username: string;

@@ -27,7 +27,9 @@ from draft_check import check_draft_meaning, draft_status
 import lexicon
 from tts_text import tts_text, VOICE_VERSION
 import topics as topics_catalog
-from gemini_client import gemini_generate, gemini_available, gemini_agent
+from gemini_client import gemini_generate, gemini_available, gemini_agent, BudgetExceeded
+import gemini_client
+import ai_budget
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, func as sa_func
@@ -61,7 +63,7 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
 
-from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel, CaptureRequest as CaptureRequestModel, DrillTombstone as DrillTombstoneModel, UserSession as UserSessionModel  # ← Alias for ORM models
+from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel, CaptureRequest as CaptureRequestModel, DrillTombstone as DrillTombstoneModel, UserSession as UserSessionModel, GeminiUsage as GeminiUsageModel  # ← Alias for ORM models
 from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort, VideoProcessingJobCreate, VideoProcessingJob, VideoSegmentCreate, VideoSegment, TranscribeRequest, TranscribeResponse, TranslateRequest, TranslateResponse, DrillPairInfo, GlossaryItem, GlossaryItemCreate, SrtImportRequest, SrtImportResponse, SrtSegment, BulkVideoUrlUpdateRequest, BulkVideoUrlUpdateResponse, iso_z  # ← Pydantic schemas
 from correction_service import get_correction_service
 from srt_parser import parse_srt_content, create_youtube_url_with_timestamp
@@ -400,6 +402,11 @@ else:
     engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=300)
 
 SessionLocal = sessionmaker(bind=engine)
+
+# Gemini usage meter: monthly money budget over every call + per-person daily cap on the
+# interactive features (see ai_budget.py). Attached to the client so no call escapes it.
+ai_meter = ai_budget.Meter(SessionLocal, GeminiUsageModel)
+gemini_client.set_meter(ai_meter)
 
 # ---------------------------------------------------------------------------
 # Auto-capture guard (P5.2): ASR on English or music sometimes yields English
@@ -5354,17 +5361,52 @@ def lexicon_lookup(q: str = ""):
     return {"query": q, "hits": lexicon.lookup(q), "attribution": lexicon.ATTRIBUTION}
 
 
+def _ai_actor(request: Request, user: Optional[UserModel]) -> str:
+    if user is not None:
+        return f"user:{user.id}"
+    host = (request.client.host if request.client else "") or request.headers.get("x-forwarded-for", "")
+    return "ip:" + hashlib.sha256(host.split(",")[0].strip().encode("utf-8")).hexdigest()[:16]
+
+
+def _ai_gate(feature: str):
+    """Dependency for the interactive AI endpoints: Gemini configured, the month's budget not
+    spent, the person's daily cap not reached; tags the call for the meter. Async on purpose:
+    the context it sets must be the request's own, so the sync endpoint (run in a thread
+    copy of it) and the Gemini hook see the feature + actor."""
+    async def dep(request: Request, user: Optional[UserModel] = Depends(get_current_user)) -> Dict[str, Any]:
+        if not gemini_available():
+            raise HTTPException(status_code=503, detail="AI assistant not configured (GEMINI_API_KEY missing)")
+        actor = _ai_actor(request, user)
+        try:
+            info = await run_in_threadpool(ai_meter.check_person, actor, bool(user and user.is_admin), user is None)
+        except BudgetExceeded as e:
+            raise HTTPException(status_code=429, detail=str(e))
+        ai_budget.set_context(feature, actor)
+        return info
+    return dep
+
+
+@app.get("/ai/usage")
+def ai_usage(request: Request, user: Optional[UserModel] = Depends(get_current_user)):
+    """What the caller has used today (and their cap) and how much of the monthly budget
+    is spent; admins also get the month's spend by feature."""
+    return ai_meter.summary(_ai_actor(request, user), bool(user and user.is_admin), user is None)
+
+
 @app.get("/ai/status")
 def ai_status():
-    """Whether the AI agent is configured, and the grammar corpus size."""
-    return {"available": gemini_available(), "grammar_chars": len(_load_grammar())}
+    """Whether the AI agent is configured (and within budget), and the grammar corpus size."""
+    return {"available": gemini_available() and ai_meter.budget_ok(), "configured": gemini_available(),
+            "budget_ok": ai_meter.budget_ok(), "budget_eur": ai_budget.monthly_budget_eur(),
+            "grammar_chars": len(_load_grammar())}
 
 @app.post("/ai/ask")
 def ai_ask(
     question: str = Body(..., embed=True),
     drill_id: Optional[int] = Body(None, embed=True),
     history: Optional[List[Dict]] = Body(None, embed=True),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _gate: Dict[str, Any] = Depends(_ai_gate("ask")),
 ):
     """
     Ask the grammar tutor. Grounded in the Amazigh grammar compendium; can use
@@ -5392,12 +5434,14 @@ def ai_ask(
     try:
         answer = gemini_generate(system_instruction, contents, max_output_tokens=1200)
         return {"answer": answer, "used_drill": bool(drill)}
+    except BudgetExceeded as e:
+        raise HTTPException(status_code=429, detail=str(e))
     except Exception as e:
         print(f"[AI] ask failed: {e}")
         raise HTTPException(status_code=502, detail=f"AI assistant error: {str(e)[:200]}")
 
 @app.post("/ai/analyze-drill/{drill_id}")
-def ai_analyze_drill(drill_id: int, db: Session = Depends(get_db)):
+def ai_analyze_drill(drill_id: int, db: Session = Depends(get_db), _gate: Dict[str, Any] = Depends(_ai_gate("analyze"))):
     """
     Morphological/grammatical analysis of the ATTESTED Tachelhit form the user
     collected in this drill — grounded in the grammar and the learner's own
@@ -5428,6 +5472,8 @@ def ai_analyze_drill(drill_id: int, db: Session = Depends(get_db)):
         analysis = gemini_generate(_build_system_instruction(db),
                                    [{"role": "user", "text": prompt}], max_output_tokens=1400)
         return {"drill_id": drill_id, "analysis": analysis}
+    except BudgetExceeded as e:
+        raise HTTPException(status_code=429, detail=str(e))
     except Exception as e:
         print(f"[AI] analyze-drill failed: {e}")
         raise HTTPException(status_code=502, detail=f"AI assistant error: {str(e)[:200]}")
@@ -5460,7 +5506,7 @@ def _related_drills(drill, db, limit: int = 8) -> list:
 
 
 @app.post("/ai/explain/{drill_id}")
-def ai_explain_drill(drill_id: int, db: Session = Depends(get_db)):
+def ai_explain_drill(drill_id: int, db: Session = Depends(get_db), _gate: Dict[str, Any] = Depends(_ai_gate("explain"))):
     """
     Learner's explanation of a drill: the Tachelhit phrase word by word, which Catalan
     word each one answers to, what is not said literally — plus the other drills in the
@@ -5500,6 +5546,8 @@ def ai_explain_drill(drill_id: int, db: Session = Depends(get_db)):
     try:
         explanation = gemini_generate(_build_system_instruction(db),
                                       [{"role": "user", "text": prompt}], max_output_tokens=1200)
+    except BudgetExceeded as e:
+        raise HTTPException(status_code=429, detail=str(e))
     except Exception as e:
         print(f"[AI] explain failed: {e}")
         raise HTTPException(status_code=502, detail=f"AI assistant error: {str(e)[:200]}")
@@ -5508,7 +5556,7 @@ def ai_explain_drill(drill_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/ai/suggest-translation/{drill_id}")
-def ai_suggest_translation(drill_id: int, db: Session = Depends(get_db)):
+def ai_suggest_translation(drill_id: int, db: Session = Depends(get_db), _gate: Dict[str, Any] = Depends(_ai_gate("suggest"))):
     """
     Generate an AI *draft* Tachelhit form from the drill's Catalan (or a Catalan
     draft from the Tachelhit) and store it in the *_suggested column — never in
@@ -5539,6 +5587,8 @@ def ai_suggest_translation(drill_id: int, db: Session = Depends(get_db)):
         setattr(drill, target_field, suggestion)
         db.commit()
         return {"drill_id": drill_id, "field": target_field, "suggestion": suggestion}
+    except BudgetExceeded as e:
+        raise HTTPException(status_code=429, detail=str(e))
     except Exception as e:
         print(f"[AI] suggest-translation failed: {e}")
         raise HTTPException(status_code=502, detail=f"AI assistant error: {str(e)[:200]}")
@@ -5640,7 +5690,8 @@ def ai_agent(
     message: str = Body(..., embed=True),
     drill_ids: Optional[List[int]] = Body(None, embed=True),
     history: Optional[List[Dict]] = Body(None, embed=True),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _gate: Dict[str, Any] = Depends(_ai_gate("agent")),
 ):
     """
     Agentic copilot: chat that can act on the app (create/update/search drills,
@@ -5679,12 +5730,14 @@ def ai_agent(
     try:
         result = gemini_agent(system, contents, AGENT_TOOLS, _agent_executor(db))
         return {"answer": result["text"], "actions": result["actions"]}
+    except BudgetExceeded as e:
+        raise HTTPException(status_code=429, detail=str(e))
     except Exception as e:
         print(f"[AI] agent failed: {e}")
         raise HTTPException(status_code=502, detail=f"AI assistant error: {str(e)[:200]}")
 
 @app.post("/ai/review-drill/{drill_id}")
-def ai_review_drill(drill_id: int, db: Session = Depends(get_db)):
+def ai_review_drill(drill_id: int, db: Session = Depends(get_db), _gate: Dict[str, Any] = Depends(_ai_gate("review"))):
     """
     Contradiction-flagging: the AI checks a drill for likely transcription
     errors, Catalan↔Tachelhit mismatches, or spelling inconsistencies vs the
@@ -5711,6 +5764,8 @@ def ai_review_drill(drill_id: int, db: Session = Depends(get_db)):
         review = gemini_generate(_build_system_instruction(db),
                                  [{"role": "user", "text": prompt}], max_output_tokens=600)
         return {"drill_id": drill_id, "review": review}
+    except BudgetExceeded as e:
+        raise HTTPException(status_code=429, detail=str(e))
     except Exception as e:
         print(f"[AI] review-drill failed: {e}")
         raise HTTPException(status_code=502, detail=f"AI assistant error: {str(e)[:200]}")

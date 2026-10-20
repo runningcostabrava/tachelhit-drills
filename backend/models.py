@@ -263,6 +263,23 @@ class DrillTombstone(Base):
     deleted_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
 
+class GeminiUsage(Base):
+    """One row per Gemini call: who/what asked, tokens, and the priced cost (micro-euros).
+    The monthly budget and the per-person daily cap are computed from this table."""
+    __tablename__ = "gemini_usage"
+
+    id = Column(Integer, primary_key=True, index=True)
+    at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    model = Column(String, nullable=True)
+    feature = Column(String, nullable=True, index=True)   # ask | agent | explain | ... | pipeline
+    actor = Column(String, nullable=True, index=True)     # "user:<id>" | "ip:<hash>" | NULL (pipeline)
+    prompt_tokens = Column(Integer, default=0, nullable=False)
+    output_tokens = Column(Integer, default=0, nullable=False)
+    images = Column(Integer, default=0, nullable=False)
+    cost_micro_eur = Column(Integer, default=0, nullable=False)
+    ok = Column(Boolean, default=True, nullable=False)
+
+
 class UserSession(Base):
     """A signed-in device: the X-User-Token presented by a browser or phone after sign-in.
     The legacy users.token (shown once at registration) still works as a session too."""
