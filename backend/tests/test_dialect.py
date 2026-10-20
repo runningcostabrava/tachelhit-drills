@@ -69,3 +69,11 @@ def test_retranscribe_endpoint_writes_suggestion_only(monkeypatch):
     r2 = client.post("/drills/", json={"text_catalan": "x", "text_tachelhit": "y", "audio_url": "https://example.test/b.webm"})
     assert client.post(f"/drills/{r2.json()['id']}/retranscribe", json={}).status_code == 400
     assert client.post(f"/drills/{r2.json()['id']}/retranscribe", json={"variety": "shi"}).status_code == 200
+
+
+def test_transcribe_returns_latin_and_tifinagh_together(monkeypatch):
+    monkeypatch.setattr(main, "_transcribe_short_clip_with_gemini", lambda *a, **k: {"latin": "mana lun tja ttfḥti", "tifinagh": "ⵎⴰⵏⴰ ⵍⵓⵏ ⵜⵊⴰ ⵜⵜⴼⵃⵜⵉ"})
+    r = client.post("/transcribe/", json={"audio_url": "https://example.test/a.webm"})
+    assert r.status_code == 200 and r.json()["corrected_transcription"] == "mana lun tja ttfḥti · ⵎⴰⵏⴰ ⵍⵓⵏ ⵜⵊⴰ ⵜⵜⴼⵃⵜⵉ"
+    monkeypatch.setattr(main, "_transcribe_short_clip_with_gemini", lambda *a, **k: {"latin": "ⵃⵓ", "tifinagh": "ⵃⵓ"})
+    assert client.post("/transcribe/", json={"audio_url": "https://example.test/a.webm"}).status_code == 502

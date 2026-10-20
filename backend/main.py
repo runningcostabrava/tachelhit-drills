@@ -7146,12 +7146,13 @@ async def transcribe_audio(
             examples = _dialect_examples(db, variety)
     short = await asyncio.to_thread(_transcribe_short_clip_with_gemini, audio_url, variety, meaning, speaker_text, examples)
     if short is not None:
-        # A speaker who typed Latin gets the reading in Latin (academic); otherwise Tifinagh, as before.
-        latin_gold = bool(speaker_text) and not re.search(r"[ⴰ-⵿]", speaker_text or "")
-        reading = short["latin"] if latin_gold else short["tifinagh"]
-        if len(re.sub(r"[^\w]", "", reading or "")) < 3:
+        # Both scripts: the Latin reading (comparable letter by letter with what the speaker typed)
+        # and its Tifinagh, «latin · ⵜⵉⴼⵉⵏⴰⵖ».
+        latin, tif = (short.get("latin") or "").strip(), (short.get("tifinagh") or "").strip()
+        if len(re.sub(r"[^\w]", "", latin or tif)) < 3:
             raise HTTPException(status_code=502, detail="No s'ha entès res de la gravació")
-        return TranscribeResponse(rough_transcription=short["latin"], corrected_transcription=reading, similarity_score=0.0)
+        reading = f"{latin} · {tif}" if latin and tif and latin != tif else (latin or tif)
+        return TranscribeResponse(rough_transcription=latin, corrected_transcription=reading, similarity_score=0.0)
 
     # Call HF Space
     asr_space_url = os.getenv("HUGGINGFACE_ASR_SPACE_URL", ASR_SPACE_DEFAULT)
