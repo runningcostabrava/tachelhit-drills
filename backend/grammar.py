@@ -408,7 +408,7 @@ def _parse_lesson(answer: str, examples: List[dict]) -> dict:
     m = re.search(r"\{.*\}", answer or "", re.S)
     if not m:
         raise ValueError(f"no JSON in answer: {(answer or '')[:120]}")
-    raw = json.loads(m.group(0))
+    raw = json.loads(re.sub(r",\s*([}\]])", r"\1", m.group(0)))  # Gemini sometimes leaves a trailing comma
     by_id = {e["id"]: e for e in examples}
     steps = []
     for s in raw.get("steps") or []:

@@ -60,6 +60,13 @@ def test_lesson_prose_is_latin_only_and_never_cites_ids():
     assert grammar._clean_prose("Ho fan servir, com es veu en els exemples 5813 i 5914. També 'waxxa' (exemple 5863).") == "Ho fan servir, com es veu. També 'waxxa'."
 
 
+def test_lesson_json_tolerates_trailing_commas():
+    import grammar
+    ex = [{"id": 1, "shi": "ur ssinɣ", "ca": "no ho sé", "image_url": None, "audio_url": None, "recorded": False, "author": None, "region": None}]
+    lesson = grammar._parse_lesson('{"intro": "x", "steps": [{"type": "explain", "title": "t", "text": "ur davant.", "example_ids": [1,],},],}', ex)
+    assert lesson["steps"][0]["examples"][0]["id"] == 1
+
+
 def test_quizzes_and_excluded_language(monkeypatch):
     import grammar
     ex = [{"id": i, "shi": f"frase {i}", "ca": f"sentit {i}", "image_url": None, "audio_url": None, "recorded": False, "author": None, "region": None} for i in range(1, 7)]
