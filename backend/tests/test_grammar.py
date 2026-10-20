@@ -54,6 +54,12 @@ def test_classification_fills_grammar_and_unit_page_shows_lesson_and_examples(mo
     assert client.post("/grammar/negacio/rewrite").status_code == 401
 
 
+def test_lesson_prose_is_latin_only_and_never_cites_ids():
+    import grammar
+    assert grammar._clean_prose("Pots dir 'marhaba' (مرحبا), que vol dir benvingut.") == "Pots dir 'marhaba', que vol dir benvingut."
+    assert grammar._clean_prose("Ho fan servir, com es veu en els exemples 5813 i 5914. També 'waxxa' (exemple 5863).") == "Ho fan servir, com es veu. També 'waxxa'."
+
+
 def test_quizzes_and_excluded_language(monkeypatch):
     import grammar
     ex = [{"id": i, "shi": f"frase {i}", "ca": f"sentit {i}", "image_url": None, "audio_url": None, "recorded": False, "author": None, "region": None} for i in range(1, 7)]

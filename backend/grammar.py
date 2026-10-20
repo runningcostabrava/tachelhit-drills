@@ -68,7 +68,7 @@ UNITS: List[dict] = [
 SLUGS = [u["slug"] for u in UNITS]
 TITLES = {u["slug"]: u["title"] for u in UNITS}
 BATCH = 40
-LESSON_VERSION = 3  # bump when the lesson format or prompt changes: old rows are rewritten on next open
+LESSON_VERSION = 4  # bump when the lesson format or prompt changes: old rows are rewritten on next open
 
 # Drills whose tag names another language are never part of the course (the owner's old Irish tests).
 EXCLUDED_TAGS = ("irish",)
@@ -260,6 +260,17 @@ def _clean_text(s: Optional[str]) -> str:
     return re.sub(r"\s+", " ", (s or "").replace("\r", "")).strip()
 
 
+def _clean_prose(s: Optional[str]) -> str:
+    """Lesson prose: no Arabic-script asides, no example ids."""
+    t = _clean_text(s)
+    t = re.sub(r"\s*\([^()]*[\u0600-\u06FF][^()]*\)", "", t)          # (مرحبا)
+    t = re.sub(r"[\u0600-\u06FF][\u0600-\u06FF\s\-؟]*", "", t)         # bare Arabic script
+    t = re.sub(r"\s*\((?:exemples?|ids?)\s*[\d,\s]+(?:i\s*\d+)?\)", "", t, flags=re.I)
+    t = re.sub(r"\b(?:als?|els?|en\s+l'|l')\s*exemples?\s+\d+(?:\s*(?:,|i)\s*\d+)*", "", t, flags=re.I)
+    t = re.sub(r"\bexemples?\s+\d+(?:\s*(?:,|i)\s*\d+)*", "", t, flags=re.I)
+    return re.sub(r"\s+", " ", t).replace(" ,", ",").replace(" .", ".").strip()
+
+
 def example_dict(d) -> dict:
     """What a lesson step shows of a drill: both texts, the picture, a voice (speaker's first)."""
     audio = d.audio_url or getattr(d, "audio_tts_shi_url", None) or getattr(d, "audio_tts_url", None)
@@ -381,7 +392,10 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str) -> str:
         "Also an \"intro\" of 25-45 words: what the learner will be able to do after this unit.\n"
         "The sentences are written as their speakers wrote them (spelling varies: 3 for ɛ, gh for ɣ, kh for x, "
         "capitals for emphatics): when your text names a form, give the standard spelling and, if the sentence spells "
-        "it differently, say so in a few words.\n\n"
+        "it differently, say so in a few words.\n"
+        "STYLE: Latin script only (never Arabic script, never transliterations in brackets). Never mention example "
+        "ids or numbers in the texts: refer to a sentence by quoting a few of its words. Talk to the learner («veuràs», "
+        "«fixa't»), never about «the sheet» or «the reference».\n\n"
         "Answer ONLY with a JSON object: {\"intro\": str, \"steps\": [{\"type\": \"explain\", \"title\": str, \"text\": str, "
         "\"example_ids\": [int], \"focus\": {\"<id>\": str}}, {\"type\": \"pattern\", \"title\": str, \"rows\": [[str, str, str]]}, "
         "{\"type\": \"tip\", \"text\": str}, {\"type\": \"dialect\", \"text\": str}]}.\n\n"
@@ -410,16 +424,16 @@ def _parse_lesson(answer: str, examples: List[dict]) -> dict:
                 if frag and frag.lower() in e["shi"].lower() and len(frag) < len(e["shi"]):
                     e["focus"] = frag
                 exs.append(e)
-            steps.append({"type": "explain", "title": _clean_text(s.get("title")) or "", "text": _clean_text(s.get("text")), "examples": exs})
+            steps.append({"type": "explain", "title": _clean_text(s.get("title")) or "", "text": _clean_prose(s.get("text")), "examples": exs})
         elif t == "pattern":
             rows = [[_clean_text(c) for c in r][:3] for r in (s.get("rows") or []) if isinstance(r, list) and r]
             if rows:
                 steps.append({"type": "pattern", "title": _clean_text(s.get("title")) or "", "rows": rows[:8]})
         elif t in ("tip", "dialect") and _clean_text(s.get("text")):
-            steps.append({"type": t, "text": _clean_text(s.get("text"))})
+            steps.append({"type": t, "text": _clean_prose(s.get("text"))})
     if not any(s["type"] == "explain" for s in steps):
         raise ValueError("lesson without explain steps")
-    return {"intro": _clean_text(raw.get("intro")), "steps": steps}
+    return {"intro": _clean_prose(raw.get("intro")), "steps": steps}
 
 
 def _with_quizzes(lesson: dict, examples: List[dict]) -> dict:
