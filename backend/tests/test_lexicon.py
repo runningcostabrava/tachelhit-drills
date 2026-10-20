@@ -18,7 +18,9 @@ def _fixture(tmp_path, monkeypatch):
     (d / "verb_type_index.json").write_text(json.dumps([{"verb": "ⴼⵍ", "type": 1, "french": "laisser", "arabic": "ترك"}], ensure_ascii=False), encoding="utf-8")
     (d / "amazigh_conjugations.json").write_text(json.dumps([{"verb": "ⴼⵍ", "type": 1, "tenses": {
         "Accompli": {"1sg_m": "ⴼⵍⵖ", "1sg_f": "ⴼⵍⵖ", "3sg_m": "ⵉⴼⵍ", "3sg_f": "ⵜⴼⵍ"}}}], ensure_ascii=False), encoding="utf-8")
-    files = {"data/translations.jsonl": "translations.jsonl", "verb_type_index.json": "verb_type_index.json", "amazigh_conjugations.json": "amazigh_conjugations.json"}
+    (d / "dglai.json").write_text(json.dumps({"1": {"id": "1", "tifinagh": "ⴰⴳⵓⴷⴰⵍ", "latin": "agudal", "grammar": "nom masculin",
+        "meaning_fr": "pâturage réservé, mis en défens", "meaning_ar": "محمية رعوية", "lang": "amz"}}, ensure_ascii=False), encoding="utf-8")
+    files = {"dglai_clean (1).json": "dglai.json", "data/translations.jsonl": "translations.jsonl", "verb_type_index.json": "verb_type_index.json", "amazigh_conjugations.json": "amazigh_conjugations.json"}
     monkeypatch.setattr(lexicon, "_fetch", lambda repo, fname: str(d / files[fname]))
     assert lexicon.load(force=True)
 
@@ -32,6 +34,14 @@ def test_lookup_matches_across_scripts_and_finds_conjugated_forms(tmp_path, monk
     assert any(c["tense"] == "Accompli" and "3sg_m" in c["persons"] for h in hits for c in h["conjugation"])
     lines = lexicon.grounding_lines("afus ifel")
     assert any("[Oulhaj]" in l and "hand" in l for l in lines) and any("[IRCAM]" in l for l in lines)
+
+
+def test_ircam_general_dictionary_grounds_central_atlas_words(tmp_path, monkeypatch):
+    _fixture(tmp_path, monkeypatch)
+    hits = lexicon.lookup("agoudal ⴰⴳⵓⴷⴰⵍ")
+    assert hits and hits[0]["ircam"][0]["french"].startswith("pâturage")
+    assert any("[IRCAM-DGLAI]" in l and "agudal" in l for l in lexicon.grounding_lines("agudal"))
+    assert lexicon.status()["dglai_forms"] == 1
 
 
 def test_endpoint_and_drill_context_carry_the_grounding(tmp_path, monkeypatch):

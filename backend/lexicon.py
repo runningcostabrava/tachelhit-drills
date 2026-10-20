@@ -7,6 +7,9 @@ Two published resources, fetched from HuggingFace on first use into backend/know
   belong to the author; used here only as private grounding for a personal learning app.
 - IRCAM "Manuel de conjugaison de l'amazighe" tables (Tamazight-NLP/ircam-conjugations,
   CC BY-NC 4.0): 3,507 verbs, 6 tenses, 12 person/gender forms, with French/Arabic meanings.
+- IRCAM DGLAI, the general dictionary of standard Moroccan Amazigh (Tamazight-NLP/ircam-dglai,
+  CC BY-NC 4.0): 18,491 entries with Tifinagh, Latin, grammar and French/Arabic meanings. It
+  covers the Central Atlas side of the vocabulary that the Tashlhit dictionary lacks.
 
 Words are matched across scripts and spellings through transliteration.to_forms(): first on
 the exact spelling (clean_latin, gemination kept: «mayd» ≠ «maydd»), then, only when that
@@ -25,17 +28,22 @@ from transliteration import to_forms
 LEX_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "knowledge", "lexicon")
 DICT_REPO = "Tamazight-NLP/English-Tashlhit-Dictionary"
 CONJ_REPO = "Tamazight-NLP/ircam-conjugations"
+DGLAI_REPO = "Tamazight-NLP/ircam-dglai"
+DGLAI_FILE = "dglai_clean (1).json"
 ATTRIBUTION = ("Diccionari anglès–taixelhit de Lahcen Oulhaj (tots els drets de l'autor); "
-               "conjugacions del Manuel de conjugaison de l'amazighe, IRCAM 2012 (CC BY-NC 4.0)")
+               "conjugacions del Manuel de conjugaison de l'amazighe, IRCAM 2012 (CC BY-NC 4.0); "
+               "Dictionnaire Général de la Langue Amazighe Informatisé, IRCAM (CC BY-NC 4.0)")
 
 _lock = threading.Lock()
-_state = {"loaded": False, "loading": False, "error": None, "dict_forms": 0, "conj_forms": 0, "verbs": 0}
+_state = {"loaded": False, "loading": False, "error": None, "dict_forms": 0, "conj_forms": 0, "verbs": 0, "dglai_forms": 0}
 # strict key (exact spelling) -> entries; loose key -> entries
 _dict_strict: Dict[str, List[dict]] = {}
 _dict_loose: Dict[str, List[dict]] = {}
 _conj_strict: Dict[str, List[dict]] = {}
 _conj_loose: Dict[str, List[dict]] = {}
 _verb_meta: Dict[str, dict] = {}
+_dglai_strict: Dict[str, List[dict]] = {}
+_dglai_loose: Dict[str, List[dict]] = {}
 
 _WORD = re.compile(r"[^\W\d_]+(?:[-'’][^\W\d_]+)*", re.UNICODE)
 _STOP = {"d", "n", "s", "a", "i", "u", "ad", "ar", "ur", "da", "is", "ma", "mi", "g", "f"}
@@ -125,13 +133,34 @@ def load(force: bool = False) -> bool:
                         if sk and sk != vk:
                             _add(cs, cl, sk, lk, {"form": form, "verb": m["verb"], "french": m["french"],
                                                   "arabic": m["arabic"], "tense": tense, "persons": plist}, 4)
+            # IRCAM general dictionary (standard Amazigh): optional, the rest works without it
+            gs: Dict[str, List[dict]] = {}
+            gl: Dict[str, List[dict]] = {}
+            try:
+                raw = json.load(open(_fetch(DGLAI_REPO, DGLAI_FILE), encoding="utf-8"))
+                for rec in (raw.values() if isinstance(raw, dict) else raw):
+                    tif, lat = (rec.get("tifinagh") or "").strip(), (rec.get("latin") or "").strip()
+                    if not (tif or lat):
+                        continue
+                    fr = rec.get("meaning_fr")
+                    if isinstance(fr, list):
+                        fr = "; ".join(str(x) for x in fr if x)
+                    e = {"tifinagh": tif, "latin": lat, "grammar": rec.get("grammar") or "", "french": (fr or "").strip(),
+                         "arabic": (rec.get("meaning_ar") or "").strip(), "construct": rec.get("construct_state") or ""}
+                    for form in {tif, lat, e["construct"]} - {""}:
+                        sk, lk = _keys(form)
+                        _add(gs, gl, sk, lk, e, 6)
+            except Exception as e:  # dataset missing or renamed: Oulhaj + conjugations still serve
+                print(f"[LEXICON] DGLAI not available: {e}")
             _dict_strict.clear(); _dict_strict.update(ds)
             _dict_loose.clear(); _dict_loose.update(dl)
             _conj_strict.clear(); _conj_strict.update(cs)
             _conj_loose.clear(); _conj_loose.update(cl)
             _verb_meta.clear(); _verb_meta.update(meta)
-            _state.update({"loaded": True, "error": None, "dict_forms": len(ds), "conj_forms": len(cs), "verbs": len(meta)})
-            print(f"[LEXICON] ready: {len(ds)} dictionary forms, {len(cs)} conjugated forms, {len(meta)} verbs")
+            _dglai_strict.clear(); _dglai_strict.update(gs)
+            _dglai_loose.clear(); _dglai_loose.update(gl)
+            _state.update({"loaded": True, "error": None, "dict_forms": len(ds), "conj_forms": len(cs), "verbs": len(meta), "dglai_forms": len(gs)})
+            print(f"[LEXICON] ready: {len(ds)} dictionary forms, {len(cs)} conjugated forms, {len(meta)} verbs, {len(gs)} DGLAI forms")
             return True
         except Exception as e:  # offline, HF down, …: the tutor simply works without it
             _state.update({"error": str(e)[:200]})
@@ -162,13 +191,15 @@ def lookup(text: Optional[str], max_words: int = 12) -> List[dict]:
         seen.add(sk)
         d = _dict_strict.get(sk) or []
         c = _conj_strict.get(sk) or []
+        g = _dglai_strict.get(sk) or []
         verb = _verb_meta.get(sk)
-        exact = bool(d or c or verb)
+        exact = bool(d or c or verb or g)
         if not exact:
             d = _dict_loose.get(lk) or []
             c = _conj_loose.get(lk) or []
-        if d or c or verb:
-            out.append({"word": w, "key": sk, "exact": exact, "dictionary": d[:4], "conjugation": c[:3], "verb": verb})
+            g = _dglai_loose.get(lk) or []
+        if d or c or verb or g:
+            out.append({"word": w, "key": sk, "exact": exact, "dictionary": d[:4], "conjugation": c[:3], "verb": verb, "ircam": g[:3]})
         if len(out) >= max_words:
             break
     return out
@@ -198,6 +229,9 @@ def grounding_lines(text: Optional[str]) -> List[str]:
             ex = f" — ex. «{e['example']}»" if e.get("example") else ""
             lines.append(f"- «{w}» ≈ {e['tashlhit']} / {e['tifinagh']} ({e['pos'] or 'diccionari'}): "
                          f"{'; '.join(e['english'])}{ex}{approx} [Oulhaj]")
+        for g in (hit.get("ircam") or [])[:2]:
+            lines.append(f"- «{w}» ≈ {g['latin']} / {g['tifinagh']} ({g['grammar'] or 'diccionari'}): "
+                         f"{g['french']}{(' · ' + g['arabic']) if g['arabic'] else ''}{approx} [IRCAM-DGLAI]")
         if hit.get("verb") and not hit["dictionary"]:
             v = hit["verb"]
             lines.append(f"- «{w}» = verb {v['verb']} «{v['french']}»{approx} [IRCAM]")
