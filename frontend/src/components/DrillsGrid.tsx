@@ -1,6 +1,6 @@
 import type React from 'react';
 import '../agGridSetup';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { AgGridReact } from 'ag-grid-react';
 import type { ColDef } from 'ag-grid-community';
@@ -116,6 +116,28 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
     const setAlwaysRevealPersist = (v: boolean) => { setAlwaysReveal(v); try { localStorage.setItem('preview.alwaysReveal', v ? '1' : '0'); } catch { /* private mode */ } };
     const [selectedRows, setSelectedRows] = useState<Drill[]>([]);
     const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+    const gridApiRef = useRef<any>(null);
+    const busyDrillId = actionLoadingId ? Number((actionLoadingId.match(/-(\d+)$/) || [])[1]) || null : null;
+    // Highlight only the rows that change (the one that got busy, the one that stopped):
+    // redrawing every row on each change froze the page.
+    const lastBusyRef = useRef<number | null>(null);
+    useEffect(() => {
+        const api = gridApiRef.current;
+        if (!api) return;
+        const ids = new Set([busyDrillId, lastBusyRef.current].filter((x): x is number => x != null));
+        lastBusyRef.current = busyDrillId;
+        const nodes: any[] = [];
+        api.forEachNode?.((n: any) => { if (n.data && ids.has(n.data.id)) nodes.push(n); });
+        if (nodes.length) api.redrawRows?.({ rowNodes: nodes });
+    }, [busyDrillId]);
+    const getRowStyle = useCallback((p: { data?: Drill }) => (busyDrillId != null && p.data?.id === busyDrillId ? { background: 'var(--brand-gradient-soft)', boxShadow: 'inset 4px 0 0 var(--brand-1)' } : undefined), [busyDrillId]);
+    // A refresh after an AI tool replaces the rows; keep the list where the person was reading.
+    const refreshKeepingScroll = async () => {
+        const viewport = document.querySelector('.ag-body-viewport') as HTMLElement | null;
+        const top = viewport?.scrollTop ?? 0;
+        await refreshData();
+        requestAnimationFrame(() => { const v = document.querySelector('.ag-body-viewport') as HTMLElement | null; if (v && top) v.scrollTop = top; });
+    };
     const [recordDrill, setRecordDrill] = useState<Drill | null>(null);
     const [showTestConfig, setShowTestConfig] = useState(false);
     const [mobileTestIds, setMobileTestIds] = useState<number[]>([]);
@@ -168,7 +190,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
             await axios.put(`${API_BASE}/drills/${drill.id}`, { [field]: preservedText });
             if (existing) toast.success(`Suggeriment IA desat, el text «${existing}» es manté: ${preservedText}`);
             else toast.success(`Traducció: ${preservedText}`);
-            await refreshData();
+            await refreshKeepingScroll();
         } catch (err) {
             console.error('Translation workflow crashed:', err);
             toast.error("No s'ha pogut completar la traducció amb IA.");
@@ -226,7 +248,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
             const existingTa = (drill.text_tachelhit || '').trim();
             await axios.put(`${API_BASE}/drills/${drill.id}`, existingTa ? { text_tachelhit_suggested: preservedText } : { text_tachelhit: preservedText });
             if (existingTa) toast.success(`Transcripció desada com a suggeriment (es manté «${existingTa}»): ${preservedText}`);
-            await refreshData();
+            await refreshKeepingScroll();
             console.log('[Transcribe] Success.');
         } catch (error) {
             console.error('[Transcribe] Transcription loop error:', error);
@@ -261,7 +283,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
 
             if (res.data.url) {
                 new Audio(getMediaUrl(res.data.url)).play();
-                await refreshData();
+                await refreshKeepingScroll();
             }
         } catch (err) {
             console.error('TTS workflow crashed:', err);
@@ -294,7 +316,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                 }
             }
             toast.success('Eliminació massiva completada.');
-            await refreshData();
+            await refreshKeepingScroll();
         } catch (error) {
             toast.error('Una o més eliminacions han fallat.');
         }
@@ -310,7 +332,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                 await axios.put(`${API_BASE}/drills/${drill.id}`, { tag: newTag });
             }
             toast.success("Actualització massiva d'etiquetes completada.");
-            await refreshData();
+            await refreshKeepingScroll();
         } catch (error) {
             toast.error("L'actualització d'etiquetes ha fallat.");
         }
@@ -412,7 +434,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
             await syncManager.deleteDrill(id);
 
             toast.success('🗑️ Drill eliminat correctament.');
-            await refreshData();
+            await refreshKeepingScroll();
         } catch (error) {
             console.error('Failed to complete delete request:', error);
             toast.error("S'ha produït un error en intentar eliminar el registre.");
@@ -513,7 +535,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                         try {
                           await axios.put(`${API_BASE}/drills/${d.id}`, { verified: !d.verified });
                           toast.success(d.verified ? 'Marca de verificat treta' : 'Drill verificat');
-                          await refreshData();
+                          await refreshKeepingScroll();
                         } catch { toast.error('No s\'ha pogut desar'); }
                       }}
                       title={d.verified ? 'Verificat per un parlant · clica per treure la marca' : 'Marca aquest drill com a verificat (text i so correctes)'}
@@ -989,6 +1011,9 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
             <div className="ag-theme-alpine" style={{ flex: 1 }}>
                 <AgGridReact
                     rowData={rowData}
+                    // The drill an AI tool is working on stays highlighted while it runs.
+                    getRowStyle={getRowStyle}
+                    onGridReady={(e) => { gridApiRef.current = e.api; }}
                     columnDefs={columnDefs}
                     animateRows={true}
                     pagination={true}
