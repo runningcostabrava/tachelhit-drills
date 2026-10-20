@@ -229,7 +229,8 @@ export const api = {
 
   // --- grammar course ---
   grammarUnits: () => request<{ units: GrammarUnit[]; counts: Record<string, number>; status: { running: boolean; done: number; pending: number } }>('/grammar'),
-  grammarUnit: (slug: string, limit = 60) => request<GrammarUnit & { lesson: string; total: number; drills: Drill[] }>(`/grammar/${slug}?limit=${limit}`),
+  grammarUnit: (slug: string, limit = 60) => request<GrammarUnitPage>(`/grammar/${slug}?limit=${limit}`),
+  grammarRewrite: (slug: string) => request<GrammarUnitPage>(`/grammar/${slug}/rewrite`, { method: 'POST' }),
 
   // --- multi-speaker recordings (many takes per drill) ---
   drillRecordings: (drillId: number) =>
@@ -293,6 +294,17 @@ export const api = {
 };
 
 export interface GrammarUnit { slug: string; title: string; level: number }
+/** A drill as a lesson quotes it: both texts plus its picture and a voice (the speaker's when recorded). */
+export interface LessonExample { id: number; shi: string; ca: string; image_url?: string | null; audio_url?: string | null; recorded: boolean; author?: string | null; region?: string | null }
+export type LessonStep =
+  | { type: 'explain'; title: string; text: string; examples: LessonExample[] }
+  | { type: 'pattern'; title: string; rows: string[][] }
+  | { type: 'quiz'; question: string; options: string[]; answer: number; example: LessonExample }
+  | { type: 'tip'; text: string }
+  | { type: 'dialect'; text: string }
+  | { type: 'end' };
+export interface GrammarLesson { intro: string; steps: LessonStep[]; error?: string }
+export interface GrammarUnitPage extends GrammarUnit { lesson: GrammarLesson; total: number; drills: Drill[] }
 
 export interface AiUsage {
   today: { used: number; limit: number | null; remaining: number | null };

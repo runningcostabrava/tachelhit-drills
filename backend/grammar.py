@@ -4,9 +4,10 @@
 drill shows (the perfective, the construct state, negation). A fixed curriculum of units in
 pedagogical order (the amazic.cat compendium's chapters, cut into teachable steps); each drill
 carries up to 3 unit slugs, filled by Gemini from the Tamazight text and the Catalan meaning
-(`grammar_source = "auto"`), overridable by hand (`"owner"`). Each unit's explanation is
-written once by Gemini from the relevant chapters of the compendium and cached on disk
-(backend/knowledge/grammar_units/<slug>.md, gitignored like the compendium itself).
+(`grammar_source = "auto"`), overridable by hand (`"owner"`). Each unit's LESSON is a sequence
+of steps (explanations with the library's own examples -pictures and voices-, a pattern table,
+quick checks, a tip, a dialect note), written once by Gemini from the compendium's sections
+named by the unit (SECTIONS) and kept in the `grammar_lessons` table so deploys don't lose it.
 """
 from __future__ import annotations
 
@@ -67,7 +68,36 @@ UNITS: List[dict] = [
 SLUGS = [u["slug"] for u in UNITS]
 TITLES = {u["slug"]: u["title"] for u in UNITS}
 BATCH = 40
-UNITS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "knowledge", "grammar_units")
+LESSON_VERSION = 2  # bump when the lesson format or prompt changes: old rows are rewritten on next open
+
+# Drills whose tag names another language are never part of the course (the owner's old Irish tests).
+EXCLUDED_TAGS = ("irish",)
+
+# The compendium's own sections (N.N / N.N.N) that explain each unit: what the lesson writer reads.
+SECTIONS: Dict[str, List[str]] = {
+    "formules": ["7.1.1", "6.4", "7.3.3"],
+    "pronoms-personals": ["4.1", "4.1.1"],
+    "demostratius": ["4.2", "4.2.1", "4.3.3"],
+    "noms-genere-nombre": ["3.1.1", "3.1.2", "3.2.1", "3.2.2", "3.2.3"],
+    "estat-annexio": ["3.3.1", "3.3.2"],
+    "possessius": ["4.1.2", "4.3.2", "4.3.4"],
+    "preposicions": ["6.2.1", "6.2.2", "6.2.3"],
+    "ser-tenir": ["7.1.1", "6.5", "7.2.3", "6.4"],
+    "aorist-ad": ["5.2", "5.2.1"],
+    "perfectiu": ["5.1.1", "5.2.2"],
+    "imperfectiu-habitual": ["5.2.4"],
+    "imperatiu": ["5.1.3", "7.2.4"],
+    "negacio": ["7.2.1", "7.2.2", "7.2.3", "5.2.3", "5.2.5"],
+    "preguntes": ["7.3.1", "7.3.2", "4.3.6"],
+    "clitics-objecte": ["4.1.2"],
+    "relatiu-participi": ["4.3.5", "5.1.4", "7.5.1", "7.5.2"],
+    "adjectius-qualitat": ["3.6", "7.4.1", "5.1.2", "7.7.8"],
+    "numerals": ["3.5.1", "3.5.2"],
+    "temps-adverbis": ["6.1", "7.4.2", "7.7.2"],
+    "subordinades": ["7.6.1", "7.7.2", "7.7.3", "7.7.4", "7.7.6"],
+    "derivacio-verbal": ["5.3.2", "5.3.3", "5.3.4", "5.3.5"],
+    "manlleus": ["3.4.1", "3.1.1"],
+}
 
 _state = {"running": False, "done": 0, "pending": 0, "errors": 0, "started_at": None, "finished_at": None, "last_error": None}
 _lock = threading.Lock()
@@ -76,6 +106,14 @@ _explain_lock = threading.Lock()
 
 def parse(s: Optional[str]) -> List[str]:
     return [x.strip() for x in (s or "").split(",") if x.strip() and x.strip() in TITLES]
+
+
+def not_excluded(query, DrillModel):
+    """Keep drills whose tag doesn't name an excluded language."""
+    from sqlalchemy import or_
+    for t in EXCLUDED_TAGS:
+        query = query.filter(or_(DrillModel.tag.is_(None), ~DrillModel.tag.ilike(f"%{t}%")))
+    return query
 
 
 def _prompt(rows: List[dict]) -> str:
@@ -128,7 +166,7 @@ def run(session_factory, force: bool = False, limit: int = 4000, only_ids: Optio
     try:
         db = session_factory()
         try:
-            q = db.query(DrillModel).filter(DrillModel.text_tachelhit != None, DrillModel.text_tachelhit != "")
+            q = not_excluded(db.query(DrillModel).filter(DrillModel.text_tachelhit != None, DrillModel.text_tachelhit != ""), DrillModel)
             if only_ids:
                 q = q.filter(DrillModel.id.in_(only_ids))
             elif not force:
@@ -177,8 +215,31 @@ def counts(session_factory) -> Dict[str, int]:
         db.close()
 
 
+def _section_text(grammar_md: str, sections: List[str], each: int = 12000, total: int = 45000) -> str:
+    """The compendium's numbered sections (e.g. 7.2.1) named by the unit, each cut at `each` chars."""
+    lines = (grammar_md or "").split("\n")
+    heads = []  # (line index, number)
+    for i, ln in enumerate(lines):
+        m = re.match(r"^\s*(\d+(?:\.\d+){1,2})\.\s+\S", ln)
+        if m and len(ln) < 110:
+            heads.append((i, m.group(1)))
+    out = []
+    for want in sections:
+        for k, (i, num) in enumerate(heads):
+            if num != want:
+                continue
+            depth = num.count(".")
+            end = len(lines)
+            for j, n2 in heads[k + 1:]:
+                if n2.count(".") <= depth and not n2.startswith(want + "."):
+                    end = j; break
+            out.append("\n".join(lines[i:end])[:each]); break
+    text = "\n\n".join(out)
+    return text[:total]
+
+
 def _chapter_text(grammar_md: str, numbers: List[int], limit: int = 60000) -> str:
-    """The compendium's chapters (## N. …) named by the unit, trimmed to `limit` characters each."""
+    """Fallback when a unit names no sections: whole chapters (## N. …)."""
     parts = re.split(r"(?m)^## (?=\d+\.)", grammar_md)
     out = []
     for p in parts:
@@ -188,40 +249,171 @@ def _chapter_text(grammar_md: str, numbers: List[int], limit: int = 60000) -> st
     return "\n\n".join(out)
 
 
-def explanation(slug: str, grammar_md: str, examples: List[dict], force: bool = False) -> str:
-    """The unit's lesson text in Catalan (Markdown), written once by Gemini from the compendium's
-    chapters and a handful of the corpus's own examples, then cached on disk."""
+def reference_text(slug: str, grammar_md: str) -> str:
+    unit = next((u for u in UNITS if u["slug"] == slug), None)
+    if unit is None or not grammar_md:
+        return ""
+    return _section_text(grammar_md, SECTIONS.get(slug) or []) or _chapter_text(grammar_md, unit["chapters"], limit=30000)
+
+
+def _clean_text(s: Optional[str]) -> str:
+    return re.sub(r"\s+", " ", (s or "").replace("\r", "")).strip()
+
+
+def example_dict(d) -> dict:
+    """What a lesson step shows of a drill: both texts, the picture, a voice (speaker's first)."""
+    audio = d.audio_url or getattr(d, "audio_tts_shi_url", None) or getattr(d, "audio_tts_url", None)
+    return {"id": d.id, "shi": _clean_text(d.text_tachelhit), "ca": _clean_text(d.text_catalan),
+            "image_url": d.image_url, "audio_url": audio, "recorded": bool(d.audio_url),
+            "author": (d.author or "").strip() or None, "region": d.region}
+
+
+def pick_examples(rows: List, limit: int = 40) -> List[dict]:
+    """The drills a lesson can quote: short real sentences (no conjugation lists, no placeholders),
+    the ones with a picture and a voice first, no duplicates."""
+    cands = []
+    for d in rows:
+        shi = _clean_text(d.text_tachelhit); ca = _clean_text(d.text_catalan)
+        if not shi or not ca or shi.lower() == "text" or len(shi) > 90 or len(ca) > 110:
+            continue
+        if "//" in shi or shi.count(",") >= 3 or shi.count("/") >= 2:
+            continue  # the deck's conjugation lists and alternatives are not sentences
+        cands.append(example_dict(d))
+    cands.sort(key=lambda e: (not (e["image_url"] and e["audio_url"]), not e["audio_url"], not e["image_url"], e["id"]))
+    seen, out = set(), []
+    for e in cands:
+        k = e["shi"].lower()
+        if k in seen:
+            continue
+        seen.add(k); out.append(e)
+        if len(out) >= limit:
+            break
+    return out
+
+
+BANNED_TERMS = ("apofonia", "díctic", "diàtesi", "morfema", "lexema", "radical", "acomplert", "inacomplert",
+                "sintagma", "tema verbal", "al·lomorf", "clític")
+
+def _lesson_prompt(unit: dict, examples: List[dict], reference: str) -> str:
+    ex = "\n".join(f"- id {e['id']}: «{e['shi']}» — {e['ca']}" for e in examples)
+    return (
+        f"Write the lesson «{unit['title']}» of a Tamazight course (Tachelhit and the Central Atlas / Beni Mellal "
+        "variety) for Catalan-speaking adults who are NOT linguists: a curious traveller, a partner of a Tamazight "
+        "speaker. Plain, warm Catalan; short sentences; explain every grammatical word the first time you use it "
+        "(«el perfectiu, la forma que es fa servir per a accions acabades…»). Never use these words: "
+        + ", ".join(BANNED_TERMS) + ". Say «pronom enganxat al verb» instead of clític, «forma de passat / acció "
+        "acabada» instead of acomplert, and so on.\n\n"
+        "Build the lesson as STEPS, each one a card the learner reads in a few seconds:\n"
+        "- 4 to 6 steps of type \"explain\": a title (3-6 words), a text of 35-70 words, and 1 to 3 example_ids "
+        "taken ONLY from the examples below (the examples that best show the point; quote nothing else). Start with "
+        "the simplest idea and build up.\n"
+        "- 1 step of type \"pattern\" (optional, when a table helps): a title and 3-7 rows of [form, meaning, example], "
+        "with the forms in standard Latin spelling (ɣ, ḥ, ṣ, ṭ, ẓ, ɛ, š).\n"
+        "- 1 step of type \"tip\": a text of 30-60 words on the mistake Catalan speakers make most, or a memory trick.\n"
+        "- 1 step of type \"dialect\" (only when it matters): 25-60 words on how Beni Mellal / Azilal speakers say it "
+        "versus the Souss (Tachelhit).\n"
+        "Also an \"intro\" of 25-45 words: what the learner will be able to do after this unit.\n"
+        "Examples are quoted by id; the app shows them with their picture and voice. The examples are written as "
+        "their speakers wrote them (spelling varies: 3 for ɛ, gh for ɣ, kh for x): when your text names a form, "
+        "give the standard spelling and, if an example spells it differently, say so in a few words.\n"
+        "Never invent words or forms. If the reference and the examples disagree, trust the examples and say the "
+        "reference describes the Souss.\n\n"
+        "Answer ONLY with a JSON object: {\"intro\": str, \"steps\": [{\"type\": \"explain\", \"title\": str, \"text\": str, "
+        "\"example_ids\": [int]}, {\"type\": \"pattern\", \"title\": str, \"rows\": [[str, str, str]]}, {\"type\": \"tip\", "
+        "\"text\": str}, {\"type\": \"dialect\", \"text\": str}]}.\n\n"
+        f"EXAMPLES FROM THE LIBRARY (real speakers):\n{ex}\n\n"
+        f"REFERENCE (grammar compendium, amazic.cat; describes mainly the Souss):\n{reference}"
+    )
+
+
+def _parse_lesson(answer: str, examples: List[dict]) -> dict:
+    m = re.search(r"\{.*\}", answer or "", re.S)
+    if not m:
+        raise ValueError(f"no JSON in answer: {(answer or '')[:120]}")
+    raw = json.loads(m.group(0))
+    by_id = {e["id"]: e for e in examples}
+    steps = []
+    for s in raw.get("steps") or []:
+        t = (s.get("type") or "").strip()
+        if t == "explain":
+            ids = [int(i) for i in (s.get("example_ids") or []) if str(i).strip().lstrip("-").isdigit() and int(i) in by_id]
+            if not _clean_text(s.get("text")):
+                continue
+            steps.append({"type": "explain", "title": _clean_text(s.get("title")) or "", "text": _clean_text(s.get("text")),
+                          "examples": [by_id[i] for i in dict.fromkeys(ids)][:3]})
+        elif t == "pattern":
+            rows = [[_clean_text(c) for c in r][:3] for r in (s.get("rows") or []) if isinstance(r, list) and r]
+            if rows:
+                steps.append({"type": "pattern", "title": _clean_text(s.get("title")) or "", "rows": rows[:8]})
+        elif t in ("tip", "dialect") and _clean_text(s.get("text")):
+            steps.append({"type": t, "text": _clean_text(s.get("text"))})
+    if not any(s["type"] == "explain" for s in steps):
+        raise ValueError("lesson without explain steps")
+    return {"intro": _clean_text(raw.get("intro")), "steps": steps}
+
+
+def _with_quizzes(lesson: dict, examples: List[dict]) -> dict:
+    """A quick check after every second explanation: «Com es diu …?» with 3 wrong answers from the same unit."""
+    import random
+    pool = [e for e in examples if e["shi"] and e["ca"]]
+    out, n_explain, used = [], 0, set()
+    for s in lesson["steps"]:
+        out.append(s)
+        if s["type"] != "explain":
+            continue
+        n_explain += 1
+        if n_explain % 2 or len(pool) < 4:
+            continue
+        target = next((e for e in s["examples"] if e["id"] not in used and e["shi"] and e["ca"]), None) or \
+                 next((e for e in pool if e["id"] not in used), None)
+        if not target:
+            continue
+        used.add(target["id"])
+        rnd = random.Random(target["id"])
+        same = lambda a, b: a[:10].lower() == b[:10].lower()  # a wrong answer must not mean the same thing
+        wrong = [e["shi"] for e in pool if e["id"] != target["id"] and e["shi"].lower() != target["shi"].lower() and not same(e["ca"], target["ca"])]
+        rnd.shuffle(wrong)
+        options = [target["shi"]] + wrong[:3]
+        rnd.shuffle(options)
+        out.append({"type": "quiz", "question": f"Com es diu «{target['ca']}»?", "options": options,
+                    "answer": options.index(target["shi"]), "example": target})
+    out.append({"type": "end"})
+    return {**lesson, "steps": out}
+
+
+def write_lesson(slug: str, grammar_md: str, examples: List[dict]) -> dict:
+    """Ask Gemini for the unit's steps and attach the examples and the quick checks."""
     unit = next((u for u in UNITS if u["slug"] == slug), None)
     if unit is None:
-        return ""
-    os.makedirs(UNITS_DIR, exist_ok=True)
-    path = os.path.join(UNITS_DIR, f"{slug}.md")
-    if os.path.exists(path) and not force:
-        return _clean_lesson(open(path, encoding="utf-8").read())
+        raise ValueError("unknown unit")
+    from gemini_client import gemini_generate
+    answer = gemini_generate("You are a patient, clear teacher of Amazigh for beginners, writing in Catalan.",
+                             [{"role": "user", "text": _lesson_prompt(unit, examples, reference_text(slug, grammar_md))}],
+                             max_output_tokens=4000, temperature=0.3, timeout=240)
+    lesson = _parse_lesson(answer, examples)
+    return _with_quizzes(lesson, examples)
+
+
+def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool = False) -> dict:
+    """The unit's lesson from the `grammar_lessons` table, written (once) when missing, outdated or forced."""
+    from datetime import datetime
+    from models import GrammarLesson
+    row = db.query(GrammarLesson).filter(GrammarLesson.id == slug).first()
+    if row and not force and (row.version or 0) >= LESSON_VERSION:
+        try:
+            return json.loads(row.body)
+        except Exception:
+            pass
     with _explain_lock:
-        if os.path.exists(path) and not force:
-            return _clean_lesson(open(path, encoding="utf-8").read())
-        from gemini_client import gemini_generate
-        ex = "\n".join(f"- {e.get('shi')} — {e.get('ca')}" for e in examples[:12])
-        chapters = _chapter_text(grammar_md, unit["chapters"]) if grammar_md else ""
-        prompt = (f"Write the lesson «{unit['title']}» of a Tamazight (Tachelhit / Central Atlas) grammar course for "
-                  "Catalan-speaking adult learners, in Catalan, in Markdown, 250-450 words: a short explanation of the "
-                  "point, the forms in a small table when useful, 4-6 examples (Latin script, with the Catalan meaning), "
-                  "the most common mistakes, and one line on dialect differences (Souss Tachelhit vs Central Atlas / "
-                  "Beni Mellal) when they matter. Prefer the corpus examples below when they fit; never invent words.\n\n"
-                  "Answer with the Markdown lesson only, starting with its # heading: no preamble, no closing remark." + chr(10) + chr(10) +
-                  f"CORPUS EXAMPLES (real speakers):\n{ex}\n\nREFERENCE (grammar compendium, amazic.cat):\n{chapters}")
-        text = gemini_generate("You are a clear, careful teacher of Amazigh grammar writing in Catalan.",
-                               [{"role": "user", "text": prompt}], max_output_tokens=2500, temperature=0.3, timeout=240)
-        text = _clean_lesson(text)
-        open(path, "w", encoding="utf-8").write(text)
-        return text
-
-
-def _clean_lesson(text: str) -> str:
-    """Drop a chatty preamble («Aquí teniu la lliçó…») and rules before the first heading."""
-    t = (text or "").replace(chr(13), "")
-    m = re.search(r"(?m)^#{1,3} ", t)
-    if m and m.start() > 0:
-        t = t[m.start():]
-    return t.strip()
+        row = db.query(GrammarLesson).filter(GrammarLesson.id == slug).first()
+        if row and not force and (row.version or 0) >= LESSON_VERSION:
+            return json.loads(row.body)
+        lesson = write_lesson(slug, grammar_md, examples)
+        body = json.dumps(lesson, ensure_ascii=False)
+        if row is None:
+            row = GrammarLesson(id=slug, body=body, version=LESSON_VERSION)
+            db.add(row)
+        else:
+            row.body = body; row.version = LESSON_VERSION; row.updated_at = datetime.utcnow()
+        db.commit()
+        return lesson

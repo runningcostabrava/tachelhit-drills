@@ -1,18 +1,25 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from '../toast';
-import { FaBullseye, FaChevronLeft, FaVolumeUp } from 'react-icons/fa';
-import { api, type GrammarUnit } from '../api';
-import type { Drill } from '../types';
+import { FaBullseye, FaCheck, FaChevronLeft, FaChevronRight, FaLightbulb, FaMapMarkerAlt, FaRedo, FaTimes, FaVolumeUp } from 'react-icons/fa';
+import { api, type GrammarUnit, type GrammarUnitPage, type LessonExample, type LessonStep } from '../api';
 import { API_BASE, getMediaUrl } from '../config';
 
 // The grammar course: the library organised as a sequence of grammar units (backend/grammar.py).
-// Course view: the units in order, with how many drills illustrate each. Unit view: the lesson
-// text (written once from the amazic.cat compendium) and the corpus's own examples, the
-// speaker-recorded ones first, with a button that turns them into a test.
+// Course view: the units in order, with how many drills illustrate each. Unit view: the lesson as
+// cards the learner steps through (explanations with the library's own examples -picture and voice-,
+// a pattern table, quick checks, a tip, a dialect note), then a button that turns the unit into a test.
 
 const LEVEL_LABEL: Record<number, string> = { 1: 'Nivell 1 · bàsic', 2: 'Nivell 2 · mitjà', 3: 'Nivell 3 · avançat' };
+
+// Course progress lives in this browser: which units were finished and the quick-check score.
+type Progress = Record<string, { right: number; total: number; at: string }>;
+const PROGRESS_KEY = 'grammar_progress';
+function loadProgress(): Progress { try { return JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}'); } catch { return {}; } }
+function saveProgress(slug: string, right: number, total: number) {
+  try { localStorage.setItem(PROGRESS_KEY, JSON.stringify({ ...loadProgress(), [slug]: { right, total, at: new Date().toISOString() } })); } catch { /* private mode */ }
+}
 
 export default function GrammarPage() {
   const { slug } = useParams<{ slug?: string }>();
@@ -24,25 +31,37 @@ function CourseView() {
   const [units, setUnits] = useState<GrammarUnit[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [status, setStatus] = useState<{ running: boolean; done: number; pending: number } | null>(null);
+  const [progress] = useState<Progress>(loadProgress);
   useEffect(() => {
     api.grammarUnits().then((r) => { setUnits(r.units); setCounts(r.counts); setStatus(r.status); }).catch(() => toast.error('No s’ha pogut carregar el curs'));
   }, []);
   const levels = [1, 2, 3];
+  const done = units.filter((u) => progress[u.slug]).length;
+  const nextUnit = units.find((u) => !progress[u.slug] && counts[u.slug]);
   return (
     <div style={{ padding: '20px 16px', maxWidth: '900px', margin: '0 auto' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', margin: '0 0 4px' }}>Gramàtica</h1>
-      <div style={{ color: 'var(--text-soft)', fontSize: '14px', marginBottom: '18px' }}>
-        El curs: cada unitat explica un punt de gramàtica amb les frases reals de la biblioteca com a exemples.
+      <div style={{ color: 'var(--text-soft)', fontSize: '14px', marginBottom: '14px' }}>
+        El curs: cada unitat explica un punt de gramàtica pas a pas, amb les frases, les imatges i les veus de la biblioteca.
         {status?.running && <span> · classificant drills ({status.done} fets, {status.pending} pendents)</span>}
       </div>
+      {units.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: 'var(--r-lg)', background: 'var(--brand-gradient-soft)', border: '1px solid var(--border)', marginBottom: '18px', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <div style={{ fontWeight: 800, color: 'var(--text)' }}>{done === 0 ? 'Comença el curs' : done >= units.length ? 'Curs acabat!' : `${done} de ${units.length} unitats fetes`}</div>
+            {nextUnit && <div style={{ fontSize: '13px', color: 'var(--text-soft)' }}>Següent: {nextUnit.title}</div>}
+          </div>
+          {nextUnit && <button onClick={() => navigate(`/grammar/${nextUnit.slug}`)} style={{ padding: '10px 16px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>{done ? 'Continua' : 'Comença'} <FaChevronRight /></button>}
+        </div>
+      )}
       {levels.map((lv) => (
         <section key={lv} style={{ marginBottom: '22px' }}>
           <h2 style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 8px' }}>{LEVEL_LABEL[lv]}</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
-            {units.filter((u) => u.level === lv).map((u, i) => (
+            {units.filter((u) => u.level === lv).map((u) => (
               <button key={u.slug} onClick={() => navigate(`/grammar/${u.slug}`)}
                 style={{ textAlign: 'left', padding: '14px 16px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '6px', minHeight: '84px' }}>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>Unitat {units.findIndex((x) => x.slug === u.slug) + 1}{i === 0 ? '' : ''}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>Unitat {units.findIndex((x) => x.slug === u.slug) + 1}{progress[u.slug] && <span style={{ color: 'var(--emerald)', display: 'inline-flex', alignItems: 'center', gap: 3 }}><FaCheck size={10} /> feta{progress[u.slug].total ? ` · ${progress[u.slug].right}/${progress[u.slug].total}` : ''}</span>}</div>
                 <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: '15px', lineHeight: 1.25 }}>{u.title}</div>
                 <div style={{ fontSize: '12px', color: counts[u.slug] ? 'var(--brand-1)' : 'var(--text-muted)' }}>{counts[u.slug] ? `${counts[u.slug]} exemples` : 'encara sense exemples'}</div>
               </button>
@@ -54,61 +73,108 @@ function CourseView() {
   );
 }
 
+// ---------------- the unit: a lesson in cards ----------------
+
+type Card = { type: 'intro' } | LessonStep;
+
 function UnitView({ slug }: { slug: string }) {
   const navigate = useNavigate();
-  const [unit, setUnit] = useState<(GrammarUnit & { lesson: string; total: number; drills: Drill[] }) | null>(null);
+  const [page, setPage] = useState<GrammarUnitPage | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [i, setI] = useState(0);
+  const [answers, setAnswers] = useState<Record<number, number>>({}); // card index -> chosen option
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [rewriting, setRewriting] = useState(false);
+  const [units, setUnits] = useState<GrammarUnit[]>([]);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+
   useEffect(() => {
-    setUnit(null); setError(null);
-    api.grammarUnit(slug).then(setUnit).catch((e) => setError(e?.message || 'Error'));
+    setPage(null); setError(null); setI(0); setAnswers({});
+    api.grammarUnit(slug).then(setPage).catch((e) => setError(e?.message || 'Error'));
+    api.me().then((m) => setIsAdmin(!!m?.is_admin)).catch(() => {});
   }, [slug]);
-  const play = (d: Drill) => {
-    const url = d.audio_url || d.audio_tts_shi_url;
-    if (url) new Audio(getMediaUrl(url)).play().catch(() => {});
-  };
+  useEffect(() => { api.grammarUnits().then((r) => { setUnits(r.units); setCounts(r.counts); }).catch(() => {}); }, []);
+  const nextUnit = useMemo(() => {
+    const k = units.findIndex((u) => u.slug === slug);
+    return k >= 0 ? units.slice(k + 1).find((u) => counts[u.slug]) || null : null;
+  }, [units, counts, slug]);
+
+  const cards = useMemo<Card[]>(() => (page ? [{ type: 'intro' }, ...page.lesson.steps] : []), [page]);
+  const card = cards[i];
+  const cover = useMemo(() => {
+    if (!page) return null;
+    for (const s of page.lesson.steps) {
+      if (s.type === 'explain') { const e = s.examples.find((x) => x.image_url); if (e) return e; }
+    }
+    return page.drills.find((d) => d.image_url) ? { image_url: page.drills.find((d) => d.image_url)!.image_url } : null;
+  }, [page]);
+
+  const canGoNext = !!card && (card.type !== 'quiz' || answers[i] !== undefined) && i < cards.length - 1;
+  const next = useCallback(() => { if (canGoNext) setI((x) => x + 1); }, [canGoNext]);
+  useEffect(() => {  // reaching the last card = unit done
+    if (!card || card.type !== 'end') return;
+    const quizzes = cards.map((c, k) => ({ c, k })).filter(({ c }) => c.type === 'quiz');
+    saveProgress(slug, quizzes.filter(({ c, k }) => c.type === 'quiz' && answers[k] === c.answer).length, quizzes.length);
+  }, [card, cards, answers, slug]);
+  const prev = useCallback(() => setI((x) => Math.max(0, x - 1)), []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') next();
+      if (e.key === 'ArrowLeft') prev();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [next, prev]);
+
   const makeTest = async () => {
-    if (!unit) return;
-    const ids = unit.drills.slice(0, 200).map((d) => d.id);
+    if (!page) return;
+    const ids = page.drills.slice(0, 200).map((d) => d.id);
     try {
       await axios.post(`${API_BASE}/tests/`, {
-        title: unit.title, description: `Unitat de gramàtica «${unit.title}» (${ids.length} drills)`,
+        title: page.title, description: `Unitat de gramàtica «${page.title}» (${ids.length} drills)`,
         question_type: 'text_input', hint_level: 'none', hint_percentage: 30, hint_tries_before_reveal: 3,
         time_limit_seconds: null, passing_score: 70, drill_ids: ids.join(','),
       });
-      toast.success(`Test «${unit.title}» creat amb ${ids.length} drills`);
+      toast.success(`Test «${page.title}» creat amb ${ids.length} drills`);
       navigate('/tests');
     } catch { toast.error('No s’ha pogut crear el test'); }
   };
+  const rewrite = async () => {
+    setRewriting(true);
+    try { setPage(await api.grammarRewrite(slug)); setI(0); setAnswers({}); toast.success('Lliçó reescrita'); }
+    catch { toast.error('No s’ha pogut reescriure la lliçó'); }
+    finally { setRewriting(false); }
+  };
+
   return (
-    <div style={{ padding: '20px 16px', maxWidth: '900px', margin: '0 auto' }}>
-      <button onClick={() => navigate('/grammar')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: '4px 0', marginBottom: '8px' }}><FaChevronLeft /> Totes les unitats</button>
+    <div style={{ padding: '16px 16px 96px', maxWidth: '640px', margin: '0 auto' }}>
+      <button onClick={() => navigate('/grammar')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: '4px 0', marginBottom: '6px' }}><FaChevronLeft /> Totes les unitats</button>
       {error && <div style={{ color: 'var(--rose)' }}>{error}</div>}
-      {!unit && !error && <div style={{ color: 'var(--text-muted)' }}>Preparant la unitat… (la primera vegada s’escriu la lliçó, triga uns segons)</div>}
-      {unit && (
+      {!page && !error && (
+        <div style={{ color: 'var(--text-muted)', padding: '24px 0' }}>
+          Preparant la unitat… (la primera vegada s’escriu la lliçó: triga uns segons)
+        </div>
+      )}
+      {page && card && (
         <>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>{LEVEL_LABEL[unit.level]}</div>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '22px', margin: '2px 0 14px' }}>{unit.title}</h1>
-          <article className="grammar-lesson" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '16px 18px', fontSize: '15px', lineHeight: 1.55, color: 'var(--text)', whiteSpace: 'pre-wrap', marginBottom: '18px' }}>
-            {renderMarkdownLite(unit.lesson)}
-          </article>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
-            <h2 style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: 0, flex: 1 }}>Exemples de la biblioteca · {unit.total}</h2>
-            {unit.drills.length > 0 && (
-              <button onClick={makeTest} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}><FaBullseye /> Practica aquesta unitat</button>
-            )}
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>{LEVEL_LABEL[page.level]} · {i + 1} / {cards.length}</div>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', margin: '2px 0 10px', lineHeight: 1.2 }}>{page.title}</h1>
+          <Progress n={cards.length} i={i} answers={answers} cards={cards} />
+          <div key={i} className="lesson-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', padding: '18px', marginTop: '12px', boxShadow: 'var(--shadow-sm)', minHeight: '240px' }}>
+            {card.type === 'intro' && <IntroCard page={page} cover={cover?.image_url || null} />}
+            {card.type === 'explain' && <ExplainCard step={card} />}
+            {card.type === 'pattern' && <PatternCard step={card} />}
+            {card.type === 'quiz' && <QuizCard step={card} chosen={answers[i]} onChoose={(k) => setAnswers((a) => ({ ...a, [i]: k }))} />}
+            {(card.type === 'tip' || card.type === 'dialect') && <NoteCard step={card} />}
+            {card.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} nextUnit={nextUnit} />}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {unit.drills.map((d) => (
-              <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
-                <button onClick={() => play(d)} disabled={!d.audio_url && !d.audio_tts_shi_url} aria-label="Escolta" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : 'var(--surface-2)', color: d.audio_url ? '#fff' : 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={13} /></button>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, color: 'var(--text)' }}>{d.text_tachelhit}</div>
-                  <div style={{ fontSize: '13px', color: 'var(--text-soft)' }}>{d.text_catalan}{d.region ? <span style={{ color: 'var(--text-muted)' }}> · {d.region}</span> : null}</div>
-                </div>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>#{d.id}</span>
-              </div>
-            ))}
-            {unit.drills.length === 0 && <div style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Encara no hi ha drills classificats en aquesta unitat.</div>}
+          <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, padding: '10px 16px calc(10px + env(safe-area-inset-bottom))', background: 'var(--bg)', borderTop: '1px solid var(--border)', zIndex: 5 }}>
+            <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', gap: '10px' }}>
+              <button onClick={prev} disabled={i === 0} style={{ flex: 1, padding: '12px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: i === 0 ? 'var(--text-muted)' : 'var(--text)', fontWeight: 700, cursor: i === 0 ? 'default' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><FaChevronLeft /> Enrere</button>
+              <button onClick={next} disabled={!canGoNext} style={{ flex: 2, padding: '12px', borderRadius: 'var(--r-pill)', border: 'none', background: canGoNext ? 'var(--brand-gradient)' : 'var(--surface-2)', color: canGoNext ? '#fff' : 'var(--text-muted)', fontWeight: 700, cursor: canGoNext ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                {card.type === 'quiz' && answers[i] === undefined ? 'Tria una resposta' : card.type === 'end' ? 'Final' : i === 0 ? 'Comencem' : 'Següent'} <FaChevronRight />
+              </button>
+            </div>
           </div>
         </>
       )}
@@ -116,19 +182,167 @@ function UnitView({ slug }: { slug: string }) {
   );
 }
 
-// Headings, bold and bullet lines are enough for the lesson text; no Markdown library needed.
-function renderMarkdownLite(md: string) {
-  const lines = (md || '').replace(/\r/g, '').split('\n');
-  return lines.map((line, i) => {
-    const h = line.match(/^(#{1,4})\s+(.*)$/);
-    if (h) return <div key={i} style={{ fontWeight: 800, fontSize: h[1].length <= 2 ? '17px' : '15px', margin: '10px 0 4px' }}>{inline(h[2])}</div>;
-    if (/^\s*[-*]\s+/.test(line)) return <div key={i} style={{ paddingLeft: '18px', textIndent: '-12px' }}>• {inline(line.replace(/^\s*[-*]\s+/, ''))}</div>;
-    if (/^\|/.test(line)) return <div key={i} style={{ fontFamily: 'ui-monospace, monospace', fontSize: '13px' }}>{line.replace(/^\||\|$/g, '').split('|').map((c) => c.trim()).join('   ')}</div>;
-    if (/^\s*$/.test(line)) return <div key={i} style={{ height: '6px' }} />;
-    return <div key={i}>{inline(line)}</div>;
-  });
+function Progress({ n, i, answers, cards }: { n: number; i: number; answers: Record<number, number>; cards: Card[] }) {
+  return (
+    <div style={{ display: 'flex', gap: '3px' }}>
+      {Array.from({ length: n }).map((_, k) => {
+        const c = cards[k];
+        const quizOk = c?.type === 'quiz' && answers[k] !== undefined ? answers[k] === c.answer : null;
+        const bg = k > i ? 'var(--surface-2)' : quizOk === false ? 'var(--rose)' : quizOk === true ? 'var(--emerald)' : 'var(--brand-1)';
+        return <div key={k} style={{ flex: 1, height: 5, borderRadius: 3, background: bg, transition: 'background var(--t-fast)' }} />;
+      })}
+    </div>
+  );
 }
+
+function IntroCard({ page, cover }: { page: GrammarUnitPage; cover: string | null }) {
+  const n = page.lesson.steps.filter((s) => s.type === 'explain').length;
+  const q = page.lesson.steps.filter((s) => s.type === 'quiz').length;
+  return (
+    <div>
+      {cover && <img src={getMediaUrl(cover)} alt="" style={{ width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 'var(--r-lg)', marginBottom: 14, display: 'block' }} onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />}
+      <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--brand-1)', marginBottom: 6 }}>En aquesta unitat</div>
+      <p style={{ fontSize: '16px', lineHeight: 1.55, margin: '0 0 12px', color: 'var(--text)' }}>{page.lesson.intro || 'Un punt de gramàtica explicat pas a pas amb frases reals de la biblioteca.'}</p>
+      <div style={{ fontSize: '13px', color: 'var(--text-soft)' }}>{n} explicacions{q ? ` · ${q} preguntes ràpides` : ''} · {page.total} frases de la biblioteca</div>
+      {page.lesson.error && <div style={{ marginTop: 10, fontSize: '12px', color: 'var(--rose)' }}>La lliçó no s’ha pogut escriure ara mateix; torna-ho a provar d’aquí a una estona.</div>}
+    </div>
+  );
+}
+
+function ExplainCard({ step }: { step: Extract<LessonStep, { type: 'explain' }> }) {
+  return (
+    <div>
+      <h2 style={{ fontSize: '18px', margin: '0 0 8px', lineHeight: 1.25 }}>{step.title}</h2>
+      <p style={{ fontSize: '16px', lineHeight: 1.55, margin: '0 0 14px', color: 'var(--text)' }}>{inline(step.text)}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {step.examples.map((e) => <Example key={e.id} e={e} />)}
+      </div>
+    </div>
+  );
+}
+
+function Example({ e, highlight }: { e: LessonExample; highlight?: 'ok' | 'ko' }) {
+  const play = () => { if (e.audio_url) new Audio(getMediaUrl(e.audio_url)).play().catch(() => {}); };
+  const border = highlight === 'ok' ? 'var(--emerald)' : highlight === 'ko' ? 'var(--rose)' : 'var(--border)';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'var(--surface-2)', border: `1px solid ${border}`, borderRadius: 'var(--r-lg)' }}>
+      {e.image_url && <img src={getMediaUrl(e.image_url)} alt="" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 'var(--r-md)', flexShrink: 0 }} onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = 'none'; }} />}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 800, fontSize: '17px', color: 'var(--text)', lineHeight: 1.3 }}>{e.shi}</div>
+        <div style={{ fontSize: '14px', color: 'var(--text-soft)' }}>{e.ca}</div>
+        {(e.recorded || e.region) && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>{e.recorded ? `veu de ${e.author || 'parlant'}` : 'veu sintètica'}{e.region ? ` · ${e.region}` : ''}</div>}
+      </div>
+      <button onClick={play} disabled={!e.audio_url} aria-label="Escolta" style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 'var(--r-pill)', border: 'none', background: e.audio_url ? (e.recorded ? 'var(--brand-1)' : 'var(--sky)') : 'var(--surface)', color: e.audio_url ? '#fff' : 'var(--text-muted)', cursor: e.audio_url ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={15} /></button>
+    </div>
+  );
+}
+
+function PatternCard({ step }: { step: Extract<LessonStep, { type: 'pattern' }> }) {
+  return (
+    <div>
+      <h2 style={{ fontSize: '18px', margin: '0 0 10px' }}>{step.title || 'Les formes'}</h2>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '15px' }}>
+        <tbody>
+          {step.rows.map((r, k) => (
+            <tr key={k} style={{ borderTop: k ? '1px solid var(--border)' : 'none' }}>
+              <td style={{ padding: '8px 6px 8px 0', fontWeight: 800, whiteSpace: 'nowrap', color: 'var(--brand-1)' }}>{r[0]}</td>
+              <td style={{ padding: '8px 6px', color: 'var(--text)' }}>{r[1]}</td>
+              <td style={{ padding: '8px 0 8px 6px', color: 'var(--text-soft)', fontSize: '14px' }}>{r[2]}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function QuizCard({ step, chosen, onChoose }: { step: Extract<LessonStep, { type: 'quiz' }>; chosen?: number; onChoose: (k: number) => void }) {
+  const answered = chosen !== undefined;
+  const choose = (k: number) => {
+    if (answered) return;
+    onChoose(k);
+    if (k === step.answer && step.example.audio_url) new Audio(getMediaUrl(step.example.audio_url)).play().catch(() => {});
+  };
+  return (
+    <div>
+      <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--saffron-strong)', marginBottom: 6 }}>Pregunta ràpida</div>
+      <h2 style={{ fontSize: '18px', margin: '0 0 12px', lineHeight: 1.3 }}>{step.question}</h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {step.options.map((o, k) => {
+          const isAnswer = k === step.answer; const isChosen = k === chosen;
+          const bg = !answered ? 'var(--surface-2)' : isAnswer ? 'var(--emerald-soft)' : isChosen ? 'var(--rose-soft)' : 'var(--surface-2)';
+          const border = !answered ? 'var(--border)' : isAnswer ? 'var(--emerald)' : isChosen ? 'var(--rose)' : 'var(--border)';
+          return (
+            <button key={k} onClick={() => choose(k)} style={{ textAlign: 'left', padding: '12px 14px', borderRadius: 'var(--r-lg)', border: `1px solid ${border}`, background: bg, color: 'var(--text)', fontWeight: 700, fontSize: '16px', cursor: answered ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ flex: 1 }}>{o}</span>
+              {answered && isAnswer && <FaCheck color="var(--emerald)" />}
+              {answered && isChosen && !isAnswer && <FaTimes color="var(--rose)" />}
+            </button>
+          );
+        })}
+      </div>
+      {answered && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: chosen === step.answer ? 'var(--emerald)' : 'var(--rose)', marginBottom: 8 }}>{chosen === step.answer ? 'Molt bé!' : 'No ben bé. Aquesta és la frase:'}</div>
+          <Example e={step.example} highlight="ok" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NoteCard({ step }: { step: Extract<LessonStep, { type: 'tip' | 'dialect' }> }) {
+  const tip = step.type === 'tip';
+  return (
+    <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+      <div style={{ flexShrink: 0, width: 44, height: 44, borderRadius: 'var(--r-pill)', background: tip ? 'var(--saffron-soft)' : 'var(--sky-soft)', color: tip ? 'var(--saffron-strong)' : 'var(--sky)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+        {tip ? <FaLightbulb size={20} /> : <FaMapMarkerAlt size={20} />}
+      </div>
+      <div>
+        <h2 style={{ fontSize: '18px', margin: '0 0 6px' }}>{tip ? 'Fixa-t’hi' : 'Per aquí ho diuen així'}</h2>
+        <p style={{ fontSize: '16px', lineHeight: 1.55, margin: 0, color: 'var(--text)' }}>{inline(step.text)}</p>
+      </div>
+    </div>
+  );
+}
+
+function EndCard({ page, answers, cards, onTest, isAdmin, onRewrite, rewriting, nextUnit }: { page: GrammarUnitPage; answers: Record<number, number>; cards: Card[]; onTest: () => void; isAdmin: boolean; onRewrite: () => void; rewriting: boolean; nextUnit: GrammarUnit | null }) {
+  const navigate = useNavigate();
+  const [showAll, setShowAll] = useState(false);
+  const quizzes = cards.map((c, k) => ({ c, k })).filter(({ c }) => c.type === 'quiz');
+  const right = quizzes.filter(({ c, k }) => c.type === 'quiz' && answers[k] === c.answer).length;
+  const play = (url?: string | null) => { if (url) new Audio(getMediaUrl(url)).play().catch(() => {}); };
+  return (
+    <div>
+      <h2 style={{ fontSize: '18px', margin: '0 0 6px' }}>Unitat acabada</h2>
+      {quizzes.length > 0 && <p style={{ margin: '0 0 12px', color: 'var(--text-soft)', fontSize: '15px' }}>Preguntes ràpides: {right} de {quizzes.length} encertades.</p>}
+      <p style={{ margin: '0 0 14px', fontSize: '15px', lineHeight: 1.5, color: 'var(--text)' }}>Ara practica-ho: un test amb les {Math.min(page.drills.length, 200)} frases de la biblioteca que mostren aquest punt.</p>
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        {nextUnit && <button onClick={() => navigate(`/grammar/${nextUnit.slug}`)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Següent unitat: {nextUnit.title} <FaChevronRight /></button>}
+        {page.drills.length > 0 && <button onClick={onTest} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: 'var(--r-pill)', border: nextUnit ? '1px solid var(--brand-1)' : 'none', background: nextUnit ? 'var(--surface)' : 'var(--brand-gradient)', color: nextUnit ? 'var(--brand-1)' : '#fff', fontWeight: 700, cursor: 'pointer' }}><FaBullseye /> Practica aquesta unitat</button>}
+        <button onClick={() => setShowAll((v) => !v)} style={{ padding: '10px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, cursor: 'pointer' }}>{showAll ? 'Amaga els exemples' : `Tots els exemples · ${page.total}`}</button>
+        {isAdmin && <button onClick={onRewrite} disabled={rewriting} title="Torna a escriure la lliçó (administrador)" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)', fontWeight: 700, cursor: rewriting ? 'default' : 'pointer' }}><FaRedo /> {rewriting ? 'Reescrivint…' : 'Reescriu la lliçó'}</button>}
+      </div>
+      {showAll && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: 14 }}>
+          {page.drills.map((d) => (
+            <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
+              {d.image_url && <img src={getMediaUrl(d.image_url)} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 'var(--r-sm)', flexShrink: 0 }} onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = 'none'; }} />}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: '14px' }}>{d.text_tachelhit}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-soft)' }}>{d.text_catalan}{d.region ? <span style={{ color: 'var(--text-muted)' }}> · {d.region}</span> : null}</div>
+              </div>
+              <button onClick={() => play(d.audio_url || d.audio_tts_shi_url)} disabled={!d.audio_url && !d.audio_tts_shi_url} aria-label="Escolta" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : d.audio_tts_shi_url ? 'var(--sky)' : 'var(--surface)', color: d.audio_url || d.audio_tts_shi_url ? '#fff' : 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={12} /></button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// **bold** is the only mark-up a lesson text carries.
 function inline(s: string) {
-  const parts = s.split(/(\*\*[^*]+\*\*)/g);
+  const parts = (s || '').split(/(\*\*[^*]+\*\*)/g);
   return parts.map((p, i) => p.startsWith('**') && p.endsWith('**') ? <strong key={i}>{p.slice(2, -2)}</strong> : <span key={i}>{p.replace(/`/g, '')}</span>);
 }

@@ -5485,21 +5485,34 @@ def grammar_units():
             "counts": grammar_course.counts(SessionLocal), "status": grammar_course.status()}
 
 
-@app.get("/grammar/{slug}")
-def grammar_unit(slug: str, limit: int = 60, db: Session = Depends(get_db)):
-    """One unit: its lesson text (written once from the compendium and cached) and its drills,
-    the speaker-recorded ones first."""
+def _grammar_unit_rows(db, slug: str, limit: int = 300):
+    """The unit's drills, pictured-and-voiced first, then voiced, then by id; excluded tags left out."""
+    q = grammar_course.not_excluded(db.query(DrillModel).filter(DrillModel.grammar.ilike(f"%{slug}%")), DrillModel)
+    rows = q.order_by(DrillModel.audio_url.isnot(None).desc(), DrillModel.image_url.isnot(None).desc(), DrillModel.id.asc()).limit(limit).all()
+    return [d for d in rows if slug in grammar_course.parse(d.grammar)]
+
+
+def _grammar_unit_payload(db, slug: str, limit: int, force: bool):
     unit = next((u for u in grammar_course.UNITS if u["slug"] == slug), None)
     if unit is None:
         raise HTTPException(status_code=404, detail="Unit not found")
-    rows = (db.query(DrillModel).filter(DrillModel.grammar.ilike(f"%{slug}%"))
-            .order_by(DrillModel.audio_url.isnot(None).desc(), DrillModel.id.asc()).limit(max(1, min(limit, 300))).all())
-    rows = [d for d in rows if slug in grammar_course.parse(d.grammar)]
-    examples = [{"id": d.id, "shi": d.text_tachelhit, "ca": d.text_catalan} for d in rows[:12]]
-    text = grammar_course.explanation(slug, _load_grammar() if gemini_available() else "", examples)
-    total = sum(1 for (g,) in db.query(DrillModel.grammar).filter(DrillModel.grammar.ilike(f"%{slug}%")).all() if slug in grammar_course.parse(g))
-    return {**{k: unit[k] for k in ("slug", "title", "level")}, "lesson": text, "total": total,
-            "drills": [Drill.model_validate(d, from_attributes=True) for d in rows]}
+    rows = _grammar_unit_rows(db, slug)
+    examples = grammar_course.pick_examples(rows)
+    try:
+        lesson = grammar_course.get_lesson(db, slug, _load_grammar() if gemini_available() else "", examples, force=force)
+    except Exception as e:
+        print(f"[GRAMMAR] lesson {slug}: {e}")
+        lesson = {"intro": "", "steps": [{"type": "explain", "title": unit["title"], "text": "La lliçó encara no s’ha pogut escriure. Mira els exemples de la biblioteca mentrestant.", "examples": examples[:3]}, {"type": "end"}], "error": str(e)[:160]}
+    total = sum(1 for (g,) in grammar_course.not_excluded(db.query(DrillModel.grammar).filter(DrillModel.grammar.ilike(f"%{slug}%")), DrillModel).all() if slug in grammar_course.parse(g))
+    return {**{k: unit[k] for k in ("slug", "title", "level")}, "lesson": lesson, "total": total,
+            "drills": [Drill.model_validate(d, from_attributes=True) for d in rows[:max(1, min(limit, 300))]]}
+
+
+@app.get("/grammar/{slug}")
+def grammar_unit(slug: str, limit: int = 60, db: Session = Depends(get_db)):
+    """One unit: its lesson (steps with the library's own examples, written once and kept in the
+    database) and its drills, the pictured-and-voiced ones first."""
+    return _grammar_unit_payload(db, slug, limit, force=False)
 
 
 @app.post("/grammar/run")
@@ -5513,11 +5526,9 @@ def grammar_run(force: bool = False, limit: int = 4000, ids: Optional[str] = Non
 
 
 @app.post("/grammar/{slug}/rewrite")
-def grammar_rewrite(slug: str, db: Session = Depends(get_db), _admin: UserModel = Depends(require_admin)):
-    """Admin: write the unit's lesson again (after a change in the course or the compendium)."""
-    rows = db.query(DrillModel).filter(DrillModel.grammar.ilike(f"%{slug}%")).order_by(DrillModel.audio_url.isnot(None).desc()).limit(12).all()
-    text = grammar_course.explanation(slug, _load_grammar(), [{"shi": d.text_tachelhit, "ca": d.text_catalan} for d in rows], force=True)
-    return {"slug": slug, "lesson": text}
+def grammar_rewrite(slug: str, limit: int = 60, db: Session = Depends(get_db), _admin: UserModel = Depends(require_admin)):
+    """Admin: write the unit's lesson again (after a change in the course, the examples or the compendium)."""
+    return _grammar_unit_payload(db, slug, limit, force=True)
 
 
 @app.get("/lexicon/status")

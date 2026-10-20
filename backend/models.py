@@ -181,6 +181,17 @@ class DrillReview(Base):
     lapses = Column(Integer, default=0, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
 
+class GrammarLesson(Base):
+    """A grammar unit's lesson (JSON steps, see grammar.py), written once by Gemini and kept here so
+    a deploy doesn't lose it; `version` lets a format change rewrite it on next open."""
+    __tablename__ = "grammar_lessons"
+
+    id = Column(String, primary_key=True)          # the unit slug
+    body = Column(Text, nullable=False)            # JSON: {"intro": str, "steps": [...]}
+    version = Column(Integer, nullable=True, default=1)
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
+
+
 class User(Base):
     """Contributor/learner identity (auditor Phase 1: multi-tenancy)."""
     __tablename__ = "users"
