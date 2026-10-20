@@ -130,6 +130,8 @@ export interface Recording {
   variety?: string | null;
   region?: string | null;
   speaker?: string | null;
+  /** the sentence as this speaker says it, when their dialect's words differ from the drill's */
+  text?: string | null;
   license?: string | null;
   date_created?: string;
 }
@@ -230,6 +232,8 @@ export const api = {
     request<Recording[]>(`/drills/${drillId}/recordings`),
   deleteRecording: (recordingId: number) =>
     request<{ deleted: number }>(`/recordings/${recordingId}`, { method: 'DELETE' }),
+  updateRecording: (recordingId: number, body: { text?: string; variety?: string; region?: string }) =>
+    request<{ id: number; text: string | null; variety: string | null; region: string | null }>(`/recordings/${recordingId}`, { method: 'PATCH', body: JSON.stringify(body) }),
 
   // --- Berber transliteration (phone-Latin -> Tifinagh / clean Latin / key) ---
   transliterate: (text: string) =>

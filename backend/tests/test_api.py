@@ -743,3 +743,23 @@ def test_catalog_display_title_and_no_latin_gap():
     tifinagh = client.post("/drills/", json={"text_tachelhit": "ⴰⵣⵓⵍ", "text_catalan": "gap latin b"}).json()["id"]
     ids = {d["id"] for d in client.get("/corpus/gaps", params={"kind": "no_latin", "limit": 500}).json()["drills"]}
     assert tifinagh in ids and latin_only not in ids
+
+
+def test_recording_keeps_the_speakers_own_words(monkeypatch):
+    """A take can carry the sentence as its speaker says it; same words as the drill are not kept."""
+    import main
+    monkeypatch.setattr(main.cloudinary.uploader, "upload", lambda *a, **k: {"secure_url": "https://res.cloudinary.com/x/video/upload/v1/tachelhit/recordings/rec_1.webm"})
+    d = client.post("/drills/", json={"text_catalan": "Ensenya'm què faré", "text_tachelhit": "sn3t-i mayd-ddix ad igx", "variety": "tdl"}).json()
+    r = client.post(f"/drills/{d['id']}/recordings", files={"file": ("take.webm", b"RIFF", "audio/webm")},
+                    data={"text": "mlid mad rad skrɣ", "variety": "shi", "region": "Tiznit"})
+    assert r.status_code == 200 and r.json()["text"] == "mlid mad rad skrɣ" and r.json()["variety"] == "shi"
+    same = client.post(f"/drills/{d['id']}/recordings", files={"file": ("take2.webm", b"RIFF", "audio/webm")},
+                       data={"text": "sn3t-i mayd-ddix ad igx"})
+    assert same.json()["text"] is None
+    lst = client.get(f"/drills/{d['id']}/recordings").json()
+    assert [x["text"] for x in lst] == ["mlid mad rad skrɣ", None] and lst[0]["region"] == "Tiznit"
+    # the drill's own words are untouched; an anonymous take can be edited by anyone
+    assert client.get(f"/drills/{d['id']}").json()["text_tachelhit"] == "sn3t-i mayd-ddix ad igx"
+    up = client.patch(f"/recordings/{lst[0]['id']}", json={"text": "mlid mad rad skrɣ ɣilad"})
+    assert up.status_code == 200 and up.json()["text"] == "mlid mad rad skrɣ ɣilad"
+    assert client.post(f"/drills/{d['id']}/recordings", files={"file": ("t.webm", b"RIFF", "audio/webm")}, data={"variety": "nope"}).status_code == 400

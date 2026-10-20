@@ -4,7 +4,7 @@ import { FaMicrophone, FaStop, FaSave, FaTrash, FaTimes, FaPlay } from 'react-ic
 import { API_BASE, getMediaUrl } from '../config';
 import { api, type Recording } from '../api';
 import { toast } from '../toast';
-import { varietyShort, varietyLabel } from '../varieties';
+import { varietyShort, varietyLabel, VARIETIES } from '../varieties';
 import type { Drill } from '../types';
 
 // Multi-speaker takes for one drill: the same phrase can carry recordings from
@@ -22,6 +22,11 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
   const [blob, setBlob] = useState<Blob | null>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // "Com ho dius tu?": the sentence in the recorder's own words (prefilled with the drill's),
+  // their variety and their town. Only a different wording is kept by the server.
+  const [ownText, setOwnText] = useState(drill.text_tachelhit || '');
+  const [ownVariety, setOwnVariety] = useState('');
+  const [ownTown, setOwnTown] = useState('');
   const recRef = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
 
@@ -62,6 +67,9 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
       const ext = blob.type.includes('webm') ? 'webm' : blob.type.includes('mp4') ? 'mp4' : 'ogg';
       const fd = new FormData();
       fd.append('file', blob, `take_${drill.id}.${ext}`);
+      if (ownText.trim()) fd.append('text', ownText.trim());
+      if (ownVariety) fd.append('variety', ownVariety);
+      if (ownTown.trim()) fd.append('region', ownTown.trim());
       const res = await fetch(`${API_BASE}/drills/${drill.id}/recordings`, { method: 'POST', body: fd });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'upload failed');
       toast.success('Veu afegida');
@@ -92,7 +100,7 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
     <span title={varietyLabel(v)} style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.03em', background: 'var(--saffron-soft)', color: 'var(--saffron-strong)', padding: '2px 7px', borderRadius: 'var(--r-pill)' }}>{varietyShort(v)}</span>
   ) : null;
 
-  const takeRow = (key: string, label: string, url: string, v?: string | null, region?: string | null, onDelete?: () => void) => (
+  const takeRow = (key: string, label: string, url: string, v?: string | null, region?: string | null, onDelete?: () => void, ownWords?: string | null) => (
     <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
       <button onClick={() => play(url)} aria-label="Reprodueix" style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-1)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FaPlay size={12} /></button>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -101,6 +109,7 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
           {badge(v)}
           {region && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{region}</span>}
         </div>
+        {ownWords && <div style={{ fontSize: '13px', color: 'var(--brand-1)', marginTop: '4px', fontWeight: 600 }} title="Com ho diu aquesta persona">{ownWords}</div>}
       </div>
       {onDelete && (
         <button onClick={onDelete} disabled={busy} aria-label="Esborra la veu" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--rose)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FaTrash size={12} /></button>
@@ -123,12 +132,23 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
           {loading && <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Carregant…</div>}
           {showPrimary && takeRow('primary', 'Àudio principal', primary, drill.variety, drill.region)}
-          {recs.map((r) => takeRow(`r${r.id}`, r.speaker || 'Anònim', r.audio_url, r.variety, r.region, () => del(r.id)))}
+          {recs.map((r) => takeRow(`r${r.id}`, r.speaker || 'Anònim', r.audio_url, r.variety, r.region, () => del(r.id), r.text))}
         </div>
 
         {/* record a new take */}
         <div style={{ paddingTop: '14px', borderTop: '1px solid var(--border)' }}>
           <div style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px' }}>Afegeix la teva veu</div>
+          <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-soft)', marginBottom: '8px' }}>
+            Com ho dius tu? Si al teu poble es diu amb altres paraules, escriu-les.
+            <textarea value={ownText} onChange={(e) => setOwnText(e.target.value)} rows={2} aria-label="La frase amb les teves paraules" style={{ display: 'block', width: '100%', boxSizing: 'border-box', marginTop: '4px', padding: '8px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: '14px', fontFamily: 'inherit' }} />
+          </label>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+            <select value={ownVariety} onChange={(e) => setOwnVariety(e.target.value)} aria-label="La teva varietat" style={{ flex: '1 1 160px', minWidth: 0, padding: '8px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: '13px' }}>
+              <option value="">Varietat: la del meu perfil</option>
+              {VARIETIES.map((v) => <option key={v.code} value={v.code}>{v.label}</option>)}
+            </select>
+            <input value={ownTown} onChange={(e) => setOwnTown(e.target.value)} placeholder="El teu poble (opcional)" aria-label="El teu poble" style={{ flex: '1 1 140px', minWidth: 0, padding: '8px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: '13px' }} />
+          </div>
           {blobUrl && <audio controls src={blobUrl} style={{ width: '100%', marginBottom: '10px' }} />}
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             {!recording ? (
@@ -140,7 +160,7 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
               <button onClick={saveTake} disabled={busy} style={btn('var(--brand-1)', '#fff')}><FaSave /> {busy ? 'Desant…' : 'Desa aquesta veu'}</button>
             )}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px' }}>La teva gravació es desa amb la teva varietat (del teu perfil), sense esborrar les altres veus.</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px' }}>La teva gravació es desa amb la teva varietat i les teves paraules, sense esborrar les altres veus ni el text del drill.</div>
         </div>
       </div>
     </div>,

@@ -240,6 +240,7 @@ class Recording(Base):
     region = Column(String, nullable=True)
     speaker = Column(String, nullable=True)                 # display label
     license = Column(String, nullable=True, default="CC-BY-SA")
+    text = Column(Text, nullable=True)       # the sentence as THIS speaker says it, when their dialect's words differ
     date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 class ReviewLog(Base):

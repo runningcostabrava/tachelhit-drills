@@ -5181,15 +5181,23 @@ async def add_recording(
     file: UploadFile = File(...),
     variety: Optional[str] = Form(None),
     region: Optional[str] = Form(None),
+    text: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     user: Optional[UserModel] = Depends(get_current_user),
 ):
     """Add one speaker's audio take of a drill. The take keeps the speaker's
     variety/region (defaulting to their declared profile), so the same drill can
-    hold recordings from different people/varieties."""
+    hold recordings from different people/varieties. `text` is the sentence as this
+    speaker says it: kept only when it differs from the drill's own words, so the drill
+    shows the sentence in every dialect that recorded it."""
     drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found")
+    own_words = (text or "").strip()
+    if own_words and own_words == (drill.text_tachelhit or "").strip():
+        own_words = ""
+    if variety and variety not in _VARIETY_CODES:
+        raise HTTPException(status_code=400, detail="Varietat desconeguda")
     content = await file.read()
     up = await run_in_threadpool(
         cloudinary.uploader.upload,
@@ -5204,6 +5212,7 @@ async def add_recording(
         variety=(variety or (user.variety if user else None)),
         region=((region or "").strip() or (user.region if user else None)),
         speaker=((user.display_name or user.username) if user else None),
+        text=own_words or None,
     )
     db.add(rec)
     # promote to the drill's primary audio if it has none yet
@@ -5212,7 +5221,7 @@ async def add_recording(
     db.commit()
     db.refresh(rec)
     return {"id": rec.id, "audio_url": rec.audio_url, "variety": rec.variety,
-            "region": rec.region, "speaker": rec.speaker,
+            "region": rec.region, "speaker": rec.speaker, "text": rec.text,
             "date_created": rec.date_created.isoformat()}
 
 
@@ -5223,8 +5232,32 @@ def list_recordings(drill_id: int, db: Session = Depends(get_db)):
             .filter(RecordingModel.drill_id == drill_id)
             .order_by(RecordingModel.date_created.asc()).all())
     return [{"id": r.id, "audio_url": normalize_media_url(r.audio_url),
-             "variety": r.variety, "region": r.region, "speaker": r.speaker,
+             "variety": r.variety, "region": r.region, "speaker": r.speaker, "text": r.text,
              "license": r.license, "date_created": r.date_created.isoformat()} for r in recs]
+
+
+@app.patch("/recordings/{recording_id}")
+def update_recording(recording_id: int, text: Optional[str] = Body(None, embed=True),
+                     variety: Optional[str] = Body(None, embed=True), region: Optional[str] = Body(None, embed=True),
+                     db: Session = Depends(get_db), user: Optional[UserModel] = Depends(get_current_user)):
+    """Fix a take's own wording, variety or town. The recorder (or an admin) only."""
+    r = db.query(RecordingModel).filter(RecordingModel.id == recording_id).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="Recording not found")
+    if r.user_id and not (user and (user.id == r.user_id or user.is_admin)):
+        raise HTTPException(status_code=403, detail="Només qui va gravar la veu (o un administrador) la pot editar")
+    if text is not None:
+        drill = db.query(DrillModel).filter(DrillModel.id == r.drill_id).first()
+        t = text.strip()
+        r.text = t if t and t != ((drill.text_tachelhit or "").strip() if drill else "") else None
+    if variety is not None:
+        if variety and variety not in _VARIETY_CODES:
+            raise HTTPException(status_code=400, detail="Varietat desconeguda")
+        r.variety = variety or None
+    if region is not None:
+        r.region = region.strip() or None
+    db.commit()
+    return {"id": r.id, "text": r.text, "variety": r.variety, "region": r.region}
 
 
 @app.delete("/recordings/{recording_id}")
