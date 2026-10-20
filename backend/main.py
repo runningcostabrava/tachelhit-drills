@@ -27,6 +27,7 @@ from draft_check import check_draft_meaning, draft_status
 import lexicon
 from tts_text import tts_text, VOICE_VERSION
 import topics as topics_catalog
+import grammar as grammar_course
 from gemini_client import gemini_generate, gemini_available, gemini_agent, BudgetExceeded
 import gemini_client
 import ai_budget
@@ -5474,6 +5475,49 @@ def catalog_topics_run(force: bool = False, limit: int = 2000, ids: Optional[str
 @app.get("/catalog/topics/status")
 def catalog_topics_status():
     return topics_catalog.status()
+
+
+# ===================== GRAMMAR COURSE =====================
+@app.get("/grammar")
+def grammar_units():
+    """The course: units in order with, per unit, how many drills illustrate it."""
+    return {"units": [{k: u[k] for k in ("slug", "title", "level")} for u in grammar_course.UNITS],
+            "counts": grammar_course.counts(SessionLocal), "status": grammar_course.status()}
+
+
+@app.get("/grammar/{slug}")
+def grammar_unit(slug: str, limit: int = 60, db: Session = Depends(get_db)):
+    """One unit: its lesson text (written once from the compendium and cached) and its drills,
+    the speaker-recorded ones first."""
+    unit = next((u for u in grammar_course.UNITS if u["slug"] == slug), None)
+    if unit is None:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    rows = (db.query(DrillModel).filter(DrillModel.grammar.ilike(f"%{slug}%"))
+            .order_by(DrillModel.audio_url.isnot(None).desc(), DrillModel.id.asc()).limit(max(1, min(limit, 300))).all())
+    rows = [d for d in rows if slug in grammar_course.parse(d.grammar)]
+    examples = [{"id": d.id, "shi": d.text_tachelhit, "ca": d.text_catalan} for d in rows[:12]]
+    text = grammar_course.explanation(slug, _load_grammar() if gemini_available() else "", examples)
+    total = sum(1 for (g,) in db.query(DrillModel.grammar).filter(DrillModel.grammar.ilike(f"%{slug}%")).all() if slug in grammar_course.parse(g))
+    return {**{k: unit[k] for k in ("slug", "title", "level")}, "lesson": text, "total": total,
+            "drills": [Drill.model_validate(d, from_attributes=True) for d in rows]}
+
+
+@app.post("/grammar/run")
+def grammar_run(force: bool = False, limit: int = 4000, ids: Optional[str] = None, _admin: UserModel = Depends(require_admin)):
+    """Admin: classify drills into grammar units in the background (all auto ones with force)."""
+    only = [int(x) for x in ids.split(",") if x.strip().isdigit()] if ids else None
+    if grammar_course.status()["running"]:
+        return {"started": False, "reason": "already running", **grammar_course.status()}
+    threading.Thread(target=grammar_course.run, args=(SessionLocal, force, limit, only), daemon=True).start()
+    return {"started": True}
+
+
+@app.post("/grammar/{slug}/rewrite")
+def grammar_rewrite(slug: str, db: Session = Depends(get_db), _admin: UserModel = Depends(require_admin)):
+    """Admin: write the unit's lesson again (after a change in the course or the compendium)."""
+    rows = db.query(DrillModel).filter(DrillModel.grammar.ilike(f"%{slug}%")).order_by(DrillModel.audio_url.isnot(None).desc()).limit(12).all()
+    text = grammar_course.explanation(slug, _load_grammar(), [{"shi": d.text_tachelhit, "ca": d.text_catalan} for d in rows], force=True)
+    return {"slug": slug, "lesson": text}
 
 
 @app.get("/lexicon/status")

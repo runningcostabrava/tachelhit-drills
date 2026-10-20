@@ -227,6 +227,10 @@ export const api = {
   wakeSpaces: (only?: string[]) =>
     request<{ waking: string[] }>(`/health/spaces/wake${only && only.length ? `?only=${only.join(',')}` : ''}`, { method: 'POST' }),
 
+  // --- grammar course ---
+  grammarUnits: () => request<{ units: GrammarUnit[]; counts: Record<string, number>; status: { running: boolean; done: number; pending: number } }>('/grammar'),
+  grammarUnit: (slug: string, limit = 60) => request<GrammarUnit & { lesson: string; total: number; drills: Drill[] }>(`/grammar/${slug}?limit=${limit}`),
+
   // --- multi-speaker recordings (many takes per drill) ---
   drillRecordings: (drillId: number) =>
     request<Recording[]>(`/drills/${drillId}/recordings`),
@@ -287,6 +291,8 @@ export const api = {
   resetPassword: (email: string, code: string, new_password: string, device?: string) =>
     request<AuthUser & { token: string }>('/auth/reset', { method: 'POST', body: JSON.stringify({ email, code, new_password, device }) }),
 };
+
+export interface GrammarUnit { slug: string; title: string; level: number }
 
 export interface AiUsage {
   today: { used: number; limit: number | null; remaining: number | null };

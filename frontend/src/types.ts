@@ -25,6 +25,8 @@ export interface Drill {
   draft_check?: string; // JSON verdict of the draft's meaning check (yes/roughly/no)
   topics?: string;        // subject catalogue: comma-separated slugs (see utils/topics.ts)
   topics_source?: string; // 'auto' | 'owner'
+  grammar?: string;        // grammar course units: comma-separated slugs (see GrammarPage)
+  grammar_source?: string; // 'auto' | 'owner'
   text_catalan_suggested?: string;
   variety?: string;
   region?: string;

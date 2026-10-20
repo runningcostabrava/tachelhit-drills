@@ -5,7 +5,7 @@ import axios from 'axios';
 import { API_BASE } from './config';
 import { api } from './api';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { FaLayerGroup, FaVideo, FaBookOpen, FaGraduationCap, FaFilm, FaComments, FaUser, FaRedo, FaFire, FaPlay } from 'react-icons/fa';
+import { FaLayerGroup, FaVideo, FaBookOpen, FaGraduationCap, FaFilm, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook } from 'react-icons/fa';
 import { syncManager } from './services/OfflineSyncManager';
 import ToastHost from './components/ToastHost';
 import AiCopilot from './components/AiCopilot';
@@ -24,6 +24,7 @@ const VideoLibraryPage = lazy(() => import('./components/VideoLibraryPage'));
 const ProfilePage = lazy(() => import('./components/ProfilePage'));
 const AuthPage = lazy(() => import('./components/AuthPage'));
 const CorpusPage = lazy(() => import('./components/CorpusPage'));
+const GrammarPage = lazy(() => import('./components/GrammarPage'));
 const VerifyQueue = lazy(() => import('./components/VerifyQueue'));
 
 const RouteLoader = () => (
@@ -128,6 +129,7 @@ function App() {
   const navLinks = [
     { to: '/', label: 'Drills', Icon: FaLayerGroup },
     { to: '/video-creator', label: 'Captura', Icon: FaVideo },
+    { to: '/grammar', label: 'Gramàtica', Icon: FaBook },
     { to: '/corpus', label: 'Corpus', Icon: FaBookOpen },
     { to: '/tests', label: 'Tests', Icon: FaGraduationCap },
     { to: '/shorts', label: 'Reels', Icon: FaFilm },
@@ -185,6 +187,8 @@ function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/signin" element={<AuthPage />} />
         <Route path="/corpus" element={<CorpusPage />} />
+        <Route path="/grammar" element={<GrammarPage />} />
+        <Route path="/grammar/:slug" element={<GrammarPage />} />
         <Route path="/verify" element={<VerifyQueue />} />
         {/* An unknown path (old link, typo, stale app shell) used to render an empty page. */}
         <Route path="*" element={<Navigate to="/" replace />} />

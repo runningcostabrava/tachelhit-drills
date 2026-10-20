@@ -79,6 +79,8 @@ class DrillBase(BaseModel):
     draft_check: Optional[str] = None  # JSON verdict of the draft's meaning check (draft_check.py)
     topics: Optional[str] = None         # subject catalogue: comma-separated slugs (topics.py)
     topics_source: Optional[str] = None  # 'auto' | 'owner'
+    grammar: Optional[str] = None         # grammar course units, comma-separated slugs (grammar.py)
+    grammar_source: Optional[str] = None  # 'auto' | 'owner'
     text_catalan_suggested: Optional[str] = None
     variety: Optional[str] = None
     region: Optional[str] = None

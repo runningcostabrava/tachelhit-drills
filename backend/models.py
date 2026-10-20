@@ -41,6 +41,8 @@ class Drill(Base):
     draft_check = Column(String, nullable=True)
     topics = Column(String, nullable=True)         # subject catalogue, comma-separated slugs (topics.py)
     topics_source = Column(String, nullable=True)  # 'auto' (Gemini) | 'owner' (set by hand)
+    grammar = Column(String, nullable=True)         # grammar course units, comma-separated slugs (grammar.py)
+    grammar_source = Column(String, nullable=True)  # 'auto' | 'owner'
     created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # contributor attribution
     variety = Column(String, nullable=True)   # e.g. "tashelhit", "central-atlas", "tarifit"
     region = Column(String, nullable=True)    # e.g. "Souss", "Tafraout", "diaspora-BCN"
