@@ -207,7 +207,8 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
             console.log(`[Transcribe] Posting to backend with URL: ${fullMediaUrl}`);
 
             const response = await axios.post(`${API_BASE}/transcribe/`, {
-                audio_url: fullMediaUrl
+                audio_url: fullMediaUrl,
+                drill_id: drill.id, // its variety picks the listener; its meaning and speaker text guide it
             });
 
             console.log('[Transcribe] Backend response received:', response.data);

@@ -307,7 +307,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         setAiLoadingKey('transcribe-voice');
         addLog(`Transcribing ${sourceType || 'media'}...`);
         try {
-            const res = await axios.post(`${API_BASE}/transcribe/`, { audio_url: mediaSource });
+            const res = await axios.post(`${API_BASE}/transcribe/`, { audio_url: mediaSource, drill_id: localDrill.id });
             const safeText = (res.data.corrected_transcription || '').trim();
             if (!safeText) return toast.error('La transcripció ha retornat un text buit.');
 

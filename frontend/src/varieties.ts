@@ -6,6 +6,7 @@ export interface Variety { code: string; label: string }
 export const VARIETIES: Variety[] = [
   { code: 'shi', label: 'Taixelhit (Tashelhit)' },
   { code: 'tzm', label: "Tamazight de l'Atles Central" },
+  { code: 'tdl', label: 'Taixelhit de transició (Tadla–Azilal: Beni Mellal, Azilal, Demnate)' },
   { code: 'rif', label: 'Tarifit (Rif)' },
   { code: 'zgh', label: 'Amazic estàndard marroquí (IRCAM)' },
   { code: 'kab', label: 'Cabilenc (Kabyle)' },

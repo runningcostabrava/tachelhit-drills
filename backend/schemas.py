@@ -253,6 +253,8 @@ class TranscribeRequest(BaseModel):
     audio_url: Optional[str] = None
     selected_pair_ids: List[int] = []
     model_id: Optional[str] = None # New: to select ASR model
+    drill_id: Optional[int] = None   # the drill the audio belongs to: its variety, meaning and speaker text guide the listener
+    variety: Optional[str] = None    # override / for a drill that does not exist yet
 
 class TranscribeResponse(BaseModel):
     rough_transcription: str
