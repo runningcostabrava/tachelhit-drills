@@ -17,6 +17,7 @@ const DrillsResponsive = lazy(() => import('./components/DrillsResponsive'));
 const TestsDashboard = lazy(() => import('./components/TestsDashboard'));
 const PracticePage = lazy(() => import('./components/PracticePage'));
 const PracticeSession = lazy(() => import('./components/PracticeSession'));
+const PracticeGroupPage = lazy(() => import('./components/PracticeGroupPage'));
 const VeusPage = lazy(() => import('./components/VeusPage'));
 const UserPage = lazy(() => import('./components/UserPage'));
 const YouTubeShorts = lazy(() => import('./components/YouTubeShorts'));
@@ -183,6 +184,7 @@ function App() {
         <Route path="/" element={<DrillsResponsive />} />
         <Route path="/tests" element={<PracticePage />} />
         <Route path="/tests/sessio" element={<PracticeSession />} />
+        <Route path="/tests/grup" element={<PracticeGroupPage />} />
         <Route path="/tests/llistes" element={<TestsDashboard />} />
         <Route path="/veus" element={<VeusPage />} />
         <Route path="/u/:username" element={<UserPage />} />

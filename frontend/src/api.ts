@@ -331,6 +331,9 @@ export interface PracticeCollections {
   topics: { slug: string; label: string; count: number }[];
   units: { slug: string; title: string; level: number; count: number }[];
   lists: { id: number; title: string; count: number }[];
+  videos: { title: string; url: string | null; count: number }[];
+  people: { name: string; count: number }[];
+  tags: { tag: string; count: number }[];
 }
 export interface PracticeTip { sound: string; label: string; found: string; tip: string }
 export interface PracticeCard { speaker: string; origin: string; day: string | null; tips: PracticeTip[]; highlights: string[] }
