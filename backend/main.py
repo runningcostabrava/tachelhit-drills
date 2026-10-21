@@ -5205,6 +5205,47 @@ def auth_reset(email: str = Body(..., embed=True), code: str = Body(..., embed=T
     return {**_user_payload(user), "token": _new_session(db, user, device)}
 
 
+def _contributions(db, user, limit: int = 60) -> dict:
+    """What a person has given the library: the drills they created, their takes (with their own
+    words when they differ), the petitions they asked, the lesson changes accepted."""
+    drills = db.query(DrillModel).filter(DrillModel.created_by_user_id == user.id).order_by(DrillModel.id.desc()).all()
+    takes = (db.query(RecordingModel, DrillModel).join(DrillModel, DrillModel.id == RecordingModel.drill_id)
+             .filter(RecordingModel.user_id == user.id).order_by(RecordingModel.id.desc()).all())
+    accepted = db.query(LessonProposalModel).filter(LessonProposalModel.user_id == user.id, LessonProposalModel.status == "accepted").count()
+    pending = db.query(LessonProposalModel).filter(LessonProposalModel.user_id == user.id, LessonProposalModel.status == "pending").count()
+    row = lambda d: {"id": d.id, "text_tachelhit": d.text_tachelhit, "text_catalan": d.text_catalan, "audio_url": normalize_media_url(d.audio_url) if d.audio_url else None,
+                     "image_url": d.image_url, "region": d.region, "variety": d.variety, "tag": d.tag, "variant_of": d.variant_of, "verified": d.verified,
+                     "date_created": d.date_created.isoformat() if d.date_created else None}
+    return {"counts": {"drills": len(drills), "petitions": sum(1 for d in drills if "petici" in (d.tag or "").lower()),
+                       "variants": sum(1 for d in drills if d.variant_of), "takes": len(takes), "proposals_accepted": accepted, "proposals_pending": pending},
+            "drills": [row(d) for d in drills[:limit]],
+            "takes": [{"id": r.id, "audio_url": normalize_media_url(r.audio_url), "text": r.text, "variety": r.variety, "region": r.region,
+                       "date_created": r.date_created.isoformat(), "drill": row(d)} for r, d in takes[:limit]]}
+
+
+@app.get("/users/by-name/{username}")
+def user_public_page(username: str, db: Session = Depends(get_db)):
+    """A person's public page («fitxa»): who they are (name, town, variety, since when) and what they
+    gave the library. No e-mail, no tokens."""
+    user = db.query(UserModel).filter(UserModel.username == (username or "").strip().lower()).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"username": user.username, "display_name": user.display_name or user.username, "variety": user.variety, "region": user.region,
+            "since": user.created_at.isoformat() if getattr(user, "created_at", None) else None, **_contributions(db, user)}
+
+
+@app.get("/drills/{drill_id}/variants")
+def drill_variants(drill_id: int, db: Session = Depends(get_db)):
+    """The same sentence as other speakers say it: the original and every variant linked to it."""
+    d = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+    if not d:
+        raise HTTPException(status_code=404, detail="Drill not found")
+    root = db.query(DrillModel).filter(DrillModel.id == d.variant_of).first() if d.variant_of else d
+    root = root or d
+    variants = db.query(DrillModel).filter(DrillModel.variant_of == root.id).order_by(DrillModel.id.asc()).all()
+    return {"original": Drill.model_validate(root, from_attributes=True), "variants": [Drill.model_validate(v, from_attributes=True) for v in variants]}
+
+
 @app.get("/users/me")
 def get_me(user: Optional[UserModel] = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user:
@@ -5222,6 +5263,7 @@ def get_me(user: Optional[UserModel] = Depends(get_current_user), db: Session = 
         "tz": user.tz or DEFAULT_TZ,
         "date_created": iso_z(user.date_created),
         "drills_contributed": drills_contributed,
+        "contributions": _contributions(db, user, limit=40),
         "cards_learning": cards_learning
     }
 
@@ -5304,16 +5346,35 @@ async def add_recording(
         drill.audio_url = url
     # a petition (Catalan only) gets its Tamazight from the first speaker who answers it, in their
     # own spelling; their variety and town travel with it
+    variant = None
     if not (drill.text_tachelhit or "").strip() and (text or "").strip():
         drill.text_tachelhit = (text or "").strip()
         drill.variety = drill.variety or rec.variety
         drill.region = drill.region or rec.region
         drill.speaker = drill.speaker or rec.speaker
+    elif own_words:
+        # the speaker says it with other words: their version becomes a card of its own, linked to
+        # this one (same meaning, their text, their voice, their town), unless that exact wording
+        # already exists as a variant
+        existing = db.query(DrillModel).filter(DrillModel.variant_of == drill.id, DrillModel.text_tachelhit == own_words).first()
+        if existing is None and own_words.lower() != (drill.text_tachelhit or "").strip().lower():
+            variant = DrillModel(text_tachelhit=own_words, text_catalan=drill.text_catalan, text_arabic=drill.text_arabic,
+                                 audio_url=url, image_url=drill.image_url, image_credit=drill.image_credit,
+                                 tag=", ".join(x for x in [(drill.tag or "").strip(), "variant"] if x), variant_of=drill.id,
+                                 variety=rec.variety, region=rec.region, speaker=rec.speaker, created_by_user_id=user.id if user else None,
+                                 grammar=drill.grammar, grammar_source=drill.grammar_source, topics=drill.topics, topics_source=drill.topics_source,
+                                 license=drill.license, verified=False)
+            db.add(variant)
+        else:
+            variant = existing
     db.commit()
     db.refresh(rec)
+    if variant is not None:
+        db.refresh(variant)
     return {"id": rec.id, "audio_url": rec.audio_url, "variety": rec.variety,
             "region": rec.region, "speaker": rec.speaker, "text": rec.text,
-            "date_created": rec.date_created.isoformat()}
+            "date_created": rec.date_created.isoformat(),
+            "variant_id": variant.id if variant is not None else None}
 
 
 @app.get("/drills/{drill_id}/recordings")

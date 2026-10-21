@@ -222,6 +222,7 @@ export default function ProfilePage() {
             <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '18px' }}>
               <div style={{ padding: '12px 18px', background: 'var(--brand-gradient-soft)', borderRadius: 'var(--r-lg)', fontWeight: 700, color: 'var(--brand-1)' }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaLayerGroup /> {me.drills_contributed} drills aportats</span>
+                <a href={`/u/${me.username}`} style={{ color: 'var(--brand-1)', fontWeight: 700, textDecoration: 'none' }}>La meva fitxa: tot el que he aportat →</a>
               </div>
               <div style={{ padding: '12px 18px', background: 'var(--emerald-soft)', borderRadius: 'var(--r-lg)', fontWeight: 700, color: 'var(--emerald)' }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaRedo /> {me.cards_learning} targetes en aprenentatge</span>

@@ -77,7 +77,8 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
       if (ownTown.trim()) fd.append('region', ownTown.trim());
       const res = await fetch(`${API_BASE}/drills/${drill.id}/recordings`, { method: 'POST', body: fd });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'upload failed');
-      toast.success('Veu afegida');
+      const saved = await res.json().catch(() => null);
+      toast.success(saved?.variant_id ? 'Veu afegida. Com que ho dius amb altres paraules, ara hi ha una targeta pròpia amb la teva versió, enllaçada a aquesta.' : 'Veu afegida');
       if (profile !== undefined && profile !== null && (!profile.region || !profile.variety) && (ownTown.trim() || ownVariety)) {
         api.updateMe({ ...(ownTown.trim() && !profile.region ? { region: ownTown.trim() } : {}), ...(ownVariety && !profile.variety ? { variety: ownVariety } : {}) }).catch(() => {});
       }

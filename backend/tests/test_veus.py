@@ -66,3 +66,27 @@ def test_lesson_proposals_are_reviewed_by_an_admin(monkeypatch):
     assert body["steps"][0]["text"].startswith("Posa «ur» just davant")
     assert client.get("/grammar/manlleus/proposals", headers=admin).json() == []
     db.close()
+
+
+def test_a_take_in_other_words_becomes_a_linked_variant_and_shows_on_the_user_page(monkeypatch):
+    monkeypatch.setattr(main.cloudinary.uploader, "upload", lambda *a, **k: {"secure_url": "https://res.cloudinary.com/x/video/upload/v1/tachelhit/recordings/rec_9.webm"})
+    base = client.post("/drills/", json={"text_catalan": "No ho sé", "text_tachelhit": "ur ssinɣ", "tag": "frase", "image_url": "https://x/i.jpg"}).json()
+    sp = _user("variant_speaker", variety="rif", region="Nador")
+    r = client.post(f"/drills/{base['id']}/recordings", files={"file": ("t.webm", io.BytesIO(b"abc"), "audio/webm")}, data={"text": "ur ssineɣ"}, headers=sp).json()
+    assert r["variant_id"] and r["text"] == "ur ssineɣ"
+    v = client.get(f"/drills/{r['variant_id']}").json()
+    assert v["variant_of"] == base["id"] and v["text_tachelhit"] == "ur ssineɣ" and v["text_catalan"] == "No ho sé" and v["region"] == "Nador" and v["variety"] == "rif"
+    assert v["audio_url"].endswith("rec_9.webm") and v["image_url"] == "https://x/i.jpg" and "variant" in v["tag"]
+    # the same wording again: no second variant
+    r2 = client.post(f"/drills/{base['id']}/recordings", files={"file": ("t.webm", io.BytesIO(b"abc"), "audio/webm")}, data={"text": "ur ssineɣ"}, headers=sp).json()
+    assert r2["variant_id"] == r["variant_id"]
+    vs = client.get(f"/drills/{base['id']}/variants").json()
+    assert vs["original"]["id"] == base["id"] and [x["id"] for x in vs["variants"]] == [r["variant_id"]]
+    assert client.get(f"/drills/{r['variant_id']}/variants").json()["original"]["id"] == base["id"]  # from the variant too
+    # the public page («fitxa») and the profile list the contribution; no e-mail leaks
+    page = client.get("/users/by-name/variant_speaker").json()
+    assert page["display_name"] == "variant_speaker" and page["region"] == "Nador" and "email" not in page
+    assert page["counts"]["takes"] == 2 and page["counts"]["variants"] == 1 and page["drills"][0]["id"] == r["variant_id"]
+    assert page["takes"][0]["drill"]["id"] == base["id"] and page["takes"][0]["text"] == "ur ssineɣ"
+    me = client.get("/users/me", headers=sp).json()
+    assert me["contributions"]["counts"]["takes"] == 2 and client.get("/users/by-name/nobody-here").status_code == 404

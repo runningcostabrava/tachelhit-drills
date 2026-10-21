@@ -47,6 +47,9 @@ class Drill(Base):
     # their own words fills text_tachelhit (see /petitions and add_recording)
     requested_by = Column(String, nullable=True)
     requested_note = Column(Text, nullable=True)
+    # A variant: the same sentence as another speaker says it (their words, their voice, their town),
+    # created from a take whose own words differ from the drill's; the original lists its variants
+    variant_of = Column(Integer, ForeignKey("drills.id"), nullable=True, index=True)
     created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # contributor attribution
     variety = Column(String, nullable=True)   # e.g. "tashelhit", "central-atlas", "tarifit"
     region = Column(String, nullable=True)    # e.g. "Souss", "Tafraout", "diaspora-BCN"

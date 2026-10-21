@@ -238,6 +238,8 @@ export const api = {
   lessonProposals: (slug: string) => request<LessonProposal[]>(`/grammar/${slug}/proposals`),
   proposeLessonChange: (slug: string, step: number, text: string, kind: 'text' | 'note' = 'text') => request<{ id: number; status: string }>(`/grammar/${slug}/proposals`, { method: 'POST', body: JSON.stringify({ step, text, kind }) }),
   decideProposal: (id: number, accept: boolean) => request<{ id: number; status: string }>(`/grammar/proposals/${id}/decide`, { method: 'POST', body: JSON.stringify({ accept }) }),
+  userPage: (username: string) => request<UserPublicPage>(`/users/by-name/${encodeURIComponent(username)}`),
+  drillVariants: (id: number) => request<{ original: Drill; variants: Drill[] }>(`/drills/${id}/variants`),
   practiceCollections: () => request<PracticeCollections>('/practice/collections'),
   practiceSession: (query: string) => request<{ drills: Drill[]; cards: PracticeCard[] }>(`/practice/session?${query}`),
   reviewsDue: (limit = 10) => request<Drill[]>(`/reviews/due?limit=${limit}`),
@@ -330,6 +332,10 @@ export interface PracticeTip { sound: string; label: string; found: string; tip:
 export interface PracticeCard { speaker: string; origin: string; day: string | null; tips: PracticeTip[]; highlights: string[] }
 export interface PronunciationWord { word: string; ok: boolean; heard: string | null }
 export type PracticeMode = 'parla' | 'escolta' | 'auto';
+/** A person's public page: who they are and what they gave the library. */
+export interface ContributionDrill { id: number; text_tachelhit?: string | null; text_catalan?: string | null; audio_url?: string | null; image_url?: string | null; region?: string | null; variety?: string | null; tag?: string | null; variant_of?: number | null; verified?: boolean | null; date_created?: string | null }
+export interface Contributions { counts: { drills: number; petitions: number; variants: number; takes: number; proposals_accepted: number; proposals_pending: number }; drills: ContributionDrill[]; takes: { id: number; audio_url: string; text: string | null; variety: string | null; region: string | null; date_created: string; drill: ContributionDrill }[] }
+export interface UserPublicPage extends Contributions { username: string; display_name: string; variety: string | null; region: string | null; since: string | null }
 /** Veus: a drill the community can record (a petition, a synthetic-only drill, or a wishlist sentence). */
 export interface PetitionItem { drill: Drill; units: string[]; level: number; requested_by: string | null; note: string | null }
 export interface LessonProposal { id: number; slug: string; step: number; kind: 'text' | 'note'; text: string; display_name: string | null; region: string | null; status: string; created_at: string }
