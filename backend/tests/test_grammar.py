@@ -140,7 +140,7 @@ def test_lesson_prose_has_no_tifinagh_and_examples_have_no_capture_noise():
     assert grammar.quotable("iga argaz", "ser-tenir")
     unit = next(u for u in grammar.UNITS if u["slug"] == "ser-tenir")
     p = grammar._lesson_prompt(unit, [], "sheet")
-    assert "example_ids (3-5" in p and "focus must be the rule itself" in p
+    assert "example_ids (4-6" in p and "focus must be the rule itself" in p
 
 
 def test_lesson_prose_is_latin_only_and_never_cites_ids():
@@ -156,6 +156,19 @@ def test_lesson_json_tolerates_trailing_commas():
     assert lesson["steps"][0]["examples"][0]["id"] == 1
 
 
+def test_a_quick_check_after_every_explanation_and_a_review_at_the_end():
+    import grammar
+    ex = [{"id": i, "shi": f"frase {i}", "ca": f"sentit {i}", "image_url": None, "audio_url": None, "recorded": False, "author": None, "region": None} for i in range(1, 16)]
+    steps = [{"type": "explain", "title": f"t{i}", "text": "x", "examples": [ex[i]]} for i in range(5)]
+    lesson = grammar._with_quizzes({"intro": "", "steps": steps}, ex)
+    kinds = [s["type"] for s in lesson["steps"]]
+    assert kinds.count("quiz") >= 7  # one per explanation plus the review
+    assert kinds[-1] == "end" and kinds[-2] == "quiz"
+    asked = [s["example"]["id"] for s in lesson["steps"] if s["type"] == "quiz"]
+    assert len(asked) == len(set(asked))  # never the same sentence twice
+    assert sum(1 for s in lesson["steps"] if s["type"] == "quiz" and s["question"].startswith("Repàs")) == 3
+
+
 def test_quizzes_and_excluded_language(monkeypatch):
     import grammar
     ex = [{"id": i, "shi": f"frase {i}", "ca": f"sentit {i}", "image_url": None, "audio_url": None, "recorded": False, "author": None, "region": None} for i in range(1, 7)]
@@ -163,18 +176,19 @@ def test_quizzes_and_excluded_language(monkeypatch):
         {"type": "explain", "title": "u", "text": "t", "examples": [ex[0]]}, {"type": "explain", "title": "d", "text": "t", "examples": [ex[1]]},
         {"type": "explain", "title": "t", "text": "t", "examples": []}, {"type": "explain", "title": "q", "text": "t", "examples": [ex[2]]}]}, ex)
     quizzes = [s for s in lesson["steps"] if s["type"] == "quiz"]
-    assert len(quizzes) == 2 and lesson["steps"][-1]["type"] == "end"
+    assert len(quizzes) > 4 and lesson["steps"][-1]["type"] == "end"  # one per explanation, plus the review
     q = quizzes[0]
-    assert q["kind"] == "meaning" and q["example"]["id"] == 2 and len(q["options"]) == 4 and q["options"][q["answer"]] == "frase 2" and q["question"] == "Com es diu «sentit 2»?"
+    assert q["kind"] == "meaning" and q["example"]["id"] == 1 and len(q["options"]) == 4 and q["options"][q["answer"]] == "frase 1" and q["question"] == "Com es diu «sentit 1»?"
     assert quizzes[1]["kind"] == "meaning"  # no voice in this pool: the listening check falls back to reading
     voiced = [{**e, "audio_url": "https://x/a.webm", "image_url": "https://x/i.jpg"} for e in ex]
     lesson = grammar._with_quizzes({"intro": "", "steps": [{"type": "explain", "title": "u", "text": "t", "examples": [voiced[0]]}] * 6}, voiced)
     kinds = [(s["kind"], s["options"][s["answer"]]) for s in lesson["steps"] if s["type"] == "quiz"]
-    assert [k for k, _ in kinds] == ["meaning", "listen", "picture"]
+    assert [k for k, _ in kinds] == ["meaning", "listen", "picture", "meaning", "listen", "picture"]
     assert kinds[1][1].startswith("sentit") and kinds[2][1].startswith("frase")  # listening: pick the meaning; picture: pick the sentence
     twin = ex + [{**ex[0], "id": 9, "shi": "una altra frase", "ca": "sentit 2"}]  # same meaning: never a wrong answer
     lesson = grammar._with_quizzes({"intro": "", "steps": [{"type": "explain", "title": "u", "text": "t", "examples": []}, {"type": "explain", "title": "d", "text": "t", "examples": [ex[1]]}]}, twin)
-    assert "una altra frase" not in next(s for s in lesson["steps"] if s["type"] == "quiz")["options"]
+    asked = next(s for s in lesson["steps"] if s["type"] == "quiz" and s["example"]["id"] == 2)
+    assert "una altra frase" not in asked["options"]
     # an Irish test drill never enters the course, even when it carries a unit
     irish = client.post("/drills/", json={"text_catalan": "Bon dia", "text_tachelhit": "Maidin Mhaith", "tag": "Irish"}).json()
     client.put(f"/drills/{irish['id']}", json={"grammar": "formules", "grammar_source": "owner"})

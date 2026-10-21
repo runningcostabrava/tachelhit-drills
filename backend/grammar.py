@@ -84,7 +84,7 @@ UNITS: List[dict] = [
 SLUGS = [u["slug"] for u in UNITS]
 TITLES = {u["slug"]: u["title"] for u in UNITS}
 BATCH = 40
-LESSON_VERSION = 9  # bump when the lesson format or prompt changes: old rows are rewritten on next open
+LESSON_VERSION = 10  # bump when the lesson format or prompt changes: old rows are rewritten on next open
 
 # Drills whose tag names another language are never part of the course (the owner's old Irish tests).
 EXCLUDED_TAGS = ("irish",)
@@ -412,7 +412,7 @@ def simplicity(e: dict) -> int:
     return len(re.findall(r"[^\W\d_]+", e["shi"])) * 100 + len(e["shi"])
 
 
-def pick_examples(rows: List, limit: int = 60, slug: Optional[str] = None) -> List[dict]:
+def pick_examples(rows: List, limit: int = 90, slug: Optional[str] = None) -> List[dict]:
     """The drills a lesson can quote: short real sentences (and words, in the units about words),
     the ones with a picture and a voice first, no duplicates."""
     cands = []
@@ -506,12 +506,12 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str) -> str:
            "LEVEL 2 UNIT: short sentences, one rule per step, every term explained in plain words. "
            if unit.get("level") == 2 else "")
         + "Build the lesson as STEPS, each one a card the learner reads in a few seconds:\n"
-        "- 5 to 7 steps of type \"explain\": a title (3-6 words), a text of 35-70 words, example_ids (3-5, ONLY from "
+        "- 7 to 9 steps of type \"explain\": a title (3-6 words), a text of 35-70 words, example_ids (4-6, ONLY from "
         "the sentences below) and \"focus\": {id: substring} for each quoted sentence. START WITH THE MOST BASIC: "
         "the first step uses the shortest examples (a single word or a two-word formula when there is one, e.g. a "
         "bare greeting, a bare noun, a bare number) and each step builds on the previous one, so the longest "
         "sentences come last. Never open a unit with a long sentence.\n"
-        "- 1 step of type \"pattern\" (optional, when a table helps): a title and 3-7 rows of [form, meaning, "
+        "- 1 or 2 steps of type \"pattern\" (one after the first explanations, one near the end): a title and 3-8 rows of [form, meaning, "
         "example], the forms in standard Latin spelling (ɣ, ḥ, ṣ, ṭ, ẓ, ɛ, š), the example taken from our sentences "
         "when one exists.\n"
         "- 1 step of type \"tip\": a text of 30-60 words on the mistake Catalan speakers make most, or a memory trick.\n"
@@ -565,9 +565,10 @@ def _parse_lesson(answer: str, examples: List[dict]) -> dict:
 
 
 def _with_quizzes(lesson: dict, examples: List[dict]) -> dict:
-    """A quick check after every second explanation, three kinds in turn: read the meaning and pick
-    the sentence; listen to the voice and pick the meaning; look at the picture and pick the
-    sentence. Wrong answers come from the same unit and never mean the same thing."""
+    """A quick check after every explanation and a short review before the end, three kinds in turn:
+    read the meaning and pick the sentence; listen to the voice and pick the meaning; look at the
+    picture and pick the sentence. Wrong answers come from the same unit and never mean the same
+    thing, and no sentence is asked about twice."""
     import random
     pool = [e for e in examples if e["shi"] and e["ca"]]
     same = lambda a, b: a[:10].lower() == b[:10].lower()
@@ -577,7 +578,7 @@ def _with_quizzes(lesson: dict, examples: List[dict]) -> dict:
         if s["type"] != "explain":
             continue
         n_explain += 1
-        if n_explain % 2 or len(pool) < 4:
+        if len(pool) < 4:
             continue
         kind = ("meaning", "listen", "picture")[n_quiz % 3]
         need = {"listen": "audio_url", "picture": "image_url"}.get(kind)
@@ -600,8 +601,40 @@ def _with_quizzes(lesson: dict, examples: List[dict]) -> dict:
         question = {"meaning": f"Com es diu «{target['ca']}»?", "listen": "Escolta. Què vol dir?", "picture": "Quina frase va amb la imatge?"}[kind]
         out.append({"type": "quiz", "kind": kind, "question": question, "options": options,
                     "answer": options.index(target[field]), "example": target})
+    out += _review_quizzes(pool, used, n_quiz, 3)
     out.append({"type": "end"})
     return {**lesson, "steps": out}
+
+
+def _review_quizzes(pool: List[dict], used: set, n_quiz: int, how_many: int) -> List[dict]:
+    """A last round over sentences the lesson did not already ask about."""
+    import random
+    same = lambda a, b: a[:10].lower() == b[:10].lower()
+    out = []
+    for _ in range(how_many):
+        kind = ("meaning", "listen", "picture")[n_quiz % 3]
+        need = {"listen": "audio_url", "picture": "image_url"}.get(kind)
+        target = next((e for e in pool if e["id"] not in used and (not need or e.get(need))), None)
+        if target is None:
+            kind, need = "meaning", None
+            target = next((e for e in pool if e["id"] not in used), None)
+        if target is None:
+            break
+        used.add(target["id"]); n_quiz += 1
+        rnd = random.Random(target["id"] * 7)
+        field = "ca" if kind == "listen" else "shi"
+        wrong = [e[field] for e in pool if e["id"] != target["id"] and e["shi"].lower() != target["shi"].lower() and not same(e["ca"], target["ca"])]
+        wrong = list(dict.fromkeys(wrong))
+        if len(wrong) < 3:
+            break
+        rnd.shuffle(wrong)
+        options = [target[field]] + wrong[:3]
+        rnd.shuffle(options)
+        question = {"meaning": f"Repàs: com es diu «{target['ca']}»?", "listen": "Repàs: escolta. Què vol dir?",
+                    "picture": "Repàs: quina frase va amb la imatge?"}[kind]
+        out.append({"type": "quiz", "kind": kind, "question": question, "options": options,
+                    "answer": options.index(target[field]), "example": target})
+    return out
 
 
 def write_lesson(slug: str, grammar_md: str, examples: List[dict]) -> dict:
@@ -613,7 +646,7 @@ def write_lesson(slug: str, grammar_md: str, examples: List[dict]) -> dict:
     sheet = study(slug, grammar_md)
     answer = gemini_generate("You are a patient, clear teacher of Amazigh for beginners, writing in Catalan.",
                              [{"role": "user", "text": _lesson_prompt(unit, examples, sheet)}],
-                             max_output_tokens=4500, temperature=0.3, timeout=240)
+                             max_output_tokens=9000, temperature=0.3, timeout=420)
     lesson = _parse_lesson(answer, examples)
     lesson["study"] = sheet  # the rule sheet travels with the lesson (shown to admins)
     return _with_quizzes(lesson, examples)
