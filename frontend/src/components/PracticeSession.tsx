@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
-import { FaLightbulb, FaMicrophone, FaPlay, FaTimes } from 'react-icons/fa';
+import { FaLightbulb, FaMicrophone, FaPlay, FaStop, FaTimes } from 'react-icons/fa';
 import { api, type PracticeCard, type PracticeMode, type PronunciationWord } from '../api';
 import { API_BASE, getMediaUrl } from '../config';
 import { toast } from '../toast';
@@ -28,6 +28,60 @@ function loadMode(): PracticeMode { try { const m = localStorage.getItem(MODE_KE
 
 function scoreGrade(score: number): number { return score >= 0.85 ? 3 : score >= 0.65 ? 2 : score >= 0.4 ? 1 : 0; }
 
+// The shape of a voice: 90 loudness bars drawn from the decoded audio, so the learner can compare
+// the speaker's rhythm and stresses with their own, and replay either as often as they want.
+function Waveform({ src, label, color, autoHeight = 54 }: { src: string | Blob | null; label: string; color: string; autoHeight?: number }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [bars, setBars] = useState<number[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const url = useMemo(() => (src instanceof Blob ? URL.createObjectURL(src) : src ? getMediaUrl(src) : ''), [src]);
+  useEffect(() => () => { if (src instanceof Blob && url) URL.revokeObjectURL(url); }, [src, url]);
+  useEffect(() => {
+    let cancelled = false;
+    setBars(null); setFailed(false);
+    if (!url) return;
+    (async () => {
+      try {
+        const buf = src instanceof Blob ? await src.arrayBuffer() : await (await fetch(url, { mode: 'cors' })).arrayBuffer();
+        const Ctx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext;
+        const ctx = new Ctx();
+        const audio = await ctx.decodeAudioData(buf.slice(0));
+        const data = audio.getChannelData(0);
+        const n = 90, step = Math.max(1, Math.floor(data.length / n)); const out: number[] = [];
+        for (let i = 0; i < n; i++) { let sum = 0; for (let j = i * step; j < Math.min(data.length, (i + 1) * step); j += 4) sum += data[j] * data[j]; out.push(Math.sqrt(sum / (step / 4))); }
+        const peak = Math.max(...out, 1e-6);
+        if (!cancelled) setBars(out.map((v) => v / peak));
+        ctx.close().catch(() => {});
+      } catch { if (!cancelled) setFailed(true); }
+    })();
+    return () => { cancelled = true; };
+  }, [url, src]);
+  useEffect(() => {
+    const c = canvasRef.current; if (!c || !bars) return;
+    const dpr = window.devicePixelRatio || 1; const w = c.clientWidth, h = autoHeight; c.width = w * dpr; c.height = h * dpr;
+    const g = c.getContext('2d'); if (!g) return; g.scale(dpr, dpr); g.clearRect(0, 0, w, h);
+    const bw = w / bars.length; g.fillStyle = color;
+    bars.forEach((v, i) => { const bh = Math.max(2, v * (h - 4)); g.fillRect(i * bw + bw * 0.2, (h - bh) / 2, bw * 0.6, bh); });
+  }, [bars, color, autoHeight]);
+  const toggle = () => {
+    if (!url) return;
+    if (audioRef.current && playing) { audioRef.current.pause(); setPlaying(false); return; }
+    const a = new Audio(url); audioRef.current = a; a.onended = () => setPlaying(false); a.onerror = () => setPlaying(false);
+    setPlaying(true); a.play().catch(() => setPlaying(false));
+  };
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <button onClick={toggle} disabled={!url} aria-label={`Escolta: ${label}`} style={{ flexShrink: 0, width: 38, height: 38, borderRadius: '50%', border: 'none', background: url ? color : 'var(--surface-2)', color: '#fff', cursor: url ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{playing ? <FaStop size={12} /> : <FaPlay size={12} />}</button>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 2 }}>{label}</div>
+        {bars ? <canvas ref={canvasRef} style={{ width: '100%', height: autoHeight, display: 'block' }} /> : <div style={{ height: autoHeight, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-muted)' }}>{!url ? 'sense veu' : failed ? 'no s’ha pogut dibuixar; prem per escoltar' : 'dibuixant…'}</div>}
+      </div>
+    </div>
+  );
+}
+
 function Highlighted({ text, marks }: { text: string; marks: string[] }) {
   // bold the spellings that carry a hard sound, longest first so «gh» wins over «g»
   const ms = [...marks].sort((a, b) => b.length - a.length).filter(Boolean);
@@ -47,6 +101,7 @@ export default function PracticeSession() {
   const [results, setResults] = useState<Record<number, Result>>({});
   const [revealed, setRevealed] = useState(false);
   const [finished, setFinished] = useState(false);
+  const [myTake, setMyTake] = useState<Blob | null>(null);  // the learner's last recording of this card
   const [loadError, setLoadError] = useState<string | null>(null);
   const [mode, setModeState] = useState<PracticeMode>(loadMode);
   const setMode = (m: PracticeMode) => { setModeState(m); try { localStorage.setItem(MODE_KEY, m); } catch { /* private mode */ } };
@@ -141,6 +196,7 @@ export default function PracticeSession() {
         setPhase('checking');
         try {
           const blob = new Blob(chunks, { type: rec.mimeType || mime || 'audio/webm' });
+          setMyTake(blob);
           const fd = new FormData();
           fd.append('drill_id', String(drill.id));
           fd.append('audio', blob, fileNameFor(blob, 'audio', 'practice'));
@@ -161,7 +217,7 @@ export default function PracticeSession() {
   const next = () => {
     if (audioRef.current) audioRef.current.pause();
     if (i + 1 >= drills.length) { finish(); return; }
-    setI(i + 1); setPhase('prompt'); setResult(null); setRevealed(false);
+    setI(i + 1); setPhase('prompt'); setResult(null); setRevealed(false); setMyTake(null);
   };
   const retry = () => { setPhase('prompt'); setResult(null); if (!sayFirst) play(1); };
   const finish = () => {
@@ -265,6 +321,13 @@ export default function PracticeSession() {
         )}
       </div>
 
+      {myTake && (phase === 'checking' || phase === 'result') && (
+        <div style={{ marginTop: 12, padding: 12, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <Waveform src={voice || null} label={card?.speaker || 'la veu'} color="var(--brand-1)" />
+          <Waveform src={myTake} label="tu" color="var(--saffron-dark, #B7791F)" />
+          {phase === 'checking' && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Compara el ritme i la força de cada síl·laba mentre s’avalua la pronúncia (uns segons).</div>}
+        </div>
+      )}
       {phase === 'result' && result ? (
         <div style={{ marginTop: 12, padding: 14, borderRadius: 'var(--r-lg)', background: result.score >= 0.65 ? 'var(--emerald-soft, #E5F2EA)' : 'var(--brand-gradient-soft)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
