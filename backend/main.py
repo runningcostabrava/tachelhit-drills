@@ -2113,6 +2113,12 @@ def reap_dead_jobs(db) -> tuple:
     return len(dead), requeued
 DEFAULT_TZ = "Europe/Madrid"
 
+# ---- Pagination + delta-sync helpers (P4.1-4.3)
+DEFAULT_PAGE_LIMIT = 100
+MAX_PAGE_LIMIT = 500
+JOB_TERMINAL_STATUSES = ("COMPLETED", "FAILED")
+
+
 def _page_bounds(limit: Optional[int], offset: Optional[int]):
     """None = no pagination (legacy "return everything"); else (offset, limit)."""
     if limit is None and offset is None:
