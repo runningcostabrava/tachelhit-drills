@@ -67,7 +67,7 @@ DRILL_FIELDS = ["tag", "author", "text_catalan", "text_tachelhit", "text_arabic"
                 "video_end_time", "text_tachelhit_latin", "text_tachelhit_suggested", "text_catalan_suggested",
                 "draft_check", "variety", "region", "speaker", "source_url", "source_title", "source_channel",
                 "source_playlist", "license", "verified"]
-WEB_APP = "https://tachelhit-drills.vercel.app/video-creator"
+WEB_APP = "https://tamazight-drills.vercel.app/video-creator"  # old address tachelhit-drills.vercel.app still answers
 YTDLP_RELEASE = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/"
 DENO_RELEASE = "https://github.com/denoland/deno/releases/latest/download/"
 FFMPEG_WIN = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip"

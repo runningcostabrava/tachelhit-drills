@@ -1711,6 +1711,9 @@ allowed_origins_base = [
     "http://localhost:5173",
     "http://localhost:4173",
     "https://tachelhit-drills.vercel.app",
+    "https://tamazight-drills.vercel.app",   # the app's name since 2026-10-21 (Tamazight Drills)
+    "https://tamazigh-drills.vercel.app",
+    "https://amazigh-drills.vercel.app",
     "http://localhost",              # Add this for Android APK
     "https://localhost",              # Add this for Android APK
     "capacitor://localhost",         # Add this for mobile WebView
@@ -1738,6 +1741,7 @@ print("=" * 80)
 
 cors_kwargs = dict(
     allow_origins=allowed_origins,
+    allow_origin_regex=r"https://(tachelhit|tamazight|tamazigh|amazigh)-drills(-[a-z0-9-]+)?[.]vercel[.]app",  # the project's own domains and preview deployments
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

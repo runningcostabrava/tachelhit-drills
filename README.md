@@ -2,7 +2,8 @@
 
 > The app is named **Tamazight Drills** (the inclusive name of the language, as its speakers and
 > content authors ask); «Tachelhit» stays only in code identifiers, the repository name and the
-> `shi` variety label.
+> `shi` variety label. The site answers at tamazight-drills.vercel.app (the old
+> tachelhit-drills.vercel.app address keeps working for installed apps and shared links).
 
 A community platform for **collecting Atlas Tamazight (Tachelhit) from people
 and the internet, and learning it** — built around Catalan as the reference
