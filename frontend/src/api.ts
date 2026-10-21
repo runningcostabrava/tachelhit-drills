@@ -232,6 +232,10 @@ export const api = {
   grammarUnit: (slug: string, limit = 60) => request<GrammarUnitPage>(`/grammar/${slug}?limit=${limit}`),
   grammarRewrite: (slug: string) => request<GrammarUnitPage>(`/grammar/${slug}/rewrite`, { method: 'POST' }),
   grammarWishlist: () => request<{ units: GrammarWishUnit[] }>('/grammar/wishlist'),
+  practiceCollections: () => request<PracticeCollections>('/practice/collections'),
+  practiceSession: (query: string) => request<{ drills: Drill[]; cards: PracticeCard[] }>(`/practice/session?${query}`),
+  reviewsDue: (limit = 10) => request<Drill[]>(`/reviews/due?limit=${limit}`),
+  reviewGrade: (drillId: number, grade: number) => request<unknown>(`/reviews/${drillId}/grade`, { method: 'POST', body: JSON.stringify({ grade }) }),
 
   // --- multi-speaker recordings (many takes per drill) ---
   drillRecordings: (drillId: number) =>
@@ -307,6 +311,16 @@ export type LessonStep =
 export interface GrammarLesson { intro: string; steps: LessonStep[]; study?: string; error?: string }
 /** `practice`: the ids the unit's test is made of (real sentences only: no single words, no conjugation lists). */
 export interface GrammarUnitPage extends GrammarUnit { lesson: GrammarLesson; total: number; practice: number[]; drills: Drill[] }
+/** Pràctica: how the library is offered for practice, and what a session card needs beyond the drill. */
+export interface PracticeCollections {
+  days: { day: string; speaker: string; count: number }[];
+  topics: { slug: string; label: string; count: number }[];
+  units: { slug: string; title: string; level: number; count: number }[];
+  lists: { id: number; title: string; count: number }[];
+}
+export interface PracticeTip { sound: string; label: string; found: string; tip: string }
+export interface PracticeCard { speaker: string; origin: string; day: string | null; tips: PracticeTip[]; highlights: string[] }
+export interface PronunciationWord { word: string; ok: boolean; heard: string | null }
 /** A unit in the recording wishlist: how many of its sentences carry an Aït Mraw voice, and the ones worth recording. */
 export interface GrammarWishUnit extends GrammarUnit { total: number; aitmraw_voiced: number; wanted: Drill[] }
 

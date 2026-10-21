@@ -28,6 +28,7 @@ import lexicon
 from tts_text import tts_text, VOICE_VERSION
 import topics as topics_catalog
 import grammar as grammar_course
+import practice as practice_mod
 from gemini_client import gemini_generate, gemini_available, gemini_agent, BudgetExceeded
 import gemini_client
 import ai_budget
@@ -5505,6 +5506,26 @@ def catalog_topics_status():
 
 
 # ===================== GRAMMAR COURSE =====================
+# ===================== PRÀCTICA (pronunciation sessions) =====================
+@app.get("/practice/collections")
+def practice_collections(db: Session = Depends(get_db)):
+    """How the library is offered for practice: by recording day (our speakers' sessions), by
+    subject, by grammar unit, and the hand-made lists."""
+    return practice_mod.collections(db)
+
+
+@app.get("/practice/session")
+def practice_session(day: Optional[str] = None, speaker: Optional[str] = None, topic: Optional[str] = None,
+                     unit: Optional[str] = None, test_id: Optional[int] = None, ids: Optional[str] = None,
+                     limit: int = 10, offset: int = 0, db: Session = Depends(get_db)):
+    """The drills of one practice session (real sentences with a voice, recorded and pictured first;
+    `ids` = an explicit list, e.g. the drills due for review) and, per drill, the card data:
+    speaker, hard sounds, pronunciation tips."""
+    only = [int(x) for x in ids.split(",") if x.strip().isdigit()] if ids else None
+    rows = practice_mod.session_rows(db, day=day, speaker=speaker, topic=topic, unit=unit, test_id=test_id, ids=only, limit=limit, offset=offset)
+    return {"drills": [Drill.model_validate(d, from_attributes=True) for d in rows], "cards": [practice_mod.card(d) for d in rows]}
+
+
 @app.get("/grammar")
 def grammar_units():
     """The course: units in order with, per unit, how many drills illustrate it."""
@@ -6465,13 +6486,15 @@ async def pronunciation_check(
         fixed = apply_glossary(heard, pairs)
 
         matched_script, target, score = _best_pronunciation_match(fixed, drill)
+        latin = drill.text_tachelhit if re.search(r"[A-Za-z]", drill.text_tachelhit or "") else (drill.text_tachelhit_latin or drill.text_tachelhit or "")
 
         return {
             "drill_id": drill_id,
             "target": target,
             "matched_script": matched_script,
             "heard": fixed,
-            "score": round(max(score, 0.0), 3)
+            "score": round(max(score, 0.0), 3),
+            "words": practice_mod.compare_words(latin, fixed),  # the speaker's words, each ok or not
         }
     except HTTPException:
         raise

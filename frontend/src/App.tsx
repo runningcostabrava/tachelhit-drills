@@ -15,6 +15,8 @@ import './App.css';
 // keeping the initial bundle small (AG Grid, players, creators all split out)
 const DrillsResponsive = lazy(() => import('./components/DrillsResponsive'));
 const TestsDashboard = lazy(() => import('./components/TestsDashboard'));
+const PracticePage = lazy(() => import('./components/PracticePage'));
+const PracticeSession = lazy(() => import('./components/PracticeSession'));
 const YouTubeShorts = lazy(() => import('./components/YouTubeShorts'));
 const DrillPlayerPage = lazy(() => import('./components/DrillPlayerPage'));
 const PublicTestView = lazy(() => import('./components/PublicTestView'));
@@ -124,14 +126,14 @@ function App() {
 
 
   // Immersive routes render full-screen; the nav would collide with them
-  const showNav = !location.pathname.startsWith('/player') && !/^\/tests\/\d/.test(location.pathname);
+  const showNav = !location.pathname.startsWith('/player') && !/^\/tests\/\d/.test(location.pathname) && location.pathname !== '/tests/sessio';
   const compactNav = useIsMobileLayout(); // phones: icon-only tabs so Tests and Reels are not hidden off-screen
   const navLinks = [
     { to: '/', label: 'Drills', Icon: FaLayerGroup },
     { to: '/video-creator', label: 'Captura', Icon: FaVideo },
     { to: '/grammar', label: 'Gramàtica', Icon: FaBook },
     { to: '/corpus', label: 'Corpus', Icon: FaBookOpen },
-    { to: '/tests', label: 'Tests', Icon: FaGraduationCap },
+    { to: '/tests', label: 'Pràctica', Icon: FaGraduationCap },
     { to: '/shorts', label: 'Reels', Icon: FaFilm },
   ];
   const navBtn = (active: boolean): React.CSSProperties => ({
@@ -176,7 +178,9 @@ function App() {
       <Suspense fallback={<RouteLoader />}>
       <Routes>
         <Route path="/" element={<DrillsResponsive />} />
-        <Route path="/tests" element={<TestsDashboard />} />
+        <Route path="/tests" element={<PracticePage />} />
+        <Route path="/tests/sessio" element={<PracticeSession />} />
+        <Route path="/tests/llistes" element={<TestsDashboard />} />
         <Route path="/tests/:testId" element={<PublicTestView />} />
         <Route path="/tests/:testId/listen" element={<PublicTestView initialView="listening" />} />
         <Route path="/shorts" element={<YouTubeShorts />} />
