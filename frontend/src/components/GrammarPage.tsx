@@ -17,6 +17,12 @@ const LEVEL_LABEL: Record<number, string> = { 1: 'Nivell 1 · bàsic', 2: 'Nivel
 
 // Course progress lives in this browser: which units were finished and the quick-check score.
 type Progress = Record<string, { right: number; total: number; at: string }>;
+// Two ways to read a unit: «Targetes» (one card at a time, the quick checks gate the next card) and
+// «Document» (the whole lesson on one page, every example with its play button, the quick checks
+// answerable in place). Remembered on the device.
+type ViewMode = 'cards' | 'document';
+const VIEW_KEY = 'grammar_view';
+function loadView(): ViewMode { try { return localStorage.getItem(VIEW_KEY) === 'document' ? 'document' : 'cards'; } catch { return 'cards'; } }
 const PROGRESS_KEY = 'grammar_progress';
 function loadProgress(): Progress { try { return JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}'); } catch { return {}; } }
 function saveProgress(slug: string, right: number, total: number) {
@@ -96,6 +102,8 @@ function UnitView({ slug }: { slug: string }) {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [signedIn, setSignedIn] = useState(false);
   const [proposals, setProposals] = useState<LessonProposal[]>([]);
+  const [view, setViewState] = useState<ViewMode>(loadView);
+  const setView = (v: ViewMode) => { setViewState(v); try { localStorage.setItem(VIEW_KEY, v); } catch { /* private mode */ } };
   const loadProposals = useCallback(() => { api.lessonProposals(slug).then(setProposals).catch(() => setProposals([])); }, [slug]);
 
   useEffect(() => {
@@ -129,12 +137,13 @@ function UnitView({ slug }: { slug: string }) {
   const prev = useCallback(() => setI((x) => Math.max(0, x - 1)), []);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (view !== 'cards') return;
       if (e.key === 'ArrowRight') next();
       if (e.key === 'ArrowLeft') prev();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [next, prev]);
+  }, [next, prev, view]);
 
   const makeTest = async () => {
     if (!page) return;
@@ -168,6 +177,33 @@ function UnitView({ slug }: { slug: string }) {
         </div>
       )}
       {page && card && (
+        <div style={{ display: 'flex', gap: 6, margin: '0 0 10px' }}>
+          {([['cards', 'Targetes'], ['document', 'Document']] as [ViewMode, string][]).map(([m, label]) => (
+            <button key={m} onClick={() => setView(m)} style={{ padding: '6px 14px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: view === m ? 'var(--brand-1)' : 'var(--surface)', color: view === m ? '#fff' : 'var(--text)', fontWeight: 800, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>{label}</button>
+          ))}
+        </div>
+      )}
+      {page && card && view === 'document' && (
+        <div style={{ paddingBottom: 24 }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>{LEVEL_LABEL[page.level]} · {cards.length - 2} passos</div>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', margin: '2px 0 12px', lineHeight: 1.2 }}>{page.title}</h1>
+          {cards.map((c, k) => (
+            <div key={k} className="lesson-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', padding: '18px', marginTop: '12px', boxShadow: 'var(--shadow-sm)' }}>
+              {c.type === 'intro' && <IntroCard page={page} cover={cover?.image_url || null} />}
+              {c.type === 'explain' && <ExplainCard step={c} />}
+              {c.type === 'pattern' && <PatternCard step={c} />}
+              {c.type === 'quiz' && <QuizCard step={c} chosen={answers[k]} onChoose={(j) => setAnswers((a) => ({ ...a, [k]: j }))} />}
+              {(c.type === 'tip' || c.type === 'dialect') && <NoteCard step={c} />}
+              {c.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} nextUnit={nextUnit} proposals={proposals} onDecided={loadProposals} />}
+              {(c.type === 'explain' || c.type === 'tip' || c.type === 'dialect' || c.type === 'intro') && page.lesson.steps.length > 0 && <ProposeChange slug={slug} step={k - 1} current={c.type === 'intro' ? page.lesson.intro : c.text} signedIn={signedIn} onSent={loadProposals} />}
+            </div>
+          ))}
+          <div style={{ marginTop: 14, textAlign: 'center' }}>
+            <button onClick={() => { const quizzes = cards.map((c, k) => ({ c, k })).filter(({ c }) => c.type === 'quiz'); saveProgress(slug, quizzes.filter(({ c, k }) => c.type === 'quiz' && answers[k] === c.answer).length, quizzes.length); toast.success('Unitat marcada com a feta'); }} style={{ padding: '12px 20px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>He acabat aquesta unitat</button>
+          </div>
+        </div>
+      )}
+      {page && card && view === 'cards' && (
         <>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>{LEVEL_LABEL[page.level]} · {i + 1} / {cards.length}</div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', margin: '2px 0 10px', lineHeight: 1.2 }}>{page.title}</h1>
