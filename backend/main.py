@@ -5485,7 +5485,7 @@ def grammar_units():
             "counts": grammar_course.counts(SessionLocal), "status": grammar_course.status()}
 
 
-def _grammar_unit_rows(db, slug: str, limit: int = 300):
+def _grammar_unit_rows(db, slug: str, limit: int = 1500):
     """The unit's drills, pictured-and-voiced first, then voiced, then by id; excluded tags left out."""
     q = grammar_course.not_excluded(db.query(DrillModel).filter(DrillModel.grammar.ilike(f"%{slug}%")), DrillModel)
     rows = q.order_by(DrillModel.audio_url.isnot(None).desc(), DrillModel.image_url.isnot(None).desc(), DrillModel.id.asc()).limit(limit).all()
@@ -5498,14 +5498,38 @@ def _grammar_unit_payload(db, slug: str, limit: int, force: bool):
         raise HTTPException(status_code=404, detail="Unit not found")
     rows = _grammar_unit_rows(db, slug)
     examples = grammar_course.pick_examples(rows)
+    practice = grammar_course.practice_rows(rows)  # the test: sentences only
     try:
-        lesson = grammar_course.get_lesson(db, slug, _load_grammar() if gemini_available() else "", examples, force=force)
+        lesson = grammar_course.get_lesson(db, slug, _load_grammar() if gemini_available() else "", examples, force=force,
+                                           unit_ids={d.id for d in rows})
     except Exception as e:
         print(f"[GRAMMAR] lesson {slug}: {e}")
         lesson = {"intro": "", "steps": [{"type": "explain", "title": unit["title"], "text": "La lliçó encara no s’ha pogut escriure. Mira els exemples de la biblioteca mentrestant.", "examples": examples[:3]}, {"type": "end"}], "error": str(e)[:160]}
     total = sum(1 for (g,) in grammar_course.not_excluded(db.query(DrillModel.grammar).filter(DrillModel.grammar.ilike(f"%{slug}%")), DrillModel).all() if slug in grammar_course.parse(g))
     return {**{k: unit[k] for k in ("slug", "title", "level")}, "lesson": lesson, "total": total,
+            "practice": [d.id for d in practice],
             "drills": [Drill.model_validate(d, from_attributes=True) for d in rows[:max(1, min(limit, 300))]]}
+
+
+@app.get("/grammar/wishlist")
+def grammar_wishlist(per_unit: int = 8, db: Session = Depends(get_db)):
+    """What our own speakers (Aït Mraw) could record next: for each unit, how many of its sentences
+    already carry an Aït Mraw voice and the sentences from elsewhere worth recording in their words
+    (real sentences, pictured first, none that already has an Aït Mraw take). Units with the fewest
+    Aït Mraw voices first."""
+    mraw_takes = {r[0] for r in db.query(RecordingModel.drill_id).filter(
+        (RecordingModel.region.ilike("%mraw%")) | (RecordingModel.speaker.in_(("Halima", "Driss")))).all()}
+    out = []
+    for unit in grammar_course.UNITS:
+        rows = _grammar_unit_rows(db, unit["slug"])
+        voiced = sum(1 for d in rows if (grammar_course.origin(d) == grammar_course.AIT_MRAW and d.audio_url) or d.id in mraw_takes)
+        wanted = [d for d in grammar_course.practice_rows(rows, limit=10000)
+                  if grammar_course.origin(d) != grammar_course.AIT_MRAW and d.id not in mraw_takes and len(d.text_tachelhit or "") <= 90]
+        wanted.sort(key=lambda d: (not d.image_url, not d.audio_url, d.id))
+        out.append({**{k: unit[k] for k in ("slug", "title", "level")}, "total": len(rows), "aitmraw_voiced": voiced,
+                    "wanted": [Drill.model_validate(d, from_attributes=True) for d in wanted[:max(0, min(per_unit, 30))]]})
+    out.sort(key=lambda u: (u["aitmraw_voiced"], -u["total"]))
+    return {"units": out}
 
 
 @app.get("/grammar/{slug}")

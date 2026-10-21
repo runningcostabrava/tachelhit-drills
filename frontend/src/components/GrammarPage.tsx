@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from '../toast';
-import { FaBullseye, FaCheck, FaChevronLeft, FaChevronRight, FaLightbulb, FaMapMarkerAlt, FaRedo, FaTimes, FaVolumeUp } from 'react-icons/fa';
-import { api, type GrammarUnit, type GrammarUnitPage, type LessonExample, type LessonStep } from '../api';
+import { FaBullseye, FaCheck, FaChevronLeft, FaChevronRight, FaLightbulb, FaMapMarkerAlt, FaMicrophone, FaRedo, FaTimes, FaVolumeUp } from 'react-icons/fa';
+import { api, type GrammarUnit, type GrammarUnitPage, type GrammarWishUnit, type LessonExample, type LessonStep } from '../api';
 import { API_BASE, getMediaUrl } from '../config';
+import RecordAudioModal from './RecordAudioModal';
+import type { Drill } from '../types';
 
 // The grammar course: the library organised as a sequence of grammar units (backend/grammar.py).
 // Course view: the units in order, with how many drills illustrate each. Unit view: the lesson as
@@ -23,6 +25,7 @@ function saveProgress(slug: string, right: number, total: number) {
 
 export default function GrammarPage() {
   const { slug } = useParams<{ slug?: string }>();
+  if (slug === 'gravacions') return <WishlistView />;
   return slug ? <UnitView slug={slug} /> : <CourseView />;
 }
 
@@ -54,6 +57,10 @@ function CourseView() {
           {nextUnit && <button onClick={() => navigate(`/grammar/${nextUnit.slug}`)} style={{ padding: '10px 16px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>{done ? 'Continua' : 'Comença'} <FaChevronRight /></button>}
         </div>
       )}
+      <div style={{ fontSize: '13px', color: 'var(--text-soft)', margin: '-8px 0 16px' }}>
+        <button onClick={() => navigate('/grammar/gravacions')} style={{ background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 6 }}><FaMicrophone size={12} /> Frases per gravar</button>
+        {' '}· les unitats on encara falten veus d’Aït Mraw.
+      </div>
       {levels.map((lv) => (
         <section key={lv} style={{ marginBottom: '22px' }}>
           <h2 style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 8px' }}>{LEVEL_LABEL[lv]}</h2>
@@ -128,14 +135,16 @@ function UnitView({ slug }: { slug: string }) {
 
   const makeTest = async () => {
     if (!page) return;
-    const ids = page.drills.slice(0, 200).map((d) => d.id);
+    // real sentences only: single words and the deck's conjugation lists stay out of the test
+    const ids = (page.practice?.length ? page.practice : page.drills.map((d) => d.id)).slice(0, 200);
+    if (!ids.length) { toast.error('Aquesta unitat encara no té frases per practicar'); return; }
     try {
       await axios.post(`${API_BASE}/tests/`, {
-        title: page.title, description: `Unitat de gramàtica «${page.title}» (${ids.length} drills)`,
+        title: page.title, description: `Unitat de gramàtica «${page.title}» (${ids.length} frases)`,
         question_type: 'text_input', hint_level: 'none', hint_percentage: 30, hint_tries_before_reveal: 3,
         time_limit_seconds: null, passing_score: 70, drill_ids: ids.join(','),
       });
-      toast.success(`Test «${page.title}» creat amb ${ids.length} drills`);
+      toast.success(`Test «${page.title}» creat amb ${ids.length} frases`);
       navigate('/tests');
     } catch { toast.error('No s’ha pogut crear el test'); }
   };
@@ -325,10 +334,10 @@ function EndCard({ page, answers, cards, onTest, isAdmin, onRewrite, rewriting, 
     <div>
       <h2 style={{ fontSize: '18px', margin: '0 0 6px' }}>Unitat acabada</h2>
       {quizzes.length > 0 && <p style={{ margin: '0 0 12px', color: 'var(--text-soft)', fontSize: '15px' }}>Preguntes ràpides: {right} de {quizzes.length} encertades.</p>}
-      <p style={{ margin: '0 0 14px', fontSize: '15px', lineHeight: 1.5, color: 'var(--text)' }}>Ara practica-ho: un test amb les {Math.min(page.drills.length, 200)} frases de la biblioteca que mostren aquest punt.</p>
+      <p style={{ margin: '0 0 14px', fontSize: '15px', lineHeight: 1.5, color: 'var(--text)' }}>Ara practica-ho: un test amb les {Math.min(page.practice?.length ?? page.drills.length, 200)} frases de la biblioteca que mostren aquest punt (només frases: ni paraules soltes ni llistes de conjugació).</p>
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         {nextUnit && <button onClick={() => navigate(`/grammar/${nextUnit.slug}`)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Següent unitat: {nextUnit.title} <FaChevronRight /></button>}
-        {page.drills.length > 0 && <button onClick={onTest} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: 'var(--r-pill)', border: nextUnit ? '1px solid var(--brand-1)' : 'none', background: nextUnit ? 'var(--surface)' : 'var(--brand-gradient)', color: nextUnit ? 'var(--brand-1)' : '#fff', fontWeight: 700, cursor: 'pointer' }}><FaBullseye /> Practica aquesta unitat</button>}
+        {(page.practice?.length ?? page.drills.length) > 0 && <button onClick={onTest} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: 'var(--r-pill)', border: nextUnit ? '1px solid var(--brand-1)' : 'none', background: nextUnit ? 'var(--surface)' : 'var(--brand-gradient)', color: nextUnit ? 'var(--brand-1)' : '#fff', fontWeight: 700, cursor: 'pointer' }}><FaBullseye /> Practica aquesta unitat</button>}
         <button onClick={() => setShowAll((v) => !v)} style={{ padding: '10px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, cursor: 'pointer' }}>{showAll ? 'Amaga els exemples' : `Tots els exemples · ${page.total}`}</button>
         {isAdmin && page.lesson.study && <details style={{ width: '100%', order: 9 }}><summary style={{ cursor: 'pointer', fontSize: '13px', color: 'var(--text-soft)', fontWeight: 700 }}>Full d’estudi (del compendi, només administradors)</summary><pre style={{ whiteSpace: 'pre-wrap', fontSize: '13px', lineHeight: 1.5, color: 'var(--text)', fontFamily: 'var(--font-sans)', margin: '8px 0 0' }}>{page.lesson.study}</pre></details>}
         {isAdmin && <button onClick={onRewrite} disabled={rewriting} title="Torna a escriure la lliçó (administrador)" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)', fontWeight: 700, cursor: rewriting ? 'default' : 'pointer' }}><FaRedo /> {rewriting ? 'Reescrivint…' : 'Reescriu la lliçó'}</button>}
@@ -363,4 +372,57 @@ function withFocus(shi: string, focus?: string | null) {
 function inline(s: string) {
   const parts = (s || '').split(/(\*\*[^*]+\*\*)/g);
   return parts.map((p, i) => p.startsWith('**') && p.endsWith('**') ? <strong key={i}>{p.slice(2, -2)}</strong> : <span key={i}>{p.replace(/`/g, '')}</span>);
+}
+
+// ---------------- what our speakers could record next ----------------
+
+// For Halima and Driss (Aït Mraw): the units where the course has few voices of theirs, with the
+// sentences (from the Beni Mellal deck or elsewhere) worth saying in their own words. The microphone
+// opens the usual recorder, where «Com ho dius tu?» keeps their wording when it differs.
+function WishlistView() {
+  const navigate = useNavigate();
+  const [units, setUnits] = useState<GrammarWishUnit[] | null>(null);
+  const [recording, setRecording] = useState<Drill | null>(null);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    api.grammarWishlist().then((r) => setUnits(r.units)).catch(() => toast.error('No s’ha pogut carregar la llista'));
+  }, [tick]);
+  const play = (url?: string | null) => { if (url) new Audio(getMediaUrl(url)).play().catch(() => {}); };
+  return (
+    <div style={{ padding: '20px 16px', maxWidth: '900px', margin: '0 auto' }}>
+      <button onClick={() => navigate('/grammar')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: '4px 0', marginBottom: '6px' }}><FaChevronLeft /> El curs</button>
+      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', margin: '0 0 4px' }}>Frases per gravar</h1>
+      <p style={{ color: 'var(--text-soft)', fontSize: '14px', margin: '0 0 16px', lineHeight: 1.5 }}>
+        Per a la Halima i en Driss: les unitats del curs on encara hi ha poques veus d’Aït Mraw, amb frases que valdria la pena
+        sentir dites a la vostra manera. Premeu el micròfon, i si al vostre poble es diu amb altres paraules, escriviu-les a «Com ho dius tu?».
+        Les unitats amb menys veus vostres van primer.
+      </p>
+      {!units && <div style={{ color: 'var(--text-muted)' }}>Carregant…</div>}
+      {units?.map((u) => (
+        <section key={u.slug} style={{ marginBottom: '18px', padding: '12px 14px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+            <button onClick={() => navigate(`/grammar/${u.slug}`)} style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', fontWeight: 800, color: 'var(--text)', fontSize: '15px', textAlign: 'left' }}>{u.title}</button>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: u.aitmraw_voiced < 5 ? 'var(--danger, #c0392b)' : u.aitmraw_voiced < 15 ? 'var(--warning, #b7791f)' : 'var(--emerald)' }}>
+              {u.aitmraw_voiced} {u.aitmraw_voiced === 1 ? 'veu' : 'veus'} d’Aït Mraw · {u.total} exemples
+            </span>
+          </div>
+          {u.wanted.length === 0 && <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Cap frase pendent.</div>}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {u.wanted.map((d) => (
+              <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
+                {d.image_url && <img src={getMediaUrl(d.image_url)} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 'var(--r-sm)', flexShrink: 0 }} onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = 'none'; }} />}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: '14px' }}>{d.text_tachelhit}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-soft)' }}>{d.text_catalan}{d.region ? <span style={{ color: 'var(--text-muted)' }}> · {d.region}</span> : null}</div>
+                </div>
+                <button onClick={() => play(d.audio_url || d.audio_tts_shi_url)} disabled={!d.audio_url && !d.audio_tts_shi_url} aria-label="Escolta" title="Escolta com ho diuen" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : d.audio_tts_shi_url ? 'var(--sky)' : 'var(--surface)', color: d.audio_url || d.audio_tts_shi_url ? '#fff' : 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={12} /></button>
+                <button onClick={() => setRecording(d)} aria-label="Grava-ho tu" title="Grava-ho a la teva manera" style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaMicrophone size={14} /></button>
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+      {recording && <RecordAudioModal drill={recording} onClose={() => setRecording(null)} onSaved={() => { setRecording(null); setTick((t) => t + 1); }} />}
+    </div>
+  );
 }

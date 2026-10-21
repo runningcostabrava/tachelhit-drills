@@ -21,7 +21,9 @@ from typing import Dict, List, Optional
 # slug, Catalan title, chapters of the compendium that explain it, hint for the classifier
 UNITS: List[dict] = [
     {"slug": "formules", "title": "Fórmules bàsiques: salutar, agrair, acomiadar-se", "chapters": [7], "level": 1,
-     "hint": "fixed phrases: hello, how are you, thank you, goodbye, welcome, God bless"},
+     "hint": "ONLY a fixed social formula used as a whole: greetings, how are you, thank you, goodbye, welcome, "
+             "blessings and polite replies (azul, manzakin, tanmmirt, bslama, mrḥba, lla yɛawn). NOT 'yes' / 'no' / 'ok' / "
+             "'well' particles (wayh, uhu, waxxa, aywa, safi) and NOT ordinary words: those are not formulas"},
     {"slug": "pronoms-personals", "title": "Els pronoms personals (nkk, kyy, ntta…)", "chapters": [4], "level": 1,
      "hint": "independent personal pronouns as subject or in isolation: I, you (m/f), he, she, we, you (pl), they"},
     {"slug": "demostratius", "title": "Demostratius: aquest, aquell (wa, ta, wi, -a, -nn)", "chapters": [4], "level": 1,
@@ -29,7 +31,9 @@ UNITS: List[dict] = [
     {"slug": "noms-genere-nombre", "title": "Els noms: masculí i femení, singular i plural", "chapters": [3], "level": 1,
      "hint": "noun forms: masculine a-, feminine ta-…-t, plurals i-…-n, ti-…-in, broken plurals; a bare noun or noun pair"},
     {"slug": "estat-annexio", "title": "L'estat d'annexió (u-, w-, t-) després de preposició i subjecte", "chapters": [3], "level": 2,
-     "hint": "a noun in the construct/annexed state: after a preposition or as a postposed subject (n urgaz, ifka urgaz, g uxxam)"},
+     "hint": "ONLY when a noun VISIBLY changes its first letters after a preposition (n, g/ɣ, s, f, dar, ɣur, zg) or as a "
+             "subject placed after the verb: a- > u-/w- (argaz > urgaz, n wass), ta- > t- (tamɣart > tmɣart), i- > y- (n yirgazn). "
+             "A noun that keeps its a-/ta- (tigmmi, n tigmmi), an Arabic loan with l- (n lḥanut) or a bare noun does NOT show it"},
     {"slug": "possessius", "title": "Els possessius (-inu, -nnk, -nns) i el genitiu n", "chapters": [4], "level": 1,
      "hint": "my, your, his/her, our house; kinship possessives (baba, mma, gma-s); 'of' with n"},
     {"slug": "preposicions", "title": "Les preposicions (s, g/ɣ, dar/ɣur, d, i, f, zg)", "chapters": [6], "level": 2,
@@ -43,7 +47,9 @@ UNITS: List[dict] = [
     {"slug": "imperfectiu-habitual", "title": "L'imperfectiu i l'habitual (da / ar + verb)", "chapters": [5], "level": 2,
      "hint": "habitual or ongoing actions with da / ar / la + intensive stem: I usually go, he is eating, every day"},
     {"slug": "imperatiu", "title": "L'imperatiu: ordres i peticions", "chapters": [5], "level": 1,
-     "hint": "commands and requests: come!, give me, sit, don't (ur + aorist / imperfective)"},
+     "hint": "ONLY a real command or request said to someone, in a sentence: come here!, give me water, sit down, don't go "
+             "(ur + aorist / imperfective). A verb given alone as a dictionary entry ('to eat' = šš, 'to go' = ddu) or a "
+             "conjugation list is vocabulary, NOT a command: never 'imperatiu'"},
     {"slug": "negacio", "title": "La negació: ur …, ur … ša / bu", "chapters": [5, 7], "level": 2,
      "hint": "negative sentences: not, never, nothing, nobody, no longer (ur, ur jjun, walu, ur ta)"},
     {"slug": "preguntes", "title": "Les preguntes: is, ma, mani, manik, mšta, maymi", "chapters": [6, 7], "level": 1,
@@ -55,7 +61,9 @@ UNITS: List[dict] = [
     {"slug": "adjectius-qualitat", "title": "Qualitats: adjectius, verbs d'estat i comparació", "chapters": [3, 5], "level": 2,
      "hint": "big, small, good, beautiful, more than; stative verbs of quality (imqqur, iḥla)"},
     {"slug": "numerals", "title": "Els numerals i la quantitat", "chapters": [3], "level": 1,
-     "hint": "cardinal numbers, counting things (yan, sin, kraḍ…), how many, a lot / a little, all"},
+     "hint": "ONLY when a number word is visible in the Tamazight (yan/yat, sin/snat, kraḍ, kuẓ, smmus… mraw, ɛšrin, mya, "
+             "alf), or counting / how many (mnšk, mšta n), half, once / twice, 'the first'. General quantity words alone "
+             "(bzzaf 'a lot', imik 'a little', kullu 'all', kra 'some') are NOT numerals"},
     {"slug": "temps-adverbis", "title": "Adverbis de temps i lloc: avui, demà, ja, encara, aquí", "chapters": [6], "level": 2,
      "hint": "today, yesterday, tomorrow, now, still / not yet (ur ta), already, here, there, always"},
     {"slug": "subordinades", "title": "Oracions subordinades: perquè, si, quan, per a què", "chapters": [7], "level": 3,
@@ -125,7 +133,10 @@ def _prompt(rows: List[dict]) -> str:
         "1 to 3 slugs from this fixed list, the most clearly shown point first. Judge from the Tamazight form "
         "(verb aspect, pronouns, clitics, construct state, negation, question particle…), with the Catalan meaning "
         "as a guide. A bare noun or noun phrase goes to 'noms-genere-nombre' (or 'numerals', 'manlleus' when that "
-        "is the point); a fixed greeting goes to 'formules'. Use ONLY these slugs.\n\n"
+        "is the point); a fixed greeting goes to 'formules'. Use ONLY these slugs. Tag a unit ONLY when its marker is "
+        "visible in the Tamazight text (never from the Catalan alone). A single word that is not a noun, a number, a loan "
+        "or a greeting (an interjection, 'yes', 'no', a proper name), or a drill that shows no unit at all, gets an EMPTY "
+        "array [].\n\n"
         f"UNITS:\n{vocab}\n\nDRILLS:\n{items}\n\n"
         "Answer ONLY with a JSON object mapping each id (as a string) to an array of slugs, e.g. "
         "{\"12\": [\"perfectiu\", \"clitics-objecte\"], \"13\": [\"formules\"]}."
@@ -146,10 +157,11 @@ def classify_batch(rows: List[dict]) -> Dict[int, List[str]]:
         except ValueError:
             continue
         slugs = [s.strip() for s in (v if isinstance(v, list) else [v]) if isinstance(s, str) and s.strip() in TITLES]
-        slugs = list(dict.fromkeys(slugs))[:3]
-        if slugs:
-            out[did] = slugs
+        out[did] = list(dict.fromkeys(slugs))[:3]  # [] = Gemini says the drill shows no unit (kept as NO_UNIT)
     return out
+
+
+NO_UNIT = "-"  # stored in `grammar` when the classifier found no unit: not re-asked, never listed
 
 
 def status() -> dict:
@@ -186,9 +198,8 @@ def run(session_factory, force: bool = False, limit: int = 4000, only_ids: Optio
                     print(f"[GRAMMAR] batch failed: {e}")
                     continue
                 for d in part:
-                    slugs = got.get(d.id)
-                    if slugs:
-                        d.grammar = ", ".join(slugs); d.grammar_source = "auto"; _state["done"] += 1
+                    if d.id in got:
+                        d.grammar = ", ".join(got[d.id]) or NO_UNIT; d.grammar_source = "auto"; _state["done"] += 1
                     else:
                         _state["errors"] += 1
                 db.commit()
@@ -296,16 +307,33 @@ def origin_rank(e: dict) -> int:
     return 0 if o == AIT_MRAW else 1 if o == "Beni Mellal" else 2
 
 
+def kind(shi: Optional[str]) -> str:
+    """What a drill's Tamazight text is: 'sentence', 'word' (one word), 'list' (the deck's conjugation
+    lists and alternatives) or 'placeholder'."""
+    t = _clean_text(shi)
+    if not t or t.lower() == "text":
+        return "placeholder"
+    if "//" in t or t.count(",") >= 3 or t.count("/") >= 2:
+        return "list"
+    if len(re.findall(r"[^\W\d_]+", t)) <= 1:
+        return "word"
+    return "sentence"
+
+
+def practice_rows(rows: List, limit: int = 200) -> List:
+    """The drills a unit's practice test is made of: real sentences only (no single words, no
+    conjugation lists, no placeholders), in the rows' order."""
+    return [d for d in rows if kind(d.text_tachelhit) == "sentence"][:limit]
+
+
 def pick_examples(rows: List, limit: int = 40) -> List[dict]:
-    """The drills a lesson can quote: short real sentences (no conjugation lists, no placeholders),
-    the ones with a picture and a voice first, no duplicates."""
+    """The drills a lesson can quote: short real sentences (no single words, no conjugation lists,
+    no placeholders), the ones with a picture and a voice first, no duplicates."""
     cands = []
     for d in rows:
         shi = _clean_text(d.text_tachelhit); ca = _clean_text(d.text_catalan)
-        if not shi or not ca or shi.lower() == "text" or len(shi) > 90 or len(ca) > 110:
+        if not ca or kind(shi) != "sentence" or len(shi) > 90 or len(ca) > 110:
             continue
-        if "//" in shi or shi.count(",") >= 3 or shi.count("/") >= 2:
-            continue  # the deck's conjugation lists and alternatives are not sentences
         cands.append(example_dict(d))
     # our own speakers from Aït Mraw first, then the Beni Mellal deck, then the rest; within each, the
     # pictured-and-voiced sentences first
@@ -491,20 +519,45 @@ def write_lesson(slug: str, grammar_md: str, examples: List[dict]) -> dict:
     return _with_quizzes(lesson, examples)
 
 
-def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool = False) -> dict:
-    """The unit's lesson from the `grammar_lessons` table, written (once) when missing, outdated or forced."""
+def quoted_ids(lesson: dict) -> set:
+    """The drills a lesson's steps quote."""
+    ids = set()
+    for s in lesson.get("steps") or []:
+        for e in s.get("examples") or []:
+            ids.add(e.get("id"))
+        if s.get("example"):
+            ids.add(s["example"].get("id"))
+    return {i for i in ids if i is not None}
+
+
+def _current(row, unit_ids: Optional[set]) -> Optional[dict]:
+    """The stored lesson when it is up to date: right version and, when the unit's drills are given,
+    every sentence it quotes still in the unit (a reclassified unit gets its lesson written again)."""
+    if row is None or (row.version or 0) < LESSON_VERSION:
+        return None
+    try:
+        lesson = json.loads(row.body)
+    except Exception:
+        return None
+    if unit_ids is not None and quoted_ids(lesson) - unit_ids:
+        return None
+    return lesson
+
+
+def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool = False, unit_ids: Optional[set] = None) -> dict:
+    """The unit's lesson from the `grammar_lessons` table, written (once) when missing, outdated,
+    quoting drills that left the unit, or forced."""
     from datetime import datetime
     from models import GrammarLesson
     row = db.query(GrammarLesson).filter(GrammarLesson.id == slug).first()
-    if row and not force and (row.version or 0) >= LESSON_VERSION:
-        try:
-            return json.loads(row.body)
-        except Exception:
-            pass
+    lesson = None if force else _current(row, unit_ids)
+    if lesson is not None:
+        return lesson
     with _explain_lock:
         row = db.query(GrammarLesson).filter(GrammarLesson.id == slug).first()
-        if row and not force and (row.version or 0) >= LESSON_VERSION:
-            return json.loads(row.body)
+        lesson = None if force else _current(row, unit_ids)
+        if lesson is not None:
+            return lesson
         lesson = write_lesson(slug, grammar_md, examples)
         body = json.dumps(lesson, ensure_ascii=False)
         if row is None:

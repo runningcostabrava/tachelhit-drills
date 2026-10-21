@@ -231,6 +231,7 @@ export const api = {
   grammarUnits: () => request<{ units: GrammarUnit[]; counts: Record<string, number>; status: { running: boolean; done: number; pending: number } }>('/grammar'),
   grammarUnit: (slug: string, limit = 60) => request<GrammarUnitPage>(`/grammar/${slug}?limit=${limit}`),
   grammarRewrite: (slug: string) => request<GrammarUnitPage>(`/grammar/${slug}/rewrite`, { method: 'POST' }),
+  grammarWishlist: () => request<{ units: GrammarWishUnit[] }>('/grammar/wishlist'),
 
   // --- multi-speaker recordings (many takes per drill) ---
   drillRecordings: (drillId: number) =>
@@ -304,7 +305,10 @@ export type LessonStep =
   | { type: 'dialect'; text: string }
   | { type: 'end' };
 export interface GrammarLesson { intro: string; steps: LessonStep[]; study?: string; error?: string }
-export interface GrammarUnitPage extends GrammarUnit { lesson: GrammarLesson; total: number; drills: Drill[] }
+/** `practice`: the ids the unit's test is made of (real sentences only: no single words, no conjugation lists). */
+export interface GrammarUnitPage extends GrammarUnit { lesson: GrammarLesson; total: number; practice: number[]; drills: Drill[] }
+/** A unit in the recording wishlist: how many of its sentences carry an Aït Mraw voice, and the ones worth recording. */
+export interface GrammarWishUnit extends GrammarUnit { total: number; aitmraw_voiced: number; wanted: Drill[] }
 
 export interface AiUsage {
   today: { used: number; limit: number | null; remaining: number | null };

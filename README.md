@@ -31,10 +31,15 @@ language, with Arabic and Latin romanization alongside Tifinagh (ⵜⵉⴼⵉⵏ
 - **📘 Grammar course** (`/grammar`): 22 units in three levels, each a lesson
   the learner steps through card by card — short explanations with the
   library's own sentences (picture, speaker's voice), a pattern table, quick
-  checks, a tip, a dialect note — then a one-tap test on the unit's drills.
-  Every drill carries the units it illustrates (`grammar`, filled by Gemini,
-  overridable). Lessons are written once from the amazic.cat compendium's own
-  sections and kept in the `grammar_lessons` table (`backend/grammar.py`).
+  checks, a tip, a dialect note — then a one-tap test on the unit's real
+  sentences (single words and conjugation lists stay out). Every drill carries
+  the units it illustrates (`grammar`, filled by Gemini only when the marker is
+  visible in the Tamazight; `-` = no unit; overridable). Lessons are written
+  once from the amazic.cat compendium's own sections and kept in the
+  `grammar_lessons` table; a lesson is written again when a sentence it quotes
+  leaves the unit (`backend/grammar.py`). `/grammar/gravacions` is the recording
+  wishlist: the units with the fewest Aït Mraw voices, with the sentences our
+  own speakers could say in their words.
 - **🖼 Pictures that teach**: each drill's picture shows the *meaning* of the
   sentence — Gemini draws it in one flat flashcard style, Moroccan Amazigh
   setting, no written words (`backend/illustrate.py`; bulk fill on the Corpus
@@ -114,7 +119,9 @@ target the Render API.
 - `/generate-image/{id}` (`use_ai`, optional `search_query` hint), `/images/fill-missing` — drill pictures
 - `/capture/*` — queue a URL for the local capture agent (`tools/capture_agent.py`)
 - `/grammar`, `/grammar/{slug}` — the course and one unit's lesson (steps) +
-  examples; admin: `POST /grammar/run` (classify), `POST /grammar/{slug}/rewrite`
+  examples + `practice` (the test's sentence ids); `/grammar/wishlist` — what
+  our speakers could record next; admin: `POST /grammar/run` (classify),
+  `POST /grammar/{slug}/rewrite`
 
 Operator tools (run from `backend/` with its venv):
 - `tools/sync_drills_to_prod.py --tags a,b [--apply]` — copy locally captured

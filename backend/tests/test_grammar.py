@@ -54,6 +54,44 @@ def test_classification_fills_grammar_and_unit_page_shows_lesson_and_examples(mo
     assert client.post("/grammar/negacio/rewrite").status_code == 401
 
 
+def test_practice_is_sentences_only_and_wishlist_names_what_our_speakers_could_record(monkeypatch):
+    import grammar
+    assert [grammar.kind(t) for t in ("ur ssinɣ", "argaz", "rix, trid, iri, nri", "text", "", "ad // rad")] == ["sentence", "word", "list", "placeholder", "placeholder", "list"]
+    word = client.post("/drills/", json={"text_catalan": "pa", "text_tachelhit": "aɣrum", "tag": "benimellal-anki"}).json()
+    lst = client.post("/drills/", json={"text_catalan": "voler", "text_tachelhit": "rix, trid, iri, nri"}).json()
+    sent = client.post("/drills/", json={"text_catalan": "vull pa", "text_tachelhit": "rix aɣrum", "tag": "benimellal-anki", "image_url": "https://x/i.jpg"}).json()
+    ours = client.post("/drills/", json={"text_catalan": "vull aigua", "text_tachelhit": "rix aman", "author": "Halima", "audio_url": "https://x/h.webm"}).json()
+    for d in (word, lst, sent, ours):
+        client.put(f"/drills/{d['id']}", json={"grammar": "aorist-ad", "grammar_source": "owner"})
+    import gemini_client
+    monkeypatch.setattr(gemini_client, "gemini_generate", lambda *x, **k: '{"intro": "x", "steps": [{"type": "explain", "title": "t", "text": "t", "example_ids": []}]}')
+    page = client.get("/grammar/aorist-ad").json()
+    # the test is made of real sentences only; the unit page still lists everything
+    assert {sent["id"], ours["id"]} <= set(page["practice"]) and not {word["id"], lst["id"]} & set(page["practice"])
+    assert {d["id"] for d in page["drills"]} >= {word["id"], lst["id"], sent["id"], ours["id"]}
+    # the wishlist: the unit's Aït Mraw voices, and the sentences from elsewhere worth recording (pictured first)
+    w = client.get("/grammar/wishlist").json()["units"]
+    u = next(x for x in w if x["slug"] == "aorist-ad")
+    wanted = [d["id"] for d in u["wanted"]]
+    assert u["aitmraw_voiced"] == 1 and wanted[0] == sent["id"] and not {ours["id"], word["id"], lst["id"]} & set(wanted)
+    assert [x["aitmraw_voiced"] for x in w] == sorted(x["aitmraw_voiced"] for x in w)  # the units lacking voices first
+    # a lesson whose quoted sentence leaves the unit is written again; one still quoting the unit is kept
+    assert grammar.quoted_ids({"steps": [{"type": "explain", "examples": [{"id": 5}]}, {"type": "quiz", "example": {"id": 7}}]}) == {5, 7}
+    class Row:  # noqa
+        version = grammar.LESSON_VERSION; body = __import__("json").dumps({"steps": [{"type": "explain", "examples": [{"id": 5}]}]})
+    assert grammar._current(Row(), {5, 6}) is not None and grammar._current(Row(), {6}) is None and grammar._current(Row(), None) is not None
+
+
+def test_classifier_may_find_no_unit(monkeypatch):
+    import grammar, json
+    d = client.post("/drills/", json={"text_catalan": "sí", "text_tachelhit": "wayh"}).json()
+    import gemini_client
+    monkeypatch.setattr(gemini_client, "gemini_generate", lambda *x, **k: json.dumps({str(d["id"]): []}))
+    assert grammar.run(main.SessionLocal, only_ids=[d["id"]])["done"] == 1
+    assert client.get(f"/drills/{d['id']}").json()["grammar"] == grammar.NO_UNIT and grammar.parse(grammar.NO_UNIT) == []
+    assert "ONLY a real command" in grammar._prompt([]) and "EMPTY" in grammar._prompt([])
+
+
 def test_lesson_prose_is_latin_only_and_never_cites_ids():
     import grammar
     assert grammar._clean_prose("Pots dir 'marhaba' (مرحبا), que vol dir benvingut.") == "Pots dir 'marhaba', que vol dir benvingut."
