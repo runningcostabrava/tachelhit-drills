@@ -84,7 +84,7 @@ UNITS: List[dict] = [
 SLUGS = [u["slug"] for u in UNITS]
 TITLES = {u["slug"]: u["title"] for u in UNITS}
 BATCH = 40
-LESSON_VERSION = 6  # bump when the lesson format or prompt changes: old rows are rewritten on next open
+LESSON_VERSION = 7  # bump when the lesson format or prompt changes: old rows are rewritten on next open
 
 # Drills whose tag names another language are never part of the course (the owner's old Irish tests).
 EXCLUDED_TAGS = ("irish",)
@@ -393,15 +393,16 @@ def practice_rows(rows: List, limit: int = 200, slug: Optional[str] = None) -> L
 # knows nothing yet, so its examples (and its quiz options) are a few words long.
 MAX_WORDS = {1: 4, 2: 8, 3: 14}
 MAX_CHARS = {1: 32, 2: 60, 3: 90}
+MAX_CHARS_CA = {1: 48, 2: 90, 3: 110}  # the Catalan meaning too: a level-1 quiz never shows a long sentence
 
 
 def level_of(slug: Optional[str]) -> int:
     return next((u["level"] for u in UNITS if u["slug"] == slug), 3)
 
 
-def fits_level(shi: str, slug: Optional[str]) -> bool:
+def fits_level(shi: str, slug: Optional[str], ca: str = "") -> bool:
     lv = level_of(slug)
-    return len(re.findall(r"[^\W\d_]+", shi)) <= MAX_WORDS[lv] and len(shi) <= MAX_CHARS[lv]
+    return len(re.findall(r"[^\W\d_]+", shi)) <= MAX_WORDS[lv] and len(shi) <= MAX_CHARS[lv] and len(ca) <= MAX_CHARS_CA[lv]
 
 
 def simplicity(e: dict) -> int:
@@ -415,7 +416,7 @@ def pick_examples(rows: List, limit: int = 40, slug: Optional[str] = None) -> Li
     cands = []
     for d in rows:
         shi = _clean_text(d.text_tachelhit); ca = _clean_text(d.text_catalan)
-        if not ca or not quotable(shi, slug) or len(shi) > 90 or len(ca) > 110 or not fits_level(shi, slug):
+        if not ca or not quotable(shi, slug) or len(shi) > 90 or len(ca) > 110 or not fits_level(shi, slug, ca):
             continue
         if shi.lower() == ca.lower():
             continue  # «Adeu» = «Adeu»: the Catalan typed in the Tamazight field

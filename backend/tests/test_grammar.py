@@ -111,6 +111,7 @@ def test_level_one_units_quote_only_short_examples():
     assert [e["id"] for e in grammar.pick_examples(rows, slug="formules")] == [2, 4]  # level 1: a few words; «Adeu»=«Adeu» never
     assert [e["id"] for e in grammar.pick_examples(rows, slug="subordinades")] == [1, 4]  # level 3: the long one is fine
     assert grammar.fits_level("ur ssinɣ ša", "formules") and not grammar.fits_level("a b c d e", "formules") and grammar.fits_level("a b c d e", "negacio")
+    assert not grammar.fits_level("tex", "formules", "Quan era petit els meus pares van anar a viure a la ciutat")  # a long meaning is not level 1 either
     unit = next(u for u in grammar.UNITS if u["slug"] == "formules")
     assert "LEVEL 1 UNIT" in grammar._lesson_prompt(unit, [], "sheet")
     assert "LEVEL 1 UNIT" not in grammar._lesson_prompt(next(u for u in grammar.UNITS if u["slug"] == "negacio"), [], "sheet")
