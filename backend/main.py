@@ -1559,6 +1559,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[INIT] Dead-job reaper skipped: {e}")
 
+    # The course writes itself: after a deploy (or a change in the lesson's shape) every unit whose
+    # lesson is missing or outdated is written here, one at a time and out of the way, so no learner
+    # is the one who waits for Gemini. Set GRAMMAR_SELF_WRITE=0 to leave the lessons alone.
+    if os.getenv("GRAMMAR_SELF_WRITE", "1") != "0":
+        threading.Thread(target=_write_missing_lessons, daemon=True).start()
+
     # Add sample data if database is empty
     with SessionLocal() as db:
         count = db.query(DrillModel).count()
@@ -5887,6 +5893,46 @@ def grammar_units():
     """The course: units in order with, per unit, how many drills illustrate it."""
     return {"units": [{k: u[k] for k in ("slug", "title", "level")} for u in grammar_course.UNITS],
             "counts": grammar_course.counts(SessionLocal), "status": grammar_course.status()}
+
+
+def _write_missing_lessons() -> None:
+    """Write the lessons that are missing or outdated, oldest unit of the course first. One at a
+    time: Gemini is slow and the free database has few connections."""
+    import time
+    time.sleep(20)  # let the server answer its first requests first
+    if not gemini_available():
+        print("[GRAMMAR] self-write skipped: no Gemini key")
+        return
+    written = 0
+    for unit in grammar_course.UNITS:
+        slug = unit["slug"]
+        try:
+            with SessionLocal() as db:
+                rows = _grammar_unit_rows(db, slug)
+                if not rows:
+                    continue
+                examples = grammar_course.pick_examples(rows, slug=slug)
+                before = grammar_course.get_lesson(db, slug, "", examples, unit_ids={d.id for d in rows})
+                if not before.get("writing") and not before.get("stale"):
+                    continue
+        except Exception as e:
+            print(f"[GRAMMAR] self-write {slug}: {e}")
+            continue
+        try:
+            with SessionLocal() as db:
+                rows = _grammar_unit_rows(db, slug)
+                examples = grammar_course.pick_examples(rows, slug=slug)
+                lesson = grammar_course.write_lesson(slug, _load_grammar(), examples,
+                                                     sheet=grammar_course.sheet_for(db, slug, _load_grammar()),
+                                                     tables=grammar_course.paradigms(rows))
+                lesson["unit_size"] = len({d.id for d in rows})
+                grammar_course._store_lesson(db, slug, lesson)
+                written += 1
+                print(f"[GRAMMAR] self-write {slug}: {len(lesson.get('steps') or [])} steps")
+        except Exception as e:
+            print(f"[GRAMMAR] self-write {slug}: {e}")
+        time.sleep(5)
+    print(f"[GRAMMAR] self-write finished: {written} lesson(s)")
 
 
 def _grammar_unit_rows(db, slug: str, limit: int = 1500):
