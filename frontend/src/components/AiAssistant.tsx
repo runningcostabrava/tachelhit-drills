@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { api } from '../api';
+import { api, type RelatedDrill } from '../api';
 import { API_BASE, getMediaUrl } from '../config';
 import AiQuota from './AiQuota';
+import DrillVoices from './DrillVoices';
+import type { Drill } from '../types';
 
 interface Msg { role: 'user' | 'model'; text: string; }
 
@@ -20,7 +22,16 @@ export default function AiAssistant({ drillId, drillLabel, autoAction, onClose }
   const [busy, setBusy] = useState(false);
   const [sayWord, setSayWord] = useState('');
   const [saying, setSaying] = useState(false);
-  const [related, setRelated] = useState<{ id: number; text_catalan?: string; text?: string; words: string[] }[]>([]);
+  const [related, setRelated] = useState<RelatedDrill[]>([]);
+  // «Mira la targeta»: one of the related drills opened INSIDE the panel (picture, texts, voices), so
+  // the learner comes back to the explanation with «Torna» without leaving what they were doing
+  const [visiting, setVisiting] = useState<Drill | null>(null);
+  const [visitBusy, setVisitBusy] = useState(false);
+  const playUrl = (url?: string | null) => { if (url) new Audio(getMediaUrl(url)).play().catch(() => {}); };
+  const visit = async (id: number) => {
+    setVisitBusy(true);
+    try { setVisiting(await api.drill(id)); } catch { /* the row stays */ } finally { setVisitBusy(false); }
+  };
   const scrollRef = useRef<HTMLDivElement>(null);
   const didAuto = useRef(false);
   const [quotaKey, setQuotaKey] = useState(0);
@@ -153,18 +164,41 @@ export default function AiAssistant({ drillId, drillLabel, autoAction, onClose }
               pensant…
             </div>
           )}
-          {related.length > 0 && !busy && (
+          {related.length > 0 && !busy && !visiting && (
             <div style={{ alignSelf: 'stretch', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '12px 14px' }}>
               <div style={{ fontWeight: 800, fontSize: '13px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>Altres drills amb les mateixes paraules</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {related.map(r => (
-                  <a key={r.id} href={`/?q=${encodeURIComponent(r.text_catalan || String(r.id))}`} style={{ textDecoration: 'none', color: 'var(--text)', fontSize: '13px', lineHeight: 1.4, padding: '8px 10px', borderRadius: 'var(--r-md)', background: 'var(--surface-2)' }}>
-                    <span style={{ fontWeight: 700 }}>{r.text_catalan || `Drill #${r.id}`}</span>
-                    {r.text && <span style={{ display: 'block', color: 'var(--text-soft)' }}>{r.text}</span>}
-                    <span style={{ display: 'block', marginTop: '3px', fontSize: '12px', color: 'var(--brand-1)', fontWeight: 700 }}>{r.words.join(' · ')}</span>
-                  </a>
-                ))}
+                {related.map(r => {
+                  const voice = r.audio_url || r.audio_tts_shi_url;
+                  return (
+                    <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text)', fontSize: '13px', lineHeight: 1.4, padding: '8px 10px', borderRadius: 'var(--r-md)', background: 'var(--surface-2)' }}>
+                      <button onClick={() => playUrl(voice)} disabled={!voice} aria-label="Escolta" title={r.audio_url ? 'Veu gravada' : r.audio_tts_shi_url ? 'Veu sintètica' : 'Sense veu'} style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 'var(--r-pill)', border: 'none', background: r.audio_url ? 'var(--brand-1)' : r.audio_tts_shi_url ? 'var(--sky)' : 'var(--surface)', color: voice ? '#fff' : 'var(--text-muted)', cursor: voice ? 'pointer' : 'default', fontSize: '13px' }}>▶</button>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontWeight: 700 }}>{r.text_catalan || `Drill #${r.id}`}</span>
+                        {r.text && <span style={{ display: 'block', color: 'var(--text-soft)' }}>{r.text}</span>}
+                        <span style={{ display: 'block', marginTop: '3px', fontSize: '12px', color: 'var(--brand-1)', fontWeight: 700 }}>{r.words.join(' · ')}</span>
+                      </div>
+                      <button onClick={() => visit(r.id)} disabled={visitBusy} style={{ flexShrink: 0, padding: '7px 10px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Mira la targeta</button>
+                    </div>
+                  );
+                })}
               </div>
+            </div>
+          )}
+          {visiting && (
+            <div style={{ alignSelf: 'stretch', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontWeight: 800, fontSize: '13px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>La targeta</div>
+                <button onClick={() => setVisiting(null)} style={{ padding: '7px 12px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>← Torna a l'explicació</button>
+              </div>
+              {visiting.image_url && <img src={getMediaUrl(visiting.image_url)} alt="" style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 'var(--r-md)' }} onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = 'none'; }} />}
+              <div style={{ fontSize: '20px', fontWeight: 800, lineHeight: 1.3 }}>{visiting.text_tachelhit || visiting.text_tachelhit_latin || visiting.text_tachelhit_suggested}</div>
+              <div style={{ fontSize: '14px', color: 'var(--text-soft)' }}>{visiting.text_catalan}{visiting.region ? <span style={{ color: 'var(--text-muted)' }}> · {visiting.region}</span> : null}</div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={() => playUrl(visiting.audio_url || visiting.audio_tts_shi_url)} disabled={!(visiting.audio_url || visiting.audio_tts_shi_url)} style={{ flex: 1, height: 40, borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-1)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>▶ Escolta</button>
+                <button onClick={() => playUrl(visiting.audio_tts_url)} disabled={!visiting.audio_tts_url} style={{ flex: 1, height: 40, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Català</button>
+              </div>
+              <DrillVoices drillId={visiting.id} />
             </div>
           )}
         </div>

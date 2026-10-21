@@ -203,7 +203,8 @@ export const api = {
   aiReviewDrill: (drillId: number) =>
     request<{ review: string }>(`/ai/review-drill/${drillId}`, { method: 'POST' }),
   aiExplainDrill: (drillId: number) =>
-    request<{ explanation: string; draft: boolean; related: { id: number; text_catalan?: string; text?: string; words: string[] }[] }>(`/ai/explain/${drillId}`, { method: 'POST' }),
+    request<{ explanation: string; draft: boolean; related: RelatedDrill[] }>(`/ai/explain/${drillId}`, { method: 'POST' }),
+  drill: (id: number) => request<Drill>(`/drills/${id}`),
   aiAgent: (message: string, drillIds?: number[], history?: { role: string; text: string }[]) =>
     request<{ answer: string; actions: { name: string; args: any; result: any }[] }>('/ai/agent', {
       method: 'POST',
@@ -303,6 +304,8 @@ export const api = {
     request<AuthUser & { token: string }>('/auth/reset', { method: 'POST', body: JSON.stringify({ email, code, new_password, device }) }),
 };
 
+/** A drill that shares words with the one being explained: playable in place, with its picture for the card. */
+export interface RelatedDrill { id: number; text_catalan?: string; text?: string; words: string[]; audio_url?: string | null; audio_tts_shi_url?: string | null; image_url?: string | null; region?: string | null }
 export interface GrammarUnit { slug: string; title: string; level: number }
 /** A drill as a lesson quotes it: both texts plus its picture and a voice (the speaker's when recorded). */
 export interface LessonExample { id: number; shi: string; ca: string; image_url?: string | null; audio_url?: string | null; recorded: boolean; author?: string | null; region?: string | null; origin?: string | null; focus?: string | null }

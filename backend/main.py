@@ -5864,7 +5864,11 @@ def _related_drills(drill, db, limit: int = 8) -> list:
     out.sort(key=lambda x: (-x[0], x[1].id))
     return [{"id": d.id, "text_catalan": d.text_catalan,
              "text": d.text_tachelhit or d.text_tachelhit_latin or d.text_tachelhit_suggested,
-             "words": shared} for _, d, shared in out[:limit]]
+             "words": shared,
+             # playable in place: the speaker's voice, else the synthetic one; and the picture for the card
+             "audio_url": normalize_media_url(d.audio_url) if d.audio_url else None,
+             "audio_tts_shi_url": normalize_media_url(d.audio_tts_shi_url) if d.audio_tts_shi_url else None,
+             "image_url": d.image_url, "region": d.region} for _, d, shared in out[:limit]]
 
 
 @app.post("/ai/explain/{drill_id}")
