@@ -94,6 +94,7 @@ class DrillBase(BaseModel):
     requested_by: Optional[str] = None
     requested_note: Optional[str] = None
     variant_of: Optional[int] = None
+    glosses: Optional[str] = None
 
     # Validators for URL fields
     @field_validator('audio_url', 'audio_tts_url', 'audio_tts_shi_url', 'video_url', 'image_url')

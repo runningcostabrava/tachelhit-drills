@@ -50,6 +50,9 @@ class Drill(Base):
     # A variant: the same sentence as another speaker says it (their words, their voice, their town),
     # created from a take whose own words differ from the drill's; the original lists its variants
     variant_of = Column(Integer, ForeignKey("drills.id"), nullable=True, index=True)
+    # Word by word: JSON list of {"shi": word as written, "tif": its Tifinagh, "ca": the Catalan
+    # word(s) it answers to or "—"}; written by the gloss pass, shown under the sentence
+    glosses = Column(Text, nullable=True)
     created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # contributor attribution
     variety = Column(String, nullable=True)   # e.g. "tashelhit", "central-atlas", "tarifit"
     region = Column(String, nullable=True)    # e.g. "Souss", "Tafraout", "diaspora-BCN"

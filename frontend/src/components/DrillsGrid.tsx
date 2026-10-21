@@ -30,6 +30,7 @@ import {
     FaCamera
 } from 'react-icons/fa';
 import RecordAudioModal from './RecordAudioModal';
+import WordGloss from './WordGloss';
 import { varietyShort, varietyLabel } from '../varieties';
 
 // Import CSS structural definitions
@@ -579,6 +580,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                 {shown ? (
                     <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         {d.text_catalan && <div style={{ fontSize: '15px', color: 'var(--text)' }}>{d.text_catalan}</div>}
+                        <WordGloss drill={d} size="sm" />
                         {d.text_arabic && <div dir="rtl" style={{ fontSize: '15px', color: 'var(--text-soft)', textAlign: 'right' }}>{d.text_arabic}</div>}
                         {!d.text_catalan && !d.text_arabic && <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>sense traducció</div>}
                     </div>

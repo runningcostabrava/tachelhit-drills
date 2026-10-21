@@ -8,6 +8,7 @@ import { toast } from '../toast';
 import type { Drill } from '../types';
 import { fileNameFor, preferredRecorderMime } from '../utils/media';
 import { saveDone } from './PracticePage';
+import WordGloss from './WordGloss';
 
 // One practice session: up to 10 sentences of our speakers, each an exercise the learner SAYS.
 //  - «Escolta i repeteix»: hear the speaker (normal or slow), see the hard sounds and a tip, hold
@@ -313,6 +314,7 @@ export default function PracticeSession() {
                 : <Highlighted text={drill.text_tachelhit || ''} marks={card?.highlights || []} />}
             </p>
             <p style={{ margin: 0, fontSize: 15, color: 'var(--text-soft)' }}>{drill.text_catalan}</p>
+            <WordGloss drill={drill} size="sm" />
             {drill.source_url && <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>Font: {drill.source_channel || 'vídeo original'}{drill.source_title ? ` · «${drill.source_title}»` : ''} · <a href={drill.source_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-1)', fontWeight: 700 }}>vídeo original ↗</a></p>}
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => play(1)} disabled={!voice} style={{ ...btn('primary'), flex: 1, height: 44, fontSize: 14 }}><FaPlay size={12} /> Escolta</button>

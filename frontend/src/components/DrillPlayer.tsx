@@ -7,6 +7,7 @@ import { getMediaWithOfflineFallback } from '../utils/offlineCache';
 import { getYouTubeVideoId, loadYouTubeApi } from '../utils/youtubeUtils';
 import { FaVideo, FaVolumeUp, FaPlay, FaPause, FaSync, FaTimes, FaStepBackward, FaStepForward, FaBullseye, FaThumbsUp, FaRedo, FaExclamationTriangle, FaEye, FaStop, FaMicrophone, FaStar } from 'react-icons/fa';
 import DrillVoices from './DrillVoices';
+import WordGloss from './WordGloss';
 import AiAssistant from './AiAssistant';
 
 declare global {
@@ -968,6 +969,8 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
             </div>
           )}
 
+          {/* Word by word: each word as written, its Tifinagh and the Catalan it answers to */}
+          {!hideAnswer && currentDrill && <div style={{ padding: '0 24px 10px' }}><WordGloss drill={currentDrill} align="center" /></div>}
           {/* Different speakers' takes, each with its variety — hear the phrase across varieties */}
           {!hideAnswer && currentDrill && <DrillVoices drillId={currentDrill.id} />}
           {/* Credit: the author and the original video, always, as content authors require */}

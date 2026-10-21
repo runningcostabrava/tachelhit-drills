@@ -21,6 +21,7 @@ export interface Drill {
   is_local?: boolean; // client-side marker for drills created offline
   // Documentation / variation layer
   text_tachelhit_latin?: string;
+  glosses?: string;               // word by word (JSON: [{shi, tif, ca}]), see components/WordGloss.tsx
   text_tachelhit_suggested?: string; // machine/AI draft (not gold)
   draft_check?: string; // JSON verdict of the draft's meaning check (yes/roughly/no)
   topics?: string;        // subject catalogue: comma-separated slugs (see utils/topics.ts)
