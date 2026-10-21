@@ -954,7 +954,13 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
             cellRenderer: (params: any) => (
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                     {params.data.audio_url && (
-                        <button onClick={() => new Audio(getMediaUrl(params.data.audio_url)).play()} style={{ background: 'var(--brand-gradient-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px', cursor: 'pointer', color: 'var(--brand-1)' }} title="Reprodueix l'àudio" aria-label="Reprodueix l'àudio"><FaVolumeUp size={16} /></button>
+                        <button onClick={() => new Audio(getMediaUrl(params.data.audio_url)).play()} style={{ background: 'var(--brand-gradient-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px', cursor: 'pointer', color: 'var(--brand-1)' }} title="Reprodueix la gravació" aria-label="Reprodueix la gravació"><FaVolumeUp size={16} /></button>
+                    )}
+                    {!params.data.audio_url && params.data.audio_tts_shi_url && (
+                        <button onClick={() => new Audio(getMediaUrl(params.data.audio_tts_shi_url)).play()} style={{ background: 'var(--sky-soft, #e6f1f7)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px', cursor: 'pointer', color: 'var(--sky)' }} title="Veu sintètica (amazic)" aria-label="Veu sintètica en amazic"><FaVolumeUp size={16} /></button>
+                    )}
+                    {params.data.audio_tts_url && (
+                        <button onClick={() => new Audio(getMediaUrl(params.data.audio_tts_url)).play()} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '6px 7px', cursor: 'pointer', color: 'var(--text-soft)', fontSize: '11px', fontWeight: 800 }} title="Veu sintètica (català)" aria-label="Veu sintètica en català">CA</button>
                     )}
                     {params.data.video_url && (
                         <button onClick={() => openPreviewOf(params.data)} style={{ background: 'var(--brand-gradient-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px', cursor: 'pointer', color: 'var(--brand-2)' }} title="Reprodueix el vídeo" aria-label="Reprodueix el vídeo"><FaVideo size={16} /></button>
