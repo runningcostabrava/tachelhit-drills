@@ -132,6 +132,17 @@ def test_classifier_may_find_no_unit(monkeypatch):
     assert "ONLY a real command" in grammar._prompt([]) and "EMPTY" in grammar._prompt([])
 
 
+def test_lesson_prose_has_no_tifinagh_and_examples_have_no_capture_noise():
+    import grammar
+    assert grammar._clean_prose("sovint es fa servir el verb \u2d45 g") == "sovint es fa servir el verb g"
+    assert grammar._clean_prose("la forma \u00abell \u00e9s\u00bb \u00e9s \u2d44\u2d45\u00b0 iga.") == "la forma \u00abell \u00e9s\u00bb \u00e9s iga."
+    assert not grammar.quotable("Mana Lun ija +tEli", "ser-tenir")  # a capture artefact is never an example
+    assert grammar.quotable("iga argaz", "ser-tenir")
+    unit = next(u for u in grammar.UNITS if u["slug"] == "ser-tenir")
+    p = grammar._lesson_prompt(unit, [], "sheet")
+    assert "example_ids (3-5" in p and "focus must be the rule itself" in p
+
+
 def test_lesson_prose_is_latin_only_and_never_cites_ids():
     import grammar
     assert grammar._clean_prose("Pots dir 'marhaba' (مرحبا), que vol dir benvingut.") == "Pots dir 'marhaba', que vol dir benvingut."

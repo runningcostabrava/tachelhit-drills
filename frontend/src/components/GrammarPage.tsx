@@ -6,6 +6,7 @@ import { FaBullseye, FaCheck, FaChevronLeft, FaChevronRight, FaLightbulb, FaMapM
 import { api, type GrammarUnit, type GrammarUnitPage, type GrammarWishUnit, type LessonExample, type LessonProposal, type LessonStep } from '../api';
 import { API_BASE, getMediaUrl } from '../config';
 import RecordAudioModal from './RecordAudioModal';
+import AiAssistant from './AiAssistant';
 import type { Drill } from '../types';
 
 // The grammar course: the library organised as a sequence of grammar units (backend/grammar.py).
@@ -103,6 +104,8 @@ function UnitView({ slug }: { slug: string }) {
   const [signedIn, setSignedIn] = useState(false);
   const [proposals, setProposals] = useState<LessonProposal[]>([]);
   const [view, setViewState] = useState<ViewMode>(loadView);
+  // the copilot, opened on one example: «Explica'm» word by word, then any question about it
+  const [ask, setAsk] = useState<{ id: number; label: string } | null>(null);
   const setView = (v: ViewMode) => { setViewState(v); try { localStorage.setItem(VIEW_KEY, v); } catch { /* private mode */ } };
   const loadProposals = useCallback(() => { api.lessonProposals(slug).then(setProposals).catch(() => setProposals([])); }, [slug]);
 
@@ -172,6 +175,7 @@ function UnitView({ slug }: { slug: string }) {
       <button onClick={() => navigate('/grammar')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: '4px 0', marginBottom: '6px' }}><FaChevronLeft /> Totes les unitats</button>
       {error && <div style={{ color: 'var(--rose)' }}>{error}</div>}
       {!page && !error && <LoadingUnit />}
+      {ask && <AiAssistant drillId={ask.id} drillLabel={ask.label} autoAction="explain" onClose={() => setAsk(null)} />}
       {page && card && (
         <div style={{ display: 'flex', gap: 6, margin: '0 0 10px' }}>
           {([['cards', 'Targetes'], ['document', 'Document']] as [ViewMode, string][]).map(([m, label]) => (
@@ -186,7 +190,7 @@ function UnitView({ slug }: { slug: string }) {
           {cards.map((c, k) => (
             <div key={k} className="lesson-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', padding: '18px', marginTop: '12px', boxShadow: 'var(--shadow-sm)' }}>
               {c.type === 'intro' && <IntroCard page={page} cover={cover?.image_url || null} />}
-              {c.type === 'explain' && <ExplainCard step={c} />}
+              {c.type === 'explain' && <ExplainCard step={c} onAsk={setAsk} />}
               {c.type === 'pattern' && <PatternCard step={c} />}
               {c.type === 'quiz' && <QuizCard step={c} chosen={answers[k]} onChoose={(j) => setAnswers((a) => ({ ...a, [k]: j }))} />}
               {(c.type === 'tip' || c.type === 'dialect') && <NoteCard step={c} />}
@@ -206,7 +210,7 @@ function UnitView({ slug }: { slug: string }) {
           <Progress n={cards.length} i={i} answers={answers} cards={cards} />
           <div key={i} className="lesson-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', padding: '18px', marginTop: '12px', boxShadow: 'var(--shadow-sm)', minHeight: '240px' }}>
             {card.type === 'intro' && <IntroCard page={page} cover={cover?.image_url || null} />}
-            {card.type === 'explain' && <ExplainCard step={card} />}
+            {card.type === 'explain' && <ExplainCard step={card} onAsk={setAsk} />}
             {card.type === 'pattern' && <PatternCard step={card} />}
             {card.type === 'quiz' && <QuizCard step={card} chosen={answers[i]} onChoose={(k) => setAnswers((a) => ({ ...a, [i]: k }))} />}
             {(card.type === 'tip' || card.type === 'dialect') && <NoteCard step={card} />}
@@ -266,19 +270,19 @@ function IntroCard({ page, cover }: { page: GrammarUnitPage; cover: string | nul
   );
 }
 
-function ExplainCard({ step }: { step: Extract<LessonStep, { type: 'explain' }> }) {
+function ExplainCard({ step, onAsk }: { step: Extract<LessonStep, { type: 'explain' }>; onAsk?: (a: { id: number; label: string }) => void }) {
   return (
     <div>
       <h2 style={{ fontSize: '18px', margin: '0 0 8px', lineHeight: 1.25 }}>{step.title}</h2>
       <p style={{ fontSize: '16px', lineHeight: 1.55, margin: '0 0 14px', color: 'var(--text)' }}>{inline(step.text)}</p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {step.examples.map((e) => <Example key={e.id} e={e} />)}
+        {step.examples.map((e) => <Example key={e.id} e={e} onAsk={onAsk} />)}
       </div>
     </div>
   );
 }
 
-function Example({ e, highlight }: { e: LessonExample; highlight?: 'ok' | 'ko' }) {
+function Example({ e, highlight, onAsk }: { e: LessonExample; highlight?: 'ok' | 'ko'; onAsk?: (a: { id: number; label: string }) => void }) {
   const play = () => { if (e.audio_url) new Audio(getMediaUrl(e.audio_url)).play().catch(() => {}); };
   const border = highlight === 'ok' ? 'var(--emerald)' : highlight === 'ko' ? 'var(--rose)' : 'var(--border)';
   return (
@@ -289,6 +293,7 @@ function Example({ e, highlight }: { e: LessonExample; highlight?: 'ok' | 'ko' }
         <div style={{ fontSize: '14px', color: 'var(--text-soft)' }}>{e.ca}</div>
         {(e.recorded || e.origin || e.region) && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>{e.recorded ? `veu de ${e.author || 'parlant'}` : 'veu sintètica'}{e.origin || e.region ? ` · ${e.origin || e.region}` : ''}</div>}
       </div>
+      {onAsk && <button onClick={() => onAsk({ id: e.id, label: e.ca || e.shi })} title="Explica'm aquesta frase paraula per paraula" aria-label="Explica'm aquesta frase" style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--brand-1)', cursor: 'pointer', fontSize: '15px', lineHeight: 1 }}>💡</button>}
       <button onClick={play} disabled={!e.audio_url} aria-label="Escolta" style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 'var(--r-pill)', border: 'none', background: e.audio_url ? (e.recorded ? 'var(--brand-1)' : 'var(--sky)') : 'var(--surface)', color: e.audio_url ? '#fff' : 'var(--text-muted)', cursor: e.audio_url ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={15} /></button>
     </div>
   );

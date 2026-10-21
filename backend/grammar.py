@@ -84,7 +84,7 @@ UNITS: List[dict] = [
 SLUGS = [u["slug"] for u in UNITS]
 TITLES = {u["slug"]: u["title"] for u in UNITS}
 BATCH = 40
-LESSON_VERSION = 8  # bump when the lesson format or prompt changes: old rows are rewritten on next open
+LESSON_VERSION = 9  # bump when the lesson format or prompt changes: old rows are rewritten on next open
 
 # Drills whose tag names another language are never part of the course (the owner's old Irish tests).
 EXCLUDED_TAGS = ("irish",)
@@ -301,10 +301,11 @@ def _clean_text(s: Optional[str]) -> str:
 
 
 def _clean_prose(s: Optional[str]) -> str:
-    """Lesson prose: no Arabic-script asides, no example ids."""
+    """Lesson prose: Latin letters only (no Arabic, no Tifinagh), no example ids."""
     t = _clean_text(s)
-    t = re.sub(r"\s*\([^()]*[\u0600-\u06FF][^()]*\)", "", t)          # (مرحبا)
+    t = re.sub(r"\s*\([^()]*[\u0600-\u06FF\u2D30-\u2D7F][^()]*\)", "", t)   # (مرحبا) or (ⴳ)
     t = re.sub(r"[\u0600-\u06FF][\u0600-\u06FF\s\-؟]*", "", t)         # bare Arabic script
+    t = re.sub(r"[\u2D30-\u2D7F][\u2D30-\u2D7F\s\u00B0\u2218]*", "", t)  # bare Tifinagh: the course is in Latin letters
     t = re.sub(r"\s*\((?:exemples?|ids?)\s*[\d,\s]+(?:i\s*\d+)?\)", "", t, flags=re.I)
     t = re.sub(r"\b(?:en\s+|a\s+)?(?:als?|els?|l')\s*exemples?\s+\d+(?:\s*(?:,|i)\s*\d+)*", "", t, flags=re.I)
     t = re.sub(r"\bexemples?\s+\d+(?:\s*(?:,|i)\s*\d+)*", "", t, flags=re.I)
@@ -379,8 +380,8 @@ def quotable(shi: str, slug: Optional[str] = None) -> bool:
     t = _clean_text(shi)
     if not re.search(r"[A-Za-zɣḥṣṭẓɛšḍčǧ]", t) or re.search(r"[\u2D30-\u2D7F]", t):
         return False  # Tifinagh-only captures: not readable in a Latin-script course
-    if re.search(r"\w\.\w", t):
-        return False  # «ⵜ.ⵅⵙ.ⵛ», «a.b.c»: OCR artefacts
+    if re.search(r"\w\.\w", t) or "+" in t:
+        return False  # «ⵜ.ⵅⵙ.ⵛ», «a.b.c», «Mana Lun ija +tEli»: capture artefacts
     return True
 
 
@@ -411,7 +412,7 @@ def simplicity(e: dict) -> int:
     return len(re.findall(r"[^\W\d_]+", e["shi"])) * 100 + len(e["shi"])
 
 
-def pick_examples(rows: List, limit: int = 40, slug: Optional[str] = None) -> List[dict]:
+def pick_examples(rows: List, limit: int = 60, slug: Optional[str] = None) -> List[dict]:
     """The drills a lesson can quote: short real sentences (and words, in the units about words),
     the ones with a picture and a voice first, no duplicates."""
     cands = []
@@ -490,7 +491,9 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str) -> str:
         "METHOD. The study sheet below condenses the grammar reference. The sentences below are what OUR speakers "
         "actually say. Your job is to show how the rules of the sheet appear in OUR sentences: every explanation "
         "states one rule, quotes 1-3 of our sentences that show it, and names the exact piece of each sentence that "
-        "shows the rule (the \"focus\": a substring copied character for character from the sentence as written). "
+        "shows the rule (the \"focus\": a substring copied character for character from the sentence as written). The "
+        "focus must be the rule itself (the particle, the ending, the pronoun being taught), never another word of the "
+        "sentence; a sentence that does not visibly contain the rule must not be quoted at all. "
         "Prefer the sentences from Aït Mraw (our own recorded speakers), then Beni Mellal. If our sentences show "
         "the rule differently from the sheet (another form, another spelling, a particle missing), say so plainly: "
         "the speakers are right about their own speech, and the sheet describes mainly the Souss. If no sentence of "
@@ -503,7 +506,7 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str) -> str:
            "LEVEL 2 UNIT: short sentences, one rule per step, every term explained in plain words. "
            if unit.get("level") == 2 else "")
         + "Build the lesson as STEPS, each one a card the learner reads in a few seconds:\n"
-        "- 4 to 6 steps of type \"explain\": a title (3-6 words), a text of 35-70 words, example_ids (1-3, ONLY from "
+        "- 5 to 7 steps of type \"explain\": a title (3-6 words), a text of 35-70 words, example_ids (3-5, ONLY from "
         "the sentences below) and \"focus\": {id: substring} for each quoted sentence. START WITH THE MOST BASIC: "
         "the first step uses the shortest examples (a single word or a two-word formula when there is one, e.g. a "
         "bare greeting, a bare noun, a bare number) and each step builds on the previous one, so the longest "
