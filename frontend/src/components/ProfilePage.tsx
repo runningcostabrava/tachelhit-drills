@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { getUserToken, isNativeApp, setUserIdentity, clearUserIdentity } from '../config';
 import { Share } from '@capacitor/share';
 import { syncManager } from '../services/OfflineSyncManager';
-import { api, type Me } from '../api';
+import { api, type Me, type MailSettings } from '../api';
 import { AiSpendAdmin } from './AiQuota';
 import { VARIETIES } from '../varieties';
 import { FaCheck, FaLayerGroup, FaRedo, FaFire } from 'react-icons/fa';
@@ -26,6 +26,49 @@ const inputStyle: React.CSSProperties = {
   color: 'var(--text)',
   marginBottom: '12px',
 };
+
+// Admin: the mail sender, set from the app itself so nobody has to open the hosting dashboard.
+// The password is stored on the server and never comes back to the browser.
+function AdminMailSettings() {
+  const [s, setS] = useState<MailSettings | null>(null);
+  const [host, setHost] = useState(''); const [port, setPort] = useState(''); const [user, setUser] = useState('');
+  const [pass, setPass] = useState(''); const [from, setFrom] = useState('');
+  const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<string | null>(null); const [err, setErr] = useState<string | null>(null);
+  const load = () => api.adminMailGet().then((r) => { setS(r); setHost(r.SMTP_HOST || ''); setPort(r.SMTP_PORT || '587'); setUser(r.SMTP_USER || ''); setFrom(r.SMTP_FROM || ''); }).catch(() => {});
+  useEffect(() => { load(); }, []);
+  const save = async () => {
+    setBusy(true); setErr(null); setMsg(null);
+    try {
+      const r = await api.adminMailSet({ SMTP_HOST: host.trim(), SMTP_PORT: port.trim(), SMTP_USER: user.trim(), SMTP_FROM: (from.trim() || user.trim()), ...(pass.trim() ? { SMTP_PASS: pass.trim() } : {}) });
+      setS(r); setPass(''); setMsg(r.ready ? 'Desat. Ja es poden enviar correus.' : 'Desat, però encara falten dades.');
+    } catch (e: any) { setErr(e?.message || 'No s’ha pogut desar'); } finally { setBusy(false); }
+  };
+  const test = async () => {
+    setBusy(true); setErr(null); setMsg(null);
+    try { const r = await api.adminMailTest(); setMsg(`Correu de prova enviat a ${r.sent_to}.`); }
+    catch (e: any) { setErr(e?.message || 'No s’ha pogut enviar'); } finally { setBusy(false); }
+  };
+  const field = { padding: '9px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontFamily: 'inherit', fontSize: '14px', width: '100%', boxSizing: 'border-box' as const };
+  return (
+    <div style={{ marginTop: '18px', padding: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', background: 'var(--surface-2)' }}>
+      <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Correu de sortida {s ? (s.ready ? '· a punt' : '· incomplet') : ''}</div>
+      <p style={{ margin: '0 0 10px', fontSize: '13px', color: 'var(--text-soft)', lineHeight: 1.45 }}>Amb un compte de Gmail dedicat: servidor smtp.gmail.com, port 587, l’adreça completa i una <strong>contrasenya d’aplicació</strong> de Google (no la del compte).</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '8px' }}>
+        <input value={host} onChange={(e) => setHost(e.target.value)} placeholder="smtp.gmail.com" style={field} />
+        <input value={port} onChange={(e) => setPort(e.target.value)} placeholder="587" style={field} />
+        <input value={user} onChange={(e) => setUser(e.target.value)} placeholder="adreça@gmail.com" style={field} />
+        <input value={from} onChange={(e) => setFrom(e.target.value)} placeholder="remitent (per defecte, la mateixa)" style={field} />
+        <input value={pass} onChange={(e) => setPass(e.target.value)} type="password" autoComplete="new-password" placeholder={s?.has_password ? 'contrasenya desada · escriu-ne una de nova per canviar-la' : 'contrasenya d’aplicació (16 lletres)'} style={field} />
+      </div>
+      <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+        <button onClick={save} disabled={busy} style={{ padding: '9px 16px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px' }}>{busy ? 'Desant…' : 'Desa'}</button>
+        <button onClick={test} disabled={busy || !s?.ready} style={{ padding: '9px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', opacity: busy || !s?.ready ? 0.6 : 1 }}>Envia’m una prova</button>
+      </div>
+      {msg && <div style={{ marginTop: '8px', fontSize: '13px', color: 'var(--emerald)' }}>{msg}</div>}
+      {err && <div style={{ marginTop: '8px', fontSize: '13px', color: 'var(--rose)' }}>{err}</div>}
+    </div>
+  );
+}
 
 // Admin: a reset code for someone who cannot receive e-mail (no mail server configured yet).
 // The admin passes the code on by hand; the person uses «Ja tinc un codi» on the sign-in page.
@@ -283,6 +326,7 @@ export default function ProfilePage() {
                   </button>
                   {accMsg && <div style={{ fontSize: '13px', color: 'var(--text-soft)' }}>{accMsg}</div>}
                 </form>
+                {me.is_admin && <AdminMailSettings />}
                 {me.is_admin && <AdminResetCode />}
                 {me.is_admin && <AiSpendAdmin />}
               </div>

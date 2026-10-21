@@ -127,14 +127,28 @@ def speaker_of(d) -> str:
     return grammar.our_speaker(d) or (d.author or "").strip() or grammar.origin(d) or "gravació"
 
 
+def quotable_any(d, slug: Optional[str] = None) -> bool:
+    """A real drill: a quotable text with a Catalan meaning (a voice is not required)."""
+    return bool((d.text_catalan or "").strip()) and grammar.quotable(d.text_tachelhit, slug)
+
+
 def practicable(d, slug: Optional[str] = None) -> bool:
-    """A drill a session can use: a quotable text with a Catalan meaning and some voice."""
-    return bool((d.text_catalan or "").strip()) and grammar.quotable(d.text_tachelhit, slug) and bool(
-        d.audio_url or getattr(d, "audio_tts_shi_url", None))
+    """A drill a spoken session can use: quotable and with some voice."""
+    return quotable_any(d, slug) and bool(d.audio_url or getattr(d, "audio_tts_shi_url", None))
 
 
 def order_key(d):
     return (not d.audio_url, not d.image_url, d.id)
+
+
+def video_of(d) -> Optional[str]:
+    """The source a drill was captured from, as one label."""
+    t = (getattr(d, "source_title", None) or "").strip()
+    return t or ((getattr(d, "source_url", None) or "").strip() or None)
+
+
+def tags_of(d) -> List[str]:
+    return [t.strip() for t in (d.tag or "").split(",") if t.strip() and t.strip().lower() != "private"]
 
 
 def collections(db) -> dict:
@@ -150,7 +164,7 @@ def collections(db) -> dict:
     # by subject
     tcount: Dict[str, int] = Counter()
     for d in rows:
-        if practicable(d):
+        if quotable_any(d):
             for s in topics_catalog.parse(d.topics):
                 tcount[s] += 1
     labels = {t["slug"]: t["label"] for t in topics_catalog.TOPICS}
@@ -163,20 +177,40 @@ def collections(db) -> dict:
             if practicable(d, s):
                 ucount[s] += 1
     unit_list = [{"slug": u["slug"], "title": u["title"], "level": u["level"], "count": ucount.get(u["slug"], 0)} for u in grammar.UNITS]
+    # by video (what it was captured from), by person (who says it) and by tag (how the owner filed it)
+    vcount: Dict[str, int] = Counter(); vurl: Dict[str, str] = {}
+    pcount: Dict[str, int] = Counter(); gcount: Dict[str, int] = Counter()
+    for d in rows:
+        if not quotable_any(d):
+            continue
+        v = video_of(d)
+        if v:
+            vcount[v] += 1; vurl.setdefault(v, (getattr(d, "source_url", None) or ""))
+        p = speaker_of(d)
+        if p and p not in ("gravació", ""):
+            pcount[p] += 1
+        for t in tags_of(d):
+            gcount[t] += 1
+    video_list = [{"title": k, "url": vurl.get(k) or None, "count": n} for k, n in vcount.most_common() if n >= 3]
+    people_list = [{"name": k, "count": n} for k, n in pcount.most_common() if n >= 3]
+    tag_list = [{"tag": k, "count": n} for k, n in gcount.most_common() if n >= 3]
     # hand-made lists
     tests = db.query(TestModel).order_by(TestModel.id.desc()).all()
     list_list = [{"id": t.id, "title": t.title, "count": len([x for x in (t.drill_ids or "").split(",") if x.strip()])} for t in tests]
-    return {"days": day_list, "topics": topic_list, "units": unit_list, "lists": list_list}
+    return {"days": day_list, "topics": topic_list, "units": unit_list, "lists": list_list,
+            "videos": video_list, "people": people_list, "tags": tag_list}
 
 
 def session_rows(db, day: Optional[str] = None, speaker: Optional[str] = None, topic: Optional[str] = None,
                  unit: Optional[str] = None, test_id: Optional[int] = None, ids: Optional[List[int]] = None,
-                 limit: int = 10, offset: int = 0) -> List:
+                 video: Optional[str] = None, person: Optional[str] = None, tag: Optional[str] = None,
+                 with_voice: bool = True, limit: int = 10, offset: int = 0) -> List:
     from models import Drill as DrillModel, Test as TestModel
     q = grammar.not_excluded(db.query(DrillModel).filter(DrillModel.text_tachelhit != None, DrillModel.text_tachelhit != ""), DrillModel)
     if ids:
         rows = {d.id: d for d in q.filter(DrillModel.id.in_(ids)).all()}
-        return [rows[i] for i in ids if i in rows and practicable(rows[i])][:max(1, min(limit, 50))]
+        keep = practicable if with_voice else quotable_any
+        return [rows[i] for i in ids if i in rows and keep(rows[i])][:max(1, min(limit, 400))]
     if test_id:
         t = db.query(TestModel).filter(TestModel.id == test_id).first()
         ids = [int(x) for x in (t.drill_ids or "").split(",") if x.strip().isdigit()] if t else []
@@ -194,9 +228,16 @@ def session_rows(db, day: Optional[str] = None, speaker: Optional[str] = None, t
         rows = [d for d in rows if topic in topics_catalog.parse(d.topics)]
     if unit:
         rows = [d for d in rows if unit in grammar.parse(d.grammar)]
-    rows = [d for d in rows if practicable(d, unit)]
+    if video:
+        rows = [d for d in rows if (video_of(d) or "") == video]
+    if person:
+        rows = [d for d in rows if speaker_of(d) == person]
+    if tag:
+        rows = [d for d in rows if tag in tags_of(d)]
+    keep = practicable if with_voice else quotable_any
+    rows = [d for d in rows if keep(d, unit)]
     rows.sort(key=order_key if not test_id else (lambda d: d.id))
-    return rows[offset:offset + max(1, min(limit, 50))]
+    return rows[offset:offset + max(1, min(limit, 400))]
 
 
 def card(d) -> dict:

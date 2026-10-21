@@ -202,6 +202,17 @@ class GrammarLesson(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
 
 
+class AppSetting(Base):
+    """A server setting an admin can change from the app itself (the mail sender, today), so a
+    deploy or a dashboard visit is not needed. Secrets live here instead of the environment and are
+    never returned to the client."""
+    __tablename__ = "app_settings"
+
+    key = Column(String, primary_key=True)
+    value = Column(Text, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
+
+
 class LessonProposal(Base):
     """A learner's or speaker's proposed change to a lesson card (the text of one step, or the
     intro when step = -1), reviewed by an admin: accepted = written into the stored lesson."""

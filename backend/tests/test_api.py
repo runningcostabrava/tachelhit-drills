@@ -811,3 +811,26 @@ def test_admin_can_issue_a_reset_code_when_there_is_no_mail_server(monkeypatch):
     assert done["username"] == "needsreset" and done["token"]
     assert client.post("/auth/login", json={"login": "needsreset", "password": "secondpass1"}).status_code == 200
     assert u["username"] == "needsreset"
+
+
+def test_admin_sets_the_mail_sender_from_the_app(monkeypatch):
+    from models import User as UserModel, AppSetting as AppSettingModel
+    admin = client.post("/users/register", json={"username": "mail_admin"}).json()
+    db = main.SessionLocal(); row = db.query(UserModel).filter(UserModel.username == "mail_admin").first(); row.is_admin = True
+    row.email = "mail.admin@example.test"; db.commit()
+    h = {"X-User-Token": admin["token"]}
+    assert client.get("/admin/mail").status_code == 401
+    r = client.post("/admin/mail", json={"settings": {"SMTP_HOST": "smtp.gmail.com", "SMTP_PORT": "587",
+                                                      "SMTP_USER": "sender@example.test", "SMTP_PASS": "app-password",
+                                                      "SMTP_FROM": "sender@example.test"}}, headers=h).json()
+    assert r["ready"] is True and r["has_password"] is True and r["SMTP_HOST"] == "smtp.gmail.com"
+    assert "SMTP_PASS" not in r  # the password never comes back
+    assert main.mail_setting("SMTP_PASS") == "app-password"
+    # the forgot flow no longer refuses for lack of a sender
+    sent = []
+    monkeypatch.setattr(main, "_send_email", lambda to, s, b: sent.append((to, s)) or True)
+    client.post("/auth/signup", json={"email": "wants.code@example.test", "password": "firstpass1", "username": "wantscode"})
+    assert client.post("/auth/forgot", json={"email": "wants.code@example.test"}).status_code == 200
+    assert sent and sent[0][0] == "wants.code@example.test"
+    assert client.post("/admin/mail/test", json={"to": None}, headers=h).json()["sent_to"] == "mail.admin@example.test"
+    db.query(AppSettingModel).delete(); db.commit(); db.close()

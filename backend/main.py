@@ -67,7 +67,7 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
 
-from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel, LessonProposal as LessonProposalModel, CaptureRequest as CaptureRequestModel, DrillTombstone as DrillTombstoneModel, UserSession as UserSessionModel, GeminiUsage as GeminiUsageModel  # ← Alias for ORM models
+from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel, LessonProposal as LessonProposalModel, AppSetting as AppSettingModel, CaptureRequest as CaptureRequestModel, DrillTombstone as DrillTombstoneModel, UserSession as UserSessionModel, GeminiUsage as GeminiUsageModel  # ← Alias for ORM models
 from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort, VideoProcessingJobCreate, VideoProcessingJob, VideoSegmentCreate, VideoSegment, TranscribeRequest, TranscribeResponse, TranslateRequest, TranslateResponse, DrillPairInfo, GlossaryItem, GlossaryItemCreate, SrtImportRequest, SrtImportResponse, SrtSegment, BulkVideoUrlUpdateRequest, BulkVideoUrlUpdateResponse, iso_z  # ← Pydantic schemas
 from correction_service import get_correction_service
 from srt_parser import parse_srt_content, create_youtube_url_with_timestamp
@@ -1988,19 +1988,34 @@ def _user_payload(user: UserModel) -> dict:
             "has_password": bool(user.password_hash)}
 
 
+MAIL_KEYS = ("SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM")
+
+
+def mail_setting(key: str) -> str:
+    """A mail setting: what an admin saved in the app, else the server environment."""
+    try:
+        with SessionLocal() as db:
+            row = db.query(AppSettingModel).filter(AppSettingModel.key == key).first()
+            if row and (row.value or "").strip():
+                return row.value.strip()
+    except Exception as e:
+        print(f"[MAIL] settings unavailable: {e}")
+    return (os.getenv(key) or "").strip()
+
+
 def _send_email(to: str, subject: str, body: str) -> bool:
     """SMTP sender from env (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM). False when not configured."""
-    host, user_, pw = os.getenv("SMTP_HOST"), os.getenv("SMTP_USER"), os.getenv("SMTP_PASS")
+    host, user_, pw = mail_setting("SMTP_HOST"), mail_setting("SMTP_USER"), mail_setting("SMTP_PASS")
     if not (host and user_ and pw):
         return False
     import smtplib
     from email.message import EmailMessage
     msg = EmailMessage()
-    msg["From"] = os.getenv("SMTP_FROM") or user_
+    msg["From"] = mail_setting("SMTP_FROM") or user_
     msg["To"] = to
     msg["Subject"] = subject
     msg.set_content(body)
-    with smtplib.SMTP(host, int(os.getenv("SMTP_PORT") or 587), timeout=30) as smtp:
+    with smtplib.SMTP(host, int(mail_setting("SMTP_PORT") or 587), timeout=30) as smtp:
         smtp.starttls()
         smtp.login(user_, pw)
         smtp.send_message(msg)
@@ -5181,7 +5196,7 @@ def auth_forgot(request: Request, email: str = Body(..., embed=True), db: Sessio
     503 only when no SMTP sender is configured."""
     ip = request.client.host if request.client else "unknown"
     _rate_limit(_login_attempts, ip, 10, 900)
-    if not (os.getenv("SMTP_HOST") and os.getenv("SMTP_USER") and os.getenv("SMTP_PASS")):
+    if not (mail_setting("SMTP_HOST") and mail_setting("SMTP_USER") and mail_setting("SMTP_PASS")):
         raise HTTPException(status_code=503, detail="No hi ha cap servidor de correu configurat; demana el restabliment a l'administrador")
     user = db.query(UserModel).filter(UserModel.email == (email or "").strip().lower()).first()
     if user:
@@ -5194,6 +5209,55 @@ def auth_forgot(request: Request, email: str = Body(..., embed=True), db: Sessio
         except Exception as e:
             print(f"[AUTH] reset e-mail failed: {e}")
     return {"ok": True}
+
+
+@app.get("/admin/mail")
+def admin_mail_get(_admin: UserModel = Depends(require_admin), db: Session = Depends(get_db)):
+    """The mail sender as the app has it: the password is never returned, only whether one is set."""
+    saved = {r.key: (r.value or "") for r in db.query(AppSettingModel).filter(AppSettingModel.key.in_(MAIL_KEYS)).all()}
+    out = {k: (saved.get(k) or os.getenv(k) or "") for k in MAIL_KEYS if k != "SMTP_PASS"}
+    out["has_password"] = bool((saved.get("SMTP_PASS") or os.getenv("SMTP_PASS") or "").strip())
+    out["from_app"] = {k: bool((saved.get(k) or "").strip()) for k in MAIL_KEYS}
+    out["ready"] = bool(mail_setting("SMTP_HOST") and mail_setting("SMTP_USER") and mail_setting("SMTP_PASS"))
+    return out
+
+
+@app.post("/admin/mail")
+def admin_mail_set(settings: Dict[str, str] = Body(..., embed=True), _admin: UserModel = Depends(require_admin), db: Session = Depends(get_db)):
+    """Admin: save the mail sender (SMTP_HOST/PORT/USER/PASS/FROM) from the app. An empty value
+    leaves that setting as it is; «-» clears it."""
+    for k, v in (settings or {}).items():
+        if k not in MAIL_KEYS:
+            continue
+        v = (v or "").strip()
+        if not v:
+            continue
+        row = db.query(AppSettingModel).filter(AppSettingModel.key == k).first()
+        val = "" if v == "-" else v
+        if row:
+            row.value = val; row.updated_at = datetime.utcnow()
+        else:
+            db.add(AppSettingModel(key=k, value=val))
+    db.commit()
+    return admin_mail_get(_admin=_admin, db=db)
+
+
+@app.post("/admin/mail/test")
+def admin_mail_test(to: Optional[str] = Body(None, embed=True), _admin: UserModel = Depends(require_admin)):
+    """Admin: send a test message to check the sender works."""
+    dest = (to or _admin.email or "").strip()
+    if not dest:
+        raise HTTPException(status_code=400, detail="Digues a quina adreça l'envio")
+    if not (mail_setting("SMTP_HOST") and mail_setting("SMTP_USER") and mail_setting("SMTP_PASS")):
+        raise HTTPException(status_code=503, detail="Encara falten dades del servidor de correu")
+    try:
+        ok = _send_email(dest, "Tamazight Drills: prova d'enviament",
+                         "Això és una prova. Si l'has rebut, el restabliment de contrasenya ja funciona.\n")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"El servidor de correu ha fallat: {str(e)[:200]}")
+    if not ok:
+        raise HTTPException(status_code=502, detail="El servidor de correu no ha acceptat el missatge")
+    return {"sent_to": dest}
 
 
 @app.post("/auth/admin-reset-code")
@@ -5719,12 +5783,14 @@ def practice_collections(db: Session = Depends(get_db)):
 @app.get("/practice/session")
 def practice_session(day: Optional[str] = None, speaker: Optional[str] = None, topic: Optional[str] = None,
                      unit: Optional[str] = None, test_id: Optional[int] = None, ids: Optional[str] = None,
-                     limit: int = 10, offset: int = 0, db: Session = Depends(get_db)):
+                     video: Optional[str] = None, person: Optional[str] = None, tag: Optional[str] = None,
+                     with_voice: bool = True, limit: int = 10, offset: int = 0, db: Session = Depends(get_db)):
     """The drills of one practice session (real sentences with a voice, recorded and pictured first;
     `ids` = an explicit list, e.g. the drills due for review) and, per drill, the card data:
     speaker, hard sounds, pronunciation tips."""
     only = [int(x) for x in ids.split(",") if x.strip().isdigit()] if ids else None
-    rows = practice_mod.session_rows(db, day=day, speaker=speaker, topic=topic, unit=unit, test_id=test_id, ids=only, limit=limit, offset=offset)
+    rows = practice_mod.session_rows(db, day=day, speaker=speaker, topic=topic, unit=unit, test_id=test_id, ids=only,
+                                     video=video, person=person, tag=tag, with_voice=with_voice, limit=limit, offset=offset)
     return {"drills": [Drill.model_validate(d, from_attributes=True) for d in rows], "cards": [practice_mod.card(d) for d in rows]}
 
 

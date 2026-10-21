@@ -302,6 +302,9 @@ export const api = {
   changePassword: (old_password: string, new_password: string) =>
     request<{ ok: boolean }>('/auth/password', { method: 'POST', body: JSON.stringify({ old_password, new_password }) }),
   forgotPassword: (email: string) => request<{ ok: boolean }>('/auth/forgot', { method: 'POST', body: JSON.stringify({ email }) }),
+  adminMailGet: () => request<MailSettings>('/admin/mail'),
+  adminMailSet: (settings: Record<string, string>) => request<MailSettings>('/admin/mail', { method: 'POST', body: JSON.stringify({ settings }) }),
+  adminMailTest: (to?: string) => request<{ sent_to: string }>('/admin/mail/test', { method: 'POST', body: JSON.stringify({ to: to || null }) }),
   adminResetCode: (login: string) => request<{ username: string; email: string; code: string; expires_in_hours: number; mailed: boolean }>('/auth/admin-reset-code', { method: 'POST', body: JSON.stringify({ login }) }),
   resetPassword: (email: string, code: string, new_password: string, device?: string) =>
     request<AuthUser & { token: string }>('/auth/reset', { method: 'POST', body: JSON.stringify({ email, code, new_password, device }) }),
@@ -333,6 +336,8 @@ export interface PracticeTip { sound: string; label: string; found: string; tip:
 export interface PracticeCard { speaker: string; origin: string; day: string | null; tips: PracticeTip[]; highlights: string[] }
 export interface PronunciationWord { word: string; ok: boolean; heard: string | null }
 export type PracticeMode = 'parla' | 'escolta' | 'auto';
+/** The mail sender as the app has it; the password itself is never sent back. */
+export interface MailSettings { SMTP_HOST: string; SMTP_PORT: string; SMTP_USER: string; SMTP_FROM: string; has_password: boolean; ready: boolean; from_app: Record<string, boolean> }
 /** A person's public page: who they are and what they gave the library. */
 export interface ContributionDrill { id: number; text_tachelhit?: string | null; text_catalan?: string | null; audio_url?: string | null; image_url?: string | null; region?: string | null; variety?: string | null; tag?: string | null; variant_of?: number | null; verified?: boolean | null; date_created?: string | null }
 export interface Contributions { counts: { drills: number; petitions: number; variants: number; takes: number; proposals_accepted: number; proposals_pending: number }; drills: ContributionDrill[]; takes: { id: number; audio_url: string; text: string | null; variety: string | null; region: string | null; date_created: string; drill: ContributionDrill }[] }
