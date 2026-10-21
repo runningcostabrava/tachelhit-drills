@@ -84,7 +84,7 @@ UNITS: List[dict] = [
 SLUGS = [u["slug"] for u in UNITS]
 TITLES = {u["slug"]: u["title"] for u in UNITS}
 BATCH = 40
-LESSON_VERSION = 12  # bump when the lesson format or prompt changes: old rows are rewritten on next open
+LESSON_VERSION = 13  # bump when the lesson format or prompt changes: old rows are rewritten on next open
 
 # Drills whose tag names another language are never part of the course (the owner's old Irish tests).
 EXCLUDED_TAGS = ("irish",)
@@ -651,6 +651,23 @@ def _fold(t: str) -> str:
     return "".join(practice.sound_key(w) for w in re.split(r"\s+", (t or "").lower()) if w)
 
 
+def _mark(shi: str, frag: str) -> Optional[str]:
+    """Where `frag` is written inside `shi`: the piece itself when it is there letter for letter,
+    else the word that sounds like it («ghori» for «ɣur-i»), else nothing."""
+    if not shi or not frag:
+        return None
+    low, fl = shi.lower(), frag.lower()
+    if fl in low and len(frag) < len(shi):
+        return shi[low.index(fl):low.index(fl) + len(fl)]
+    key = _fold(frag)
+    if not key:
+        return None
+    for w in re.split(r"\s+", shi):
+        if w and (key == _fold(w) or (len(key) > 2 and key in _fold(w))):
+            return w.strip(".,;:!?«»()") or None
+    return None
+
+
 def _top_up(lesson: dict, examples: List[dict], want: int = 4) -> dict:
     """An explanation that quotes fewer than `want` sentences gets more from the unit's own pool:
     only sentences that really contain the piece being taught (by sound, so another spelling of the
@@ -660,6 +677,13 @@ def _top_up(lesson: dict, examples: List[dict], want: int = 4) -> dict:
         if s["type"] != "explain" or len(s["examples"]) >= want:
             continue
         frags = [e["focus"] for e in s["examples"] if e.get("focus")]
+        for e in s["examples"]:  # a sentence the writer quoted without saying where the rule is
+            if not e.get("focus"):
+                for frag in frags:
+                    mark = _mark(e["shi"], frag)
+                    if mark:
+                        e["focus"] = mark
+                        break
         for frag in frags:
             key = _fold(frag)
             if not key:
@@ -669,13 +693,12 @@ def _top_up(lesson: dict, examples: List[dict], want: int = 4) -> dict:
                     break
                 if e["id"] in used or not e["shi"]:
                     continue
-                low, fl = e["shi"].lower(), frag.lower()
-                if fl in low:
-                    add = dict(e); add["focus"] = e["shi"][low.index(fl):low.index(fl) + len(fl)]
-                elif key in _fold(e["shi"]):
-                    add = dict(e)  # the same word, spelled another way: no highlight, still the rule
-                else:
+                if key not in _fold(e["shi"]) and frag.lower() not in e["shi"].lower():
                     continue
+                add = dict(e)
+                mark = _mark(e["shi"], frag)
+                if mark:
+                    add["focus"] = mark
                 s["examples"].append(add); used.add(e["id"])
     return lesson
 

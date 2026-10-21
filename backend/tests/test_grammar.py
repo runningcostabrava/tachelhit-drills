@@ -184,6 +184,9 @@ def test_an_explanation_never_shows_fewer_than_four_sentences():
     assert got[0] == 1 and len(got) == 4 and 5 not in got  # «izri wass» does not carry the rule
     assert 2 in got  # «ghori», the same word spelled another way, does
     assert lesson["steps"][0]["examples"][2]["focus"] == "ɣur-i"  # the piece is marked where it is written
+    marked = {e["id"]: e.get("focus") for e in lesson["steps"][0]["examples"]}
+    assert marked[2] == "ghori"  # another spelling of the same word is marked as the speaker wrote it
+    assert grammar._mark("hla ghori udghar", "ɣur-i") == "ghori" and grammar._mark("izri wass", "ɣur-i") is None
 
 
 def test_conjugation_lists_become_the_lessons_tables():
