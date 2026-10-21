@@ -5524,8 +5524,8 @@ def _grammar_unit_payload(db, slug: str, limit: int, force: bool):
     if unit is None:
         raise HTTPException(status_code=404, detail="Unit not found")
     rows = _grammar_unit_rows(db, slug)
-    examples = grammar_course.pick_examples(rows)
-    practice = grammar_course.practice_rows(rows)  # the test: sentences only
+    examples = grammar_course.pick_examples(rows, slug=slug)
+    practice = grammar_course.practice_rows(rows, slug=slug)  # the test: sentences (and words, in the units about words)
     try:
         lesson = grammar_course.get_lesson(db, slug, _load_grammar() if gemini_available() else "", examples, force=force,
                                            unit_ids={d.id for d in rows})
@@ -5550,7 +5550,7 @@ def grammar_wishlist(per_unit: int = 8, db: Session = Depends(get_db)):
     for unit in grammar_course.UNITS:
         rows = _grammar_unit_rows(db, unit["slug"])
         voiced = sum(1 for d in rows if (grammar_course.origin(d) == grammar_course.AIT_MRAW and d.audio_url) or d.id in mraw_takes)
-        wanted = [d for d in grammar_course.practice_rows(rows, limit=10000)
+        wanted = [d for d in grammar_course.practice_rows(rows, limit=10000, slug=unit["slug"])
                   if grammar_course.origin(d) != grammar_course.AIT_MRAW and d.id not in mraw_takes and len(d.text_tachelhit or "") <= 90]
         # the Beni Mellal deck's sentences first (real Central Atlas Tamazight), then pictured, then voiced
         wanted.sort(key=lambda d: (grammar_course.origin(d) != "Beni Mellal", not d.image_url, not d.audio_url, d.id))

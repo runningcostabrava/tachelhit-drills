@@ -76,7 +76,7 @@ UNITS: List[dict] = [
 SLUGS = [u["slug"] for u in UNITS]
 TITLES = {u["slug"]: u["title"] for u in UNITS}
 BATCH = 40
-LESSON_VERSION = 4  # bump when the lesson format or prompt changes: old rows are rewritten on next open
+LESSON_VERSION = 5  # bump when the lesson format or prompt changes: old rows are rewritten on next open
 
 # Drills whose tag names another language are never part of the course (the owner's old Irish tests).
 EXCLUDED_TAGS = ("irish",)
@@ -320,19 +320,43 @@ def kind(shi: Optional[str]) -> str:
     return "sentence"
 
 
-def practice_rows(rows: List, limit: int = 200) -> List:
-    """The drills a unit's practice test is made of: real sentences only (no single words, no
-    conjugation lists, no placeholders), in the rows' order."""
-    return [d for d in rows if kind(d.text_tachelhit) == "sentence"][:limit]
+# Units whose point is the word itself: a single word is a valid example and a valid exercise
+# there («azul», «tanmmirt», «yan», «nkk»), where elsewhere only sentences show the rule.
+WORD_UNITS = {"formules", "noms-genere-nombre", "numerals", "pronoms-personals", "demostratius", "manlleus", "temps-adverbis"}
 
 
-def pick_examples(rows: List, limit: int = 40) -> List[dict]:
-    """The drills a lesson can quote: short real sentences (no single words, no conjugation lists,
-    no placeholders), the ones with a picture and a voice first, no duplicates."""
+def quotable(shi: str, slug: Optional[str] = None) -> bool:
+    """A text a lesson or a test can use: a sentence (or a word, in the units about words), in Latin
+    letters as the course is, with no capture artefacts (Tifinagh-only text, dots inside words)."""
+    k = kind(shi)
+    if k not in ("sentence", "word") or (k == "word" and slug not in WORD_UNITS):
+        return False
+    t = _clean_text(shi)
+    if not re.search(r"[A-Za-zɣḥṣṭẓɛšḍčǧ]", t) or re.search(r"[\u2D30-\u2D7F]", t):
+        return False  # Tifinagh-only captures: not readable in a Latin-script course
+    if re.search(r"\w\.\w", t):
+        return False  # «ⵜ.ⵅⵙ.ⵛ», «a.b.c»: OCR artefacts
+    return True
+
+
+def practice_rows(rows: List, limit: int = 200, slug: Optional[str] = None) -> List:
+    """The drills a unit's practice test is made of: real sentences (plus single words in the units
+    about words), no conjugation lists, no placeholders, no capture artefacts; in the rows' order."""
+    return [d for d in rows if quotable(d.text_tachelhit, slug)][:limit]
+
+
+def simplicity(e: dict) -> int:
+    """How basic an example is: fewer words first, then shorter."""
+    return len(re.findall(r"[^\W\d_]+", e["shi"])) * 100 + len(e["shi"])
+
+
+def pick_examples(rows: List, limit: int = 40, slug: Optional[str] = None) -> List[dict]:
+    """The drills a lesson can quote: short real sentences (and words, in the units about words),
+    the ones with a picture and a voice first, no duplicates."""
     cands = []
     for d in rows:
         shi = _clean_text(d.text_tachelhit); ca = _clean_text(d.text_catalan)
-        if not ca or kind(shi) != "sentence" or len(shi) > 90 or len(ca) > 110:
+        if not ca or not quotable(shi, slug) or len(shi) > 90 or len(ca) > 110:
             continue
         cands.append(example_dict(d))
     # our own speakers from Aït Mraw first, then the Beni Mellal deck, then the rest; within each, the
@@ -391,7 +415,8 @@ def _clean_sheet(s: Optional[str]) -> str:
 
 
 def _lesson_prompt(unit: dict, examples: List[dict], sheet: str) -> str:
-    ex = "\n".join(f"- id {e['id']} ({e.get('origin') or 'origen desconegut'}{', gravat' if e.get('recorded') else ''}): «{e['shi']}» — {e['ca']}" for e in examples)
+    # the writer sees the simplest examples first: a one-word greeting before a full sentence
+    ex = "\n".join(f"- id {e['id']} ({e.get('origin') or 'origen desconegut'}{', gravat' if e.get('recorded') else ''}): «{e['shi']}» — {e['ca']}" for e in sorted(examples, key=simplicity))
     return (
         f"Write the lesson «{unit['title']}» of a course of Central Atlas Tamazight (the speech of Aït Mraw near "
         "Boutharar, Azilal, and of Beni Mellal) for Catalan-speaking adults who are NOT linguists: a curious "
@@ -409,8 +434,10 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str) -> str:
         "ours shows a rule, leave that rule out or say we have no example yet; never invent a sentence.\n\n"
         "Build the lesson as STEPS, each one a card the learner reads in a few seconds:\n"
         "- 4 to 6 steps of type \"explain\": a title (3-6 words), a text of 35-70 words, example_ids (1-3, ONLY from "
-        "the sentences below) and \"focus\": {id: substring} for each quoted sentence. Start with the simplest "
-        "idea and build up.\n"
+        "the sentences below) and \"focus\": {id: substring} for each quoted sentence. START WITH THE MOST BASIC: "
+        "the first step uses the shortest examples (a single word or a two-word formula when there is one, e.g. a "
+        "bare greeting, a bare noun, a bare number) and each step builds on the previous one, so the longest "
+        "sentences come last. Never open a unit with a long sentence.\n"
         "- 1 step of type \"pattern\" (optional, when a table helps): a title and 3-7 rows of [form, meaning, "
         "example], the forms in standard Latin spelling (ɣ, ḥ, ṣ, ṭ, ẓ, ɛ, š), the example taken from our sentences "
         "when one exists.\n"

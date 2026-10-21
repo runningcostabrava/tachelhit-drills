@@ -85,6 +85,23 @@ def test_practice_is_sentences_only_and_wishlist_names_what_our_speakers_could_r
     assert grammar._current(Row(), {5, 6}) is not None and grammar._current(Row(), {6}) is None and grammar._current(Row(), None) is not None
 
 
+def test_lessons_start_basic_and_skip_capture_artefacts():
+    import grammar
+    assert grammar.quotable("azul", "formules") and not grammar.quotable("azul", "perfectiu")  # a word only where the word is the point
+    assert grammar.quotable("ur ssinɣ", "perfectiu") and not grammar.quotable("rix, trid, iri, nri", "formules")
+    assert not grammar.quotable("ⵜ.ⵅⵙ.ⵛ ⵙⵙ ⵉⵙⵙ", "formules") and not grammar.quotable("ⴰⵣⵓⵍ", "formules")  # Tifinagh-only captures
+    assert not grammar.quotable("a.z.ul fllawn", "formules")  # dots inside words
+    class R:  # noqa
+        def __init__(self, id, shi, ca): self.id, self.text_tachelhit, self.text_catalan, self.image_url, self.audio_url, self.author, self.region, self.tag = id, shi, ca, None, None, None, None, None
+    rows = [R(1, "jigh labas, tanmmirt", "estic bé, gràcies"), R(2, "azul", "hola"), R(3, "ⵜ.ⵅⵙ.ⵛ ⵙⵙ", "hola, encàrrec'm")]
+    ex = grammar.pick_examples(rows, slug="formules")
+    assert [e["id"] for e in ex] == [1, 2] and [e["id"] for e in grammar.pick_examples(rows, slug="negacio")] == [1]
+    assert [d.id for d in grammar.practice_rows(rows, slug="formules")] == [1, 2]
+    unit = next(u for u in grammar.UNITS if u["slug"] == "formules")
+    p = grammar._lesson_prompt(unit, ex, "sheet")
+    assert p.index("«azul»") < p.index("«jigh labas") and "START WITH THE MOST BASIC" in p  # the writer sees the basics first
+
+
 def test_classifier_may_find_no_unit(monkeypatch):
     import grammar, json
     d = client.post("/drills/", json={"text_catalan": "sí", "text_tachelhit": "wayh"}).json()
