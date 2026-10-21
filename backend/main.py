@@ -1546,25 +1546,17 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[SCHEMA] Column sync skipped: {e}")
 
-    # Stale-job reaper (P4.6): background jobs live in this process, so a
-    # redeploy / spin-down kills them mid-flight and leaves the row forever in
-    # TRANSCRIBING. Anything non-terminal and untouched for 2 h is dead.
+    # Dead-job reaper (P4.6): background jobs live in this process, so a redeploy / spin-down
+    # kills them mid-flight and left the row forever in TRANSLATING (a 2-hour grace used to hide
+    # it). A process that has just started cannot be running any job: every non-terminal job is
+    # dead, and the capture request it came from goes back to the agent's queue.
     try:
         with SessionLocal() as db:
-            cutoff = datetime.utcnow() - timedelta(hours=2)
-            stale = db.query(VideoProcessingJobModel).filter(
-                ~VideoProcessingJobModel.status.in_(JOB_TERMINAL_STATUSES),
-                sa_func.coalesce(VideoProcessingJobModel.updated_at,
-                                 VideoProcessingJobModel.date_submitted) < cutoff,
-            ).all()
-            for j in stale:
-                j.status = "FAILED"
-                j.error_message = "stale after restart"
-            if stale:
-                db.commit()
-                print(f"[INIT] Reaped {len(stale)} stale video job(s)")
+            n_jobs, n_req = reap_dead_jobs(db)
+            if n_jobs:
+                print(f"[INIT] Reaped {n_jobs} dead video job(s); {n_req} capture request(s) re-queued")
     except Exception as e:
-        print(f"[INIT] Stale-job reaper skipped: {e}")
+        print(f"[INIT] Dead-job reaper skipped: {e}")
 
     # Add sample data if database is empty
     with SessionLocal() as db:
@@ -2013,6 +2005,24 @@ def _send_email(to: str, subject: str, body: str) -> bool:
 DEFAULT_PAGE_LIMIT = 100
 MAX_PAGE_LIMIT = 500
 JOB_TERMINAL_STATUSES = ("COMPLETED", "FAILED")
+
+
+def reap_dead_jobs(db) -> tuple:
+    """Mark every non-terminal video job FAILED («died with the server») and put the capture
+    request that was waiting on it back to `pending`, so the local agent uploads it again.
+    Called at startup, when no job can legitimately be running in this process."""
+    dead = db.query(VideoProcessingJobModel).filter(~VideoProcessingJobModel.status.in_(JOB_TERMINAL_STATUSES)).all()
+    requeued = 0
+    for j in dead:
+        j.status = "FAILED"
+        j.error_message = "died with the server (restart or deploy); the capture request was re-queued"
+        for req in db.query(CaptureRequestModel).filter(CaptureRequestModel.job_id == j.id,
+                                                        CaptureRequestModel.status.notin_(("done", "failed"))).all():
+            req.status = "pending"; req.claimed_at = None; req.job_id = None; req.error = "re-queued: the server restarted mid-job"
+            requeued += 1
+    if dead:
+        db.commit()
+    return len(dead), requeued
 DEFAULT_TZ = "Europe/Madrid"
 
 def _page_bounds(limit: Optional[int], offset: Optional[int]):

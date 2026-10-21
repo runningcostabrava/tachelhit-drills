@@ -777,3 +777,18 @@ def test_catalan_voice_is_made_once_for_a_drill_that_lacks_it(monkeypatch):
     assert client.get(f"/drills/{d['id']}").json()["audio_tts_url"] == r["url"]
     assert client.post("/tts/catalan", json={"drill_id": d["id"]}).json()["cached"] is True and len(calls) == before + 1
     assert client.post("/tts/catalan", json={"drill_id": 999999}).status_code == 404
+
+
+def test_startup_reaper_fails_dead_jobs_and_requeues_their_captures():
+    from models import VideoProcessingJob as JobModel, CaptureRequest as ReqModel
+    db = main.SessionLocal()
+    job = JobModel(status="TRANSLATING", kind="auto"); db.add(job); db.commit(); db.refresh(job)
+    done = JobModel(status="COMPLETED"); db.add(done); db.commit(); db.refresh(done)
+    req = ReqModel(url="https://www.youtube.com/watch?v=x", status="claimed", job_id=job.id); db.add(req); db.commit(); db.refresh(req)
+    n_jobs, n_req = main.reap_dead_jobs(db)
+    assert n_jobs >= 1 and n_req == 1
+    db.refresh(job); db.refresh(req); db.refresh(done)
+    assert job.status == "FAILED" and "died with the server" in job.error_message
+    assert req.status == "pending" and req.job_id is None and req.claimed_at is None
+    assert done.status == "COMPLETED"
+    db.close()
