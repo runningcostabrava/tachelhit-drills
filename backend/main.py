@@ -5964,6 +5964,18 @@ def _grammar_unit_payload(db, slug: str, limit: int, force: bool):
             "drills": [Drill.model_validate(d, from_attributes=True) for d in rows[:max(1, min(limit, 300))]]}
 
 
+def _lesson_quotes(db, slug: str) -> set:
+    """The drills the unit's stored lesson quotes, if it has one."""
+    from models import GrammarLesson
+    row = db.query(GrammarLesson).filter(GrammarLesson.id == slug).first()
+    if row is None:
+        return set()
+    try:
+        return grammar_course.quoted_ids(json.loads(row.body))
+    except Exception:
+        return set()
+
+
 @app.get("/grammar/wishlist")
 def grammar_wishlist(per_unit: int = 8, db: Session = Depends(get_db)):
     """What our own speakers (Aït Mraw) could record next: for each unit, how many of its sentences
@@ -5975,12 +5987,16 @@ def grammar_wishlist(per_unit: int = 8, db: Session = Depends(get_db)):
     out = []
     for unit in grammar_course.UNITS:
         rows = _grammar_unit_rows(db, unit["slug"])
+        in_lesson = _lesson_quotes(db, unit["slug"])  # what the unit's lesson shows a learner
         voiced = sum(1 for d in rows if (grammar_course.origin(d) == grammar_course.AIT_MRAW and d.audio_url) or d.id in mraw_takes)
         wanted = [d for d in grammar_course.practice_rows(rows, limit=10000, slug=unit["slug"])
                   if grammar_course.origin(d) != grammar_course.AIT_MRAW and d.id not in mraw_takes and len(d.text_tachelhit or "") <= 90]
-        # the Beni Mellal deck's sentences first (real Central Atlas Tamazight), then pictured, then voiced
-        wanted.sort(key=lambda d: (grammar_course.origin(d) != "Beni Mellal", not d.image_url, not d.audio_url, d.id))
+        # the sentences the lesson itself quotes first (recording those changes what a learner hears),
+        # then the Beni Mellal deck (real Central Atlas Tamazight), then pictured, then voiced
+        wanted.sort(key=lambda d: (d.id not in in_lesson, grammar_course.origin(d) != "Beni Mellal",
+                                   not d.image_url, not d.audio_url, d.id))
         out.append({**{k: unit[k] for k in ("slug", "title", "level")}, "total": len(rows), "aitmraw_voiced": voiced,
+                    "in_lesson": sum(1 for d in wanted if d.id in in_lesson),
                     "wanted": [Drill.model_validate(d, from_attributes=True) for d in wanted[:max(0, min(per_unit, 30))]]})
     out.sort(key=lambda u: (u["aitmraw_voiced"], -u["total"]))
     return {"units": out}

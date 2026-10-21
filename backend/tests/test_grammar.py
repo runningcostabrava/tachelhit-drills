@@ -67,6 +67,30 @@ def test_classification_fills_grammar_and_unit_page_shows_lesson_and_examples(mo
     assert client.post("/grammar/negacio/rewrite").status_code == 401
 
 
+def test_the_wishlist_asks_for_the_sentences_the_lesson_shows(monkeypatch):
+    """Recording a sentence the course quotes changes what a learner hears; recording any other
+    sentence of the unit does not."""
+    import json as _json, main as _main
+    from models import GrammarLesson
+    quoted = client.post("/drills/", json={"text_catalan": "No ho sé", "text_tachelhit": "ur ssinɣ", "tag": "benimellal-anki"}).json()
+    other = client.post("/drills/", json={"text_catalan": "No hi és", "text_tachelhit": "ur illi", "tag": "benimellal-anki"}).json()
+    for d in (quoted, other):
+        client.put(f"/drills/{d['id']}", json={"grammar": "negacio", "grammar_source": "owner"})
+    with _main.SessionLocal() as db:
+        body = _json.dumps({"intro": "", "steps": [{"type": "explain", "title": "ur", "text": "x",
+                                                    "examples": [{"id": quoted["id"], "shi": "ur ssinɣ", "ca": "No ho sé"}]}]})
+        row = db.query(GrammarLesson).filter(GrammarLesson.id == "negacio").first()
+        if row is None:
+            db.add(GrammarLesson(id="negacio", body=body, version=grammar.LESSON_VERSION))
+        else:
+            row.body = body
+        db.commit()
+    unit = next(u for u in client.get("/grammar/wishlist").json()["units"] if u["slug"] == "negacio")
+    ids = [d["id"] for d in unit["wanted"]]
+    assert ids and ids[0] == quoted["id"] and unit["in_lesson"] >= 1
+    assert ids.index(quoted["id"]) < (ids.index(other["id"]) if other["id"] in ids else 99)
+
+
 def test_practice_is_sentences_only_and_wishlist_names_what_our_speakers_could_record(monkeypatch):
     import grammar
     assert [grammar.kind(t) for t in ("ur ssinɣ", "argaz", "rix, trid, iri, nri", "text", "", "ad // rad")] == ["sentence", "word", "list", "placeholder", "placeholder", "list"]
