@@ -102,6 +102,20 @@ def test_lessons_start_basic_and_skip_capture_artefacts():
     assert p.index("«azul»") < p.index("«jigh labas") and "START WITH THE MOST BASIC" in p  # the writer sees the basics first
 
 
+def test_level_one_units_quote_only_short_examples():
+    import grammar
+    class R:  # noqa
+        def __init__(self, id, shi, ca): self.id, self.text_tachelhit, self.text_catalan, self.image_url, self.audio_url, self.author, self.region, self.tag = id, shi, ca, None, None, None, None, None
+    long = R(1, "waxxa, isul-yan g-usawn n-tuwrirt-in", "D'acord, encara n'hi ha una al vessant")
+    rows = [long, R(2, "3afaš", "gràcies"), R(3, "Adeu", "Adeu"), R(4, "jigh labas, tanmmirt", "estic bé, gràcies")]
+    assert [e["id"] for e in grammar.pick_examples(rows, slug="formules")] == [2, 4]  # level 1: a few words; «Adeu»=«Adeu» never
+    assert [e["id"] for e in grammar.pick_examples(rows, slug="subordinades")] == [1, 4]  # level 3: the long one is fine
+    assert grammar.fits_level("ur ssinɣ ša", "formules") and not grammar.fits_level("a b c d e", "formules") and grammar.fits_level("a b c d e", "negacio")
+    unit = next(u for u in grammar.UNITS if u["slug"] == "formules")
+    assert "LEVEL 1 UNIT" in grammar._lesson_prompt(unit, [], "sheet")
+    assert "LEVEL 1 UNIT" not in grammar._lesson_prompt(next(u for u in grammar.UNITS if u["slug"] == "negacio"), [], "sheet")
+
+
 def test_classifier_may_find_no_unit(monkeypatch):
     import grammar, json
     d = client.post("/drills/", json={"text_catalan": "sí", "text_tachelhit": "wayh"}).json()
@@ -160,3 +174,5 @@ def test_quizzes_and_excluded_language(monkeypatch):
     o = R(7, "ur ssin", "no sap"); o.audio_url = "https://x/a.webm"
     assert [e["id"] for e in grammar.pick_examples([o, b, h])] == [5, 6, 7]
     assert grammar.pick_examples([h])[0]["origin"] == grammar.AIT_MRAW
+    t = R(8, "ur ssinx", "no sé"); t.tag = "frase, Driss"  # the owner tags Driss's recordings by name
+    assert grammar.our_speaker(t) == "Driss" and grammar.origin(t) == grammar.AIT_MRAW and grammar.our_speaker(o) is None

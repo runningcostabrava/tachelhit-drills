@@ -121,14 +121,7 @@ def highlights(text: str) -> List[str]:
 # ---- what a session is made of ----
 
 def speaker_of(d) -> str:
-    author = (d.author or "").strip(); tag = (d.tag or "")
-    if author in ("Halima", "Driss"):
-        return author
-    if "Driss" in tag:
-        return "Driss"
-    if "Halima" in tag:
-        return "Halima"
-    return author or grammar.origin(d) or "gravació"
+    return grammar.our_speaker(d) or (d.author or "").strip() or grammar.origin(d) or "gravació"
 
 
 def practicable(d, slug: Optional[str] = None) -> bool:

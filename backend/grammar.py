@@ -76,7 +76,7 @@ UNITS: List[dict] = [
 SLUGS = [u["slug"] for u in UNITS]
 TITLES = {u["slug"]: u["title"] for u in UNITS}
 BATCH = 40
-LESSON_VERSION = 5  # bump when the lesson format or prompt changes: old rows are rewritten on next open
+LESSON_VERSION = 6  # bump when the lesson format or prompt changes: old rows are rewritten on next open
 
 # Drills whose tag names another language are never part of the course (the owner's old Irish tests).
 EXCLUDED_TAGS = ("irish",)
@@ -292,10 +292,25 @@ def example_dict(d) -> dict:
 
 AIT_MRAW = "Aït Mraw (Boutharar, Azilal)"
 
+OUR_SPEAKERS = ("Halima", "Driss")
+
+
+def our_speaker(d) -> Optional[str]:
+    """Halima or Driss when the drill is theirs: by author, or by a tag naming them (the owner tags
+    their recordings «Driss», «frase, Driss», «Biografia, Driss»…)."""
+    author = (d.author or "").strip()
+    if author in OUR_SPEAKERS:
+        return author
+    for part in (d.tag or "").split(","):
+        if part.strip() in OUR_SPEAKERS:
+            return part.strip()
+    return None
+
+
 def origin(d) -> str:
     """Where a drill's sentence comes from, for the lesson writer and the card."""
-    author = (d.author or "").strip(); tag = (d.tag or "").lower(); region = (d.region or "").strip()
-    if author in ("Halima", "Driss") or "mraw" in region.lower():
+    tag = (d.tag or "").lower(); region = (d.region or "").strip()
+    if our_speaker(d) or "mraw" in region.lower():
         return AIT_MRAW
     if "benimellal" in tag or region.lower().startswith("beni mellal"):
         return "Beni Mellal"
@@ -345,6 +360,21 @@ def practice_rows(rows: List, limit: int = 200, slug: Optional[str] = None) -> L
     return [d for d in rows if quotable(d.text_tachelhit, slug)][:limit]
 
 
+# The longest example a unit may quote or ask about, by level: a level-1 card is for someone who
+# knows nothing yet, so its examples (and its quiz options) are a few words long.
+MAX_WORDS = {1: 4, 2: 8, 3: 14}
+MAX_CHARS = {1: 32, 2: 60, 3: 90}
+
+
+def level_of(slug: Optional[str]) -> int:
+    return next((u["level"] for u in UNITS if u["slug"] == slug), 3)
+
+
+def fits_level(shi: str, slug: Optional[str]) -> bool:
+    lv = level_of(slug)
+    return len(re.findall(r"[^\W\d_]+", shi)) <= MAX_WORDS[lv] and len(shi) <= MAX_CHARS[lv]
+
+
 def simplicity(e: dict) -> int:
     """How basic an example is: fewer words first, then shorter."""
     return len(re.findall(r"[^\W\d_]+", e["shi"])) * 100 + len(e["shi"])
@@ -356,8 +386,10 @@ def pick_examples(rows: List, limit: int = 40, slug: Optional[str] = None) -> Li
     cands = []
     for d in rows:
         shi = _clean_text(d.text_tachelhit); ca = _clean_text(d.text_catalan)
-        if not ca or not quotable(shi, slug) or len(shi) > 90 or len(ca) > 110:
+        if not ca or not quotable(shi, slug) or len(shi) > 90 or len(ca) > 110 or not fits_level(shi, slug):
             continue
+        if shi.lower() == ca.lower():
+            continue  # «Adeu» = «Adeu»: the Catalan typed in the Tamazight field
         cands.append(example_dict(d))
     # our own speakers from Aït Mraw first, then the Beni Mellal deck, then the rest; within each, the
     # pictured-and-voiced sentences first
@@ -432,7 +464,13 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str) -> str:
         "the rule differently from the sheet (another form, another spelling, a particle missing), say so plainly: "
         "the speakers are right about their own speech, and the sheet describes mainly the Souss. If no sentence of "
         "ours shows a rule, leave that rule out or say we have no example yet; never invent a sentence.\n\n"
-        "Build the lesson as STEPS, each one a card the learner reads in a few seconds:\n"
+        + ("LEVEL 1 UNIT, for someone who knows NOTHING yet: only the most basic forms, each step one thing to say or "
+           "recognise, no grammar vocabulary at all, no rule that needs a term to be explained. If the examples only "
+           "allow 2-3 steps, write 2-3 steps. "
+           if unit.get("level") == 1 else
+           "LEVEL 2 UNIT: short sentences, one rule per step, every term explained in plain words. "
+           if unit.get("level") == 2 else "")
+        + "Build the lesson as STEPS, each one a card the learner reads in a few seconds:\n"
         "- 4 to 6 steps of type \"explain\": a title (3-6 words), a text of 35-70 words, example_ids (1-3, ONLY from "
         "the sentences below) and \"focus\": {id: substring} for each quoted sentence. START WITH THE MOST BASIC: "
         "the first step uses the shortest examples (a single word or a two-word formula when there is one, e.g. a "
