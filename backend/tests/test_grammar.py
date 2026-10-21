@@ -154,6 +154,7 @@ def test_lesson_prose_has_no_tifinagh_and_examples_have_no_capture_noise():
     unit = next(u for u in grammar.UNITS if u["slug"] == "ser-tenir")
     p = grammar._lesson_prompt(unit, [], "sheet")
     assert "example_ids (4-6" in p and "focus must be the rule itself" in p
+    assert "fewer than seven is not acceptable" in p  # the lesson must cover the whole point
 
 
 def test_lesson_prose_is_latin_only_and_never_cites_ids():

@@ -84,7 +84,7 @@ UNITS: List[dict] = [
 SLUGS = [u["slug"] for u in UNITS]
 TITLES = {u["slug"]: u["title"] for u in UNITS}
 BATCH = 40
-LESSON_VERSION = 13  # bump when the lesson format or prompt changes: old rows are rewritten on next open
+LESSON_VERSION = 14  # bump when the lesson format or prompt changes: old rows are rewritten on next open
 
 # Drills whose tag names another language are never part of the course (the owner's old Irish tests).
 EXCLUDED_TAGS = ("irish",)
@@ -556,7 +556,8 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str, tables: Optiona
         "word the first time you use it («el perfectiu, la forma que es fa servir per a accions acabades…»). Never use "
         "these words: " + ", ".join(BANNED_TERMS) + ". Say «pronom enganxat al verb» instead of clític, «forma de "
         "passat / acció acabada» instead of acomplert, and so on.\n\n"
-        "METHOD. The study sheet below condenses the grammar reference. The sentences below are what OUR speakers "
+        "METHOD. The study sheet below condenses the grammar reference and ends with the steps the point breaks "
+        "into: follow them, one explanation each. The sentences below are what OUR speakers "
         "actually say. Your job is to show how the rules of the sheet appear in OUR sentences: every explanation "
         "states one rule, quotes 4-6 of our sentences that show it, and names the exact piece of each sentence that "
         "shows the rule (the \"focus\": a substring copied character for character from the sentence as written). The "
@@ -576,7 +577,9 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str, tables: Optiona
            "LEVEL 2 UNIT: short sentences, one rule per step, every term explained in plain words. "
            if unit.get("level") == 2 else "")
         + "Build the lesson as STEPS, each one a card the learner reads in a few seconds:\n"
-        "- 7 to 9 steps of type \"explain\": a title (3-6 words), a text of 35-70 words, example_ids (4-6, ONLY from "
+        "- 7 to 9 steps of type \"explain\" (eight when the unit allows it; with 40 sentences or more below, fewer "
+        "than seven is not acceptable — cut the point into smaller rules rather than writing fewer steps): a title "
+        "(3-6 words), a text of 35-70 words, example_ids (4-6, ONLY from "
         "the sentences below) and \"focus\": {id: substring} for each quoted sentence. Fewer than four sentences in a "
         "step is not acceptable: if four of our sentences do not show the rule, teach a rule they do show. "
         "START WITH THE MOST BASIC: "
