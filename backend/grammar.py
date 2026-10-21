@@ -84,7 +84,7 @@ UNITS: List[dict] = [
 SLUGS = [u["slug"] for u in UNITS]
 TITLES = {u["slug"]: u["title"] for u in UNITS}
 BATCH = 40
-LESSON_VERSION = 7  # bump when the lesson format or prompt changes: old rows are rewritten on next open
+LESSON_VERSION = 8  # bump when the lesson format or prompt changes: old rows are rewritten on next open
 
 # Drills whose tag names another language are never part of the course (the owner's old Irish tests).
 EXCLUDED_TAGS = ("irish",)
