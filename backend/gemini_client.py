@@ -32,6 +32,38 @@ def gemini_available() -> bool:
                 or (os.getenv("GEMINI_PROXY_URL") or "").strip())
 
 
+# The egress proxy lives on the web app, so renaming its domain used to take every AI feature
+# down until someone edited GEMINI_PROXY_URL. These are the project's own hosts: when the configured
+# one answers «deployment not found» (404/410), the next is tried and the one that works is
+# remembered for the rest of the process. Nothing else is ever called.
+_PROXY_HOSTS = ("tamazight-drills.vercel.app", "tachelhit-drills.vercel.app", "amazigh-drills.vercel.app", "tamazigh-drills.vercel.app")
+_proxy_ok: str | None = None
+
+
+def _proxy_candidates() -> list:
+    """The configured proxy URL first, then the same path on the project's other hosts."""
+    import re as _re
+    conf = (os.getenv("GEMINI_PROXY_URL") or "").strip()
+    if not conf:
+        return []
+    if _proxy_ok:
+        return [_proxy_ok] + [c for c in _candidates_from(conf) if c != _proxy_ok]
+    return _candidates_from(conf)
+
+
+def _candidates_from(conf: str) -> list:
+    import re as _re
+    m = _re.match(r"(https?://)([^/]+)(/.*)?$", conf)
+    if not m:
+        return [conf]
+    scheme, host, path = m.group(1), m.group(2), m.group(3) or "/api/gemini"
+    out = [conf]
+    for h in _PROXY_HOSTS:
+        if h != host:
+            out.append(f"{scheme}{h}{path}")
+    return out
+
+
 def _generate_content(payload: dict, timeout: int, model: str | None = None) -> dict:
     """
     POST a generateContent payload to Gemini and return the parsed JSON.
@@ -43,19 +75,35 @@ def _generate_content(payload: dict, timeout: int, model: str | None = None) -> 
     used_model = model or GEMINI_MODEL
     if _meter is not None:
         _meter.before_call(used_model)
-    proxy = (os.getenv("GEMINI_PROXY_URL") or "").strip()
+    global _proxy_ok
+    candidates = _proxy_candidates()
+    key = (os.getenv("GEMINI_API_KEY") or "").strip()
     try:
-        if proxy:
+        resp = None
+        last = ""
+        for i, proxy in enumerate(candidates):
             headers = {"Content-Type": "application/json"}
             secret = (os.getenv("GEMINI_PROXY_SECRET") or "").strip()
             if secret:
                 headers["X-Proxy-Secret"] = secret
-            resp = requests.post(proxy, json={"model": used_model, "payload": payload},
-                                 headers=headers, timeout=timeout)
-        else:
-            key = (os.getenv("GEMINI_API_KEY") or "").strip()
+            try:
+                r = requests.post(proxy, json={"model": used_model, "payload": payload}, headers=headers, timeout=timeout)
+            except Exception as e:
+                last = f"{proxy}: {e}"; continue
+            # a proxy that is not deployed at this host: try the project's next host
+            if r.status_code in (404, 410) or (r.status_code == 400 and "DEPLOYMENT_NOT_FOUND" in r.text):
+                last = f"{proxy}: {r.status_code}"
+                print(f"[GEMINI] proxy not found at {proxy}; trying the next host")
+                continue
+            resp = r
+            if _proxy_ok != proxy:
+                _proxy_ok = proxy
+                print(f"[GEMINI] using the proxy at {proxy}")
+            break
+        if resp is None:
+            # no proxy answered (or none configured): Google directly when we hold a key
             if not key:
-                raise RuntimeError("GEMINI_API_KEY not configured")
+                raise RuntimeError(f"No Gemini proxy reachable and GEMINI_API_KEY not configured ({last})")
             url = f"{GEMINI_BASE}/models/{used_model}:generateContent?key={key}"
             resp = requests.post(url, json=payload, timeout=timeout)
         if resp.status_code != 200:
