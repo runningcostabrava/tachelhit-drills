@@ -107,7 +107,7 @@ export default function AuthPage() {
 
         {mode === 'forgot' && (
           <form onSubmit={(e) => { e.preventDefault(); doForgot(); }}>
-            <p style={{ marginTop: 0, color: 'var(--text-soft)', fontSize: '14px' }}>T'enviem un codi de 6 xifres al correu del compte.</p>
+            <p style={{ marginTop: 0, color: 'var(--text-soft)', fontSize: '14px' }}>T&apos;enviem un codi de 6 xifres al correu del compte. Si el servidor encara no envia correu, demana el codi a l&apos;administrador i fes servir «Ja tinc un codi».</p>
             <label style={label} htmlFor="fg-email">Correu electrònic</label>
             <input id="fg-email" style={input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus />
             <button type="submit" disabled={busy || !email} style={{ ...primary, opacity: busy || !email ? 0.6 : 1 }}>{busy ? 'Enviant…' : 'Envia el codi'}</button>

@@ -5196,6 +5196,29 @@ def auth_forgot(request: Request, email: str = Body(..., embed=True), db: Sessio
     return {"ok": True}
 
 
+@app.post("/auth/admin-reset-code")
+def auth_admin_reset_code(login: str = Body(..., embed=True), db: Session = Depends(get_db), _admin: UserModel = Depends(require_admin)):
+    """Admin: make a reset code for someone who cannot receive e-mail (no mail server configured, a
+    wrong address, a token-only account). Returns the code so the admin can pass it on by hand; the
+    person then uses «Ja tinc un codi». Also mailed when a mail server is configured."""
+    key = (login or "").strip().lower()
+    user = db.query(UserModel).filter((UserModel.email == key) | (UserModel.username == key)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="No hi ha cap compte amb aquest correu o nom d'usuari")
+    if not user.email:
+        raise HTTPException(status_code=400, detail="Aquest compte encara no té correu: que l'afegeixi des del seu perfil")
+    code = f"{secrets.randbelow(10**6):06d}"
+    user.reset_code_hash = _hash_token(code); user.reset_expires = datetime.utcnow() + timedelta(hours=2)
+    db.commit()
+    mailed = False
+    try:
+        mailed = bool(_send_email(user.email, "Tamazight Drills: codi per restablir la contrasenya",
+                                  f"Hola {user.display_name or user.username},\n\nEl teu codi és: {code}\nCaduca en 2 hores.\n"))
+    except Exception as e:
+        print(f"[AUTH] admin reset e-mail failed: {e}")
+    return {"username": user.username, "email": user.email, "code": code, "expires_in_hours": 2, "mailed": mailed}
+
+
 @app.post("/auth/reset")
 def auth_reset(email: str = Body(..., embed=True), code: str = Body(..., embed=True), new_password: str = Body(..., embed=True),
                device: Optional[str] = Body(None, embed=True), db: Session = Depends(get_db)):

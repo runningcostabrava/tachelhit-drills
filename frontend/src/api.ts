@@ -302,6 +302,7 @@ export const api = {
   changePassword: (old_password: string, new_password: string) =>
     request<{ ok: boolean }>('/auth/password', { method: 'POST', body: JSON.stringify({ old_password, new_password }) }),
   forgotPassword: (email: string) => request<{ ok: boolean }>('/auth/forgot', { method: 'POST', body: JSON.stringify({ email }) }),
+  adminResetCode: (login: string) => request<{ username: string; email: string; code: string; expires_in_hours: number; mailed: boolean }>('/auth/admin-reset-code', { method: 'POST', body: JSON.stringify({ login }) }),
   resetPassword: (email: string, code: string, new_password: string, device?: string) =>
     request<AuthUser & { token: string }>('/auth/reset', { method: 'POST', body: JSON.stringify({ email, code, new_password, device }) }),
 };

@@ -792,3 +792,22 @@ def test_startup_reaper_fails_dead_jobs_and_requeues_their_captures():
     assert req.status == "pending" and req.job_id is None and req.claimed_at is None
     assert done.status == "COMPLETED"
     db.close()
+
+
+def test_admin_can_issue_a_reset_code_when_there_is_no_mail_server(monkeypatch):
+    from models import User as UserModel
+    monkeypatch.setattr(main, "_send_email", lambda *a, **k: False)  # no mail server
+    u = client.post("/auth/signup", json={"email": "needs.reset@example.test", "password": "firstpass1", "username": "needsreset"}).json()
+    admin = client.post("/users/register", json={"username": "reset_admin"}).json()
+    db = main.SessionLocal(); row = db.query(UserModel).filter(UserModel.username == "reset_admin").first(); row.is_admin = True; db.commit(); db.close()
+    h = {"X-User-Token": admin["token"]}
+    assert client.post("/auth/admin-reset-code", json={"login": "needsreset"}).status_code == 401
+    r = client.post("/auth/admin-reset-code", json={"login": "needs.reset@example.test"}, headers=h).json()
+    assert len(r["code"]) == 6 and r["username"] == "needsreset" and r["mailed"] is False
+    assert client.post("/auth/admin-reset-code", json={"login": "nobody-at-all"}, headers=h).status_code == 404
+    # the person uses the code on the sign-in page
+    assert client.post("/auth/reset", json={"email": "needs.reset@example.test", "code": "000000", "new_password": "secondpass1"}).status_code == 400
+    done = client.post("/auth/reset", json={"email": "needs.reset@example.test", "code": r["code"], "new_password": "secondpass1"}).json()
+    assert done["username"] == "needsreset" and done["token"]
+    assert client.post("/auth/login", json={"login": "needsreset", "password": "secondpass1"}).status_code == 200
+    assert u["username"] == "needsreset"

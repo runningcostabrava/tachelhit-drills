@@ -27,6 +27,38 @@ const inputStyle: React.CSSProperties = {
   marginBottom: '12px',
 };
 
+// Admin: a reset code for someone who cannot receive e-mail (no mail server configured yet).
+// The admin passes the code on by hand; the person uses «Ja tinc un codi» on the sign-in page.
+function AdminResetCode() {
+  const [login, setLogin] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [out, setOut] = useState<{ username: string; email: string; code: string; expires_in_hours: number; mailed: boolean } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const go = async () => {
+    setBusy(true); setErr(null); setOut(null);
+    try { setOut(await api.adminResetCode(login.trim())); }
+    catch (e: any) { setErr(e?.message || 'No s’ha pogut generar el codi'); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div style={{ marginTop: '18px', padding: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', background: 'var(--surface-2)' }}>
+      <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Codi per restablir una contrasenya</div>
+      <p style={{ margin: '0 0 8px', fontSize: '13px', color: 'var(--text-soft)', lineHeight: 1.45 }}>Per a qui no pot rebre el correu. Dona-li el codi i que faci servir «Ja tinc un codi» a la pantalla d’entrada.</p>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <input value={login} onChange={(e) => setLogin(e.target.value)} placeholder="correu o nom d’usuari" style={{ flex: 1, minWidth: 180, padding: '9px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontFamily: 'inherit', fontSize: '14px' }} />
+        <button onClick={go} disabled={busy || login.trim().length < 3} style={{ padding: '9px 16px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', opacity: busy || login.trim().length < 3 ? 0.6 : 1 }}>{busy ? 'Generant…' : 'Genera el codi'}</button>
+      </div>
+      {err && <div style={{ marginTop: '8px', fontSize: '13px', color: 'var(--rose)' }}>{err}</div>}
+      {out && (
+        <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '0.12em', color: 'var(--brand-1)' }}>{out.code}</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-soft)' }}>@{out.username} · {out.email} · caduca en {out.expires_in_hours} h{out.mailed ? ' · també enviat per correu' : ' · el servidor no envia correu: passa-l’hi tu'}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const [me, setMe] = useState<Me | null>(null);
   const [streak, setStreak] = useState<{ streak_days: number; reviews_week: number } | null>(null);
@@ -251,6 +283,7 @@ export default function ProfilePage() {
                   </button>
                   {accMsg && <div style={{ fontSize: '13px', color: 'var(--text-soft)' }}>{accMsg}</div>}
                 </form>
+                {me.is_admin && <AdminResetCode />}
                 {me.is_admin && <AiSpendAdmin />}
               </div>
               <button onClick={saveProfile} disabled={savingProfile} style={{ marginTop: '12px', padding: '10px 20px', background: 'var(--brand-gradient)', color: '#fff', border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: savingProfile ? 'wait' : 'pointer' }}>
