@@ -59,12 +59,15 @@ _FOLD = [
 
 
 def sound_key(word: str) -> str:
-    """A spelling-independent key of how a word sounds (loose: gh/ɣ, kh/x, 3/ɛ, emphatics folded)."""
+    """A spelling- and script-independent key of how a word sounds: Tifinagh (what the speech
+    recogniser answers) and any Latin spelling (gh/ġ/ɣ, kh/x, 3/ɛ, emphatics) land on the same key."""
+    import transliteration
     w = word.lower().strip("'’\"«»()[]¿?¡!.,;:-")
     for pat, rep in _FOLD:
         w = re.sub(pat, rep, w)
-    w = re.sub(r"(.)\1+", r"\1", w)  # long consonants count once for the comparison
-    return w
+    k = transliteration.phonemic_key(w) if w else ""
+    k = re.sub(r"(.)\1+", r"\1", k)  # long consonants count once for the comparison
+    return k or w
 
 
 def words_of(text: str) -> List[str]:

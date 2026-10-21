@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { FaLightbulb, FaMicrophone, FaPlay, FaTimes } from 'react-icons/fa';
-import { api, type PracticeCard, type PronunciationWord } from '../api';
+import { api, type PracticeCard, type PracticeMode, type PronunciationWord } from '../api';
 import { API_BASE, getMediaUrl } from '../config';
 import { toast } from '../toast';
 import type { Drill } from '../types';
@@ -21,6 +21,10 @@ import { saveDone } from './PracticePage';
 
 type Phase = 'prompt' | 'recording' | 'checking' | 'result';
 type Result = { score: number; heard: string; words: PronunciationWord[] };
+// Three ways to run a session: «Parla» records and scores you; «Escolta» is listen-and-next, no
+// microphone; «Auto» plays each card (Catalan, then the Tamazight twice) and moves on by itself.
+const MODE_KEY = 'practice_mode';
+function loadMode(): PracticeMode { try { const m = localStorage.getItem(MODE_KEY); return m === 'escolta' || m === 'auto' ? m : 'parla'; } catch { return 'parla'; } }
 
 function scoreGrade(score: number): number { return score >= 0.85 ? 3 : score >= 0.65 ? 2 : score >= 0.4 ? 1 : 0; }
 
@@ -44,8 +48,11 @@ export default function PracticeSession() {
   const [revealed, setRevealed] = useState(false);
   const [finished, setFinished] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [mode, setModeState] = useState<PracticeMode>(loadMode);
+  const setMode = (m: PracticeMode) => { setModeState(m); try { localStorage.setItem(MODE_KEY, m); } catch { /* private mode */ } };
   const recorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const autoTimer = useRef<number | null>(null);
 
   const key = useMemo(() => {
     if (params.get('daily')) return 'daily';
@@ -87,15 +94,38 @@ export default function PracticeSession() {
   }, [params]);
 
   const drill = drills[i]; const card = cards[i];
-  const sayFirst = i % 3 === 2;  // every third card: say it before hearing it
+  const sayFirst = mode === 'parla' && i % 3 === 2;  // every third card: say it before hearing it (only when speaking)
   const voice = drill ? (drill.audio_url || drill.audio_tts_shi_url || '') : '';
+  const speakerLabel = card ? (card.origin && card.origin !== card.speaker ? `${card.speaker} · ${card.origin}` : card.speaker) : '';
 
   const play = useCallback((rate = 1) => {
     if (!voice) return;
     if (audioRef.current) { audioRef.current.pause(); }
     const a = new Audio(getMediaUrl(voice)); a.playbackRate = rate; audioRef.current = a; a.play().catch(() => {});
   }, [voice]);
-  useEffect(() => { if (drill && !sayFirst && phase === 'prompt') play(1); }, [drill?.id]);  // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (drill && !sayFirst && phase === 'prompt' && mode !== 'auto') play(1); }, [drill?.id]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // «Auto»: Catalan voice, then the Tamazight twice, then the next card; stops when the mode changes
+  useEffect(() => {
+    if (mode !== 'auto' || !drill || finished) return;
+    let cancelled = false;
+    const clear = () => { if (autoTimer.current) { window.clearTimeout(autoTimer.current); autoTimer.current = null; } };
+    const playOnce = (url: string, rate = 1) => new Promise<void>((resolve) => {
+      if (!url) { resolve(); return; }
+      if (audioRef.current) audioRef.current.pause();
+      const a = new Audio(getMediaUrl(url)); a.playbackRate = rate; audioRef.current = a;
+      a.onended = () => resolve(); a.onerror = () => resolve();
+      a.play().catch(() => resolve());
+    });
+    const wait = (ms: number) => new Promise<void>((resolve) => { autoTimer.current = window.setTimeout(resolve, ms); });
+    (async () => {
+      if (drill.audio_tts_url) { await playOnce(drill.audio_tts_url); if (cancelled) return; await wait(500); }
+      await playOnce(voice); if (cancelled) return; await wait(900);
+      await playOnce(voice); if (cancelled) return; await wait(1600);
+      if (!cancelled) { if (i + 1 >= drills.length) finish(); else { setI(i + 1); setPhase('prompt'); setResult(null); setRevealed(false); } }
+    })();
+    return () => { cancelled = true; clear(); if (audioRef.current) audioRef.current.pause(); };
+  }, [mode, drill?.id, finished]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const startRecording = async () => {
     if (!drill || phase === 'recording' || phase === 'checking') return;
@@ -117,7 +147,7 @@ export default function PracticeSession() {
           const res = await fetch(`${API_BASE}/pronunciation/check`, { method: 'POST', body: fd });
           if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'No s’ha pogut avaluar');
           const data = await res.json();
-          const r: Result = { score: data.score, heard: data.heard, words: data.words || [] };
+          const r: Result = { score: data.score, heard: data.heard_latin || data.heard, words: data.words || [] };
           setResult(r); setResults((m) => ({ ...m, [drill.id]: r })); setRevealed(true); setPhase('result');
           api.reviewGrade(drill.id, scoreGrade(data.score)).catch(() => {});
           if (sayFirst) setTimeout(() => play(1), 300);
@@ -161,6 +191,13 @@ export default function PracticeSession() {
       <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-soft)' }}>{Math.min(i + 1, drills.length)} / {drills.length}</span>
     </div>
   );
+  const modeBar = (
+    <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+      {([['parla', 'Parla'], ['escolta', 'Escolta'], ['auto', 'Auto']] as [PracticeMode, string][]).map(([m, label]) => (
+        <button key={m} onClick={() => setMode(m)} style={{ flex: 1, padding: '7px 0', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: mode === m ? 'var(--brand-1)' : 'var(--surface)', color: mode === m ? '#fff' : 'var(--text)', fontWeight: 800, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>{label}</button>
+      ))}
+    </div>
+  );
 
   if (loadError) return <div style={{ padding: '40px 16px', maxWidth: 520, margin: '0 auto', textAlign: 'center' }}><p style={{ color: 'var(--text-soft)' }}>{loadError}</p><button onClick={exit} style={btn('ghost')}>Torna a Pràctica</button></div>;
   if (!drill) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Preparant la sessió…</div>;
@@ -201,12 +238,13 @@ export default function PracticeSession() {
   return (
     <div style={{ padding: '20px 16px 32px', maxWidth: 520, margin: '0 auto', minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
       {bar}
-      <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--brand-1)' }}>{sayFirst ? 'Digues-ho tu' : 'Escolta i repeteix'}</div>
-      <h2 style={{ margin: '2px 0 14px', fontSize: 19, lineHeight: 1.25 }}>{sayFirst ? 'Com ho diries en amazic?' : `Escolta ${card?.speaker === 'Halima' ? 'la Halima' : card?.speaker === 'Driss' ? 'en Driss' : 'la veu'} i digues-ho igual`}</h2>
+      {modeBar}
+      <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--brand-1)' }}>{mode === 'auto' ? 'Reproducció automàtica' : mode === 'escolta' ? 'Escolta' : sayFirst ? 'Digues-ho tu' : 'Escolta i repeteix'}</div>
+      <h2 style={{ margin: '2px 0 14px', fontSize: 19, lineHeight: 1.25 }}>{mode === 'auto' ? 'Escolta; passa sola a la següent' : mode === 'escolta' ? 'Escolta tantes vegades com vulguis' : sayFirst ? 'Com ho diries en amazic?' : `Escolta ${card?.speaker === 'Halima' ? 'la Halima' : card?.speaker === 'Driss' ? 'en Driss' : 'la veu'} i digues-ho igual`}</h2>
 
       <div style={{ padding: 14, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {drill.image_url && <div style={{ position: 'relative', width: '100%', aspectRatio: '16 / 9', borderRadius: 'var(--r-md)', overflow: 'hidden', background: 'var(--surface-2)' }}><img src={getMediaUrl(drill.image_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: sayFirst && !revealed ? 'none' : 'none' }} onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = 'none'; }} /><span style={{ position: 'absolute', left: 10, bottom: 10, fontSize: 12, fontWeight: 700, background: 'rgba(255,255,255,0.92)', color: 'var(--text)', padding: '4px 10px', borderRadius: 'var(--r-pill)' }}>{card?.speaker}{card?.origin ? ` · ${card.origin}` : ''}</span></div>}
-        {!drill.image_url && <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-soft)' }}>{card?.speaker}{card?.origin ? ` · ${card.origin}` : ''}</div>}
+        {drill.image_url && <div style={{ position: 'relative', width: '100%', aspectRatio: '16 / 9', borderRadius: 'var(--r-md)', overflow: 'hidden', background: 'var(--surface-2)' }}><img src={getMediaUrl(drill.image_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: sayFirst && !revealed ? 'none' : 'none' }} onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = 'none'; }} /><span style={{ position: 'absolute', left: 10, bottom: 10, fontSize: 12, fontWeight: 700, background: 'rgba(255,255,255,0.92)', color: 'var(--text)', padding: '4px 10px', borderRadius: 'var(--r-pill)' }}>{speakerLabel}</span></div>}
+        {!drill.image_url && <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-soft)' }}>{speakerLabel}</div>}
         {sayFirst && !revealed ? (
           <>
             <p style={{ margin: 0, fontSize: 24, fontWeight: 800, lineHeight: 1.3 }}>{drill.text_catalan}</p>
@@ -234,6 +272,7 @@ export default function PracticeSession() {
             <div>
               <div style={{ fontWeight: 800, fontSize: 16 }}>{result.score >= 0.85 ? 'Molt bé!' : result.score >= 0.65 ? 'Gairebé!' : 'Torna-ho a provar'}</div>
               <div style={{ fontSize: 13, color: 'var(--text-soft)' }}>{result.words.filter((w) => !w.ok).length === 0 ? 'S’han entès totes les paraules.' : `Diferent del que diu ${card?.speaker}: ${result.words.filter((w) => !w.ok).map((w) => `«${w.word}»`).join(', ')}.`}</div>
+              {result.heard && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Hem sentit: «{result.heard}»</div>}
             </div>
           </div>
           {(() => { const bad = result.words.filter((w) => !w.ok).map((w) => w.word.toLowerCase()); const t = card?.tips.find((x) => bad.some((w) => w.includes(x.found.toLowerCase()))) || (bad.length ? card?.tips[0] : null); return t ? <p style={{ margin: '6px 0 0', fontSize: 14, lineHeight: 1.45 }}><strong>{t.label}:</strong> {t.tip}</p> : null; })()}
@@ -249,6 +288,11 @@ export default function PracticeSession() {
       {phase === 'result' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
           <button onClick={retry} style={btn('ghost')}>Torna-ho a provar</button>
+          <button onClick={next} style={btn('primary')}>{i + 1 >= drills.length ? 'Acaba la sessió' : 'Següent'}</button>
+        </div>
+      ) : mode !== 'parla' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
+          {mode === 'auto' && <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: 'var(--text-soft)' }}>Sonant… passa sola</div>}
           <button onClick={next} style={btn('primary')}>{i + 1 >= drills.length ? 'Acaba la sessió' : 'Següent'}</button>
         </div>
       ) : (

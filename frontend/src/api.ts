@@ -329,6 +329,7 @@ export interface PracticeCollections {
 export interface PracticeTip { sound: string; label: string; found: string; tip: string }
 export interface PracticeCard { speaker: string; origin: string; day: string | null; tips: PracticeTip[]; highlights: string[] }
 export interface PronunciationWord { word: string; ok: boolean; heard: string | null }
+export type PracticeMode = 'parla' | 'escolta' | 'auto';
 /** Veus: a drill the community can record (a petition, a synthetic-only drill, or a wishlist sentence). */
 export interface PetitionItem { drill: Drill; units: string[]; level: number; requested_by: string | null; note: string | null }
 export interface LessonProposal { id: number; slug: string; step: number; kind: 'text' | 'note'; text: string; display_name: string | null; region: string | null; status: string; created_at: string }

@@ -18,6 +18,9 @@ def test_words_compare_by_sound_not_spelling():
     w = practice.compare_words("tasneem iskm ingha yits?", "tasneem iskm")
     assert [x["ok"] for x in w] == [True, True, False, False]
     assert practice.sound_key("ghur") == practice.sound_key("ɣur") == practice.sound_key("Ġur")
+    # the recogniser answers in Tifinagh: the same words in either script compare equal
+    assert practice.sound_key("ⴼⵛⵉⴷ") == practice.sound_key("fsh-i-d") == practice.sound_key("fšid")
+    assert [x["ok"] for x in practice.compare_words("fsh-i fsh-i-d", "ⴼⵛⵉ ⴼⵛⵉⴷ")] == [True, True]
 
 
 def test_collections_and_session(monkeypatch):

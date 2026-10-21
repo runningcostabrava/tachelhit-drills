@@ -29,6 +29,7 @@ from tts_text import tts_text, VOICE_VERSION
 import topics as topics_catalog
 import grammar as grammar_course
 import practice as practice_mod
+import transliteration
 from gemini_client import gemini_generate, gemini_available, gemini_agent, BudgetExceeded
 import gemini_client
 import ai_budget
@@ -6614,6 +6615,7 @@ async def pronunciation_check(
             "heard": fixed,
             "score": round(max(score, 0.0), 3),
             "words": practice_mod.compare_words(latin, fixed),  # the speaker's words, each ok or not
+            "heard_latin": transliteration.to_forms(fixed)["clean_latin"] if fixed else "",  # what was heard, readable
         }
     except HTTPException:
         raise
