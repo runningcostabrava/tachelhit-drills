@@ -84,7 +84,7 @@ UNITS: List[dict] = [
 SLUGS = [u["slug"] for u in UNITS]
 TITLES = {u["slug"]: u["title"] for u in UNITS}
 BATCH = 40
-LESSON_VERSION = 11  # bump when the lesson format or prompt changes: old rows are rewritten on next open
+LESSON_VERSION = 12  # bump when the lesson format or prompt changes: old rows are rewritten on next open
 
 # Drills whose tag names another language are never part of the course (the owner's old Irish tests).
 EXCLUDED_TAGS = ("irish",)
@@ -577,7 +577,9 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str, tables: Optiona
            if unit.get("level") == 2 else "")
         + "Build the lesson as STEPS, each one a card the learner reads in a few seconds:\n"
         "- 7 to 9 steps of type \"explain\": a title (3-6 words), a text of 35-70 words, example_ids (4-6, ONLY from "
-        "the sentences below) and \"focus\": {id: substring} for each quoted sentence. START WITH THE MOST BASIC: "
+        "the sentences below) and \"focus\": {id: substring} for each quoted sentence. Fewer than four sentences in a "
+        "step is not acceptable: if four of our sentences do not show the rule, teach a rule they do show. "
+        "START WITH THE MOST BASIC: "
         "the first step uses the shortest examples (a single word or a two-word formula when there is one, e.g. a "
         "bare greeting, a bare noun, a bare number) and each step builds on the previous one, so the longest "
         "sentences come last. Never open a unit with a long sentence.\n"
@@ -624,7 +626,7 @@ def _parse_lesson(answer: str, examples: List[dict]) -> dict:
                 continue
             focus = s.get("focus") if isinstance(s.get("focus"), dict) else {}
             exs = []
-            for i in list(dict.fromkeys(ids))[:3]:
+            for i in list(dict.fromkeys(ids))[:6]:
                 e = dict(by_id[i]); frag = _clean_text(str(focus.get(str(i)) or focus.get(i) or ""))
                 if frag and frag.lower() in e["shi"].lower() and len(frag) < len(e["shi"]):
                     e["focus"] = frag
@@ -638,7 +640,44 @@ def _parse_lesson(answer: str, examples: List[dict]) -> dict:
             steps.append({"type": t, "text": _clean_prose(s.get("text"))})
     if not any(s["type"] == "explain" for s in steps):
         raise ValueError("lesson without explain steps")
-    return {"intro": _clean_prose(raw.get("intro")), "steps": steps}
+    return _top_up({"intro": _clean_prose(raw.get("intro")), "steps": steps}, examples)
+
+
+def _fold(t: str) -> str:
+    """A text as it sounds, so «ghori» and «ɣur-i» are the same piece of language: our speakers
+    spell the same word three ways."""
+    import practice
+    # whole words, hyphens kept: «ɣur-i» is one piece of language, not «ɣur» and «i»
+    return "".join(practice.sound_key(w) for w in re.split(r"\s+", (t or "").lower()) if w)
+
+
+def _top_up(lesson: dict, examples: List[dict], want: int = 4) -> dict:
+    """An explanation that quotes fewer than `want` sentences gets more from the unit's own pool:
+    only sentences that really contain the piece being taught (by sound, so another spelling of the
+    same word counts), never one the lesson already shows."""
+    used = quoted_ids(lesson)
+    for s in lesson["steps"]:
+        if s["type"] != "explain" or len(s["examples"]) >= want:
+            continue
+        frags = [e["focus"] for e in s["examples"] if e.get("focus")]
+        for frag in frags:
+            key = _fold(frag)
+            if not key:
+                continue
+            for e in examples:
+                if len(s["examples"]) >= want:
+                    break
+                if e["id"] in used or not e["shi"]:
+                    continue
+                low, fl = e["shi"].lower(), frag.lower()
+                if fl in low:
+                    add = dict(e); add["focus"] = e["shi"][low.index(fl):low.index(fl) + len(fl)]
+                elif key in _fold(e["shi"]):
+                    add = dict(e)  # the same word, spelled another way: no highlight, still the rule
+                else:
+                    continue
+                s["examples"].append(add); used.add(e["id"])
+    return lesson
 
 
 def _with_quizzes(lesson: dict, examples: List[dict]) -> dict:

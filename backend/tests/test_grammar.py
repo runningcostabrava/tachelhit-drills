@@ -169,6 +169,23 @@ def test_lesson_json_tolerates_trailing_commas():
     assert lesson["steps"][0]["examples"][0]["id"] == 1
 
 
+def test_an_explanation_never_shows_fewer_than_four_sentences():
+    """The writer quotes three; the library has thirty more that carry the same piece."""
+    import grammar, json as _json
+    ex = [{"id": 1, "shi": "ɣur-i yat", "ca": "en tinc una", "image_url": None, "audio_url": None, "recorded": False, "author": None, "region": None, "origin": ""},
+          {"id": 2, "shi": "ghori tigmmi", "ca": "tinc una casa", "image_url": None, "audio_url": None, "recorded": False, "author": None, "region": None, "origin": ""},
+          {"id": 3, "shi": "ɣur-i aman", "ca": "tinc aigua", "image_url": None, "audio_url": None, "recorded": False, "author": None, "region": None, "origin": ""},
+          {"id": 4, "shi": "ur ɣur-i walu", "ca": "no tinc res", "image_url": None, "audio_url": None, "recorded": False, "author": None, "region": None, "origin": ""},
+          {"id": 5, "shi": "izri wass", "ca": "el dia ha passat", "image_url": None, "audio_url": None, "recorded": False, "author": None, "region": None, "origin": ""}]
+    answer = _json.dumps({"intro": "x", "steps": [{"type": "explain", "title": "ɣur-i", "text": "Per dir que tens una cosa.",
+                                                   "example_ids": [1], "focus": {"1": "ɣur-i"}}]})
+    lesson = grammar._parse_lesson(answer, ex)
+    got = [e["id"] for e in lesson["steps"][0]["examples"]]
+    assert got[0] == 1 and len(got) == 4 and 5 not in got  # «izri wass» does not carry the rule
+    assert 2 in got  # «ghori», the same word spelled another way, does
+    assert lesson["steps"][0]["examples"][2]["focus"] == "ɣur-i"  # the piece is marked where it is written
+
+
 def test_conjugation_lists_become_the_lessons_tables():
     """The deck wrote out 299 paradigms; they are no example, but they are what a table is made of."""
     import grammar
