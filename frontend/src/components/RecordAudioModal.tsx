@@ -27,6 +27,9 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
   const [ownText, setOwnText] = useState(drill.text_tachelhit || '');
   const [ownVariety, setOwnVariety] = useState('');
   const [ownTown, setOwnTown] = useState('');
+  // the speaker's declared profile: a take without a place is not accepted (every voice carries its town)
+  const [profile, setProfile] = useState<{ variety: string | null; region: string | null } | null | undefined>(undefined);
+  useEffect(() => { api.me().then((m) => setProfile(m ? { variety: m.variety ?? null, region: m.region ?? null } : null)).catch(() => setProfile(null)); }, []);
   const recRef = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
 
@@ -65,6 +68,8 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
     setBusy(true);
     try {
       const ext = blob.type.includes('webm') ? 'webm' : blob.type.includes('mp4') ? 'mp4' : 'ogg';
+      if (!ownTown.trim() && !profile?.region) { toast.error('Digues de quin poble o zona ets: cada veu porta el seu lloc.'); setBusy(false); return; }
+      if (!ownVariety && !profile?.variety) { toast.error('Tria la teva varietat (o la més propera).'); setBusy(false); return; }
       const fd = new FormData();
       fd.append('file', blob, `take_${drill.id}.${ext}`);
       if (ownText.trim()) fd.append('text', ownText.trim());
@@ -73,6 +78,9 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
       const res = await fetch(`${API_BASE}/drills/${drill.id}/recordings`, { method: 'POST', body: fd });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'upload failed');
       toast.success('Veu afegida');
+      if (profile !== undefined && profile !== null && (!profile.region || !profile.variety) && (ownTown.trim() || ownVariety)) {
+        api.updateMe({ ...(ownTown.trim() && !profile.region ? { region: ownTown.trim() } : {}), ...(ownVariety && !profile.variety ? { variety: ownVariety } : {}) }).catch(() => {});
+      }
       setBlob(null);
       setBlobUrl(null);
       load();

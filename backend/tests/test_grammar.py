@@ -6,7 +6,7 @@ from test_api import client
 
 def test_units_are_ordered_and_endpoint_lists_them():
     r = client.get("/grammar").json()
-    assert [u["slug"] for u in r["units"]] == grammar.SLUGS and r["units"][0]["slug"] == "formules"
+    assert [u["slug"] for u in r["units"]] == grammar.SLUGS and r["units"][0]["slug"] == grammar.SOUNDS_UNIT and r["units"][1]["slug"] == "formules"
     assert set(r["counts"]) == set(grammar.SLUGS)
 
 

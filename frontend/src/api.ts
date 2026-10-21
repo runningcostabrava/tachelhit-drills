@@ -232,6 +232,11 @@ export const api = {
   grammarUnit: (slug: string, limit = 60) => request<GrammarUnitPage>(`/grammar/${slug}?limit=${limit}`),
   grammarRewrite: (slug: string) => request<GrammarUnitPage>(`/grammar/${slug}/rewrite`, { method: 'POST' }),
   grammarWishlist: () => request<{ units: GrammarWishUnit[] }>('/grammar/wishlist'),
+  petitions: (kind: 'open' | 'synthetic' | 'aitmraw', limit = 40) => request<{ items: PetitionItem[]; total: number }>(`/petitions?kind=${kind}&limit=${limit}`),
+  addPetition: (text_catalan: string, note: string | null) => request<Drill>('/petitions', { method: 'POST', body: JSON.stringify({ text_catalan, note }) }),
+  lessonProposals: (slug: string) => request<LessonProposal[]>(`/grammar/${slug}/proposals`),
+  proposeLessonChange: (slug: string, step: number, text: string, kind: 'text' | 'note' = 'text') => request<{ id: number; status: string }>(`/grammar/${slug}/proposals`, { method: 'POST', body: JSON.stringify({ step, text, kind }) }),
+  decideProposal: (id: number, accept: boolean) => request<{ id: number; status: string }>(`/grammar/proposals/${id}/decide`, { method: 'POST', body: JSON.stringify({ accept }) }),
   practiceCollections: () => request<PracticeCollections>('/practice/collections'),
   practiceSession: (query: string) => request<{ drills: Drill[]; cards: PracticeCard[] }>(`/practice/session?${query}`),
   reviewsDue: (limit = 10) => request<Drill[]>(`/reviews/due?limit=${limit}`),
@@ -321,6 +326,9 @@ export interface PracticeCollections {
 export interface PracticeTip { sound: string; label: string; found: string; tip: string }
 export interface PracticeCard { speaker: string; origin: string; day: string | null; tips: PracticeTip[]; highlights: string[] }
 export interface PronunciationWord { word: string; ok: boolean; heard: string | null }
+/** Veus: a drill the community can record (a petition, a synthetic-only drill, or a wishlist sentence). */
+export interface PetitionItem { drill: Drill; units: string[]; level: number; requested_by: string | null; note: string | null }
+export interface LessonProposal { id: number; slug: string; step: number; kind: 'text' | 'note'; text: string; display_name: string | null; region: string | null; status: string; created_at: string }
 /** A unit in the recording wishlist: how many of its sentences carry an Aït Mraw voice, and the ones worth recording. */
 export interface GrammarWishUnit extends GrammarUnit { total: number; aitmraw_voiced: number; wanted: Drill[] }
 

@@ -5,7 +5,7 @@ import axios from 'axios';
 import { API_BASE } from './config';
 import { api } from './api';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { FaLayerGroup, FaVideo, FaBookOpen, FaGraduationCap, FaFilm, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook } from 'react-icons/fa';
+import { FaLayerGroup, FaVideo, FaBookOpen, FaGraduationCap, FaFilm, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaMicrophone } from 'react-icons/fa';
 import { syncManager } from './services/OfflineSyncManager';
 import ToastHost from './components/ToastHost';
 import AiCopilot from './components/AiCopilot';
@@ -17,6 +17,7 @@ const DrillsResponsive = lazy(() => import('./components/DrillsResponsive'));
 const TestsDashboard = lazy(() => import('./components/TestsDashboard'));
 const PracticePage = lazy(() => import('./components/PracticePage'));
 const PracticeSession = lazy(() => import('./components/PracticeSession'));
+const VeusPage = lazy(() => import('./components/VeusPage'));
 const YouTubeShorts = lazy(() => import('./components/YouTubeShorts'));
 const DrillPlayerPage = lazy(() => import('./components/DrillPlayerPage'));
 const PublicTestView = lazy(() => import('./components/PublicTestView'));
@@ -134,6 +135,7 @@ function App() {
     { to: '/grammar', label: 'Gramàtica', Icon: FaBook },
     { to: '/corpus', label: 'Corpus', Icon: FaBookOpen },
     { to: '/tests', label: 'Pràctica', Icon: FaGraduationCap },
+    { to: '/veus', label: 'Veus', Icon: FaMicrophone },
     { to: '/shorts', label: 'Reels', Icon: FaFilm },
   ];
   const navBtn = (active: boolean): React.CSSProperties => ({
@@ -181,6 +183,7 @@ function App() {
         <Route path="/tests" element={<PracticePage />} />
         <Route path="/tests/sessio" element={<PracticeSession />} />
         <Route path="/tests/llistes" element={<TestsDashboard />} />
+        <Route path="/veus" element={<VeusPage />} />
         <Route path="/tests/:testId" element={<PublicTestView />} />
         <Route path="/tests/:testId/listen" element={<PublicTestView initialView="listening" />} />
         <Route path="/shorts" element={<YouTubeShorts />} />

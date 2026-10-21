@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from '../toast';
 import { FaBullseye, FaCheck, FaChevronLeft, FaChevronRight, FaLightbulb, FaMapMarkerAlt, FaMicrophone, FaRedo, FaTimes, FaVolumeUp } from 'react-icons/fa';
-import { api, type GrammarUnit, type GrammarUnitPage, type GrammarWishUnit, type LessonExample, type LessonStep } from '../api';
+import { api, type GrammarUnit, type GrammarUnitPage, type GrammarWishUnit, type LessonExample, type LessonProposal, type LessonStep } from '../api';
 import { API_BASE, getMediaUrl } from '../config';
 import RecordAudioModal from './RecordAudioModal';
 import type { Drill } from '../types';
@@ -58,8 +58,8 @@ function CourseView() {
         </div>
       )}
       <div style={{ fontSize: '13px', color: 'var(--text-soft)', margin: '-8px 0 16px' }}>
-        <button onClick={() => navigate('/grammar/gravacions')} style={{ background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 6 }}><FaMicrophone size={12} /> Frases per gravar</button>
-        {' '}· les unitats on encara falten veus d’Aït Mraw.
+        <button onClick={() => navigate('/veus')} style={{ background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 6 }}><FaMicrophone size={12} /> Veus</button>
+        {' '}· demana com es diu una frase, o grava les que saps. A cada targeta del curs pots proposar un canvi.
       </div>
       {levels.map((lv) => (
         <section key={lv} style={{ marginBottom: '22px' }}>
@@ -94,12 +94,15 @@ function UnitView({ slug }: { slug: string }) {
   const [rewriting, setRewriting] = useState(false);
   const [units, setUnits] = useState<GrammarUnit[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [signedIn, setSignedIn] = useState(false);
+  const [proposals, setProposals] = useState<LessonProposal[]>([]);
+  const loadProposals = useCallback(() => { api.lessonProposals(slug).then(setProposals).catch(() => setProposals([])); }, [slug]);
 
   useEffect(() => {
     setPage(null); setError(null); setI(0); setAnswers({});
     api.grammarUnit(slug).then(setPage).catch((e) => setError(e?.message || 'Error'));
-    api.me().then((m) => setIsAdmin(!!m?.is_admin)).catch(() => {});
-  }, [slug]);
+    api.me().then((m) => { setIsAdmin(!!m?.is_admin); setSignedIn(!!m); if (m) loadProposals(); }).catch(() => {});
+  }, [slug, loadProposals]);
   useEffect(() => { api.grammarUnits().then((r) => { setUnits(r.units); setCounts(r.counts); }).catch(() => {}); }, []);
   const nextUnit = useMemo(() => {
     const k = units.findIndex((u) => u.slug === slug);
@@ -175,7 +178,8 @@ function UnitView({ slug }: { slug: string }) {
             {card.type === 'pattern' && <PatternCard step={card} />}
             {card.type === 'quiz' && <QuizCard step={card} chosen={answers[i]} onChoose={(k) => setAnswers((a) => ({ ...a, [i]: k }))} />}
             {(card.type === 'tip' || card.type === 'dialect') && <NoteCard step={card} />}
-            {card.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} nextUnit={nextUnit} />}
+            {card.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} nextUnit={nextUnit} proposals={proposals} onDecided={loadProposals} />}
+        {(card.type === 'explain' || card.type === 'tip' || card.type === 'dialect' || card.type === 'intro') && page.lesson.steps.length > 0 && <ProposeChange slug={slug} step={i - 1} current={card.type === 'intro' ? page.lesson.intro : card.text} signedIn={signedIn} onSent={loadProposals} />}
           </div>
           <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, padding: '10px 16px calc(10px + env(safe-area-inset-bottom))', background: 'var(--bg)', borderTop: '1px solid var(--border)', zIndex: 5 }}>
             <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', gap: '10px' }}>
@@ -324,7 +328,37 @@ function NoteCard({ step }: { step: Extract<LessonStep, { type: 'tip' | 'dialect
   );
 }
 
-function EndCard({ page, answers, cards, onTest, isAdmin, onRewrite, rewriting, nextUnit }: { page: GrammarUnitPage; answers: Record<number, number>; cards: Card[]; onTest: () => void; isAdmin: boolean; onRewrite: () => void; rewriting: boolean; nextUnit: GrammarUnit | null }) {
+// «Proposa un canvi»: anyone signed in can suggest a better text for a card (or a note); an admin
+// accepts it into the lesson or rejects it.
+function ProposeChange({ slug, step, current, signedIn, onSent }: { slug: string; step: number; current: string; signedIn: boolean; onSent: () => void }) {
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { setOpen(false); setText(''); }, [step, slug]);
+  const send = async () => {
+    if (text.trim().length < 3) { toast.error('Escriu la proposta'); return; }
+    setBusy(true);
+    try { await api.proposeLessonChange(slug, step, text.trim()); toast.success('Proposta enviada. Un administrador la revisarà.'); setOpen(false); setText(''); onSent(); }
+    catch (e: any) { toast.error(e?.message || 'No s’ha pogut enviar'); } finally { setBusy(false); }
+  };
+  if (!open) return <div style={{ marginTop: 10, textAlign: 'right' }}><button onClick={() => { if (!signedIn) { navigate('/profile'); return; } setOpen(true); setText(current); }} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', padding: 4 }}>Proposa un canvi en aquesta targeta</button></div>;
+  return (
+    <div style={{ marginTop: 12, padding: 12, borderRadius: 'var(--r-lg)', border: '1px dashed var(--border)', background: 'var(--surface-2)' }}>
+      <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 }}>La teva versió d’aquesta targeta</div>
+      <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} style={{ width: '100%', boxSizing: 'border-box', padding: 10, borderRadius: 'var(--r-md)', border: '1px solid var(--border)', fontSize: 14, fontFamily: 'inherit', background: 'var(--surface)', color: 'var(--text)', lineHeight: 1.45 }} />
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+        <button onClick={() => setOpen(false)} style={{ padding: '8px 14px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>Cancel·la</button>
+        <button onClick={send} disabled={busy} style={{ padding: '8px 14px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>Envia la proposta</button>
+      </div>
+    </div>
+  );
+}
+
+function EndCard({ page, answers, cards, onTest, isAdmin, onRewrite, rewriting, nextUnit, proposals, onDecided }: { page: GrammarUnitPage; answers: Record<number, number>; cards: Card[]; onTest: () => void; isAdmin: boolean; onRewrite: () => void; rewriting: boolean; nextUnit: GrammarUnit | null; proposals: LessonProposal[]; onDecided: () => void }) {
+  const decide = async (id: number, accept: boolean) => {
+    try { await api.decideProposal(id, accept); toast.success(accept ? 'Canvi aplicat a la lliçó' : 'Proposta rebutjada'); onDecided(); } catch (e: any) { toast.error(e?.message || 'No s’ha pogut'); }
+  };
   const navigate = useNavigate();
   const [showAll, setShowAll] = useState(false);
   const quizzes = cards.map((c, k) => ({ c, k })).filter(({ c }) => c.type === 'quiz');
@@ -340,6 +374,21 @@ function EndCard({ page, answers, cards, onTest, isAdmin, onRewrite, rewriting, 
         {(page.practice?.length ?? page.drills.length) > 0 && <button onClick={onTest} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: 'var(--r-pill)', border: nextUnit ? '1px solid var(--brand-1)' : 'none', background: nextUnit ? 'var(--surface)' : 'var(--brand-gradient)', color: nextUnit ? 'var(--brand-1)' : '#fff', fontWeight: 700, cursor: 'pointer' }}><FaBullseye /> Practica aquesta unitat</button>}
         <button onClick={() => setShowAll((v) => !v)} style={{ padding: '10px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, cursor: 'pointer' }}>{showAll ? 'Amaga els exemples' : `Tots els exemples · ${page.total}`}</button>
         {isAdmin && page.lesson.study && <details style={{ width: '100%', order: 9 }}><summary style={{ cursor: 'pointer', fontSize: '13px', color: 'var(--text-soft)', fontWeight: 700 }}>Full d’estudi (del compendi, només administradors)</summary><pre style={{ whiteSpace: 'pre-wrap', fontSize: '13px', lineHeight: 1.5, color: 'var(--text)', fontFamily: 'var(--font-sans)', margin: '8px 0 0' }}>{page.lesson.study}</pre></details>}
+        {proposals.length > 0 && (
+          <div style={{ width: '100%', order: 8, padding: 12, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface-2)' }}>
+            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>{isAdmin ? 'Propostes pendents de revisar' : 'Les teves propostes pendents'}</div>
+            {proposals.map((p) => (
+              <div key={p.id} style={{ padding: '8px 0', borderTop: '1px solid var(--border)', fontSize: 14 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>{p.display_name || 'Anònim'}{p.region ? ` · ${p.region}` : ''} · targeta {p.step + 2}</div>
+                <div style={{ lineHeight: 1.45, color: 'var(--text)' }}>{p.text}</div>
+                {isAdmin && <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                  <button onClick={() => decide(p.id, true)} style={{ padding: '6px 12px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--emerald)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }}>Accepta</button>
+                  <button onClick={() => decide(p.id, false)} style={{ padding: '6px 12px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12 }}>Rebutja</button>
+                </div>}
+              </div>
+            ))}
+          </div>
+        )}
         {isAdmin && <button onClick={onRewrite} disabled={rewriting} title="Torna a escriure la lliçó (administrador)" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)', fontWeight: 700, cursor: rewriting ? 'default' : 'pointer' }}><FaRedo /> {rewriting ? 'Reescrivint…' : 'Reescriu la lliçó'}</button>}
       </div>
       {showAll && (

@@ -91,6 +91,8 @@ class DrillBase(BaseModel):
     source_playlist: Optional[str] = None
     license: Optional[str] = None
     verified: Optional[bool] = None
+    requested_by: Optional[str] = None
+    requested_note: Optional[str] = None
 
     # Validators for URL fields
     @field_validator('audio_url', 'audio_tts_url', 'audio_tts_shi_url', 'video_url', 'image_url')

@@ -66,7 +66,7 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
 
-from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel, CaptureRequest as CaptureRequestModel, DrillTombstone as DrillTombstoneModel, UserSession as UserSessionModel, GeminiUsage as GeminiUsageModel  # ← Alias for ORM models
+from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel, LessonProposal as LessonProposalModel, CaptureRequest as CaptureRequestModel, DrillTombstone as DrillTombstoneModel, UserSession as UserSessionModel, GeminiUsage as GeminiUsageModel  # ← Alias for ORM models
 from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort, VideoProcessingJobCreate, VideoProcessingJob, VideoSegmentCreate, VideoSegment, TranscribeRequest, TranscribeResponse, TranslateRequest, TranslateResponse, DrillPairInfo, GlossaryItem, GlossaryItemCreate, SrtImportRequest, SrtImportResponse, SrtSegment, BulkVideoUrlUpdateRequest, BulkVideoUrlUpdateResponse, iso_z  # ← Pydantic schemas
 from correction_service import get_correction_service
 from srt_parser import parse_srt_content, create_youtube_url_with_timestamp
@@ -5291,6 +5291,13 @@ async def add_recording(
     # promote to the drill's primary audio if it has none yet
     if not (drill.audio_url or "").strip():
         drill.audio_url = url
+    # a petition (Catalan only) gets its Tamazight from the first speaker who answers it, in their
+    # own spelling; their variety and town travel with it
+    if not (drill.text_tachelhit or "").strip() and (text or "").strip():
+        drill.text_tachelhit = (text or "").strip()
+        drill.variety = drill.variety or rec.variety
+        drill.region = drill.region or rec.region
+        drill.speaker = drill.speaker or rec.speaker
     db.commit()
     db.refresh(rec)
     return {"id": rec.id, "audio_url": rec.audio_url, "variety": rec.variety,
@@ -5506,6 +5513,102 @@ def catalog_topics_status():
 
 
 # ===================== GRAMMAR COURSE =====================
+# ===================== VEUS: petitions and recordings wanted =====================
+def _petition_row(d, units_level: dict) -> dict:
+    us = grammar_course.parse(d.grammar)
+    return {"drill": Drill.model_validate(d, from_attributes=True), "units": us,
+            "level": min([units_level.get(u, 9) for u in us] or [9]), "requested_by": d.requested_by, "note": d.requested_note}
+
+
+@app.get("/petitions")
+def petitions(kind: str = "open", limit: int = 40, db: Session = Depends(get_db)):
+    """What the community can record. `open`: sentences a learner asked for, still without Tamazight
+    (a speaker answers with their recording and their own spelling). `synthetic`: drills that have a
+    text but no human voice yet (only a synthetic one), the basic units first. `aitmraw`: the
+    sentences our Aït Mraw speakers could say in their words (the course's wishlist)."""
+    units_level = {u["slug"]: u["level"] for u in grammar_course.UNITS}
+    base = grammar_course.not_excluded(db.query(DrillModel), DrillModel)
+    if kind == "open":
+        rows = base.filter(DrillModel.tag.ilike("%petici%"), (DrillModel.text_tachelhit.is_(None)) | (DrillModel.text_tachelhit == "")).order_by(DrillModel.id.desc()).all()
+        return {"items": [_petition_row(d, units_level) for d in rows[:max(1, min(limit, 200))]], "total": len(rows)}
+    if kind == "synthetic":
+        rows = base.filter(DrillModel.text_tachelhit.isnot(None), DrillModel.text_tachelhit != "", DrillModel.text_catalan.isnot(None),
+                           (DrillModel.audio_url.is_(None)) | (DrillModel.audio_url == "")).all()
+        rows = [d for d in rows if grammar_course.quotable(d.text_tachelhit, (grammar_course.parse(d.grammar) or [None])[0])]
+        items = [_petition_row(d, units_level) for d in rows]
+        items.sort(key=lambda x: (x["level"], not x["drill"].image_url, -x["drill"].id))
+        return {"items": items[:max(1, min(limit, 200))], "total": len(items)}
+    if kind == "aitmraw":
+        w = grammar_wishlist(per_unit=6, db=db)["units"]
+        items = [{"drill": d, "units": [u["slug"]], "level": u["level"], "requested_by": None, "note": f"Unitat «{u['title']}»: {u['aitmraw_voiced']} veus d'Aït Mraw"} for u in w for d in u["wanted"]]
+        return {"items": items[:max(1, min(limit, 200))], "total": len(items)}
+    raise HTTPException(status_code=400, detail="kind must be open, synthetic or aitmraw")
+
+
+@app.post("/petitions")
+def add_petition(text_catalan: str = Body(..., embed=True), note: Optional[str] = Body(None, embed=True),
+                 db: Session = Depends(get_db), user: UserModel = Depends(require_user)):
+    """A learner asks how to say something: a drill with the Catalan only, tagged «petició», that a
+    native speaker completes by recording it with their own words."""
+    t = (text_catalan or "").strip()
+    if len(t) < 2:
+        raise HTTPException(status_code=400, detail="Escriu què vols saber dir")
+    d = DrillModel(text_catalan=t, text_tachelhit="", tag="petició", requested_by=(user.display_name or user.username),
+                   requested_note=(note or "").strip() or None, created_by_user_id=user.id, grammar_source="auto", topics_source="auto")
+    db.add(d); db.commit(); db.refresh(d)
+    return Drill.model_validate(d, from_attributes=True)
+
+
+@app.get("/grammar/{slug}/proposals")
+def lesson_proposals(slug: str, db: Session = Depends(get_db), user: Optional[UserModel] = Depends(get_current_user)):
+    """The pending proposals for a lesson: all of them for an admin, their own for anyone else."""
+    q = db.query(LessonProposalModel).filter(LessonProposalModel.slug == slug, LessonProposalModel.status == "pending")
+    if not (user and user.is_admin):
+        q = q.filter(LessonProposalModel.user_id == (user.id if user else -1))
+    return [{"id": p.id, "slug": p.slug, "step": p.step, "kind": p.kind, "text": p.text, "display_name": p.display_name, "region": p.region,
+             "status": p.status, "created_at": p.created_at.isoformat()} for p in q.order_by(LessonProposalModel.id.desc()).all()]
+
+
+@app.post("/grammar/{slug}/proposals")
+def propose_lesson_change(slug: str, step: int = Body(..., embed=True), text: str = Body(..., embed=True), kind: str = Body("text", embed=True),
+                          db: Session = Depends(get_db), user: UserModel = Depends(require_user)):
+    """A learner or speaker proposes a change to a card (step index; -1 = the intro): a new text,
+    or a note. Kept for an admin to accept or reject."""
+    if slug not in grammar_course.TITLES:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    t = (text or "").strip()
+    if len(t) < 3:
+        raise HTTPException(status_code=400, detail="Escriu la proposta")
+    p = LessonProposalModel(slug=slug, step=int(step), kind=("note" if kind == "note" else "text"), text=t, user_id=user.id,
+                            display_name=(user.display_name or user.username), region=user.region)
+    db.add(p); db.commit(); db.refresh(p)
+    return {"id": p.id, "status": p.status}
+
+
+@app.post("/grammar/proposals/{proposal_id}/decide")
+def decide_lesson_proposal(proposal_id: int, accept: bool = Body(..., embed=True), db: Session = Depends(get_db), _admin: UserModel = Depends(require_admin)):
+    """Admin: accept (the text replaces the card's text in the stored lesson) or reject a proposal."""
+    from models import GrammarLesson
+    p = db.query(LessonProposalModel).filter(LessonProposalModel.id == proposal_id).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    if accept and p.kind == "text":
+        row = db.query(GrammarLesson).filter(GrammarLesson.id == p.slug).first()
+        if not row:
+            raise HTTPException(status_code=409, detail="The lesson is not written yet")
+        lesson = json.loads(row.body)
+        if p.step == -1:
+            lesson["intro"] = p.text
+        elif 0 <= p.step < len(lesson.get("steps", [])) and "text" in lesson["steps"][p.step]:
+            lesson["steps"][p.step]["text"] = p.text
+        else:
+            raise HTTPException(status_code=409, detail="That card no longer exists in the lesson")
+        row.body = json.dumps(lesson, ensure_ascii=False); row.updated_at = datetime.utcnow()
+    p.status = "accepted" if accept else "rejected"
+    db.commit()
+    return {"id": p.id, "status": p.status}
+
+
 # ===================== PRÀCTICA (pronunciation sessions) =====================
 @app.get("/practice/collections")
 def practice_collections(db: Session = Depends(get_db)):
@@ -5535,6 +5638,8 @@ def grammar_units():
 
 def _grammar_unit_rows(db, slug: str, limit: int = 1500):
     """The unit's drills, pictured-and-voiced first, then voiced, then by id; excluded tags left out."""
+    if slug == grammar_course.SOUNDS_UNIT:
+        return grammar_course.sound_rows(db, limit=min(limit, 300))
     q = grammar_course.not_excluded(db.query(DrillModel).filter(DrillModel.grammar.ilike(f"%{slug}%")), DrillModel)
     rows = q.order_by(DrillModel.audio_url.isnot(None).desc(), DrillModel.image_url.isnot(None).desc(), DrillModel.id.asc()).limit(limit).all()
     return [d for d in rows if slug in grammar_course.parse(d.grammar)]
@@ -5553,7 +5658,7 @@ def _grammar_unit_payload(db, slug: str, limit: int, force: bool):
     except Exception as e:
         print(f"[GRAMMAR] lesson {slug}: {e}")
         lesson = {"intro": "", "steps": [{"type": "explain", "title": unit["title"], "text": "La lliçó encara no s’ha pogut escriure. Mira els exemples de la biblioteca mentrestant.", "examples": examples[:3]}, {"type": "end"}], "error": str(e)[:160]}
-    total = sum(1 for (g,) in grammar_course.not_excluded(db.query(DrillModel.grammar).filter(DrillModel.grammar.ilike(f"%{slug}%")), DrillModel).all() if slug in grammar_course.parse(g))
+    total = len(rows) if slug == grammar_course.SOUNDS_UNIT else sum(1 for (g,) in grammar_course.not_excluded(db.query(DrillModel.grammar).filter(DrillModel.grammar.ilike(f"%{slug}%")), DrillModel).all() if slug in grammar_course.parse(g))
     return {**{k: unit[k] for k in ("slug", "title", "level")}, "lesson": lesson, "total": total,
             "practice": [d.id for d in practice],
             "drills": [Drill.model_validate(d, from_attributes=True) for d in rows[:max(1, min(limit, 300))]]}

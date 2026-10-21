@@ -40,6 +40,16 @@ language, with Arabic and Latin romanization alongside Tifinagh (ⵜⵉⴼⵉⵏ
   leaves the unit (`backend/grammar.py`). `/grammar/gravacions` is the recording
   wishlist: the units with the fewest Aït Mraw voices, with the sentences our
   own speakers could say in their words.
+- **🎤 Veus** (`/veus`): the community's recording desk. A learner asks how to
+  say something (a petition: Catalan only); a native speaker answers with
+  their voice and their own spelling, and says where they are from (required;
+  saved to their profile) — the first answer fills the drill's Tamazight.
+  Also lists drills with only a synthetic voice (basic units first) and the
+  course's Aït Mraw wishlist. Every lesson card has «Proposa un canvi»: a
+  signed-in user's text goes to `lesson_proposals`; an admin accepts it into
+  the stored lesson or rejects it. The course now opens with unit 0, «Els sons
+  de l'amazic i com els escrivim» (compendium ch. 1), whose examples are our
+  speakers' short recorded words with a hard sound.
 - **🖼 Pictures that teach**: each drill's picture shows the *meaning* of the
   sentence — Gemini draws it in one flat flashcard style, Moroccan Amazigh
   setting, no written words (`backend/illustrate.py`; bulk fill on the Corpus
@@ -120,6 +130,9 @@ target the Render API.
 - `/capture/*` — queue a URL for the local capture agent (`tools/capture_agent.py`)
 - `POST /tts/catalan` — make the Catalan synthetic voice (`audio_tts_url`) of a drill
   that lacks one (idempotent); the player says the meaning first (CAT toggle)
+- `GET/POST /petitions` — what the community can record (open petitions, synthetic-only
+  drills, the Aït Mraw wishlist); `GET/POST /grammar/{slug}/proposals`,
+  `POST /grammar/proposals/{id}/decide` (admin) — lesson change proposals
 - `/grammar`, `/grammar/{slug}` — the course and one unit's lesson (steps) +
   examples + `practice` (the test's sentence ids); `/grammar/wishlist` — what
   our speakers could record next; admin: `POST /grammar/run` (classify),

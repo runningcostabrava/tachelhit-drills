@@ -43,6 +43,10 @@ class Drill(Base):
     topics_source = Column(String, nullable=True)  # 'auto' (Gemini) | 'owner' (set by hand)
     grammar = Column(String, nullable=True)         # grammar course units, comma-separated slugs (grammar.py)
     grammar_source = Column(String, nullable=True)  # 'auto' | 'owner'
+    # A petition: a learner asked how to say this (Catalan only); a native speaker's recording with
+    # their own words fills text_tachelhit (see /petitions and add_recording)
+    requested_by = Column(String, nullable=True)
+    requested_note = Column(Text, nullable=True)
     created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # contributor attribution
     variety = Column(String, nullable=True)   # e.g. "tashelhit", "central-atlas", "tarifit"
     region = Column(String, nullable=True)    # e.g. "Souss", "Tafraout", "diaspora-BCN"
@@ -190,6 +194,23 @@ class GrammarLesson(Base):
     body = Column(Text, nullable=False)            # JSON: {"intro": str, "steps": [...]}
     version = Column(Integer, nullable=True, default=1)
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
+
+
+class LessonProposal(Base):
+    """A learner's or speaker's proposed change to a lesson card (the text of one step, or the
+    intro when step = -1), reviewed by an admin: accepted = written into the stored lesson."""
+    __tablename__ = "lesson_proposals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    slug = Column(String, nullable=False, index=True)
+    step = Column(Integer, nullable=False)            # index in lesson["steps"]; -1 = the intro
+    kind = Column(String, nullable=False, default="text")  # 'text' (replace the card's text) | 'note' (free comment)
+    text = Column(Text, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    display_name = Column(String, nullable=True)
+    region = Column(String, nullable=True)
+    status = Column(String, nullable=False, default="pending", index=True)  # pending | accepted | rejected
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
 class User(Base):

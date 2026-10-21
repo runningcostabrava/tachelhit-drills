@@ -19,7 +19,15 @@ import time
 from typing import Dict, List, Optional
 
 # slug, Catalan title, chapters of the compendium that explain it, hint for the classifier
+SOUNDS_UNIT = "sons-i-escriptura"
 UNITS: List[dict] = [
+    {"slug": SOUNDS_UNIT, "title": "Els sons de l'amazic i com els escrivim", "chapters": [1], "level": 1,
+     "hint": "NEVER choose this unit: it is about sounds and spelling, not grammar",
+     "brief": "This unit is about SOUNDS and SPELLING, not grammar, for someone who has never heard the language: each "
+              "step presents one or two sounds Catalan speakers find hard (ɣ, ḥ, ɛ, q, x, the emphatic ṭ ḍ ṣ ẓ, long "
+              "consonants, š), says in plain words how to make the sound with the mouth and throat, shows how our "
+              "speakers spell it (gh / ġ / ɣ, kh / x, 3 / ɛ, sh / š) and quotes our short words that contain it; the "
+              "focus of each example is the letter or letters of that sound. No grammar at all."},
     {"slug": "formules", "title": "Fórmules bàsiques: salutar, agrair, acomiadar-se", "chapters": [7], "level": 1,
      "hint": "ONLY a fixed social formula used as a whole: greetings, how are you, thank you, goodbye, welcome, "
              "blessings and polite replies (azul, manzakin, tanmmirt, bslama, mrḥba, lla yɛawn). NOT 'yes' / 'no' / 'ok' / "
@@ -83,6 +91,7 @@ EXCLUDED_TAGS = ("irish",)
 
 # The compendium's own sections (N.N / N.N.N) that explain each unit: what the lesson writer reads.
 SECTIONS: Dict[str, List[str]] = {
+    SOUNDS_UNIT: ["1.1", "1.4"],
     "formules": ["7.1.1", "6.4", "7.3.3"],
     "pronoms-personals": ["4.1", "4.1.1"],
     "demostratius": ["4.2", "4.2.1", "4.3.3"],
@@ -213,6 +222,25 @@ def run(session_factory, force: bool = False, limit: int = 4000, only_ids: Optio
     return {"started": True, "done": _state["done"], "errors": _state["errors"]}
 
 
+def sound_rows(db, limit: int = 300) -> List:
+    """The sounds unit's examples: our speakers' short recorded words and phrases (≤ 3 words) that
+    contain a sound Catalan speakers find hard, the pictured ones first."""
+    from models import Drill as DrillModel
+    import practice
+    q = not_excluded(db.query(DrillModel).filter(DrillModel.audio_url.isnot(None), DrillModel.audio_url != "",
+                                                  DrillModel.text_tachelhit.isnot(None), DrillModel.text_tachelhit != ""), DrillModel)
+    out = []
+    for d in q.order_by(DrillModel.image_url.isnot(None).desc(), DrillModel.id.asc()).all():
+        shi = _clean_text(d.text_tachelhit)
+        if kind(shi) not in ("word", "sentence") or len(re.findall(r"[^\W\d_]+", shi)) > 3 or not quotable(shi, SOUNDS_UNIT):
+            continue
+        if practice.tips(shi, limit=1):
+            out.append(d)
+            if len(out) >= limit:
+                break
+    return out
+
+
 def counts(session_factory) -> Dict[str, int]:
     from models import Drill as DrillModel
     db = session_factory()
@@ -221,6 +249,7 @@ def counts(session_factory) -> Dict[str, int]:
         for (g,) in db.query(DrillModel.grammar).filter(DrillModel.grammar.isnot(None)).all():
             for s in parse(g):
                 c[s] = c.get(s, 0) + 1
+        c[SOUNDS_UNIT] = len(sound_rows(db))
         return c
     finally:
         db.close()
@@ -337,7 +366,7 @@ def kind(shi: Optional[str]) -> str:
 
 # Units whose point is the word itself: a single word is a valid example and a valid exercise
 # there («azul», «tanmmirt», «yan», «nkk»), where elsewhere only sentences show the rule.
-WORD_UNITS = {"formules", "noms-genere-nombre", "numerals", "pronoms-personals", "demostratius", "manlleus", "temps-adverbis"}
+WORD_UNITS = {SOUNDS_UNIT, "formules", "noms-genere-nombre", "numerals", "pronoms-personals", "demostratius", "manlleus", "temps-adverbis"}
 
 
 def quotable(shi: str, slug: Optional[str] = None) -> bool:
@@ -464,6 +493,7 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str) -> str:
         "the rule differently from the sheet (another form, another spelling, a particle missing), say so plainly: "
         "the speakers are right about their own speech, and the sheet describes mainly the Souss. If no sentence of "
         "ours shows a rule, leave that rule out or say we have no example yet; never invent a sentence.\n\n"
+        + ((unit.get("brief") + " ") if unit.get("brief") else "")
         + ("LEVEL 1 UNIT, for someone who knows NOTHING yet: only the most basic forms, each step one thing to say or "
            "recognise, no grammar vocabulary at all, no rule that needs a term to be explained. If the examples only "
            "allow 2-3 steps, write 2-3 steps. "
