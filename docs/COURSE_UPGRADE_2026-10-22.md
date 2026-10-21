@@ -73,9 +73,22 @@ canvien per la manera planera de dir-ho, encara que el qui escriu se n'oblidi.
 | | drills |
 |---|---|
 | sense unitat, o amb una d'inventada, ara classificats | 43 |
-| fórmules recuperades d'altres unitats | 24 (el fons passa de 15 a 39) |
-| frases afegides a l'estat d'annexió | 184 (la unitat passa de 43 a 227) |
-| glosses paraula per paraula | en curs, 3.148 drills |
+| frases que ara també pertanyen a una unitat que en tenia poques | 562 |
+| glosses paraula per paraula, refetes | en curs, 3.148 drills |
+
+Les unitats pobres eren les que escrivien lliçons curtes. Cada candidat es va pesar un per un i
+només s'hi va afegir quan la frase és de debò un exemple del que ensenya la unitat:
+
+| unitat | drills abans | ara | frases citables |
+|---|---|---|---|
+| estat d'annexió | 43 | 227 | 35 → 212 |
+| ser, estar i tenir | 273 | 409 | 80 → 205 |
+| derivació verbal | 40 | 154 | 26 → 138 |
+| possessius | 280 | 320 | 69 → 106 |
+| demostratius | 131 | 165 | 44 → 77 |
+| fórmules | 24 | 49 | 13 → 36 |
+| numerals | 128 | 151 | 70 → 92 |
+| imperatiu | 183 | 198 | 65 → 79 |
 
 ## El que cal de tu
 
