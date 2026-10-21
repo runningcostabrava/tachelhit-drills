@@ -490,10 +490,11 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
     const allTags = [...new Set(rowData.flatMap((d) => splitTags(d.tag)))].sort((a, b) => a.localeCompare(b));
     const tagDialog = showTagEditor && (
         <div style={overlayStyle} onClick={() => !tagBusy && setShowTagEditor(false)}>
-            <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--surface)', padding: '24px', borderRadius: 'var(--r-xl)', width: '100%', maxWidth: '420px', boxShadow: 'var(--shadow-xl)' }}>
-                <h3 style={{ margin: '0 0 4px 0', fontSize: '19px', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Etiquetes de {tagTargets.length} drills</h3>
-                <p style={{ margin: '0 0 14px 0', fontSize: '13px', color: 'var(--text-soft)' }}>Afegir una etiqueta no toca les que ja hi són. Treu-ne una amb la ✕.</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px', minHeight: '28px' }}>
+            <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--surface)', padding: '24px', borderRadius: 'var(--r-xl)', width: '100%', maxWidth: '420px', boxShadow: 'var(--shadow-xl)', display: 'flex', flexDirection: 'column', maxHeight: '85vh' }}>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '19px', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)', flexShrink: 0 }}>Etiquetes de {tagTargets.length} drills</h3>
+                <p style={{ margin: '0 0 14px 0', fontSize: '13px', color: 'var(--text-soft)', flexShrink: 0 }}>Afegir una etiqueta no toca les que ja hi són. Treu-ne una amb la ✕.</p>
+                {/* many drills selected = many tags: this list scrolls so the field below stays reachable */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px', minHeight: '28px', overflowY: 'auto', maxHeight: '38vh', flexShrink: 1 }}>
                     {selectionTags.length === 0 && <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Cap etiqueta encara.</span>}
                     {selectionTags.map(([t, n]) => (
                         <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 6px 4px 10px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface-2)', fontSize: '12.5px', fontWeight: 700, color: 'var(--text)' }}>
@@ -502,7 +503,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                         </span>
                     ))}
                 </div>
-                <form onSubmit={(e) => { e.preventDefault(); applyTagChange('+', tagInput); }} style={{ display: 'flex', gap: '8px' }}>
+                <form onSubmit={(e) => { e.preventDefault(); applyTagChange('+', tagInput); }} style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                     <input
                         autoFocus
                         list="bulk-tag-options"
@@ -516,7 +517,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                     <datalist id="bulk-tag-options">{allTags.map((t) => <option key={t} value={t} />)}</datalist>
                     <button type="submit" disabled={tagBusy || !tagInput.trim()} style={{ padding: '10px 16px', background: 'var(--brand-1)', color: '#fff', border: 'none', borderRadius: 'var(--r-md)', fontWeight: 700, cursor: 'pointer', opacity: tagBusy || !tagInput.trim() ? 0.6 : 1 }}>{tagBusy ? '…' : 'Afegeix'}</button>
                 </form>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', gap: '8px', flexShrink: 0 }}>
                     <button type="button" disabled={tagBusy || !tagInput.trim()} onClick={() => { if (window.confirm(`Substituir TOTES les etiquetes dels ${tagTargets.length} drills per «${tagInput.trim()}»?`)) applyTagChange('=', tagInput); }} style={{ padding: '8px 10px', background: 'transparent', color: 'var(--text-muted)', border: 'none', fontSize: '12.5px', cursor: 'pointer', textDecoration: 'underline', opacity: tagBusy || !tagInput.trim() ? 0.5 : 1 }}>Substitueix-les totes per aquesta</button>
                     <button type="button" onClick={() => setShowTagEditor(false)} disabled={tagBusy} style={{ padding: '10px 16px', background: 'var(--surface)', color: 'var(--text-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 700, cursor: 'pointer' }}>Tanca</button>
                 </div>
