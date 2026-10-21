@@ -194,6 +194,15 @@ def test_lesson_json_tolerates_trailing_commas():
     assert lesson["steps"][0]["examples"][0]["id"] == 1
 
 
+def test_the_lesson_never_uses_a_word_a_beginner_would_look_up():
+    import grammar
+    assert grammar._clean_prose("el tema d'inacomplert") == "el tema d'inacabat"
+    assert grammar._clean_prose("els clítics van davant") == "els pronoms enganxats al verb van davant"
+    assert grammar._clean_prose("un díctic marca el lloc") == "un mot que assenyala marca el lloc"
+    for w in ("inacomplert", "clítics", "díctic", "morfema", "lexema", "sintagma"):
+        assert w not in grammar._clean_prose(f"text amb {w} dins").lower()
+
+
 def test_an_explanation_never_shows_fewer_than_four_sentences():
     """The writer quotes three; the library has thirty more that carry the same piece."""
     import grammar, json as _json

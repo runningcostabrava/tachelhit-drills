@@ -84,7 +84,7 @@ UNITS: List[dict] = [
 SLUGS = [u["slug"] for u in UNITS]
 TITLES = {u["slug"]: u["title"] for u in UNITS}
 BATCH = 40
-LESSON_VERSION = 14  # bump when the lesson format or prompt changes: old rows are rewritten on next open
+LESSON_VERSION = 15  # bump when the lesson format or prompt changes: old rows are rewritten on next open
 
 # Drills whose tag names another language are never part of the course (the owner's old Irish tests).
 EXCLUDED_TAGS = ("irish",)
@@ -300,6 +300,27 @@ def _clean_text(s: Optional[str]) -> str:
     return re.sub(r"\s+", " ", (s or "").replace("\r", "")).strip()
 
 
+# The grammarian's words a beginner does not have, and what the lesson says instead. The writer is
+# told not to use them; this is the net under that, because three lessons used them anyway.
+PLAIN_WORDS = [
+    (r"\binacomplert\b", "inacabat"), (r"\bacomplert\b", "acabat"),
+    (r"\bdíctics\b", "mots que assenyalen"), (r"\bdíctic\b", "mot que assenyala"),
+    (r"\bclítics\b", "pronoms enganxats al verb"), (r"\bclític\b", "pronom enganxat al verb"),
+    (r"\bmorfemes\b", "trossos de paraula"), (r"\bmorfema\b", "tros de paraula"),
+    (r"\blexemes\b", "arrels"), (r"\blexema\b", "arrel"),
+    (r"\bsintagmes\b", "grups de paraules"), (r"\bsintagma\b", "grup de paraules"),
+    (r"\bapofonia\b", "canvi de vocal a dins de la paraula"),
+    (r"\btema verbal\b", "forma del verb"), (r"\bdiàtesi\b", "manera de dir qui fa l'acció"),
+]
+
+
+def _plain(t: str) -> str:
+    """Say it as a lesson would: no word the learner would have to look up."""
+    for pat, rep in PLAIN_WORDS:
+        t = re.sub(pat, rep, t, flags=re.I)
+    return t
+
+
 def _clean_prose(s: Optional[str]) -> str:
     """Lesson prose: Latin letters only (no Arabic, no Tifinagh), no example ids."""
     t = _clean_text(s)
@@ -309,7 +330,7 @@ def _clean_prose(s: Optional[str]) -> str:
     t = re.sub(r"\s*\((?:exemples?|ids?)\s*[\d,\s]+(?:i\s*\d+)?\)", "", t, flags=re.I)
     t = re.sub(r"\b(?:en\s+|a\s+)?(?:als?|els?|l')\s*exemples?\s+\d+(?:\s*(?:,|i)\s*\d+)*", "", t, flags=re.I)
     t = re.sub(r"\bexemples?\s+\d+(?:\s*(?:,|i)\s*\d+)*", "", t, flags=re.I)
-    return re.sub(r"\s+", " ", t).replace(" ,", ",").replace(" .", ".").strip()
+    return _plain(re.sub(r"\s+", " ", t).replace(" ,", ",").replace(" .", ".").strip())
 
 
 def example_dict(d) -> dict:
