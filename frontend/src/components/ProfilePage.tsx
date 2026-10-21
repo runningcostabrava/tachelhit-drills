@@ -276,7 +276,7 @@ export default function ProfilePage() {
                   {tokenCopied ? 'Copiat!' : 'Copia'}
                 </button>
                 {isNativeApp() && (
-                  <button type="button" onClick={() => Share.share({ title: 'Tachelhit Drills · token', text: getUserToken() }).catch(() => {})} style={{ padding: '10px 16px', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: 'pointer', minHeight: '44px' }}>
+                  <button type="button" onClick={() => Share.share({ title: 'Tamazight Drills · token', text: getUserToken() }).catch(() => {})} style={{ padding: '10px 16px', background: 'var(--surface-2)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', fontWeight: 700, cursor: 'pointer', minHeight: '44px' }}>
                     Desa / comparteix
                   </button>
                 )}

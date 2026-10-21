@@ -46,7 +46,7 @@ export default function AiAssistant({ drillId, drillLabel, autoAction, onClose }
       didAuto.current = true;
       const isReview = autoAction === 'review';
       const isExplain = autoAction === 'explain';
-      setMessages([{ role: 'user', text: isExplain ? '💡 Explica\'m la frase paraula per paraula' : isReview ? '🔎 Revisa aquest drill' : '🔍 Analitza la forma taixelhit d\'aquest drill' }]);
+      setMessages([{ role: 'user', text: isExplain ? '💡 Explica\'m la frase paraula per paraula' : isReview ? '🔎 Revisa aquest drill' : '🔍 Analitza la forma amazic d\'aquest drill' }]);
       setBusy(true);
       const call = isExplain
         ? api.aiExplainDrill(drillId).then(r => { setRelated(r.related || []); return (r.draft ? '✍️ Lectura automàtica, encara no confirmada pel parlant.\n\n' : '') + r.explanation; })
@@ -127,7 +127,7 @@ export default function AiAssistant({ drillId, drillLabel, autoAction, onClose }
           <div>
             <div style={{ fontWeight: 800, fontSize: '17px' }}>{autoAction === 'explain' ? '💡 Explica\'m la frase' : '🤖 Assistent de gramàtica'}</div>
             <div style={{ fontSize: '12px', opacity: 0.85 }}>
-              {drillLabel ? `Sobre: ${drillLabel}` : 'Amazic · taixelhit · font: amazic.cat'}
+              {drillLabel ? `Sobre: ${drillLabel}` : 'Amazic (tamazight) · font: amazic.cat'}
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', width: '32px', height: '32px', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontSize: '16px' }}>✕</button>

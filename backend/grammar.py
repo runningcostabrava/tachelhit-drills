@@ -316,7 +316,8 @@ def example_dict(d) -> dict:
     audio = d.audio_url or getattr(d, "audio_tts_shi_url", None) or getattr(d, "audio_tts_url", None)
     return {"id": d.id, "shi": _clean_text(d.text_tachelhit), "ca": _clean_text(d.text_catalan),
             "image_url": d.image_url, "audio_url": audio, "recorded": bool(d.audio_url),
-            "author": (d.author or "").strip() or None, "region": d.region, "origin": origin(d)}
+            "author": (d.author or "").strip() or None, "region": d.region, "origin": origin(d),
+            "source_url": getattr(d, "source_url", None), "source_channel": getattr(d, "source_channel", None)}
 
 
 AIT_MRAW = "Aït Mraw (Boutharar, Azilal)"

@@ -1,4 +1,8 @@
-# Tachelhit Drills — language documentation & learning platform
+# Tamazight Drills — language documentation & learning platform
+
+> The app is named **Tamazight Drills** (the inclusive name of the language, as its speakers and
+> content authors ask); «Tachelhit» stays only in code identifiers, the repository name and the
+> `shi` variety label.
 
 A community platform for **collecting Atlas Tamazight (Tachelhit) from people
 and the internet, and learning it** — built around Catalan as the reference

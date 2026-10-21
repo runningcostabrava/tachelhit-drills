@@ -1622,7 +1622,7 @@ async def lifespan(app: FastAPI):
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
-app = FastAPI(title="Tachelhit Drills API", lifespan=lifespan)
+app = FastAPI(title="Tamazight Drills API", lifespan=lifespan)
 
 # ---- Error envelope (P4.10): every error body is {"detail": str, "code": str}.
 # The 500 handler runs OUTSIDE CORSMiddleware (ServerErrorMiddleware is the
@@ -5485,7 +5485,7 @@ def _load_grammar() -> str:
             _GRAMMAR_TEXT = ""
     return _GRAMMAR_TEXT
 
-AI_SYSTEM_ROLE = """Ets l'assistent lingüístic de "Tachelhit Drills", una aplicació per aprendre la llengua amaziga taixelhit (tachelhit/tashelhit) fent servir el català com a llengua de referència, amb l'àrab i els alfabets tifinag i llatí.
+AI_SYSTEM_ROLE = """Ets l'assistent lingüístic de "Tamazight Drills", una aplicació per aprendre la llengua amaziga taixelhit (tachelhit/tashelhit) fent servir el català com a llengua de referència, amb l'àrab i els alfabets tifinag i llatí.
 
 El teu paper:
 - Ajudes qui aprèn a entendre la gramàtica, la pronunciació i l'ús del taixelhit i l'amazic en general.

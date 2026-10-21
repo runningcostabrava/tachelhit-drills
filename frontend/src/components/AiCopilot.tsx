@@ -58,7 +58,7 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
 
   const suggestions = selected.length
     ? ['Analitza el drill seleccionat', 'Tradueix-lo i desa la forma', 'Fes 3 exemples i deixa-me\'ls escoltar']
-    : ['Crea un drill: «aigua» en taixelhit', 'Cerca drills sobre la família', 'Com es diu «gràcies»? Fes-m\'ho escoltar'];
+    : ['Crea un drill: «aigua» en amazic', 'Cerca drills sobre la família', 'Com es diu «gràcies»? Fes-m\'ho escoltar'];
 
   const renderActions = (actions?: Action[]) => {
     if (!actions?.length) return null;

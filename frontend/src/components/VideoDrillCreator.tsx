@@ -523,7 +523,7 @@ const VideoDrillCreator: React.FC = () => {
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-soft)', fontWeight: 600, cursor: 'pointer' }}>
             <input type="checkbox" checked={foreignSource} onChange={(e) => setForeignSource(e.target.checked)} />
-            <FaGlobe /> Font en una altra llengua (p. ex. anglès) → genera el taixelhit com a ESBORRANY per corregir
+            <FaGlobe /> Font en una altra llengua (p. ex. anglès) → genera el amazic com a ESBORRANY per corregir
           </label>
           {autoMode && (
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-soft)', fontWeight: 600, cursor: 'pointer' }}>
@@ -786,7 +786,7 @@ const VideoDrillCreator: React.FC = () => {
                           <textarea
                             value={seg.text_tachelhit_suggested || ''}
                             onChange={(e) => { const ns = [...videoInfo.segments]; ns[idx].text_tachelhit_suggested = e.target.value; setVideoInfo({ ...videoInfo, segments: ns }); }}
-                            placeholder="esborrany en taixelhit…"
+                            placeholder="esborrany en amazic…"
                             style={{ width: '100%', minHeight: '40px', padding: '8px', fontSize: '13px', borderRadius: 'var(--r-sm)', border: '1px dashed var(--sky)', background: 'var(--sky-soft)', fontFamily: 'var(--font-tifinagh)', color: 'var(--text)' }}
                           />
                         </div>

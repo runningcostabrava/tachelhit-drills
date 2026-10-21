@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.tachelhit.app',
-  appName: 'Tachelhit Drills',
+  appName: 'Tamazight Drills',
   webDir: 'dist',
   ios: {
     // Let the web view run under the status bar; the app pads its own

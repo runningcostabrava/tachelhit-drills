@@ -970,6 +970,14 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
 
           {/* Different speakers' takes, each with its variety — hear the phrase across varieties */}
           {!hideAnswer && currentDrill && <DrillVoices drillId={currentDrill.id} />}
+          {/* Credit: the author and the original video, always, as content authors require */}
+          {currentDrill?.source_url && (
+            <div style={{ textAlign: 'center', padding: '0 24px 6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+              Font: {currentDrill.source_channel || 'vídeo original'}{currentDrill.source_title ? ` · «${currentDrill.source_title}»` : ''} ·{' '}
+              <a href={currentDrill.source_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-1)', fontWeight: 700 }}>vídeo original ↗</a>
+              {currentDrill.license ? <span> · {currentDrill.license}</span> : null}
+            </div>
+          )}
           {!hideAnswer && currentDrill && (currentDrill.text_tachelhit || currentDrill.text_tachelhit_suggested || currentDrill.text_tachelhit_latin) && (
             <div style={{ textAlign: 'center', padding: '4px 24px 16px' }}>
               <button onClick={() => setExplainOpen(true)} style={{ padding: '9px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>

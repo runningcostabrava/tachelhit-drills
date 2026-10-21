@@ -156,7 +156,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
         console.log(`[DrillsGrid] Starting translation: ${source} -> ${target} for drill ${drill.id}`);
         const sourceText = source === 'ca' ? drill.text_catalan : drill.text_tachelhit;
         if (!sourceText) {
-            toast.error(`Introdueix primer el text en ${source === 'ca' ? 'català' : 'taixelhit'}.`);
+            toast.error(`Introdueix primer el text en ${source === 'ca' ? 'català' : 'amazic'}.`);
             return;
         }
 
@@ -262,7 +262,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
     const handleTachelhitTTS = async (drill: Drill) => {
         const text = drill.text_tachelhit;
         if (!text) {
-            toast.error('El camp de taixelhit és buit.');
+            toast.error('El camp de amazic és buit.');
             return;
         }
 
@@ -747,7 +747,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                             <div style={{ fontSize: '16px', color: 'var(--text)', fontWeight: 600, lineHeight: 1.4 }}>{drill.text_catalan || <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>Sense català</span>}</div>
                             <div style={{ fontSize: '17px', color: 'var(--brand-1)', fontWeight: 700, fontFamily: 'var(--font-tifinagh)', lineHeight: 1.5 }}>{drill.text_tachelhit || (drill.text_tachelhit_suggested && draftUsable(drill)
                               ? <span title="Esborrany automàtic (no verificat)" style={{ color: 'var(--text-muted)', fontWeight: 500, fontStyle: 'italic' }}>{drill.text_tachelhit_suggested}<span style={{ display: 'block', fontSize: 10, letterSpacing: '0.04em', textTransform: 'uppercase', fontStyle: 'normal', fontFamily: 'var(--font-sans)' }}>esborrany</span></span>
-                              : <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontFamily: 'var(--font-sans)' }}>{drill.text_tachelhit_suggested ? DRAFT_REJECTED_LABEL : 'Sense taixelhit'}</span>)}</div>
+                              : <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontFamily: 'var(--font-sans)' }}>{drill.text_tachelhit_suggested ? DRAFT_REJECTED_LABEL : 'Sense amazic'}</span>)}</div>
                             {drill.text_arabic && (
                                 <div style={{ fontSize: '16px', color: 'var(--emerald)', direction: 'rtl', textAlign: 'right', fontWeight: 600, lineHeight: 1.5 }}>{drill.text_arabic}</div>
                             )}
@@ -992,11 +992,11 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                         <AiToolsMenu busy={actionLoadingId !== null} tools={[
                             { key: 'explain', icon: '💡', title: "Explica'm la frase", description: 'Paraula per paraula, com està construïda i altres drills amb les mateixes paraules.', run: () => setExplainDrill(d), disabled: !(d.text_tachelhit || d.text_tachelhit_suggested || d.text_tachelhit_latin) },
                             { key: 'ask', icon: '💬', title: "Pregunta a l'assistent", description: 'Xat sobre aquest drill: gramàtica, pronunciació, variants. Es basa en el compendi amazic.', run: () => setAskDrill(d) },
-                            { key: 'ca-ta', icon: <span style={{ color: 'var(--brand-1)', display: 'flex' }}><FaLanguage /></span>, title: 'Tradueix català → taixelhit', description: 'Proposa la frase en taixelhit. Si ja hi ha text, la proposta es desa com a suggeriment i no el toca.', run: () => handleTranslate(d, 'ca', 'shi'), disabled: !d.text_catalan },
-                            { key: 'ta-ca', icon: <span style={{ color: 'var(--emerald)', display: 'flex' }}><FaLanguage /></span>, title: 'Tradueix taixelhit → català', description: 'Proposa la traducció catalana. Si ja n\'hi ha, va com a suggeriment.', run: () => handleTranslate(d, 'shi', 'ca'), disabled: !d.text_tachelhit },
+                            { key: 'ca-ta', icon: <span style={{ color: 'var(--brand-1)', display: 'flex' }}><FaLanguage /></span>, title: 'Tradueix català → amazic', description: 'Proposa la frase en amazic. Si ja hi ha text, la proposta es desa com a suggeriment i no el toca.', run: () => handleTranslate(d, 'ca', 'shi'), disabled: !d.text_catalan },
+                            { key: 'ta-ca', icon: <span style={{ color: 'var(--emerald)', display: 'flex' }}><FaLanguage /></span>, title: 'Tradueix amazic → català', description: 'Proposa la traducció catalana. Si ja n\'hi ha, va com a suggeriment.', run: () => handleTranslate(d, 'shi', 'ca'), disabled: !d.text_tachelhit },
                             { key: 'transcribe', icon: <span style={{ color: 'var(--sky)', display: 'flex' }}><FaMagic /></span>, title: "Transcriu l'àudio", description: 'La màquina escolta la gravació i escriu el que sent. Va com a esborrany; el text del parlant es manté.', run: transcribe, disabled: !media },
                             ...(d.audio_url && d.video_url ? [{ key: 'transcribe-video', icon: <span style={{ color: 'var(--sky)', display: 'flex' }}><FaMagic /></span>, title: 'Transcriu el so del vídeo', description: 'Escolta el vídeo en lloc de la gravació. També va com a esborrany.', run: () => handleTranscribe(d, 'video'), disabled: actionLoadingId !== null }] : []),
-                            { key: 'tts', icon: <span style={{ color: 'var(--saffron)', display: 'flex' }}><FaVolumeUp /></span>, title: 'Genera una veu sintètica', description: 'Llegeix el taixelhit amb veu artificial, marcada com a sintètica. Útil quan no hi ha gravació.', run: () => handleTachelhitTTS(d), disabled: !d.text_tachelhit },
+                            { key: 'tts', icon: <span style={{ color: 'var(--saffron)', display: 'flex' }}><FaVolumeUp /></span>, title: 'Genera una veu sintètica', description: 'Llegeix el amazic amb veu artificial, marcada com a sintètica. Útil quan no hi ha gravació.', run: () => handleTachelhitTTS(d), disabled: !d.text_tachelhit },
                             { key: 'voices', icon: <span style={{ color: 'var(--rose)', display: 'flex' }}><FaMicrophone /></span>, title: 'Veus del drill', description: 'Escolta o grava parlants reals dient aquesta frase, cadascú amb la seva varietat.', run: () => setRecordDrill(d) },
                             { key: 'save', icon: <span style={{ color: 'var(--text-muted)', display: 'flex' }}><FaSave /></span>, title: 'Desa fora de línia', description: 'Guarda l\'àudio o el vídeo al dispositiu per practicar sense connexió.', run: save, disabled: !media },
                         ]} />
