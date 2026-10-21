@@ -5907,7 +5907,8 @@ def _grammar_unit_payload(db, slug: str, limit: int, force: bool):
     practice = grammar_course.practice_rows(rows, slug=slug)  # the test: sentences (and words, in the units about words)
     try:
         lesson = grammar_course.get_lesson(db, slug, _load_grammar() if gemini_available() else "", examples, force=force,
-                                           unit_ids={d.id for d in rows}, session_factory=SessionLocal)
+                                           unit_ids={d.id for d in rows}, session_factory=SessionLocal,
+                                           tables=grammar_course.paradigms(rows))
     except Exception as e:
         print(f"[GRAMMAR] lesson {slug}: {e}")
         lesson = {"intro": "", "steps": [{"type": "explain", "title": unit["title"], "text": "La lliçó encara no s’ha pogut escriure. Mira els exemples de la biblioteca mentrestant.", "examples": examples[:3]}, {"type": "end"}], "error": str(e)[:160]}
@@ -5945,7 +5946,8 @@ def grammar_lesson(slug: str, db: Session = Depends(get_db)):
     rows = _grammar_unit_rows(db, slug)
     examples = grammar_course.pick_examples(rows, slug=slug)
     lesson = grammar_course.get_lesson(db, slug, _load_grammar() if gemini_available() else "", examples,
-                                       unit_ids={d.id for d in rows}, session_factory=SessionLocal)
+                                       unit_ids={d.id for d in rows}, session_factory=SessionLocal,
+                                       tables=grammar_course.paradigms(rows))
     return {"slug": slug, "lesson": lesson, "writing": slug in grammar_course.writing()}
 
 

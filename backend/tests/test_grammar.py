@@ -169,6 +169,22 @@ def test_lesson_json_tolerates_trailing_commas():
     assert lesson["steps"][0]["examples"][0]["id"] == 1
 
 
+def test_conjugation_lists_become_the_lessons_tables():
+    """The deck wrote out 299 paradigms; they are no example, but they are what a table is made of."""
+    import grammar
+    class R:  # noqa
+        def __init__(self, id, shi, ca): self.id, self.text_tachelhit, self.text_catalan = id, shi, ca
+    rows = [R(1, "rgl, rglkh, trgld, irgl, nrgl, trglm(t), rgln(t)", "tancar"),
+            R(2, "adhadh / idhudhan afus / ifasn", "dit / dits mà / mans"), R(3, "ur rgliɣ", "no he tancat")]
+    tables = grammar.paradigms(rows)
+    assert [t["id"] for t in tables] == [1, 2]  # the fullest list first, and never the sentence
+    assert not any(t["id"] == 3 for t in tables)
+    unit = next(u for u in grammar.UNITS if u["slug"] == "perfectiu")
+    p = grammar._lesson_prompt(unit, [], "sheet", tables)
+    assert "OUR LISTS" in p and "trglm(t)" in p and "build the table from THEM" in p  # the writer is told to copy the forms
+    assert "OUR LISTS" not in grammar._lesson_prompt(unit, [], "sheet", [])
+
+
 def test_every_deck_reaches_the_examples():
     """A unit with hundreds of Aït Mraw sentences used to hide the Beni Mellal deck completely."""
     import grammar

@@ -84,7 +84,7 @@ UNITS: List[dict] = [
 SLUGS = [u["slug"] for u in UNITS]
 TITLES = {u["slug"]: u["title"] for u in UNITS}
 BATCH = 40
-LESSON_VERSION = 10  # bump when the lesson format or prompt changes: old rows are rewritten on next open
+LESSON_VERSION = 11  # bump when the lesson format or prompt changes: old rows are rewritten on next open
 
 # Drills whose tag names another language are never part of the course (the owner's old Irish tests).
 EXCLUDED_TAGS = ("irish",)
@@ -385,6 +385,25 @@ def quotable(shi: str, slug: Optional[str] = None) -> bool:
     return True
 
 
+def paradigms(rows: List, limit: int = 14) -> List[dict]:
+    """The unit's conjugation and plural lists — «rgl, rglkh, trgld, irgl…», «afus / ifasn» — as the
+    Beni Mellal deck wrote them. They are not sentences, so no lesson quotes them as an example and
+    no test asks about them; but they are the paradigms of the very variety we teach, so the lesson
+    builds its tables from them instead of inventing forms. The fullest lists first."""
+    out, seen = [], set()
+    for d in rows:
+        shi = _clean_text(d.text_tachelhit); ca = _clean_text(d.text_catalan)
+        if kind(shi) != "list" or not ca or len(shi) > 170 or re.search(r"[\u2D30-\u2D7F]", shi):
+            continue
+        k = shi.lower()
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append({"id": d.id, "shi": shi, "ca": ca})
+    out.sort(key=lambda e: (-(e["shi"].count(",") + e["shi"].count("/")), len(e["shi"])))
+    return out[:limit]
+
+
 def practice_rows(rows: List, limit: int = 200, slug: Optional[str] = None) -> List:
     """The drills a unit's practice test is made of: real sentences (plus single words in the units
     about words), no conjugation lists, no placeholders, no capture artefacts; in the rows' order."""
@@ -527,7 +546,7 @@ def _clean_sheet(s: Optional[str]) -> str:
     return (t[m.start():] if m else t).strip()
 
 
-def _lesson_prompt(unit: dict, examples: List[dict], sheet: str) -> str:
+def _lesson_prompt(unit: dict, examples: List[dict], sheet: str, tables: Optional[List[dict]] = None) -> str:
     # the writer sees the simplest examples first: a one-word greeting before a full sentence
     ex = "\n".join(f"- id {e['id']} ({e.get('origin') or 'origen desconegut'}{', gravat' if e.get('recorded') else ''}): «{e['shi']}» — {e['ca']}" for e in sorted(examples, key=simplicity))
     return (
@@ -564,7 +583,11 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str) -> str:
         "sentences come last. Never open a unit with a long sentence.\n"
         "- 1 or 2 steps of type \"pattern\" (one after the first explanations, one near the end): a title and 3-8 rows of [form, meaning, "
         "example], the forms in standard Latin spelling (ɣ, ḥ, ṣ, ṭ, ẓ, ɛ, š), the example taken from our sentences "
-        "when one exists.\n"
+        "when one exists."
+        + (" OUR LISTS below are the paradigms our own speakers wrote for this unit: build the table from THEM, "
+           "form by form as they are written, and never put in a form that is in neither the lists nor our "
+           "sentences." if tables else "")
+        + "\n"
         "- 1 step of type \"tip\": a text of 30-60 words on the mistake Catalan speakers make most, or a memory trick.\n"
         "- 1 step of type \"dialect\": 25-70 words on how our speakers (Aït Mraw, Beni Mellal) do it versus what the "
         "sheet says for the Souss, with the evidence from our sentences; leave it out only if there is no difference.\n"
@@ -579,7 +602,10 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str) -> str:
         "\"example_ids\": [int], \"focus\": {\"<id>\": str}}, {\"type\": \"pattern\", \"title\": str, \"rows\": [[str, str, str]]}, "
         "{\"type\": \"tip\", \"text\": str}, {\"type\": \"dialect\", \"text\": str}]}.\n\n"
         f"OUR SENTENCES (real speakers; origin in brackets):\n{ex}\n\n"
-        f"STUDY SHEET (from the amazic.cat compendium):\n{sheet}"
+        + (("OUR LISTS (paradigms our own speakers wrote out: all the forms of one verb or one noun, in their "
+            "spelling; never quote these as sentences, they are tables):\n"
+            + "\n".join(f"- «{t['shi']}» — {t['ca']}" for t in (tables or [])) + "\n\n") if tables else "")
+        + f"STUDY SHEET (from the amazic.cat compendium):\n{sheet}"
     )
 
 
@@ -688,7 +714,8 @@ def _review_quizzes(pool: List[dict], used: set, n_quiz: int, how_many: int) -> 
     return out
 
 
-def write_lesson(slug: str, grammar_md: str, examples: List[dict], sheet: Optional[str] = None) -> dict:
+def write_lesson(slug: str, grammar_md: str, examples: List[dict], sheet: Optional[str] = None,
+                 tables: Optional[List[dict]] = None) -> dict:
     """Ask Gemini for the unit's steps and attach the examples and the quick checks."""
     unit = next((u for u in UNITS if u["slug"] == slug), None)
     if unit is None:
@@ -696,7 +723,7 @@ def write_lesson(slug: str, grammar_md: str, examples: List[dict], sheet: Option
     from gemini_client import gemini_generate
     sheet = study(slug, grammar_md) if sheet is None else sheet
     answer = gemini_generate("You are a patient, clear teacher of Amazigh for beginners, writing in Catalan.",
-                             [{"role": "user", "text": _lesson_prompt(unit, examples, sheet)}],
+                             [{"role": "user", "text": _lesson_prompt(unit, examples, sheet, tables)}],
                              max_output_tokens=9000, temperature=0.3, timeout=420)
     lesson = _parse_lesson(answer, examples)
     lesson["study"] = sheet  # the rule sheet travels with the lesson (shown to admins)
@@ -769,7 +796,8 @@ def _store_lesson(db, slug: str, lesson: dict) -> None:
     db.commit()
 
 
-def _write_in_background(session_factory, slug: str, grammar_md: str, examples: List[dict], unit_ids: Optional[set]) -> bool:
+def _write_in_background(session_factory, slug: str, grammar_md: str, examples: List[dict], unit_ids: Optional[set],
+                         tables: Optional[List[dict]] = None) -> bool:
     """Write the unit's lesson on a thread of its own, once at a time per unit. True when this call
     started the writing."""
     with _write_lock:
@@ -780,7 +808,7 @@ def _write_in_background(session_factory, slug: str, grammar_md: str, examples: 
     def run():
         db = session_factory()
         try:
-            lesson = write_lesson(slug, grammar_md, examples, sheet=sheet_for(db, slug, grammar_md))
+            lesson = write_lesson(slug, grammar_md, examples, sheet=sheet_for(db, slug, grammar_md), tables=tables)
             if unit_ids is not None:
                 lesson["unit_size"] = len(unit_ids)  # so growth of the unit can be noticed later
             _store_lesson(db, slug, lesson)
@@ -810,7 +838,7 @@ def _placeholder(slug: str, examples: List[dict]) -> dict:
 
 
 def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool = False, unit_ids: Optional[set] = None,
-               session_factory=None) -> dict:
+               session_factory=None, tables: Optional[List[dict]] = None) -> dict:
     """The unit's lesson from the `grammar_lessons` table. A page NEVER waits for Gemini: when the
     lesson is missing or outdated and a session factory is given, the writing starts on a thread and
     the kept lesson (or a short placeholder) comes back at once, marked so the page can ask again."""
@@ -820,7 +848,7 @@ def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool
     if lesson is not None:
         return lesson
     if session_factory is not None:
-        _write_in_background(session_factory, slug, grammar_md, examples, unit_ids)
+        _write_in_background(session_factory, slug, grammar_md, examples, unit_ids, tables)
         kept = _stored(row)
         return {**kept, "stale": True, "writing": True} if kept else _placeholder(slug, examples)
     with _explain_lock:  # a script that asked for the lesson itself waits for it
@@ -828,7 +856,7 @@ def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool
         lesson = None if force else _current(row, unit_ids)
         if lesson is not None:
             return lesson
-        lesson = write_lesson(slug, grammar_md, examples, sheet=sheet_for(db, slug, grammar_md))
+        lesson = write_lesson(slug, grammar_md, examples, sheet=sheet_for(db, slug, grammar_md), tables=tables)
         if unit_ids is not None:
             lesson["unit_size"] = len(unit_ids)
         _store_lesson(db, slug, lesson)
