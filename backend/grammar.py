@@ -645,7 +645,9 @@ def _current(row, unit_ids: Optional[set]) -> Optional[dict]:
         if quoted_ids(lesson) - unit_ids:
             return None
         size = lesson.get("unit_size")
-        if isinstance(size, int) and len(unit_ids) >= size + max(5, int(size * GROWTH)):
+        if not isinstance(size, int):
+            return None  # written before the rule existed: written again once, then it records the size
+        if len(unit_ids) >= size + max(5, int(size * GROWTH)):
             return None
     return lesson
 

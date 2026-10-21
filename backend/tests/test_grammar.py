@@ -82,7 +82,7 @@ def test_practice_is_sentences_only_and_wishlist_names_what_our_speakers_could_r
     assert grammar.quoted_ids({"steps": [{"type": "explain", "examples": [{"id": 5}]}, {"type": "quiz", "example": {"id": 7}}]}) == {5, 7}
     class Row:  # noqa
         version = grammar.LESSON_VERSION; body = __import__("json").dumps({"steps": [{"type": "explain", "examples": [{"id": 5}]}]})
-    assert grammar._current(Row(), {5, 6}) is not None and grammar._current(Row(), {6}) is None and grammar._current(Row(), None) is not None
+    assert grammar._current(Row(), {5, 6}) is None and grammar._current(Row(), {6}) is None and grammar._current(Row(), None) is not None  # no unit_size yet: written again once
     # a unit that grew by 30% (and 5 drills) since the lesson was written gets it written again
     class Grown:  # noqa
         version = grammar.LESSON_VERSION; body = __import__("json").dumps({"unit_size": 10, "steps": [{"type": "explain", "examples": [{"id": 5}]}]})
