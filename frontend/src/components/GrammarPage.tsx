@@ -114,6 +114,20 @@ function UnitView({ slug }: { slug: string }) {
     api.grammarUnit(slug).then(setPage).catch((e) => setError(e?.message || 'Error'));
     api.me().then((m) => { setIsAdmin(!!m?.is_admin); setSignedIn(!!m); if (m) loadProposals(); }).catch(() => {});
   }, [slug, loadProposals]);
+  // a lesson being written arrives on its own: the page never waits for it
+  const writing = !!page?.lesson?.writing;
+  useEffect(() => {
+    if (!writing) return;
+    let alive = true;
+    const t = window.setInterval(() => {
+      api.grammarLesson(slug).then((r) => {
+        if (!alive || r.lesson.writing) return;
+        setPage((p) => (p && p.slug === slug ? { ...p, lesson: r.lesson } : p));
+        setI(0); setAnswers({});
+      }).catch(() => {});
+    }, 8000);
+    return () => { alive = false; window.clearInterval(t); };
+  }, [writing, slug]);
   useEffect(() => { api.grammarUnits().then((r) => { setUnits(r.units); setCounts(r.counts); }).catch(() => {}); }, []);
   const nextUnit = useMemo(() => {
     const k = units.findIndex((u) => u.slug === slug);

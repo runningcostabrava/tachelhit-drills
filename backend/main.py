@@ -5901,11 +5901,11 @@ def _grammar_unit_payload(db, slug: str, limit: int, force: bool):
     practice = grammar_course.practice_rows(rows, slug=slug)  # the test: sentences (and words, in the units about words)
     try:
         lesson = grammar_course.get_lesson(db, slug, _load_grammar() if gemini_available() else "", examples, force=force,
-                                           unit_ids={d.id for d in rows})
+                                           unit_ids={d.id for d in rows}, session_factory=SessionLocal)
     except Exception as e:
         print(f"[GRAMMAR] lesson {slug}: {e}")
         lesson = {"intro": "", "steps": [{"type": "explain", "title": unit["title"], "text": "La lliçó encara no s’ha pogut escriure. Mira els exemples de la biblioteca mentrestant.", "examples": examples[:3]}, {"type": "end"}], "error": str(e)[:160]}
-    total = len(rows) if slug == grammar_course.SOUNDS_UNIT else sum(1 for (g,) in grammar_course.not_excluded(db.query(DrillModel.grammar).filter(DrillModel.grammar.ilike(f"%{slug}%")), DrillModel).all() if slug in grammar_course.parse(g))
+    total = len(rows)  # the rows are already every drill of the unit (the query's limit is far above any unit)
     return {**{k: unit[k] for k in ("slug", "title", "level")}, "lesson": lesson, "total": total,
             "practice": [d.id for d in practice],
             "drills": [Drill.model_validate(d, from_attributes=True) for d in rows[:max(1, min(limit, 300))]]}
@@ -5931,6 +5931,16 @@ def grammar_wishlist(per_unit: int = 8, db: Session = Depends(get_db)):
                     "wanted": [Drill.model_validate(d, from_attributes=True) for d in wanted[:max(0, min(per_unit, 30))]]})
     out.sort(key=lambda u: (u["aitmraw_voiced"], -u["total"]))
     return {"units": out}
+
+
+@app.get("/grammar/{slug}/lesson")
+def grammar_lesson(slug: str, db: Session = Depends(get_db)):
+    """Just the unit's lesson: what a page asks for again while a new one is being written."""
+    rows = _grammar_unit_rows(db, slug)
+    examples = grammar_course.pick_examples(rows, slug=slug)
+    lesson = grammar_course.get_lesson(db, slug, _load_grammar() if gemini_available() else "", examples,
+                                       unit_ids={d.id for d in rows}, session_factory=SessionLocal)
+    return {"slug": slug, "lesson": lesson, "writing": slug in grammar_course.writing()}
 
 
 @app.get("/grammar/{slug}")

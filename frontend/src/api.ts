@@ -232,6 +232,7 @@ export const api = {
   grammarUnits: () => request<{ units: GrammarUnit[]; counts: Record<string, number>; status: { running: boolean; done: number; pending: number } }>('/grammar'),
   grammarUnit: (slug: string, limit = 60) => request<GrammarUnitPage>(`/grammar/${slug}?limit=${limit}`),
   grammarRewrite: (slug: string) => request<GrammarUnitPage>(`/grammar/${slug}/rewrite`, { method: 'POST' }),
+  grammarLesson: (slug: string) => request<{ slug: string; lesson: GrammarLesson; writing: boolean }>(`/grammar/${slug}/lesson`),
   grammarWishlist: () => request<{ units: GrammarWishUnit[] }>('/grammar/wishlist'),
   petitions: (kind: 'open' | 'synthetic' | 'aitmraw', limit = 40) => request<{ items: PetitionItem[]; total: number }>(`/petitions?kind=${kind}&limit=${limit}`),
   addPetition: (text_catalan: string, note: string | null) => request<Drill>('/petitions', { method: 'POST', body: JSON.stringify({ text_catalan, note }) }),
@@ -322,7 +323,9 @@ export type LessonStep =
   | { type: 'tip'; text: string }
   | { type: 'dialect'; text: string }
   | { type: 'end' };
-export interface GrammarLesson { intro: string; steps: LessonStep[]; study?: string; error?: string }
+/** `writing`: a new lesson is being written right now; ask again in a few seconds. `stale`: what you have is the
+ *  previous one meanwhile. */
+export interface GrammarLesson { intro: string; steps: LessonStep[]; study?: string; error?: string; writing?: boolean; stale?: boolean }
 /** `practice`: the ids the unit's test is made of (real sentences only: no single words, no conjugation lists). */
 export interface GrammarUnitPage extends GrammarUnit { lesson: GrammarLesson; total: number; practice: number[]; drills: Drill[] }
 /** Pràctica: how the library is offered for practice, and what a session card needs beyond the drill. */

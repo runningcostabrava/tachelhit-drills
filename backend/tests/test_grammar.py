@@ -10,6 +10,18 @@ def test_units_are_ordered_and_endpoint_lists_them():
     assert set(r["counts"]) == set(grammar.SLUGS)
 
 
+def _wait_lesson(slug: str, secs: float = 20.0) -> dict:
+    """The lesson a unit page asked for in the background, once the writer has finished."""
+    import time
+    for _ in range(int(secs * 10)):
+        if slug not in grammar.writing():
+            body = client.get(f"/grammar/{slug}/lesson").json()
+            if not body["lesson"].get("writing"):
+                return body["lesson"]
+        time.sleep(0.1)
+    raise AssertionError(f"lesson {slug} was never written")
+
+
 def test_classification_fills_grammar_and_unit_page_shows_lesson_and_examples(monkeypatch):
     a = client.post("/drills/", json={"text_catalan": "No hi aniré", "text_tachelhit": "ur rad dduɣ", "audio_url": "https://example.test/a.webm"}).json()
     b = client.post("/drills/", json={"text_catalan": "la casa del meu pare", "text_tachelhit": "tigmmi n baba"}).json()
@@ -36,7 +48,8 @@ def test_classification_fills_grammar_and_unit_page_shows_lesson_and_examples(mo
     monkeypatch.setattr(gemini_client, "gemini_generate", lambda sys_, contents, **k: calls.append(contents[0]["text"]) or (sheet if "STUDY SHEET in" in contents[0]["text"] else answer))
     page = client.get("/grammar/negacio").json()
     assert page["title"].startswith("La negació") and page["total"] >= 1
-    lesson = page["lesson"]
+    assert page["lesson"]["writing"] and page["lesson"]["steps"][-1]["type"] == "end"  # never a wait for Gemini
+    lesson = _wait_lesson("negacio")
     kinds = [s["type"] for s in lesson["steps"]]
     assert lesson["intro"] == "Sabràs dir que no." and kinds[:2] == ["explain", "explain"] and kinds[-1] == "end"
     assert lesson["steps"][0]["examples"] == [lesson["steps"][0]["examples"][0]] and lesson["steps"][0]["examples"][0]["id"] == a["id"]
@@ -47,7 +60,7 @@ def test_classification_fills_grammar_and_unit_page_shows_lesson_and_examples(mo
     assert len(calls) == 2 and "7.2.1. La partícula negativa" in calls[0] and "7.3. L'oració" not in calls[0]
     assert "ur rad dduɣ" in calls[1] and sheet in calls[1] and lesson["study"] == sheet
     assert page["drills"][0]["id"] == a["id"]
-    client.get("/grammar/negacio")
+    assert client.get("/grammar/negacio").json()["lesson"]["intro"] == "Sabràs dir que no."  # kept, and now served at once
     assert len(calls) == 2  # written once, kept in the grammar_lessons table
     assert client.get("/grammar/no-such-unit").status_code == 404
     assert client.post("/grammar/run").status_code == 401  # admin only
@@ -100,7 +113,7 @@ def test_lessons_start_basic_and_skip_capture_artefacts():
         def __init__(self, id, shi, ca): self.id, self.text_tachelhit, self.text_catalan, self.image_url, self.audio_url, self.author, self.region, self.tag = id, shi, ca, None, None, None, None, None
     rows = [R(1, "jigh labas, tanmmirt", "estic bé, gràcies"), R(2, "azul", "hola"), R(3, "ⵜ.ⵅⵙ.ⵛ ⵙⵙ", "hola, encàrrec'm")]
     ex = grammar.pick_examples(rows, slug="formules")
-    assert [e["id"] for e in ex] == [1, 2] and [e["id"] for e in grammar.pick_examples(rows, slug="negacio")] == [1]
+    assert [e["id"] for e in ex] == [2, 1] and [e["id"] for e in grammar.pick_examples(rows, slug="negacio")] == [1]  # shortest first
     assert [d.id for d in grammar.practice_rows(rows, slug="formules")] == [1, 2]
     unit = next(u for u in grammar.UNITS if u["slug"] == "formules")
     p = grammar._lesson_prompt(unit, ex, "sheet")
@@ -114,7 +127,7 @@ def test_level_one_units_quote_only_short_examples():
     long = R(1, "waxxa, isul-yan g-usawn n-tuwrirt-in", "D'acord, encara n'hi ha una al vessant")
     rows = [long, R(2, "3afaš", "gràcies"), R(3, "Adeu", "Adeu"), R(4, "jigh labas, tanmmirt", "estic bé, gràcies")]
     assert [e["id"] for e in grammar.pick_examples(rows, slug="formules")] == [2, 4]  # level 1: a few words; «Adeu»=«Adeu» never
-    assert [e["id"] for e in grammar.pick_examples(rows, slug="subordinades")] == [1, 4]  # level 3: the long one is fine
+    assert [e["id"] for e in grammar.pick_examples(rows, slug="subordinades")] == [4, 1]  # level 3: the long one is fine, last
     assert grammar.fits_level("ur ssinɣ ša", "formules") and not grammar.fits_level("a b c d e", "formules") and grammar.fits_level("a b c d e", "negacio")
     assert not grammar.fits_level("tex", "formules", "Quan era petit els meus pares van anar a viure a la ciutat")  # a long meaning is not level 1 either
     unit = next(u for u in grammar.UNITS if u["slug"] == "formules")
@@ -154,6 +167,24 @@ def test_lesson_json_tolerates_trailing_commas():
     ex = [{"id": 1, "shi": "ur ssinɣ", "ca": "no ho sé", "image_url": None, "audio_url": None, "recorded": False, "author": None, "region": None}]
     lesson = grammar._parse_lesson('{"intro": "x", "steps": [{"type": "explain", "title": "t", "text": "ur davant.", "example_ids": [1,],},],}', ex)
     assert lesson["steps"][0]["examples"][0]["id"] == 1
+
+
+def test_every_deck_reaches_the_examples():
+    """A unit with hundreds of Aït Mraw sentences used to hide the Beni Mellal deck completely."""
+    import grammar
+    class R:  # noqa
+        def __init__(self, id, shi, ca, tag=None, author=None):
+            self.id, self.text_tachelhit, self.text_catalan, self.tag, self.author = id, shi, ca, tag, author
+            self.image_url = self.audio_url = self.region = None
+    words = ["aman", "argaz", "tamghart", "afus", "ixf", "tigmmi", "ighrm", "amud", "izm", "ul",
+             "akal", "tafukt", "ayyur", "itri", "adrar", "asif", "tazart", "agharas", "ikchm", "afullus"]
+    rows = [R(i, f"ur ɣriɣ {words[i % 20]} {i}", f"no he llegit {i}", author="Halima") for i in range(1, 200)]
+    rows += [R(1000 + i, f"ur ufiɣ {words[i % 20]} {i} walu", f"no he trobat {i}", tag="benimellal-anki, private") for i in range(1, 200)]
+    rows += [R(2000 + i, f"ur sawlɣ {words[i % 20]} {i} ša", f"no he parlat {i}") for i in range(1, 60)]
+    picked = grammar.pick_examples(rows, slug="negacio")
+    by_source = [sum(1 for e in picked if grammar.origin_rank(e) == r) for r in (0, 1, 2)]
+    assert all(n >= 15 for n in by_source), by_source  # all three decks, every time
+    assert len({e["shi"].lower() for e in picked}) == len(picked)  # and no sentence twice
 
 
 def test_a_quick_check_after_every_explanation_and_a_review_at_the_end():

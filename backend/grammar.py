@@ -91,29 +91,29 @@ EXCLUDED_TAGS = ("irish",)
 
 # The compendium's own sections (N.N / N.N.N) that explain each unit: what the lesson writer reads.
 SECTIONS: Dict[str, List[str]] = {
-    SOUNDS_UNIT: ["1.1", "1.4"],
-    "formules": ["7.1.1", "6.4", "7.3.3"],
-    "pronoms-personals": ["4.1", "4.1.1"],
-    "demostratius": ["4.2", "4.2.1", "4.3.3"],
-    "noms-genere-nombre": ["3.1.1", "3.1.2", "3.2.1", "3.2.2", "3.2.3"],
-    "estat-annexio": ["3.3.1", "3.3.2"],
-    "possessius": ["4.1.2", "4.3.2", "4.3.4"],
-    "preposicions": ["6.2.1", "6.2.2", "6.2.3"],
-    "ser-tenir": ["7.1.1", "6.5", "7.2.3", "6.4"],
-    "aorist-ad": ["5.2", "5.2.1"],
-    "perfectiu": ["5.1.1", "5.2.2"],
-    "imperfectiu-habitual": ["5.2.4"],
+    SOUNDS_UNIT: ["1.1", "1.1.2", "1.2.1", "1.4.1", "1.4.2", "1.5.2"],
+    "formules": ["7.1.1", "6.4", "7.3.3", "7.2.3"],
+    "pronoms-personals": ["4.1", "4.1.1", "4.1.2", "5.1.1"],
+    "demostratius": ["4.2", "4.2.1", "4.2.2", "4.3.1", "4.3.3"],
+    "noms-genere-nombre": ["3.1", "3.1.1", "3.1.2", "3.2", "3.2.1", "3.2.2", "3.2.3", "3.2.4"],
+    "estat-annexio": ["3.3", "3.3.1", "3.3.2"],
+    "possessius": ["4.1.2", "4.3.2", "4.3.4", "3.3.2"],
+    "preposicions": ["6.2", "6.2.1", "6.2.2", "6.2.3", "3.3.2"],
+    "ser-tenir": ["7.1.1", "6.5", "7.2.3", "6.4", "7.1.3"],
+    "aorist-ad": ["5.2", "5.2.1", "5.1.1", "7.5.5"],
+    "perfectiu": ["5.1.1", "5.2.2", "5.1.2", "5.2.3"],
+    "imperfectiu-habitual": ["5.2", "5.2.4", "5.2.5"],
     "imperatiu": ["5.1.3", "7.2.4"],
-    "negacio": ["7.2.1", "7.2.2", "7.2.3", "5.2.3", "5.2.5"],
-    "preguntes": ["7.3.1", "7.3.2", "4.3.6"],
-    "clitics-objecte": ["4.1.2"],
-    "relatiu-participi": ["4.3.5", "5.1.4", "7.5.1", "7.5.2"],
+    "negacio": ["7.2", "7.2.1", "7.2.2", "7.2.3", "5.2.3", "5.2.5"],
+    "preguntes": ["7.3", "7.3.1", "7.3.2", "4.3.6", "7.5.4"],
+    "clitics-objecte": ["4.1.2", "7.1.2", "4.2.2"],
+    "relatiu-participi": ["4.3.5", "5.1.4", "7.5.1", "7.5.2", "7.5.6"],
     "adjectius-qualitat": ["3.6", "7.4.1", "5.1.2", "7.7.8"],
-    "numerals": ["3.5.1", "3.5.2"],
-    "temps-adverbis": ["6.1", "7.4.2", "7.7.2"],
-    "subordinades": ["7.6.1", "7.7.2", "7.7.3", "7.7.4", "7.7.6"],
-    "derivacio-verbal": ["5.3.2", "5.3.3", "5.3.4", "5.3.5"],
-    "manlleus": ["3.4.1", "3.1.1"],
+    "numerals": ["3.5.1", "3.5.2", "3.5.3"],
+    "temps-adverbis": ["6.1", "7.4.2", "7.7.1", "7.7.2"],
+    "subordinades": ["7.6.1", "7.6.3", "7.7.2", "7.7.3", "7.7.4", "7.7.6"],
+    "derivacio-verbal": ["5.3", "5.3.2", "5.3.3", "5.3.4", "5.3.5"],
+    "manlleus": ["3.4.1", "3.4.2", "3.1.1"],
 }
 
 _state = {"running": False, "done": 0, "pending": 0, "errors": 0, "started_at": None, "finished_at": None, "last_error": None}
@@ -255,7 +255,7 @@ def counts(session_factory) -> Dict[str, int]:
         db.close()
 
 
-def _section_text(grammar_md: str, sections: List[str], each: int = 12000, total: int = 45000) -> str:
+def _section_text(grammar_md: str, sections: List[str], each: int = 12000, total: int = 70000) -> str:
     """The compendium's numbered sections (e.g. 7.2.1) named by the unit, each cut at `each` chars."""
     lines = (grammar_md or "").split("\n")
     heads = []  # (line index, number)
@@ -423,16 +423,33 @@ def pick_examples(rows: List, limit: int = 90, slug: Optional[str] = None) -> Li
         if shi.lower() == ca.lower():
             continue  # «Adeu» = «Adeu»: the Catalan typed in the Tamazight field
         cands.append(example_dict(d))
-    # our own speakers from Aït Mraw first, then the Beni Mellal deck, then the rest; within each, the
-    # pictured-and-voiced sentences first
-    cands.sort(key=lambda e: (origin_rank(e), not (e["image_url"] and e["audio_url"]), not e["audio_url"], not e["image_url"], e["id"]))
-    seen, out = set(), []
+    # within each source, the pictured-and-voiced sentences first, then the shortest
+    cands.sort(key=lambda e: (not (e["image_url"] and e["audio_url"]), not e["audio_url"], not e["image_url"], simplicity(e), e["id"]))
+    return _spread(cands, limit)
+
+
+def _spread(cands: List[dict], limit: int) -> List[dict]:
+    """Take from all three sources at once — our own Aït Mraw speakers, the Beni Mellal deck and the
+    rest — instead of filling the whole pool with the first one: a unit with 300 Aït Mraw sentences
+    used to hide its 500 Beni Mellal ones from the lesson entirely. Two Aït Mraw sentences for every
+    two from Beni Mellal and one from elsewhere, and a source that runs out leaves its turns to the
+    others. Sentences that sound nearly the same («ihla ghori udghar» twice over) count as one."""
+    import practice
+    buckets: List[List[dict]] = [[], [], []]
+    seen = set()
     for e in cands:
-        k = e["shi"].lower()
-        if k in seen:
+        key = " ".join(practice.sound_key(w) for w in re.findall(r"[^\W\d_]+", e["shi"].lower()))
+        if not key or key in seen:
             continue
-        seen.add(k); out.append(e)
-        if len(out) >= limit:
+        seen.add(key)
+        buckets[origin_rank(e)].append(e)
+    out, turns, k = [], (0, 0, 1, 1, 2), 0
+    while len(out) < limit and any(buckets):
+        b = buckets[turns[k % len(turns)]]
+        k += 1
+        if b:
+            out.append(b.pop(0))
+        elif not any(buckets):
             break
     return out
 
@@ -444,7 +461,7 @@ def _study_prompt(unit: dict, reference: str) -> str:
     return (
         f"Study these sections of an Amazigh grammar reference (amazic.cat compendium, in Catalan, centred on the "
         f"Souss Tachelhit with notes on other varieties) for the lesson «{unit['title']}». Write a STUDY SHEET in "
-        "Catalan, at most 600 words, that a teacher will use to explain this point with real sentences from the "
+        "Catalan, at most 900 words, that a teacher will use to explain this point with real sentences from the "
         "Central Atlas (Aït Mraw near Boutharar, Azilal; Beni Mellal):\n"
         "1. RULES: the rules of this point, numbered, one or two sentences each, in plain words.\n"
         "2. FORMS: the forms (prefixes, suffixes, particles, pronouns…) as a compact table in standard Latin "
@@ -452,11 +469,43 @@ def _study_prompt(unit: dict, reference: str) -> str:
         "3. VARIETIES: which rules or forms the reference marks as Souss-only, Central Atlas (tamazight) or "
         "general; what the reference says the Central Atlas does differently, if anything.\n"
         "4. WHAT TO LOOK FOR in a sentence to recognise this point (the visible clues).\n"
+        "5. STEPS: the point cut into 7 to 9 teachable steps, in the order a beginner meets them, one line each "
+        "(«pas 3: el plural en i…n»), so a lesson can follow them one card at a time.\n"
+        "6. MISTAKES: two or three mistakes a Catalan speaker makes with this point.\n"
         "Keep only what the reference says; do not add rules from elsewhere. Spell the reference's variety "
         "abbreviations out (CLḤ = taixelhit del Souss, MZƔ = tamazight del Marroc Central, QBYL = cabilenc, RIF = "
         "rifeny, ZNT = zenata). Start directly with «1. REGLES»: no preamble, no closing remark.\n\n"
         f"REFERENCE:\n{reference}"
     )
+
+
+SHEET_VERSION = 2  # the sheet's shape; a change here reads the compendium again
+
+
+def sheet_for(db, slug: str, grammar_md: str, force: bool = False) -> str:
+    """The unit's rule sheet, read from the compendium once and kept in `grammar_lessons` under
+    «sheet:<slug>»: writing a lesson again then costs one call, not two, and the sheet only changes
+    when its shape or the unit's sections do."""
+    from datetime import datetime
+    from models import GrammarLesson
+    key, want = f"sheet:{slug}", ",".join(SECTIONS.get(slug) or [])
+    row = db.query(GrammarLesson).filter(GrammarLesson.id == key).first() if db is not None else None
+    if row is not None and not force and (row.version or 0) >= SHEET_VERSION:
+        try:
+            kept = json.loads(row.body)
+            if kept.get("sections") == want and kept.get("sheet"):
+                return kept["sheet"]
+        except Exception:
+            pass
+    sheet = study(slug, grammar_md)
+    if db is not None and sheet:
+        body = json.dumps({"sheet": sheet, "sections": want}, ensure_ascii=False)
+        if row is None:
+            db.add(GrammarLesson(id=key, body=body, version=SHEET_VERSION))
+        else:
+            row.body, row.version, row.updated_at = body, SHEET_VERSION, datetime.utcnow()
+        db.commit()
+    return sheet
 
 
 def study(slug: str, grammar_md: str) -> str:
@@ -468,7 +517,7 @@ def study(slug: str, grammar_md: str) -> str:
     from gemini_client import gemini_generate
     return _clean_sheet(gemini_generate("You are a careful reader of Amazigh grammar, writing notes in Catalan.",
                                         [{"role": "user", "text": _study_prompt(unit, reference)}],
-                                        max_output_tokens=2500, temperature=0.2, timeout=240))
+                                        max_output_tokens=3500, temperature=0.2, timeout=300))
 
 
 def _clean_sheet(s: Optional[str]) -> str:
@@ -490,11 +539,13 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str) -> str:
         "passat / acció acabada» instead of acomplert, and so on.\n\n"
         "METHOD. The study sheet below condenses the grammar reference. The sentences below are what OUR speakers "
         "actually say. Your job is to show how the rules of the sheet appear in OUR sentences: every explanation "
-        "states one rule, quotes 1-3 of our sentences that show it, and names the exact piece of each sentence that "
+        "states one rule, quotes 4-6 of our sentences that show it, and names the exact piece of each sentence that "
         "shows the rule (the \"focus\": a substring copied character for character from the sentence as written). The "
         "focus must be the rule itself (the particle, the ending, the pronoun being taught), never another word of the "
         "sentence; a sentence that does not visibly contain the rule must not be quoted at all. "
-        "Prefer the sentences from Aït Mraw (our own recorded speakers), then Beni Mellal. If our sentences show "
+        "Quote from BOTH of our sources across the lesson: the Aït Mraw sentences (our own recorded speakers) "
+        "first inside each step, and the Beni Mellal deck's sentences too — a lesson that never quotes Beni Mellal "
+        "is wasting half of what we have. If our sentences show "
         "the rule differently from the sheet (another form, another spelling, a particle missing), say so plainly: "
         "the speakers are right about their own speech, and the sheet describes mainly the Souss. If no sentence of "
         "ours shows a rule, leave that rule out or say we have no example yet; never invent a sentence.\n\n"
@@ -637,13 +688,13 @@ def _review_quizzes(pool: List[dict], used: set, n_quiz: int, how_many: int) -> 
     return out
 
 
-def write_lesson(slug: str, grammar_md: str, examples: List[dict]) -> dict:
+def write_lesson(slug: str, grammar_md: str, examples: List[dict], sheet: Optional[str] = None) -> dict:
     """Ask Gemini for the unit's steps and attach the examples and the quick checks."""
     unit = next((u for u in UNITS if u["slug"] == slug), None)
     if unit is None:
         raise ValueError("unknown unit")
     from gemini_client import gemini_generate
-    sheet = study(slug, grammar_md)
+    sheet = study(slug, grammar_md) if sheet is None else sheet
     answer = gemini_generate("You are a patient, clear teacher of Amazigh for beginners, writing in Catalan.",
                              [{"role": "user", "text": _lesson_prompt(unit, examples, sheet)}],
                              max_output_tokens=9000, temperature=0.3, timeout=420)
@@ -688,28 +739,97 @@ def _current(row, unit_ids: Optional[set]) -> Optional[dict]:
     return lesson
 
 
-def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool = False, unit_ids: Optional[set] = None) -> dict:
-    """The unit's lesson from the `grammar_lessons` table, written (once) when missing, outdated,
-    quoting drills that left the unit, or forced."""
+_writing: set = set()
+_write_lock = threading.Lock()
+
+
+def writing() -> List[str]:
+    """The units whose lesson is being written right now."""
+    with _write_lock:
+        return sorted(_writing)
+
+
+def _stored(row) -> Optional[dict]:
+    """Whatever lesson is kept for a unit, fresh or not."""
+    try:
+        return json.loads(row.body) if row is not None else None
+    except Exception:
+        return None
+
+
+def _store_lesson(db, slug: str, lesson: dict) -> None:
     from datetime import datetime
+    from models import GrammarLesson
+    body = json.dumps(lesson, ensure_ascii=False)
+    row = db.query(GrammarLesson).filter(GrammarLesson.id == slug).first()
+    if row is None:
+        db.add(GrammarLesson(id=slug, body=body, version=LESSON_VERSION))
+    else:
+        row.body = body; row.version = LESSON_VERSION; row.updated_at = datetime.utcnow()
+    db.commit()
+
+
+def _write_in_background(session_factory, slug: str, grammar_md: str, examples: List[dict], unit_ids: Optional[set]) -> bool:
+    """Write the unit's lesson on a thread of its own, once at a time per unit. True when this call
+    started the writing."""
+    with _write_lock:
+        if slug in _writing:
+            return False
+        _writing.add(slug)
+
+    def run():
+        db = session_factory()
+        try:
+            lesson = write_lesson(slug, grammar_md, examples, sheet=sheet_for(db, slug, grammar_md))
+            if unit_ids is not None:
+                lesson["unit_size"] = len(unit_ids)  # so growth of the unit can be noticed later
+            _store_lesson(db, slug, lesson)
+            print(f"[GRAMMAR] lesson {slug}: written ({len(lesson.get('steps') or [])} steps)")
+        except Exception as e:
+            print(f"[GRAMMAR] lesson {slug}: {e}")
+        finally:
+            try:
+                db.close()
+            except Exception:
+                pass
+            with _write_lock:
+                _writing.discard(slug)
+
+    threading.Thread(target=run, daemon=True).start()
+    return True
+
+
+def _placeholder(slug: str, examples: List[dict]) -> dict:
+    unit = next((u for u in UNITS if u["slug"] == slug), None)
+    return {"intro": "", "writing": True, "steps": [
+        {"type": "explain", "title": (unit or {}).get("title") or "Unitat",
+         "text": "S’està escrivint aquesta lliçó ara mateix. Mentrestant pots escoltar i llegir les frases de la "
+                 "unitat; la lliçó apareixerà tota sola en un minut.",
+         "examples": examples[:4]},
+        {"type": "end"}]}
+
+
+def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool = False, unit_ids: Optional[set] = None,
+               session_factory=None) -> dict:
+    """The unit's lesson from the `grammar_lessons` table. A page NEVER waits for Gemini: when the
+    lesson is missing or outdated and a session factory is given, the writing starts on a thread and
+    the kept lesson (or a short placeholder) comes back at once, marked so the page can ask again."""
     from models import GrammarLesson
     row = db.query(GrammarLesson).filter(GrammarLesson.id == slug).first()
     lesson = None if force else _current(row, unit_ids)
     if lesson is not None:
         return lesson
-    with _explain_lock:
+    if session_factory is not None:
+        _write_in_background(session_factory, slug, grammar_md, examples, unit_ids)
+        kept = _stored(row)
+        return {**kept, "stale": True, "writing": True} if kept else _placeholder(slug, examples)
+    with _explain_lock:  # a script that asked for the lesson itself waits for it
         row = db.query(GrammarLesson).filter(GrammarLesson.id == slug).first()
         lesson = None if force else _current(row, unit_ids)
         if lesson is not None:
             return lesson
-        lesson = write_lesson(slug, grammar_md, examples)
+        lesson = write_lesson(slug, grammar_md, examples, sheet=sheet_for(db, slug, grammar_md))
         if unit_ids is not None:
-            lesson["unit_size"] = len(unit_ids)  # so growth of the unit can be noticed later
-        body = json.dumps(lesson, ensure_ascii=False)
-        if row is None:
-            row = GrammarLesson(id=slug, body=body, version=LESSON_VERSION)
-            db.add(row)
-        else:
-            row.body = body; row.version = LESSON_VERSION; row.updated_at = datetime.utcnow()
-        db.commit()
+            lesson["unit_size"] = len(unit_ids)
+        _store_lesson(db, slug, lesson)
         return lesson
