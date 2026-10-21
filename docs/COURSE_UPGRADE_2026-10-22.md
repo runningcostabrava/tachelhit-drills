@@ -1,64 +1,90 @@
 # El curs de gramàtica, refet (22-10-2026)
 
-Què s'ha canviat aquesta nit, per què, i què queda obert. Tot és a la branca `feat/paradigms`
-(PR #176), que porta també la correcció urgent del PR #175.
+Què s'ha canviat aquesta nit, què s'ha mesurat i què queda obert. El codi és al PR #176, que porta
+també la correcció urgent del PR #175.
 
-## 1. Les lliçons tenen més contingut
+## 1. Les lliçons tenen molt més contingut
 
 | | abans | ara |
 |---|---|---|
-| explicacions per lliçó | 5-7 | 7-9 |
-| frases per explicació | 3 (el lector en retallava la resta) | 4-6 |
+| explicacions per lliçó | 5-7 demanades, 5 escrites | 7-9 (amb 40 frases o més, menys de 7 no s'accepta) |
+| frases per explicació | 3 | 4-6 |
 | preguntes | una cada dues explicacions | una després de cada explicació |
-| repàs final | cap | 3 preguntes sobre frases que no havien sortit |
+| repàs final | cap | 3 preguntes sobre frases noves |
 | fons de frases | 60 | 90 |
-| taules | 1, inventada | 1-2, copiades dels paradigmes dels parlants |
+| taules | inventades | copiades dels paradigmes dels parlants |
 
-El retall a tres era un error del lector: el model donava sis exemples i el codi en llençava la
-meitat. A més, una explicació que arriba curta s'omple amb frases de la mateixa unitat que
-contenen el tros que s'ensenya, comparat pel so, de manera que «ghori» serveix per a una
-explicació sobre «ɣur-i» i «izri wass» no hi entra mai.
+El retall a tres era un error del lector de la resposta: el model donava sis exemples i el codi en
+llençava la meitat. Una explicació que arriba curta s'omple ara amb frases de la unitat que
+contenen el tros ensenyat, comparat **pel so**, de manera que «ghori» entra en una explicació
+sobre «ɣur-i» i «izri wass» no hi entra mai. El mateix criteri marca el tros dins de cada frase,
+encara que el parlant l'escrigui d'una altra manera.
 
-## 2. Una unitat obre a l'instant
+## 2. Mesura: les 23 lliçons, escrites amb aquest codi
 
-Abans la lliçó s'escrivia dins de la petició: obrir «ser-tenir» trigava 22 segons, i qualsevol
-canvi de format feia esperar el primer que entrava. Ara:
+Totes es van escriure en local amb la biblioteca i el compendi reals (no es va tocar producció):
+
+| | mitjana |
+|---|---|
+| explicacions per lliçó | 7,5 |
+| frases citades per lliçó | 36,9 |
+| preguntes per lliçó | 10,5 |
+| unitats que citen Beni Mellal | 22 de 22 |
+| prosa amb tifinag o àrab | cap |
+
+Unitats amb més de 8 explicacions: possessius (10), temps i adverbis (12), demostratius,
+preposicions i manlleus (9). Les que en tenen 5 o 6 són les de fons petit: derivació verbal (26
+frases), estat d'annexió (35, ara ampliat), aorist, adjectius i numerals.
+
+## 3. Una unitat obre a l'instant
+
+Obrir «ser-tenir» trigava **22 segons** perquè la lliçó s'escrivia dins de la petició. Ara:
 
 - la lliçó guardada torna de seguida; si se n'està escrivint una de nova, la pàgina ho diu i la
-  recull tota sola al cap de pocs segons (`GET /grammar/{slug}/lesson`);
-- després de cada desplegament el servidor escriu ell mateix les lliçons que falten o que han
-  quedat velles, una a una, vint segons després d'arrencar (`GRAMMAR_SELF_WRITE=0` ho atura);
-- el full de regles que es llegeix del compendi es guarda per unitat, així que reescriure una
-  lliçó costa una crida i no dues.
+  recull tota sola (`GET /grammar/{slug}/lesson`);
+- després de cada desplegament el servidor escriu ell mateix les que falten o han quedat velles,
+  una a una (`GRAMMAR_SELF_WRITE=0` ho atura);
+- el full de regles del compendi es guarda per unitat: reescriure costa una crida, no dues.
 
-## 3. Tots els reculls arriben a les lliçons
+## 4. Tots els reculls arriben a les lliçons
 
-El fons d'exemples omplia les 90 places per ordre de procedència, de manera que una unitat amb 90
-frases d'Aït Mraw no mostrava mai cap de les 500 de Beni Mellal. Ara es reparteix entre els tres
-reculls i descarta les frases que sonen igual que una que ja hi és. La revisió sencera del recull
-de Beni Mellal és a `docs/BENIMELLAL_REVIEW_2026-10-22.md`.
+El fons omplia les places per ordre de procedència: una unitat amb 90 frases d'Aït Mraw no en
+mostrava cap de les 500 de Beni Mellal.
 
-## 4. Més compendi d'amazic.cat darrere de cada unitat
+| unitat | abans (mraw/beni/altres) | ara |
+|---|---|---|
+| perfectiu | 90/0/0 | 36/36/18 |
+| pronoms enganxats al verb | 90/0/0 | 36/36/18 |
+| noms, gènere i nombre | 90/0/0 | 36/36/18 |
 
-Cada unitat llegeix ara dues o tres vegades més seccions dels PDFs, i el full de regles inclou
-els passos per ensenyar el punt i els errors típics d'un catalanoparlant. Els fulls fan entre 900
-i 1.900 paraules.
+Les **299 llistes de conjugació** del recull de Beni Mellal, que cap lliçó podia tocar perquè no
+són frases, són ara les taules de les lliçons (19 unitats en tenen). Revisió sencera del recull:
+`docs/BENIMELLAL_REVIEW_2026-10-22.md`.
 
-## 5. Dades de producció
+## 5. Més compendi d'amazic.cat
 
-- 43 drills que no tenien unitat (o en tenien una desconeguda) ja la tenen.
-- Les glosses paraula per paraula s'estan escrivint per a tota la biblioteca (3.166 drills; cap
-  del recull de Beni Mellal en tenia).
-- 299 llistes de conjugació passen a ser taules de lliçó.
+Cada unitat llegeix dues o tres vegades més seccions dels PDFs. El full de regles fa entre 900 i
+1.900 paraules i ara inclou els passos per ensenyar el punt i els errors típics d'un
+catalanoparlant. Els mots que un principiant no té («inacomplert», «clític», «díctic»…) es
+canvien per la manera planera de dir-ho, encara que el qui escriu se n'oblidi.
+
+## 6. Dades de producció (ja fetes)
+
+| | drills |
+|---|---|
+| sense unitat, o amb una d'inventada, ara classificats | 43 |
+| fórmules recuperades d'altres unitats | 24 (el fons passa de 15 a 39) |
+| frases afegides a l'estat d'annexió | 184 (la unitat passa de 43 a 227) |
+| glosses paraula per paraula | en curs, 3.148 drills |
 
 ## El que cal de tu
 
-**Fusionar el PR #176.** Jo no puc fusionar en aquest mode. Quan hi sigui, Render desplega i el
-servidor escriu les 23 lliçons ell sol; no cal fer res més.
+**Fusionar el PR #176.** En aquest mode no puc fusionar jo. Quan hi sigui, Render desplega i el
+servidor escriu les 23 lliçons ell sol.
 
 ## Obert
 
-- El correu encara no surt de Render (cal provar «Envia'm una prova» amb una clau d'API de Brevo
-  o Resend a la pantalla d'administració).
+- El correu encara no surt de Render (cal provar «Envia'm una prova» amb una clau de Brevo o
+  Resend a la pantalla d'administració).
 - `FRONTEND_URL` a Render encara apunta al domini vell.
-- Les 23 veus catalanes que van fallar amb error de servidor estan per repetir.
+- Les veus sintètiques en tamazight estan aturades expressament: no les vols.
