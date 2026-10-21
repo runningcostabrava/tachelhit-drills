@@ -171,11 +171,7 @@ function UnitView({ slug }: { slug: string }) {
     <div style={{ padding: '16px 16px 96px', maxWidth: '640px', margin: '0 auto' }}>
       <button onClick={() => navigate('/grammar')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: '4px 0', marginBottom: '6px' }}><FaChevronLeft /> Totes les unitats</button>
       {error && <div style={{ color: 'var(--rose)' }}>{error}</div>}
-      {!page && !error && (
-        <div style={{ color: 'var(--text-muted)', padding: '24px 0' }}>
-          Preparant la unitat… (la primera vegada s’escriu la lliçó: triga uns segons)
-        </div>
-      )}
+      {!page && !error && <LoadingUnit />}
       {page && card && (
         <div style={{ display: 'flex', gap: 6, margin: '0 0 10px' }}>
           {([['cards', 'Targetes'], ['document', 'Document']] as [ViewMode, string][]).map(([m, label]) => (
@@ -227,6 +223,18 @@ function UnitView({ slug }: { slug: string }) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// The lessons are written ahead of time and cached, so a wait is almost always the server being
+// busy; only a unit whose lesson was never written (or just changed) is written on open.
+function LoadingUnit() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => { const t = window.setTimeout(() => setSlow(true), 7000); return () => window.clearTimeout(t); }, []);
+  return (
+    <div style={{ color: 'var(--text-muted)', padding: '24px 0' }}>
+      Carregant la unitat…{slow ? ' El servidor va carregat ara mateix; si aquesta lliçó és nova s’està escrivint i pot trigar fins a un minut.' : ''}
     </div>
   );
 }
