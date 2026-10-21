@@ -1957,6 +1957,13 @@ def _admin_emails() -> set:
     return {e.strip().lower() for e in (os.getenv("ADMIN_EMAILS") or "").split(",") if e.strip()}
 
 
+def _no_admin_yet(db) -> bool:
+    """True while nobody can administer this library. The first account then becomes the
+    administrator, so a fresh database (or one whose only admin was a token identity that is gone)
+    is not left with no way in; once an admin exists this never fires again."""
+    return db.query(UserModel).filter(UserModel.is_admin.is_(True)).count() == 0
+
+
 def _valid_email(e: str) -> bool:
     return bool(re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", e or ""))
 
@@ -5132,8 +5139,11 @@ def auth_signup(request: Request, email: str = Body(..., embed=True), password: 
     if db.query(UserModel).filter(UserModel.username == uname).first():
         raise HTTPException(status_code=409, detail="Username already taken")
     user = UserModel(username=uname, display_name=(display_name or uname).strip(), token=_hash_token(secrets.token_hex(16)),
-                     email=email_n, password_hash=_hash_password(password), is_admin=email_n in _admin_emails(),
+                     email=email_n, password_hash=_hash_password(password),
+                     is_admin=(email_n in _admin_emails() or _no_admin_yet(db)),
                      variety=(variety or None), region=(region or "").strip() or None)
+    if user.is_admin and email_n not in _admin_emails():
+        print(f"[AUTH] {email_n} is the first account of this library: granted administrator")
     db.add(user); db.commit(); db.refresh(user)
     return {**_user_payload(user), "token": _new_session(db, user, device)}
 
@@ -5684,7 +5694,8 @@ def _petition_row(d, units_level: dict) -> dict:
 
 
 @app.get("/petitions")
-def petitions(kind: str = "open", limit: int = 40, db: Session = Depends(get_db)):
+def petitions(kind: str = "open", limit: int = 40, offset: int = 0, topic: Optional[str] = None,
+              unit: Optional[str] = None, db: Session = Depends(get_db)):
     """What the community can record. `open`: sentences a learner asked for, still without Tamazight
     (a speaker answers with their recording and their own spelling). `synthetic`: drills that have a
     text but no human voice yet (only a synthetic one), the basic units first. `aitmraw`: the
@@ -5695,12 +5706,19 @@ def petitions(kind: str = "open", limit: int = 40, db: Session = Depends(get_db)
         rows = base.filter(DrillModel.tag.ilike("%petici%"), (DrillModel.text_tachelhit.is_(None)) | (DrillModel.text_tachelhit == "")).order_by(DrillModel.id.desc()).all()
         return {"items": [_petition_row(d, units_level) for d in rows[:max(1, min(limit, 200))]], "total": len(rows)}
     if kind == "synthetic":
+        # every real drill nobody has recorded yet: the synthetic voice is only scaffolding
         rows = base.filter(DrillModel.text_tachelhit.isnot(None), DrillModel.text_tachelhit != "", DrillModel.text_catalan.isnot(None),
                            (DrillModel.audio_url.is_(None)) | (DrillModel.audio_url == "")).all()
         rows = [d for d in rows if grammar_course.quotable(d.text_tachelhit, (grammar_course.parse(d.grammar) or [None])[0])]
+        if topic:
+            rows = [d for d in rows if topic in topics_catalog.parse(d.topics)]
+        if unit:
+            rows = [d for d in rows if unit in grammar_course.parse(d.grammar)]
         items = [_petition_row(d, units_level) for d in rows]
+        # the course's first units first, then the ones with a picture to record from
         items.sort(key=lambda x: (x["level"], not x["drill"].image_url, -x["drill"].id))
-        return {"items": items[:max(1, min(limit, 200))], "total": len(items)}
+        return {"items": items[max(0, offset):max(0, offset) + max(1, min(limit, 200))], "total": len(items),
+                "without_any_voice": sum(1 for x in items if not x["drill"].audio_tts_shi_url)}
     if kind == "aitmraw":
         w = grammar_wishlist(per_unit=6, db=db)["units"]
         items = [{"drill": d, "units": [u["slug"]], "level": u["level"], "requested_by": None, "note": f"Unitat «{u['title']}»: {u['aitmraw_voiced']} veus d'Aït Mraw"} for u in w for d in u["wanted"]]

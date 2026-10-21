@@ -834,3 +834,22 @@ def test_admin_sets_the_mail_sender_from_the_app(monkeypatch):
     assert sent and sent[0][0] == "wants.code@example.test"
     assert client.post("/admin/mail/test", json={"to": None}, headers=h).json()["sent_to"] == "mail.admin@example.test"
     db.query(AppSettingModel).delete(); db.commit(); db.close()
+
+
+def test_the_first_account_of_an_empty_library_can_administer_it():
+    from models import User as UserModel
+    db = main.SessionLocal()
+    was = db.query(UserModel).filter(UserModel.is_admin.is_(True)).all()
+    for u in was:
+        u.is_admin = False
+    db.commit()
+    import secrets as _s
+    main._register_attempts.clear()  # the suite has already used this IP's signup allowance
+    tag = _s.token_hex(3)
+    first = client.post("/auth/signup", json={"email": f"first.owner.{tag}@example.test", "password": "ownerpass1", "username": f"firstowner{tag}"}).json()
+    assert first["is_admin"] is True  # nobody could administer the library: this account can
+    second = client.post("/auth/signup", json={"email": f"later.person.{tag}@example.test", "password": "laterpass1", "username": f"laterperson{tag}"}).json()
+    assert second["is_admin"] is False  # an admin exists now: everyone else is an ordinary user
+    for u in was:
+        u.is_admin = True
+    db.commit(); db.close()
