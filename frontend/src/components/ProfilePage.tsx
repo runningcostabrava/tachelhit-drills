@@ -33,14 +33,15 @@ function AdminMailSettings() {
   const [s, setS] = useState<MailSettings | null>(null);
   const [host, setHost] = useState(''); const [port, setPort] = useState(''); const [user, setUser] = useState('');
   const [pass, setPass] = useState(''); const [from, setFrom] = useState('');
+  const [prov, setProv] = useState(''); const [apiKey, setApiKey] = useState('');
   const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<string | null>(null); const [err, setErr] = useState<string | null>(null);
-  const load = () => api.adminMailGet().then((r) => { setS(r); setHost(r.SMTP_HOST || ''); setPort(r.SMTP_PORT || '587'); setUser(r.SMTP_USER || ''); setFrom(r.SMTP_FROM || ''); }).catch(() => {});
+  const load = () => api.adminMailGet().then((r) => { setS(r); setHost(r.SMTP_HOST || ''); setPort(r.SMTP_PORT || '587'); setUser(r.SMTP_USER || ''); setFrom(r.SMTP_FROM || ''); setProv(r.MAIL_API_PROVIDER || ''); }).catch(() => {});
   useEffect(() => { load(); }, []);
   const save = async () => {
     setBusy(true); setErr(null); setMsg(null);
     try {
-      const r = await api.adminMailSet({ SMTP_HOST: host.trim(), SMTP_PORT: port.trim(), SMTP_USER: user.trim(), SMTP_FROM: (from.trim() || user.trim()), ...(pass.trim() ? { SMTP_PASS: pass.trim() } : {}) });
-      setS(r); setPass(''); setMsg(r.ready ? 'Desat. Ja es poden enviar correus.' : 'Desat, però encara falten dades.');
+      const r = await api.adminMailSet({ SMTP_HOST: host.trim(), SMTP_PORT: port.trim(), SMTP_USER: user.trim(), SMTP_FROM: (from.trim() || user.trim()), ...(pass.trim() ? { SMTP_PASS: pass.trim() } : {}), MAIL_API_PROVIDER: prov.trim() || '-', ...(apiKey.trim() ? { MAIL_API_KEY: apiKey.trim() } : {}) });
+      setS(r); setPass(''); setApiKey(''); setMsg(r.ready ? 'Desat. Ja es poden enviar correus.' : 'Desat, però encara falten dades.');
     } catch (e: any) { setErr(e?.message || 'No s’ha pogut desar'); } finally { setBusy(false); }
   };
   const test = async () => {
@@ -59,6 +60,11 @@ function AdminMailSettings() {
         <input value={user} onChange={(e) => setUser(e.target.value)} placeholder="adreça@gmail.com" style={field} />
         <input value={from} onChange={(e) => setFrom(e.target.value)} placeholder="remitent (per defecte, la mateixa)" style={field} />
         <input value={pass} onChange={(e) => setPass(e.target.value)} type="password" autoComplete="new-password" placeholder={s?.has_password ? 'contrasenya desada · escriu-ne una de nova per canviar-la' : 'contrasenya d’aplicació (16 lletres)'} style={field} />
+      </div>
+      <p style={{ margin: '10px 0 6px', fontSize: '13px', color: 'var(--text-soft)', lineHeight: 1.45 }}>Si el servidor no pot obrir connexions SMTP (error «Network is unreachable»), fes servir un proveïdor per HTTPS: escriu <strong>resend</strong> o <strong>brevo</strong> i la seva clau d’API. El remitent ha de ser una adreça verificada al proveïdor.</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '8px' }}>
+        <input value={prov} onChange={(e) => setProv(e.target.value)} placeholder="proveïdor: resend o brevo" style={field} />
+        <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} type="password" autoComplete="new-password" placeholder={s?.has_api_key ? 'clau desada · escriu-ne una de nova' : 'clau d’API del proveïdor'} style={field} />
       </div>
       <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
         <button onClick={save} disabled={busy} style={{ padding: '9px 16px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px' }}>{busy ? 'Desant…' : 'Desa'}</button>

@@ -340,7 +340,7 @@ export interface PracticeCard { speaker: string; origin: string; day: string | n
 export interface PronunciationWord { word: string; ok: boolean; heard: string | null }
 export type PracticeMode = 'parla' | 'escolta' | 'auto';
 /** The mail sender as the app has it; the password itself is never sent back. */
-export interface MailSettings { SMTP_HOST: string; SMTP_PORT: string; SMTP_USER: string; SMTP_FROM: string; has_password: boolean; ready: boolean; from_app: Record<string, boolean> }
+export interface MailSettings { SMTP_HOST: string; SMTP_PORT: string; SMTP_USER: string; SMTP_FROM: string; has_password: boolean; ready: boolean; from_app: Record<string, boolean>; MAIL_API_PROVIDER?: string; has_api_key?: boolean }
 /** A person's public page: who they are and what they gave the library. */
 export interface ContributionDrill { id: number; text_tachelhit?: string | null; text_catalan?: string | null; audio_url?: string | null; image_url?: string | null; region?: string | null; variety?: string | null; tag?: string | null; variant_of?: number | null; verified?: boolean | null; date_created?: string | null }
 export interface Contributions { counts: { drills: number; petitions: number; variants: number; takes: number; proposals_accepted: number; proposals_pending: number }; drills: ContributionDrill[]; takes: { id: number; audio_url: string; text: string | null; variety: string | null; region: string | null; date_created: string; drill: ContributionDrill }[] }

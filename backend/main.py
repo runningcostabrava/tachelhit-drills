@@ -1995,7 +1995,14 @@ def _user_payload(user: UserModel) -> dict:
             "has_password": bool(user.password_hash)}
 
 
-MAIL_KEYS = ("SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM")
+MAIL_KEYS = ("SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "MAIL_API_PROVIDER", "MAIL_API_KEY")
+
+
+def _mail_ready() -> bool:
+    """Can this server send mail at all: an HTTPS provider, or a full SMTP sender."""
+    api = mail_setting("MAIL_API_PROVIDER") and mail_setting("MAIL_API_KEY") and (mail_setting("SMTP_FROM") or mail_setting("SMTP_USER"))
+    smtp = mail_setting("SMTP_HOST") and mail_setting("SMTP_USER") and mail_setting("SMTP_PASS")
+    return bool(api or smtp)
 
 
 def mail_setting(key: str) -> str:
@@ -2010,28 +2017,82 @@ def mail_setting(key: str) -> str:
     return (os.getenv(key) or "").strip()
 
 
+def _send_email_api(to: str, subject: str, body: str) -> bool:
+    """Send over HTTPS through a mail provider (Resend or Brevo). Hosts that block the SMTP ports
+    (Render does) can still send this way. Returns False when no provider is configured."""
+    provider = mail_setting("MAIL_API_PROVIDER").lower()
+    key = mail_setting("MAIL_API_KEY")
+    sender = mail_setting("SMTP_FROM") or mail_setting("SMTP_USER")
+    if not provider or not key or not sender:
+        return False
+    if provider == "resend":
+        r = requests.post("https://api.resend.com/emails", headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                          json={"from": sender, "to": [to], "subject": subject, "text": body}, timeout=30)
+    elif provider == "brevo":
+        r = requests.post("https://api.brevo.com/v3/smtp/email", headers={"api-key": key, "Content-Type": "application/json"},
+                          json={"sender": {"email": sender}, "to": [{"email": to}], "subject": subject, "textContent": body}, timeout=30)
+    else:
+        raise RuntimeError(f"Unknown mail provider: {provider}")
+    if r.status_code >= 300:
+        raise RuntimeError(f"{provider} {r.status_code}: {r.text[:200]}")
+    return True
+
+
+def _smtp_connect(host: str, port: int, timeout: int = 30):
+    """Open an SMTP connection, IPv4 first (a host with no IPv6 route answers «Network is
+    unreachable» when the name resolves to IPv6), trying STARTTLS on the given port and implicit
+    TLS on 465. Raises the last error when nothing connects."""
+    import smtplib, socket, ssl
+    last = None
+    for p, implicit in ((port, False), (465, True)) if port != 465 else ((465, True), (587, False)):
+        for family in (socket.AF_INET, socket.AF_INET6):
+            try:
+                infos = socket.getaddrinfo(host, p, family, socket.SOCK_STREAM)
+            except OSError as e:
+                last = e; continue
+            for *_ , addr in [i[:5] for i in infos][:3]:
+                try:
+                    sock = socket.create_connection(addr[:2], timeout)
+                    if implicit:
+                        smtp = smtplib.SMTP_SSL(timeout=timeout, context=ssl.create_default_context())
+                        smtp.sock = ssl.create_default_context().wrap_socket(sock, server_hostname=host)
+                        smtp.file = smtp.sock.makefile("rb"); smtp._host = host
+                        smtp.getreply(); smtp.ehlo()
+                    else:
+                        smtp = smtplib.SMTP(timeout=timeout)
+                        smtp.sock = sock; smtp.file = sock.makefile("rb"); smtp._host = host
+                        smtp.getreply(); smtp.ehlo(); smtp.starttls(context=ssl.create_default_context()); smtp.ehlo()
+                    return smtp
+                except Exception as e:
+                    last = e
+                    try: sock.close()
+                    except Exception: pass
+    raise last or RuntimeError("no route to the mail server")
+
+
 def _send_email(to: str, subject: str, body: str) -> bool:
-    """SMTP sender from env (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM). False when not configured."""
+    """Send a message. An HTTPS provider is used when one is configured (the only way out of hosts
+    that block SMTP); otherwise SMTP from the saved settings, else the environment. False when
+    nothing is configured."""
+    if _send_email_api(to, subject, body):
+        return True
     host, user_, pw = mail_setting("SMTP_HOST"), mail_setting("SMTP_USER"), mail_setting("SMTP_PASS")
     if not (host and user_ and pw):
         return False
-    import smtplib
     from email.message import EmailMessage
     msg = EmailMessage()
     msg["From"] = mail_setting("SMTP_FROM") or user_
     msg["To"] = to
     msg["Subject"] = subject
     msg.set_content(body)
-    with smtplib.SMTP(host, int(mail_setting("SMTP_PORT") or 587), timeout=30) as smtp:
-        smtp.starttls()
+    smtp = _smtp_connect(host, int(mail_setting("SMTP_PORT") or 587))
+    try:
         smtp.login(user_, pw)
         smtp.send_message(msg)
+    finally:
+        try: smtp.quit()
+        except Exception: pass
     return True
-
-# ---- Pagination + delta-sync helpers (P4.1-4.3)
-DEFAULT_PAGE_LIMIT = 100
-MAX_PAGE_LIMIT = 500
-JOB_TERMINAL_STATUSES = ("COMPLETED", "FAILED")
 
 
 def reap_dead_jobs(db) -> tuple:
@@ -5206,7 +5267,7 @@ def auth_forgot(request: Request, email: str = Body(..., embed=True), db: Sessio
     503 only when no SMTP sender is configured."""
     ip = request.client.host if request.client else "unknown"
     _rate_limit(_login_attempts, ip, 10, 900)
-    if not (mail_setting("SMTP_HOST") and mail_setting("SMTP_USER") and mail_setting("SMTP_PASS")):
+    if not _mail_ready():
         raise HTTPException(status_code=503, detail="No hi ha cap servidor de correu configurat; demana el restabliment a l'administrador")
     user = db.query(UserModel).filter(UserModel.email == (email or "").strip().lower()).first()
     if user:
@@ -5228,7 +5289,10 @@ def admin_mail_get(_admin: UserModel = Depends(require_admin), db: Session = Dep
     out = {k: (saved.get(k) or os.getenv(k) or "") for k in MAIL_KEYS if k != "SMTP_PASS"}
     out["has_password"] = bool((saved.get("SMTP_PASS") or os.getenv("SMTP_PASS") or "").strip())
     out["from_app"] = {k: bool((saved.get(k) or "").strip()) for k in MAIL_KEYS}
-    out["ready"] = bool(mail_setting("SMTP_HOST") and mail_setting("SMTP_USER") and mail_setting("SMTP_PASS"))
+    out["ready"] = bool((mail_setting("MAIL_API_PROVIDER") and mail_setting("MAIL_API_KEY") and (mail_setting("SMTP_FROM") or mail_setting("SMTP_USER")))
+                        or (mail_setting("SMTP_HOST") and mail_setting("SMTP_USER") and mail_setting("SMTP_PASS")))
+    out["MAIL_API_PROVIDER"] = mail_setting("MAIL_API_PROVIDER")
+    out["has_api_key"] = bool(mail_setting("MAIL_API_KEY"))
     return out
 
 
@@ -5258,7 +5322,7 @@ def admin_mail_test(to: Optional[str] = Body(None, embed=True), _admin: UserMode
     dest = (to or _admin.email or "").strip()
     if not dest:
         raise HTTPException(status_code=400, detail="Digues a quina adreça l'envio")
-    if not (mail_setting("SMTP_HOST") and mail_setting("SMTP_USER") and mail_setting("SMTP_PASS")):
+    if not _mail_ready():
         raise HTTPException(status_code=503, detail="Encara falten dades del servidor de correu")
     try:
         ok = _send_email(dest, "Tamazight Drills: prova d'enviament",
