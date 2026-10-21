@@ -627,17 +627,26 @@ def quoted_ids(lesson: dict) -> set:
     return {i for i in ids if i is not None}
 
 
+GROWTH = 0.3  # a unit that gained this share of drills (and at least 5) gets its lesson written again
+
+
 def _current(row, unit_ids: Optional[set]) -> Optional[dict]:
-    """The stored lesson when it is up to date: right version and, when the unit's drills are given,
-    every sentence it quotes still in the unit (a reclassified unit gets its lesson written again)."""
+    """The stored lesson when it is up to date: right version; when the unit's drills are given,
+    every sentence it quotes still in the unit (a reclassified unit gets its lesson written again)
+    and the unit has not grown much since the lesson was written (new recordings and captures join
+    the lesson, instead of waiting for a format change)."""
     if row is None or (row.version or 0) < LESSON_VERSION:
         return None
     try:
         lesson = json.loads(row.body)
     except Exception:
         return None
-    if unit_ids is not None and quoted_ids(lesson) - unit_ids:
-        return None
+    if unit_ids is not None:
+        if quoted_ids(lesson) - unit_ids:
+            return None
+        size = lesson.get("unit_size")
+        if isinstance(size, int) and len(unit_ids) >= size + max(5, int(size * GROWTH)):
+            return None
     return lesson
 
 
@@ -656,6 +665,8 @@ def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool
         if lesson is not None:
             return lesson
         lesson = write_lesson(slug, grammar_md, examples)
+        if unit_ids is not None:
+            lesson["unit_size"] = len(unit_ids)  # so growth of the unit can be noticed later
         body = json.dumps(lesson, ensure_ascii=False)
         if row is None:
             row = GrammarLesson(id=slug, body=body, version=LESSON_VERSION)
