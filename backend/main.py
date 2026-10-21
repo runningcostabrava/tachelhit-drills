@@ -2151,6 +2151,33 @@ async def tachelhit_tts_endpoint(request: TtsRequest, db: Session = Depends(get_
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+class CatalanTtsRequest(BaseModel):
+    drill_id: int
+    force: bool = False
+
+
+@app.post("/tts/catalan")
+def catalan_tts_endpoint(request: CatalanTtsRequest, db: Session = Depends(get_db)):
+    """Make and store the Catalan synthetic voice (audio_tts_url) of a drill that lacks one, so the
+    player can say the meaning before the Tachelhit. Drills created by hand with a recording (our own
+    speakers') never got one. Idempotent: an existing voice is kept unless `force`."""
+    drill = db.query(DrillModel).filter(DrillModel.id == request.drill_id).first()
+    if drill is None:
+        raise HTTPException(status_code=404, detail="Drill not found")
+    text = (drill.text_catalan or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="The drill has no Catalan text")
+    if drill.audio_tts_url and not request.force:
+        return {"url": drill.audio_tts_url, "cached": True}
+    try:
+        url = generate_catalan_tts(text, drill.id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    drill.audio_tts_url = url
+    db.commit()
+    return {"url": url, "cached": False}
+
+
 class ImportLinkRequest(BaseModel):
     url: str
     drill_id: int

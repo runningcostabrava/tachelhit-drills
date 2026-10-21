@@ -110,6 +110,9 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
   const [isPlaying, setIsPlaying] = useState(false);
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(false);
   const [loopEnabled, setLoopEnabled] = useState(false);
+  // Say the Catalan meaning (synthetic voice) before the Tachelhit; remembered on this device
+  const [catalanFirst, setCatalanFirst] = useState<boolean>(() => { try { return localStorage.getItem('player_catalan_first') !== 'off'; } catch { return true; } });
+  const toggleCatalanFirst = () => setCatalanFirst((v) => { try { localStorage.setItem('player_catalan_first', v ? 'off' : 'on'); } catch { /* private mode */ } return !v; });
   const [audioProgress, setAudioProgress] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const [imageUrl, setImageUrl] = useState<string>('');
@@ -457,8 +460,8 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
     const startedAtIndex = currentIndexRef.current;
 
     try {
-      // 1. Catalan (1x)
-      await handleSpeakCatalan();
+      // 1. Catalan (1x), unless the learner turned it off
+      if (catalanFirst) await handleSpeakCatalan();
 
       // Recall-first: stop after the prompt until the user reveals the answer
       if (reviewMode && !answerRevealedRef.current) {
@@ -844,6 +847,13 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
             style={{ ...pillButtonStyle, background: loopEnabled ? 'var(--saffron)' : 'rgba(255,255,255,0.18)', color: loopEnabled ? '#3a2a00' : 'white' }}
           >
             LOOP {loopEnabled ? 'ON' : 'OFF'}
+          </button>
+          <button
+            onClick={toggleCatalanFirst}
+            title={catalanFirst ? 'Primer sona el significat en català, després el tamazight' : 'Només el tamazight'}
+            style={{ ...pillButtonStyle, background: catalanFirst ? 'var(--saffron)' : 'rgba(255,255,255,0.18)', color: catalanFirst ? '#3a2a00' : 'white' }}
+          >
+            CAT {catalanFirst ? 'ON' : 'OFF'}
           </button>
 
           {/* Video Library Button */}

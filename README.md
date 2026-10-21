@@ -118,6 +118,8 @@ target the Render API.
   speaker's verdict from the verification queue
 - `/generate-image/{id}` (`use_ai`, optional `search_query` hint), `/images/fill-missing` — drill pictures
 - `/capture/*` — queue a URL for the local capture agent (`tools/capture_agent.py`)
+- `POST /tts/catalan` — make the Catalan synthetic voice (`audio_tts_url`) of a drill
+  that lacks one (idempotent); the player says the meaning first (CAT toggle)
 - `/grammar`, `/grammar/{slug}` — the course and one unit's lesson (steps) +
   examples + `practice` (the test's sentence ids); `/grammar/wishlist` — what
   our speakers could record next; admin: `POST /grammar/run` (classify),

@@ -763,3 +763,17 @@ def test_recording_keeps_the_speakers_own_words(monkeypatch):
     up = client.patch(f"/recordings/{lst[0]['id']}", json={"text": "mlid mad rad skrɣ ɣilad"})
     assert up.status_code == 200 and up.json()["text"] == "mlid mad rad skrɣ ɣilad"
     assert client.post(f"/drills/{d['id']}/recordings", files={"file": ("t.webm", b"RIFF", "audio/webm")}, data={"variety": "nope"}).status_code == 400
+
+
+def test_catalan_voice_is_made_once_for_a_drill_that_lacks_it(monkeypatch):
+    import main
+    calls = []
+    monkeypatch.setattr(main, "generate_catalan_tts", lambda text, did: calls.append(text) or f"https://x/tts_{did}.mp3")
+    d = client.post("/drills/", json={"text_catalan": "Tinc mal de cap", "text_tachelhit": "ixxa iyi uqlal", "audio_url": "https://x/h.webm"}).json()
+    client.put(f"/drills/{d['id']}", json={"audio_tts_url": None})
+    before = len(calls)
+    r = client.post("/tts/catalan", json={"drill_id": d["id"]}).json()
+    assert r["url"].endswith(f"tts_{d['id']}.mp3") and r["cached"] is False and len(calls) == before + 1
+    assert client.get(f"/drills/{d['id']}").json()["audio_tts_url"] == r["url"]
+    assert client.post("/tts/catalan", json={"drill_id": d["id"]}).json()["cached"] is True and len(calls) == before + 1
+    assert client.post("/tts/catalan", json={"drill_id": 999999}).status_code == 404
