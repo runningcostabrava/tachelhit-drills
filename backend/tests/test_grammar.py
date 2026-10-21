@@ -72,8 +72,11 @@ def test_practice_is_sentences_only_and_wishlist_names_what_our_speakers_could_r
     # the wishlist: the unit's Aït Mraw voices, and the sentences from elsewhere worth recording (pictured first)
     w = client.get("/grammar/wishlist").json()["units"]
     u = next(x for x in w if x["slug"] == "aorist-ad")
-    wanted = [d["id"] for d in u["wanted"]]
-    assert u["aitmraw_voiced"] == 1 and wanted[0] == sent["id"] and not {ours["id"], word["id"], lst["id"]} & set(wanted)
+    other = client.post("/drills/", json={"text_catalan": "vull te", "text_tachelhit": "rix atay", "image_url": "https://x/t.jpg", "audio_url": "https://x/t.webm"}).json()
+    client.put(f"/drills/{other['id']}", json={"grammar": "aorist-ad", "grammar_source": "owner"})
+    wanted = [d["id"] for d in next(x for x in client.get("/grammar/wishlist").json()["units"] if x["slug"] == "aorist-ad")["wanted"]]
+    assert other["id"] in wanted
+    assert u["aitmraw_voiced"] == 1 and wanted[0] == sent["id"] and not {ours["id"], word["id"], lst["id"]} & set(wanted)  # the deck's sentence before a pictured-and-voiced one from elsewhere
     assert [x["aitmraw_voiced"] for x in w] == sorted(x["aitmraw_voiced"] for x in w)  # the units lacking voices first
     # a lesson whose quoted sentence leaves the unit is written again; one still quoting the unit is kept
     assert grammar.quoted_ids({"steps": [{"type": "explain", "examples": [{"id": 5}]}, {"type": "quiz", "example": {"id": 7}}]}) == {5, 7}

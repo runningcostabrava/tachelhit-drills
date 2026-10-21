@@ -5525,7 +5525,8 @@ def grammar_wishlist(per_unit: int = 8, db: Session = Depends(get_db)):
         voiced = sum(1 for d in rows if (grammar_course.origin(d) == grammar_course.AIT_MRAW and d.audio_url) or d.id in mraw_takes)
         wanted = [d for d in grammar_course.practice_rows(rows, limit=10000)
                   if grammar_course.origin(d) != grammar_course.AIT_MRAW and d.id not in mraw_takes and len(d.text_tachelhit or "") <= 90]
-        wanted.sort(key=lambda d: (not d.image_url, not d.audio_url, d.id))
+        # the Beni Mellal deck's sentences first (real Central Atlas Tamazight), then pictured, then voiced
+        wanted.sort(key=lambda d: (grammar_course.origin(d) != "Beni Mellal", not d.image_url, not d.audio_url, d.id))
         out.append({**{k: unit[k] for k in ("slug", "title", "level")}, "total": len(rows), "aitmraw_voiced": voiced,
                     "wanted": [Drill.model_validate(d, from_attributes=True) for d in wanted[:max(0, min(per_unit, 30))]]})
     out.sort(key=lambda u: (u["aitmraw_voiced"], -u["total"]))
