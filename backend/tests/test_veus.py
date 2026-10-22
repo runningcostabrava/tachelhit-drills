@@ -90,3 +90,33 @@ def test_a_take_in_other_words_becomes_a_linked_variant_and_shows_on_the_user_pa
     assert page["takes"][0]["drill"]["id"] == base["id"] and page["takes"][0]["text"] == "ur ssineɣ"
     me = client.get("/users/me", headers=sp).json()
     assert me["contributions"]["counts"]["takes"] == 2 and client.get("/users/by-name/nobody-here").status_code == 404
+
+
+def test_a_take_says_whether_the_voice_is_a_native_speaker(tmp_path):
+    """A learner's recording must never pass for a model pronunciation, so every take carries who
+    said it: a native speaker, somebody learning, or — when nobody said — nothing at all."""
+    import io as _io
+    main._register_attempts.clear(); main._login_attempts.clear()
+    speaker = client.post("/auth/signup", json={"email": "halima@example.com", "password": "speaks-it-123",
+                                                "username": "halima_s"}).json()
+    learner = client.post("/auth/signup", json={"email": "learner@example.com", "password": "learning-it-123",
+                                                "username": "a_learner"}).json()
+    sh, lh = {"X-User-Token": speaker["token"]}, {"X-User-Token": learner["token"]}
+    assert client.put("/users/me", json={"is_native": True}, headers=sh).status_code == 200
+    assert client.put("/users/me", json={"is_native": False}, headers=lh).status_code == 200
+    assert client.get("/users/me", headers=sh).json()["is_native"] is True
+    assert client.get("/users/me", headers=lh).json()["is_native"] is False
+
+    drill = client.post("/drills/", json={"text_catalan": "aigua", "text_tachelhit": "aman"}).json()
+    wav = b"RIFF$\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00@\x1f\x00\x00\x80>\x00\x00\x02\x00\x10\x00data\x00\x00\x00\x00"
+    import cloudinary.uploader
+    from unittest.mock import patch
+    fake = {"secure_url": "https://res.cloudinary.com/x/video/upload/take.mp3"}
+    with patch.object(cloudinary.uploader, "upload", return_value=fake):  # no take leaves the test
+        for hdr in (sh, lh):
+            r = client.post(f"/drills/{drill['id']}/recordings", headers=hdr,
+                            files={"file": ("take.wav", _io.BytesIO(wav), "audio/wav")})
+            assert r.status_code in (200, 201), r.text
+    takes = client.get(f"/drills/{drill['id']}/recordings").json()
+    said = {t["speaker"]: t["is_native"] for t in takes}
+    assert said.get("halima_s") is True and said.get("a_learner") is False

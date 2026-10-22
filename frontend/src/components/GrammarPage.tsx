@@ -316,6 +316,7 @@ function Example({ e, highlight, onAsk, onRecord, onWant, signedIn, isAdmin }: {
   // An admin corrects the sentence where they read it. The speakers' own words change only here,
   // by a person who decided to: «Smun ino» is «el meu amic», not «Amic», and only a human knows.
   const [edit, setEdit] = useState<{ shi: string; ca: string } | null>(null);
+  const [suggest, setSuggest] = useState<string | null>(null);   // somebody else's way of saying it
   const [saving, setSaving] = useState(false);
   const [shown, setShown] = useState({ shi: e.shi, ca: e.ca });
   const saveEdit = async () => {
@@ -349,9 +350,13 @@ function Example({ e, highlight, onAsk, onRecord, onWant, signedIn, isAdmin }: {
                 {why ? 'amaga el perquè' : 'per què és aquí'}
               </button>
             )}
-            {isAdmin && (
+            {isAdmin ? (
               <button onClick={() => setEdit(edit ? null : { shi: shown.shi, ca: shown.ca })} style={{ ...linkBtn, color: 'var(--text-soft)' }}>
-                {edit ? 'deixa-ho' : 'corregeix'}
+                {edit ? 'deixa-ho' : 'edita el drill'}
+              </button>
+            ) : signedIn && (
+              <button onClick={() => setSuggest(suggest === null ? shown.shi : null)} style={{ ...linkBtn, color: 'var(--text-soft)' }}>
+                {suggest === null ? 'suggereix un canvi' : 'deixa-ho'}
               </button>
             )}
             {!e.recorded && onWant && (
@@ -366,6 +371,21 @@ function Example({ e, highlight, onAsk, onRecord, onWant, signedIn, isAdmin }: {
       {onAsk && <button onClick={() => onAsk({ id: e.id, label: e.ca || e.shi })} title="Explica'm aquesta frase paraula per paraula" aria-label="Explica'm aquesta frase" style={{ flexShrink: 0, width: 36, height: 36, padding: 0, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--brand-1)', cursor: 'pointer', fontSize: '15px', lineHeight: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>💡</button>}
       <button onClick={play} disabled={!e.audio_url} aria-label="Escolta" style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 'var(--r-pill)', border: 'none', background: e.audio_url ? (e.recorded ? 'var(--brand-1)' : 'var(--sky)') : 'var(--surface)', color: e.audio_url ? '#fff' : 'var(--text-muted)', cursor: e.audio_url ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={15} /></button>
       {words && e.gloss && <div style={{ flexBasis: '100%' }}><GlossWords words={e.gloss} size="sm" /></div>}
+      {suggest !== null && (
+        <div style={{ flexBasis: '100%', display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-soft)' }}>Com ho dius tu? Es desa com una segona versió d&apos;aquesta frase, amb el mateix significat.</div>
+          <input value={suggest} onChange={(ev) => setSuggest(ev.target.value)} placeholder="la teva manera de dir-ho"
+                 style={{ padding: '8px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontFamily: 'inherit', fontSize: '15px', fontWeight: 700 }} />
+          <div>
+            <button onClick={async () => {
+              const said = (suggest || '').trim();
+              if (said.length < 2) { toast.error('Escriu com ho dius tu'); return; }
+              try { await api.addVariant(e.id, said); setSuggest(null); toast.success('Desat com una altra manera de dir-ho. Gràcies!'); }
+              catch (err: any) { toast.error(err?.message || 'No s’ha pogut desar'); }
+            }} style={{ padding: '7px 14px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>Desa la meva versió</button>
+          </div>
+        </div>
+      )}
       {edit && (
         <div style={{ flexBasis: '100%', display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
           <input value={edit.shi} onChange={(ev) => setEdit({ ...edit, shi: ev.target.value })} placeholder="en amazic, tal com es diu"

@@ -28,7 +28,7 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
   const [ownVariety, setOwnVariety] = useState('');
   const [ownTown, setOwnTown] = useState('');
   // the speaker's declared profile: a take without a place is not accepted (every voice carries its town)
-  const [profile, setProfile] = useState<{ variety: string | null; region: string | null } | null | undefined>(undefined);
+  const [profile, setProfile] = useState<{ variety: string | null; region: string | null; is_native?: boolean | null } | null | undefined>(undefined);
   useEffect(() => { api.me().then((m) => setProfile(m ? { variety: m.variety ?? null, region: m.region ?? null } : null)).catch(() => setProfile(null)); }, []);
   const recRef = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
@@ -63,6 +63,11 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
   };
   const stop = () => { recRef.current?.stop(); setRecording(false); };
 
+  // Asked before the first take and then remembered: the library needs to know whether a voice is
+  // a native speaker's. Nobody is kept out — a learner's take is welcome, it is just labelled.
+  const [isNative, setIsNative] = useState<boolean | null>(null);
+  const mustAsk = profile != null && (profile.is_native === undefined || profile.is_native === null) && isNative === null;
+
   const saveTake = async () => {
     if (!blob) return;
     setBusy(true);
@@ -75,10 +80,14 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
       if (ownText.trim()) fd.append('text', ownText.trim());
       if (ownVariety) fd.append('variety', ownVariety);
       if (ownTown.trim()) fd.append('region', ownTown.trim());
+      // whose voice this is: a learner's take must never pass for a model pronunciation
+      const native = isNative ?? profile?.is_native;
+      if (native !== undefined && native !== null) fd.append('is_native', String(native));
       const res = await fetch(`${API_BASE}/drills/${drill.id}/recordings`, { method: 'POST', body: fd });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'upload failed');
       const saved = await res.json().catch(() => null);
       toast.success(saved?.variant_id ? 'Veu afegida. Com que ho dius amb altres paraules, ara hi ha una targeta pròpia amb la teva versió, enllaçada a aquesta.' : 'Veu afegida');
+      if (profile && isNative !== null && profile.is_native === undefined) api.updateMe({ is_native: isNative }).catch(() => {});
       if (profile !== undefined && profile !== null && (!profile.region || !profile.variety) && (ownTown.trim() || ownVariety)) {
         api.updateMe({ ...(ownTown.trim() && !profile.region ? { region: ownTown.trim() } : {}), ...(ownVariety && !profile.variety ? { variety: ownVariety } : {}) }).catch(() => {});
       }
@@ -166,9 +175,19 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
               <button onClick={stop} style={btn('var(--rose)', '#fff')}><FaStop /> Atura</button>
             )}
             {blob && !recording && (
-              <button onClick={saveTake} disabled={busy} style={btn('var(--brand-1)', '#fff')}><FaSave /> {busy ? 'Desant…' : 'Desa aquesta veu'}</button>
+              <button onClick={saveTake} disabled={busy || mustAsk} style={{ ...btn('var(--brand-1)', '#fff'), opacity: mustAsk ? 0.55 : 1 }}><FaSave /> {busy ? 'Desant…' : 'Desa aquesta veu'}</button>
             )}
           </div>
+          {blob && !recording && mustAsk && (
+            <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>Parles amazic de tota la vida?</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-soft)', marginBottom: 8, lineHeight: 1.45 }}>Les dues veus hi tenen lloc; només cal saber quina és quina, perquè qui aprèn sàpiga a qui imitar.</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button onClick={() => setIsNative(true)} style={{ padding: '7px 14px', borderRadius: 'var(--r-pill)', border: '1px solid var(--brand-1)', background: 'var(--surface)', color: 'var(--brand-1)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>Sí, és la meva llengua</button>
+                <button onClick={() => setIsNative(false)} style={{ padding: '7px 14px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>No, l&apos;estic aprenent</button>
+              </div>
+            </div>
+          )}
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '10px' }}>La teva gravació es desa amb la teva varietat i les teves paraules, sense esborrar les altres veus ni el text del drill.</div>
         </div>
       </div>

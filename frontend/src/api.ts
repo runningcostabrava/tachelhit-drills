@@ -84,6 +84,8 @@ export interface VerifyQueue {
 export interface Me {
   email?: string | null;
   is_admin?: boolean;
+  /** Speaks Tamazight from home (true), is learning it (false), or has never said (null). */
+  is_native?: boolean | null;
   has_password?: boolean;
   username: string;
   display_name: string;
@@ -205,6 +207,9 @@ export const api = {
   aiExplainDrill: (drillId: number) =>
     request<{ explanation: string; draft: boolean; related: RelatedDrill[] }>(`/ai/explain/${drillId}`, { method: 'POST' }),
   drill: (id: number) => request<Drill>(`/drills/${id}`),
+  /** Anyone signed in: say it your way. A second version linked to the first, same Catalan. */
+  addVariant: (id: number, text_tachelhit: string, note?: string) =>
+    request<Drill>(`/drills/${id}/variant`, { method: 'POST', body: JSON.stringify({ text_tachelhit, note }) }),
   /** Admin: correct a sentence by hand. The speakers' own words are only ever changed here, on
    *  purpose, by a person — never by a machine pass. */
   editDrillText: (id: number, patch: { text_tachelhit?: string; text_catalan?: string }) =>
@@ -296,7 +301,7 @@ export const api = {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
   },
-  updateMe: (patch: { display_name?: string; variety?: string | null; region?: string | null }) =>
+  updateMe: (patch: { display_name?: string; variety?: string | null; region?: string | null; is_native?: boolean }) =>
     request<{ username: string; display_name: string; variety: string | null; region: string | null }>('/users/me', {
       method: 'PUT',
       body: JSON.stringify(patch),

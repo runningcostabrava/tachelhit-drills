@@ -265,6 +265,7 @@ class User(Base):
     email = Column(String, nullable=True, unique=True, index=True)
     password_hash = Column(String, nullable=True)        # pbkdf2_sha256$iters$salt$hash
     is_admin = Column(Boolean, nullable=True, default=False)
+    is_native = Column(Boolean, nullable=True)           # speaks Tamazight from home, or is learning it
     reset_code_hash = Column(String, nullable=True)      # password reset code (hashed), 30 min
     reset_expires = Column(DateTime, nullable=True)
     date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -307,6 +308,7 @@ class Recording(Base):
     variety = Column(String, nullable=True)
     region = Column(String, nullable=True)
     speaker = Column(String, nullable=True)                 # display label
+    is_native = Column(Boolean, nullable=True)              # a native speaker's take, or a learner's
     license = Column(String, nullable=True, default="CC-BY-SA")
     text = Column(Text, nullable=True)       # the sentence as THIS speaker says it, when their dialect's words differ
     date_created = Column(DateTime, default=datetime.utcnow, nullable=False)

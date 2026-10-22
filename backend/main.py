@@ -2003,7 +2003,7 @@ def _rate_limit(bucket: Dict[str, List[float]], key: str, limit: int, window: in
 def _user_payload(user: UserModel) -> dict:
     return {"username": user.username, "display_name": user.display_name, "email": user.email,
             "variety": user.variety, "region": user.region, "is_admin": bool(user.is_admin),
-            "has_password": bool(user.password_hash)}
+            "is_native": user.is_native, "has_password": bool(user.password_hash)}
 
 
 MAIL_KEYS = ("SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "MAIL_API_PROVIDER", "MAIL_API_KEY")
@@ -5475,6 +5475,7 @@ def get_me(user: Optional[UserModel] = Depends(get_current_user), db: Session = 
         "has_password": bool(user.password_hash),
         "variety": user.variety,
         "region": user.region,
+        "is_native": user.is_native,
         "tz": user.tz or DEFAULT_TZ,
         "date_created": iso_z(user.date_created),
         "drills_contributed": drills_contributed,
@@ -5489,6 +5490,7 @@ def update_me(
     variety: Optional[str] = Body(None, embed=True),
     region: Optional[str] = Body(None, embed=True),
     tz: Optional[str] = Body(None, embed=True),
+    is_native: Optional[bool] = Body(None, embed=True),
     user: Optional[UserModel] = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -5502,6 +5504,8 @@ def update_me(
         user.variety = variety or None
     if region is not None:
         user.region = region.strip() or None
+    if is_native is not None:
+        user.is_native = bool(is_native)
     if tz is not None:
         tz = tz.strip()
         if tz:
@@ -5523,6 +5527,7 @@ async def add_recording(
     variety: Optional[str] = Form(None),
     region: Optional[str] = Form(None),
     text: Optional[str] = Form(None),
+    is_native: Optional[bool] = Form(None),
     db: Session = Depends(get_db),
     user: Optional[UserModel] = Depends(get_current_user),
 ):
@@ -5553,6 +5558,8 @@ async def add_recording(
         variety=(variety or (user.variety if user else None)),
         region=((region or "").strip() or (user.region if user else None)),
         speaker=((user.display_name or user.username) if user else None),
+        # whose voice this is matters: a learner's take must never pass for a model pronunciation
+        is_native=(is_native if is_native is not None else (user.is_native if user else None)),
         text=own_words or None,
     )
     db.add(rec)
@@ -5592,6 +5599,36 @@ async def add_recording(
             "variant_id": variant.id if variant is not None else None}
 
 
+@app.post("/drills/{drill_id}/variant", response_model=Drill)
+def add_variant(drill_id: int, text_tachelhit: str = Body(..., embed=True),
+                note: Optional[str] = Body(None, embed=True),
+                variety: Optional[str] = Body(None, embed=True), region: Optional[str] = Body(None, embed=True),
+                user: UserModel = Depends(require_user), db: Session = Depends(get_db)):
+    """Say it your way. The sentence is copied as a second version linked to the first: the Catalan
+    meaning is the original's — that is what makes them the same sentence — and the Tamazight is
+    yours, in your spelling, with your variety and your region on it. Nothing of the original
+    changes, and the new one belongs to whoever wrote it."""
+    original = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+    if not original:
+        raise HTTPException(status_code=404, detail="Drill not found")
+    said = (text_tachelhit or "").strip()
+    if len(said) < 2:
+        raise HTTPException(status_code=400, detail="Escriu com ho dius tu")
+    if said.lower() == (original.text_tachelhit or "").strip().lower():
+        raise HTTPException(status_code=409, detail="Això és igual que el que ja hi ha")
+    root = original.variant_of or original.id   # variants of a variant still hang on the first one
+    variant = DrillModel(
+        text_catalan=original.text_catalan, text_tachelhit=said, text_arabic=original.text_arabic,
+        image_url=original.image_url, variant_of=root, created_by_user_id=user.id,
+        variety=(variety or user.variety), region=((region or "").strip() or user.region),
+        author=(user.display_name or user.username), notes=(note or None),
+        tag=", ".join(x for x in [(original.tag or "").strip(), "variant"] if x) or "variant",
+        grammar=original.grammar, topics=original.topics,
+    )
+    db.add(variant); db.commit(); db.refresh(variant)
+    return variant
+
+
 @app.get("/drills/{drill_id}/recordings")
 def list_recordings(drill_id: int, db: Session = Depends(get_db)):
     """All takes of a drill, oldest first, each with its speaker/variety."""
@@ -5600,6 +5637,7 @@ def list_recordings(drill_id: int, db: Session = Depends(get_db)):
             .order_by(RecordingModel.date_created.asc()).all())
     return [{"id": r.id, "audio_url": normalize_media_url(r.audio_url),
              "variety": r.variety, "region": r.region, "speaker": r.speaker, "text": r.text,
+             "is_native": r.is_native,   # a native speaker's voice, a learner's, or not said
              "license": r.license, "date_created": r.date_created.isoformat()} for r in recs]
 
 
