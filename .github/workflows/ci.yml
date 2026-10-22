@@ -22,8 +22,11 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          # The version the suite is developed against; the pins in requirements.txt follow it.
-          python-version: '3.14'
+          # 3.13, not the 3.14 this is developed on: the pins in requirements.txt target the
+          # Python Render runs (see CLAUDE.md), and on 3.14 neither pydantic-core nor Pillow has a
+          # Linux wheel — pip falls back to compiling and PyO3 0.22 stops at 3.13. So the checks
+          # run closer to production than the laptop does.
+          python-version: '3.13'
           cache: pip
           cache-dependency-path: backend/requirements.txt
 
