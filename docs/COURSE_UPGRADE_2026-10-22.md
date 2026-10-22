@@ -74,7 +74,7 @@ canvien per la manera planera de dir-ho, encara que el qui escriu se n'oblidi.
 |---|---|
 | sense unitat, o amb una d'inventada, ara classificats | 43 |
 | frases que ara també pertanyen a una unitat que en tenia poques | 562 |
-| glosses paraula per paraula, refetes | en curs, 3.148 drills |
+| glosses paraula per paraula, refetes | 3.139 |
 
 Les unitats pobres eren les que escrivien lliçons curtes. Cada candidat es va pesar un per un i
 només s'hi va afegir quan la frase és de debò un exemple del que ensenya la unitat:
@@ -89,6 +89,30 @@ només s'hi va afegir quan la frase és de debò un exemple del que ensenya la u
 | fórmules | 24 | 49 | 13 → 36 |
 | numerals | 128 | 151 | 70 → 92 |
 | imperatiu | 183 | 198 | 65 → 79 |
+
+## 7. Cada frase de la lliçó es llegeix paraula per paraula
+
+La biblioteca ja guardava la lectura paraula per paraula, però la lliçó no la mostrava: calia
+prémer el llum i esperar una crida. Ara cada exemple la porta a dins, l'obre un enllaç petit
+(«paraula per paraula») i no costa res. Les glosses s'hi posen cada vegada que es serveix la
+lliçó, lligades per id, així que una glossa que millora arriba al curs sense reescriure res.
+
+La passada de glosses es va refer sencera perquè la primera alineava les paraules amb la
+traducció («am» = «va»); ara cada paraula diu el que vol dir ella, i les gramaticals porten
+etiqueta («ad» = partícula de futur, «is» = partícula de pregunta).
+
+| | |
+|---|---|
+| frases glossades | 3.139 de 3.148 |
+| paraules glossades | 12.834 (4,1 per frase) |
+| paraula glossada amb ella mateixa | 723 → 40, i totes són noms propis («Girona» = Girona) |
+| sense sentit, o amb «?» | 139 → 62 (no es mostren) |
+| frases citables del curs que es llegeixen paraula per paraula | 1.878 de 1.892 (99%) |
+
+Les 515 frases amb un forat es van reparar així: la puntuació sola no és una paraula i es
+treu (387 entrades), les gramaticals que el model havia repetit prenen l'etiqueta d'una taula
+(262), la resta es torna a preguntar amb la frase sencera com a context (111 de 173), i un nom
+propi es deixa estar: «Driss» vol dir Driss.
 
 ## El que cal de tu
 
