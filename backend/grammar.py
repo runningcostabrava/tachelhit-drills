@@ -84,7 +84,7 @@ UNITS: List[dict] = [
 SLUGS = [u["slug"] for u in UNITS]
 TITLES = {u["slug"]: u["title"] for u in UNITS}
 BATCH = 40
-LESSON_VERSION = 15  # bump when the lesson format or prompt changes: old rows are rewritten on next open
+LESSON_VERSION = 16  # bump when the lesson format or prompt changes: old rows are rewritten on next open
 
 # Drills whose tag names another language are never part of the course (the owner's old Irish tests).
 EXCLUDED_TAGS = ("irish",)
@@ -716,10 +716,17 @@ def _mark(shi: str, frag: str) -> Optional[str]:
     return None
 
 
+def _kin(e: dict) -> set:
+    """The words of an example, for measuring how close two sentences of the unit are."""
+    return {w for w in re.findall(r"[^\W\d_]+", (e.get("shi") or "").lower()) if len(w) > 2}
+
+
 def _top_up(lesson: dict, examples: List[dict], want: int = 4) -> dict:
     """An explanation that quotes fewer than `want` sentences gets more from the unit's own pool:
-    only sentences that really contain the piece being taught (by sound, so another spelling of the
-    same word counts), never one the lesson already shows."""
+    first the sentences that really contain the piece being taught (by sound, so another spelling of
+    the same word counts); then, if the step is still short, the unit's sentences that share a word
+    with what it already shows — kin, not padding, so a step is never filled with sentences that
+    have nothing to do with it. Never a sentence the lesson already shows."""
     used = quoted_ids(lesson)
     for s in lesson["steps"]:
         if s["type"] != "explain" or len(s["examples"]) >= want:
@@ -748,6 +755,21 @@ def _top_up(lesson: dict, examples: List[dict], want: int = 4) -> dict:
                 if mark:
                     add["focus"] = mark
                 s["examples"].append(add); used.add(e["id"])
+        if len(s["examples"]) >= want or not s["examples"]:
+            continue
+        near = set().union(*(_kin(e) for e in s["examples"]))
+        kin = [(len(near & _kin(e)), e) for e in examples if e["id"] not in used and e.get("shi")]
+        kin = sorted(((n, e) for n, e in kin if n), key=lambda p: (-p[0], simplicity(p[1])))
+        for _n, e in kin:
+            if len(s["examples"]) >= want:
+                break
+            add = dict(e)
+            for frag in frags:
+                mark = _mark(e["shi"], frag)
+                if mark:
+                    add["focus"] = mark
+                    break
+            s["examples"].append(add); used.add(e["id"])
     return lesson
 
 

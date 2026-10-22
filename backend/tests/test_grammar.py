@@ -338,3 +338,26 @@ def test_the_lesson_shows_the_library_word_by_word():
     fresh = grammar._with_glosses(kept, [e])
     assert fresh["steps"][0]["examples"][0]["gloss"][1]["ca"] == "aniré"
     assert fresh["steps"][1]["example"]["gloss"][0]["ca"] == "partícula de futur"
+
+
+def test_a_thin_step_is_filled_with_kin_and_never_with_decoys():
+    """When the piece taught is spelt that way nowhere else, the step takes the unit's sentences
+    that share a word with it — and nothing else: a lone example beats four unrelated ones."""
+    import grammar, json as _json
+    def e(i, shi, ca):
+        return {"id": i, "shi": shi, "ca": ca, "image_url": None, "audio_url": None, "recorded": False,
+                "author": None, "region": None, "origin": ""}
+    ex = [e(1, "tigmmi-nu", "la meva casa"), e(2, "tigmmi-nk", "la teva casa"),
+          e(3, "tigmmi ixatr", "la casa es gran"), e(4, "wa d tigmmi", "aquesta es la casa"),
+          e(5, "izri wass", "el dia ha passat"), e(6, "ssbah lxir", "bon dia")]
+    answer = _json.dumps({"intro": "x", "steps": [{"type": "explain", "title": "-nu", "text": "El meu.",
+                                                   "example_ids": [1], "focus": {"1": "-nu"}}]})
+    got = [x["id"] for x in grammar._parse_lesson(answer, ex)["steps"][0]["examples"]]
+    assert got[0] == 1 and len(got) == 4           # one example is no explanation
+    assert set(got) == {1, 2, 3, 4}                # the sentences about a house, nearest first
+    assert 5 not in got and 6 not in got           # the day and the greeting share nothing
+
+    alone = _json.dumps({"intro": "x", "steps": [{"type": "explain", "title": "t", "text": "x",
+                                                  "example_ids": [5], "focus": {"5": "izri"}}]})
+    kept = grammar._parse_lesson(alone, [ex[4], ex[5]])["steps"][0]["examples"]
+    assert [x["id"] for x in kept] == [5]          # nothing is kin: left short rather than padded
