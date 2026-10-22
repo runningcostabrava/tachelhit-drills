@@ -333,12 +333,36 @@ def _clean_prose(s: Optional[str]) -> str:
     return _plain(re.sub(r"\s+", " ", t).replace(" ,", ",").replace(" .", ".").strip())
 
 
+def gloss_of(d) -> Optional[List[dict]]:
+    """The word-by-word reading the library already stores for the sentence (`glosses`), so a
+    lesson can show it under the example instead of asking the copilot for it."""
+    raw = (getattr(d, "glosses", None) or "").strip()
+    if not raw:
+        return None
+    try:
+        got = json.loads(raw)
+    except Exception:
+        return None
+    if not isinstance(got, list):
+        return None
+    out = []
+    for g in got:
+        if not isinstance(g, dict):
+            continue
+        w, ca = str(g.get("shi") or "").strip(), str(g.get("ca") or "").strip()
+        if w and ca and ca != "?" and ca.lower() != w.lower():
+            out.append({"shi": w, "ca": ca})
+    return out or None
+
+
 def example_dict(d) -> dict:
-    """What a lesson step shows of a drill: both texts, the picture, a voice (speaker's first)."""
+    """What a lesson step shows of a drill: both texts, the picture, a voice (speaker's first),
+    and the word-by-word reading when the library has one."""
     audio = d.audio_url or getattr(d, "audio_tts_shi_url", None) or getattr(d, "audio_tts_url", None)
     return {"id": d.id, "shi": _clean_text(d.text_tachelhit), "ca": _clean_text(d.text_catalan),
             "image_url": d.image_url, "audio_url": audio, "recorded": bool(d.audio_url),
             "author": (d.author or "").strip() or None, "region": d.region, "origin": origin(d),
+            "gloss": gloss_of(d),
             "source_url": getattr(d, "source_url", None), "source_channel": getattr(d, "source_channel", None)}
 
 
@@ -923,6 +947,27 @@ def _placeholder(slug: str, examples: List[dict]) -> dict:
         {"type": "end"}]}
 
 
+def _with_glosses(lesson, examples: List[dict]):
+    """Put the library's CURRENT word-by-word readings into a kept lesson, matched by drill id, so
+    a gloss that improves reaches the course without the lesson being written again."""
+    if not isinstance(lesson, dict):
+        return lesson
+    have = {e["id"]: e["gloss"] for e in examples if e.get("gloss") and e.get("id")}
+    if not have:
+        return lesson
+    for s in lesson.get("steps") or []:
+        if not isinstance(s, dict):
+            continue
+        shown = list(s.get("examples") or [])
+        if isinstance(s.get("example"), dict):
+            shown.append(s["example"])
+        for e in shown:
+            g = have.get(e.get("id"))
+            if g:
+                e["gloss"] = g
+    return lesson
+
+
 def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool = False, unit_ids: Optional[set] = None,
                session_factory=None, tables: Optional[List[dict]] = None) -> dict:
     """The unit's lesson from the `grammar_lessons` table. A page NEVER waits for Gemini: when the
@@ -932,16 +977,16 @@ def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool
     row = db.query(GrammarLesson).filter(GrammarLesson.id == slug).first()
     lesson = None if force else _current(row, unit_ids)
     if lesson is not None:
-        return lesson
+        return _with_glosses(lesson, examples)
     if session_factory is not None:
         _write_in_background(session_factory, slug, grammar_md, examples, unit_ids, tables)
         kept = _stored(row)
-        return {**kept, "stale": True, "writing": True} if kept else _placeholder(slug, examples)
+        return _with_glosses({**kept, "stale": True, "writing": True}, examples) if kept else _placeholder(slug, examples)
     with _explain_lock:  # a script that asked for the lesson itself waits for it
         row = db.query(GrammarLesson).filter(GrammarLesson.id == slug).first()
         lesson = None if force else _current(row, unit_ids)
         if lesson is not None:
-            return lesson
+            return _with_glosses(lesson, examples)
         lesson = write_lesson(slug, grammar_md, examples, sheet=sheet_for(db, slug, grammar_md), tables=tables)
         if unit_ids is not None:
             lesson["unit_size"] = len(unit_ids)

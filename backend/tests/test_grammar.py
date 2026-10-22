@@ -308,3 +308,33 @@ def test_quizzes_and_excluded_language(monkeypatch):
     assert grammar.pick_examples([h])[0]["origin"] == grammar.AIT_MRAW
     t = R(8, "ur ssinx", "no sé"); t.tag = "frase, Driss"  # the owner tags Driss's recordings by name
     assert grammar.our_speaker(t) == "Driss" and grammar.origin(t) == grammar.AIT_MRAW and grammar.our_speaker(o) is None
+
+
+def test_the_lesson_shows_the_library_word_by_word():
+    """The glosses are written once for the whole library; a lesson must show them without a call,
+    and a gloss that improves must reach a lesson already written."""
+    import grammar
+
+    class R:  # noqa
+        def __init__(self, id, shi, ca, glosses=None):
+            self.id, self.text_tachelhit, self.text_catalan, self.glosses = id, shi, ca, glosses
+            self.image_url = self.audio_url = self.region = self.author = self.tag = None
+
+    good = '[{"shi": "ad", "tif": null, "ca": "part\u00edcula de futur"}, {"shi": "ddu\u0263", "tif": null, "ca": "anir\u00e9"}]'
+    noise = '[{"shi": "ad", "ca": "ad"}, {"shi": "?", "ca": "?"}, {"shi": "ddu\u0263", "ca": "anir\u00e9"}]'
+    assert [g["ca"] for g in grammar.gloss_of(R(1, "ad dduɣ", "hi anire", good))] == ["partícula de futur", "aniré"]
+    assert [g["shi"] for g in grammar.gloss_of(R(2, "ad dduɣ", "hi anire", noise))] == ["dduɣ"]  # the parrot and the «?» are not shown
+    assert grammar.gloss_of(R(3, "ad dduɣ", "hi anire", None)) is None
+    assert grammar.gloss_of(R(4, "ad dduɣ", "hi anire", "not json")) is None
+
+    e = grammar.example_dict(R(5, "ad dduɣ", "hi aniré", good))
+    assert e["gloss"][0] == {"shi": "ad", "ca": "partícula de futur"}
+
+    kept = {"intro": "", "steps": [
+        {"type": "explain", "title": "t", "text": "x", "examples": [{"id": 5, "shi": "ad dduɣ", "ca": "hi aniré"}]},
+        {"type": "quiz", "kind": "meaning", "question": "q", "options": ["a"], "answer": 0,
+         "example": {"id": 5, "shi": "ad dduɣ", "ca": "hi aniré"}},
+        {"type": "end"}]}
+    fresh = grammar._with_glosses(kept, [e])
+    assert fresh["steps"][0]["examples"][0]["gloss"][1]["ca"] == "aniré"
+    assert fresh["steps"][1]["example"]["gloss"][0]["ca"] == "partícula de futur"

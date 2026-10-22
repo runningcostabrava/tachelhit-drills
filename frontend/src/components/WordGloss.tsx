@@ -11,8 +11,12 @@ export function parseGlosses(drill: Pick<Drill, 'glosses'> | null | undefined): 
 }
 
 export default function WordGloss({ drill, size = 'md', align = 'left' }: { drill: Pick<Drill, 'glosses'> | null | undefined; size?: 'sm' | 'md'; align?: 'left' | 'center' }) {
-  const g = parseGlosses(drill);
-  if (g.length === 0) return null;
+  return <GlossWords words={parseGlosses(drill)} size={size} align={align} />;
+}
+
+// The same strip from words already parsed — the grammar lessons carry theirs in the lesson itself.
+export function GlossWords({ words: g, size = 'md', align = 'left' }: { words: Gloss[] | null | undefined; size?: 'sm' | 'md'; align?: 'left' | 'center' }) {
+  if (!g || g.length === 0) return null;
   const fs = size === 'sm' ? 12 : 14;
   return (
     <div aria-label="Paraula per paraula" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 8px', justifyContent: align === 'center' ? 'center' : 'flex-start', marginTop: 8 }}>

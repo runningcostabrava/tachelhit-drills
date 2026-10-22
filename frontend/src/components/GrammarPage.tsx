@@ -7,6 +7,7 @@ import { api, type GrammarUnit, type GrammarUnitPage, type GrammarWishUnit, type
 import { API_BASE, getMediaUrl } from '../config';
 import RecordAudioModal from './RecordAudioModal';
 import AiAssistant from './AiAssistant';
+import { GlossWords } from './WordGloss';
 import type { Drill } from '../types';
 
 // The grammar course: the library organised as a sequence of grammar units (backend/grammar.py).
@@ -299,16 +300,24 @@ function ExplainCard({ step, onAsk }: { step: Extract<LessonStep, { type: 'expla
 function Example({ e, highlight, onAsk }: { e: LessonExample; highlight?: 'ok' | 'ko'; onAsk?: (a: { id: number; label: string }) => void }) {
   const play = () => { if (e.audio_url) new Audio(getMediaUrl(e.audio_url)).play().catch(() => {}); };
   const border = highlight === 'ok' ? 'var(--emerald)' : highlight === 'ko' ? 'var(--rose)' : 'var(--border)';
+  // the word-by-word reading the library already stores: shown on demand, no call to anything
+  const [words, setWords] = useState(false);
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'var(--surface-2)', border: `1px solid ${border}`, borderRadius: 'var(--r-lg)' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'var(--surface-2)', border: `1px solid ${border}`, borderRadius: 'var(--r-lg)', flexWrap: 'wrap' }}>
       {e.image_url && <img src={getMediaUrl(e.image_url)} alt="" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 'var(--r-md)', flexShrink: 0 }} onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = 'none'; }} />}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 800, fontSize: '17px', color: 'var(--text)', lineHeight: 1.3 }}>{withFocus(e.shi, e.focus)}</div>
         <div style={{ fontSize: '14px', color: 'var(--text-soft)' }}>{e.ca}</div>
         {(e.recorded || e.origin || e.region) && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>{e.recorded ? `veu de ${e.author || 'parlant'}` : 'veu sintètica'}{e.origin || e.region ? ` · ${e.origin || e.region}` : ''}</div>}
+        {e.gloss && e.gloss.length > 0 && (
+          <button onClick={() => setWords((v) => !v)} style={{ marginTop: 4, padding: 0, border: 'none', background: 'none', color: 'var(--brand-1)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+            {words ? 'amaga les paraules' : 'paraula per paraula'}
+          </button>
+        )}
       </div>
       {onAsk && <button onClick={() => onAsk({ id: e.id, label: e.ca || e.shi })} title="Explica'm aquesta frase paraula per paraula" aria-label="Explica'm aquesta frase" style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--brand-1)', cursor: 'pointer', fontSize: '15px', lineHeight: 1 }}>💡</button>}
       <button onClick={play} disabled={!e.audio_url} aria-label="Escolta" style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 'var(--r-pill)', border: 'none', background: e.audio_url ? (e.recorded ? 'var(--brand-1)' : 'var(--sky)') : 'var(--surface)', color: e.audio_url ? '#fff' : 'var(--text-muted)', cursor: e.audio_url ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={15} /></button>
+      {words && e.gloss && <div style={{ flexBasis: '100%' }}><GlossWords words={e.gloss} size="sm" /></div>}
     </div>
   );
 }
