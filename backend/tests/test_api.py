@@ -24,6 +24,20 @@ from fastapi.testclient import TestClient  # noqa: E402
 import main  # noqa: E402
 
 client = TestClient(main.app)
+
+
+class as_stranger:
+    """Act with no identity at all. The shared client carries one (every real client does), so a
+    test about what an OUTSIDER may do has to put it down for a moment."""
+
+    def __enter__(self):
+        self._token = client.headers.pop("X-User-Token", None)
+        return client
+
+    def __exit__(self, *exc):
+        if self._token:
+            client.headers["X-User-Token"] = self._token
+        return False
 client.__enter__()  # run lifespan: create tables + seed samples
 
 
@@ -191,7 +205,8 @@ def test_create_drill_attribution_and_corpus():
     assert any(d["id"] == drill["id"] for d in hits)
 
     # verification requires identity, then flips the flag
-    assert client.post(f"/drills/{drill['id']}/verify", json={"verified": True}).status_code == 401
+    with as_stranger():  # nobody verifies anonymously
+        assert client.post(f"/drills/{drill['id']}/verify", json={"verified": True}).status_code == 401
     v = client.post(f"/drills/{drill['id']}/verify", json={"verified": True},
                     headers={"X-User-Token": token})
     assert v.status_code == 200 and v.json()["verified"] is True
@@ -400,8 +415,8 @@ def test_delete_drill_with_review_writes_tombstone_and_since_sync():
     assert got["updated_at"] and got["updated_at"].endswith("Z")
     changed = client.get("/drills/", params={"since": marker}).json()
     assert any(x["id"] == d["id"] for x in changed)
-    # delete succeeds despite the dependent rows
-    r = client.delete(f"/drills/{d['id']}")
+    # delete succeeds despite the dependent rows — done by whoever made it
+    r = client.delete(f"/drills/{d['id']}", headers=hdr)
     assert r.status_code == 200, r.text
     assert client.get(f"/drills/{d['id']}").status_code == 404
     db = main.SessionLocal()
@@ -475,13 +490,15 @@ def test_test_attempts_keyed_by_user_and_mine_filter():
                                      "drill_ids": str(d["id"])}).json()
     payload = {"test_id": t["id"], "user_name": None, "score": 100.0, "time_taken_seconds": 5,
                "total_questions": 1, "correct_answers": 1}
-    anon = client.post("/test-attempts/", json=payload).json()
+    with as_stranger():  # somebody practising without an account leaves no name on the attempt
+        anon = client.post("/test-attempts/", json=payload).json()
     mine = client.post("/test-attempts/", json=payload, headers=hdr).json()
     assert anon["user_id"] is None and mine["user_id"] is not None
     assert mine["date_taken"].endswith("Z")
     r = client.get("/test-attempts/", params={"mine": 1}, headers=hdr)
     assert [a["id"] for a in r.json()] == [mine["id"]]
-    assert client.get("/test-attempts/", params={"mine": 1}).status_code == 401
+    with as_stranger():  # «mine» means nothing without a name
+        assert client.get("/test-attempts/", params={"mine": 1}).status_code == 401
 
 
 def test_streak_today_follows_user_tz():
@@ -717,7 +734,8 @@ def test_verify_queue_reasons_and_resolve():
     assert client.get("/corpus/verify-queue", params={"reason": "nope"}).status_code == 400
 
     # resolving needs a registered user
-    assert client.post(f"/drills/{contested}/resolve", json={"text_tachelhit": "ar timlilit"}).status_code == 401
+    with as_stranger():  # settling which words a drill carries needs a name behind it
+        assert client.post(f"/drills/{contested}/resolve", json={"text_tachelhit": "ar timlilit"}).status_code == 401
     token = register("verifier")
     h = {"X-User-Token": token}
     # accept one of the heard readings: text set, Latin filled, bracket dropped, verified
@@ -801,7 +819,7 @@ def test_admin_can_issue_a_reset_code_when_there_is_no_mail_server(monkeypatch):
     admin = client.post("/users/register", json={"username": "reset_admin"}).json()
     db = main.SessionLocal(); row = db.query(UserModel).filter(UserModel.username == "reset_admin").first(); row.is_admin = True; db.commit(); db.close()
     h = {"X-User-Token": admin["token"]}
-    assert client.post("/auth/admin-reset-code", json={"login": "needsreset"}).status_code == 401
+    assert client.post("/auth/admin-reset-code", json={"login": "needsreset"}).status_code in (401, 403)
     r = client.post("/auth/admin-reset-code", json={"login": "needs.reset@example.test"}, headers=h).json()
     assert len(r["code"]) == 6 and r["username"] == "needsreset" and r["mailed"] is False
     assert client.post("/auth/admin-reset-code", json={"login": "nobody-at-all"}, headers=h).status_code == 404
@@ -819,7 +837,7 @@ def test_admin_sets_the_mail_sender_from_the_app(monkeypatch):
     db = main.SessionLocal(); row = db.query(UserModel).filter(UserModel.username == "mail_admin").first(); row.is_admin = True
     row.email = "mail.admin@example.test"; db.commit()
     h = {"X-User-Token": admin["token"]}
-    assert client.get("/admin/mail").status_code == 401
+    assert client.get("/admin/mail").status_code in (401, 403)
     r = client.post("/admin/mail", json={"settings": {"SMTP_HOST": "smtp.gmail.com", "SMTP_PORT": "587",
                                                       "SMTP_USER": "sender@example.test", "SMTP_PASS": "app-password",
                                                       "SMTP_FROM": "sender@example.test"}}, headers=h).json()

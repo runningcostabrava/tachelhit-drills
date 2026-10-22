@@ -65,8 +65,8 @@ def test_classification_fills_grammar_and_unit_page_shows_lesson_and_examples(mo
     assert client.get("/grammar/negacio").json()["lesson"]["intro"] == "Sabràs dir que no."  # kept, and now served at once
     assert len(calls) == 2  # written once, kept in the grammar_lessons table
     assert client.get("/grammar/no-such-unit").status_code == 404
-    assert client.post("/grammar/run").status_code == 401  # admin only
-    assert client.post("/grammar/negacio/rewrite").status_code == 401
+    assert client.post("/grammar/run").status_code in (401, 403)  # admin only
+    assert client.post("/grammar/negacio/rewrite").status_code in (401, 403)
 
 
 def test_the_wishlist_asks_for_the_sentences_the_lesson_shows(monkeypatch):

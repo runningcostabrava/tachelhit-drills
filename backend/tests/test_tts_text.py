@@ -54,4 +54,4 @@ def test_prefill_tts_makes_and_stores_a_voice_once(monkeypatch):
         assert main.prefill_tts(placeholder, db) is None and len(calls) == 1
     finally:
         db.close()
-    assert client.post("/tts/prefill", json={"limit": 5}).status_code == 401  # admin only
+    assert client.post("/tts/prefill", json={"limit": 5}).status_code in (401, 403)  # admin only

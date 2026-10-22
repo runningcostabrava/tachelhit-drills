@@ -14,7 +14,9 @@ def _user(name, **kw):
 
 def test_petition_is_filled_by_the_first_speakers_recording(monkeypatch):
     learner = _user("veus_learner")
-    assert client.post("/petitions", json={"text_catalan": "Com es diu «bon profit»?"}).status_code == 401
+    from test_api import as_stranger
+    with as_stranger():  # asking for a sentence needs a name to answer to
+        assert client.post("/petitions", json={"text_catalan": "Com es diu «bon profit»?"}).status_code == 401
     p = client.post("/petitions", json={"text_catalan": "bon profit", "note": "per dir-ho a taula"}, headers=learner).json()
     assert p["tag"] == "petició" and p["requested_by"] == "veus_learner" and not p["text_tachelhit"]
     opened = client.get("/petitions?kind=open").json()
