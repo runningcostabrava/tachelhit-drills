@@ -6860,6 +6860,33 @@ AGENT_TOOLS = [
         }},
     },
     {
+        "name": "add_to_practice",
+        "description": ("Afegeix passos al FINAL d'una pr\u00e0ctica, sense tocar els que ja hi s\u00f3n. \u00c9s el que "
+                        "vols quan et demanen \u00abafegeix-hi m\u00e9s frases\u00bb: build_practice substitueix tota "
+                        "la seq\u00fc\u00e8ncia i nom\u00e9s s'ha de fer servir per refer-la de cap i de nou."),
+        "parameters": {"type": "object", "properties": {
+            "test_id": {"type": "integer"},
+            "steps": {"type": "array", "description": "els passos nous, en ordre", "items": {
+                "type": "object", "properties": {
+                    "kind": {"type": "string"},
+                    "drill_id": {"type": "integer"},
+                    "heading": {"type": "string", "description": "nom\u00e9s per a kind=note"},
+                    "text": {"type": "string", "description": "nom\u00e9s per a kind=note"},
+                }, "required": ["kind"]}},
+        }, "required": ["test_id", "steps"]},
+    },
+    {
+        "name": "illustrate_sentence",
+        "description": ("Dibuixa una imatge per a una frase que no en t\u00e9, amb l'estil de les targetes. "
+                        "Serveix quan et demanen \u00abafegeix-hi imatges\u00bb: les imatges van a les FRASES, no "
+                        "als passos, i aix\u00ed les t\u00e9 tothom qui les faci servir. Una frase que ja en t\u00e9 "
+                        "no es toca."),
+        "parameters": {"type": "object", "properties": {
+            "drill_id": {"type": "integer"},
+            "hint": {"type": "string", "description": "qu\u00e8 s'hi ha de veure, si vols guiar-ho"},
+        }, "required": ["drill_id"]},
+    },
+    {
         "name": "read_practice",
         "description": "Què té ara mateix una pràctica: el seu nom i els seus passos en ordre.",
         "parameters": {"type": "object", "properties": {
@@ -6961,6 +6988,48 @@ def _agent_executor(db, user=None):
             if not t:
                 return {"error": f"no existeix la pr\u00e0ctica {args.get('test_id')}"}
             return {"test_id": t.id, "title": t.title, "steps": practice_steps.steps_of(db, t.id)}
+        if name == "add_to_practice":
+            t = db.query(TestModel).filter(TestModel.id == args.get("test_id")).first()
+            if not t:
+                return {"error": f"no existeix la pr\u00e0ctica {args.get('test_id')}"}
+            if not may_change(t, user):
+                return {"error": "aquesta pr\u00e0ctica no \u00e9s teva; demana-ho a qui l'administra"}
+            kept = [{"kind": x["kind"], "drill_id": x["drill_id"], "payload": x["payload"]}
+                    for x in practice_steps.steps_of(db, t.id)]
+            added = []
+            for raw_step in (args.get("steps") or []):
+                kind = (raw_step or {}).get("kind")
+                one = {"kind": kind, "drill_id": raw_step.get("drill_id")}
+                if kind == "note":
+                    one["payload"] = {k: raw_step.get(k) for k in ("heading", "text") if raw_step.get(k)}
+                added.append(one)
+            if not added:
+                return {"error": "no m'has dit cap pas per afegir"}
+            try:
+                written = practice_steps.replace_steps(db, t.id, kept + added)
+            except practice_steps.StepError as e:
+                return {"error": str(e)}
+            return {"test_id": t.id, "added": len(added), "now": len(written)}
+        if name == "illustrate_sentence":
+            d = db.query(DrillModel).filter(DrillModel.id == args.get("drill_id")).first()
+            if not d:
+                return {"error": f"no existeix la frase {args.get('drill_id')}"}
+            if (d.image_url or "").strip():
+                return {"drill_id": d.id, "image_url": d.image_url, "note": "ja en tenia una"}
+            if not illustration_available():
+                return {"error": "ara mateix no es poden dibuixar imatges"}
+            try:
+                blob = generate_illustration(d.text_catalan or args.get("hint") or "", args.get("hint"))
+                up = cloudinary.uploader.upload(
+                    blob, folder="tachelhit/images",
+                    public_id=f"img_{d.id}_{int(datetime.utcnow().timestamp())}")
+                d.image_url = normalize_media_url(up["secure_url"])
+                d.updated_at = datetime.utcnow()
+                db.commit()
+                return {"drill_id": d.id, "image_url": d.image_url}
+            except Exception as e:
+                db.rollback()
+                return {"error": f"no s'ha pogut dibuixar: {str(e)[:120]}"}
         if name == "build_practice":
             t = db.query(TestModel).filter(TestModel.id == args.get("test_id")).first()
             if not t:

@@ -96,3 +96,50 @@ def test_the_copilot_refuses_a_step_it_cannot_run():
         assert "error" in run("build_practice", {"test_id": p["id"], "steps": [{"kind": "record", "drill_id": 1}]})
     finally:
         db.close()
+
+
+def _declared_tool_names():
+    return {t["name"] for t in main.AGENT_TOOLS}
+
+
+def test_the_workshop_never_ordena_fer_servir_una_eina_que_no_existeix():
+    """The instruction the copilot gets inside a practice names its tools by hand, so the names
+    can drift apart from the tools. They did: a release once told it to call add_to_practice and
+    illustrate_sentence months before either existed, and nothing failed — the only symptom was
+    the copilot answering that it could not do what it had just been ordered to do.
+
+    The instruction is built inside the request handler, so this reads the source rather than
+    cutting it out into something importable: a span moved out of main.py is how three constants
+    were once deleted by accident."""
+    import inspect
+    import re
+
+    src = inspect.getsource(main.ai_agent)
+    start = src.find("Ara MATEIX l'usuari")
+    assert start > 0, "la instrucció del taller ja no comença on es deia"
+    end = src.find("contents = []", start)   # where the instruction stops and the request is built
+    assert end > start, "no trobo on s'acaba la instrucció"
+    named = set(re.findall(r"[a-z][a-z0-9]*(?:_[a-z0-9]+)+", src[start:end]))
+    declared = _declared_tool_names()
+    # only words that look like one of our tool names; Catalan has no underscores
+    mentioned = {w for w in named if w in declared or w.endswith(("_practice", "_sentence",
+                                                                 "_sentences_for_practice",
+                                                                 "_tachelhit", "_about"))}
+    assert mentioned, "la instrucció no anomena cap eina: o ha canviat molt, o aquesta prova ja no mira res"
+    missing = sorted(mentioned - declared)
+    assert not missing, f"la instrucció mana fer servir eines que no existeixen: {missing}"
+
+
+def test_every_declared_tool_has_hands():
+    """A declaration without an executor branch is the same bug seen from the other side: the
+    model calls the tool, the executor shrugs, and the answer is «eina desconeguda»."""
+    run, db = _run()
+    try:
+        for name in sorted(_declared_tool_names()):
+            try:
+                out = run(name, {})
+            except Exception:
+                continue        # it tried to do the work and tripped on the empty arguments: it has hands
+            assert out.get("error") != f"eina desconeguda: {name}", f"{name} es declara i no es fa"
+    finally:
+        db.close()
