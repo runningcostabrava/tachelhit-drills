@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { getUserToken, isNativeApp, setUserIdentity, clearUserIdentity } from '../config';
 import { Share } from '@capacitor/share';
 import { syncManager } from '../services/OfflineSyncManager';
-import { api, type Me, type MailSettings } from '../api';
+import { api, type AdminUser, type Me, type MailSettings } from '../api';
+import { toast } from '../toast';
 import { AiSpendAdmin } from './AiQuota';
 import { VARIETIES } from '../varieties';
 import { FaCheck, FaLayerGroup, FaRedo, FaFire } from 'react-icons/fa';
@@ -112,6 +113,58 @@ function Handle({ me, onChanged }: { me: Me; onChanged: (u: { username: string; 
         <button onClick={() => { setEditing(false); setErr(null); }} style={{ padding: 0, border: 'none', background: 'none', color: 'var(--text-soft)', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>deixa-ho</button>
       </div>
       <div style={{ fontSize: '12px', color: err ? 'var(--rose)' : 'var(--text-muted)', marginTop: 4 }}>{err || 'De 3 a 32 caràcters: lletres sense accent, xifres, _ - .'}</div>
+    </div>
+  );
+}
+
+
+// Admin: who is in this library, and who administers it. Being an administrator used to live in
+// an environment variable on the host — now it is a row anyone with the keys can change, with the
+// two guards the server keeps: you cannot demote yourself, and the last admin stays.
+function AdminPeople() {
+  const [people, setPeople] = useState<AdminUser[] | null>(null);
+  const [q, setQ] = useState('');
+  const [busy, setBusy] = useState<number | null>(null);
+  const load = (needle?: string) => api.adminUsers(needle).then((r) => setPeople(r.users)).catch(() => setPeople([]));
+  useEffect(() => { load(); }, []);
+  const flip = async (u: AdminUser) => {
+    setBusy(u.id);
+    try {
+      const r = await api.setAdmin(u.id, !u.is_admin);
+      setPeople((ps) => (ps || []).map((p) => (p.id === u.id ? { ...p, is_admin: r.is_admin } : p)));
+      toast.success(r.is_admin ? `@${r.username} ja pot administrar` : `@${r.username} ja no administra`);
+    } catch (e: any) { toast.error(e?.message || 'No s’ha pogut canviar'); }
+    finally { setBusy(null); }
+  };
+  return (
+    <div style={{ marginTop: '18px', padding: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', background: 'var(--surface-2)' }}>
+      <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Qui hi ha i qui administra</div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+        <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') load(q.trim() || undefined); }}
+               placeholder="busca per nom o correu"
+               style={{ flex: 1, minWidth: 140, padding: '8px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontFamily: 'inherit', fontSize: '13px' }} />
+        <button onClick={() => load(q.trim() || undefined)} style={{ padding: '8px 14px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>Busca</button>
+      </div>
+      {people === null && <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Carregant…</div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {(people || []).map((u) => (
+          <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 'var(--r-md)', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}>
+                {u.display_name || u.username} <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>@{u.username}</span>
+                {u.is_native === true && <span style={{ marginLeft: 6, fontSize: '11px', color: 'var(--emerald)', fontWeight: 700 }}>parla amazic</span>}
+                {u.is_native === false && <span style={{ marginLeft: 6, fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>l’aprèn</span>}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                {u.email || 'sense correu'} · {u.drills} drills · {u.takes} veus{u.region ? ` · ${u.region}` : ''}
+              </div>
+            </div>
+            <button onClick={() => flip(u)} disabled={busy === u.id} style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 'var(--r-pill)', border: `1px solid ${u.is_admin ? 'var(--brand-1)' : 'var(--border)'}`, background: u.is_admin ? 'var(--brand-1)' : 'var(--surface)', color: u.is_admin ? '#fff' : 'var(--text-soft)', fontWeight: 700, fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', opacity: busy === u.id ? 0.6 : 1 }}>
+              {u.is_admin ? 'administra' : 'fes-lo administrador'}
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -373,6 +426,7 @@ export default function ProfilePage() {
                   </button>
                   {accMsg && <div style={{ fontSize: '13px', color: 'var(--text-soft)' }}>{accMsg}</div>}
                 </form>
+                {me.is_admin && <AdminPeople />}
                 {me.is_admin && <AdminMailSettings />}
                 {me.is_admin && <AdminResetCode />}
                 {me.is_admin && <AiSpendAdmin />}

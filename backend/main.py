@@ -1934,6 +1934,27 @@ def require_user(user: Optional[UserModel] = Depends(get_current_user)) -> UserM
     return user
 
 
+def may_change(drill, user: Optional[UserModel]) -> bool:
+    """A drill is whoever made it's, or an admin's. One nobody claims — almost all of the library,
+    made before accounts existed — is an admin's."""
+    if user is None:
+        return False
+    if user.is_admin:
+        return True
+    return bool(drill.created_by_user_id) and drill.created_by_user_id == user.id
+
+
+def owner_or_admin(drill, user: Optional[UserModel]) -> None:
+    """Raise unless this person may change this drill, saying which of the two it is."""
+    if may_change(drill, user):
+        return
+    if user is None:
+        raise HTTPException(status_code=401, detail="Entra-hi per canviar res")
+    if not drill.created_by_user_id:
+        raise HTTPException(status_code=403, detail="Aquesta frase és de la biblioteca: demana-ho a qui l'administra, o desa la teva versió")
+    raise HTTPException(status_code=403, detail="Aquesta frase és d'algú altre: desa la teva versió")
+
+
 def require_admin(user: UserModel = Depends(require_user)) -> UserModel:
     if not user.is_admin:
         raise HTTPException(status_code=403, detail="Admin only")
@@ -2420,7 +2441,7 @@ def _set_drill_key(db_drill) -> None:
 
 @app.post("/drills/", response_model=Drill)
 def create_drill(drill: DrillCreate = None, db: Session = Depends(get_db),
-                 user: Optional[UserModel] = Depends(get_current_user)):
+                 user: UserModel = Depends(require_user)):
     # A drill needs at least one text or one media URL; a fully empty body
     # used to create blank rows (P1.9). Checked before the try/except below,
     # which turns any exception into a 500.
@@ -2476,10 +2497,12 @@ def create_drill(drill: DrillCreate = None, db: Session = Depends(get_db),
         raise HTTPException(status_code=500, detail=f"Failed to create drill: {e}")
 
 @app.put("/drills/{drill_id}", response_model=Drill)
-def update_drill(drill_id: int, update_data: DrillUpdate, db: Session = Depends(get_db)):
+def update_drill(drill_id: int, update_data: DrillUpdate, db: Session = Depends(get_db),
+                 user: Optional[UserModel] = Depends(get_current_user)):
     drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found")
+    owner_or_admin(drill, user)
 
     update_dict = update_data.model_dump(exclude_unset=True)
 
@@ -2555,7 +2578,8 @@ def update_drill(drill_id: int, update_data: DrillUpdate, db: Session = Depends(
     return drill
 
 @app.delete("/drills/{drill_id}")
-def delete_drill(drill_id: int, db: Session = Depends(get_db)):
+def delete_drill(drill_id: int, db: Session = Depends(get_db),
+                 user: Optional[UserModel] = Depends(get_current_user)):
     """Delete a drill and everything keyed on it (P4.7): review state, review
     log and extra recordings go first (explicitly — SQLite ignores FK cascades
     unless PRAGMA foreign_keys is on, and the Postgres FKs were created before
@@ -2563,6 +2587,7 @@ def delete_drill(drill_id: int, db: Session = Depends(get_db)):
     drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found")
+    owner_or_admin(drill, user)
     for model in (DrillReviewModel, ReviewLogModel, RecordingModel):
         db.query(model).filter(model.drill_id == drill_id).delete(synchronize_session=False)
     db.add(DrillTombstoneModel(drill_id=drill_id, deleted_at=datetime.utcnow()))
@@ -5324,6 +5349,46 @@ def auth_forgot(request: Request, email: Optional[str] = Body(None, embed=True),
         except Exception as e:
             print(f"[AUTH] reset e-mail failed: {e}")
     return {"ok": True}
+
+
+@app.get("/admin/users")
+def admin_users(q: Optional[str] = None, limit: int = 200,
+                _admin: UserModel = Depends(require_admin), db: Session = Depends(get_db)):
+    """Admin: who is in this library. Newest first, with what each person has given it."""
+    rows = db.query(UserModel).order_by(UserModel.id.desc()).limit(max(1, min(limit, 500))).all()
+    if q:
+        needle = q.strip().lower()
+        rows = [u for u in rows if needle in (u.username or "").lower()
+                or needle in (u.display_name or "").lower() or needle in (u.email or "").lower()]
+    made = dict(db.query(DrillModel.created_by_user_id, sa_func.count(DrillModel.id))
+                .filter(DrillModel.created_by_user_id.isnot(None))
+                .group_by(DrillModel.created_by_user_id).all())
+    takes = dict(db.query(RecordingModel.user_id, sa_func.count(RecordingModel.id))
+                 .filter(RecordingModel.user_id.isnot(None))
+                 .group_by(RecordingModel.user_id).all())
+    return {"users": [{"id": u.id, "username": u.username, "display_name": u.display_name,
+                       "email": u.email, "is_admin": bool(u.is_admin), "is_native": u.is_native,
+                       "variety": u.variety, "region": u.region,
+                       "drills": made.get(u.id, 0), "takes": takes.get(u.id, 0),
+                       "date_created": iso_z(u.date_created)} for u in rows]}
+
+
+@app.post("/admin/users/{user_id}/admin")
+def admin_set_admin(user_id: int, is_admin: bool = Body(..., embed=True),
+                    me: UserModel = Depends(require_admin), db: Session = Depends(get_db)):
+    """Admin: make somebody an administrator, or stop them being one. Two guards keep a library
+    from locking itself out: you cannot demote yourself, and the last administrator stays."""
+    person = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if not person:
+        raise HTTPException(status_code=404, detail="No hi ha ningú amb aquest identificador")
+    if person.id == me.id and not is_admin:
+        raise HTTPException(status_code=400, detail="No et pots treure a tu mateix: que ho faci un altre administrador")
+    if not is_admin and db.query(UserModel).filter(UserModel.is_admin.is_(True)).count() <= 1:
+        raise HTTPException(status_code=400, detail="És l'únic administrador que queda")
+    person.is_admin = bool(is_admin)
+    db.commit()
+    print(f"[AUTH] @{me.username} {'made' if is_admin else 'unmade'} @{person.username} an administrator")
+    return {"id": person.id, "username": person.username, "is_admin": bool(person.is_admin)}
 
 
 @app.get("/admin/mail")

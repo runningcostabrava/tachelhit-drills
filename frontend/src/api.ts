@@ -81,6 +81,11 @@ export interface VerifyQueue {
   drills: VerifyItem[];
 }
 
+export interface AdminUser {
+  id: number; username: string; display_name: string | null; email: string | null;
+  is_admin: boolean; is_native?: boolean | null; variety?: string | null; region?: string | null;
+  drills: number; takes: number; date_created: string;
+}
 export interface Me {
   email?: string | null;
   is_admin?: boolean;
@@ -246,6 +251,10 @@ export const api = {
   grammarDeep: (slug: string, limit = 60) => request<GrammarUnitPage>(`/grammar/${slug}/deep?limit=${limit}`),
   grammarDeepRewrite: (slug: string) => request<GrammarUnitPage>(`/grammar/${slug}/deep/rewrite`, { method: 'POST' }),
   grammarWishlist: () => request<{ units: GrammarWishUnit[] }>('/grammar/wishlist'),
+  /** Admin: who is in this library, and who administers it. */
+  adminUsers: (q?: string) => request<{ users: AdminUser[] }>(`/admin/users${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+  setAdmin: (userId: number, is_admin: boolean) =>
+    request<{ id: number; username: string; is_admin: boolean }>(`/admin/users/${userId}/admin`, { method: 'POST', body: JSON.stringify({ is_admin }) }),
   /** Admin: ask for every sentence the library cannot say out loud, in one pass. */
   askForEveryMissingVoice: () => request<{ asked: number; already_asked: number; with_a_take: number }>('/drills/voice-wanted/missing', { method: 'POST', body: JSON.stringify({ include_synthetic: true }) }),
   /** Ask our speakers to say this sentence out loud; it goes to the top of «Veus». */

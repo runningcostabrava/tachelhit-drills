@@ -78,11 +78,13 @@ def test_monthly_budget_stops_calls(monkeypatch):
 def test_anonymous_daily_cap_then_429(monkeypatch):
     monkeypatch.setattr(gemini_client.requests, "post", _fake_post())
     monkeypatch.setattr(main, "_build_system_instruction", lambda db: "sys")
-    for _ in range(2):
-        assert client.post("/ai/ask", json={"question": "hola?"}).status_code == 200
-    r = client.post("/ai/ask", json={"question": "hola?"})
-    assert r.status_code == 429 and "entra amb el teu compte" in r.json()["detail"]
-    u = client.get("/ai/usage").json()
+    from test_api import as_stranger
+    with as_stranger():  # the small daily allowance is counted by address, for people with no account
+        for _ in range(2):
+            assert client.post("/ai/ask", json={"question": "hola?"}).status_code == 200
+        r = client.post("/ai/ask", json={"question": "hola?"})
+        assert r.status_code == 429 and "entra amb el teu compte" in r.json()["detail"]
+        u = client.get("/ai/usage").json()
     assert u["today"] == {"used": 2, "limit": 2, "remaining": 0}
     with main.SessionLocal() as db:
         feats = {r.feature for r in db.query(GeminiUsage).all()}
