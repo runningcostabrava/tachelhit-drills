@@ -28,6 +28,7 @@ import lexicon
 from tts_text import tts_text, VOICE_VERSION
 import topics as topics_catalog
 import grammar as grammar_course
+import practice_steps
 import practice as practice_mod
 import transliteration
 from gemini_client import gemini_generate, gemini_available, gemini_agent, BudgetExceeded
@@ -1570,6 +1571,13 @@ async def lifespan(app: FastAPI):
     if os.getenv("GRAMMAR_NOTES_WRITE", "1") != "0":
         threading.Thread(target=_write_missing_notes, daemon=True).start()
 
+    # The practices made before ADR 0002 become steps, one per sentence, so they can be edited
+    # like any other. Only those that have none, so this can run on every boot.
+    try:
+        practice_steps.convert_missing(SessionLocal)
+    except Exception as e:
+        print(f"[PRACTICE] conversion skipped: {e}")
+
     # Add sample data if database is empty
     with SessionLocal() as db:
         count = db.query(DrillModel).count()
@@ -2345,7 +2353,7 @@ def get_drill_tombstones(since: Optional[str] = None, db: Session = Depends(get_
 
 @app.get("/drills/", response_model=list[Drill])
 def get_drills(response: Response, tag: Optional[str] = None, author: Optional[str] = None,
-               ids: Optional[str] = None, since: Optional[str] = None,
+               ids: Optional[str] = None, since: Optional[str] = None, search: Optional[str] = None,
                limit: Optional[int] = None, offset: Optional[int] = None,
                db: Session = Depends(get_db)):
     """List drills, newest first.
@@ -2367,6 +2375,15 @@ def get_drills(response: Response, tag: Optional[str] = None, author: Optional[s
 
         if author:
             query = query.filter(DrillModel.author.ilike(f"%{author}%"))
+
+        if search and search.strip():
+            # Finding a sentence to put in a practice must not mean downloading the library:
+            # the search happens here, over both texts and the tag (issue #199).
+            from sqlalchemy import or_ as _or_search
+            needle = f"%{search.strip()}%"
+            query = query.filter(_or_search(DrillModel.text_catalan.ilike(needle),
+                                            DrillModel.text_tachelhit.ilike(needle),
+                                            DrillModel.tag.ilike(needle)))
 
         if since:
             query = query.filter(
@@ -3226,11 +3243,23 @@ def get_test(test_id: int, db: Session = Depends(get_db)):
     return test
 
 @app.post("/tests/", response_model=Test)
-def create_test(test: TestCreate, db: Session = Depends(get_db)):
+def create_test(test: TestCreate, db: Session = Depends(get_db),
+                user: Optional[UserModel] = Depends(get_current_user)):
+    """Make a practice. It belongs to whoever made it (#199): that is what «les meves llistes»
+    is built on, and what decides later who may change it."""
     db_test = TestModel(**test.model_dump())
+    if user and not getattr(db_test, "created_by_user_id", None):
+        db_test.created_by_user_id = user.id
     db.add(db_test)
     db.commit()
     db.refresh(db_test)
+    # A practice made from a list of sentences starts as those sentences, one step each.
+    try:
+        steps = practice_steps.from_legacy(db_test)
+        if steps:
+            practice_steps.replace_steps(db, db_test.id, steps)
+    except Exception as e:
+        print(f"[PRACTICE] steps for test {db_test.id}: {e}")
     return db_test
 
 @app.put("/tests/{test_id}", response_model=Test)
@@ -3284,6 +3313,32 @@ def create_test_attempt(attempt: TestAttemptCreate, db: Session = Depends(get_db
     return db_attempt
 
 # ===================== TEST STATISTICS =====================
+@app.get("/tests/{test_id}/steps")
+def get_practice_steps(test_id: int, db: Session = Depends(get_db)):
+    """The steps of a practice, in the order a learner meets them."""
+    test = db.query(TestModel).filter(TestModel.id == test_id).first()
+    if not test:
+        raise HTTPException(status_code=404, detail="Test not found")
+    return {"test_id": test_id, "steps": practice_steps.steps_of(db, test_id),
+            "kinds": {k: {"needs_drill": v[0], "asks": v[1]} for k, v in practice_steps.KINDS.items()}}
+
+
+@app.put("/tests/{test_id}/steps")
+def put_practice_steps(test_id: int, steps: List[dict] = Body(..., embed=True),
+                       db: Session = Depends(get_db),
+                       user: Optional[UserModel] = Depends(get_current_user)):
+    """Rewrite a practice's steps in the order the editor sends. Whoever made the practice, or an
+    admin: the same rule as a drill. Nothing is deleted until every step has been checked."""
+    test = db.query(TestModel).filter(TestModel.id == test_id).first()
+    if not test:
+        raise HTTPException(status_code=404, detail="Test not found")
+    owner_or_admin(test, user)
+    try:
+        return {"test_id": test_id, "steps": practice_steps.replace_steps(db, test_id, steps)}
+    except practice_steps.StepError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.get("/tests/{test_id}/stats")
 def get_test_stats(test_id: int, db: Session = Depends(get_db)):
     test = db.query(TestModel).filter(TestModel.id == test_id).first()

@@ -86,6 +86,18 @@ export interface VerifyQueue {
   drills: VerifyItem[];
 }
 
+/** One step of a practice: the tool, and the sentence it works on (ADR 0002). */
+export interface PracticeStep {
+  id?: number;
+  position?: number;
+  kind: 'listen_pick' | 'write_heard' | 'say_it' | 'look_say' | 'fill_gap' | 'word_by_word' | 'script_swap' | 'pick_spelling' | 'note' | 'record';
+  drill_id?: number | null;
+  payload?: { text?: string } | null;
+}
+export interface PracticeList {
+  id: number; title: string; description?: string | null; drill_ids: string;
+  created_by_user_id?: number | null; visibility?: string | null; date_created: string;
+}
 export interface AdminUser {
   id: number; username: string; display_name: string | null; email: string | null;
   is_admin: boolean; is_native?: boolean | null; variety?: string | null; region?: string | null;
@@ -217,6 +229,20 @@ export const api = {
   aiExplainDrill: (drillId: number) =>
     request<{ explanation: string; draft: boolean; related: RelatedDrill[] }>(`/ai/explain/${drillId}`, { method: 'POST' }),
   drill: (id: number) => request<Drill>(`/drills/${id}`),
+  // --- Pràctiques: una seqüència de passos, no una llista de números (ADR 0002) ---
+  /** The steps of a practice, in the order a learner meets them, plus the tools that exist. */
+  practiceSteps: (testId: number) => request<{ test_id: number; steps: PracticeStep[]; kinds: Record<string, { needs_drill: boolean; asks: string }> }>(`/tests/${testId}/steps`),
+  /** Rewrite them in this order. Whoever made the practice, or an admin. */
+  savePracticeSteps: (testId: number, steps: PracticeStep[]) =>
+    request<{ test_id: number; steps: PracticeStep[] }>(`/tests/${testId}/steps`, { method: 'PUT', body: JSON.stringify({ steps }) }),
+  /** Find sentences for a practice without downloading the library. */
+  searchDrills: (q: string, limit = 40) => request<Drill[]>(`/drills/?search=${encodeURIComponent(q)}&limit=${limit}`),
+  practices: () => request<PracticeList[]>('/tests/'),
+  /** The sentences a practice's steps point at, in one request. */
+  drillsByIds: (ids: number[]) => request<Drill[]>(`/drills/?ids=${ids.join(',')}`),
+  createPractice: (title: string) => request<PracticeList>('/tests/', { method: 'POST', body: JSON.stringify({ title, description: '', question_type: 'audio', hint_level: 'none', hint_percentage: 30, hint_tries_before_reveal: 3, passing_score: 70, drill_ids: '' }) }),
+  renamePractice: (id: number, title: string) => request<PracticeList>(`/tests/${id}`, { method: 'PUT', body: JSON.stringify({ title }) }),
+  deletePractice: (id: number) => request<{ detail: string }>(`/tests/${id}`, { method: 'DELETE' }),
   /** Anyone signed in: say it your way. A second version linked to the first, same Catalan. */
   addVariant: (id: number, text_tachelhit: string, note?: string) =>
     request<Drill>(`/drills/${id}/variant`, { method: 'POST', body: JSON.stringify({ text_tachelhit, note }) }),

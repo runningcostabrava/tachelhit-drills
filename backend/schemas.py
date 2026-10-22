@@ -154,6 +154,8 @@ class Test(TestBase):
     id: int
     date_created: datetime
     updated_at: Optional[datetime] = None
+    created_by_user_id: Optional[int] = None   # whose list it is: «les meves» is built on this
+    visibility: Optional[str] = None           # private | shared
 
     @field_serializer('date_created', 'updated_at', when_used='json')
     def _ser_dt(self, v: Optional[datetime]) -> Optional[str]:
