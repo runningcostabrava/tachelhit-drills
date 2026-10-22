@@ -851,3 +851,31 @@ def test_the_first_account_of_an_empty_library_can_administer_it():
     for u in was:
         u.is_admin = True
     db.commit(); db.close()
+
+
+def test_the_drills_list_travels_compressed_and_without_empty_fields():
+    """Issue #190: the list was 5,7 MB on every load, and 43% of that was field names.
+
+    Two cheap habits keep it down, and both are easy to undo by accident:
+    gzip on the way out, and no `"field":null` for the thirty-odd fields a drill usually
+    leaves empty. A missing key and a null key mean the same thing to every reader we have.
+    """
+    plain = client.get("/drills/", headers={"Accept-Encoding": "identity"})
+    assert plain.status_code == 200
+    for drill in plain.json():
+        assert None not in drill.values(), f"empty fields are being written out: {drill}"
+
+    # TestClient decodes for us, so the header is what proves it was compressed.
+    zipped = client.get("/drills/", headers={"Accept-Encoding": "gzip"})
+    assert zipped.status_code == 200
+    assert zipped.headers.get("content-encoding") == "gzip" or len(plain.content) < 1024
+    assert zipped.json() == plain.json()  # same answer, fewer bytes
+
+
+def test_asking_for_one_drill_does_not_return_the_whole_library():
+    """Issue #190: editing a drill pulled every row a second time to find one of them."""
+    everything = client.get("/drills/").json()
+    assert everything, "the suite seeds drills"
+    wanted = everything[0]["id"]
+    one = client.get(f"/drills/?ids={wanted}").json()
+    assert [d["id"] for d in one] == [wanted]
