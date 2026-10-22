@@ -207,7 +207,7 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
               {c.type === 'intro' && <IntroCard page={page} cover={cover?.image_url || null} />}
               {c.type === 'explain' && <ExplainCard step={c} onAsk={setAsk} />}
               {c.type === 'pattern' && <PatternCard step={c} />}
-              {c.type === 'quiz' && <QuizCard step={c} chosen={answers[k]} onChoose={(j) => setAnswers((a) => ({ ...a, [k]: j }))} />}
+              {c.type === 'quiz' && <QuizCard step={c} chosen={answers[k]} onChoose={(j) => setAnswers((a) => ({ ...a, [k]: j }))} active={false} />}
               {(c.type === 'tip' || c.type === 'dialect') && <NoteCard step={c} />}
               {c.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} nextUnit={nextUnit} proposals={proposals} onDecided={loadProposals} deep={deep} />}
               {(c.type === 'explain' || c.type === 'tip' || c.type === 'dialect' || c.type === 'intro') && page.lesson.steps.length > 0 && <ProposeChange slug={slug} step={k - 1} current={c.type === 'intro' ? page.lesson.intro : c.text} signedIn={signedIn} onSent={loadProposals} />}
@@ -359,11 +359,13 @@ function PatternCard({ step }: { step: Extract<LessonStep, { type: 'pattern' }> 
   );
 }
 
-function QuizCard({ step, chosen, onChoose }: { step: Extract<LessonStep, { type: 'quiz' }>; chosen?: number; onChoose: (k: number) => void }) {
+function QuizCard({ step, chosen, onChoose, active = true }: { step: Extract<LessonStep, { type: 'quiz' }>; chosen?: number; onChoose: (k: number) => void; active?: boolean }) {
   const answered = chosen !== undefined;
   const kind = step.kind || 'meaning';
   const play = useCallback(() => { if (step.example.audio_url) new Audio(getMediaUrl(step.example.audio_url)).play().catch(() => {}); }, [step.example.audio_url]);
-  useEffect(() => { if (kind === 'listen' && !answered) play(); }, [kind, answered, play]);
+  // «Escolta» speaks by itself only when this is the card the learner is on. The whole lesson on
+  // one page renders every card at once: without this, a unit opens with four voices at a time.
+  useEffect(() => { if (active && kind === 'listen' && !answered) play(); }, [active, kind, answered, play]);
   const choose = (k: number) => {
     if (answered) return;
     onChoose(k);

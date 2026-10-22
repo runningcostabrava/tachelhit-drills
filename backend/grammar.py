@@ -358,6 +358,7 @@ def gloss_of(d) -> Optional[List[dict]]:
 
 NOTE_VERSION = 1       # bump to rewrite every «why this sentence is here» note
 NOTES_BATCH = 12       # sentences per Gemini call: ~160 calls cover the whole course
+NOTES_PAUSE = 4.0      # seconds between calls: the free instance serves pages with the same CPU
 NO_NOTE = "-"          # asked, and the honest answer was that the sentence shows nothing of the unit
 
 _notes_state = {"running": False, "done": 0, "pending": 0, "errors": 0, "unit": None,
@@ -470,6 +471,11 @@ def fill_notes(session_factory, rows_for, grammar_md: str = "", only: Optional[s
                 sheet = sheet_for(db, slug, grammar_md)
                 for i in range(0, len(todo), NOTES_BATCH):
                     batch = todo[i:i + NOTES_BATCH]
+                    # a lesson being written is what a learner is waiting for: let it go first
+                    for _ in range(60):
+                        if not writing():
+                            break
+                        time.sleep(5)
                     try:
                         notes = write_notes(unit, sheet, batch)
                         for e in batch:  # a sentence the writer passed over is marked asked, once
@@ -481,7 +487,7 @@ def fill_notes(session_factory, rows_for, grammar_md: str = "", only: Optional[s
                         _notes_state["errors"] += 1
                         _notes_state["last_error"] = f"{slug}: {str(e)[:160]}"
                         print(f"[NOTES] {slug}: {e}")
-                    time.sleep(1)
+                    time.sleep(NOTES_PAUSE)  # half a CPU is also serving pages
                 print(f"[NOTES] {slug}: {len(todo)} sentences explained")
             except Exception as e:
                 _notes_state["errors"] += 1
@@ -503,7 +509,9 @@ def fill_notes(session_factory, rows_for, grammar_md: str = "", only: Optional[s
 def example_dict(d) -> dict:
     """What a lesson step shows of a drill: both texts, the picture, a voice (speaker's first),
     and the word-by-word reading when the library has one."""
-    audio = d.audio_url or getattr(d, "audio_tts_shi_url", None) or getattr(d, "audio_tts_url", None)
+    # Tamazight only. `audio_tts_url` is the CATALAN reading of the meaning: in a lesson it would
+    # say the answer out loud in the wrong language, and «escolta i tria el sentit» would be a joke.
+    audio = d.audio_url or getattr(d, "audio_tts_shi_url", None)
     return {"id": d.id, "shi": _clean_text(d.text_tachelhit), "ca": _clean_text(d.text_catalan),
             "image_url": d.image_url, "audio_url": audio, "recorded": bool(d.audio_url),
             "author": (d.author or "").strip() or None, "region": d.region, "origin": origin(d),

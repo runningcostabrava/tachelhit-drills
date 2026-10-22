@@ -5279,17 +5279,21 @@ def auth_change_password(old_password: str = Body(..., embed=True), new_password
 
 
 @app.post("/auth/forgot")
-def auth_forgot(request: Request, email: str = Body(..., embed=True), db: Session = Depends(get_db)):
-    """E-mail a 6-digit reset code (30 min). Always answers ok, so addresses cannot be probed;
-    503 only when no SMTP sender is configured."""
+def auth_forgot(request: Request, email: Optional[str] = Body(None, embed=True),
+                login: Optional[str] = Body(None, embed=True), db: Session = Depends(get_db)):
+    """E-mail a 6-digit reset code (30 min) to the account's address. Say who you are with your
+    e-mail OR your user name: someone who signed up without an address has only the name, and that
+    is exactly the person who cannot ask for help any other way. Always answers ok, so neither
+    addresses nor names can be probed from outside."""
     ip = request.client.host if request.client else "unknown"
     _rate_limit(_login_attempts, ip, 10, 900)
     if not _mail_ready():
         # Not an error: this library recovers accounts with a code an admin hands over. The page
         # says so instead of showing a server fault nobody can act on.
         return {"ok": True, "mail": False}
-    user = db.query(UserModel).filter(UserModel.email == (email or "").strip().lower()).first()
-    if user:
+    key = (login or email or "").strip().lower()
+    user = db.query(UserModel).filter((UserModel.email == key) | (UserModel.username == key)).first() if key else None
+    if user and user.email:  # with no address there is nowhere to send it: ask the admin for a code
         code = f"{secrets.randbelow(10**6):06d}"
         user.reset_code_hash = _hash_token(code); user.reset_expires = datetime.utcnow() + timedelta(minutes=30)
         db.commit()

@@ -52,7 +52,7 @@ export default function AuthPage() {
     navigate('/', { replace: true });
   });
   const doForgot = () => run(async () => {
-    const r = await api.forgotPassword(email.trim());
+    const r = await api.forgotPassword((login || email).trim());
     if (r.mail === false) { setNoMail(true); toast.success('Aquest servidor no envia correu: demana el codi.'); }
     else toast.success('Si el correu existeix, hi rebràs un codi de 6 xifres.');
     setMode('reset');
@@ -111,10 +111,10 @@ export default function AuthPage() {
 
         {mode === 'forgot' && (
           <form onSubmit={(e) => { e.preventDefault(); doForgot(); }}>
-            <p style={{ marginTop: 0, color: 'var(--text-soft)', fontSize: '14px' }}>T&apos;enviem un codi de 6 xifres al correu del compte. Si aquest servidor encara no envia correu, t&apos;ho dirà: llavors demana el codi a qui porta la biblioteca i fes servir «Ja tinc un codi».</p>
-            <label style={label} htmlFor="fg-email">Correu electrònic</label>
-            <input id="fg-email" style={input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus />
-            <button type="submit" disabled={busy || !email} style={{ ...primary, opacity: busy || !email ? 0.6 : 1 }}>{busy ? 'Enviant…' : 'Envia el codi'}</button>
+            <p style={{ marginTop: 0, color: 'var(--text-soft)', fontSize: '14px' }}>T&apos;enviem un codi de 6 xifres al correu del compte. Si el teu compte no té correu, o aquest servidor encara no n&apos;envia, demana el codi a qui porta la biblioteca i fes servir «Ja tinc un codi».</p>
+            <label style={label} htmlFor="fg-login">Correu electrònic o nom d&apos;usuari</label>
+            <input id="fg-login" style={input} value={login || email} onChange={(e) => setLogin(e.target.value)} autoComplete="username" autoFocus />
+            <button type="submit" disabled={busy || !(login || email)} style={{ ...primary, opacity: busy || !(login || email) ? 0.6 : 1 }}>{busy ? 'Enviant…' : 'Envia el codi'}</button>
             <div style={{ marginTop: '12px' }}><button type="button" style={link} onClick={() => setMode('reset')}>Ja tinc un codi</button></div>
           </form>
         )}

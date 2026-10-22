@@ -306,7 +306,7 @@ export const api = {
   changePassword: (old_password: string, new_password: string) =>
     request<{ ok: boolean }>('/auth/password', { method: 'POST', body: JSON.stringify({ old_password, new_password }) }),
   /** `mail: false` means this server sends no e-mail: ask an admin for a code instead. */
-  forgotPassword: (email: string) => request<{ ok: boolean; mail?: boolean }>('/auth/forgot', { method: 'POST', body: JSON.stringify({ email }) }),
+  forgotPassword: (login: string) => request<{ ok: boolean; mail?: boolean }>('/auth/forgot', { method: 'POST', body: JSON.stringify({ login }) }),
   adminMailGet: () => request<MailSettings>('/admin/mail'),
   adminMailSet: (settings: Record<string, string>) => request<MailSettings>('/admin/mail', { method: 'POST', body: JSON.stringify({ settings }) }),
   adminMailTest: (to?: string) => request<{ sent_to: string }>('/admin/mail/test', { method: 'POST', body: JSON.stringify({ to: to || null }) }),
