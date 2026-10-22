@@ -8311,6 +8311,84 @@ async def evaluate_dataset(
 
     return results
 
+_text_fill_job = {"running": False, "total": 0, "done": 0, "failed": 0, "last": None}
+
+
+def _run_text_fill(variety: str, limit: int) -> None:
+    """Ask the listener for a reading of every recording whose words nobody has written."""
+    db = SessionLocal()
+    try:
+        rows = (db.query(DrillModel)
+                .filter(DrillModel.audio_url.isnot(None), DrillModel.audio_url != "")
+                .order_by(DrillModel.id.desc()).all())
+        todo = [d for d in rows
+                if not (d.text_tachelhit or "").strip()
+                and not (d.text_tachelhit_suggested or "").strip()][:max(1, limit)]
+        _text_fill_job["total"] = len(todo)
+        for drill in todo:
+            if not _text_fill_job["running"]:
+                break
+            v = (drill.variety or variety or "").strip().lower()
+            if not dialect.profile(v):
+                _text_fill_job["failed"] += 1
+                continue
+            try:
+                out = dialect.transcribe(drill.audio_url, v, meaning=drill.text_catalan,
+                                         speaker_text=None, examples=[],
+                                         max_secs=float(os.getenv("ASR_GEMINI_MAX_SECS", "30")))
+            except Exception as e:
+                print(f"[TEXT-FILL] drill {drill.id}: {str(e)[:120]}")
+                out = None
+            if not out or not (out.get("latin") or "").strip():
+                _text_fill_job["failed"] += 1
+                continue
+            drill.text_tachelhit_suggested = out["latin"]
+            drill.updated_at = datetime.utcnow()
+            db.commit()
+            _text_fill_job["done"] += 1
+            _text_fill_job["last"] = out["latin"][:60]
+        print(f"[TEXT-FILL] drafted {_text_fill_job['done']} of {_text_fill_job['total']} "
+              f"({_text_fill_job['failed']} could not be read)")
+    except Exception as e:
+        print(f"[TEXT-FILL] stopped: {e}")
+    finally:
+        db.close()
+        _text_fill_job["running"] = False
+
+
+@app.post("/drills/transcribe-missing")
+def transcribe_missing_text(variety: str = "tzm", limit: int = 120,
+                            _admin: UserModel = Depends(require_admin)):
+    """Draft the words of every recording that has none (#189 is blocked on exactly this).
+
+    The reading goes to `text_tachelhit_suggested` and waits for a person in the verification
+    queue. The speaker's own field is never touched by a machine — that rule does not bend for a
+    hundred recordings any more than it bends for one.
+    """
+    if _text_fill_job["running"]:
+        return {"status": "already_running", **_text_fill_job}
+    import threading
+    _text_fill_job.update({"running": True, "total": 0, "done": 0, "failed": 0, "last": None})
+    threading.Thread(target=_run_text_fill, args=(variety, limit), daemon=True).start()
+    return {"status": "started", "variety": variety, "limit": limit}
+
+
+@app.get("/drills/transcribe-missing/status")
+def transcribe_missing_status(db: Session = Depends(get_db)):
+    """How the drafting is going, and how many recordings are still mute on paper."""
+    waiting = (db.query(DrillModel)
+               .filter(DrillModel.audio_url.isnot(None), DrillModel.audio_url != "")
+               .filter((DrillModel.text_tachelhit.is_(None)) | (DrillModel.text_tachelhit == ""))
+               .count())
+    return {**_text_fill_job, "recordings_without_words": waiting}
+
+
+@app.post("/drills/transcribe-missing/stop")
+def transcribe_missing_stop():
+    _text_fill_job["running"] = False
+    return {"status": "stopping"}
+
+
 @app.post("/drills/{drill_id}/retranscribe")
 async def retranscribe_drill(drill_id: int, variety: Optional[str] = Body(None, embed=True), db: Session = Depends(get_db)):
     """Listen to the drill's recording again with the listener of its variety and write the

@@ -119,7 +119,7 @@ export default function AutoCapturePanel() {
       </div>
 
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '12px' }}>
-        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=…"
+        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Enganxa un enllaç: YouTube, Instagram, TikTok, un podcast…"
           style={{ flex: 2, minWidth: '220px', padding: '12px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface-2)', fontSize: '15px', color: 'var(--text)' }} />
         <input value={tag} onChange={(e) => setTag(e.target.value)} placeholder="etiqueta (opcional)"
           style={{ flex: 1, minWidth: '120px', padding: '12px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface-2)', fontSize: '15px', color: 'var(--text)' }} />

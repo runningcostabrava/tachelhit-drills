@@ -7,6 +7,7 @@ are not exercised here).
 """
 import os
 import sys
+import time
 
 # Isolated DB — must be set before importing main (module reads env at import)
 TEST_DB = "test_drills.db"
@@ -944,3 +945,38 @@ def test_a_failed_capture_can_be_retried_and_a_finished_one_forgotten():
     db = main.SessionLocal()
     db.query(CaptureRequest).filter(CaptureRequest.id == running_id).delete()
     db.commit(); db.close()
+
+
+def test_drafting_the_missing_words_never_touches_the_speakers_own_text(monkeypatch):
+    """101 recordings have a voice and a meaning but nobody has written what is said, which is
+    what blocks whole stories from becoming lessons. The listener can DRAFT them; it cannot
+    decide them. A machine reading goes to text_tachelhit_suggested and waits for a person."""
+    import dialect
+
+    hdr = {"X-User-Token": register("text_drafter")}
+    db = main.SessionLocal()
+    me = db.query(main.UserModel).filter(main.UserModel.username == "text_drafter").first()
+    me.is_admin = True
+    db.commit(); db.close()
+
+    mute = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "El llop i la seva ombra", "text_tachelhit": "",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/wolf.mp3", "variety": "tzm"}).json()
+    spoken = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "aigua", "text_tachelhit": "aman",   # a speaker wrote this one
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/aman.mp3", "variety": "tzm"}).json()
+
+    monkeypatch.setattr(dialect, "transcribe", lambda *a, **k: {"latin": "uššn d umalu nns", "tifinagh": ""})
+    assert client.post("/drills/transcribe-missing?limit=5", headers=hdr).json()["status"] == "started"
+    for _ in range(100):                      # it runs on a thread
+        if not client.get("/drills/transcribe-missing/status").json()["running"]:
+            break
+        time.sleep(0.05)
+
+    drafted = client.get(f"/drills/{mute['id']}").json()
+    assert drafted["text_tachelhit_suggested"] == "uššn d umalu nns"
+    assert not (drafted.get("text_tachelhit") or ""), "la paraula del parlant no la toca cap màquina"
+
+    kept = client.get(f"/drills/{spoken['id']}").json()
+    assert kept["text_tachelhit"] == "aman"
+    assert not kept.get("text_tachelhit_suggested"), "qui ja té paraules escrites no es toca"
