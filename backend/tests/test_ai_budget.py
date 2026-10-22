@@ -62,17 +62,29 @@ def test_failed_call_is_recorded_without_cost(monkeypatch):
 
 
 def test_monthly_budget_stops_calls(monkeypatch):
+    """Spending the month's budget stops the calls — and this test SPENDS it, so it puts the
+    money back before leaving. It used to leave a 10 € charge in the database, and the next test
+    that asked Gemini for anything failed with «Pressupost mensual d'IA esgotat», somewhere else,
+    for something it did not do. Which test that was depended on the order (#191)."""
     monkeypatch.setattr(gemini_client.requests, "post", _fake_post())
     with main.SessionLocal() as db:
-        db.add(GeminiUsage(model="gemini-2.5-flash", feature="pipeline", cost_micro_eur=10_000_000))
+        spent = GeminiUsage(model="gemini-2.5-flash", feature="pipeline", cost_micro_eur=10_000_000)
+        db.add(spent)
         db.commit()
+        spent_id = spent.id
     main.ai_meter._spent_cache = (0.0, 0)
-    with pytest.raises(gemini_client.BudgetExceeded):
-        gemini_client.gemini_generate("sys", [{"role": "user", "text": "hi"}])
-    r = client.post("/ai/ask", json={"question": "què vol dir azul?"})
-    assert r.status_code == 429 and "Pressupost" in r.json()["detail"]
-    assert client.get("/ai/status").json()["available"] is False
-    assert client.get("/ai/usage").json()["month"]["remaining_eur"] == 0
+    try:
+        with pytest.raises(gemini_client.BudgetExceeded):
+            gemini_client.gemini_generate("sys", [{"role": "user", "text": "hi"}])
+        r = client.post("/ai/ask", json={"question": "què vol dir azul?"})
+        assert r.status_code == 429 and "Pressupost" in r.json()["detail"]
+        assert client.get("/ai/status").json()["available"] is False
+        assert client.get("/ai/usage").json()["month"]["remaining_eur"] == 0
+    finally:
+        with main.SessionLocal() as db:
+            db.query(GeminiUsage).filter(GeminiUsage.id == spent_id).delete()
+            db.commit()
+        main.ai_meter._spent_cache = (0.0, 0)
 
 
 def test_anonymous_daily_cap_then_429(monkeypatch):
