@@ -47,11 +47,29 @@ class OfflineSyncManager {
     return value ? JSON.parse(value) : [];
   }
 
+  // On the web, Preferences is localStorage: about 5 MB for the whole origin, and the library
+  // passed that long ago. A cache that cannot be written is a pity, not a failure — losing the
+  // offline copy must never look like losing the server, so this never throws. When the whole
+  // library does not fit, what a person needs offline is kept (the texts and the media links)
+  // and the rest is dropped.
   async saveDrillsToCache(drills: Drill[]) {
-    await Preferences.set({
-      key: DRILLS_CACHE_KEY,
-      value: JSON.stringify(drills),
-    });
+    const write = async (value: string) => Preferences.set({ key: DRILLS_CACHE_KEY, value });
+    try {
+      await write(JSON.stringify(drills));
+    } catch {
+      const slim = drills.map((d: any) => ({
+        id: d.id, text_catalan: d.text_catalan, text_tachelhit: d.text_tachelhit,
+        text_arabic: d.text_arabic, audio_url: d.audio_url, image_url: d.image_url,
+        tag: d.tag, region: d.region, variety: d.variety, date_created: d.date_created,
+      }));
+      try {
+        await write(JSON.stringify(slim));
+        console.warn(`[Sync] Library too big for local storage: kept a light copy of ${slim.length} drills.`);
+      } catch {
+        try { await Preferences.remove({ key: DRILLS_CACHE_KEY }); } catch { /* nothing to do */ }
+        console.warn('[Sync] No room for an offline copy of the drills; the app will always ask the server.');
+      }
+    }
     // Trigger media sync in background when drills are updated
     this.syncAllMedia();
   }

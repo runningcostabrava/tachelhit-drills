@@ -225,11 +225,9 @@ export default function DrillsResponsive() {
       // empty local cache. The cache is only a fallback when the request
       // genuinely fails (real offline / native app without connectivity).
       try {
-        syncManager.sync().catch(() => {});
         const response = await axios.get(`${API_BASE}/drills/`);
-        allDrills = response.data || [];
+        allDrills = Array.isArray(response.data) ? response.data : [];
         setLoadError(null);
-        await syncManager.saveDrillsToCache(allDrills); // also schedules the media sync (throttled)
       } catch (netErr) {
         console.warn('Server fetch failed, falling back to cached drills:', netErr);
         allDrills = await syncManager.getDrills();
@@ -239,6 +237,10 @@ export default function DrillsResponsive() {
         setLoadError(allDrills.length ? 'cached' : 'error');
         if (allDrills.length) toast.error('Sense resposta del servidor: es mostra la còpia local.');
       }
+      // Saving the offline copy happens AFTER, and on its own: a full local storage used to throw
+      // here, be caught as a network error, and show «no response from the server» over a library
+      // the server had just sent in full.
+      if (allDrills.length) syncManager.saveDrillsToCache(allDrills).catch(() => {});
 
       const queue = await syncManager.getQueue();
       const localCreates = queue
