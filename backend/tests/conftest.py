@@ -29,3 +29,21 @@ def _client_identity():
     if r.status_code == 200:
         client.headers.update({"X-User-Token": r.json()["token"]})
     yield
+
+
+@pytest.fixture(autouse=True)
+def _fresh_signup_budget():
+    """Signing up and logging in are limited per IP, and every test shares the same one.
+
+    So a test that makes two accounts quietly spends the next test's allowance, and that test
+    fails with `KeyError: 'token'` — somewhere else, for something it did not do. It bit
+    test_veus the day the practice tests started registering two people, and it depends on the
+    order the tests happen to run in, which is random here (pytest-randomly).
+
+    Clearing the counters before each test makes every test start from the same place. The tests
+    that are ABOUT the limit fill it up themselves, so they still prove what they prove.
+    """
+    import main
+    main._register_attempts.clear()
+    main._login_attempts.clear()
+    yield
