@@ -91,3 +91,28 @@ def test_admin_dependency():
             assert e.status_code == 403
     finally:
         db.close()
+
+
+def test_the_handle_can_be_changed_and_nothing_is_lost():
+    """A name typed in haste at sign-up should not follow somebody for ever. What a person gave the
+    library hangs on the account, not on the name."""
+    main._register_attempts.clear(); main._login_attempts.clear()
+    r = client.post("/auth/signup", json={"email": "handle@example.com", "password": "handle-me-123",
+                                          "username": "123jprarv", "display_name": "123jprarv"}).json()
+    h = {"X-User-Token": r["token"]}
+    drill = client.post("/drills/", json={"text_catalan": "casa", "text_tachelhit": "tigmmi"}, headers=h).json()
+
+    assert client.post("/auth/username", json={"username": "AB"}, headers=h).status_code == 400       # too short
+    assert client.post("/auth/username", json={"username": "no spaces"}, headers=h).status_code == 400
+    assert client.post("/auth/username", json={"username": "123jprarv"}, headers=h).status_code == 200  # its own name
+
+    out = client.post("/auth/username", json={"username": "Pablo"}, headers=h)
+    assert out.status_code == 200 and out.json()["username"] == "pablo"       # lower-cased
+    assert out.json()["display_name"] == "pablo"   # the shown name followed the handle, so it moves too
+    assert client.get("/users/me", headers=h).json()["username"] == "pablo"   # the session still works
+    assert client.get(f"/drills/{drill['id']}").status_code == 200            # and what they gave is still there
+
+    other = client.post("/auth/signup", json={"email": "other@example.com", "password": "other-one-123",
+                                              "username": "someone"}).json()
+    taken = client.post("/auth/username", json={"username": "pablo"}, headers={"X-User-Token": other["token"]})
+    assert taken.status_code == 409  # one handle, one person

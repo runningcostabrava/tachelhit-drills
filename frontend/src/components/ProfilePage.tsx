@@ -76,6 +76,47 @@ function AdminMailSettings() {
   );
 }
 
+// The handle people see. It can be changed: nothing a person has given the library hangs on the
+// name (takes, drills, proposals all hang on the account), and a handle typed in haste at sign-up
+// should not follow somebody about for ever.
+function Handle({ me, onChanged }: { me: Me; onChanged: (u: { username: string; display_name: string }) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(me.username);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const save = async () => {
+    setBusy(true); setErr(null);
+    try {
+      const u = await api.changeUsername(name.trim().toLowerCase());
+      onChanged({ username: u.username, display_name: u.display_name });
+      setUserIdentity(getUserToken() || '', u.username);
+      setEditing(false);
+    } catch (e: any) { setErr(e?.message || 'No s’ha pogut canviar'); }
+    finally { setBusy(false); }
+  };
+  if (!editing) {
+    return (
+      <p style={{ color: 'var(--text-muted)', margin: '0 0 16px', fontSize: '14px' }}>
+        @{me.username}
+        <button onClick={() => { setName(me.username); setEditing(true); }} style={{ marginLeft: 8, padding: 0, border: 'none', background: 'none', color: 'var(--brand-1)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>canvia’l</button>
+      </p>
+    );
+  }
+  return (
+    <div style={{ margin: '0 0 16px' }}>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <span style={{ color: 'var(--text-muted)' }}>@</span>
+        <input value={name} onChange={(e) => setName(e.target.value)} autoFocus maxLength={32} placeholder="pablo"
+               style={{ flex: 1, minWidth: 140, padding: '8px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontFamily: 'inherit', fontSize: '14px' }} />
+        <button onClick={save} disabled={busy || name.trim().length < 3} style={{ padding: '8px 14px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', opacity: busy || name.trim().length < 3 ? 0.6 : 1 }}>{busy ? 'Desant…' : 'Desa'}</button>
+        <button onClick={() => { setEditing(false); setErr(null); }} style={{ padding: 0, border: 'none', background: 'none', color: 'var(--text-soft)', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>deixa-ho</button>
+      </div>
+      <div style={{ fontSize: '12px', color: err ? 'var(--rose)' : 'var(--text-muted)', marginTop: 4 }}>{err || 'De 3 a 32 caràcters: lletres sense accent, xifres, _ - .'}</div>
+    </div>
+  );
+}
+
+
 // Admin: a reset code for someone who cannot receive e-mail (no mail server configured yet).
 // The admin passes the code on by hand; the person uses «Ja tinc un codi» on the sign-in page.
 function AdminResetCode() {
@@ -299,7 +340,7 @@ export default function ProfilePage() {
         {!newToken && hasToken && me && (
           <div style={cardStyle}>
             <h3 style={{ marginTop: 0, fontFamily: 'var(--font-display)', fontSize: '22px' }}>{me.display_name || me.username}</h3>
-            <p style={{ color: 'var(--text-muted)', margin: '0 0 16px', fontSize: '14px' }}>@{me.username}</p>
+            <Handle me={me} onChanged={(u) => setMe((m) => (m ? { ...m, username: u.username, display_name: u.display_name } : m))} />
             <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '18px' }}>
               <div style={{ padding: '12px 18px', background: 'var(--brand-gradient-soft)', borderRadius: 'var(--r-lg)', fontWeight: 700, color: 'var(--brand-1)' }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaLayerGroup /> {me.drills_contributed} drills aportats</span>

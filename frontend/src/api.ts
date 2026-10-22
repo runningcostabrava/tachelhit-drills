@@ -205,6 +205,10 @@ export const api = {
   aiExplainDrill: (drillId: number) =>
     request<{ explanation: string; draft: boolean; related: RelatedDrill[] }>(`/ai/explain/${drillId}`, { method: 'POST' }),
   drill: (id: number) => request<Drill>(`/drills/${id}`),
+  /** Admin: correct a sentence by hand. The speakers' own words are only ever changed here, on
+   *  purpose, by a person — never by a machine pass. */
+  editDrillText: (id: number, patch: { text_tachelhit?: string; text_catalan?: string }) =>
+    request<Drill>(`/drills/${id}`, { method: 'PUT', body: JSON.stringify(patch) }),
   aiAgent: (message: string, drillIds?: number[], history?: { role: string; text: string }[]) =>
     request<{ answer: string; actions: { name: string; args: any; result: any }[] }>('/ai/agent', {
       method: 'POST',
@@ -237,6 +241,8 @@ export const api = {
   grammarDeep: (slug: string, limit = 60) => request<GrammarUnitPage>(`/grammar/${slug}/deep?limit=${limit}`),
   grammarDeepRewrite: (slug: string) => request<GrammarUnitPage>(`/grammar/${slug}/deep/rewrite`, { method: 'POST' }),
   grammarWishlist: () => request<{ units: GrammarWishUnit[] }>('/grammar/wishlist'),
+  /** Admin: ask for every sentence the library cannot say out loud, in one pass. */
+  askForEveryMissingVoice: () => request<{ asked: number; already_asked: number; with_a_take: number }>('/drills/voice-wanted/missing', { method: 'POST', body: JSON.stringify({ include_synthetic: true }) }),
   /** Ask our speakers to say this sentence out loud; it goes to the top of «Veus». */
   askForVoice: (drillId: number, wanted = true) => request<{ id: number; voice_wanted: boolean; voice_wanted_by: string | null }>(`/drills/${drillId}/voice-wanted`, { method: 'POST', body: JSON.stringify({ wanted }) }),
   petitions: (kind: 'open' | 'synthetic' | 'aitmraw', limit = 40) => request<{ items: PetitionItem[]; total: number }>(`/petitions?kind=${kind}&limit=${limit}`),
@@ -305,6 +311,8 @@ export const api = {
   logout: () => request<{ ok: boolean }>('/auth/logout', { method: 'POST', body: '{}' }),
   attachCredentials: (email: string, password: string) =>
     request<AuthUser>('/auth/attach', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  /** Change the handle people see («@pablo»). Nothing you contributed is tied to the name. */
+  changeUsername: (username: string) => request<AuthUser>('/auth/username', { method: 'POST', body: JSON.stringify({ username }) }),
   changePassword: (old_password: string, new_password: string) =>
     request<{ ok: boolean }>('/auth/password', { method: 'POST', body: JSON.stringify({ old_password, new_password }) }),
   /** `mail: false` means this server sends no e-mail: ask an admin for a code instead. */
@@ -324,7 +332,7 @@ export interface GrammarUnit { slug: string; title: string; level: number }
 /** A drill as a lesson quotes it: both texts plus its picture and a voice (the speaker's when recorded). */
 /** `gloss`: the library's word-by-word reading of the sentence, refreshed on every serve.
  *  `why`: what this sentence shows of THIS unit's point (stored per sentence and unit). */
-export interface LessonExample { id: number; shi: string; ca: string; image_url?: string | null; audio_url?: string | null; recorded: boolean; author?: string | null; region?: string | null; origin?: string | null; focus?: string | null; gloss?: { shi: string; ca: string }[] | null; why?: string | null; source_url?: string | null; source_channel?: string | null }
+export interface LessonExample { id: number; shi: string; ca: string; image_url?: string | null; audio_url?: string | null; recorded: boolean; author?: string | null; region?: string | null; origin?: string | null; focus?: string | null; gloss?: { shi: string; ca: string; tif?: string | null }[] | null; why?: string | null; tif?: string | null; source_url?: string | null; source_channel?: string | null }
 export type LessonStep =
   | { type: 'explain'; title: string; text: string; examples: LessonExample[] }
   | { type: 'pattern'; title: string; rows: string[][] }

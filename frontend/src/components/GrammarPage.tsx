@@ -107,6 +107,7 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
   const [view, setViewState] = useState<ViewMode>(loadView);
   // the copilot, opened on one example: «Explica'm» word by word, then any question about it
   const [ask, setAsk] = useState<{ id: number; label: string } | null>(null);
+  const [recording, setRecording] = useState<Drill | null>(null);  // the recorder, on one sentence
   const setView = (v: ViewMode) => { setViewState(v); try { localStorage.setItem(VIEW_KEY, v); } catch { /* private mode */ } };
   const loadProposals = useCallback(() => { api.lessonProposals(slug).then(setProposals).catch(() => setProposals([])); }, [slug]);
 
@@ -178,6 +179,13 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
       navigate('/tests');
     } catch { toast.error('No s’ha pogut crear el test'); }
   };
+  // a speaker records the sentence where they met it; anyone else can ask for a voice
+  const recordExample = useCallback((e: LessonExample) => {
+    api.drill(e.id).then(setRecording).catch(() => toast.error('No s’ha pogut obrir la gravadora'));
+  }, []);
+  const wantVoice = useCallback((e: LessonExample) => {
+    api.askForVoice(e.id).then(() => toast.success('Demanada a les nostres veus')).catch(() => toast.error('No s’ha pogut demanar'));
+  }, []);
   const rewrite = async () => {
     setRewriting(true);
     try { setPage(await (deep ? api.grammarDeepRewrite(slug) : api.grammarRewrite(slug))); setI(0); setAnswers({}); toast.success('Lliçó reescrita'); }
@@ -191,6 +199,7 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
       {error && <div style={{ color: 'var(--rose)' }}>{error}</div>}
       {!page && !error && <LoadingUnit />}
       {ask && <AiAssistant drillId={ask.id} drillLabel={ask.label} autoAction="explain" onClose={() => setAsk(null)} />}
+      {recording && <RecordAudioModal drill={recording} onClose={() => setRecording(null)} onSaved={() => { setRecording(null); toast.success('Gravada. Gràcies per la teva veu.'); }} />}
       {page && card && (
         <div style={{ display: 'flex', gap: 6, margin: '0 0 10px' }}>
           {([['cards', 'Targetes'], ['document', 'Document']] as [ViewMode, string][]).map(([m, label]) => (
@@ -205,7 +214,7 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
           {cards.map((c, k) => (
             <div key={k} className="lesson-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', padding: '18px', marginTop: '12px', boxShadow: 'var(--shadow-sm)' }}>
               {c.type === 'intro' && <IntroCard page={page} cover={cover?.image_url || null} />}
-              {c.type === 'explain' && <ExplainCard step={c} onAsk={setAsk} />}
+              {c.type === 'explain' && <ExplainCard step={c} onAsk={setAsk} onRecord={recordExample} onWant={wantVoice} signedIn={signedIn} isAdmin={isAdmin} />}
               {c.type === 'pattern' && <PatternCard step={c} />}
               {c.type === 'quiz' && <QuizCard step={c} chosen={answers[k]} onChoose={(j) => setAnswers((a) => ({ ...a, [k]: j }))} active={false} />}
               {(c.type === 'tip' || c.type === 'dialect') && <NoteCard step={c} />}
@@ -225,7 +234,7 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
           <Progress n={cards.length} i={i} answers={answers} cards={cards} />
           <div key={i} className="lesson-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', padding: '18px', marginTop: '12px', boxShadow: 'var(--shadow-sm)', minHeight: '240px' }}>
             {card.type === 'intro' && <IntroCard page={page} cover={cover?.image_url || null} />}
-            {card.type === 'explain' && <ExplainCard step={card} onAsk={setAsk} />}
+            {card.type === 'explain' && <ExplainCard step={card} onAsk={setAsk} onRecord={recordExample} onWant={wantVoice} signedIn={signedIn} isAdmin={isAdmin} />}
             {card.type === 'pattern' && <PatternCard step={card} />}
             {card.type === 'quiz' && <QuizCard step={card} chosen={answers[i]} onChoose={(k) => setAnswers((a) => ({ ...a, [i]: k }))} />}
             {(card.type === 'tip' || card.type === 'dialect') && <NoteCard step={card} />}
@@ -285,31 +294,48 @@ function IntroCard({ page, cover }: { page: GrammarUnitPage; cover: string | nul
   );
 }
 
-function ExplainCard({ step, onAsk }: { step: Extract<LessonStep, { type: 'explain' }>; onAsk?: (a: { id: number; label: string }) => void }) {
+function ExplainCard({ step, onAsk, onRecord, onWant, signedIn, isAdmin }: { step: Extract<LessonStep, { type: 'explain' }>; onAsk?: (a: { id: number; label: string }) => void; onRecord?: (e: LessonExample) => void; onWant?: (e: LessonExample) => void; signedIn?: boolean; isAdmin?: boolean }) {
   return (
     <div>
       <h2 style={{ fontSize: '18px', margin: '0 0 8px', lineHeight: 1.25 }}>{step.title}</h2>
       <p style={{ fontSize: '16px', lineHeight: 1.55, margin: '0 0 14px', color: 'var(--text)' }}>{inline(step.text)}</p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {step.examples.map((e) => <Example key={e.id} e={e} onAsk={onAsk} />)}
+        {step.examples.map((e) => <Example key={e.id} e={e} onAsk={onAsk} onRecord={onRecord} onWant={onWant} signedIn={signedIn} isAdmin={isAdmin} />)}
       </div>
     </div>
   );
 }
 
-function Example({ e, highlight, onAsk, onRecord, onWant, signedIn }: { e: LessonExample; highlight?: 'ok' | 'ko'; onAsk?: (a: { id: number; label: string }) => void; onRecord?: (e: LessonExample) => void; onWant?: (e: LessonExample) => void; signedIn?: boolean }) {
+function Example({ e, highlight, onAsk, onRecord, onWant, signedIn, isAdmin }: { e: LessonExample; highlight?: 'ok' | 'ko'; onAsk?: (a: { id: number; label: string }) => void; onRecord?: (e: LessonExample) => void; onWant?: (e: LessonExample) => void; signedIn?: boolean; isAdmin?: boolean }) {
   const play = () => { if (e.audio_url) new Audio(getMediaUrl(e.audio_url)).play().catch(() => {}); };
   const border = highlight === 'ok' ? 'var(--emerald)' : highlight === 'ko' ? 'var(--rose)' : 'var(--border)';
   // the word-by-word reading and why this sentence is in this unit: both stored, both free
   const [words, setWords] = useState(false);
   const [why, setWhy] = useState(false);
   const [wanted, setWanted] = useState(false);   // asked a speaker for a voice, just now
+  // An admin corrects the sentence where they read it. The speakers' own words change only here,
+  // by a person who decided to: «Smun ino» is «el meu amic», not «Amic», and only a human knows.
+  const [edit, setEdit] = useState<{ shi: string; ca: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [shown, setShown] = useState({ shi: e.shi, ca: e.ca });
+  const saveEdit = async () => {
+    if (!edit) return;
+    setSaving(true);
+    try {
+      await api.editDrillText(e.id, { text_tachelhit: edit.shi.trim(), text_catalan: edit.ca.trim() });
+      setShown({ shi: edit.shi.trim(), ca: edit.ca.trim() });
+      setEdit(null);
+      toast.success('Frase corregida');
+    } catch (err: any) { toast.error(err?.message || 'No s’ha pogut desar'); }
+    finally { setSaving(false); }
+  };
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'var(--surface-2)', border: `1px solid ${border}`, borderRadius: 'var(--r-lg)', flexWrap: 'wrap' }}>
       {e.image_url && <img src={getMediaUrl(e.image_url)} alt="" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 'var(--r-md)', flexShrink: 0 }} onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = 'none'; }} />}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 800, fontSize: '17px', color: 'var(--text)', lineHeight: 1.3 }}>{withFocus(e.shi, e.focus)}</div>
-        <div style={{ fontSize: '14px', color: 'var(--text-soft)' }}>{e.ca}</div>
+        <div style={{ fontWeight: 800, fontSize: '17px', color: 'var(--text)', lineHeight: 1.3 }}>{withFocus(shown.shi, e.focus)}</div>
+        {e.tif && <div lang="zgh" style={{ fontFamily: 'var(--font-tifinagh)', fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.4 }}>{e.tif}</div>}
+        <div style={{ fontSize: '14px', color: 'var(--text-soft)' }}>{shown.ca}</div>
         {(e.recorded || e.origin || e.region) && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>{e.recorded ? `veu de ${e.author || 'parlant'}` : 'veu sintètica'}{e.origin || e.region ? ` · ${e.origin || e.region}` : ''}</div>}
         {((e.gloss && e.gloss.length > 0) || e.why) && (
           <div style={{ display: 'flex', gap: '10px', marginTop: 4, flexWrap: 'wrap' }}>
@@ -323,6 +349,11 @@ function Example({ e, highlight, onAsk, onRecord, onWant, signedIn }: { e: Lesso
                 {why ? 'amaga el perquè' : 'per què és aquí'}
               </button>
             )}
+            {isAdmin && (
+              <button onClick={() => setEdit(edit ? null : { shi: shown.shi, ca: shown.ca })} style={{ ...linkBtn, color: 'var(--text-soft)' }}>
+                {edit ? 'deixa-ho' : 'corregeix'}
+              </button>
+            )}
             {!e.recorded && onWant && (
               <button onClick={() => { if (!wanted) { onWant(e); setWanted(true); } }} style={{ ...linkBtn, color: wanted ? 'var(--emerald)' : 'var(--saffron-strong)' }}>
                 {wanted ? 'demanada ✓' : 'demana una veu'}
@@ -332,9 +363,21 @@ function Example({ e, highlight, onAsk, onRecord, onWant, signedIn }: { e: Lesso
         )}
       </div>
       {signedIn && onRecord && <button onClick={() => onRecord(e)} title="Grava-ho amb la teva veu" aria-label="Grava-ho tu" style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--brand-1)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaMicrophone size={13} /></button>}
-      {onAsk && <button onClick={() => onAsk({ id: e.id, label: e.ca || e.shi })} title="Explica'm aquesta frase paraula per paraula" aria-label="Explica'm aquesta frase" style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--brand-1)', cursor: 'pointer', fontSize: '15px', lineHeight: 1 }}>💡</button>}
+      {onAsk && <button onClick={() => onAsk({ id: e.id, label: e.ca || e.shi })} title="Explica'm aquesta frase paraula per paraula" aria-label="Explica'm aquesta frase" style={{ flexShrink: 0, width: 36, height: 36, padding: 0, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--brand-1)', cursor: 'pointer', fontSize: '15px', lineHeight: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>💡</button>}
       <button onClick={play} disabled={!e.audio_url} aria-label="Escolta" style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 'var(--r-pill)', border: 'none', background: e.audio_url ? (e.recorded ? 'var(--brand-1)' : 'var(--sky)') : 'var(--surface)', color: e.audio_url ? '#fff' : 'var(--text-muted)', cursor: e.audio_url ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={15} /></button>
       {words && e.gloss && <div style={{ flexBasis: '100%' }}><GlossWords words={e.gloss} size="sm" /></div>}
+      {edit && (
+        <div style={{ flexBasis: '100%', display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+          <input value={edit.shi} onChange={(ev) => setEdit({ ...edit, shi: ev.target.value })} placeholder="en amazic, tal com es diu"
+                 style={{ padding: '8px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontFamily: 'inherit', fontSize: '15px', fontWeight: 700 }} />
+          <input value={edit.ca} onChange={(ev) => setEdit({ ...edit, ca: ev.target.value })} placeholder="en català"
+                 style={{ padding: '8px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontFamily: 'inherit', fontSize: '14px' }} />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button onClick={saveEdit} disabled={saving || !edit.shi.trim()} style={{ padding: '7px 14px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', opacity: saving ? 0.6 : 1 }}>{saving ? 'Desant…' : 'Desa la correcció'}</button>
+            {onRecord && <button onClick={() => onRecord(e)} style={{ ...linkBtn, color: 'var(--brand-1)' }}>torna a gravar-ho</button>}
+          </div>
+        </div>
+      )}
       {why && e.why && (
         <div style={{ flexBasis: '100%', marginTop: 8, padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--surface)', border: '1px solid var(--border)', fontSize: '13px', lineHeight: 1.5, color: 'var(--text-soft)' }}>
           {e.why}

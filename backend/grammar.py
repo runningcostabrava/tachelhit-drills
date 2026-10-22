@@ -352,7 +352,7 @@ def gloss_of(d) -> Optional[List[dict]]:
             continue
         w, ca = str(g.get("shi") or "").strip(), str(g.get("ca") or "").strip()
         if w and ca and ca != "?" and ca.lower() != w.lower():
-            out.append({"shi": w, "ca": ca})
+            out.append({"shi": w, "ca": ca, "tif": (str(g.get("tif") or "").strip() or None)})
     return out or None
 
 
@@ -506,16 +506,27 @@ def fill_notes(session_factory, rows_for, grammar_md: str = "", only: Optional[s
     return {"started": True, **notes_status()}
 
 
+def tifinagh(shi: str) -> Optional[str]:
+    """The sentence in Tifinagh, from the app's own transliterator. Shown under the speaker's own
+    spelling: the prose of a lesson stays in Latin, but the language's own script belongs with the
+    language. Never raises: a sentence we cannot transliterate simply shows none."""
+    try:
+        import transliteration
+        return (transliteration.to_forms(shi or "")["tifinagh"] or "").strip() or None
+    except Exception:
+        return None
+
+
 def example_dict(d) -> dict:
     """What a lesson step shows of a drill: both texts, the picture, a voice (speaker's first),
-    and the word-by-word reading when the library has one."""
+    the word-by-word reading when the library has one, and the sentence in Tifinagh."""
     # Tamazight only. `audio_tts_url` is the CATALAN reading of the meaning: in a lesson it would
     # say the answer out loud in the wrong language, and «escolta i tria el sentit» would be a joke.
     audio = d.audio_url or getattr(d, "audio_tts_shi_url", None)
     return {"id": d.id, "shi": _clean_text(d.text_tachelhit), "ca": _clean_text(d.text_catalan),
             "image_url": d.image_url, "audio_url": audio, "recorded": bool(d.audio_url),
             "author": (d.author or "").strip() or None, "region": d.region, "origin": origin(d),
-            "gloss": gloss_of(d),
+            "gloss": gloss_of(d), "tif": tifinagh(_clean_text(d.text_tachelhit)),
             "source_url": getattr(d, "source_url", None), "source_channel": getattr(d, "source_channel", None)}
 
 

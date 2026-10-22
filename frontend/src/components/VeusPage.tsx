@@ -46,6 +46,19 @@ export default function VeusPage() {
     catch (e: any) { toast.error(e?.message || 'No s’ha pogut demanar'); }
     finally { setAsking(false); }
   };
+  const [opening, setOpening] = useState(false);
+  // Admin: everything the library cannot say out loud becomes a request, in one pass inside the
+  // server. 581 sentences outside the Beni Mellal deck and some 246 inside it, "yan", "Azul!" and
+  // "nkk" among them: the first hour of the course has no voice.
+  const askEverything = async () => {
+    setOpening(true);
+    try {
+      const r = await api.askForEveryMissingVoice();
+      toast.success(`${r.asked} frases demanades a les nostres veus`);
+      setTick((t) => t + 1);
+    } catch (e: any) { toast.error(e?.message || 'No s’ha pogut demanar'); }
+    finally { setOpening(false); }
+  };
   const tab = TABS.find((t) => t.kind === kind)!;
 
   return (
@@ -54,6 +67,14 @@ export default function VeusPage() {
       <p style={{ color: 'var(--text-soft)', fontSize: '14px', margin: '0 0 14px', lineHeight: 1.5 }}>
         La biblioteca creix amb les veus de qui parla amazic. Demana una frase, o grava les que saps dir: pots fer servir l’escriptura que ja hi ha o escriure-ho com ho dius tu. Digue’ns de quin poble ets: cada veu porta el seu lloc.
       </p>
+
+      {me?.is_admin && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+          <button onClick={askEverything} disabled={opening} style={{ padding: '8px 14px', borderRadius: 'var(--r-pill)', border: '1px solid var(--brand-1)', background: 'var(--surface)', color: 'var(--brand-1)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', opacity: opening ? 0.6 : 1 }}>
+            {opening ? 'Demanant…' : 'Demana veu per a tot el que no en té'}
+          </button>
+        </div>
+      )}
 
       <div style={{ padding: 14, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', marginBottom: 18 }}>
         <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>Demana com es diu</div>

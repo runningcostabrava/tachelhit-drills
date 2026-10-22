@@ -5267,6 +5267,27 @@ def auth_attach(email: str = Body(..., embed=True), password: str = Body(..., em
     return _user_payload(user)
 
 
+@app.post("/auth/username")
+def auth_change_username(username: str = Body(..., embed=True),
+                         user: UserModel = Depends(require_user), db: Session = Depends(get_db)):
+    """Change the handle people see («@pablo»). Everything a person has given the library hangs on
+    the account, not on the name, so nothing is lost by changing it."""
+    uname = (username or "").strip().lower()
+    if not re.fullmatch(r"[a-z0-9_\-\.]{3,32}", uname):
+        raise HTTPException(status_code=400, detail="El nom d'usuari té de 3 a 32 caràcters: a-z 0-9 _ - .")
+    if uname == (user.username or "").lower():
+        return _user_payload(user)
+    if db.query(UserModel).filter(UserModel.username == uname, UserModel.id != user.id).first():
+        raise HTTPException(status_code=409, detail="Aquest nom d'usuari ja és d'algú altre")
+    was = user.username
+    user.username = uname
+    if not (user.display_name or "").strip() or (user.display_name or "").strip().lower() == (was or "").lower():
+        user.display_name = uname  # the name shown followed the handle: keep them together
+    db.commit()
+    print(f"[AUTH] @{was} is now @{uname}")
+    return _user_payload(user)
+
+
 @app.post("/auth/password")
 def auth_change_password(old_password: str = Body(..., embed=True), new_password: str = Body(..., embed=True),
                          user: UserModel = Depends(require_user), db: Session = Depends(get_db)):
@@ -5791,6 +5812,29 @@ def ask_for_a_voice(drill_id: int, wanted: bool = Body(True, embed=True),
     drill.voice_wanted_by = ((user.display_name or user.username) if wanted else None)
     db.commit()
     return {"id": drill.id, "voice_wanted": bool(drill.voice_wanted), "voice_wanted_by": drill.voice_wanted_by}
+
+
+@app.post("/drills/voice-wanted/missing")
+def ask_for_every_missing_voice(include_synthetic: bool = Body(True, embed=True),
+                                user: UserModel = Depends(require_admin), db: Session = Depends(get_db)):
+    """Admin: ask our speakers for EVERY sentence the library cannot say out loud. One pass in the
+    database instead of hundreds of calls from outside. A sentence that already has a human take
+    (its own or somebody else's) is left alone; a synthetic voice does not count as said."""
+    taken = {r[0] for r in db.query(RecordingModel.drill_id).all()}
+    rows = grammar_course.not_excluded(
+        db.query(DrillModel).filter((DrillModel.audio_url.is_(None)) | (DrillModel.audio_url == "")), DrillModel).all()
+    who = (user.display_name or user.username)
+    n = 0
+    for d in rows:
+        if d.id in taken or not (d.text_tachelhit or "").strip():
+            continue
+        if not include_synthetic and (d.audio_tts_shi_url or "").strip():
+            continue
+        if not d.voice_wanted:
+            d.voice_wanted, d.voice_wanted_by = True, who
+            n += 1
+    db.commit()
+    return {"asked": n, "already_asked": sum(1 for d in rows if d.voice_wanted) - n, "with_a_take": len(taken)}
 
 
 # ===================== VEUS: petitions and recordings wanted =====================
