@@ -5779,6 +5779,20 @@ def catalog_topics_status():
 
 
 # ===================== GRAMMAR COURSE =====================
+@app.post("/drills/{drill_id}/voice-wanted")
+def ask_for_a_voice(drill_id: int, wanted: bool = Body(True, embed=True),
+                    user: UserModel = Depends(require_user), db: Session = Depends(get_db)):
+    """Mark a sentence as one our speakers should say out loud, from the lesson card where you
+    noticed it. Marked sentences go to the top of the «Veus» list."""
+    drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+    if not drill:
+        raise HTTPException(status_code=404, detail="Drill not found")
+    drill.voice_wanted = bool(wanted)
+    drill.voice_wanted_by = ((user.display_name or user.username) if wanted else None)
+    db.commit()
+    return {"id": drill.id, "voice_wanted": bool(drill.voice_wanted), "voice_wanted_by": drill.voice_wanted_by}
+
+
 # ===================== VEUS: petitions and recordings wanted =====================
 def _petition_row(d, units_level: dict) -> dict:
     us = grammar_course.parse(d.grammar)
@@ -6023,13 +6037,17 @@ def grammar_wishlist(per_unit: int = 8, db: Session = Depends(get_db)):
         in_lesson = _lesson_quotes(db, unit["slug"])  # what the unit's lesson shows a learner
         voiced = sum(1 for d in rows if (grammar_course.origin(d) == grammar_course.AIT_MRAW and d.audio_url) or d.id in mraw_takes)
         wanted = [d for d in grammar_course.practice_rows(rows, limit=10000, slug=unit["slug"])
-                  if grammar_course.origin(d) != grammar_course.AIT_MRAW and d.id not in mraw_takes and len(d.text_tachelhit or "") <= 90]
-        # the sentences the lesson itself quotes first (recording those changes what a learner hears),
-        # then the Beni Mellal deck (real Central Atlas Tamazight), then pictured, then voiced
-        wanted.sort(key=lambda d: (d.id not in in_lesson, grammar_course.origin(d) != "Beni Mellal",
+                  if len(d.text_tachelhit or "") <= 90
+                  and (getattr(d, "voice_wanted", False)  # somebody asked for this one by hand
+                       or (grammar_course.origin(d) != grammar_course.AIT_MRAW and d.id not in mraw_takes))]
+        # what a person asked for first, then the sentences the lesson quotes (recording those
+        # changes what a learner hears), then the Beni Mellal deck, then pictured, then voiced
+        wanted.sort(key=lambda d: (not getattr(d, "voice_wanted", False), d.id not in in_lesson,
+                                   grammar_course.origin(d) != "Beni Mellal",
                                    not d.image_url, not d.audio_url, d.id))
         out.append({**{k: unit[k] for k in ("slug", "title", "level")}, "total": len(rows), "aitmraw_voiced": voiced,
                     "in_lesson": sum(1 for d in wanted if d.id in in_lesson),
+                    "asked": sum(1 for d in wanted if getattr(d, "voice_wanted", False)),
                     "wanted": [Drill.model_validate(d, from_attributes=True) for d in wanted[:max(0, min(per_unit, 30))]]})
     out.sort(key=lambda u: (u["aitmraw_voiced"], -u["total"]))
     return {"units": out}

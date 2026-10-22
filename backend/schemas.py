@@ -67,6 +67,8 @@ class DrillBase(BaseModel):
     audio_url: Optional[str] = None
     audio_tts_url: Optional[str] = None  # Generated TTS for Catalan text
     audio_tts_shi_url: Optional[str] = None  # Synthesized Tachelhit voice (fallback)
+    voice_wanted: Optional[bool] = None      # somebody asked a native speaker to say this one
+    voice_wanted_by: Optional[str] = None
     video_url: Optional[str] = None
     image_url: Optional[str] = None
     image_credit: Optional[str] = None  # attribution of a free-licensed picture (Wikimedia Commons)

@@ -85,7 +85,7 @@ SLUGS = [u["slug"] for u in UNITS]
 TITLES = {u["slug"]: u["title"] for u in UNITS}
 BATCH = 40
 DEEP_VERSION = 1   # the «a fons» level of a unit, kept under «deep:<slug>» in the same table
-LESSON_VERSION = 17  # bump when the lesson format or prompt changes: old rows are rewritten on next open
+LESSON_VERSION = 18  # bump when the lesson format or prompt changes: old rows are rewritten on next open
 
 # Drills whose tag names another language are never part of the course (the owner's old Irish tests).
 EXCLUDED_TAGS = ("irish",)
@@ -963,6 +963,11 @@ def _top_up(lesson: dict, examples: List[dict], want: int = 4, notes: Optional[D
     return lesson
 
 
+def _words(t: str) -> int:
+    """How many words a text has: what tells a one-word answer from a whole sentence."""
+    return len(re.findall(r"[^\W\d_]+", t or ""))
+
+
 def _with_quizzes(lesson: dict, examples: List[dict]) -> dict:
     """A quick check after every explanation and a short review before the end, three kinds in turn:
     read the meaning and pick the sentence; listen to the voice and pick the meaning; look at the
@@ -990,11 +995,17 @@ def _with_quizzes(lesson: dict, examples: List[dict]) -> dict:
         used.add(target["id"]); n_quiz += 1
         rnd = random.Random(target["id"])
         field = "ca" if kind == "listen" else "shi"
-        wrong = [e[field] for e in pool if e["id"] != target["id"] and e["shi"].lower() != target["shi"].lower() and not same(e["ca"], target["ca"])]
-        wrong = list(dict.fromkeys(wrong))
+        cands = [e for e in pool if e["id"] != target["id"] and e["shi"].lower() != target["shi"].lower()
+                 and not same(e["ca"], target["ca"])]
+        rnd.shuffle(cands)
+        # The wrong answers must be able to pass for the right one. A single word among three long
+        # sentences is given away by its shape alone, and the four together read as nonsense: so
+        # the nearest in length come first, and the choice stays random among equals.
+        n_target = _words(target[field])
+        cands.sort(key=lambda e: (abs(_words(e[field]) - n_target), (_words(e[field]) > 1) != (n_target > 1)))
+        wrong = list(dict.fromkeys(e[field] for e in cands))
         if len(wrong) < 3:
             continue
-        rnd.shuffle(wrong)
         options = [target[field]] + wrong[:3]
         rnd.shuffle(options)
         question = {"meaning": f"Com es diu «{target['ca']}»?", "listen": "Escolta. Què vol dir?", "picture": "Quina frase va amb la imatge?"}[kind]
@@ -1022,11 +1033,14 @@ def _review_quizzes(pool: List[dict], used: set, n_quiz: int, how_many: int) -> 
         used.add(target["id"]); n_quiz += 1
         rnd = random.Random(target["id"] * 7)
         field = "ca" if kind == "listen" else "shi"
-        wrong = [e[field] for e in pool if e["id"] != target["id"] and e["shi"].lower() != target["shi"].lower() and not same(e["ca"], target["ca"])]
-        wrong = list(dict.fromkeys(wrong))
+        cands = [e for e in pool if e["id"] != target["id"] and e["shi"].lower() != target["shi"].lower()
+                 and not same(e["ca"], target["ca"])]
+        rnd.shuffle(cands)
+        n_target = _words(target[field])   # the wrong answers look like the right one (see _with_quizzes)
+        cands.sort(key=lambda e: (abs(_words(e[field]) - n_target), (_words(e[field]) > 1) != (n_target > 1)))
+        wrong = list(dict.fromkeys(e[field] for e in cands))
         if len(wrong) < 3:
             break
-        rnd.shuffle(wrong)
         options = [target[field]] + wrong[:3]
         rnd.shuffle(options)
         question = {"meaning": f"Repàs: com es diu «{target['ca']}»?", "listen": "Repàs: escolta. Què vol dir?",

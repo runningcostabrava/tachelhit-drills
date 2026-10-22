@@ -18,6 +18,8 @@ class Drill(Base):
     audio_url = Column(String, nullable=True)
     audio_tts_url = Column(String, nullable=True)  # Generated TTS for Catalan text
     audio_tts_shi_url = Column(String, nullable=True)  # Synthesized Tachelhit voice (fallback when no recording)
+    voice_wanted = Column(Boolean, nullable=True, default=False)   # somebody asked a native speaker to say this one
+    voice_wanted_by = Column(String, nullable=True)                # who asked, so the speakers know who is waiting
     video_url = Column(String, nullable=True)
     image_url = Column(String, nullable=True)
     image_credit = Column(String, nullable=True)  # «title · author · licence · source» for a free-licensed picture

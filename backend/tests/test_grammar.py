@@ -457,3 +457,24 @@ def test_the_second_level_leaves_the_first_lesson_alone():
         assert rows["numerals"].version == grammar.LESSON_VERSION and rows["deep:numerals"].version == grammar.DEEP_VERSION
     finally:
         db.close()
+
+
+def test_the_wrong_answers_can_pass_for_the_right_one():
+    """A one-word answer among three long sentences gives itself away by its shape, and the four
+    together read as nonsense: «tu (masc.)» next to «Menjo el dinar» is not a question."""
+    import grammar
+    def e(i, shi, ca, audio=True):
+        return {"id": i, "shi": shi, "ca": ca, "image_url": None, "audio_url": "u" if audio else None,
+                "recorded": audio, "author": None, "region": None, "origin": ""}
+    pool = [e(1, "kyy", "tu (masc.)"), e(2, "kmm", "tu (fem.)"), e(3, "nkk", "jo"), e(4, "ntta", "ell"),
+            e(5, "da ttɣ imkli", "Menjo el dinar"), e(6, "hak ad gan", "Així són ells."),
+            e(7, "bla tili", "sense ombra"), e(8, "ur ssinɣ mani", "no sé on")]
+    steps = [{"type": "explain", "title": "t", "text": "x", "examples": [pool[0]]}]
+    lesson = grammar._with_quizzes({"intro": "", "steps": steps}, pool)
+    quiz = next(s for s in lesson["steps"] if s["type"] == "quiz")
+    field = "ca" if quiz["kind"] == "listen" else "shi"
+    answer = quiz["example"][field]
+    lengths = {grammar._words(o) for o in quiz["options"]}
+    assert quiz["options"][quiz["answer"]] == answer
+    assert max(lengths) - min(lengths) <= 1, quiz["options"]   # all of a kind: words with words
+    assert len(set(quiz["options"])) == 4

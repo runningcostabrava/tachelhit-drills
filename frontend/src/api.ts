@@ -237,6 +237,8 @@ export const api = {
   grammarDeep: (slug: string, limit = 60) => request<GrammarUnitPage>(`/grammar/${slug}/deep?limit=${limit}`),
   grammarDeepRewrite: (slug: string) => request<GrammarUnitPage>(`/grammar/${slug}/deep/rewrite`, { method: 'POST' }),
   grammarWishlist: () => request<{ units: GrammarWishUnit[] }>('/grammar/wishlist'),
+  /** Ask our speakers to say this sentence out loud; it goes to the top of «Veus». */
+  askForVoice: (drillId: number, wanted = true) => request<{ id: number; voice_wanted: boolean; voice_wanted_by: string | null }>(`/drills/${drillId}/voice-wanted`, { method: 'POST', body: JSON.stringify({ wanted }) }),
   petitions: (kind: 'open' | 'synthetic' | 'aitmraw', limit = 40) => request<{ items: PetitionItem[]; total: number }>(`/petitions?kind=${kind}&limit=${limit}`),
   addPetition: (text_catalan: string, note: string | null) => request<Drill>('/petitions', { method: 'POST', body: JSON.stringify({ text_catalan, note }) }),
   lessonProposals: (slug: string) => request<LessonProposal[]>(`/grammar/${slug}/proposals`),
