@@ -126,3 +126,59 @@ def test_the_editor_can_find_a_sentence_without_downloading_the_library():
     tam = client.get("/drills/", params={"search": "tasarut"}).json()
     assert any("tasarut" in (d.get("text_tachelhit") or "") for d in tam)
     assert client.get("/drills/", params={"search": "   "}).status_code == 200   # blank asks for nothing
+
+
+def test_a_practice_can_be_renamed_by_whoever_made_it_and_by_nobody_else():
+    """Until 2026-10-22 any visitor could rename or delete anyone's practice: PUT and DELETE
+    /tests/{id} checked nothing at all, while the steps underneath them did."""
+    import main
+    from test_api import client, as_stranger, register
+
+    main._register_attempts.clear(); main._login_attempts.clear()
+    hdr = {"X-User-Token": register("practice_owner")}
+    other = {"X-User-Token": register("someone_else")}
+
+    mine = client.post("/tests/", headers=hdr, json={
+        "title": "Com es diu", "description": "", "question_type": "audio",
+        "hint_level": "none", "passing_score": 70, "drill_ids": ""}).json()
+
+    # a field at a time: what is not sent is left alone, not blanked
+    renamed = client.put(f"/tests/{mine['id']}", headers=hdr, json={"title": "Els possessius"})
+    assert renamed.status_code == 200, renamed.text
+    assert renamed.json()["title"] == "Els possessius"
+    assert renamed.json()["question_type"] == "audio"
+
+    with as_stranger():
+        assert client.put(f"/tests/{mine['id']}", json={"title": "Teva no"}).status_code == 401
+    assert client.put(f"/tests/{mine['id']}", headers=other, json={"title": "Teva no"}).status_code == 403
+    assert client.delete(f"/tests/{mine['id']}", headers=other).status_code == 403
+    assert client.get(f"/tests/{mine['id']}").json()["title"] == "Els possessius"
+
+    assert client.delete(f"/tests/{mine['id']}", headers=hdr).status_code == 200
+    assert client.get(f"/tests/{mine['id']}").status_code == 404
+
+
+def test_a_tifinagh_sentence_can_be_practised_even_if_the_course_cannot_quote_it():
+    """Two groups showed «aquest grup no té cap drill» while holding 84 and 9 sentences.
+
+    One of them («Tamazight For All · faules») is written in Tifinagh, and practice was filtering
+    with the grammar course's rule, which refuses Tifinagh because the course itself is written in
+    Latin letters. Practice has no such reason: you can hear the sentence and read it.
+    """
+    import grammar
+
+    tifinagh = "ⵉⵎⵎⵓⵜ ⵡⴰⵡⵜⵉⵍ ⵙ ⵜⴰⴹⵚⴰ"
+    latin = "immut wawtil s taḍṣa"
+
+    assert grammar.well_formed(tifinagh)       # practisable
+    assert not grammar.quotable(tifinagh)      # the course keeps its Latin letters
+    assert grammar.well_formed(latin) and grammar.quotable(latin)
+
+    # and what is not a sentence at all stays out of both
+    for junk in ("text", "a.b.c", "", "Mana Lun ija +tEli"):
+        assert not grammar.well_formed(junk), junk
+
+    class FakeDrill:
+        text_catalan = "La llebre va morir de riure"
+        text_tachelhit = tifinagh
+    assert practice.quotable_any(FakeDrill())

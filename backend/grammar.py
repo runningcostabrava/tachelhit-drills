@@ -580,17 +580,31 @@ def kind(shi: Optional[str]) -> str:
 WORD_UNITS = {SOUNDS_UNIT, "formules", "noms-genere-nombre", "numerals", "pronoms-personals", "demostratius", "manlleus", "temps-adverbis"}
 
 
-def quotable(shi: str, slug: Optional[str] = None) -> bool:
-    """A text a lesson or a test can use: a sentence (or a word, in the units about words), in Latin
-    letters as the course is, with no capture artefacts (Tifinagh-only text, dots inside words)."""
+def well_formed(shi: str, slug: Optional[str] = None) -> bool:
+    """A text somebody can work with: a sentence (or a word, in the units about words) with no
+    capture artefacts — dots inside words, a stray «+». Says nothing about the script it is
+    written in."""
     k = kind(shi)
     if k not in ("sentence", "word") or (k == "word" and slug not in WORD_UNITS):
         return False
     t = _clean_text(shi)
-    if not re.search(r"[A-Za-zɣḥṣṭẓɛšḍčǧ]", t) or re.search(r"[\u2D30-\u2D7F]", t):
-        return False  # Tifinagh-only captures: not readable in a Latin-script course
     if re.search(r"\w\.\w", t) or "+" in t:
         return False  # «ⵜ.ⵅⵙ.ⵛ», «a.b.c», «Mana Lun ija +tEli»: capture artefacts
+    return True
+
+
+def quotable(shi: str, slug: Optional[str] = None) -> bool:
+    """A text a LESSON can quote: well formed, and in Latin letters as the course is written.
+
+    Practice must NOT borrow this. A sentence you can hear and read in Tifinagh is perfectly
+    practisable, and this app teaches Tifinagh. Until 2026-10-22 the practice filter called this
+    very function, which silently emptied every list captured in Tifinagh: the «Tamazight For
+    All» fables, 84 sentences, showed up as «aquest grup no té cap drill»."""
+    if not well_formed(shi, slug):
+        return False
+    t = _clean_text(shi)
+    if not re.search(r"[A-Za-zɣḥṣṭẓɛšḍčǧ]", t) or re.search(r"[\u2D30-\u2D7F]", t):
+        return False  # Tifinagh-only captures: not readable in a Latin-script course
     return True
 
 

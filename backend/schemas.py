@@ -147,8 +147,26 @@ class TestBase(BaseModel):
 class TestCreate(TestBase):
     pass
 
-class TestUpdate(TestBase):
-    pass
+class TestUpdate(BaseModel):
+    """Every field optional: the workshop renames a practice without resending the whole thing,
+    and `exclude_unset` in the route means an absent field is left alone (not blanked)."""
+    title: Optional[str] = None
+    description: Optional[str] = None
+    question_type: Optional[str] = None
+    hint_level: Optional[str] = None
+    hint_percentage: Optional[int] = None
+    hint_tries_before_reveal: Optional[int] = None
+    time_limit_seconds: Optional[int] = None
+    passing_score: Optional[float] = None
+    drill_ids: Optional[str] = None
+    video_url: Optional[str] = None
+
+    @field_validator('video_url')
+    @classmethod
+    def normalize_video_url(cls, v: str | None) -> str | None:
+        if not v:
+            return v
+        return normalize_media_url(v)
 
 class Test(TestBase):
     id: int

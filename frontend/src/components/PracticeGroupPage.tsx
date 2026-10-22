@@ -30,10 +30,30 @@ export default function PracticeGroupPage() {
   }, [params]);
   const title = params.get('title') || params.get('topic') || params.get('unit') || params.get('video') || params.get('person') || params.get('tag') || params.get('day') || 'Grup';
 
+  // When a hand-made list comes back empty, why? The server filtered it; the page asks what the
+  // list holds and counts the reasons, instead of shrugging.
+  const [whyEmpty, setWhyEmpty] = useState<{ held: number; noText: number; noMeaning: number } | null>(null);
+
   useEffect(() => {
-    setDrills(null); setError(null);
-    api.practiceSession(query).then((r) => { setDrills(r.drills); setCards(r.cards); }).catch((e) => setError(e?.message || 'Error'));
-  }, [query]);
+    setDrills(null); setError(null); setWhyEmpty(null);
+    api.practiceSession(query).then(async (r) => {
+      setDrills(r.drills); setCards(r.cards);
+      const testId = Number(params.get('test_id'));
+      if (r.drills.length || !testId) return;
+      try {
+        const all = await api.practices();
+        const list = all.find((t) => t.id === testId);
+        const ids = (list?.drill_ids || '').split(',').map((x) => Number(x.trim())).filter(Boolean);
+        if (!ids.length) { setWhyEmpty({ held: 0, noText: 0, noMeaning: 0 }); return; }
+        const held = await api.drillsByIds(ids);
+        setWhyEmpty({
+          held: held.length,
+          noText: held.filter((d) => !(d.text_tachelhit || '').trim()).length,
+          noMeaning: held.filter((d) => !(d.text_catalan || '').trim()).length,
+        });
+      } catch { /* the plain message is still true */ }
+    }).catch((e) => setError(e?.message || 'Error'));
+  }, [query, params]);
 
   const practise = () => {
     const q = new URLSearchParams();
@@ -52,11 +72,31 @@ export default function PracticeGroupPage() {
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
         <button onClick={() => setPlaying(true)} disabled={!drills?.length} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', opacity: drills?.length ? 1 : 0.6 }}><FaPlay size={12} /> Reprodueix</button>
-        <button onClick={practise} disabled={!drills?.length} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 'var(--r-pill)', border: '1px solid var(--brand-1)', background: 'var(--surface)', color: 'var(--brand-1)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', opacity: drills?.length ? 1 : 0.6 }}><FaBullseye size={12} /> Practica la pronúncia</button>
+        <button onClick={practise} disabled={!drills?.length} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 'var(--r-pill)', border: '1px solid var(--brand-1)', background: 'var(--surface)', color: 'var(--brand-1)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', opacity: drills?.length ? 1 : 0.6 }}><FaBullseye size={12} /> Fes la sessió</button>
       </div>
 
       {error && <div style={{ color: 'var(--rose)' }}>{error}</div>}
-      {drills && drills.length === 0 && <div style={{ color: 'var(--text-muted)' }}>Aquest grup no té cap drill.</div>}
+      {drills && drills.length === 0 && (
+        <div style={{ color: 'var(--text-soft)', fontSize: 14, lineHeight: 1.55, maxWidth: 560 }}>
+          {!whyEmpty ? (
+            'Aquest grup no té cap frase per practicar.'
+          ) : whyEmpty.held === 0 ? (
+            'Aquesta llista està buida: no hi ha cap frase a dins.'
+          ) : (
+            <>
+              <strong>La llista té {whyEmpty.held} {whyEmpty.held === 1 ? 'frase' : 'frases'}, però cap no es pot practicar encara.</strong>
+              <ul style={{ margin: '8px 0 0', paddingLeft: 20 }}>
+                {whyEmpty.noText > 0 && <li>{whyEmpty.noText} no {whyEmpty.noText === 1 ? 'té' : 'tenen'} les paraules escrites en amazic.</li>}
+                {whyEmpty.noMeaning > 0 && <li>{whyEmpty.noMeaning} no {whyEmpty.noMeaning === 1 ? 'diu' : 'diuen'} què vol dir en català.</li>}
+                {whyEmpty.noText === 0 && whyEmpty.noMeaning === 0 && <li>El text que porten no és una frase (per exemple, hi diu literalment «text»).</li>}
+              </ul>
+              <p style={{ margin: '10px 0 0' }}>
+                Si tenen veu, la feina és escriure el que s’hi diu: obre’n una a <strong>Drills</strong> i escriu-hi les paraules.
+              </p>
+            </>
+          )}
+        </div>
+      )}
       {drills && drills.length > 0 && (
         <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', background: 'var(--surface)' }}>
           {drills.map((d, i) => {

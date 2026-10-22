@@ -12,7 +12,9 @@ import { fileNameFor, kindOf, type MediaKind } from '../utils/media';
 
 interface MobileDrillCreatorProps {
     onClose: () => void;
-    onDrillCreated: () => void;
+    // The id of what was made, when there is one: the practice workshop needs to know which
+    // sentence to put in the sequence. Offline the drill has no real id yet, so it is omitted.
+    onDrillCreated: (drillId?: number) => void;
 }
 
 const errMsg = (err: any, fallback: string) =>
@@ -373,7 +375,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 text_arabic: d.text_arabic, tag: d.tag,
             });
             toast.success('Drill desat');
-            onDrillCreated();
+            onDrillCreated(serverIdRef.current ?? undefined);
         } catch (err: any) {
             toast.error(`No s'ha pogut desar: ${errMsg(err, 'error')}`);
         } finally {

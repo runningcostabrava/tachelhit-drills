@@ -3264,10 +3264,15 @@ def create_test(test: TestCreate, db: Session = Depends(get_db),
     return db_test
 
 @app.put("/tests/{test_id}", response_model=Test)
-def update_test(test_id: int, update_data: TestUpdate, db: Session = Depends(get_db)):
+def update_test(test_id: int, update_data: TestUpdate, db: Session = Depends(get_db),
+                user: Optional[UserModel] = Depends(get_current_user)):
+    """Change a practice: its name, its description, whatever is sent. Whoever made it, or an
+    admin -- the same rule as its steps and as a drill. Until 2026-10-22 ANY visitor could rename
+    or empty anyone's practice."""
     test = db.query(TestModel).filter(TestModel.id == test_id).first()
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
+    owner_or_admin(test, user)
 
     update_dict = update_data.model_dump(exclude_unset=True)
     for key, value in update_dict.items():
@@ -3279,10 +3284,13 @@ def update_test(test_id: int, update_data: TestUpdate, db: Session = Depends(get
     return test
 
 @app.delete("/tests/{test_id}")
-def delete_test(test_id: int, db: Session = Depends(get_db)):
+def delete_test(test_id: int, db: Session = Depends(get_db),
+                user: Optional[UserModel] = Depends(get_current_user)):
+    """Throw a practice away. Whoever made it, or an admin."""
     test = db.query(TestModel).filter(TestModel.id == test_id).first()
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
+    owner_or_admin(test, user)
     db.delete(test)
     db.commit()
     return {"detail": "Deleted"}

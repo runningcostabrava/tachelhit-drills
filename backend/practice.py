@@ -128,8 +128,11 @@ def speaker_of(d) -> str:
 
 
 def quotable_any(d, slug: Optional[str] = None) -> bool:
-    """A real drill: a quotable text with a Catalan meaning (a voice is not required)."""
-    return bool((d.text_catalan or "").strip()) and grammar.quotable(d.text_tachelhit, slug)
+    """A real drill: the words written down in both languages (a voice is not required).
+
+    `well_formed` and not `quotable`: the course is written in Latin letters and quotes only
+    Latin-letter sentences; practice has no such reason, and this app teaches Tifinagh."""
+    return bool((d.text_catalan or "").strip()) and grammar.well_formed(d.text_tachelhit, slug)
 
 
 def practicable(d, slug: Optional[str] = None) -> bool:

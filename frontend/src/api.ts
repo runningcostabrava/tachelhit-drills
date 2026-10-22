@@ -90,9 +90,10 @@ export interface VerifyQueue {
 export interface PracticeStep {
   id?: number;
   position?: number;
-  kind: 'listen_pick' | 'write_heard' | 'say_it' | 'look_say' | 'fill_gap' | 'word_by_word' | 'script_swap' | 'pick_spelling' | 'note' | 'record';
+  kind: 'listen_pick' | 'write_heard' | 'say_it' | 'look_say' | 'fill_gap' | 'word_by_word' | 'script_swap' | 'pick_spelling' | 'note';
   drill_id?: number | null;
-  payload?: { text?: string } | null;
+  // a «note» is the document part of a practice: a heading, a paragraph, a picture
+  payload?: { text?: string; heading?: string; image_url?: string } | null;
 }
 export interface PracticeList {
   id: number; title: string; description?: string | null; drill_ids: string;
@@ -240,6 +241,8 @@ export const api = {
   practices: () => request<PracticeList[]>('/tests/'),
   /** The sentences a practice's steps point at, in one request. */
   drillsByIds: (ids: number[]) => request<Drill[]>(`/drills/?ids=${ids.join(',')}`),
+  updatePractice: (id: number, patch: { title?: string; description?: string }) =>
+    request<PracticeList>(`/tests/${id}`, { method: 'PUT', body: JSON.stringify(patch) }),
   createPractice: (title: string) => request<PracticeList>('/tests/', { method: 'POST', body: JSON.stringify({ title, description: '', question_type: 'audio', hint_level: 'none', hint_percentage: 30, hint_tries_before_reveal: 3, passing_score: 70, drill_ids: '' }) }),
   renamePractice: (id: number, title: string) => request<PracticeList>(`/tests/${id}`, { method: 'PUT', body: JSON.stringify({ title }) }),
   deletePractice: (id: number) => request<{ detail: string }>(`/tests/${id}`, { method: 'DELETE' }),
