@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { VARIETIES } from '../varieties';
 import { FaMicrophone, FaPlus, FaTimes, FaLink, FaChevronDown, FaSearch, FaBook, FaTrash, FaFileImport, FaFilm, FaBookOpen } from 'react-icons/fa';
 import axios from 'axios';
-import { API_BASE } from '../config';
+import { API_BASE, hasIdentity } from '../config';
 import { syncManager } from '../services/OfflineSyncManager';
 import { AgGridReact } from 'ag-grid-react';
 import 'ag-grid-community/styles/ag-grid.css';
@@ -216,6 +216,15 @@ export default function DrillsResponsive() {
   }, []);
 
   const [loadError, setLoadError] = useState<'error' | 'cached' | null>(null);
+  // Adding to the library needs a name (#184). Nobody is registered behind their back: the
+  // profile page explains what contributing means, so this asks and takes you there (#202).
+  const needsName = () => {
+    if (hasIdentity()) return false;
+    toast.error('Per afegir-hi coses et cal un nom. Te’n fas un en un moment.');
+    navigate('/profile');
+    return true;
+  };
+
   const fetchDrills = async () => {
     try {
       let allDrills: Drill[] = [];
@@ -359,13 +368,13 @@ export default function DrillsResponsive() {
                 {showNewDrillOptions && (
                   <div style={{ position: 'absolute', top: 'calc(100% + 10px)', right: 0, backgroundColor: 'var(--surface)', borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-xl)', zIndex: 1000, minWidth: '230px', display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--border)' }}>
                     <button
-                      onClick={() => { setShowMobileDrillCreator(true); setShowNewDrillOptions(false); }}
+                      onClick={() => { setShowNewDrillOptions(false); if (!needsName()) setShowMobileDrillCreator(true); }}
                       style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', fontSize: '14px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', color: 'var(--text)', fontWeight: 600, whiteSpace: 'nowrap' }}
                     >
                       <FaPlus style={{ color: 'var(--emerald)' }} /> Crea un drill buit
                     </button>
                     <button
-                      onClick={() => { navigate('/srt-import'); setShowNewDrillOptions(false); }}
+                      onClick={() => { setShowNewDrillOptions(false); if (!needsName()) navigate('/srt-import'); }}
                       style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', fontSize: '14px', background: 'none', border: 'none', borderTop: '1px solid var(--border)', textAlign: 'left', cursor: 'pointer', color: 'var(--text)', fontWeight: 600, whiteSpace: 'nowrap' }}
                     >
                       <FaFileImport style={{ color: 'var(--sky)' }} /> Importa subtítols (SRT)

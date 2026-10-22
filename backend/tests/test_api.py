@@ -891,3 +891,15 @@ def test_the_credits_are_readable_from_inside_the_app():
     for owed in ("CIEMEN", "Awal", "IRCAM", "Common Voice", "amazic.cat"):
         assert owed in md, f"els crèdits no nomenen {owed}"
     assert r.json()["source"] == "docs/CREDITS.md", "s'ha llegit el fitxer de debò, no el text de reserva"
+
+
+def test_a_newcomer_who_adds_something_is_told_what_to_do():
+    """#202: since #184 adding needs a name, and a first-time visitor has none. The answer was
+    401 «Sign in first (X-User-Token)» — in English, from a server, to somebody who pressed a
+    button. The app asks first now, and if a path is ever missed, this is what they read."""
+    with as_stranger():
+        r = client.post("/drills/", json={"text_catalan": "aigua", "text_tachelhit": "aman"})
+    assert r.status_code == 401
+    said = r.json()["detail"]
+    assert "perfil" in said.lower(), said
+    assert "X-User-Token" not in said, "no li expliquem capçaleres a qui acaba d'arribar"

@@ -141,7 +141,7 @@ function App() {
     { to: '/video-creator', label: 'Captura', Icon: FaVideo },
     { to: '/grammar', label: 'Gramàtica', Icon: FaBook },
     { to: '/tests', label: 'Pràctica', Icon: FaGraduationCap },
-    { to: '/veus', label: 'Veus', Icon: FaMicrophone },
+    { to: '/veus', label: 'Posa-hi veu', Icon: FaMicrophone },   // the route keeps its old name: links point at it
   ];
   const navBtn = (active: boolean): React.CSSProperties => ({
     flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '6px',

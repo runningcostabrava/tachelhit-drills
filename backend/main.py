@@ -1946,7 +1946,10 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> Optiona
 
 def require_user(user: Optional[UserModel] = Depends(get_current_user)) -> UserModel:
     if user is None:
-        raise HTTPException(status_code=401, detail="Sign in first (X-User-Token)")
+        raise HTTPException(
+            status_code=401,
+            detail="Per afegir coses a la biblioteca cal un nom: fes-te'n un al teu perfil (és gratis i "
+                   "triga un moment).")
     return user
 
 

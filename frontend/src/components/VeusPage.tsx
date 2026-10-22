@@ -7,16 +7,18 @@ import { toast } from '../toast';
 import type { Drill } from '../types';
 import RecordAudioModal from './RecordAudioModal';
 
-// Veus: what the community can record. A learner asks how to say something (a petition: Catalan
-// only); a native speaker answers with their voice and their own spelling, and says where they are
-// from. Drills that only have a synthetic voice are listed too, the basic units first, and the
-// sentences our Aït Mraw speakers could say in their words.
+// «Posa-hi veu»: the two halves of the same act. A learner asks how to say something (a petition,
+// in Catalan); somebody who speaks the language answers with their voice and their own spelling,
+// and says where they are from.
+//
+// It used to be called «Veus», which named a thing instead of what you do here, and the tabs were
+// named after how the server groups the rows (#200). The route stays /veus so links keep working.
 
 type Kind = 'open' | 'synthetic' | 'aitmraw';
 const TABS: { kind: Kind; label: string; blurb: string }[] = [
-  { kind: 'open', label: 'Demanades', blurb: 'Frases que algú vol saber dir. Si les saps, grava-les: la teva manera de dir-ho i d’escriure-ho és la bona.' },
-  { kind: 'synthetic', label: 'Sense veu humana', blurb: 'Frases que de moment només tenen una veu sintètica. Les unitats bàsiques del curs van primer.' },
-  { kind: 'aitmraw', label: 'Per a Aït Mraw', blurb: 'Frases d’altres llocs que valdria la pena sentir dites a Aït Mraw (Halima, Driss).' },
+  { kind: 'open', label: 'Algú ho ha demanat', blurb: 'Algú vol saber dir això i espera una veu. Si ho saps dir, grava-ho: la teva manera de dir-ho i d’escriure-ho és la bona.' },
+  { kind: 'synthetic', label: 'Només hi parla una màquina', blurb: 'Aquestes frases només tenen una veu sintètica, i una llengua no s’aprèn d’una màquina. Les primeres unitats del curs van al davant.' },
+  { kind: 'aitmraw', label: 'Dites a Aït Mraw', blurb: 'Frases d’altres llocs que valdria la pena sentir dites a Aït Mraw, com les diuen la Halima i en Driss.' },
 ];
 
 export default function VeusPage() {
@@ -63,9 +65,11 @@ export default function VeusPage() {
 
   return (
     <div style={{ padding: '20px 16px 32px', maxWidth: '900px', margin: '0 auto' }}>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', margin: '0 0 4px' }}>Veus</h1>
+      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', margin: '0 0 4px' }}>Posa-hi veu</h1>
       <p style={{ color: 'var(--text-soft)', fontSize: '14px', margin: '0 0 14px', lineHeight: 1.5 }}>
-        La biblioteca creix amb les veus de qui parla amazic. Demana una frase, o grava les que saps dir: pots fer servir l’escriptura que ja hi ha o escriure-ho com ho dius tu. Digue’ns de quin poble ets: cada veu porta el seu lloc.
+        Aquí es fan dues coses, i totes dues fan créixer la biblioteca: <strong>demanar</strong> una frase que vols
+        saber dir, i <strong>gravar-ne</strong> una que saps dir. Si en graves, escriu-la com la dius tu —no cal
+        seguir cap ortografia— i digue’ns de quin poble ets: cada veu porta el seu lloc i el nom de qui parla.
       </p>
 
       {me?.is_admin && (

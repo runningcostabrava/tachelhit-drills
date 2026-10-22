@@ -40,6 +40,8 @@ const NATIVE_TOKEN_KEY = 'user_token';
 const NATIVE_NAME_KEY = 'user_name';
 
 export const getUserToken = () => localStorage.getItem('user_token') || '';
+/** Adding to the library needs a name (#184). A newcomer has none, and used to meet a bare 401. */
+export const hasIdentity = () => !!getUserToken();
 export const getUserName = () => localStorage.getItem('user_name') || '';
 export const setUserIdentity = (token: string, username: string) => {
   localStorage.setItem('user_token', token);
