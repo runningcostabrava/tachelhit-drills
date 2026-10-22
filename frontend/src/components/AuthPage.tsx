@@ -27,6 +27,9 @@ export default function AuthPage() {
   const [variety, setVariety] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
+  // the sign-in field already holds «e-mail or user name»: the code path reuses it, so whatever
+  // the person typed to sign in is still there when they go to reset
+  const [noMail, setNoMail] = useState(false); // this server sends no e-mail: ask for a code
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => { if (getUserToken()) navigate('/profile', { replace: true }); }, [navigate]);
@@ -49,12 +52,13 @@ export default function AuthPage() {
     navigate('/', { replace: true });
   });
   const doForgot = () => run(async () => {
-    await api.forgotPassword(email.trim());
-    toast.success('Si el correu existeix, hi rebràs un codi de 6 xifres.');
+    const r = await api.forgotPassword(email.trim());
+    if (r.mail === false) { setNoMail(true); toast.success('Aquest servidor no envia correu: demana el codi.'); }
+    else toast.success('Si el correu existeix, hi rebràs un codi de 6 xifres.');
     setMode('reset');
   });
   const doReset = () => run(async () => {
-    const r = await api.resetPassword(email.trim(), code.trim(), password, device());
+    const r = await api.resetPassword((login || email).trim(), code.trim(), password, device());
     setUserIdentity(r.token, r.username);
     toast.success('Contrasenya canviada.');
     navigate('/', { replace: true });
@@ -107,7 +111,7 @@ export default function AuthPage() {
 
         {mode === 'forgot' && (
           <form onSubmit={(e) => { e.preventDefault(); doForgot(); }}>
-            <p style={{ marginTop: 0, color: 'var(--text-soft)', fontSize: '14px' }}>T&apos;enviem un codi de 6 xifres al correu del compte. Si el servidor encara no envia correu, demana el codi a l&apos;administrador i fes servir «Ja tinc un codi».</p>
+            <p style={{ marginTop: 0, color: 'var(--text-soft)', fontSize: '14px' }}>T&apos;enviem un codi de 6 xifres al correu del compte. Si aquest servidor encara no envia correu, t&apos;ho dirà: llavors demana el codi a qui porta la biblioteca i fes servir «Ja tinc un codi».</p>
             <label style={label} htmlFor="fg-email">Correu electrònic</label>
             <input id="fg-email" style={input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus />
             <button type="submit" disabled={busy || !email} style={{ ...primary, opacity: busy || !email ? 0.6 : 1 }}>{busy ? 'Enviant…' : 'Envia el codi'}</button>
@@ -117,13 +121,14 @@ export default function AuthPage() {
 
         {mode === 'reset' && (
           <form onSubmit={(e) => { e.preventDefault(); doReset(); }}>
-            <label style={label} htmlFor="rs-email">Correu electrònic</label>
-            <input id="rs-email" style={input} type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            {noMail && <p style={{ marginTop: 0, color: 'var(--text-soft)', fontSize: '14px' }}>Aquest servidor no envia correu. Demana el codi a qui porta la biblioteca (digues-li el teu nom d&apos;usuari) i escriu-lo aquí.</p>}
+            <label style={label} htmlFor="rs-login">Correu electrònic o nom d&apos;usuari</label>
+            <input id="rs-login" style={input} value={login || email} onChange={(e) => setLogin(e.target.value)} autoComplete="username" />
             <label style={label} htmlFor="rs-code">Codi de 6 xifres</label>
             <input id="rs-code" style={input} inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value)} />
             <label style={label} htmlFor="rs-pw">Contrasenya nova (mínim 8 caràcters)</label>
             <input id="rs-pw" style={input} type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
-            <button type="submit" disabled={busy || !email || code.length < 6 || password.length < 8} style={{ ...primary, opacity: busy || !email || code.length < 6 || password.length < 8 ? 0.6 : 1 }}>{busy ? 'Canviant…' : 'Canvia la contrasenya'}</button>
+            <button type="submit" disabled={busy || !(login || email) || code.length < 6 || password.length < 8} style={{ ...primary, opacity: busy || !(login || email) || code.length < 6 || password.length < 8 ? 0.6 : 1 }}>{busy ? 'Canviant…' : 'Canvia la contrasenya'}</button>
           </form>
         )}
 

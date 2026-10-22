@@ -51,12 +51,15 @@ def test_token_identity_attaches_credentials_and_changes_password():
     assert client.post("/auth/login", json={"login": "legacy_one", "password": "another-pass-1"}).status_code == 200
 
 
-def test_forgot_without_smtp_is_503_and_reset_with_code(monkeypatch):
+def test_forgot_without_mail_says_so_and_reset_takes_a_code(monkeypatch):
+    """A library whose server sends no mail is not broken: it recovers accounts with a code an
+    admin hands over, so «forgot» answers calmly instead of raising a fault nobody can act on."""
     for k in ("SMTP_HOST", "SMTP_USER", "SMTP_PASS"):
         monkeypatch.delenv(k, raising=False)
     main._register_attempts.clear(); main._login_attempts.clear()
     client.post("/auth/signup", json={"email": "r@example.com", "password": "reset-me-123", "username": "resetter"})
-    assert client.post("/auth/forgot", json={"email": "r@example.com"}).status_code == 503
+    r = client.post("/auth/forgot", json={"email": "r@example.com"})
+    assert r.status_code == 200 and r.json() == {"ok": True, "mail": False}
     # with a (fake) sender configured, a code is stored and resets the password
     monkeypatch.setenv("SMTP_HOST", "smtp.example.com"); monkeypatch.setenv("SMTP_USER", "u"); monkeypatch.setenv("SMTP_PASS", "p")
     sent = {}
@@ -65,9 +68,12 @@ def test_forgot_without_smtp_is_503_and_reset_with_code(monkeypatch):
     import re
     code = re.search(r"codi és: (\d{6})", sent["body"]).group(1)
     assert client.post("/auth/reset", json={"email": "r@example.com", "code": "000000", "new_password": "newpass-123"}).status_code == 400
+    old_token = client.post("/auth/login", json={"login": "r@example.com", "password": "reset-me-123"}).json()["token"]
     r = client.post("/auth/reset", json={"email": "r@example.com", "code": code, "new_password": "newpass-123"})
     assert r.status_code == 200 and r.json()["token"]
     assert client.post("/auth/login", json={"login": "r@example.com", "password": "newpass-123"}).status_code == 200
+    # the session that was open before the reset is dead: a stolen or borrowed one dies here
+    assert client.get("/users/me", headers={"X-User-Token": old_token}).status_code == 401
 
 
 def test_admin_dependency():

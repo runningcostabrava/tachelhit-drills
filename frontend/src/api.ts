@@ -305,13 +305,15 @@ export const api = {
     request<AuthUser>('/auth/attach', { method: 'POST', body: JSON.stringify({ email, password }) }),
   changePassword: (old_password: string, new_password: string) =>
     request<{ ok: boolean }>('/auth/password', { method: 'POST', body: JSON.stringify({ old_password, new_password }) }),
-  forgotPassword: (email: string) => request<{ ok: boolean }>('/auth/forgot', { method: 'POST', body: JSON.stringify({ email }) }),
+  /** `mail: false` means this server sends no e-mail: ask an admin for a code instead. */
+  forgotPassword: (email: string) => request<{ ok: boolean; mail?: boolean }>('/auth/forgot', { method: 'POST', body: JSON.stringify({ email }) }),
   adminMailGet: () => request<MailSettings>('/admin/mail'),
   adminMailSet: (settings: Record<string, string>) => request<MailSettings>('/admin/mail', { method: 'POST', body: JSON.stringify({ settings }) }),
   adminMailTest: (to?: string) => request<{ sent_to: string }>('/admin/mail/test', { method: 'POST', body: JSON.stringify({ to: to || null }) }),
   adminResetCode: (login: string) => request<{ username: string; email: string; code: string; expires_in_hours: number; mailed: boolean }>('/auth/admin-reset-code', { method: 'POST', body: JSON.stringify({ login }) }),
-  resetPassword: (email: string, code: string, new_password: string, device?: string) =>
-    request<AuthUser & { token: string }>('/auth/reset', { method: 'POST', body: JSON.stringify({ email, code, new_password, device }) }),
+  /** `login` is the e-mail OR the user name: an account with no address is recovered by code. */
+  resetPassword: (login: string, code: string, new_password: string, device?: string) =>
+    request<AuthUser & { token: string }>('/auth/reset', { method: 'POST', body: JSON.stringify({ login, code, new_password, device }) }),
 };
 
 /** A drill that shares words with the one being explained: playable in place, with its picture for the card. */

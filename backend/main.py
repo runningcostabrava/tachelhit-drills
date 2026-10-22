@@ -5285,7 +5285,9 @@ def auth_forgot(request: Request, email: str = Body(..., embed=True), db: Sessio
     ip = request.client.host if request.client else "unknown"
     _rate_limit(_login_attempts, ip, 10, 900)
     if not _mail_ready():
-        raise HTTPException(status_code=503, detail="No hi ha cap servidor de correu configurat; demana el restabliment a l'administrador")
+        # Not an error: this library recovers accounts with a code an admin hands over. The page
+        # says so instead of showing a server fault nobody can act on.
+        return {"ok": True, "mail": False}
     user = db.query(UserModel).filter(UserModel.email == (email or "").strip().lower()).first()
     if user:
         code = f"{secrets.randbelow(10**6):06d}"
@@ -5360,29 +5362,35 @@ def auth_admin_reset_code(login: str = Body(..., embed=True), db: Session = Depe
     user = db.query(UserModel).filter((UserModel.email == key) | (UserModel.username == key)).first()
     if not user:
         raise HTTPException(status_code=404, detail="No hi ha cap compte amb aquest correu o nom d'usuari")
-    if not user.email:
-        raise HTTPException(status_code=400, detail="Aquest compte encara no té correu: que l'afegeixi des del seu perfil")
     code = f"{secrets.randbelow(10**6):06d}"
     user.reset_code_hash = _hash_token(code); user.reset_expires = datetime.utcnow() + timedelta(hours=2)
     db.commit()
     mailed = False
-    try:
-        mailed = bool(_send_email(user.email, "Tamazight Drills: codi per restablir la contrasenya",
+    try:  # an account with no address is recovered by the code alone, handed over by the admin
+        mailed = bool(user.email) and bool(_send_email(user.email, "Tamazight Drills: codi per restablir la contrasenya",
                                   f"Hola {user.display_name or user.username},\n\nEl teu codi és: {code}\nCaduca en 2 hores.\n"))
     except Exception as e:
         print(f"[AUTH] admin reset e-mail failed: {e}")
-    return {"username": user.username, "email": user.email, "code": code, "expires_in_hours": 2, "mailed": mailed}
+    return {"username": user.username, "email": user.email or "", "code": code, "expires_in_hours": 2, "mailed": mailed}
 
 
 @app.post("/auth/reset")
-def auth_reset(email: str = Body(..., embed=True), code: str = Body(..., embed=True), new_password: str = Body(..., embed=True),
+def auth_reset(request: Request, code: str = Body(..., embed=True), new_password: str = Body(..., embed=True),
+               email: Optional[str] = Body(None, embed=True), login: Optional[str] = Body(None, embed=True),
                device: Optional[str] = Body(None, embed=True), db: Session = Depends(get_db)):
-    user = db.query(UserModel).filter(UserModel.email == (email or "").strip().lower()).first()
+    """A new password from a 6-digit code. Who you are is your e-mail OR your user name: an account
+    with no address is recovered with a code the admin hands over. Changing the password closes
+    every other session, so a borrowed or stolen one dies here."""
+    ip = request.client.host if request.client else "unknown"
+    _rate_limit(_login_attempts, ip, 20, 900)
+    key = (login or email or "").strip().lower()
+    user = db.query(UserModel).filter((UserModel.email == key) | (UserModel.username == key)).first() if key else None
     if not user or not user.reset_code_hash or not user.reset_expires or user.reset_expires < datetime.utcnow() \
             or user.reset_code_hash != _hash_token((code or "").strip()):
         raise HTTPException(status_code=400, detail="Codi incorrecte o caducat")
     _check_password_strength(new_password)
     user.password_hash = _hash_password(new_password); user.reset_code_hash = None; user.reset_expires = None
+    db.query(UserSessionModel).filter(UserSessionModel.user_id == user.id).delete()
     db.commit()
     return {**_user_payload(user), "token": _new_session(db, user, device)}
 
