@@ -4722,6 +4722,66 @@ def _drills_created_count(value) -> Optional[int]:
         return None
 
 
+_agent_latest_cache: Dict[str, Any] = {}
+
+
+def _published_agent_version() -> Optional[str]:
+    """The version the release is built from: tools/capture_agent.py's own `__version__`.
+
+    An old agent fails in ways that look like a broken video, so it is worth saying out loud when
+    the one connected is behind. Read once; a deploy is what changes it.
+    """
+    if "v" in _agent_latest_cache:
+        return _agent_latest_cache["v"]
+    found = None
+    here = os.path.dirname(os.path.abspath(__file__))
+    for path in (os.path.join(here, "..", "tools", "capture_agent.py"),
+                 os.path.join(here, "tools", "capture_agent.py")):
+        try:
+            with open(os.path.normpath(path), encoding="utf-8") as f:
+                for line in f:
+                    if line.startswith("__version__"):
+                        found = line.split("=", 1)[1].strip().strip('"').strip("'")
+                        break
+        except OSError:
+            continue
+        if found:
+            break
+    _agent_latest_cache["v"] = found
+    return found
+
+
+@app.post("/capture/{request_id}/retry")
+def capture_retry(request_id: int, db: Session = Depends(get_db),
+                  user: UserModel = Depends(require_user)):
+    """Put a request back in the queue. A capture fails for reasons that pass: the video was
+    private for an hour, the agent was an old one, the network went. Retrying is the obvious
+    thing, and until now the only way was to paste the URL again."""
+    req = db.query(CaptureRequestModel).filter(CaptureRequestModel.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Aquesta captura no existeix")
+    req.status = "pending"
+    req.error = None
+    req.claimed_at = None
+    db.commit()
+    return {"id": req.id, "status": req.status}
+
+
+@app.delete("/capture/{request_id}")
+def capture_forget(request_id: int, db: Session = Depends(get_db),
+                   user: UserModel = Depends(require_user)):
+    """Take a finished or failed request out of the list. What is still being worked on stays:
+    forgetting a running job would leave the agent working on something nobody is waiting for."""
+    req = db.query(CaptureRequestModel).filter(CaptureRequestModel.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Aquesta captura no existeix")
+    if req.status in ("claimed", "processing"):
+        raise HTTPException(status_code=409, detail="Aquesta encara s\u2019est\u00e0 fent; espera que acabi")
+    db.delete(req)
+    db.commit()
+    return {"id": request_id, "forgotten": True}
+
+
 @app.get("/capture/queue")
 def capture_queue(limit: int = 40, db: Session = Depends(get_db)):
     """The last `limit` capture requests, newest first, with state, drill count and error:
@@ -4747,8 +4807,10 @@ def capture_queue(limit: int = 40, db: Session = Depends(get_db)):
                     "created_at": iso_z(r.created_at) if r.created_at else None,
                     "claimed_at": iso_z(r.claimed_at) if r.claimed_at else None})
     agent_at = _capture_agent_seen.get("at")
-    return {"requests": out, "agent": {"online": bool(agent_at and (datetime.utcnow() - agent_at).total_seconds() < 45),
-                                       "version": _capture_agent_seen.get("version")}}
+    return {"requests": out,
+            "agent": {"online": bool(agent_at and (datetime.utcnow() - agent_at).total_seconds() < 45),
+                      "version": _capture_agent_seen.get("version"),
+                      "latest": _published_agent_version()}}
 
 
 @app.get("/capture/{request_id}")

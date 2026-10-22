@@ -271,7 +271,10 @@ export const api = {
     }),
   captureStatus: (id: number) => request<CaptureStatus>(`/capture/${id}`),
   captureAgent: () => request<{ online: boolean; last_seen: string | null; version: string | null }>('/capture/agent'),
-  captureQueue: (limit = 20) => request<{ requests: CaptureQueueItem[]; agent: { online: boolean; version: string | null } }>(`/capture/queue?limit=${limit}`),
+  // `latest`: the version the release is built from, so an old agent can be named as old (#197)
+  captureQueue: (limit = 20) => request<{ requests: CaptureQueueItem[]; agent: { online: boolean; version: string | null; latest?: string | null } }>(`/capture/queue?limit=${limit}`),
+  retryCapture: (id: number) => request<{ id: number; status: string }>(`/capture/${id}/retry`, { method: 'POST' }),
+  forgetCapture: (id: number) => request<{ id: number; forgotten: boolean }>(`/capture/${id}`, { method: 'DELETE' }),
 
   // --- AI Space health (reliability) ---
   spacesHealth: () => request<SpacesHealth>('/health/spaces'),

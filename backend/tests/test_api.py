@@ -903,3 +903,35 @@ def test_a_newcomer_who_adds_something_is_told_what_to_do():
     said = r.json()["detail"]
     assert "perfil" in said.lower(), said
     assert "X-User-Token" not in said, "no li expliquem capçaleres a qui acaba d'arribar"
+
+
+def test_a_failed_capture_can_be_retried_and_a_finished_one_forgotten():
+    """#197: the queue could only be watched. A capture fails for reasons that pass — a video
+    private for an hour, an old agent, the network — and the only way back was to paste the URL
+    again. What is still running stays: forgetting it would leave the agent working for nobody."""
+    from models import CaptureRequest
+
+    db = main.SessionLocal()
+    failed = CaptureRequest(url="https://youtu.be/failed-one", tag="prova", status="failed",
+                            error="HTTP Error 403: Forbidden")
+    running = CaptureRequest(url="https://youtu.be/running-one", tag="prova", status="processing")
+    db.add(failed); db.add(running); db.commit()
+    failed_id, running_id = failed.id, running.id
+    db.close()
+
+    rows = client.get("/capture/queue").json()
+    assert rows["agent"]["latest"], "no sabem quina versió de l'agent s'ha publicat"
+    mine = next(r for r in rows["requests"] if r["id"] == failed_id)
+    assert mine["url"].endswith("failed-one"), "la fila ha de dir QUIN vídeo és"
+    assert mine["error"] == "HTTP Error 403: Forbidden"
+
+    assert client.post(f"/capture/{failed_id}/retry").json()["status"] == "pending"
+    back = next(r for r in client.get("/capture/queue").json()["requests"] if r["id"] == failed_id)
+    assert back["status"] == "pending" and not back["error"]
+
+    assert client.delete(f"/capture/{failed_id}").status_code == 200
+    assert client.delete(f"/capture/{running_id}").status_code == 409   # encara s'està fent
+
+    db = main.SessionLocal()
+    db.query(CaptureRequest).filter(CaptureRequest.id == running_id).delete()
+    db.commit(); db.close()
