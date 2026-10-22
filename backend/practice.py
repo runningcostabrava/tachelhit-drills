@@ -215,6 +215,24 @@ def session_rows(db, day: Optional[str] = None, speaker: Optional[str] = None, t
         keep = practicable if with_voice else quotable_any
         return [rows[i] for i in ids if i in rows and keep(rows[i])][:max(1, min(limit, 400))]
     if test_id:
+        # A practice built in the workshop keeps its sentences in its STEPS, in the order whoever
+        # made it chose; `drill_ids` is the flat list a practice used to be, and a new one leaves
+        # it empty. Steps win when there are any, and the chosen order is kept (#199).
+        try:
+            import practice_steps
+            step_ids = [s["drill_id"] for s in practice_steps.steps_of(db, test_id) if s.get("drill_id")]
+        except Exception:
+            step_ids = []
+        if step_ids:
+            rows = {d.id: d for d in q.filter(DrillModel.id.in_(step_ids)).all()}
+            keep = practicable if with_voice else quotable_any
+            seen, ordered = set(), []
+            for i in step_ids:
+                if i in rows and i not in seen and keep(rows[i]):
+                    ordered.append(rows[i])
+                    seen.add(i)
+            if ordered:
+                return ordered[:max(1, min(limit, 400))]
         t = db.query(TestModel).filter(TestModel.id == test_id).first()
         ids = [int(x) for x in (t.drill_ids or "").split(",") if x.strip().isdigit()] if t else []
         q = q.filter(DrillModel.id.in_(ids or [-1]))

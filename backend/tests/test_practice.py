@@ -210,3 +210,33 @@ def test_a_step_that_points_at_no_sentence_becomes_a_note_instead_of_showing_as_
     assert all(s["drill_id"] is None for s in steps)
     assert "esborrat" in steps[1]["payload"]["text"]
     assert practice_steps.repair_pointless_steps(main.SessionLocal) == 0  # safe to run again
+
+
+def test_a_practice_made_of_steps_can_actually_be_played():
+    """ADR 0002 made a practice a sequence of steps; the runner kept reading `drill_ids`, the flat
+    list a practice used to be. A practice written in the workshop has steps and an empty list, so
+    pressing play gave nothing — which is what three brand-new lessons did the minute they existed.
+    """
+    import main
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("step_player")}
+    first = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "aigua", "text_tachelhit": "aman aman",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/one.mp3"}).json()
+    second = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "pa", "text_tachelhit": "aɣrum n tgmmi",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/two.mp3"}).json()
+
+    made = client.post("/tests/", headers=hdr, json={
+        "title": "Feta de passos", "description": "", "question_type": "audio",
+        "hint_level": "none", "passing_score": 70, "drill_ids": ""}).json()   # empty on purpose
+    client.put(f"/tests/{made['id']}/steps", headers=hdr, json={"steps": [
+        {"kind": "note", "payload": {"text": "una nota no es reprodueix"}},
+        {"kind": "listen_pick", "drill_id": second["id"]},
+        {"kind": "say_it", "drill_id": first["id"]},
+    ]})
+
+    played = client.get(f"/practice/session?test_id={made['id']}&limit=10").json()["drills"]
+    assert [d["id"] for d in played] == [second["id"], first["id"]], "l'ordre el tria qui la fa"
+    assert all((d.get("text_tachelhit") or "").strip() for d in played), "la nota no hi és"
