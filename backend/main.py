@@ -6311,7 +6311,61 @@ def grammar_lesson(slug: str, db: Session = Depends(get_db)):
     lesson = grammar_course.get_lesson(db, slug, _load_grammar() if gemini_available() else "", examples,
                                        unit_ids={d.id for d in rows}, session_factory=SessionLocal,
                                        tables=grammar_course.paradigms(rows))
-    return {"slug": slug, "lesson": lesson, "writing": slug in grammar_course.writing()}
+    from models import GrammarLesson
+    row = db.query(GrammarLesson).filter(GrammarLesson.id == slug).first()
+    return {"slug": slug, "lesson": lesson, "writing": slug in grammar_course.writing(),
+            "hand_written": bool(row is not None and getattr(row, "hand_written", False))}
+
+
+@app.put("/grammar/{slug}/lesson")
+def put_grammar_lesson(slug: str, lesson: Dict[str, Any] = Body(..., embed=True),
+                       db: Session = Depends(get_db), _admin: UserModel = Depends(require_admin)):
+    """Write a unit's lesson by hand (#187). From now on the writer leaves it alone.
+
+    A lesson is `{"intro": str, "steps": [...]}`. Steps must be the kinds the course knows how to
+    show, because a step nobody can draw is a blank page for whoever is learning.
+    """
+    from models import GrammarLesson
+    steps = lesson.get("steps")
+    if not isinstance(steps, list) or not steps:
+        raise HTTPException(status_code=400, detail="Una lliçó necessita com a mínim un pas")
+    allowed = {"explain", "pattern", "quiz", "tip", "dialect", "end"}
+    for i, step in enumerate(steps):
+        if not isinstance(step, dict) or step.get("type") not in allowed:
+            raise HTTPException(status_code=400,
+                                detail=f"El pas {i + 1} no és d'un tipus que el curs sàpiga ensenyar")
+        if step.get("type") == "quiz":
+            options = step.get("options")
+            if not isinstance(options, list) or len(options) < 2:
+                raise HTTPException(status_code=400, detail=f"La pregunta del pas {i + 1} no té respostes")
+            if not isinstance(step.get("answer"), int) or not (0 <= step["answer"] < len(options)):
+                raise HTTPException(status_code=400, detail=f"La pregunta del pas {i + 1} no diu quina és la bona")
+
+    body = json.dumps({k: v for k, v in lesson.items() if k not in ("writing", "stale")},
+                      ensure_ascii=False)
+    row = db.query(GrammarLesson).filter(GrammarLesson.id == slug).first()
+    if row is None:
+        row = GrammarLesson(id=slug, body=body, version=grammar_course.LESSON_VERSION)
+        db.add(row)
+    row.body = body
+    row.version = grammar_course.LESSON_VERSION
+    row.hand_written = True
+    row.updated_at = datetime.utcnow()
+    db.commit()
+    return {"slug": slug, "hand_written": True, "steps": len(steps)}
+
+
+@app.post("/grammar/{slug}/lesson/release")
+def release_grammar_lesson(slug: str, db: Session = Depends(get_db),
+                           _admin: UserModel = Depends(require_admin)):
+    """Hand a hand-written lesson back to the writer: the next open writes it again (#187)."""
+    from models import GrammarLesson
+    row = db.query(GrammarLesson).filter(GrammarLesson.id == slug).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Aquesta unitat no té cap lliçó desada")
+    row.hand_written = False
+    db.commit()
+    return {"slug": slug, "hand_written": False}
 
 
 @app.get("/grammar/{slug}")

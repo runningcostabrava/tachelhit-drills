@@ -282,7 +282,14 @@ export const api = {
   grammarUnits: () => request<{ units: GrammarUnit[]; counts: Record<string, number>; status: { running: boolean; done: number; pending: number } }>('/grammar'),
   grammarUnit: (slug: string, limit = 60) => request<GrammarUnitPage>(`/grammar/${slug}?limit=${limit}`),
   grammarRewrite: (slug: string) => request<GrammarUnitPage>(`/grammar/${slug}/rewrite`, { method: 'POST' }),
-  grammarLesson: (slug: string) => request<{ slug: string; lesson: GrammarLesson; writing: boolean }>(`/grammar/${slug}/lesson`),
+  // `hand_written`: somebody edited this lesson, so the writer leaves it alone (#187)
+  grammarLesson: (slug: string) => request<{ slug: string; lesson: GrammarLesson; writing: boolean; hand_written?: boolean }>(`/grammar/${slug}/lesson`),
+  putGrammarLesson: (slug: string, lesson: { intro: string; steps: LessonStep[] }) =>
+    request<{ slug: string; hand_written: boolean; steps: number }>(`/grammar/${slug}/lesson`, {
+      method: 'PUT', body: JSON.stringify({ lesson }),
+    }),
+  releaseGrammarLesson: (slug: string) =>
+    request<{ slug: string; hand_written: boolean }>(`/grammar/${slug}/lesson/release`, { method: 'POST' }),
   /** The unit's «a fons» level: same shape as the unit page, written on first open. */
   grammarDeep: (slug: string, limit = 60) => request<GrammarUnitPage>(`/grammar/${slug}/deep?limit=${limit}`),
   grammarDeepRewrite: (slug: string) => request<GrammarUnitPage>(`/grammar/${slug}/deep/rewrite`, { method: 'POST' }),

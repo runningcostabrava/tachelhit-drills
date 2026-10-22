@@ -222,6 +222,9 @@ class GrammarLesson(Base):
     id = Column(String, primary_key=True)          # the unit slug
     body = Column(Text, nullable=False)            # JSON: {"intro": str, "steps": [...]}
     version = Column(Integer, nullable=True, default=1)
+    # Somebody edited this lesson by hand. The writer then leaves it alone for good: a version
+    # bump, a reclassified unit or a grown unit must not throw a person's work away (#187).
+    hand_written = Column(Boolean, nullable=True, default=False)
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
 
 

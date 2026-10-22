@@ -497,3 +497,64 @@ def test_the_language_shows_its_own_script():
     assert grammar.tifinagh("") is None
     # the prose is still cleaned of it: an explanation a beginner reads stays in Latin
     assert grammar._clean_prose("El pronom \u2d4f\u2d3d\u2d3d vol dir jo").strip() == "El pronom vol dir jo"
+
+
+def test_a_lesson_written_by_hand_is_never_overwritten_by_the_machine():
+    """#187: lessons are written by Gemini and rewritten whenever the format version moves or the
+    unit changes. That is right until somebody edits one — then a rewrite throws their work away.
+    """
+    import json
+    import main
+    import grammar
+    from models import GrammarLesson
+    from test_api import client, as_stranger, register
+
+    slug = grammar.UNITS[0]["slug"]
+    mine = {"X-User-Token": register("lesson_editor")}
+    db = main.SessionLocal()
+    me = db.query(main.UserModel).filter(main.UserModel.username == "lesson_editor").first()
+    me.is_admin = True
+    db.commit(); db.close()
+
+    lesson = {"intro": "Una lliçó escrita a mà.", "steps": [
+        {"type": "explain", "title": "El punt", "text": "Això ho ha escrit una persona."},
+        {"type": "quiz", "question": "Quina és la bona?", "options": ["aquesta", "aquella"], "answer": 0},
+        {"type": "end"},
+    ]}
+    r = client.put(f"/grammar/{slug}/lesson", headers=mine, json={"lesson": lesson})
+    assert r.status_code == 200, r.text
+
+    # the row says so, and the freshness check now always keeps it, whatever the version says
+    db = main.SessionLocal()
+    row = db.query(GrammarLesson).filter(GrammarLesson.id == slug).first()
+    assert row.hand_written is True
+    row.version = 0            # as if the format had moved on without it
+    db.commit()
+    kept = grammar._current(row, unit_ids=None)
+    assert kept and kept["intro"] == "Una lliçó escrita a mà."
+    db.close()
+
+    assert client.get(f"/grammar/{slug}/lesson").json()["hand_written"] is True
+
+    # what the course cannot draw is refused, so a learner never meets a blank card
+    bad = client.put(f"/grammar/{slug}/lesson", headers=mine,
+                     json={"lesson": {"intro": "", "steps": [{"type": "cançó", "text": "x"}]}})
+    assert bad.status_code == 400
+    half = client.put(f"/grammar/{slug}/lesson", headers=mine, json={"lesson": {"intro": "", "steps": [
+        {"type": "quiz", "question": "I la resposta?", "options": ["una"]}]}})
+    assert half.status_code == 400
+
+    # and it is an admin's doing, not anybody's
+    with as_stranger():
+        assert client.put(f"/grammar/{slug}/lesson", json={"lesson": lesson}).status_code == 401
+
+    # handing it back to the machine makes it ordinary again
+    assert client.post(f"/grammar/{slug}/lesson/release", headers=mine).status_code == 200
+    db = main.SessionLocal()
+    row = db.query(GrammarLesson).filter(GrammarLesson.id == slug).first()
+    assert not row.hand_written
+    row.version = 0
+    db.commit()
+    assert grammar._current(row, unit_ids=None) is None   # out of date again, so it gets rewritten
+    json.loads(row.body)
+    db.close()

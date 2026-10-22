@@ -29,6 +29,7 @@ const ProfilePage = lazy(() => import('./components/ProfilePage'));
 const AuthPage = lazy(() => import('./components/AuthPage'));
 const CorpusPage = lazy(() => import('./components/CorpusPage'));
 const CreditsPage = lazy(() => import('./components/CreditsPage'));
+const LessonEditor = lazy(() => import('./components/LessonEditor'));
 const GrammarPage = lazy(() => import('./components/GrammarPage'));
 const PracticeEditor = lazy(() => import('./components/PracticeEditor'));
 const VerifyQueue = lazy(() => import('./components/VerifyQueue'));
@@ -203,6 +204,7 @@ function App() {
         <Route path="/credits" element={<CreditsPage />} />
         <Route path="/grammar" element={<GrammarPage />} />
         <Route path="/grammar/:slug" element={<GrammarPage />} />
+        <Route path="/grammar/:slug/editor" element={<LessonEditor />} />
         <Route path="/grammar/:slug/a-fons" element={<GrammarPage deep />} />
         <Route path="/verify" element={<VerifyQueue />} />
         {/* An unknown path (old link, typo, stale app shell) used to render an empty page. */}

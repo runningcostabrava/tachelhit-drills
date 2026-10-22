@@ -1118,7 +1118,15 @@ def _current(row, unit_ids: Optional[set], deep: bool = False) -> Optional[dict]
     every sentence it quotes still in the unit (a reclassified unit gets its lesson written again)
     and the unit has not grown much since the lesson was written (new recordings and captures join
     the lesson, instead of waiting for a format change)."""
-    if row is None or (row.version or 0) < (DEEP_VERSION if deep else LESSON_VERSION):
+    if row is None:
+        return None
+    if getattr(row, "hand_written", False):
+        # Somebody wrote this one. It is current by definition, whatever the version says (#187).
+        try:
+            return json.loads(row.body)
+        except Exception:
+            return None
+    if (row.version or 0) < (DEEP_VERSION if deep else LESSON_VERSION):
         return None
     try:
         lesson = json.loads(row.body)

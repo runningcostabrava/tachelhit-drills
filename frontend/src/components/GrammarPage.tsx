@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from '../toast';
-import { FaBullseye, FaCheck, FaChevronLeft, FaChevronRight, FaLightbulb, FaMapMarkerAlt, FaMicrophone, FaRedo, FaTimes, FaVolumeUp } from 'react-icons/fa';
+import { FaBullseye, FaCheck, FaChevronLeft, FaChevronRight, FaLightbulb, FaMapMarkerAlt, FaMicrophone, FaPen, FaRedo, FaTimes, FaVolumeUp } from 'react-icons/fa';
 import { api, type GrammarUnit, type GrammarUnitPage, type GrammarWishUnit, type LessonExample, type LessonProposal, type LessonStep } from '../api';
 import { API_BASE, getMediaUrl } from '../config';
 import RecordAudioModal from './RecordAudioModal';
@@ -219,7 +219,7 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
               {c.type === 'pattern' && <PatternCard step={c} />}
               {c.type === 'quiz' && <QuizCard step={c} chosen={answers[k]} onChoose={(j) => setAnswers((a) => ({ ...a, [k]: j }))} active={false} />}
               {(c.type === 'tip' || c.type === 'dialect') && <NoteCard step={c} />}
-              {c.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} nextUnit={nextUnit} proposals={proposals} onDecided={loadProposals} deep={deep} />}
+              {c.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} onEdit={() => navigate(`/grammar/${slug}/editor`)} nextUnit={nextUnit} proposals={proposals} onDecided={loadProposals} deep={deep} />}
               {(c.type === 'explain' || c.type === 'tip' || c.type === 'dialect' || c.type === 'intro') && page.lesson.steps.length > 0 && <ProposeChange slug={slug} step={k - 1} current={c.type === 'intro' ? page.lesson.intro : c.text} signedIn={signedIn} onSent={loadProposals} />}
             </div>
           ))}
@@ -239,7 +239,7 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
             {card.type === 'pattern' && <PatternCard step={card} />}
             {card.type === 'quiz' && <QuizCard step={card} chosen={answers[i]} onChoose={(k) => setAnswers((a) => ({ ...a, [i]: k }))} />}
             {(card.type === 'tip' || card.type === 'dialect') && <NoteCard step={card} />}
-            {card.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} nextUnit={nextUnit} proposals={proposals} onDecided={loadProposals} deep={deep} />}
+            {card.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} onEdit={() => navigate(`/grammar/${slug}/editor`)} nextUnit={nextUnit} proposals={proposals} onDecided={loadProposals} deep={deep} />}
         {(card.type === 'explain' || card.type === 'tip' || card.type === 'dialect' || card.type === 'intro') && page.lesson.steps.length > 0 && <ProposeChange slug={slug} step={i - 1} current={card.type === 'intro' ? page.lesson.intro : card.text} signedIn={signedIn} onSent={loadProposals} />}
           </div>
           <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, padding: '10px 16px calc(10px + env(safe-area-inset-bottom))', background: 'var(--bg)', borderTop: '1px solid var(--border)', zIndex: 5 }}>
@@ -518,7 +518,7 @@ function ProposeChange({ slug, step, current, signedIn, onSent }: { slug: string
   );
 }
 
-function EndCard({ page, answers, cards, onTest, isAdmin, onRewrite, rewriting, nextUnit, proposals, onDecided, deep }: { page: GrammarUnitPage; answers: Record<number, number>; cards: Card[]; onTest: () => void; isAdmin: boolean; onRewrite: () => void; rewriting: boolean; nextUnit: GrammarUnit | null; proposals: LessonProposal[]; onDecided: () => void; deep: boolean }) {
+function EndCard({ page, answers, cards, onTest, isAdmin, onRewrite, rewriting, onEdit, nextUnit, proposals, onDecided, deep }: { page: GrammarUnitPage; answers: Record<number, number>; cards: Card[]; onTest: () => void; isAdmin: boolean; onRewrite: () => void; rewriting: boolean; onEdit: () => void; nextUnit: GrammarUnit | null; proposals: LessonProposal[]; onDecided: () => void; deep: boolean }) {
   const decide = async (id: number, accept: boolean) => {
     try { await api.decideProposal(id, accept); toast.success(accept ? 'Canvi aplicat a la lliçó' : 'Proposta rebutjada'); onDecided(); } catch (e: any) { toast.error(e?.message || 'No s’ha pogut'); }
   };
@@ -554,6 +554,7 @@ function EndCard({ page, answers, cards, onTest, isAdmin, onRewrite, rewriting, 
             ))}
           </div>
         )}
+        {isAdmin && <button onClick={onEdit} title="Edita la lliçó a mà (administrador). En desar-la, la màquina deixa de tocar-la." style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer' }}><FaPen /> Edita la lliçó</button>}
         {isAdmin && <button onClick={onRewrite} disabled={rewriting} title="Torna a escriure la lliçó (administrador)" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)', fontWeight: 700, cursor: rewriting ? 'default' : 'pointer' }}><FaRedo /> {rewriting ? 'Reescrivint…' : 'Reescriu la lliçó'}</button>}
       </div>
       {showAll && (
