@@ -545,8 +545,17 @@ def test_looks_like_junk_asr():
 
 
 def test_capture_agent_liveness():
-    """The web app asks whether a local capture agent is polling before it queues a URL."""
+    """The web app asks whether a local capture agent is polling before it queues a URL.
+
+    Polling /capture/pending CLAIMS a request, so this starts from an empty queue: otherwise it
+    takes a request another test left waiting and asserts on it by accident (#191).
+    """
+    from models import CaptureRequest
+
     main._capture_agent_seen.update({"at": None, "version": None})
+    db = main.SessionLocal()
+    db.query(CaptureRequest).filter(CaptureRequest.status == "pending").delete()
+    db.commit(); db.close()
     r = client.get("/capture/agent")
     assert r.status_code == 200 and r.json()["online"] is False
     # an agent poll (with its version header) marks it online

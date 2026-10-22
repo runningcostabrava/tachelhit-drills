@@ -48,6 +48,13 @@ def test_classification_fills_grammar_and_unit_page_shows_lesson_and_examples(mo
         {"type": "tip", "text": "No oblidis ur."}, {"type": "dialect", "text": "A Beni Mellal s'hi afegeix ša."}]})
     sheet = "1. RULES: ur davant del verb."
     monkeypatch.setattr(gemini_client, "gemini_generate", lambda sys_, contents, **k: calls.append(contents[0]["text"]) or (sheet if "STUDY SHEET in" in contents[0]["text"] else answer))
+    # What is being tested is the FIRST open of a unit, so the unit has to have no lesson yet:
+    # another test may have written this one already, and then the page quite rightly serves it (#191).
+    from models import GrammarLesson
+    db = main.SessionLocal()
+    db.query(GrammarLesson).filter(GrammarLesson.id.in_(("negacio", "negacio:deep"))).delete(synchronize_session=False)
+    db.commit(); db.close()
+
     page = client.get("/grammar/negacio").json()
     assert page["title"].startswith("La negació") and page["total"] >= 1
     assert page["lesson"]["writing"] and page["lesson"]["steps"][-1]["type"] == "end"  # never a wait for Gemini

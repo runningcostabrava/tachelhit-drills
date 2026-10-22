@@ -39,10 +39,11 @@ jobs:
 
       - name: pytest
         working-directory: backend
-        # -p no:randomly on purpose: one test still depends on the order of the others (issue #190).
+        # Random order on purpose (pytest-randomly): a test that only passes when it runs after
+        # another one is a test that does not say what it means. Fixed in #191.
         # Fixing that test is its own issue; hiding it behind a random seed here would make the
         # suite lie about itself.
-        run: python -m pytest tests -q -p no:randomly
+        run: python -m pytest tests -q
         env:
           LEXICON_WARMUP: '0'
 
