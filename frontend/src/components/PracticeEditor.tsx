@@ -37,6 +37,19 @@ const TOOLS: { kind: PracticeStep['kind']; label: string; needsDrill: boolean; n
 ];
 const toolOf = (k: PracticeStep['kind']) => TOOLS.find((t) => t.kind === k);
 
+// The status rides along with every error (#196). «Alguna cosa ha anat malament» is the one
+// answer that never helps: being throttled, being logged out and being offline are three
+// different problems with three different things to do about them.
+function whyItFailed(e: unknown, doing: string): string {
+  const status = (e as { status?: number })?.status;
+  if (status === 429) return 'El servidor ens frena un moment (massa peticions seguides). Torna-ho a provar d’aquí a un minut.';
+  if (status === 401) return 'Per a això et cal un nom. Fes-te’n un al teu perfil.';
+  if (status === 403) return 'Aquesta pràctica no és teva: demana-ho a qui l’administra.';
+  if (status && status >= 500) return 'El servidor no respon bé ara mateix. Espera una mica i torna-hi.';
+  if (status === undefined) return 'No s’ha pogut arribar al servidor. Mira la connexió.';
+  return (e as Error)?.message || doing;
+}
+
 // Where sentences come from. Everything but «cerca» is a collection the server already knows how
 // to slice, so the workshop asks for it instead of making the person type a word and hope.
 type SourceKind = 'cerca' | 'unit' | 'topic' | 'person' | 'day' | 'tag' | 'video';
@@ -84,6 +97,7 @@ export default function PracticeEditor() {
   const [picked, setPicked] = useState<Set<number>>(new Set());
   const [loadingHits, setLoadingHits] = useState(false);
   const [hidden, setHidden] = useState(0);   // how many were left out for being half-made
+  const [failed, setFailed] = useState(false);  // the list is empty because the server said no
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -126,7 +140,7 @@ export default function PracticeEditor() {
       const r = await api.savePracticeSteps(id, clean);
       setSteps(r.steps); setDirty(false);
       setSavedAt(new Date().toLocaleTimeString('ca-ES', { hour: '2-digit', minute: '2-digit' }));
-    } catch (e: any) { toast.error(e?.message || 'No s’ha pogut desar'); }
+    } catch (e) { toast.error(whyItFailed(e, 'No s’ha pogut desar')); }
     finally { setSaving(false); }
   }, [id]);
 
@@ -148,17 +162,17 @@ export default function PracticeEditor() {
 
   // ---- the library ------------------------------------------------------------------
   const loadFrom = async (query: string) => {
-    setLoadingHits(true); setPicked(new Set());
+    setLoadingHits(true); setPicked(new Set()); setFailed(false);
     try {
       const r = await api.practiceSession(`${query}&limit=120`);
       const good = r.drills.filter(complete).sort(simplestFirst);
       remember(good); setHits(good); setHidden(r.drills.length - good.length);
-    } catch { toast.error('No s’han pogut portar les frases'); setHits([]); setHidden(0); }
+    } catch (e) { toast.error(whyItFailed(e, 'No s’han pogut portar les frases')); setHits([]); setHidden(0); setFailed(true); }
     finally { setLoadingHits(false); }
   };
   const search = async () => {
     if (q.trim().length < 2) { setHits(null); return; }
-    setLoadingHits(true); setPicked(new Set());
+    setLoadingHits(true); setPicked(new Set()); setFailed(false);
     try {
       const got = await api.searchDrills(q.trim(), 120);
       const good = got.filter(complete).sort(simplestFirst);
@@ -497,15 +511,18 @@ export default function PracticeEditor() {
                     borderColor: badText ? 'var(--rose)' : badVoice ? 'var(--saffron)' : 'var(--border)',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span title="Arrossega per moure'l" style={{ cursor: 'grab', color: 'var(--text-muted)', display: 'inline-flex' }}><FaGripVertical size={12} /></span>
-                    <span style={{ color: 'var(--text-muted)', fontWeight: 800, fontSize: 12, minWidth: 18 }}>{i + 1}</span>
+                  {/* Two lines on purpose: what the step IS, then what you can do to it. On one
+                      line the six buttons wrapped underneath and the note had no room to write in. */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <span title="Arrossega per moure'l" style={{ cursor: 'grab', color: 'var(--text-muted)', display: 'inline-flex', paddingTop: 7 }}><FaGripVertical size={12} /></span>
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 800, fontSize: 12, minWidth: 18, paddingTop: 6 }}>{i + 1}</span>
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <select value={s.kind} onChange={(e) => update(i, { kind: e.target.value as PracticeStep['kind'] })} style={select}>
                       {TOOLS.filter((t) => (s.drill_id ? t.needsDrill : !t.needsDrill)).map((t) => (
                         <option key={t.kind} value={t.kind}>{t.label}</option>
                       ))}
                     </select>
-                    <div style={{ flex: 1, minWidth: 170 }}>
+                    <div style={{ minWidth: 0 }}>
                       {s.kind === 'note' ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                           <input value={s.payload?.heading || ''} onChange={(e) => update(i, { payload: { ...s.payload, heading: e.target.value } })}
@@ -532,6 +549,10 @@ export default function PracticeEditor() {
                         <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>frase #{s.drill_id}</span>
                       )}
                     </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end', marginTop: 8 }}>
                     {drill && hasVoice(drill) && (
                       <button onClick={() => new Audio(getMediaUrl(drill.audio_url || drill.audio_tts_shi_url || '')).play().catch(() => {})}
                               title="Escolta" style={icon}><FaPlay size={11} /></button>
@@ -583,7 +604,9 @@ export default function PracticeEditor() {
           {loadingHits && <p style={{ fontSize: 13.5, color: 'var(--text-muted)' }}>Portant les frases…</p>}
           {hits && hits.length === 0 && !loadingHits && (
             <p style={{ color: 'var(--text-muted)', fontSize: 14, lineHeight: 1.5 }}>
-              Aquí no hi ha cap frase sencera{hidden > 0 ? `: n’hi havia ${hidden}, però els falta la veu o les paraules escrites` : ''}.
+              {failed
+                ? 'No s’han pogut llegir les frases: mira l’avís de dalt i torna-ho a provar.'
+                : `Aquí no hi ha cap frase sencera${hidden > 0 ? `: n’hi havia ${hidden}, però els falta la veu o les paraules escrites` : ''}.`}
             </p>
           )}
           {hits && hits.length > 0 && hidden > 0 && (

@@ -7,6 +7,7 @@ import { toast } from '../toast';
 import type { Drill } from '../types';
 import { preferredRecorderMime } from '../utils/media';
 import { saveDone } from './PracticePage';
+import StepSession from './StepSession';
 import WordGloss from './WordGloss';
 
 // One practice session: up to 10 sentences said by our speakers.
@@ -148,6 +149,18 @@ export default function PracticeSession() {
     load();
   }, [params]);
 
+  // A hand-made practice is a SEQUENCE: every step has its own tool, and it is played with that
+  // tool (StepSession). This listening session stays for the collections — a day, a subject, a
+  // grammar unit — which are a pile of sentences and nothing more (#199).
+  const testId = Number(params.get('test_id')) || 0;
+  const [asSteps, setAsSteps] = useState<boolean | null>(testId ? null : false);
+  useEffect(() => {
+    if (!testId) return;
+    api.practiceSteps(testId)
+      .then((r) => setAsSteps(r.steps.some((s) => s.kind !== 'note' || s.payload?.text)))
+      .catch(() => setAsSteps(false));
+  }, [testId]);
+
   const drill = drills[i]; const card = cards[i];
   const voice = drill ? (drill.audio_url || drill.audio_tts_shi_url || '') : '';
   const speakerLabel = card ? (card.origin && card.origin !== card.speaker ? `${card.speaker} · ${card.origin}` : card.speaker) : '';
@@ -234,6 +247,9 @@ export default function PracticeSession() {
       ))}
     </div>
   );
+
+  if (asSteps === null) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Preparant la pràctica…</div>;
+  if (asSteps) return <StepSession testId={testId} title={title} onExit={() => navigate('/tests')} />;
 
   if (loadError) return <div style={{ padding: '40px 16px', maxWidth: 520, margin: '0 auto', textAlign: 'center' }}><p style={{ color: 'var(--text-soft)' }}>{loadError}</p><button onClick={exit} style={btn('ghost')}>Torna a Pràctica</button></div>;
   if (!drill) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Preparant la sessió…</div>;
