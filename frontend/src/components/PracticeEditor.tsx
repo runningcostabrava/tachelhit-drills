@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   FaArrowDown, FaArrowUp, FaCheck, FaClone, FaEye, FaGripVertical, FaImage, FaMagic,
-  FaMicrophone, FaPaperPlane, FaPlay, FaPlus, FaRobot, FaTrash, FaVideo,
+  FaDownload, FaFileAlt, FaMicrophone, FaPaperPlane, FaPen, FaPlay, FaPlus, FaPrint,
+  FaRobot, FaTrash, FaVideo,
 } from 'react-icons/fa';
 import { api, type PracticeCollections, type PracticeList, type PracticeStep } from '../api';
 import { getMediaUrl } from '../config';
@@ -86,7 +87,9 @@ export default function PracticeEditor() {
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
-  const [preview, setPreview] = useState(false);
+  const [view, setView] = useState<'edit' | 'preview' | 'document'>('edit');
+  const preview = view === 'preview';
+  const [about, setAbout] = useState('');
   const [recording, setRecording] = useState<Drill | null>(null);
   const [makingDrill, setMakingDrill] = useState(false);
   const [illustrating, setIllustrating] = useState<number | null>(null);
@@ -105,7 +108,7 @@ export default function PracticeEditor() {
     if (!id) return;
     api.practices().then((all) => {
       const p = all.find((x) => x.id === id) || null;
-      setPractice(p); setTitle(p?.title || '');
+      setPractice(p); setTitle(p?.title || ''); setAbout(p?.description || '');
     }).catch(() => {});
     api.practiceCollections().then(setCollections).catch(() => {});
     api.practiceSteps(id).then(async (r) => {
@@ -246,6 +249,40 @@ export default function PracticeEditor() {
     try { const p = await api.updatePractice(id, { title: name }); setPractice(p); toast.success('Nom canviat'); }
     catch (e: any) { toast.error(e?.message || 'No s’ha pogut canviar el nom'); setTitle(practice.title); }
   };
+  const saveAbout = async () => {
+    if (!practice || about === (practice.description || '')) return;
+    try { const p = await api.updatePractice(id, { description: about }); setPractice(p); }
+    catch (e: any) { toast.error(e?.message || 'No s’ha pogut desar'); setAbout(practice.description || ''); }
+  };
+
+  // The practice as a text somebody can keep: the same thing the document view shows.
+  const asMarkdown = () => {
+    const out: string[] = [`# ${title || 'Pràctica'}`, ''];
+    if (about.trim()) out.push(about.trim(), '');
+    steps.forEach((s2, i) => {
+      if (s2.kind === 'note') {
+        if (s2.payload?.heading) out.push(`## ${s2.payload.heading}`, '');
+        if (s2.payload?.text) out.push(s2.payload.text, '');
+        return;
+      }
+      const d = s2.drill_id ? drills[s2.drill_id] : undefined;
+      out.push(`**${i + 1}. ${toolOf(s2.kind)?.label}**`, '');
+      if (d) {
+        out.push(`> ${d.text_tachelhit || ''}`, `> ${d.text_catalan || ''}`, '');
+        if (d.speaker || d.author) out.push(`*Ho diu ${d.speaker || d.author}.*`, '');
+      }
+    });
+    out.push('', `_${steps.length} passos · tamazight-drills_`);
+    return out.join('\n');
+  };
+  const download = () => {
+    const blob = new Blob([asMarkdown()], { type: 'text/markdown;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${(title || 'practica').replace(/[^\p{L}\p{N}]+/gu, '-').toLowerCase()}.md`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
 
   // ---- what is wrong with this practice ---------------------------------------------
   const problems = useMemo(() => {
@@ -316,13 +353,18 @@ export default function PracticeEditor() {
                 title="Captura: porta un vídeo de YouTube o d'on sigui, talla'l i fes-ne frases">
           <FaVideo /> Porta-les d’un vídeo
         </button>
-        <button onClick={() => setPreview((v) => !v)} style={{ ...secondary, color: preview ? 'var(--brand-1)' : 'var(--text)' }}>
-          <FaEye /> {preview ? 'Torna a editar' : 'Mira com es veurà'}
-        </button>
+        <div style={{ display: 'inline-flex', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+          {([['edit', 'Edita', <FaPen key="e" size={11} />], ['preview', 'Mira-ho', <FaEye key="p" size={11} />], ['document', 'Document', <FaFileAlt key="d" size={11} />]] as const).map(([v, label, ico]) => (
+            <button key={v} onClick={() => setView(v as typeof view)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700, fontSize: 13, background: view === v ? 'var(--brand-1)' : 'var(--surface)', color: view === v ? '#fff' : 'var(--text)' }}>
+              {ico} {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* The copilot, with its hands in this practice */}
-      <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', background: 'var(--surface)', padding: '12px 14px', marginBottom: 18 }}>
+      {view !== 'document' && <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', background: 'var(--surface)', padding: '12px 14px', marginBottom: 18 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
           <FaRobot style={{ color: 'var(--brand-1)' }} />
           <strong style={{ fontSize: 14 }}>Digues-li què vols i t’ho munta</strong>
@@ -360,8 +402,50 @@ export default function PracticeEditor() {
         <p style={{ fontSize: 11.5, color: 'var(--text-muted)', margin: '8px 0 0', lineHeight: 1.45 }}>
           Només pot fer servir frases senceres de la biblioteca, i només pot tocar les pràctiques teves.
         </p>
-      </div>
+      </div>}
 
+      {view === 'document' ? (
+        <article className="practice-document" style={{ maxWidth: 720, margin: '0 auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '28px 30px 36px' }}>
+          <div className="no-print" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginBottom: 14 }}>
+            <button onClick={() => window.print()} style={secondary}><FaPrint size={12} /> Imprimeix o desa en PDF</button>
+            <button onClick={download} style={secondary}><FaDownload size={12} /> Baixa’l en text</button>
+          </div>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, margin: '0 0 6px' }}>{title || 'Pràctica'}</h1>
+          <textarea className="no-print" value={about} onChange={(e) => setAbout(e.target.value)} onBlur={saveAbout}
+                    placeholder="Una línia que digui de què va i per a qui és (surt al document)"
+                    rows={2} style={{ ...input, resize: 'vertical', marginBottom: 18, color: 'var(--text-soft)' }} />
+          {about.trim() && <p className="only-print" style={{ color: 'var(--text-soft)', fontSize: 15, margin: '0 0 18px' }}>{about}</p>}
+
+          {steps.length === 0 && <p style={{ color: 'var(--text-muted)' }}>Encara no hi ha res a llegir.</p>}
+          {steps.map((s2, i) => {
+            const d = s2.drill_id ? drills[s2.drill_id] : undefined;
+            if (s2.kind === 'note') {
+              return (
+                <section key={`doc-${i}`} style={{ margin: '0 0 20px' }}>
+                  {s2.payload?.heading && <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 19, margin: '0 0 6px' }}>{s2.payload.heading}</h2>}
+                  {s2.payload?.text && <p style={{ margin: 0, lineHeight: 1.6, fontSize: 15 }}>{s2.payload.text}</p>}
+                  {s2.payload?.image_url && <img src={getMediaUrl(s2.payload.image_url)} alt="" style={{ width: '100%', borderRadius: 'var(--r-md)', marginTop: 10 }} />}
+                </section>
+              );
+            }
+            return (
+              <section key={`doc-${i}`} style={{ margin: '0 0 18px', paddingLeft: 14, borderLeft: '3px solid var(--border)' }}>
+                <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 4 }}>
+                  {i + 1} · {toolOf(s2.kind)?.label}
+                </div>
+                {d ? (
+                  <>
+                    <div style={{ fontSize: 19, fontWeight: 800, lineHeight: 1.3 }}>{d.text_tachelhit}</div>
+                    <div style={{ fontSize: 15, color: 'var(--text-soft)' }}>{d.text_catalan}</div>
+                    {(d.speaker || d.author) && <div style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 2 }}>Ho diu {d.speaker || d.author}.</div>}
+                  </>
+                ) : <em style={{ color: 'var(--text-muted)' }}>frase #{s2.drill_id}</em>}
+              </section>
+            );
+          })}
+          <p style={{ marginTop: 26, fontSize: 12, color: 'var(--text-muted)' }}>{steps.length} passos · tamazight-drills</p>
+        </article>
+      ) : (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: 20, alignItems: 'start' }}>
         {/* ---------- the sequence ---------- */}
         <section>
@@ -545,6 +629,8 @@ export default function PracticeEditor() {
           )}
         </section>
       </div>
+
+      )}
 
       {makingDrill && (
         <MobileDrillCreator onClose={() => setMakingDrill(false)} onDrillCreated={drillWasMade} />

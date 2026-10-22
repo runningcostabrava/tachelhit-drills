@@ -254,3 +254,14 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+
+
+/* A practice printed as a document: the page, and nothing of the app around it. */
+.only-print { display: none; }
+@media print {
+  body { background: #fff; }
+  nav, .no-print { display: none !important; }
+  .only-print { display: block; }
+  .practice-document { border: none !important; max-width: none !important; padding: 0 !important; }
+  section { break-inside: avoid; }
+}
