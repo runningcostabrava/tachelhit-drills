@@ -30,6 +30,7 @@ const ProfilePage = lazy(() => import('./components/ProfilePage'));
 const AuthPage = lazy(() => import('./components/AuthPage'));
 const CorpusPage = lazy(() => import('./components/CorpusPage'));
 const GrammarPage = lazy(() => import('./components/GrammarPage'));
+const PracticeEditor = lazy(() => import('./components/PracticeEditor'));
 const VerifyQueue = lazy(() => import('./components/VerifyQueue'));
 
 const RouteLoader = () => (
@@ -186,6 +187,7 @@ function App() {
         <Route path="/tests/sessio" element={<PracticeSession />} />
         <Route path="/tests/grup" element={<PracticeGroupPage />} />
         <Route path="/tests/llistes" element={<TestsDashboard />} />
+        <Route path="/tests/:testId/editor" element={<PracticeEditor />} />
         <Route path="/veus" element={<VeusPage />} />
         <Route path="/u/:username" element={<UserPage />} />
         <Route path="/tests/:testId" element={<PublicTestView />} />
