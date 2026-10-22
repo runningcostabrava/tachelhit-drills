@@ -53,9 +53,11 @@ les seccions numerades per escriure cada unitat. **Els PDF no es committegen**:
 Cap d'aquests fitxers es committeja: `backend/lexicon.py` els baixa de HuggingFace al primer ús,
 a `backend/knowledge/lexicon/` (gitignorat).
 
-**Què ens obliga el «NC»:** mentre el curs i les glosses s'aguantin en aquestes dues fonts
-d'IRCAM, **l'app no pot tenir ús comercial**. Si algun dia es vol cobrar per res, primer cal
-treure-les o demanar permís.
+**Què ens obliga el «NC»:** les dues fonts d'IRCAM no es poden fer servir per guanyar-hi diners.
+Això aquí no lliga res, perquè **aquesta app no tindrà mai ús comercial** — decisió de l'amo,
+22 d'octubre del 2026, i és una frontera del projecte, no una conseqüència d'aquestes llicències
+([SCOPE.md](SCOPE.md)). Si algun dia algú es repensés això, el primer que caldria mirar és
+justament aquesta secció: caldria treure IRCAM del lèxic o demanar-ne permís.
 
 ## 4. El transcriptor i l'alineador
 
@@ -130,7 +132,7 @@ servidor i el web.
 1. Qualsevol font nova de tercers: apuntar-la aquí amb autor i llicència **abans** de fer-la
    servir.
 2. CC BY i CC BY-NC: dir el nom de qui ho ha fet i la llicència allà on es vegi el resultat.
-3. CC BY-NC a dins vol dir **app sense ús comercial**.
+3. L'app no té ús comercial: per això el material CC BY-NC hi pot ser.
 4. Les dades d'Awal no es fan servir sense nomenar CIEMEN i el projecte Awal.
 5. Dels parlants de Common Voice no se'n busca la identitat.
 6. Res de material de tercers (PDF, diccionaris, clips de corpus) es committeja al repositori.

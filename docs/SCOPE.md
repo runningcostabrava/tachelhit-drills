@@ -44,6 +44,9 @@ No és un diccionari, ni un traductor automàtic, ni un curs genèric d'«amazic
 - **Material exclòs**: res gravat en càmera de «Tamazight For All»; els drills de Beni Mellal van
   etiquetats «private»; cap drill etiquetat irlandès entra al curs.
 - **El curs cita només** la nostra biblioteca i el compendi d'amazic.cat.
+- **Això no es ven mai.** L'app no tindrà ús comercial (decisió de l'amo, 22-10-2026). No és una
+  conseqüència de les llicències: és el projecte. De retruc, el material CC BY-NC —el lèxic
+  d'IRCAM— hi pot ser; vegeu [CREDITS.md](CREDITS.md).
 
 ## Com se sap que va bé
 
