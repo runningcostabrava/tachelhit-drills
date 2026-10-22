@@ -30,6 +30,7 @@ const AuthPage = lazy(() => import('./components/AuthPage'));
 const CorpusPage = lazy(() => import('./components/CorpusPage'));
 const CreditsPage = lazy(() => import('./components/CreditsPage'));
 const LessonEditor = lazy(() => import('./components/LessonEditor'));
+const StoriesPage = lazy(() => import('./components/StoriesPage'));
 const GrammarPage = lazy(() => import('./components/GrammarPage'));
 const PracticeEditor = lazy(() => import('./components/PracticeEditor'));
 const VerifyQueue = lazy(() => import('./components/VerifyQueue'));
@@ -202,6 +203,8 @@ function App() {
         <Route path="/signin" element={<AuthPage />} />
         <Route path="/corpus" element={<CorpusPage />} />
         <Route path="/credits" element={<CreditsPage />} />
+        <Route path="/stories" element={<StoriesPage />} />
+        <Route path="/stories/:slug" element={<StoriesPage />} />
         <Route path="/grammar" element={<GrammarPage />} />
         <Route path="/grammar/:slug" element={<GrammarPage />} />
         <Route path="/grammar/:slug/editor" element={<LessonEditor />} />

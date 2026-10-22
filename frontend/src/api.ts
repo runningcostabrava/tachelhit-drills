@@ -319,6 +319,8 @@ export const api = {
   wordAlignStatus: () => request<{ running: boolean; done: number; words: number; failed: number; stored: number; recordings: number }>('/words/align/status'),
   runWordAlign: (limit = 200, redo = false) =>
     request<{ started: boolean }>(`/words/align/run?limit=${limit}&redo=${redo}`, { method: 'POST' }),
+  stories: () => request<{ stories: Story[] }>('/stories'),
+  story: (slug: string) => request<StoryPage>(`/stories/${encodeURIComponent(slug)}`),
   // What the project owes to other people, read from the repository's own docs/CREDITS.md
   credits: () => request<{ markdown: string; source: string }>('/credits'),
   practiceCollections: () => request<PracticeCollections>('/practice/collections'),
@@ -430,6 +432,14 @@ export interface WordClip {
   word: string; drill_id: number; audio_url: string; start: number; end: number;
   speaker: string | null; source: string; sentence: string | null; meaning: string | null;
 }
+/** A whole story or song: a group of drills from one source, put back in the order they are
+ *  spoken. `missing_words` = lines that can be heard but not read yet (#189). */
+export interface Story {
+  slug: string; title: string; lines: number; written: number; missing_words: number; voiced: number;
+  cover: string | null; video_url: string | null; source_url: string | null;
+  channel: string | null; speaker: string | null;
+}
+export interface StoryPage extends Story { drills: Drill[] }
 export interface PracticeTip { sound: string; label: string; found: string; tip: string }
 export interface PracticeCard { speaker: string; origin: string; day: string | null; tips: PracticeTip[]; highlights: string[] }
 export interface PronunciationWord { word: string; ok: boolean; heard: string | null }

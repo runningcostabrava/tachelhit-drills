@@ -30,6 +30,7 @@ import topics as topics_catalog
 import grammar as grammar_course
 import practice_steps
 import practice as practice_mod
+import stories as stories_mod
 import word_audio
 import transliteration
 from gemini_client import gemini_generate, gemini_available, gemini_agent, BudgetExceeded
@@ -6184,6 +6185,32 @@ def decide_lesson_proposal(proposal_id: int, accept: bool = Body(..., embed=True
 
 
 # ===================== PRÀCTICA (pronunciation sessions) =====================
+# ===================== HISTORIES I CANÇONS ====================
+@app.get("/stories")
+def list_stories(db: Session = Depends(get_db)):
+    """Whole stories and songs the library already holds (#189).
+
+    Not a new kind of row: a story is what a group of drills already is when they come from one
+    source and say when they are spoken. The ones you can read all the way through come first.
+    """
+    return {"stories": stories_mod.listing(db)}
+
+
+@app.get("/stories/{slug}")
+def read_story(slug: str, db: Session = Depends(get_db)):
+    """One story: its lines in the order they are spoken, each with its voice and meaning.
+
+    A line whose Amazigh words nobody has written down is kept in its place and marked. A story
+    with holes is still a story, and the hole says what is missing instead of hiding it.
+    """
+    story = stories_mod.one(db, slug)
+    if not story:
+        raise HTTPException(status_code=404, detail="Aquesta hist\u00f2ria no existeix")
+    ids = story.pop("drill_ids")
+    rows = {d.id: d for d in db.query(DrillModel).filter(DrillModel.id.in_(ids)).all()}
+    return {**story, "drills": [Drill.model_validate(rows[i], from_attributes=True) for i in ids if i in rows]}
+
+
 # ===================== UNA PARAULA, DITA ====================
 @app.get("/words/audio")
 def word_audio_clips(word: str, limit: int = 6, db: Session = Depends(get_db)):
