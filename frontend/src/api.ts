@@ -12,10 +12,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     let detail = `HTTP ${res.status}`;
+    let code: string | undefined;
     try {
-      detail = (await res.json()).detail || detail;
+      const body = await res.json();
+      detail = body.detail || detail;
+      code = body.code;
     } catch { /* non-JSON error body */ }
-    throw new Error(detail);
+    // The status travels with the error. Without it a caller has to guess from the server's own
+    // words — and guessing wrong turns «your session ended» into «you have no connection».
+    throw Object.assign(new Error(detail), { status: res.status, code });
   }
   return res.json() as Promise<T>;
 }

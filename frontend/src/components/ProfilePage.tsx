@@ -187,9 +187,11 @@ export default function ProfilePage() {
         else { clearUserIdentity(); setError('El token ja no és vàlid. Torna a iniciar sessió.'); }
       })
       .catch((e: any) => {
-        if (e?.status === 401 || /401|invalid token/i.test(e?.message || '')) {
+        if (e?.status === 401 || e?.code === 'unauthorized') {
           clearUserIdentity();
-          setError('El token ja no és vàlid. Torna a iniciar sessió.');
+          // Happens more since changing a password closes every other session: the browser was
+          // holding a token that no longer exists. Say that, instead of blaming the network.
+          setError('La teva sessió s’ha acabat. Torna a entrar-hi.');
         } else {
           setError('No s\'ha pogut carregar el perfil (sense connexió?). Torna-ho a provar.');
         }
