@@ -88,12 +88,33 @@ class Test(Base):
     passing_score = Column(Float, nullable=False, default=70.0)  # % needed to pass
 
     # Selected drills (stored as comma-separated IDs)
-    drill_ids = Column(Text, nullable=False)
+    drill_ids = Column(Text, nullable=False)   # kept: the steps are built from it (ADR 0002)
+    created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    visibility = Column(String, nullable=True, default="private")   # private | shared
     video_url = Column(String, nullable=True) # New field for demo video URL
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True, index=True)
 
     # Relationships
     attempts = relationship("TestAttempt", back_populates="test")
+
+class PracticeStep(Base):
+    """One step of a practice: a sentence and the tool used on it (ADR 0002).
+
+    A practice is an ordered sequence, not a list of ids with one question type over all of it:
+    a step can ask you to listen, to write, to say it out loud, to fill the taught piece back in,
+    to read it in Tifinagh — or to READ A NOTE, which is what makes a practice able to teach, or
+    to RECORD the sentence, which turns the same tool into a voice session for a speaker.
+    """
+    __tablename__ = "practice_steps"
+
+    id = Column(Integer, primary_key=True, index=True)
+    test_id = Column(Integer, ForeignKey("tests.id", ondelete="CASCADE"), nullable=False, index=True)
+    position = Column(Integer, nullable=False, default=0)   # the order a learner meets them in
+    kind = Column(String, nullable=False)                   # see grammar of kinds in practice.py
+    drill_id = Column(Integer, ForeignKey("drills.id"), nullable=True, index=True)
+    payload = Column(Text, nullable=True)                   # JSON: what THIS kind needs (a note's text…)
+    date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
+
 
 class TestAttempt(Base):
     __tablename__ = "test_attempts"

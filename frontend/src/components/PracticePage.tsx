@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaListUl, FaMicrophone, FaVideo, FaUser, FaTag } from 'react-icons/fa';
+import { FaListUl, FaMicrophone, FaPlus, FaVideo, FaUser, FaTag } from 'react-icons/fa';
 import { api, type PracticeCollections } from '../api';
 import { toast } from '../toast';
 
@@ -26,6 +26,17 @@ const h2Style: React.CSSProperties = { margin: '0 0 8px', fontSize: '12px', font
 
 export default function PracticePage() {
   const navigate = useNavigate();
+  // A practice starts empty and opens in the workbench: you put the sentences in there, in the
+  // order you want, and every step can ask for something different (ADR 0002).
+  const [making, setMaking] = useState(false);
+  const newPractice = async () => {
+    setMaking(true);
+    try {
+      const made = await api.createPractice('Pràctica nova');
+      navigate(`/tests/${made.id}/editor`);
+    } catch (e: any) { toast.error(e?.message || 'No s’ha pogut crear'); }
+    finally { setMaking(false); }
+  };
   const [col, setCol] = useState<PracticeCollections | null>(null);
   const [done] = useState<Done>(loadDone);
   const [allTopics, setAllTopics] = useState(false);
@@ -53,6 +64,36 @@ export default function PracticePage() {
         <span style={{ fontSize: '18px', fontWeight: 800 }}>Repàs: les frases que toca repetir avui</span>
         <span style={{ fontSize: '13px', opacity: 0.9 }}>10 frases · uns 6 minuts · <FaMicrophone size={11} /> cal el micròfon</span>
       </button>
+
+      {/* What you made yourself comes first: the automatic slices of the library are below. */}
+      {col && (
+        <section style={{ marginBottom: 22 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+            <h2 style={h2Style}>Les meves llistes</h2>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <button onClick={newPractice} disabled={making} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', opacity: making ? 0.6 : 1 }}>
+                <FaPlus size={11} /> {making ? 'Creant…' : 'Nova pràctica'}
+              </button>
+              <button onClick={() => navigate('/tests/llistes')} style={{ background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4 }}><FaListUl size={11} /> Gestiona-les</button>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {col.lists.slice(0, 6).map((t) => (
+              <div key={t.id} style={{ ...cardStyle, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', cursor: 'default' }}>
+                <button onClick={() => grid(`test_id=${t.id}&title=${encodeURIComponent(t.title)}`)} style={{ flex: 1, textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '14px', fontWeight: 700, color: 'var(--text)', padding: 0 }}>{t.title}</button>
+                <span style={{ fontSize: '12px', color: 'var(--text-soft)', fontWeight: 700, whiteSpace: 'nowrap' }}>{t.count} frases</span>
+                <button onClick={() => navigate(`/tests/${t.id}/editor`)} title="Edita els passos" style={{ marginLeft: 10, padding: '5px 10px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Edita</button>
+                <button onClick={() => go(`test_id=${t.id}`)} aria-label={`Practica ${t.title}`} title="Practica la pronúncia" style={{ marginLeft: 6, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--brand-1)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaMicrophone size={11} /></button>
+              </div>
+            ))}
+            {col.lists.length === 0 && (
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                Encara no en tens cap. «Nova pràctica» obre el taller: hi poses les frases que vulguis, en l’ordre que vulguis, i cada pas pot demanar una cosa diferent.
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {col && col.days.length > 0 && (
         <section style={{ marginBottom: 20 }}>
@@ -126,24 +167,6 @@ export default function PracticePage() {
         </section>
       )}
 
-      {col && (
-        <section>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <h2 style={h2Style}>Les meves llistes</h2>
-            <button onClick={() => navigate('/tests/llistes')} style={{ background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4 }}><FaListUl size={11} /> Gestiona les llistes</button>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {col.lists.slice(0, 6).map((t) => (
-              <div key={t.id} style={{ ...cardStyle, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', cursor: 'default' }}>
-                <button onClick={() => grid(`test_id=${t.id}&title=${encodeURIComponent(t.title)}`)} style={{ flex: 1, textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '14px', fontWeight: 700, color: 'var(--text)', padding: 0 }}>{t.title}</button>
-                <span style={{ fontSize: '12px', color: 'var(--text-soft)', fontWeight: 700, whiteSpace: 'nowrap' }}>{t.count} drills</span>
-                <button onClick={() => go(`test_id=${t.id}`)} aria-label={`Practica ${t.title}`} title="Practica la pronúncia" style={{ marginLeft: 10, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--brand-1)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaMicrophone size={11} /></button>
-              </div>
-            ))}
-            {col.lists.length === 0 && <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Encara no tens cap llista.</div>}
-          </div>
-        </section>
-      )}
       {!col && <div style={{ color: 'var(--text-muted)' }}>Carregant…</div>}
     </div>
   );
