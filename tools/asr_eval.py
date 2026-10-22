@@ -37,6 +37,26 @@ SPACE = os.environ.get("ASR_SPACE", "Tamazight-NLP/ASR")
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) tachelhit-ops"}
 
 
+# A measurement names whose recordings it used. Keyed by the `source` passed to measure().
+CREDIT = {
+    "Common Voice (Mozilla Data Collective)": [
+        "## D'on surten les gravacions",
+        "",
+        "Mozilla Common Voice, *Scripted Speech* 27.0 — Tamazight (`zgh`), "
+        "`cv-corpus-27.0-2026-09-11`, baixat del Mozilla Data Collective. Llicència **CC0**: no "
+        "exigeix atribució, però els clips els van gravar i validar persones de la comunitat "
+        "amaziga i és just dir-ho. En baixar-los es va acceptar no intentar esbrinar qui parla.",
+    ],
+    "la nostra biblioteca": [
+        "## D'on surten les gravacions",
+        "",
+        "De la nostra biblioteca: Halima i Driss (Aït Mraw) i els reculls de Beni Mellal, que han "
+        "dit aquestes frases per al projecte. El text de referència és el seu, passat a tifinag "
+        "amb el transliterador de l'app.",
+    ],
+}
+
+
 def levenshtein(a: list, b: list) -> int:
     """Edits to turn one sequence into the other. Characters or words, same arithmetic."""
     if not a:
@@ -60,14 +80,128 @@ def rates(reference: str, heard: str) -> dict:
     }
 
 
+def common_voice(folder: str, sample: int, seed: int) -> list:
+    """A Common Voice corpus as this tool wants it: the clip, and the sentence as written.
+
+    Nothing has to be transliterated here — Common Voice writes Tifinagh and so does the Space —
+    which removes the one weak point of measuring against our own library, where the reference
+    has to be converted from the speaker's own spelling first.
+    """
+    import csv
+    valid = os.path.join(folder, "validated.tsv")
+    rows = list(csv.DictReader(open(valid, encoding="utf-8"), delimiter="	"))
+    buckets: dict = collections.defaultdict(list)
+    for r in rows:
+        if not (r.get("sentence") or "").strip():
+            continue
+        name = (r.get("variant") or "").strip()
+        label = ("Tachelhit" if "Tachelhit" in name else
+                 "Atles central" if "Central" in name else "sense varietat")
+        buckets[label].append(r)
+    rnd = random.Random(seed)
+    share = max(1, sample // max(1, len(buckets)))
+    picked = []
+    for label, items in buckets.items():
+        rnd.shuffle(items)
+        for r in items[:share]:
+            picked.append({"id": r.get("path"), "origin": label,
+                           "said": r["sentence"], "reference": r["sentence"].strip(),
+                           "file": os.path.join(folder, "clips", r["path"])})
+    print(f"{len(rows)} validades · "
+          + " · ".join(f"{k}: {min(len(v), share)} de {len(v)}" for k, v in buckets.items()))
+    rnd.shuffle(picked)
+    return picked
+
+
+def measure(picked: list, source: str = "la nostra biblioteca") -> None:
+    """Ask the Space to transcribe each clip, and say how wrong it was.
+
+    `picked` holds dicts with: id, origin, said, reference (already Tifinagh), and either `file`
+    (a clip on disk) or `audio` (a URL to fetch). Only /predict is called: /predict and
+    /predict_1 returned identical error rates on every source measured on 2026-10-22, so the
+    second one buys nothing but time.
+    """
+    import requests
+    from gradio_client import Client, handle_file
+    client = Client(SPACE)
+    out = []
+    for i, p in enumerate(picked, 1):
+        local = p.get("file")
+        if not local:
+            local = os.path.join(os.environ.get("TEMP", "/tmp"), f"asr_{p['id']}.mp3")
+            try:
+                with open(local, "wb") as f:
+                    f.write(requests.get(p["audio"], headers=HEADERS, timeout=120).content)
+            except Exception as e:
+                print(f"  {p['id']}: no audio ({str(e)[:50]})")
+                continue
+        if not os.path.exists(local):
+            print(f"  {p['id']}: the clip is not where the index says")
+            continue
+        row = {"id": p["id"], "origin": p["origin"], "said": p["said"],
+               "reference": p["reference"], "models": {}}
+        try:
+            heard = client.predict(audio_path=handle_file(local), api_name="/predict")
+            heard = (heard if isinstance(heard, str) else json.dumps(heard, ensure_ascii=False)).strip()
+            row["models"]["/predict"] = {"heard": heard, **rates(p["reference"], heard)}
+        except Exception as e:
+            row["models"]["/predict"] = {"heard": "", "error": str(e)[:80], "cer": 1.0, "wer": 1.0}
+        out.append(row)
+        print(f"  {i:3d}/{len(picked)} [{p['origin']:14s}] CER {row['models']['/predict']['cer']:.2f}", flush=True)
+        if not p.get("file"):
+            try:
+                os.remove(local)
+            except OSError:
+                pass
+        time.sleep(0.4)
+
+    stamp = date.today().isoformat()
+    per = collections.defaultdict(list)
+    wer = collections.defaultdict(list)
+    for r in out:
+        m = r["models"]["/predict"]
+        per[r["origin"]].append(m.get("cer", 1.0))
+        wer[r["origin"]].append(m.get("wer", 1.0))
+        per["tot"].append(m.get("cer", 1.0))
+        wer["tot"].append(m.get("wer", 1.0))
+    lines = [f"# Què val el nostre transcriptor ({stamp})", "",
+             f"Space `{SPACE}` · font: **{source}** · {len(out)} gravacions.", "",
+             "| origen | gravacions | CER mitjà | WER mitjà |", "|---|---|---|---|"]
+    for origin in sorted(per):
+        lines.append(f"| {origin} | {len(per[origin])} | {sum(per[origin])/max(1,len(per[origin])):.2f} "
+                     f"| {sum(wer[origin])/max(1,len(wer[origin])):.2f} |")
+    lines += ["", "CER 0 vol dir clavat; 1 vol dir que no n'ha encertat res. Per decidir si una "
+                  "veu diu el que diu un text caldria estar clarament per sota de 0,5.", ""]
+    lines += CREDIT.get(source, []) + ["", "Totes les fonts del projecte: [docs/CREDITS.md](CREDITS.md).", ""]
+    slug = "CV" if "Common Voice" in source else "NOSTRA"
+    md = os.path.join(ROOT, "docs", f"ASR_EVAL_{slug}_{stamp}.md")
+    with open(md, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+    with open(md.replace(".md", ".json"), "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, indent=1)
+    print("\n".join(lines[3:]))
+    print(f"\nescrit a {md}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--cv", help="a Common Voice corpus folder (the one holding validated.tsv)")
     ap.add_argument("--sample", type=int, default=60, help="how many recordings to listen to")
     ap.add_argument("--dry", action="store_true", help="pick them, call nothing")
     ap.add_argument("--seed", type=int, default=22)
     args = ap.parse_args()
 
     import requests
+
+    if args.cv:
+        picked = common_voice(args.cv, args.sample, args.seed)
+        if args.dry:
+            for p in picked[:10]:
+                print(f"  {p['origin']:14s} {p['said'][:46]}")
+            return
+        measure(picked, source="Common Voice (Mozilla Data Collective)")
+        return
+
     import grammar
     import transliteration
 
@@ -109,63 +243,11 @@ def main() -> None:
             print(f"  {d['id']:6d} [{origin_of(d):11s}] {d['text_tachelhit'][:48]}")
         return
 
-    from gradio_client import Client, handle_file
-    client = Client(SPACE)
-    out = []
-    for i, d in enumerate(picked, 1):
-        reference = (transliteration.to_forms(d["text_tachelhit"])["tifinagh"] or "").strip()
-        if not reference:
-            continue
-        audio = d["audio_url"]
-        local = os.path.join(os.environ.get("TEMP", "/tmp"), f"asr_{d['id']}.mp3")
-        try:
-            with open(local, "wb") as f:
-                f.write(requests.get(audio, headers=HEADERS, timeout=120).content)
-        except Exception as e:
-            print(f"  {d['id']}: no audio ({str(e)[:50]})")
-            continue
-        row = {"id": d["id"], "origin": origin_of(d), "said": d["text_tachelhit"],
-               "reference": reference, "models": {}}
-        for endpoint in ("/predict", "/predict_1"):
-            try:
-                heard = client.predict(audio_path=handle_file(local), api_name=endpoint)
-                heard = heard if isinstance(heard, str) else json.dumps(heard, ensure_ascii=False)
-                row["models"][endpoint] = {"heard": heard.strip(), **rates(reference, heard.strip())}
-            except Exception as e:
-                row["models"][endpoint] = {"heard": "", "error": str(e)[:80], "cer": 1.0, "wer": 1.0}
-        out.append(row)
-        best = min((m.get("cer", 1.0) for m in row["models"].values()), default=1.0)
-        print(f"  {i:3d}/{len(picked)} {d['id']:6d} [{row['origin']:11s}] CER {best:.2f}", flush=True)
-        try:
-            os.remove(local)
-        except OSError:
-            pass
-        time.sleep(0.4)
-
-    # the report
-    stamp = date.today().isoformat()
-    per = collections.defaultdict(lambda: collections.defaultdict(list))
-    for r in out:
-        for endpoint, m in r["models"].items():
-            per[endpoint][r["origin"]].append(m.get("cer", 1.0))
-            per[endpoint]["tot"].append(m.get("cer", 1.0))
-    lines = [f"# Què val el nostre transcriptor ({stamp})", "",
-             f"Space `{SPACE}` · {len(out)} gravacions nostres · comparat en tifinag "
-             "(el text del parlant hi passa amb el transliterador de l'app).", "",
-             "| model | origen | gravacions | CER mitjà |", "|---|---|---|---|"]
-    for endpoint, origins in per.items():
-        for origin, vals in sorted(origins.items()):
-            lines.append(f"| `{endpoint}` | {origin} | {len(vals)} | {sum(vals)/max(1,len(vals)):.2f} |")
-    lines += ["", "CER 0 vol dir clavat; 1 vol dir que no n'ha encertat res. Per fer servir el "
-                  "transcriptor per decidir si una veu diu el que diu un text, caldria estar "
-                  "clarament per sota de 0,5.", ""]
-    md = os.path.join(ROOT, "docs", f"ASR_EVAL_{stamp}.md")
-    with open(md, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
-    with open(md.replace(".md", ".json"), "w", encoding="utf-8") as f:
-        json.dump(out, f, ensure_ascii=False, indent=1)
-    print("\n".join(lines[3:]))
-    print(f"\nescrit a {md}")
+    measure([{"id": d["id"], "origin": origin_of(d), "said": d["text_tachelhit"],
+               "reference": (transliteration.to_forms(d["text_tachelhit"])["tifinagh"] or "").strip(),
+               "audio": d["audio_url"]}
+              for d in picked
+              if (transliteration.to_forms(d["text_tachelhit"])["tifinagh"] or "").strip()])
 
 
 if __name__ == "__main__":
