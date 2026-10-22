@@ -50,9 +50,11 @@ interface DrillsGridProps {
     onEditDrill?: (drill: Drill) => void;
     /** 'error' = server unreachable and no local copy; 'cached' = showing the local copy */
     loadError?: 'error' | 'cached' | null;
+    /** What is ticked right now, so the screen above can play just those (#201). */
+    onSelectionChange?: (rows: Drill[]) => void;
 }
 
-export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadError }: DrillsGridProps) {
+export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadError, onSelectionChange }: DrillsGridProps) {
     const [isMobile, setIsMobile] = useState(isMobileLayout);
     const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
     // Inline media preview (video/audio) opened from the grid or the cards.
@@ -1109,6 +1111,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                     onSelectionChanged={(event) => {
                         const rows = event.api.getSelectedRows();
                         setSelectedRows(rows);
+                        onSelectionChange?.(rows);
                         setSelectedDrillIds(rows.map((r: Drill) => r.id));
                     }}
                     onCellValueChanged={onCellValueChanged}
