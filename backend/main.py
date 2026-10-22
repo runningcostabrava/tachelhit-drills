@@ -30,6 +30,7 @@ import topics as topics_catalog
 import grammar as grammar_course
 import practice_steps
 import practice as practice_mod
+import word_audio
 import transliteration
 from gemini_client import gemini_generate, gemini_available, gemini_agent, BudgetExceeded
 import gemini_client
@@ -6183,6 +6184,43 @@ def decide_lesson_proposal(proposal_id: int, accept: bool = Body(..., embed=True
 
 
 # ===================== PRÀCTICA (pronunciation sessions) =====================
+# ===================== UNA PARAULA, DITA ====================
+@app.get("/words/audio")
+def word_audio_clips(word: str, limit: int = 6, db: Session = Depends(get_db)):
+    """Where this word can be heard: a recording, and the two times it sits between.
+
+    No new sound files. A word is a drill id and a span inside the recording that already exists,
+    so the player seeks there. The people we can name come first; the open corpus only fills the
+    gaps they leave, and every clip says which it is.
+    """
+    clips = word_audio.clips_for(db, word, limit=max(1, min(limit, 20)))
+    return {"word": word, "count": len(clips), "clips": clips}
+
+
+@app.get("/words/align/status")
+def word_align_status():
+    """How the alignment pass is going."""
+    from models import WordAudio
+    db = SessionLocal()
+    try:
+        return {**word_audio.state(),
+                "stored": db.query(WordAudio).count(),
+                "recordings": db.query(WordAudio.drill_id).distinct().count()}
+    finally:
+        db.close()
+
+
+@app.post("/words/align/run")
+def word_align_run(limit: int = 200, redo: bool = False, _admin: UserModel = Depends(require_admin)):
+    """Align recorded sentences so their words can be played one by one.
+
+    On a thread: the Space is one CPU and takes one request at a time, and nobody should sit in
+    front of a spinner while a few hundred recordings are listened to.
+    """
+    word_audio.run(SessionLocal, limit=limit, redo=redo)
+    return {"started": True, **word_audio.state()}
+
+
 # ===================== CREDITS =====================
 _CREDITS_FALLBACK = (
     "# Cr\u00e8dits i fonts\n\n"

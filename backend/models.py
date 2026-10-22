@@ -228,6 +228,27 @@ class GrammarLesson(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
 
 
+class WordAudio(Base):
+    """When one word is spoken inside one recording (#  hear a word on its own).
+
+    Not a sound file: a drill id and two times. The recording already exists and already carries
+    who said it and where they are from; this says where in it the word lives, so the player can
+    seek there. Written by the alignment pass (word_audio.py), which asks the ASR Space's /align
+    for the times of a text we already know.
+    """
+    __tablename__ = "word_audio"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String, index=True, nullable=False)     # the word, matched across spellings
+    word = Column(String, nullable=False)                # as it is written in that sentence
+    drill_id = Column(Integer, index=True, nullable=False)
+    start_ms = Column(Integer, nullable=False)
+    end_ms = Column(Integer, nullable=False)
+    speaker = Column(String, nullable=True)              # who says it, when we know
+    source = Column(String, nullable=True)               # 'library' | 'tosd'
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
+
+
 class GrammarNote(Base):
     """Why ONE sentence sits in ONE grammar unit: what that sentence shows of that unit's point.
     A sentence belongs to up to three units and shows something different in each, so the note is

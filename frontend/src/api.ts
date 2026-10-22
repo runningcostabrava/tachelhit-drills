@@ -312,6 +312,13 @@ export const api = {
   decideProposal: (id: number, accept: boolean) => request<{ id: number; status: string }>(`/grammar/proposals/${id}/decide`, { method: 'POST', body: JSON.stringify({ accept }) }),
   userPage: (username: string) => request<UserPublicPage>(`/users/by-name/${encodeURIComponent(username)}`),
   drillVariants: (id: number) => request<{ original: Drill; variants: Drill[] }>(`/drills/${id}/variants`),
+  // One word, said by a person: a recording we already have and the span the word sits in. No new
+  // sound files -- the player seeks there and stops at the end of the word.
+  wordAudio: (word: string, limit = 6) =>
+    request<{ word: string; count: number; clips: WordClip[] }>(`/words/audio?word=${encodeURIComponent(word)}&limit=${limit}`),
+  wordAlignStatus: () => request<{ running: boolean; done: number; words: number; failed: number; stored: number; recordings: number }>('/words/align/status'),
+  runWordAlign: (limit = 200, redo = false) =>
+    request<{ started: boolean }>(`/words/align/run?limit=${limit}&redo=${redo}`, { method: 'POST' }),
   // What the project owes to other people, read from the repository's own docs/CREDITS.md
   credits: () => request<{ markdown: string; source: string }>('/credits'),
   practiceCollections: () => request<PracticeCollections>('/practice/collections'),
@@ -416,6 +423,12 @@ export interface PracticeCollections {
   videos: { title: string; url: string | null; count: number }[];
   people: { name: string; count: number }[];
   tags: { tag: string; count: number }[];
+}
+/** Where one word is spoken: the recording, and the seconds it sits between. `source`:
+ *  'library' = one of our speakers, with a name; 'tosd' = the open corpus, anonymous. */
+export interface WordClip {
+  word: string; drill_id: number; audio_url: string; start: number; end: number;
+  speaker: string | null; source: string; sentence: string | null; meaning: string | null;
 }
 export interface PracticeTip { sound: string; label: string; found: string; tip: string }
 export interface PracticeCard { speaker: string; origin: string; day: string | null; tips: PracticeTip[]; highlights: string[] }
