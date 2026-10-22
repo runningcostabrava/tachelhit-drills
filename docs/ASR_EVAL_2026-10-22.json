@@ -1,0 +1,812 @@
+[
+ {
+  "id": 276,
+  "origin": "altres",
+  "said": "O mani ija?",
+  "reference": "ⵓ ⵎⴰⵏⵉ ⵉⵊⴰ",
+  "models": {
+   "/predict": {
+    "heard": "ⵎⴰⵏⵉ ⵉⴳⴰ ⵓⵎⴰⵏⵉ ⵉⴳⴰ",
+    "cer": 1.0,
+    "wer": 1.333
+   },
+   "/predict_1": {
+    "heard": "ⵎⴰⵏⵉ ⵉⴳⴰ ⵓⵎⴰⵏⵉ ⵉⴳⴰ",
+    "cer": 1.0,
+    "wer": 1.333
+   }
+  }
+ },
+ {
+  "id": 5434,
+  "origin": "Beni Mellal",
+  "said": "tabhirt / urti (uwrti)",
+  "reference": "ⵜⴰⴱⵀⵉⵔⵜ  ⵓⵔⵜⵉ ⵓⵡⵔⵜⵉ",
+  "models": {
+   "/predict": {
+    "heard": "ⵜⴰⴱⵃⵉⵔⵜ ⵜⵓⵔⵜⵉ",
+    "cer": 0.312,
+    "wer": 1.0
+   },
+   "/predict_1": {
+    "heard": "ⵜⴰⴱⵃⵉⵔⵜ ⵜⵓⵔⵜⵉ",
+    "cer": 0.312,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": 4716,
+  "origin": "Beni Mellal",
+  "said": "inni-yas -diG",
+  "reference": "ⵉⵏⵏⵉⵢⴰⵙ ⴷⵉⴳ",
+  "models": {
+   "/predict": {
+    "heard": "ⵉⵏⵉ ⴰⵙ ⴷⵖ",
+    "cer": 0.4,
+    "wer": 1.5
+   },
+   "/predict_1": {
+    "heard": "ⵉⵏⵉ ⴰⵙ ⴷⵖ",
+    "cer": 0.4,
+    "wer": 1.5
+   }
+  }
+ },
+ {
+  "id": 5934,
+  "origin": "Beni Mellal",
+  "said": "rix ad-kkrux yan-iġrm. mayd-i-ixssa ad-gx?",
+  "reference": "ⵔⵉⵅ ⴰⴷⴽⴽⵔⵓⵅ ⵢⴰⵏⵉⴳⵔⵎ ⵎⴰⵢⴷⵉⵉⵅⵙⵙⴰ ⴰⴷⴳⵅ",
+  "models": {
+   "/predict": {
+    "heard": "ⵔⵉⵖ ⴰⴷ ⴽⵔⵓⵖ ⵢⴰⵍ ⵉⵖⵔⵎⵎⴰⵢ ⵢⵅⵚ ⵄ ⵜⵉⵔ",
+    "cer": 0.484,
+    "wer": 1.6
+   },
+   "/predict_1": {
+    "heard": "ⵔⵉⵖ ⴰⴷ ⴽⵔⵓⵖ ⵢⴰⵍ ⵉⵖⵔⵎⵎⴰⵢ ⵢⵅⵚ ⵄ ⵜⵉⵔ",
+    "cer": 0.484,
+    "wer": 1.6
+   }
+  }
+ },
+ {
+  "id": 449,
+  "origin": "Aït Mraw",
+  "said": "maydam tna krisṭina tna‐yyi addud tawada‐yyi",
+  "reference": "ⵎⴰⵢⴷⴰⵎ ⵜⵏⴰ ⴽⵔⵉⵙⵟⵉⵏⴰ ⵜⵏⴰⵢⵢⵉ ⴰⴷⴷⵓⴷ ⵜⴰⵡⴰⴷⴰⵢⵢⵉ",
+  "models": {
+   "/predict": {
+    "heard": "ⵎⴰ ⵢⵍⴰⴰⵎ ⵏⵖ ⴷ ⵙⵜⵉⵎⴰ ⵏⵏⴰ ⵢⵉ ⴰⴷⵓⵍ ⴷ ⵜⴰⵡⴰⵍⴰ ⵢⵉ",
+    "cer": 0.405,
+    "wer": 1.833
+   },
+   "/predict_1": {
+    "heard": "ⵎⴰ ⵢⵍⴰⴰⵎ ⵏⵖ ⴷ ⵙⵜⵉⵎⴰ ⵏⵏⴰ ⵢⵉ ⴰⴷⵓⵍ ⴷ ⵜⴰⵡⴰⵍⴰ ⵢⵉ",
+    "cer": 0.405,
+    "wer": 1.833
+   }
+  }
+ },
+ {
+  "id": 440,
+  "origin": "Aït Mraw",
+  "said": "jlmbarst myassan datrbatt ismns mariyya dja tamġrabits",
+  "reference": "ⵊⵍⵎⴱⴰⵔⵙⵜ ⵎⵢⴰⵙⵙⴰⵏ ⴷⴰⵜⵔⴱⴰⵜⵜ ⵉⵙⵎⵏⵙ ⵎⴰⵔⵉⵢⵢⴰ ⵊⴰ ⵜⴰⵎⵔⴰⴱⵉⵜⵙ",
+  "models": {
+   "/predict": {
+    "heard": "ⵊⵎⴱⵙ ⵎ ⵢⵙⴰⵏ ⴷ ⴰⵜⵔⴱⴰⴷ ⵉⵙⵎ ⵏⵙ ⵎⴰⵔⵉⵢⴰ ⴷⵊⴰ ⵜⴰⵎⵖⵔⴰⵍⵉⵜ",
+    "cer": 0.283,
+    "wer": 1.429
+   },
+   "/predict_1": {
+    "heard": "ⵊⵎⴱⵙ ⵎ ⵢⵙⴰⵏ ⴷ ⴰⵜⵔⴱⴰⴷ ⵉⵙⵎ ⵏⵙ ⵎⴰⵔⵉⵢⴰ ⴷⵊⴰ ⵜⴰⵎⵖⵔⴰⵍⵉⵜ",
+    "cer": 0.283,
+    "wer": 1.429
+   }
+  }
+ },
+ {
+  "id": 6029,
+  "origin": "Beni Mellal",
+  "said": "si-hamid amzil ihlan ayd-iga",
+  "reference": "ⵙⵉⵀⴰⵎⵉⴷ ⴰⵎⵣⵉⵍ ⵉⵀⵍⴰⵏ ⴰⵢⴷⵉⴳⴰ",
+  "models": {
+   "/predict": {
+    "heard": "ⵙⵉ ⵃⴰⵏⵉ ⴰⵎⵣⵉ ⵉ ⵜⵍⴰⵎ ⴰⵢ ⵜⴳⴰ",
+    "cer": 0.348,
+    "wer": 1.75
+   },
+   "/predict_1": {
+    "heard": "ⵙⵉ ⵃⴰⵏⵉ ⴰⵎⵣⵉ ⵉ ⵜⵍⴰⵎ ⴰⵢ ⵜⴳⴰ",
+    "cer": 0.348,
+    "wer": 1.75
+   }
+  }
+ },
+ {
+  "id": 436,
+  "origin": "Aït Mraw",
+  "said": "imkn adi tadšht tnubil-nšh",
+  "reference": "ⵉⵎⴽⵏ ⴰⴷⵉ ⵜⴰⴷⵛⵀⵜ ⵜⵏⵓⴱⵉⵍⵏⵛⵀ",
+  "models": {
+   "/predict": {
+    "heard": "ⵉⵏ ⴽⵏ ⴰⴷ ⵉⴷⵛ ⵕⴱⴱⵉ ⵍⵎⵓⵊ",
+    "cer": 0.5,
+    "wer": 1.5
+   },
+   "/predict_1": {
+    "heard": "ⵉⵏ ⴽⵏ ⴰⴷ ⵉⴷⵛ ⵕⴱⴱⵉ ⵍⵎⵓⵊ",
+    "cer": 0.5,
+    "wer": 1.5
+   }
+  }
+ },
+ {
+  "id": 5497,
+  "origin": "Beni Mellal",
+  "said": "3dan iššrran-ns ġif iššrran-inu",
+  "reference": "ⵄⴷⴰⵏ ⵉⵙⵙⵔⵔⴰⵏⵏⵙ ⴳⵉⴼ ⵉⵙⵙⵔⵔⴰⵏⵉⵏⵓ",
+  "models": {
+   "/predict": {
+    "heard": "ⵄⴷⴷⴰⵏ ⵉ ⴽⵔⴰ ⵏⵏⵙⵅⴼ ⵉⵛ ⵉⵖⴰⵏ ⵉⵏⵓ",
+    "cer": 0.385,
+    "wer": 1.75
+   },
+   "/predict_1": {
+    "heard": "ⵄⴷⴷⴰⵏ ⵉ ⴽⵔⴰ ⵏⵏⵙⵅⴼ ⵉⵛ ⵉⵖⴰⵏ ⵉⵏⵓ",
+    "cer": 0.385,
+    "wer": 1.75
+   }
+  }
+ },
+ {
+  "id": 8,
+  "origin": "Aït Mraw",
+  "said": "Mshta as trit at tkt da?",
+  "reference": "ⵎⵛⵜⴰ ⴰⵙ ⵜⵔⵉⵜ ⴰⵜ ⵜⴽⵜ ⴷⴰ",
+  "models": {
+   "/predict": {
+    "heard": "ⵎⵓⵜⵛⵜⴰ ⵜⵙⴼⵔⵉⴷ ⴰⴷ ⵜⴽⴽⴹ ⵏⴰⵖ",
+    "cer": 0.588,
+    "wer": 1.0
+   },
+   "/predict_1": {
+    "heard": "ⵎⵓⵜⵛⵜⴰ ⵜⵙⴼⵔⵉⴷ ⴰⴷ ⵜⴽⴽⴹ ⵏⴰⵖ",
+    "cer": 0.588,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": 24,
+  "origin": "Aït Mraw",
+  "said": "safi waha imchnagh",
+  "reference": "ⵙⴰⴼⵉ ⵡⴰⵀⴰ ⵉⵎⵛⵏⴰⵖ",
+  "models": {
+   "/predict": {
+    "heard": "ⵎⵎⴽⵏⵏⴰⵕⴱ ⵉ ⴰⵅⵅⴰⵎ ⵜⴰⵎⵛⵉⵏⵜ",
+    "cer": 1.143,
+    "wer": 1.333
+   },
+   "/predict_1": {
+    "heard": "ⵎⵎⴽⵏⵏⴰⵕⴱ ⵉ ⴰⵅⵅⴰⵎ ⵜⴰⵎⵛⵉⵏⵜ",
+    "cer": 1.143,
+    "wer": 1.333
+   }
+  }
+ },
+ {
+  "id": 25,
+  "origin": "Aït Mraw",
+  "said": "Manism n pash - Manism n pam",
+  "reference": "ⵎⴰⵏⵉⵙⵎ ⵏ ⴱⴰⵛ  ⵎⴰⵏⵉⵙⵎ ⵏ ⴱⴰⵎ",
+  "models": {
+   "/predict": {
+    "heard": "ⴰⵏⵙⵜ ⴷⴱⴰⴽ ⵎⴰⵏⵙ ⵏⵎⵎⴰⴱⴱ",
+    "cer": 0.55,
+    "wer": 1.0
+   },
+   "/predict_1": {
+    "heard": "ⴰⵏⵙⵜ ⴷⴱⴰⴽ ⵎⴰⵏⵙ ⵏⵎⵎⴰⴱⴱ",
+    "cer": 0.55,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": 4199,
+  "origin": "Beni Mellal",
+  "said": "Rba / arou",
+  "reference": "ⵔⴱⴰ  ⴰⵔⵓ",
+  "models": {
+   "/predict": {
+    "heard": "ⴰⵔⴱⴰ ⴰⵔⵔⴰⵡ",
+    "cer": 0.667,
+    "wer": 1.0
+   },
+   "/predict_1": {
+    "heard": "ⴰⵔⴱⴰ ⴰⵔⵔⴰⵡ",
+    "cer": 0.667,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": 390,
+  "origin": "altres",
+  "said": "imani si trit adagh zars tawit mnb3d",
+  "reference": "ⵉⵎⴰⵏⵉ ⵙⵉ ⵜⵔⵉⵜ ⴰⴷⴰⵖ ⵣⴰⵔⵙ ⵜⴰⵡⵉⵜ ⵎⵏⴱⵄⴷ",
+  "models": {
+   "/predict": {
+    "heard": "ⵉ ⵎⴰ ⵏⵏⵉ ⵙⵉⵏ ⵎⵄ ⵖ ⵣⴰ ⵔ ⵙⴰ ⵡⵉ ⵎ ⵏ ⵎⴱⴰ ⵃⴰⵏ ⴷ ⵉⵎⴰⵏ ⵉⵙ ⵜⵉⴷ ⴰⴷⴰⵖ  ⵣⴰⵔⵙ ⵜⴰⵡⵉ ⴷ ⵎⵏⴱⴰⴷ",
+    "cer": 1.0,
+    "wer": 3.0
+   },
+   "/predict_1": {
+    "heard": "ⵉ ⵎⴰ ⵏⵏⵉ ⵙⵉⵏ ⵎⵄ ⵖ ⵣⴰ ⵔ ⵙⴰ ⵡⵉ ⵎ ⵏ ⵎⴱⴰ ⵃⴰⵏ ⴷ ⵉⵎⴰⵏ ⵉⵙ ⵜⵉⴷ ⴰⴷⴰⵖ  ⵣⴰⵔⵙ ⵜⴰⵡⵉ ⴷ ⵎⵏⴱⴰⴷ",
+    "cer": 1.0,
+    "wer": 3.0
+   }
+  }
+ },
+ {
+  "id": 6782,
+  "origin": "Aït Mraw",
+  "said": "irzen lbeb",
+  "reference": "ⵉⵔⵣⴻⵏ ⵍⴱⴻⴱ",
+  "models": {
+   "/predict": {
+    "heard": "ⵉⵔⵥⵎ ⵍⴱⴰⵄⴷ ⵉⴽⴽⵎⵎ ⵍⴱⴰⴱ ⵉ ⵢⵔⵥⵏⴱⴰⴷ ⵉⴽⴽⵎ ⵍⴱⵄ",
+    "cer": 3.111,
+    "wer": 4.0
+   },
+   "/predict_1": {
+    "heard": "ⵉⵔⵥⵎ ⵍⴱⴰⵄⴷ ⵉⴽⴽⵎⵎ ⵍⴱⴰⴱ ⵉ ⵢⵔⵥⵏⴱⴰⴷ ⵉⴽⴽⵎ ⵍⴱⵄ",
+    "cer": 3.111,
+    "wer": 4.0
+   }
+  }
+ },
+ {
+  "id": 507,
+  "origin": "altres",
+  "said": "fch-at-agh",
+  "reference": "ⴼⵛⴰⵜⴰⵖ",
+  "models": {
+   "/predict": {
+    "heard": "ⵛⴰⵟⵖ ⵜⵔⵓ ⵛⴰⵟⵖ ⴽ",
+    "cer": 1.333,
+    "wer": 4.0
+   },
+   "/predict_1": {
+    "heard": "ⵛⴰⵟⵖ ⵜⵔⵓ ⵛⴰⵟⵖ ⴽ",
+    "cer": 1.333,
+    "wer": 4.0
+   }
+  }
+ },
+ {
+  "id": 4930,
+  "origin": "Beni Mellal",
+  "said": "isn lmudir is-ur-ta-yas-d-iwin atay.",
+  "reference": "ⵉⵙⵏ ⵍⵎⵓⴷⵉⵔ ⵉⵙⵓⵔⵜⴰⵢⴰⵙⴷⵉⵡⵉⵏ ⴰⵜⴰⵢ",
+  "models": {
+   "/predict": {
+    "heard": "ⵉⵙⵙⵏⵎⵓⵓⴷⵉⵔ ⵉⵙ ⵓⵔ ⵜⴰ ⴰⵣⵣⵉⵡⵉⵏ ⴰⵜⴰⵢ",
+    "cer": 0.222,
+    "wer": 1.25
+   },
+   "/predict_1": {
+    "heard": "ⵉⵙⵙⵏⵎⵓⵓⴷⵉⵔ ⵉⵙ ⵓⵔ ⵜⴰ ⴰⵣⵣⵉⵡⵉⵏ ⴰⵜⴰⵢ",
+    "cer": 0.222,
+    "wer": 1.25
+   }
+  }
+ },
+ {
+  "id": 5913,
+  "origin": "Beni Mellal",
+  "said": "kšmx innix yat-tmttutt tqima g-taddart nnix-as..",
+  "reference": "ⴽⵙⵎⵅ ⵉⵏⵏⵉⵅ ⵢⴰⵜⵜⵎⵜⵜⵓⵜⵜ ⵜⵇⵉⵎⴰ ⴳⵜⴰⴷⴷⴰⵔⵜ ⵏⵏⵉⵅⴰⵙ",
+  "models": {
+   "/predict": {
+    "heard": "ⴽⵛⵎⵖ ⵉⵏⵏⵉ ⵢ ⴼ ⵢⴰⵜ ⵜⵏⵟⵓⵜ ⵜⵇⵇⵉⵎⵎⴰⴳ ⵜⴰⴷⴷⴰⵔⵜ ⵏⵏⵉⵖ ⴰⵙ",
+    "cer": 0.263,
+    "wer": 1.667
+   },
+   "/predict_1": {
+    "heard": "ⴽⵛⵎⵖ ⵉⵏⵏⵉ ⵢ ⴼ ⵢⴰⵜ ⵜⵏⵟⵓⵜ ⵜⵇⵇⵉⵎⵎⴰⴳ ⵜⴰⴷⴷⴰⵔⵜ ⵏⵏⵉⵖ ⴰⵙ",
+    "cer": 0.263,
+    "wer": 1.667
+   }
+  }
+ },
+ {
+  "id": 4258,
+  "origin": "Beni Mellal",
+  "said": "ddu, ddix, tddid / ur ddix",
+  "reference": "ⴷⴷⵓ ⴷⴷⵉⵅ ⵜⴷⴷⵉⴷ  ⵓⵔ ⴷⴷⵉⵅ",
+  "models": {
+   "/predict": {
+    "heard": "ⴷⴷⵓⵖ ⴷⴷⵉⵖ ⵓⵔ ⴷⴷⵉⵖ",
+    "cer": 0.389,
+    "wer": 0.8
+   },
+   "/predict_1": {
+    "heard": "ⴷⴷⵓⵖ ⴷⴷⵉⵖ ⵓⵔ ⴷⴷⵉⵖ",
+    "cer": 0.389,
+    "wer": 0.8
+   }
+  }
+ },
+ {
+  "id": 108,
+  "origin": "altres",
+  "said": "tnkur zich",
+  "reference": "ⵜⵏⴽⵓⵔ ⵣⵉⵛ",
+  "models": {
+   "/predict": {
+    "heard": "ⵏⵜⵜⴰⵜ ⵏⴽⵔⵔⴽ ⵣⵉⴽⵙ ⵓⵣⴱⴷⵓⵏ ⵏⵜⵜ ⴷ ⵏⴽⵔ ⵣⵉⴽ",
+    "cer": 2.875,
+    "wer": 4.0
+   },
+   "/predict_1": {
+    "heard": "ⵏⵜⵜⴰⵜ ⵏⴽⵔⵔⴽ ⵣⵉⴽⵙ ⵓⵣⴱⴷⵓⵏ ⵏⵜⵜ ⴷ ⵏⴽⵔ ⵣⵉⴽ",
+    "cer": 2.875,
+    "wer": 4.0
+   }
+  }
+ },
+ {
+  "id": 366,
+  "origin": "altres",
+  "said": "awi-yasn",
+  "reference": "ⴰⵡⵉⵢⴰⵙⵏ",
+  "models": {
+   "/predict": {
+    "heard": "ⴰ ⵡⴰ ⵉⴰ ⵙ ⴰⵡⵡⵉⵙⵏⵡⵢⴰⵙⵏ",
+    "cer": 1.429,
+    "wer": 5.0
+   },
+   "/predict_1": {
+    "heard": "ⴰ ⵡⴰ ⵉⴰ ⵙ ⴰⵡⵡⵉⵙⵏⵡⵢⴰⵙⵏ",
+    "cer": 1.429,
+    "wer": 5.0
+   }
+  }
+ },
+ {
+  "id": 199,
+  "origin": "altres",
+  "said": "aman irghan",
+  "reference": "ⴰⵎⴰⵏ ⵉⵔⵖⴰⵏ",
+  "models": {
+   "/predict": {
+    "heard": "ⴰⵎⴰⵏ ⵔⵖⴰⵏ ⵜ ⴰⵎⴰⵏ ⵔⵖⴰⵏ",
+    "cer": 1.0,
+    "wer": 2.0
+   },
+   "/predict_1": {
+    "heard": "ⴰⵎⴰⵏ ⵔⵖⴰⵏ ⵜ ⴰⵎⴰⵏ ⵔⵖⴰⵏ",
+    "cer": 1.0,
+    "wer": 2.0
+   }
+  }
+ },
+ {
+  "id": 4185,
+  "origin": "Beni Mellal",
+  "said": "ass l-lxmis ayd-sgan lxxudrt",
+  "reference": "ⴰⵙⵙ ⵍⵍⵅⵎⵉⵙ ⴰⵢⴷⵙⴳⴰⵏ ⵍⵅⵅⵓⴷⵔⵜ",
+  "models": {
+   "/predict": {
+    "heard": "ⴰⵙⵙ ⵏ ⵍⵅⵎⵉⵙ ⴰ ⵉⵢⵜⵙⵖⴰⵔ ⵍⵅⵓⴹⵕⵜ",
+    "cer": 0.348,
+    "wer": 1.25
+   },
+   "/predict_1": {
+    "heard": "ⴰⵙⵙ ⵏ ⵍⵅⵎⵉⵙ ⴰ ⵉⵢⵜⵙⵖⴰⵔ ⵍⵅⵓⴹⵕⵜ",
+    "cer": 0.348,
+    "wer": 1.25
+   }
+  }
+ },
+ {
+  "id": 249,
+  "origin": "altres",
+  "said": "uri sela",
+  "reference": "ⵓⵔⵉ ⵙⴻⵍⴰ",
+  "models": {
+   "/predict": {
+    "heard": "ⵀⴰⴷ ⵓⵔ ⵉⵙⵍⴰ ⴰⵏⵜ ⵓⵔ ⵉⵙⵙⴰⵏ ⴰⵔⴰ",
+    "cer": 2.429,
+    "wer": 3.5
+   },
+   "/predict_1": {
+    "heard": "ⵀⴰⴷ ⵓⵔ ⵉⵙⵍⴰ ⴰⵏⵜ ⵓⵔ ⵉⵙⵙⴰⵏ ⴰⵔⴰ",
+    "cer": 2.429,
+    "wer": 3.5
+   }
+  }
+ },
+ {
+  "id": 247,
+  "origin": "altres",
+  "said": "An nQn imi (Lbab)",
+  "reference": "ⴰⵏ ⵏⵇⵏ ⵉⵎⵉ ⵍⴱⴰⴱ",
+  "models": {
+   "/predict": {
+    "heard": "ⵜⵥⴰⵏ ⵜⵉⴱⵍⴰⵜ ⴷⵉ ⴱⵣⵣⵔⵙ ⵜⴰⵇⴱⵉⴱ ⵢⵄⴰⵜⵉⵏ",
+    "cer": 2.0,
+    "wer": 1.5
+   },
+   "/predict_1": {
+    "heard": "ⵜⵥⴰⵏ ⵜⵉⴱⵍⴰⵜ ⴷⵉ ⴱⵣⵣⵔⵙ ⵜⴰⵇⴱⵉⴱ ⵢⵄⴰⵜⵉⵏ",
+    "cer": 2.0,
+    "wer": 1.5
+   }
+  }
+ },
+ {
+  "id": 6937,
+  "origin": "Aït Mraw",
+  "said": "Hayagh datkh",
+  "reference": "ⵀⴰⵢⴰⵖ ⴷⴰⵜⵅ",
+  "models": {
+   "/predict": {
+    "heard": "ⵀⴰ ⵢⵖⵍⴰ ⵍⵄⴰⵢⴰ ⵏⴰⵖ ⵀⴰⵢⴰ ⵏ ⵄ ⵜⴱⴹ ⴰⴳⵉ ⵢⵉⵎ",
+    "cer": 2.444,
+    "wer": 5.0
+   },
+   "/predict_1": {
+    "heard": "ⵀⴰ ⵢⵖⵍⴰ ⵍⵄⴰⵢⴰ ⵏⴰⵖ ⵀⴰⵢⴰ ⵏ ⵄ ⵜⴱⴹ ⴰⴳⵉ ⵢⵉⵎ",
+    "cer": 2.444,
+    "wer": 5.0
+   }
+  }
+ },
+ {
+  "id": 482,
+  "origin": "altres",
+  "said": "is ihla oghorsh  udghar",
+  "reference": "ⵉⵙ ⵉⵀⵍⴰ ⵓⵖⵓⵔⵛ  ⵓⴷⵖⴰⵔ",
+  "models": {
+   "/predict": {
+    "heard": "ⵜⵃⵍⴰ ⵖⵓⵔ ⵙ ⵓⴷⵖⴰⵔ ⵜⵃⵍ ⵖⵓⵔ ⴽ ⴹⵔ",
+    "cer": 0.938,
+    "wer": 1.75
+   },
+   "/predict_1": {
+    "heard": "ⵜⵃⵍⴰ ⵖⵓⵔ ⵙ ⵓⴷⵖⴰⵔ ⵜⵃⵍ ⵖⵓⵔ ⴽ ⴹⵔ",
+    "cer": 0.938,
+    "wer": 1.75
+   }
+  }
+ },
+ {
+  "id": 471,
+  "origin": "altres",
+  "said": "isi tfhmt",
+  "reference": "ⵉⵙⵉ ⵜⴼⵀⵎⵜ",
+  "models": {
+   "/predict": {
+    "heard": "ⵉⵙ ⵜⴼⵀⵎ ⴷ",
+    "cer": 0.25,
+    "wer": 1.5
+   },
+   "/predict_1": {
+    "heard": "ⵉⵙ ⵜⴼⵀⵎ ⴷ",
+    "cer": 0.25,
+    "wer": 1.5
+   }
+  }
+ },
+ {
+  "id": 18,
+  "origin": "Aït Mraw",
+  "said": "basha ad dogh s Lkhdmt",
+  "reference": "ⴱⴰⵛⴰ ⴰⴷ ⴷⵓⵖ ⵙ ⵍⵅⴷⵎⵜ",
+  "models": {
+   "/predict": {
+    "heard": "ⴱⴱⴰⵄⵛⴰ ⴰⴷ ⴷⴷⵓ ⵜ ⵍⵅⴷⵎⵜ",
+    "cer": 0.333,
+    "wer": 0.6
+   },
+   "/predict_1": {
+    "heard": "ⴱⴱⴰⵄⵛⴰ ⴰⴷ ⴷⴷⵓ ⵜ ⵍⵅⴷⵎⵜ",
+    "cer": 0.333,
+    "wer": 0.6
+   }
+  }
+ },
+ {
+  "id": 6938,
+  "origin": "Aït Mraw",
+  "said": "Izd imchi",
+  "reference": "ⵉⵣⴷ ⵉⵎⵛⵉ",
+  "models": {
+   "/predict": {
+    "heard": "ⵎⴰ ⵉⴽ ⴰⵏⵍⴰⵢⵉⴷ",
+    "cer": 1.286,
+    "wer": 1.5
+   },
+   "/predict_1": {
+    "heard": "ⵎⴰ ⵉⴽ ⴰⵏⵍⴰⵢⵉⴷ",
+    "cer": 1.286,
+    "wer": 1.5
+   }
+  }
+ },
+ {
+  "id": 297,
+  "origin": "altres",
+  "said": "ashkjo ar tkhmamagh(penso molt) bzf",
+  "reference": "ⴰⵛⴽⵊⵓ ⴰⵔ ⵜⵅⵎⴰⵎⴰⵖⴱⴻⵏⵙⵓ ⵎⵓⵍⵜ ⴱⵣⴼ",
+  "models": {
+   "/predict": {
+    "heard": "ⴰⵛⴽⵓ ⴰⵔ ⵜⵅⵎⵎⴰⵎ ⵙⵜⴼ ⴰⵛⴽⵓ ⴰ ⵜⵅⵎⴰⵎ ⵏⵙⴰ",
+    "cer": 0.654,
+    "wer": 1.4
+   },
+   "/predict_1": {
+    "heard": "ⴰⵛⴽⵓ ⴰⵔ ⵜⵅⵎⵎⴰⵎ ⵙⵜⴼ ⴰⵛⴽⵓ ⴰ ⵜⵅⵎⴰⵎ ⵏⵙⴰ",
+    "cer": 0.654,
+    "wer": 1.4
+   }
+  }
+ },
+ {
+  "id": 5144,
+  "origin": "Beni Mellal",
+  "said": "ad-ittug / ittuga",
+  "reference": "ⴰⴷⵉⵜⵜⵓⴳ  ⵉⵜⵜⵓⴳⴰ",
+  "models": {
+   "/predict": {
+    "heard": "ⴰⵍⵉⵜⵓ ⵢⵜⵜⵓⴳⴰ",
+    "cer": 0.308,
+    "wer": 1.0
+   },
+   "/predict_1": {
+    "heard": "ⴰⵍⵉⵜⵓ ⵢⵜⵜⵓⴳⴰ",
+    "cer": 0.308,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": 6063,
+  "origin": "Beni Mellal",
+  "said": "ula sikan digsn lmuqadit-nsn nna-di-sġan zi-ssuq.",
+  "reference": "ⵓⵍⴰ ⵙⵉⴽⴰⵏ ⴷⵉⴳⵙⵏ ⵍⵎⵓⵇⴰⴷⵉⵜⵏⵙⵏ ⵏⵏⴰⴷⵉⵙⴳⴰⵏ ⵣⵉⵙⵙⵓⵇ",
+  "models": {
+   "/predict": {
+    "heard": "ⵓⵍⴰ ⵉⵇⴱⴰⵛ ⵍⵍⵉ ⵢⵙⵎⵇⴹⵢⴰⵏ ⵉⵙ ⵏ ⴰ ⴷ ⵉⵙⵖⴰⵏⵣⵉⵚⵓ",
+    "cer": 0.538,
+    "wer": 1.333
+   },
+   "/predict_1": {
+    "heard": "ⵓⵍⴰ ⵉⵇⴱⴰⵛ ⵍⵍⵉ ⵢⵙⵎⵇⴹⵢⴰⵏ ⵉⵙ ⵏ ⴰ ⴷ ⵉⵙⵖⴰⵏⵣⵉⵚⵓ",
+    "cer": 0.538,
+    "wer": 1.333
+   }
+  }
+ },
+ {
+  "id": 6015,
+  "origin": "Beni Mellal",
+  "said": "frix is-aš-trża lkarrusa.",
+  "reference": "ⴼⵔⵉⵅ ⵉⵙⴰⵙⵜⵔⵣⴰ ⵍⴽⴰⵔⵔⵓⵙⴰ",
+  "models": {
+   "/predict": {
+    "heard": "ⵜⵔⵉ ⵜⵙⵔ ⵙⵜⵔⵥⴰ ⴽⵕⵚⴰ",
+    "cer": 0.55,
+    "wer": 1.333
+   },
+   "/predict_1": {
+    "heard": "ⵜⵔⵉ ⵜⵙⵔ ⵙⵜⵔⵥⴰ ⴽⵕⵚⴰ",
+    "cer": 0.55,
+    "wer": 1.333
+   }
+  }
+ },
+ {
+  "id": 14,
+  "origin": "Aït Mraw",
+  "said": "Manij zdagh",
+  "reference": "ⵎⴰⵏⵉⵊ ⵣⴷⴰⵖ",
+  "models": {
+   "/predict": {
+    "heard": "ⵎⴰⵏⴽ ⴼⴰ",
+    "cer": 0.556,
+    "wer": 1.0
+   },
+   "/predict_1": {
+    "heard": "ⵎⴰⵏⴽ ⴼⴰ",
+    "cer": 0.556,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": 637,
+  "origin": "altres",
+  "said": "Dia güit, eS Misha Pablo",
+  "reference": "ⴷⵉⴰ ⴳⵉⵜ ⴻⵙ ⵎⵉⵛⴰ ⴱⴰⴱⵍⵓ",
+  "models": {
+   "/predict": {
+    "heard": "ⵉⴳⵡⵉⴹ ⵉⵙⵎ ⵉⵙⴰⴱⵄⴱⵍⴹ ⵜⵉⵢⴰⴳⴹ ⵉⵙⵎ ⵉⵙ ⵜⵄⴱⵍⴹ ⵜⵉⴳⴰⴳⵜ ⵉⵙⵎ ⵉⵙ ⵉ ⴰⴱⵍⴰ ⵢⵡⴰⵥ",
+    "cer": 2.412,
+    "wer": 2.6
+   },
+   "/predict_1": {
+    "heard": "ⵉⴳⵡⵉⴹ ⵉⵙⵎ ⵉⵙⴰⴱⵄⴱⵍⴹ ⵜⵉⵢⴰⴳⴹ ⵉⵙⵎ ⵉⵙ ⵜⵄⴱⵍⴹ ⵜⵉⴳⴰⴳⵜ ⵉⵙⵎ ⵉⵙ ⵉ ⴰⴱⵍⴰ ⵢⵡⴰⵥ",
+    "cer": 2.412,
+    "wer": 2.6
+   }
+  }
+ },
+ {
+  "id": 5498,
+  "origin": "Beni Mellal",
+  "said": "ixatr am-umzwaru",
+  "reference": "ⵉⵅⴰⵜⵔ ⴰⵎⵓⵎⵣⵡⴰⵔⵓ",
+  "models": {
+   "/predict": {
+    "heard": "ⵉⴼⴰⴷⵔⴰⵎ ⵓⵎⵣⵡⴰⵔⵓ",
+    "cer": 0.143,
+    "wer": 1.0
+   },
+   "/predict_1": {
+    "heard": "ⵉⴼⴰⴷⵔⴰⵎ ⵓⵎⵣⵡⴰⵔⵓ",
+    "cer": 0.143,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": 200,
+  "origin": "altres",
+  "said": "is ierghLhaL dinagh",
+  "reference": "ⵉⵙ ⵉⴻⵔⵖⵍⵀⴰⵍ ⴷⵉⵏⴰⵖ",
+  "models": {
+   "/predict": {
+    "heard": "ⵢⵙⵙⵔⵖⴰ ⵍⵃⴰⵍ ⴷⵉⵏⵏⴰ ⵉⵙⵔⵖⴰ ⵍⵃⴰⵍ ⵢⵉⵏⵏⴰ",
+    "cer": 1.267,
+    "wer": 2.0
+   },
+   "/predict_1": {
+    "heard": "ⵢⵙⵙⵔⵖⴰ ⵍⵃⴰⵍ ⴷⵉⵏⵏⴰ ⵉⵙⵔⵖⴰ ⵍⵃⴰⵍ ⵢⵉⵏⵏⴰ",
+    "cer": 1.267,
+    "wer": 2.0
+   }
+  }
+ },
+ {
+  "id": 7,
+  "origin": "Aït Mraw",
+  "said": "mana lon tja tatfahti",
+  "reference": "ⵎⴰⵏⴰ ⵍⵓⵏ ⵜⵊⴰ ⵜⴰⵜⴼⴰⵀⵜⵉ",
+  "models": {
+   "/predict": {
+    "heard": "ⵎⴰⵏⴰ ⵍⵓⵏ ⵊⴰ ⴷ ⵜⴼⴼⴰⵃⵜⵉⵏ",
+    "cer": 0.333,
+    "wer": 0.75
+   },
+   "/predict_1": {
+    "heard": "ⵎⴰⵏⴰ ⵍⵓⵏ ⵊⴰ ⴷ ⵜⴼⴼⴰⵃⵜⵉⵏ",
+    "cer": 0.333,
+    "wer": 0.75
+   }
+  }
+ },
+ {
+  "id": 3675,
+  "origin": "altres",
+  "said": "I ya-ha ya-wa Iẓṛi yumen dig-un",
+  "reference": "ⵉ ⵢⴰⵀⴰ ⵢⴰⵡⴰ ⵉⵥⵕⵉ ⵢⵓⵎⴻⵏ ⴷⵉⴳⵓⵏ",
+  "models": {
+   "/predict": {
+    "heard": "ⴰⵥⵔ ⵓⴷⴷⵉ",
+    "cer": 0.783,
+    "wer": 1.0
+   },
+   "/predict_1": {
+    "heard": "ⴰⵥⵔ ⵓⴷⴷⵉ",
+    "cer": 0.783,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": 6947,
+  "origin": "Aït Mraw",
+  "said": "kud tssnu kud tssnuwa tmtut tadwart, tbidik simik ad lišt tsmir.",
+  "reference": "ⴽⵓⴷ ⵜⵙⵙⵏⵓ ⴽⵓⴷ ⵜⵙⵙⵏⵓⵡⴰ ⵜⵎⵜⵓⵜ ⵜⴰⴷⵡⴰⵔⵜ ⵜⴱⵉⴷⵉⴽ ⵙⵉⵎⵉⴽ ⴰⴷ ⵍⵉⵛⵜ ⵜⵙⵎⵉⵔ",
+  "models": {
+   "/predict": {
+    "heard": "ⴰⴽⵓⴷ ⵜⵙⵏⴽⴽⵙⵡⴰ ⵏⵟⵓⵊ ⵜⴰⴰⴷⵡⴰⵜ ⵜⴱⴱⵉ ⴷ ⵉⴳ ⵙⵉⵏⵎⵉⴽⴽ ⴰⴷ ⴰⴽ ⵜⵜ ⵜⵙⵎⴰⵔ",
+    "cer": 0.442,
+    "wer": 1.0
+   },
+   "/predict_1": {
+    "heard": "ⴰⴽⵓⴷ ⵜⵙⵏⴽⴽⵙⵡⴰ ⵏⵟⵓⵊ ⵜⴰⴰⴷⵡⴰⵜ ⵜⴱⴱⵉ ⴷ ⵉⴳ ⵙⵉⵏⵎⵉⴽⴽ ⴰⴷ ⴰⴽ ⵜⵜ ⵜⵙⵎⴰⵔ",
+    "cer": 0.442,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": 448,
+  "origin": "Aït Mraw",
+  "said": "ur ġhiygh a-tshṭḥagh ašhku iḥlshi ufud",
+  "reference": "ⵓⵔ ⵀⵉⵢⵖ ⴰⵜⵛⵟⵃⴰⵖ ⴰⵛⵀⴽⵓ ⵉⵃⵍⵛⵉ ⵓⴼⵓⴷ",
+  "models": {
+   "/predict": {
+    "heard": "ⵓⵔ ⴱⵖⵉⵖ ⴰⴷ ⵛⴹⵃⵖ ⴰⵛⴽⵓ ⵉⵀⵏⵙⵉ ⵓⴳⴼⴼⵓⴷ",
+    "cer": 0.444,
+    "wer": 1.0
+   },
+   "/predict_1": {
+    "heard": "ⵓⵔ ⴱⵖⵉⵖ ⴰⴷ ⵛⴹⵃⵖ ⴰⵛⴽⵓ ⵉⵀⵏⵙⵉ ⵓⴳⴼⴼⵓⴷ",
+    "cer": 0.444,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": 433,
+  "origin": "Aït Mraw",
+  "said": "hat ar zari tqln yan sa3a lmajana aytkh",
+  "reference": "ⵀⴰⵜ ⴰⵔ ⵣⴰⵔⵉ ⵜⵇⵍⵏ ⵢⴰⵏ ⵙⴰⵄⴰ ⵍⵎⴰⵊⴰⵏⴰ ⴰⵢⵜⵅ",
+  "models": {
+   "/predict": {
+    "heard": "ⴰⴷ ⴰⵥⴰⵔ ⵉ ⵜⵇⵇⵍ ⵢⴰⵏ ⵙⵙⴰⵄⴰ ⵍⵎⴰⵍⵎⴰ ⵄⴷ",
+    "cer": 0.452,
+    "wer": 0.875
+   },
+   "/predict_1": {
+    "heard": "ⴰⴷ ⴰⵥⴰⵔ ⵉ ⵜⵇⵇⵍ ⵢⴰⵏ ⵙⵙⴰⵄⴰ ⵍⵎⴰⵍⵎⴰ ⵄⴷ",
+    "cer": 0.452,
+    "wer": 0.875
+   }
+  }
+ },
+ {
+  "id": 5944,
+  "origin": "Beni Mellal",
+  "said": "yuhn-lhal.",
+  "reference": "ⵢⵓⵀⵏⵍⵀⴰⵍ",
+  "models": {
+   "/predict": {
+    "heard": "ⵢⴱⴰ ⵍⵀⴰⵏ",
+    "cer": 0.5,
+    "wer": 2.0
+   },
+   "/predict_1": {
+    "heard": "ⵢⴱⴰ ⵍⵀⴰⵏ",
+    "cer": 0.5,
+    "wer": 2.0
+   }
+  }
+ },
+ {
+  "id": 339,
+  "origin": "altres",
+  "said": "imkin (es posible) adi taznt le video ar tsawalt tachelhit",
+  "reference": "ⵉⵎⴽⵉⵏ ⴻⵙ ⴱⵓⵙⵉⴱⵍⴻ ⴰⴷⵉ ⵜⴰⵣⵏⵜ ⵍⴻ ⴼⵉⴷⴻⵓ ⴰⵔ ⵜⵙⴰⵡⴰⵍⵜ ⵜⴰⵛⴻⵍⵀⵉⵜ",
+  "models": {
+   "/predict": {
+    "heard": "ⵉⵏⴽⴰⵎⴰⵍ ⵉ ⵜⴰⵣⵏⵜ ⴷⴷ ⵢⵡⴰⵍ ⴰⵔ ⵜⴰⵡⴰⴰⵏⵜ ⵙ ⵜⵛⴱⵃⵉⵜ",
+    "cer": 0.609,
+    "wer": 0.9
+   },
+   "/predict_1": {
+    "heard": "ⵉⵏⴽⴰⵎⴰⵍ ⵉ ⵜⴰⵣⵏⵜ ⴷⴷ ⵢⵡⴰⵍ ⴰⵔ ⵜⴰⵡⴰⴰⵏⵜ ⵙ ⵜⵛⴱⵃⵉⵜ",
+    "cer": 0.609,
+    "wer": 0.9
+   }
+  }
+ }
+]
