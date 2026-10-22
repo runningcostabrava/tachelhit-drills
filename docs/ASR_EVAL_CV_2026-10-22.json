@@ -1,0 +1,782 @@
+[
+ {
+  "id": "common_voice_zgh_40064734.mp3",
+  "origin": "Atles central",
+  "said": "ⴳⴳ.",
+  "reference": "ⴳⴳ.",
+  "models": {
+   "/predict": {
+    "heard": "ⴳⴼ",
+    "cer": 0.667,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40165528.mp3",
+  "origin": "Tachelhit",
+  "said": "ⵜⵏⵏⴰ ⵜⵙⵔⴷⴰⵙⵜ ⵏ ⵎⴰⵔⵉⴽⴰⵏ ⵎⴰⵙ ⵜⵙⵎⴷ ⵜⴰⵡⵓⵔⵉ ⵏⵏⵙ ⴳ ⵍⵄⵉⵔⴰⵇ.",
+  "reference": "ⵜⵏⵏⴰ ⵜⵙⵔⴷⴰⵙⵜ ⵏ ⵎⴰⵔⵉⴽⴰⵏ ⵎⴰⵙ ⵜⵙⵎⴷ ⵜⴰⵡⵓⵔⵉ ⵏⵏⵙ ⴳ ⵍⵄⵉⵔⴰⵇ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵏⵏⴰⵙⵙⵔⴷⵙⵜ ⵏ ⵎⴰⵔⵉⴽⴰⵏ ⵎⴰ ⵜⵙⵙⵏⵜ ⵜⴰⵡⵓⵔⵉ ⵏⵙ ⴳⴳ ⵍⵄⵉⵔⵇ",
+    "cer": 0.256,
+    "wer": 0.7
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40043518.mp3",
+  "origin": "Tachelhit",
+  "said": "ⵜⵏⵊⵎⴻⵎⵜ ⴰⴷ ⵉⵢⵉ ⴷ ⵜⵙⵙⵓⵖⵍⵎⵜ ⴽⵔⴰ ⵏ ⵜⵡⵉⵏⴰⵙ?",
+  "reference": "ⵜⵏⵊⵎⴻⵎⵜ ⴰⴷ ⵉⵢⵉ ⴷ ⵜⵙⵙⵓⵖⵍⵎⵜ ⴽⵔⴰ ⵏ ⵜⵡⵉⵏⴰⵙ?",
+  "models": {
+   "/predict": {
+    "heard": "ⵏⴰⵊⵎⴻⵎⵜ ⴰⴷ ⵉⵢⵉ ⴷ ⵙⵙⵓⵖⵎⵜ ⴽⵔⴰ ⵏ ⵜⵡⵉⵏⴰⵙ",
+    "cer": 0.156,
+    "wer": 0.375
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_37842451.mp3",
+  "origin": "sense varietat",
+  "said": "ⵜⵉⴷⴷⵉ ⵜⴰⵔ ⵜⴰⵢⴰⴼⵓⵜ.",
+  "reference": "ⵜⵉⴷⴷⵉ ⵜⴰⵔ ⵜⴰⵢⴰⴼⵓⵜ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵜⵉⴷⴷⵉ ⴷ ⵜⵔ ⵜⴰⴼⵓⵜ",
+    "cer": 0.312,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_37842474.mp3",
+  "origin": "sense varietat",
+  "said": "ⵎⴰⵏⵉ ⵣⴰ ⵙⵓⵍ ⵏⵔⴰ.",
+  "reference": "ⵎⴰⵏⵉ ⵣⴰ ⵙⵓⵍ ⵏⵔⴰ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵎⴰⵍⵉⵣⴰ ⵙ ⵓ ⵏⵔ",
+    "cer": 0.308,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40140057.mp3",
+  "origin": "Tachelhit",
+  "said": "ⴰⵔ ⵜⵜⵎⵓⴷⴷⵓⵏ ⵉⴳⴹⴰⴹ ⴰⴷ ⵙ ⵢⵉⵥⵥⵍⵎⴹ ⵏ ⵜⴼⵔⵉⵇⵜ ⴳ ⵜⴳⵔⵙⵜ.",
+  "reference": "ⴰⵔ ⵜⵜⵎⵓⴷⴷⵓⵏ ⵉⴳⴹⴰⴹ ⴰⴷ ⵙ ⵢⵉⵥⵥⵍⵎⴹ ⵏ ⵜⴼⵔⵉⵇⵜ ⴳ ⵜⴳⵔⵙⵜ.",
+  "models": {
+   "/predict": {
+    "heard": "ⴰⵔ ⵜⵎⵓⴷⴷⵓⵏ ⵉⴳⴹⴰⴹ ⴰⴷ ⵙ ⵢ ⵉⵣⵣⵍⵎⴹ ⵏ ⵜⴼⵔⵉⵜ ⴳ ⵜⴳⵔⵜ",
+    "cer": 0.154,
+    "wer": 0.5
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40065331.mp3",
+  "origin": "Atles central",
+  "said": "ⵎⴰ ⵉⵙⵙⵏⵏ ⵜⵓⵍⵍⵉⵙⵜ ⵏ ⵜⵓⴹⴼⵉⵜ ⴷ ⵓⴱⴰⵏⴹⵕⵉⵡ?",
+  "reference": "ⵎⴰ ⵉⵙⵙⵏⵏ ⵜⵓⵍⵍⵉⵙⵜ ⵏ ⵜⵓⴹⴼⵉⵜ ⴷ ⵓⴱⴰⵏⴹⵕⵉⵡ?",
+  "models": {
+   "/predict": {
+    "heard": "ⵎⴰ ⵢⵙⵙⵏ ⴷ ⵜⵓⵍⵍⵉⵙⵜ ⴰⵏⴰⵖ ⵜⵟⵟⴼ ⵉⵜ ⴷ ⵓⴱⴰⵏⴷⵔⵉⵡ",
+    "cer": 0.323,
+    "wer": 0.857
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_37855760.mp3",
+  "origin": "sense varietat",
+  "said": "ⵀⴰⵜⵉ ⴰⵔ ⵓⴽⴰⵏ ⵜⴻⵜⵜⵇⵇⵍ.",
+  "reference": "ⵀⴰⵜⵉ ⴰⵔ ⵓⴽⴰⵏ ⵜⴻⵜⵜⵇⵇⵍ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵀⴰⵜⵉ ⴰⵔⴽⴰⵏ ⵜⵇⵇⵍ",
+    "cer": 0.278,
+    "wer": 0.75
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40124125.mp3",
+  "origin": "Tachelhit",
+  "said": "ⵜⴱⴷⴷⵎ ⵉⵢⵉ ⴷⵉ ⵓⵖⴰⵔⴰⵙ!",
+  "reference": "ⵜⴱⴷⴷⵎ ⵉⵢⵉ ⴷⵉ ⵓⵖⴰⵔⴰⵙ!",
+  "models": {
+   "/predict": {
+    "heard": "ⵜⴱⴷⴷⵎ ⵉⵢⵉ ⴷ ⵉ ⵓⵖⴰⵔⴰⵙ",
+    "cer": 0.059,
+    "wer": 0.75
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_37842526.mp3",
+  "origin": "sense varietat",
+  "said": "ⵜⵉⴼⴼⵓⴳⵏⴰ ⴰⴷ ⴰⵖ ⵉⵙⵎⵓⵏⵏ.",
+  "reference": "ⵜⵉⴼⴼⵓⴳⵏⴰ ⴰⴷ ⴰⵖ ⵉⵙⵎⵓⵏⵏ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵜⵉⴼⵓⴳⵏⴰ ⴰⴷⵖ ⵉⵙⵎⵓⵏ",
+    "cer": 0.211,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40064935.mp3",
+  "origin": "Atles central",
+  "said": "ⵅⴼ ⵜⴰⵖⴰⵔⵜ ⵏ ⵚⵚⵃⵔⴰ ⵔⵏⴰⵏ ⵉⴽⵙⵙⴰⴱⵏ ⵉⴼⵍⵍⴰⵃⵏ.",
+  "reference": "ⵅⴼ ⵜⴰⵖⴰⵔⵜ ⵏ ⵚⵚⵃⵔⴰ ⵔⵏⴰⵏ ⵉⴽⵙⵙⴰⴱⵏ ⵉⴼⵍⵍⴰⵃⵏ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵖ ⵜⴰⵖⴰⵔⵜ ⵏ ⵚⵃⵔⴰⴰ ⵜⵏⵏⴰⵏ ⵉⴽⵙⵙⴰⴱⵏ ⵉⴼⵍⵍⴰⵃⵏ",
+    "cer": 0.212,
+    "wer": 0.571
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40043059.mp3",
+  "origin": "sense varietat",
+  "said": "ⵊⴷⵔⵏ ⵉⵎⵟⵟⴰⵡⵏ ⵏⵏⴽ ⵓⵍ ⵉⵏⵓ.",
+  "reference": "ⵊⴷⵔⵏ ⵉⵎⵟⵟⴰⵡⵏ ⵏⵏⴽ ⵓⵍ ⵉⵏⵓ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵊⴷⵔⵏ ⵉⵎⵟⵟⴰⵡⵏ ⵏ ⵡⵓⵍ ⵉⵏⵓ",
+    "cer": 0.15,
+    "wer": 0.6
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40105509.mp3",
+  "origin": "Tachelhit",
+  "said": "ⵓⵔⵓⵏ ⵉⴳⵯⵔⴰ ⵉⴼⴰⵖⵔⵉⵡⵏ",
+  "reference": "ⵓⵔⵓⵏ ⵉⴳⵯⵔⴰ ⵉⴼⴰⵖⵔⵉⵡⵏ",
+  "models": {
+   "/predict": {
+    "heard": "ⵓⵔⵓⵏ ⵉⴳⵔⵉ ⵉⵙ ⴰⵖⵔⵉⵡⵡⵏ",
+    "cer": 0.235,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40070926.mp3",
+  "origin": "Tachelhit",
+  "said": "ⵜⵖⵔⴰ ⵎⵉⵏⴳ ⵉ ⵓⵎⴷⴷⴰⴽⴽⵍ ⵏⵏⵙ ⵉⴹⵍⵍⵉ.",
+  "reference": "ⵜⵖⵔⴰ ⵎⵉⵏⴳ ⵉ ⵓⵎⴷⴷⴰⴽⴽⵍ ⵏⵏⵙ ⵉⴹⵍⵍⵉ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵜⵖⵔⴰ ⵎⴰⵏⵉ ⴳ ⵉ ⵓⵎⴷⴷⴰⴽⴽⵯⵍ ⵏⵏⵙ ⵉⴹⵍⵍⵉ",
+    "cer": 0.154,
+    "wer": 0.667
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_42737634.mp3",
+  "origin": "Atles central",
+  "said": "ⵓⵔ ⵉⵙⴽⵉⵔ ⵙⴰⵎⵉ ⵢⴰⵜ.",
+  "reference": "ⵓⵔ ⵉⵙⴽⵉⵔ ⵙⴰⵎⵉ ⵢⴰⵜ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵓⵔ ⵢⵙⵙⴼⵉⵔ ⵙⴰⵎⵉⵢⴰⵜ",
+    "cer": 0.267,
+    "wer": 0.75
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_37837258.mp3",
+  "origin": "sense varietat",
+  "said": "ⵉⵜⵜⵔ ⵙⴰⵎⵉ ⴰⵏⵏⵓⵕⵥⵎ ⵖ ⵍⴱⴰⵀⵉⵔⴰ.",
+  "reference": "ⵉⵜⵜⵔ ⵙⴰⵎⵉ ⴰⵏⵏⵓⵕⵥⵎ ⵖ ⵍⴱⴰⵀⵉⵔⴰ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵉⴷⴷⵔ ⵙⴰⵎⵉ ⵢⵏⵏⵥⵏ ⵏⵖ ⵍⴱⴰⵀⵉⵔⴰ",
+    "cer": 0.333,
+    "wer": 0.8
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40593601.mp3",
+  "origin": "sense varietat",
+  "said": "ⵉⵕⵥⵎ ⵏⵏ ⵙⴰⵎⵉ ⵉ ⵜⵎⵙⵙⵉ ⴼ ⵢⵉⵅⴼ ⵏ ⵍⴰⵢⵍⴰ.",
+  "reference": "ⵉⵕⵥⵎ ⵏⵏ ⵙⴰⵎⵉ ⵉ ⵜⵎⵙⵙⵉ ⴼ ⵢⵉⵅⴼ ⵏ ⵍⴰⵢⵍⴰ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵉⵥⵎ ⵏ ⵙⴰⵎⵉ ⵢⵜⵜⵎⵙⵉⴼ ⵢⵅⴼ ⵏ ⵍⴰⵢⵍⴰ",
+    "cer": 0.25,
+    "wer": 0.778
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40064936.mp3",
+  "origin": "Atles central",
+  "said": "ⵢⴰⵏ ⵓⴼⵓⵙ, ⵓⵔ ⴰⵔ ⵉⴽⴽⴰⵜ ⵕⵕⵛⵛ.",
+  "reference": "ⵢⴰⵏ ⵓⴼⵓⵙ, ⵓⵔ ⴰⵔ ⵉⴽⴽⴰⵜ ⵕⵕⵛⵛ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵢⵔⴼⵓⵙ ⵓⵔⴰⵔ ⵉⴽⴽⴰⵜ ⵔⵛ",
+    "cer": 0.364,
+    "wer": 0.833
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40124138.mp3",
+  "origin": "Tachelhit",
+  "said": "ⵣⵉⵔⵉ ⵉⵇⵇⵉⵎ ⴷⵉⵀⴰ.",
+  "reference": "ⵣⵉⵔⵉ ⵉⵇⵇⵉⵎ ⴷⵉⵀⴰ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵣⵉⵔⵉ ⵢⵇⵇⵉⵎ ⴷⵉⵀⴰ",
+    "cer": 0.143,
+    "wer": 0.667
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40065554.mp3",
+  "origin": "sense varietat",
+  "said": "ⵓⵔ ⴷⴰⵔⵉ ⴽⵔⴰ ⵡⴰⵏⵙⴰ.",
+  "reference": "ⵓⵔ ⴷⴰⵔⵉ ⴽⵔⴰ ⵡⴰⵏⵙⴰ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵓⵔ ⴷ ⴰⵔⴰ ⵉ ⴽ ⴷⵔⴰ ⵡⴰⵏⵙⴰ",
+    "cer": 0.2,
+    "wer": 1.5
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40071308.mp3",
+  "origin": "Atles central",
+  "said": "ⵔⵓⵅ ⵉ ⵙⵖⵉⵖ ⵎⴰⵏ ⴰⵢⴰ.",
+  "reference": "ⵔⵓⵅ ⵉ ⵙⵖⵉⵖ ⵎⴰⵏ ⴰⵢⴰ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵔⵓⵖ ⵉⵙⵖⵅ ⵎⴰⵏ ⴰⵢⴰ",
+    "cer": 0.267,
+    "wer": 0.8
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40066171.mp3",
+  "origin": "sense varietat",
+  "said": "ⵛⵛⵉⵖ ⵢⴰⵜ ⵜⵉⵢⵏⵉⵜ ⵉⴳⴰⵏ ⵜⴰⴱⵅⵅⴰⵏⵜ.",
+  "reference": "ⵛⵛⵉⵖ ⵢⴰⵜ ⵜⵉⵢⵏⵉⵜ ⵉⴳⴰⵏ ⵜⴰⴱⵅⵅⴰⵏⵜ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵛⵛⵉⵖ ⵢⴰ ⵜⴰⵢⵢⵏ ⵉ ⵙ ⵉⴳⴰⵏ ⵜⴰⴱⵅⵅⴰⵏⵜ",
+    "cer": 0.154,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_38267079.mp3",
+  "origin": "Tachelhit",
+  "said": "ⵎⴰⵏⴰⴳⵓ ⵔⴰⴷ ⴷ ⵜⴰⴹⵓⴷ?",
+  "reference": "ⵎⴰⵏⴰⴳⵓ ⵔⴰⴷ ⴷ ⵜⴰⴹⵓⴷ?",
+  "models": {
+   "/predict": {
+    "heard": "ⵎⴰⵏⵓⴳ ⵓ ⵔⴰ ⴷ ⵜⴰⴹⵓⵓⴷ",
+    "cer": 0.25,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40593213.mp3",
+  "origin": "sense varietat",
+  "said": "ⵊⵊⵉⵊⵉ ⵎⵓⵛⵛ ⵉ ⵓⴳⴰⴷⵉⵔ, ⵉⴳ ⵉⵣⵎ",
+  "reference": "ⵊⵊⵉⵊⵉ ⵎⵓⵛⵛ ⵉ ⵓⴳⴰⴷⵉⵔ, ⵉⴳ ⵉⵣⵎ",
+  "models": {
+   "/predict": {
+    "heard": "ⵊⵊⵉⵊ ⵢⵎⵓⵛⵛ ⵉ ⵓⴳⴰⴷⵉⵔ ⵉⴳⵉⵜⵏ",
+    "cer": 0.182,
+    "wer": 0.833
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40252331.mp3",
+  "origin": "Atles central",
+  "said": "ⵖⵓⵔⵉ ⴰⵅⵅⴰⵎ.",
+  "reference": "ⵖⵓⵔⵉ ⴰⵅⵅⴰⵎ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵖⵓⵔ ⵉ ⴰⵅⵅⴰⵎ",
+    "cer": 0.1,
+    "wer": 1.5
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_37837257.mp3",
+  "origin": "sense varietat",
+  "said": "ⵎⵍ ⵉⵢⵉ ⵎⴰⴷ ⴷ ⵜⴻⵜⵜⵎⵓⵏⴷ ⴰⴷ ⴰⴽ ⵎⵍⵖ ⵎⴰⴷ ⵜⴳⵉⴷ.",
+  "reference": "ⵎⵍ ⵉⵢⵉ ⵎⴰⴷ ⴷ ⵜⴻⵜⵜⵎⵓⵏⴷ ⴰⴷ ⴰⴽ ⵎⵍⵖ ⵎⴰⴷ ⵜⴳⵉⴷ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵎⵍ ⵉⵢⵉ ⵎⴰⴷ ⵜⵎⵓⵏⴷ ⴰⴷ ⴽⵎⵎⵍⵖ ⵎⴰ ⵜⴳⵜ",
+    "cer": 0.312,
+    "wer": 0.6
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40252330.mp3",
+  "origin": "Atles central",
+  "said": "ⴷⵉⵏⵏⴰ ⴳ ⵜⵓⵜⵜ ⴰⵎⵊⵊⵓⴹ, ⴰⵔ ⵉⵙⵉⵙⵙⵉⵢ",
+  "reference": "ⴷⵉⵏⵏⴰ ⴳ ⵜⵓⵜⵜ ⴰⵎⵊⵊⵓⴹ, ⴰⵔ ⵉⵙⵉⵙⵙⵉⵢ",
+  "models": {
+   "/predict": {
+    "heard": "ⴷⵉⵏⵏⴰ ⵓ ⵜⵓⵓⴷ ⴰⵎⵊⵊⵓⵓⴷ ⴰⵔ ⵉⵙⵉⵙⵉ ⵉⵢⵉ",
+    "cer": 0.269,
+    "wer": 0.833
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_42737704.mp3",
+  "origin": "Atles central",
+  "said": "ⴰⵢⵢⵓⵣ ⵏⵏⴽ ⵓⵔ ⵏⵏ ⵜⴼⵉⵍⴷ.",
+  "reference": "ⴰⵢⵢⵓⵣ ⵏⵏⴽ ⵓⵔ ⵏⵏ ⵜⴼⵉⵍⴷ.",
+  "models": {
+   "/predict": {
+    "heard": "ⴰⵢ ⵓⵣⵏⵛ ⵓⵔ ⵏ ⵜ ⵜⵉⵍⴰⴼ",
+    "cer": 0.389,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40080587.mp3",
+  "origin": "Tachelhit",
+  "said": "ⵉⵎⵉ ⵏ ⵜⵎⴷⴰ ⴽⴰ ⴰⵖ ⵏⴳⵯⵎⵔ.",
+  "reference": "ⵉⵎⵉ ⵏ ⵜⵎⴷⴰ ⴽⴰ ⴰⵖ ⵏⴳⵯⵎⵔ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵉⵎⵉ ⵏ ⵜⵎⴷⴰⴽ ⵉⵖⵏⴳⵎⵔ",
+    "cer": 0.222,
+    "wer": 0.667
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40064678.mp3",
+  "origin": "Atles central",
+  "said": "ⵉⵙⴽⵔ ⵜⵓⵎ ⵉ ⵎⴰⵔⵉ ⵀⵔⵔ.",
+  "reference": "ⵉⵙⴽⵔ ⵜⵓⵎ ⵉ ⵎⴰⵔⵉ ⵀⵔⵔ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵉⵙⴽⵔ ⵟⵓ ⵉ ⵎⴰⵔⵉ ⵃⵔ",
+    "cer": 0.312,
+    "wer": 0.4
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40066170.mp3",
+  "origin": "sense varietat",
+  "said": "ⵉⵙⵙⵏ ⴰⴷ ⵉⵜⵜⵎⵙⵍⴰⵢ.",
+  "reference": "ⵉⵙⵙⵏ ⴰⴷ ⵉⵜⵜⵎⵙⵍⴰⵢ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵢⵙⵙⵏ ⴰⴷ ⵢⵜⵜⵎⵙⵍⴰⵢ",
+    "cer": 0.2,
+    "wer": 0.667
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_38267096.mp3",
+  "origin": "Tachelhit",
+  "said": "ⴰⴷ ⴰⴽ ⵉⴼⴽ ⵕⴱⴱⵉ ⴰⵍⵍⵓⵖ.",
+  "reference": "ⴰⴷ ⴰⴽ ⵉⴼⴽ ⵕⴱⴱⵉ ⴰⵍⵍⵓⵖ.",
+  "models": {
+   "/predict": {
+    "heard": "ⴰⴷ ⴰⴽ ⵉⴼⴽ ⵕⴱⴱⵉ ⴰⵍⵍⵖ",
+    "cer": 0.118,
+    "wer": 0.2
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40080494.mp3",
+  "origin": "Tachelhit",
+  "said": "ⵔⵓⵅ ⴰⴷ ⵕⴰⵃⵖ.",
+  "reference": "ⵔⵓⵅ ⴰⴷ ⵕⴰⵃⵖ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵔⵓⵖ ⴼ ⴰⴷ ⵔⴰⵃⵖ",
+    "cer": 0.4,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40064922.mp3",
+  "origin": "Atles central",
+  "said": "ⵎⴰ ⴰⴷ ⵜⵔⵉⴷ ⴰⴷ ⵜ ⵜⵉⵙⵉⵏⴷ ⵖⴼ ⵜⵡⵓⵔⵉ ⵉⵏⵓ?",
+  "reference": "ⵎⴰ ⴰⴷ ⵜⵔⵉⴷ ⴰⴷ ⵜ ⵜⵉⵙⵉⵏⴷ ⵖⴼ ⵜⵡⵓⵔⵉ ⵉⵏⵓ?",
+  "models": {
+   "/predict": {
+    "heard": "ⵓⵊ ⵎⴰ ⵜⵔⵉⵉⴷ ⴰⴷ ⴰⵙ ⵜⵉⵏⵉⴹ ⵖⴼ ⵜⵡⵓⵔⵉ ⵉⵏⵓ",
+    "cer": 0.393,
+    "wer": 0.667
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40055224.mp3",
+  "origin": "Tachelhit",
+  "said": "ⴷⴰ ⴰⴱⴷⴰ ⵉⵜⵜⵉⵍⵉ.",
+  "reference": "ⴷⴰ ⴰⴱⴷⴰ ⵉⵜⵜⵉⵍⵉ.",
+  "models": {
+   "/predict": {
+    "heard": "ⴷ ⴰⴱⵔ ⵉⵜⵜⵉⵍⵉ",
+    "cer": 0.308,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40170601.mp3",
+  "origin": "sense varietat",
+  "said": "ⵎⵥⵥⵉⵏ ⵉⴹⴰⵕⵏ ⵉⵏⵓ ⴼ ⵡⵉⵏⵏⴽ.",
+  "reference": "ⵎⵥⵥⵉⵏ ⵉⴹⴰⵕⵏ ⵉⵏⵓ ⴼ ⵡⵉⵏⵏⴽ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵎⵥⵥⵉⵉⵏ ⵉⴹⴰⵔⵔⵏ ⵉⵏⵓ ⵖⴼ ⵡⵉⵏⴽⴽ",
+    "cer": 0.3,
+    "wer": 0.8
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40070839.mp3",
+  "origin": "Tachelhit",
+  "said": "ⵜⴰⵎⵖⴰⵔⵜ ⵏⵏⴽ ⴷ ⵜⴰⵎⴰⵣⵉⵖⵜ?",
+  "reference": "ⵜⴰⵎⵖⴰⵔⵜ ⵏⵏⴽ ⴷ ⵜⴰⵎⴰⵣⵉⵖⵜ?",
+  "models": {
+   "/predict": {
+    "heard": "ⵜⴰⵎⵖⴰⵔⵜ ⵏⵏⴳ ⴷⵙ ⵜⴰⵎⴰⵣⵉⵖⵜ",
+    "cer": 0.15,
+    "wer": 0.75
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40957122.mp3",
+  "origin": "Atles central",
+  "said": "ⴳ.",
+  "reference": "ⴳ.",
+  "models": {
+   "/predict": {
+    "heard": "ⴳⵊⵊ",
+    "cer": 1.0,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_38267281.mp3",
+  "origin": "Tachelhit",
+  "said": "ⵇⴰⴷ ⴽⵯⵏⵜ ⵉⴷ ⴰⵡⵉⵏⵜ?",
+  "reference": "ⵇⴰⴷ ⴽⵯⵏⵜ ⵉⴷ ⴰⵡⵉⵏⵜ?",
+  "models": {
+   "/predict": {
+    "heard": "ⴰⴷ ⴳ ⵜ ⵉⴷ ⴰⵡⵉⵏⵜ",
+    "cer": 0.333,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_37855758.mp3",
+  "origin": "sense varietat",
+  "said": "ⵉⵙⴳⴳⵯⴰⵙⵏ ⵃⴷⴰⵏⵉⵏ ⴰⵢⴰⴷ ⵉⵣⵔⵉⵏ.",
+  "reference": "ⵉⵙⴳⴳⵯⴰⵙⵏ ⵃⴷⴰⵏⵉⵏ ⴰⵢⴰⴷ ⵉⵣⵔⵉⵏ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵉⵉⵏ ⵉⵙⴳⴳⵯⴰⵙⵏ ⵃⴹⴰⵏⵉⵏ ⴰⵢⴰⴷ ⵉⵣⵔⵉⵏ",
+    "cer": 0.208,
+    "wer": 0.75
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40124023.mp3",
+  "origin": "Tachelhit",
+  "said": "ⵓⵙⵔⵖ ⴰⴷ ⴷⴷⵓⵖ ⵖⵔ ⵓⵙⵜⵕⴰⵍⵢⴰ ⴰⵢⵢⵓⵔ ⴷ ⵉⴷⴷⴰⵏ.",
+  "reference": "ⵓⵙⵔⵖ ⴰⴷ ⴷⴷⵓⵖ ⵖⵔ ⵓⵙⵜⵕⴰⵍⵢⴰ ⴰⵢⵢⵓⵔ ⴷ ⵉⴷⴷⴰⵏ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵓⵙⵔⵖ ⴰⴷ ⴷⴷⵓⵖ ⵖⵔ ⵓⵙⵜⵕⴰⵍⵢⴰ ⴰⵢⵢⵓⵔ ⴷ ⵉⴷⴷⵏ",
+    "cer": 0.062,
+    "wer": 0.125
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40066149.mp3",
+  "origin": "sense varietat",
+  "said": "ⵡⵏⵏⴰ ⵉⵎⵎⵓⵜⵏ ⵍⴰ ⴰⴽⴽⵯ ⵉⴼⵔⵔⵓ ⵉⵎⵔⵡⴰⵙⵏ.",
+  "reference": "ⵡⵏⵏⴰ ⵉⵎⵎⵓⵜⵏ ⵍⴰ ⴰⴽⴽⵯ ⵉⴼⵔⵔⵓ ⵉⵎⵔⵡⴰⵙⵏ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵡⴰⵏⵏⴰ ⵢⵎⵎⵓⵜⵏ ⵍⴰ ⴰⴽⴽ ⵉⴼⵔⵔⵓ ⵉⵎⵔⵡⴰⵙⵏ",
+    "cer": 0.138,
+    "wer": 0.667
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40593238.mp3",
+  "origin": "sense varietat",
+  "said": "ⴰⵢⴰ ⵓⵔ ⵓⵔ ⵉⵙⵙⵉⵡⵙ ⵎⵍⵉⵃ.",
+  "reference": "ⴰⵢⴰ ⵓⵔ ⵓⵔ ⵉⵙⵙⵉⵡⵙ ⵎⵍⵉⵃ.",
+  "models": {
+   "/predict": {
+    "heard": "ⴰⵢⴰ ⵓⵔ ⵉⵙⵙⵉⵡⵙ ⵎⵍⵉⵃ",
+    "cer": 0.167,
+    "wer": 0.4
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40064826.mp3",
+  "origin": "Atles central",
+  "said": "ⵓⵔ ⵙⵙⵉⵏⵖ ⵎⴰⵏⵉ ⵙⴳ ⴷ ⵜⴷⴷⴰ.",
+  "reference": "ⵓⵔ ⵙⵙⵉⵏⵖ ⵎⴰⵏⵉ ⵙⴳ ⴷ ⵜⴷⴷⴰ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵓⵔ ⵙⵙⵉⵏⵖⵎⴰⵏⵉⵚⵖ ⵜⴷⴷⵖ",
+    "cer": 0.263,
+    "wer": 0.833
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40066180.mp3",
+  "origin": "sense varietat",
+  "said": "ⵜⵉⴳⵉⵔⴰ ⵜⴼⵙⵉ ⵙⵓⵍ ⵜⵎⵓⴽⵔⵉⵙⵜ.",
+  "reference": "ⵜⵉⴳⵉⵔⴰ ⵜⴼⵙⵉ ⵙⵓⵍ ⵜⵎⵓⴽⵔⵉⵙⵜ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵜⵜⵉⴳⵉⵔ ⴰⴷ ⵜⴼⵙⵙⵉⵉⵙⵓⵍ ⵜⵏⴽⵔⵉⵙⵜ",
+    "cer": 0.318,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40041162.mp3",
+  "origin": "Tachelhit",
+  "said": "ⴰⵙⴳⴳⵯⴰⵙ ⴰⴷ ⵉⵎⵓⵔⵙ ⵓⴽⴰⵏ ⵉⵡⵉ ⴳ ⵍⴱⴰⴽ.",
+  "reference": "ⴰⵙⴳⴳⵯⴰⵙ ⴰⴷ ⵉⵎⵓⵔⵙ ⵓⴽⴰⵏ ⵉⵡⵉ ⴳ ⵍⴱⴰⴽ.",
+  "models": {
+   "/predict": {
+    "heard": "ⴰⵙⴳⴳⵯⴰⵙ ⴰⴷ ⵉⵎⵓⵔⵙ ⵓⴽⴰⵏ ⵉⵡⵉ ⴳ ⵍⴱⴰⴽ",
+    "cer": 0.037,
+    "wer": 0.143
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40043056.mp3",
+  "origin": "sense varietat",
+  "said": "ⵓⵔ ⵙⵇⵇⵙⵉⵖ ⵛⴰ ⵖⴼ ⵜⵎⵓⵔⵜ ⵏ ⵍⵇⴱⴰⵢⵍ.",
+  "reference": "ⵓⵔ ⵙⵇⵇⵙⵉⵖ ⵛⴰ ⵖⴼ ⵜⵎⵓⵔⵜ ⵏ ⵍⵇⴱⴰⵢⵍ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵓⵔ ⵙⵇⵙⵉⵖ ⵛⵔⴰⴼ ⵜⵎⵓⵔⵜ ⵏ ⵍⵇⴱⴰⵢⵍ",
+    "cer": 0.16,
+    "wer": 0.571
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40064732.mp3",
+  "origin": "Atles central",
+  "said": "ⵢⵓⴼ ⴳⴰⵔ ⵉⵎⵏⵙⵉ ⴳⴰⵔ ⴰⵡⴰⵍ.",
+  "reference": "ⵢⵓⴼ ⴳⴰⵔ ⵉⵎⵏⵙⵉ ⴳⴰⵔ ⴰⵡⴰⵍ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵢⵓⴼⴷⵔ ⵉⵎⵏⵙⵉ ⵉⴳⵔⴰⵡⴰⵍ",
+    "cer": 0.263,
+    "wer": 0.8
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40092985.mp3",
+  "origin": "Tachelhit",
+  "said": "ⴰⵙⴰⵡⵏ ⵖⴼ ⵡⵓⴷⵎ ⵏ ⵓⵎⴷⴷⴰⴽⴽⵯⵍ ⴷ ⴰⴽⵯⵙⵙⴰⵔ",
+  "reference": "ⴰⵙⴰⵡⵏ ⵖⴼ ⵡⵓⴷⵎ ⵏ ⵓⵎⴷⴷⴰⴽⴽⵯⵍ ⴷ ⴰⴽⵯⵙⵙⴰⵔ",
+  "models": {
+   "/predict": {
+    "heard": "ⴰⵙⴰⵍ ⵖⴼ ⵡⵓⴷⵎ ⵏ ⵓⵎⴷⴷⴰⴽⴽⵯⵍ ⴷ ⴰⴽⵙⵙⴰⵔ",
+    "cer": 0.103,
+    "wer": 0.286
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40957124.mp3",
+  "origin": "Atles central",
+  "said": "ⵎⴰ ⵢⴰⵖⵏ ⴰⵢⵢⵉⵙ ⵉⵏⵓ?",
+  "reference": "ⵎⴰ ⵢⴰⵖⵏ ⴰⵢⵢⵉⵙ ⵉⵏⵓ?",
+  "models": {
+   "/predict": {
+    "heard": "ⵎⴰ ⵢⵓⵖⵏⴰ ⴰ ⵙ ⵉⵉ",
+    "cer": 0.467,
+    "wer": 1.0
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40593216.mp3",
+  "origin": "sense varietat",
+  "said": "ⵢⵓⴹⴰ ⴷ ⵙ ⵜⵜⵥⵓⵕⵉ.",
+  "reference": "ⵢⵓⴹⴰ ⴷ ⵙ ⵜⵜⵥⵓⵕⵉ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵢⵡⴹⴰ ⴷ ⵙ ⵜⵥⵓⵕⵔⵉ",
+    "cer": 0.308,
+    "wer": 0.5
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40038476.mp3",
+  "origin": "Tachelhit",
+  "said": "ⵍⵍⴰⵏ ⴷⴰⵔ ⴱⵉⵍⵍ ⵜⵓⴳⵜ ⵏ ⵉⵎⴷⴷⵓⴽⴽⴰⵍ.",
+  "reference": "ⵍⵍⴰⵏ ⴷⴰⵔ ⴱⵉⵍⵍ ⵜⵓⴳⵜ ⵏ ⵉⵎⴷⴷⵓⴽⴽⴰⵍ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵍⵍⴰⵏ ⴷⴰⵔ ⴱⵉⵍ ⵜⵓⴳⵜⵜ ⵏ ⵉⵎⴷⴷⵓⴽⴽⵯⴰⵍ",
+    "cer": 0.154,
+    "wer": 0.5
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_43372140.mp3",
+  "origin": "Atles central",
+  "said": "ⵢⵓⵔⵔⵉ ⴷ ⴳ ⵜⵙⵏⴱⴹⴰⵢⵜ.",
+  "reference": "ⵢⵓⵔⵔⵉ ⴷ ⴳ ⵜⵙⵏⴱⴹⴰⵢⵜ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵢⵓⵔⵔⵉ ⴷ ⵙⵍⴱⴹ ⵜ",
+    "cer": 0.375,
+    "wer": 0.5
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40064596.mp3",
+  "origin": "Atles central",
+  "said": "ⵎⵉⵏ ⵜⵙⵙⵏⵡⴰⴷ?",
+  "reference": "ⵎⵉⵏ ⵜⵙⵙⵏⵡⴰⴷ?",
+  "models": {
+   "/predict": {
+    "heard": "ⵎⵉ ⵏⵙ ⵏⵡⴰ ⴷ",
+    "cer": 0.273,
+    "wer": 2.0
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40064954.mp3",
+  "origin": "Atles central",
+  "said": "ⵜⵓⵎ ⴰⴷ ⵉⵙⵙⵍⵎⴰⴷⵏ ⵜⴰⴼⵕⴰⵏⵙⵉⵙⵜ ⵉ ⵎⴰⵔⵉ.",
+  "reference": "ⵜⵓⵎ ⴰⴷ ⵉⵙⵙⵍⵎⴰⴷⵏ ⵜⴰⴼⵕⴰⵏⵙⵉⵙⵜ ⵉ ⵎⴰⵔⵉ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵜⵓⵎ ⴰⴷ ⵉⵙⵍⵎⴷⵏ ⵜⴰⴼⵕⴰⵏⵙⵉⵙⵙⵜ ⵉ ⵎⴰⵔⵉ",
+    "cer": 0.138,
+    "wer": 0.5
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_37842531.mp3",
+  "origin": "sense varietat",
+  "said": "ⵎⴰ ⵉⵏⵏⴰⵏ ⵓⵢⴰ?",
+  "reference": "ⵎⴰ ⵉⵏⵏⴰⵏ ⵓⵢⴰ?",
+  "models": {
+   "/predict": {
+    "heard": "ⵎⴰ ⵢⵏⵏⴰⵏ ⵡⵉⵢⴰ",
+    "cer": 0.364,
+    "wer": 0.667
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40064572.mp3",
+  "origin": "Atles central",
+  "said": "ⴷⴷⵉⵖ ⵉⴹⴳⴰⵎ ⵙ ⵓⵍⵎⵓⴳⴳⴰⵔ.",
+  "reference": "ⴷⴷⵉⵖ ⵉⴹⴳⴰⵎ ⵙ ⵓⵍⵎⵓⴳⴳⴰⵔ.",
+  "models": {
+   "/predict": {
+    "heard": "ⴷⵊⴰⵊⵉⴷⴳⴰ ⵙ ⵓⵎⵓⴳⵔ",
+    "cer": 0.474,
+    "wer": 0.75
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_38280365.mp3",
+  "origin": "Tachelhit",
+  "said": "ⵓⵔ ⵉⵖⴰⵍ ⵟⵓⵎ ⵉⵙ ⵔⴰⴷ ⵉⵢⵉ ⵜⴰⵊⵊ ⵎⴰⵔⵉ ⴰⴷ ⴳⴳⵖ ⴰⵢⵉⵏⵏ.",
+  "reference": "ⵓⵔ ⵉⵖⴰⵍ ⵟⵓⵎ ⵉⵙ ⵔⴰⴷ ⵉⵢⵉ ⵜⴰⵊⵊ ⵎⴰⵔⵉ ⴰⴷ ⴳⴳⵖ ⴰⵢⵉⵏⵏ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵓⵔⵉⵖ ⴰⵎ ⵟⵓⵎ ⵉⵙⵔⴰⴷⵉⵢⴰ ⵜⴰⵊ ⵎⴰⵔⵉ ⴰⴷ ⴳⵖ ⴰⵢⵏ",
+    "cer": 0.194,
+    "wer": 0.727
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40382432.mp3",
+  "origin": "Atles central",
+  "said": "ⵉⵎⵎⵓⵜ ⵜⵓⵎ ⵓⵔ ⵜⴰ ⴷ ⵉⵍⵓⵍ ⵉⵡⵉⵙ.",
+  "reference": "ⵉⵎⵎⵓⵜ ⵜⵓⵎ ⵓⵔ ⵜⴰ ⴷ ⵉⵍⵓⵍ ⵉⵡⵉⵙ.",
+  "models": {
+   "/predict": {
+    "heard": "ⵉⵎⵓⵜⵟⵟⵏ ⵓⵔ ⵜⵜⴰ ⴷ ⵉⵍⵓⵍⵍⵉⵡⵙ",
+    "cer": 0.364,
+    "wer": 0.714
+   }
+  }
+ },
+ {
+  "id": "common_voice_zgh_40173403.mp3",
+  "origin": "Tachelhit",
+  "said": "ⴷ ⵍⵎⵍⵉⵃ ⵎⴰ ⵕⴰⵃⵖ ⵖⵔ ⵓⵛⵓⵛⵛⴼ.",
+  "reference": "ⴷ ⵍⵎⵍⵉⵃ ⵎⴰ ⵕⴰⵃⵖ ⵖⵔ ⵓⵛⵓⵛⵛⴼ.",
+  "models": {
+   "/predict": {
+    "heard": "ⴷ ⵍⵎⵍⵉⵃ ⵎⴰ ⵔⵉⵃ ⵖⵔ ⵓⵙⵛⵛⴼ",
+    "cer": 0.286,
+    "wer": 0.333
+   }
+  }
+ }
+]
