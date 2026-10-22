@@ -33,9 +33,29 @@ sys.path.insert(0, os.path.join(ROOT, "backend"))
 os.environ.setdefault("LEXICON_WARMUP", "0")
 
 API = os.environ.get("TACHELHIT_API", "https://tachelhit-drills-api.onrender.com")
-SPACE = os.environ.get("ASR_SPACE", "Tamazight-NLP/ASR")
+# The Space the APP actually calls (backend/main.py ASR_SPACE_DEFAULT): our own Docker Space,
+# NeMo FastConformer, with /transcribe and /align. Measuring anything else measures a
+# transcriber nobody uses -- which is exactly what happened on 2026-10-22.
+SPACE = os.environ.get("ASR_SPACE", "https://josepabloucr-huggingface-asr-space.hf.space")
+HF_TOKEN = os.environ.get("HUGGINGFACE_API_KEY", "")
+if not HF_TOKEN:
+    try:
+        for _line in open(os.path.join(ROOT, "backend", ".env"), encoding="utf-8"):
+            if _line.startswith("HUGGINGFACE_API_KEY="):
+                HF_TOKEN = _line.split("=", 1)[1].strip()
+                break
+    except OSError:
+        pass
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) tachelhit-ops"}
 
+
+# Each source gets its own file name. This used to be "CV if Common Voice else NOSTRA", which
+# meant the third corpus quietly overwrote the library's own report.
+SLUG = {
+    "la nostra biblioteca": "NOSTRA",
+    "Common Voice (Mozilla Data Collective)": "CV",
+    "Tamazight Open Speech Dataset": "TOSD",
+}
 
 # A measurement names whose recordings it used. Keyed by the `source` passed to measure().
 CREDIT = {
@@ -46,6 +66,14 @@ CREDIT = {
         "`cv-corpus-27.0-2026-09-11`, baixat del Mozilla Data Collective. Llicència **CC0**: no "
         "exigeix atribució, però els clips els van gravar i validar persones de la comunitat "
         "amaziga i és just dir-ho. En baixar-los es va acceptar no intentar esbrinar qui parla.",
+    ],
+    "Tamazight Open Speech Dataset": [
+        "## D'on surten les gravacions",
+        "",
+        "**Tamazight Open Speech Dataset**, publicat per **Tamazight NLP** al Mozilla Data "
+        "Collective, llicència **Apache-2.0**. 1.801 gravacions, 1,44 h, amb la frase en tifinag. "
+        "No entren a la biblioteca: no diuen qui parla ni d'on és, i no porten cap significat en "
+        "català. Aquí només fan de jutge.",
     ],
     "la nostra biblioteca": [
         "## D'on surten les gravacions",
@@ -113,6 +141,35 @@ def common_voice(folder: str, sample: int, seed: int) -> list:
     return picked
 
 
+def tamazight_open_speech(folder: str, sample: int, seed: int) -> list:
+    """The Tamazight Open Speech Dataset as this tool wants it.
+
+    1.801 clips, 1,44 h, each with its sentence in Tifinagh -- so, like Common Voice, nothing has
+    to be transliterated. Unlike Common Voice it says nothing about who speaks or from where, so
+    there is no variety to break the sample down by: the only split it offers is its own two
+    subsets, and those are what the report shows.
+    """
+    rows = [json.loads(line) for line in open(os.path.join(folder, "metadata.jsonl"), encoding="utf-8")
+            if line.strip()]
+    buckets: dict = collections.defaultdict(list)
+    for r in rows:
+        if (r.get("text") or "").strip():
+            buckets[r.get("subset") or "sense grup"].append(r)
+    rnd = random.Random(seed)
+    share = max(1, sample // max(1, len(buckets)))
+    picked = []
+    for label, items in buckets.items():
+        rnd.shuffle(items)
+        for r in items[:share]:
+            picked.append({"id": os.path.basename(r["audio_filepath"]), "origin": label,
+                           "said": r["text"], "reference": r["text"].strip(),
+                           "file": os.path.join(folder, r["audio_filepath"])})
+    print(f"{len(rows)} gravacions · "
+          + " · ".join(f"{k}: {min(len(v), share)} de {len(v)}" for k, v in buckets.items()))
+    rnd.shuffle(picked)
+    return picked
+
+
 def measure(picked: list, source: str = "la nostra biblioteca") -> None:
     """Ask the Space to transcribe each clip, and say how wrong it was.
 
@@ -122,8 +179,14 @@ def measure(picked: list, source: str = "la nostra biblioteca") -> None:
     second one buys nothing but time.
     """
     import requests
-    from gradio_client import Client, handle_file
-    client = Client(SPACE)
+    # A URL means our own Docker Space (FastAPI: POST /transcribe). An "owner/name" means a
+    # Gradio Space, which is how the public ones are reached.
+    rest = SPACE.startswith("http")
+    client = None
+    if not rest:
+        from gradio_client import Client, handle_file
+        client = Client(SPACE)
+    auth = {"Authorization": f"Bearer {HF_TOKEN}"} if HF_TOKEN else {}
     out = []
     for i, p in enumerate(picked, 1):
         local = p.get("file")
@@ -141,8 +204,17 @@ def measure(picked: list, source: str = "la nostra biblioteca") -> None:
         row = {"id": p["id"], "origin": p["origin"], "said": p["said"],
                "reference": p["reference"], "models": {}}
         try:
-            heard = client.predict(audio_path=handle_file(local), api_name="/predict")
-            heard = (heard if isinstance(heard, str) else json.dumps(heard, ensure_ascii=False)).strip()
+            if rest:
+                with open(local, "rb") as fh:
+                    r = requests.post(f"{SPACE}/transcribe", headers=auth,
+                                      files={"audio_file": (os.path.basename(local), fh, "audio/wav")},
+                                      timeout=600)
+                r.raise_for_status()
+                heard = (r.json() or {}).get("text") or ""
+            else:
+                heard = client.predict(audio_path=handle_file(local), api_name="/predict")
+                heard = heard if isinstance(heard, str) else json.dumps(heard, ensure_ascii=False)
+            heard = heard.strip()
             row["models"]["/predict"] = {"heard": heard, **rates(p["reference"], heard)}
         except Exception as e:
             row["models"]["/predict"] = {"heard": "", "error": str(e)[:80], "cer": 1.0, "wer": 1.0}
@@ -173,7 +245,7 @@ def measure(picked: list, source: str = "la nostra biblioteca") -> None:
     lines += ["", "CER 0 vol dir clavat; 1 vol dir que no n'ha encertat res. Per decidir si una "
                   "veu diu el que diu un text caldria estar clarament per sota de 0,5.", ""]
     lines += CREDIT.get(source, []) + ["", "Totes les fonts del projecte: [docs/CREDITS.md](CREDITS.md).", ""]
-    slug = "CV" if "Common Voice" in source else "NOSTRA"
+    slug = SLUG.get(source, "ALTRES")
     md = os.path.join(ROOT, "docs", f"ASR_EVAL_{slug}_{stamp}.md")
     with open(md, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
@@ -186,6 +258,7 @@ def measure(picked: list, source: str = "la nostra biblioteca") -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--cv", help="a Common Voice corpus folder (the one holding validated.tsv)")
+    ap.add_argument("--tosd", help="a Tamazight Open Speech folder (the one holding metadata.jsonl)")
     ap.add_argument("--sample", type=int, default=60, help="how many recordings to listen to")
     ap.add_argument("--dry", action="store_true", help="pick them, call nothing")
     ap.add_argument("--seed", type=int, default=22)
@@ -200,6 +273,15 @@ def main() -> None:
                 print(f"  {p['origin']:14s} {p['said'][:46]}")
             return
         measure(picked, source="Common Voice (Mozilla Data Collective)")
+        return
+
+    if args.tosd:
+        picked = tamazight_open_speech(args.tosd, args.sample, args.seed)
+        if args.dry:
+            for p in picked[:10]:
+                print(f"  {p['origin']:14s} {p['said'][:46]}")
+            return
+        measure(picked, source="Tamazight Open Speech Dataset")
         return
 
     import grammar
