@@ -5,7 +5,7 @@ import axios from 'axios';
 import { API_BASE } from './config';
 import { api } from './api';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { FaLayerGroup, FaVideo, FaBookOpen, FaGraduationCap, FaFilm, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaMicrophone } from 'react-icons/fa';
+import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaMicrophone } from 'react-icons/fa';
 import { syncManager } from './services/OfflineSyncManager';
 import ToastHost from './components/ToastHost';
 import AiCopilot from './components/AiCopilot';
@@ -20,7 +20,6 @@ const PracticeSession = lazy(() => import('./components/PracticeSession'));
 const PracticeGroupPage = lazy(() => import('./components/PracticeGroupPage'));
 const VeusPage = lazy(() => import('./components/VeusPage'));
 const UserPage = lazy(() => import('./components/UserPage'));
-const YouTubeShorts = lazy(() => import('./components/YouTubeShorts'));
 const DrillPlayerPage = lazy(() => import('./components/DrillPlayerPage'));
 const PublicTestView = lazy(() => import('./components/PublicTestView'));
 const VideoDrillCreator = lazy(() => import('./components/VideoDrillCreator'));
@@ -130,15 +129,16 @@ function App() {
 
   // Immersive routes render full-screen; the nav would collide with them
   const showNav = !location.pathname.startsWith('/player') && !/^\/tests\/\d/.test(location.pathname) && location.pathname !== '/tests/sessio';
-  const compactNav = useIsMobileLayout(); // phones: icon-only tabs so Tests and Reels are not hidden off-screen
+  const compactNav = useIsMobileLayout(); // phones: icon-only tabs, so none of them is hidden off-screen
+  // Five doors, and each one is something you DO: look at the library, record new material, learn,
+  // practise, lend your voice. What only an editor needs (the corpus and its exports) hangs off the
+  // Drills page's "Més" menu instead of standing in the main menu.
   const navLinks = [
     { to: '/', label: 'Drills', Icon: FaLayerGroup },
     { to: '/video-creator', label: 'Captura', Icon: FaVideo },
     { to: '/grammar', label: 'Gramàtica', Icon: FaBook },
-    { to: '/corpus', label: 'Corpus', Icon: FaBookOpen },
     { to: '/tests', label: 'Pràctica', Icon: FaGraduationCap },
     { to: '/veus', label: 'Veus', Icon: FaMicrophone },
-    { to: '/shorts', label: 'Reels', Icon: FaFilm },
   ];
   const navBtn = (active: boolean): React.CSSProperties => ({
     flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -190,7 +190,6 @@ function App() {
         <Route path="/u/:username" element={<UserPage />} />
         <Route path="/tests/:testId" element={<PublicTestView />} />
         <Route path="/tests/:testId/listen" element={<PublicTestView initialView="listening" />} />
-        <Route path="/shorts" element={<YouTubeShorts />} />
         <Route path="/video-creator" element={<VideoDrillCreator />} />
         <Route path="/srt-import" element={<SrtImport />} />
         <Route path="/player" element={<DrillPlayerPage />} />
