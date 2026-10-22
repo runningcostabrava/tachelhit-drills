@@ -84,7 +84,8 @@ UNITS: List[dict] = [
 SLUGS = [u["slug"] for u in UNITS]
 TITLES = {u["slug"]: u["title"] for u in UNITS}
 BATCH = 40
-LESSON_VERSION = 16  # bump when the lesson format or prompt changes: old rows are rewritten on next open
+DEEP_VERSION = 1   # the «a fons» level of a unit, kept under «deep:<slug>» in the same table
+LESSON_VERSION = 17  # bump when the lesson format or prompt changes: old rows are rewritten on next open
 
 # Drills whose tag names another language are never part of the course (the owner's old Irish tests).
 EXCLUDED_TAGS = ("irish",)
@@ -355,6 +356,150 @@ def gloss_of(d) -> Optional[List[dict]]:
     return out or None
 
 
+NOTE_VERSION = 1       # bump to rewrite every «why this sentence is here» note
+NOTES_BATCH = 12       # sentences per Gemini call: ~160 calls cover the whole course
+NO_NOTE = "-"          # asked, and the honest answer was that the sentence shows nothing of the unit
+
+_notes_state = {"running": False, "done": 0, "pending": 0, "errors": 0, "unit": None,
+                "started_at": None, "finished_at": None, "last_error": None}
+_notes_lock = threading.Lock()
+
+
+def notes_status() -> dict:
+    return dict(_notes_state)
+
+
+def notes_for(db, slug: str) -> Dict[int, str]:
+    """What the library can say about each sentence of ONE unit: why it is there. By drill id, and
+    without the ones whose honest answer was «it shows nothing of this unit»."""
+    from models import GrammarNote
+    rows = db.query(GrammarNote.drill_id, GrammarNote.body).filter(GrammarNote.slug == slug).all()
+    return {int(i): b for i, b in rows if b and b != NO_NOTE}
+
+
+def asked_notes(db, slug: str) -> set:
+    """The drills already asked about for this unit, so a pass never asks twice."""
+    from models import GrammarNote
+    return {int(i) for (i,) in db.query(GrammarNote.drill_id).filter(
+        GrammarNote.slug == slug, GrammarNote.version >= NOTE_VERSION).all()}
+
+
+def _notes_prompt(unit: dict, sheet: str, batch: List[dict]) -> str:
+    lines = "\n".join(f"- id {e['id']}: «{e['shi']}» — {e['ca']}" for e in batch)
+    return (
+        f"Ensenyes amazic (tamazight de l'Atles central) a catalanoparlants que comencen. La unitat "
+        f"del curs és «{unit['title']}»: {unit.get('hint') or ''}\n\n"
+        f"FULL DE REGLES DE LA UNITAT\n{sheet}\n\n"
+        "Per a cada frase de sota, digues QUÈ MOSTRA AQUESTA FRASE d'aquesta unitat: quin tros de la "
+        "frase és el que ensenya el punt i què hi fa. De 25 a 45 paraules, en català planer, com ho "
+        "diria un mestre al costat de la frase.\n"
+        "- anomena el tros tal com està escrit a la frase, entre cometes;\n"
+        "- no facis servir mots de gramàtic (ni «inacomplert», ni «clític», ni «díctic»…): digues-ho "
+        "a la manera planera;\n"
+        "- no citis mai números d'identificació ni diguis «aquesta frase» dues vegades;\n"
+        "- si la frase no mostra res d'aquesta unitat, respon exactament «-» i prou. Val més dir-ho "
+        "que inventar-s'ho.\n\n"
+        f"FRASES\n{lines}\n\n"
+        'Respon NOMÉS amb un objecte JSON {"<id>": "<el que mostra, 25-45 paraules>"}.'
+    )
+
+
+def write_notes(unit: dict, sheet: str, batch: List[dict]) -> Dict[int, str]:
+    """One call: why each of these sentences is in this unit."""
+    from gemini_client import gemini_generate
+    answer = gemini_generate(
+        "Ets un mestre d'amazic que explica, frase a frase, què ensenya cada exemple.",
+        [{"role": "user", "text": _notes_prompt(unit, sheet, batch)}],
+        max_output_tokens=2000, temperature=0.2, timeout=180)
+    m = re.search(r"\{.*\}", answer or "", re.S)
+    if not m:
+        raise ValueError("notes without JSON")
+    got = json.loads(re.sub(r",\s*([}\]])", r"\1", m.group(0)))
+    ids = {e["id"] for e in batch}
+    out: Dict[int, str] = {}
+    for k, v in (got or {}).items():
+        try:
+            i = int(str(k).strip())
+        except ValueError:
+            continue
+        body = _clean_prose(str(v or "").strip())
+        if i in ids and body:
+            out[i] = NO_NOTE if body.strip(" .-") == "" else body
+    return out
+
+
+def store_notes(db, slug: str, notes: Dict[int, str]) -> int:
+    from datetime import datetime
+    from models import GrammarNote
+    n = 0
+    for drill_id, body in notes.items():
+        key = f"{slug}:{drill_id}"
+        row = db.query(GrammarNote).filter(GrammarNote.id == key).first()
+        if row is None:
+            db.add(GrammarNote(id=key, slug=slug, drill_id=drill_id, body=body, version=NOTE_VERSION))
+        else:
+            row.body, row.version, row.updated_at = body, NOTE_VERSION, datetime.utcnow()
+        n += 1
+    db.commit()
+    return n
+
+
+def fill_notes(session_factory, rows_for, grammar_md: str = "", only: Optional[str] = None,
+               per_unit: int = 90) -> dict:
+    """Write «why this sentence is here» for every sentence each unit can quote, unit by unit and
+    NOTES_BATCH sentences per call. Resumable: a pair already asked is never asked again, so the
+    pass can stop and start, and a lesson rewritten later finds its notes waiting.
+
+    `rows_for(db, slug)` gives a unit's drills (main.py owns that query)."""
+    with _notes_lock:
+        if _notes_state["running"]:
+            return {"started": False, "reason": "already running"}
+        _notes_state.update(running=True, done=0, pending=0, errors=0, unit=None,
+                            started_at=time.time(), finished_at=None, last_error=None)
+    try:
+        for unit in [u for u in UNITS if not only or u["slug"] == only]:
+            slug = unit["slug"]
+            _notes_state["unit"] = slug
+            db = session_factory()
+            try:
+                examples = pick_examples(rows_for(db, slug), limit=per_unit, slug=slug)
+                todo = [e for e in examples if e["id"] not in asked_notes(db, slug)]
+                if not todo:
+                    continue
+                _notes_state["pending"] += len(todo)
+                sheet = sheet_for(db, slug, grammar_md)
+                for i in range(0, len(todo), NOTES_BATCH):
+                    batch = todo[i:i + NOTES_BATCH]
+                    try:
+                        notes = write_notes(unit, sheet, batch)
+                        for e in batch:  # a sentence the writer passed over is marked asked, once
+                            notes.setdefault(e["id"], NO_NOTE)
+                        store_notes(db, slug, notes)
+                        _notes_state["done"] += len(batch)
+                    except Exception as e:
+                        db.rollback()
+                        _notes_state["errors"] += 1
+                        _notes_state["last_error"] = f"{slug}: {str(e)[:160]}"
+                        print(f"[NOTES] {slug}: {e}")
+                    time.sleep(1)
+                print(f"[NOTES] {slug}: {len(todo)} sentences explained")
+            except Exception as e:
+                _notes_state["errors"] += 1
+                _notes_state["last_error"] = f"{slug}: {str(e)[:160]}"
+                print(f"[NOTES] {slug}: {e}")
+            finally:
+                try:
+                    db.close()
+                except Exception:
+                    pass
+    finally:
+        with _notes_lock:
+            _notes_state["running"] = False
+            _notes_state["unit"] = None
+            _notes_state["finished_at"] = time.time()
+    return {"started": True, **notes_status()}
+
+
 def example_dict(d) -> dict:
     """What a lesson step shows of a drill: both texts, the picture, a voice (speaker's first),
     and the word-by-word reading when the library has one."""
@@ -591,7 +736,10 @@ def _clean_sheet(s: Optional[str]) -> str:
     return (t[m.start():] if m else t).strip()
 
 
-def _lesson_prompt(unit: dict, examples: List[dict], sheet: str, tables: Optional[List[dict]] = None) -> str:
+def _lesson_prompt(unit: dict, examples: List[dict], sheet: str, tables: Optional[List[dict]] = None,
+                   deep: bool = False) -> str:
+    """The lesson the unit opens with, or — with `deep` — its second level: the same method and the
+    same sources, more steps, and the fine points the first lesson leaves out."""
     # the writer sees the simplest examples first: a one-word greeting before a full sentence
     ex = "\n".join(f"- id {e['id']} ({e.get('origin') or 'origen desconegut'}{', gravat' if e.get('recorded') else ''}): «{e['shi']}» — {e['ca']}" for e in sorted(examples, key=simplicity))
     return (
@@ -621,7 +769,17 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str, tables: Optiona
            if unit.get("level") == 1 else
            "LEVEL 2 UNIT: short sentences, one rule per step, every term explained in plain words. "
            if unit.get("level") == 2 else "")
+        + ("SECOND LEVEL. The learner has already read the first lesson of this unit and has answered its "
+           "questions: do not teach its basics again. Take the point further — the forms the first lesson left "
+           "aside, what changes after a particle or in a question, what our speakers do that the sheet does not "
+           "describe, the places where the two decks differ — and quote the sentences the first lesson did not "
+           "use (they come first in the list below). Say «ja saps que…» when you build on something known.\n\n"
+           if deep else "")
         + "Build the lesson as STEPS, each one a card the learner reads in a few seconds:\n"
+        + ("- 10 to 14 steps of type \"explain\": a title (3-6 words), a text of 35-70 words, example_ids (4-6, "
+           "ONLY from the sentences below) and \"focus\": {id: substring} for each quoted sentence, the same rules "
+           "as always. Cut the point finer than the first lesson did: one narrow rule per step.\n"
+           if deep else
         "- 7 to 9 steps of type \"explain\" (eight when the unit allows it; with 40 sentences or more below, fewer "
         "than seven is not acceptable — cut the point into smaller rules rather than writing fewer steps): a title "
         "(3-6 words), a text of 35-70 words, example_ids (4-6, ONLY from "
@@ -630,8 +788,8 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str, tables: Optiona
         "START WITH THE MOST BASIC: "
         "the first step uses the shortest examples (a single word or a two-word formula when there is one, e.g. a "
         "bare greeting, a bare noun, a bare number) and each step builds on the previous one, so the longest "
-        "sentences come last. Never open a unit with a long sentence.\n"
-        "- 1 or 2 steps of type \"pattern\" (one after the first explanations, one near the end): a title and 3-8 rows of [form, meaning, "
+        "sentences come last. Never open a unit with a long sentence.\n")
+        + "- 1 or 2 steps of type \"pattern\" (one after the first explanations, one near the end): a title and 3-8 rows of [form, meaning, "
         "example], the forms in standard Latin spelling (ɣ, ḥ, ṣ, ṭ, ẓ, ɛ, š), the example taken from our sentences "
         "when one exists."
         + (" OUR LISTS below are the paradigms our own speakers wrote for this unit: build the table from THEM, "
@@ -659,7 +817,7 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str, tables: Optiona
     )
 
 
-def _parse_lesson(answer: str, examples: List[dict]) -> dict:
+def _parse_lesson(answer: str, examples: List[dict], notes: Optional[Dict[int, str]] = None) -> dict:
     m = re.search(r"\{.*\}", answer or "", re.S)
     if not m:
         raise ValueError(f"no JSON in answer: {(answer or '')[:120]}")
@@ -688,7 +846,7 @@ def _parse_lesson(answer: str, examples: List[dict]) -> dict:
             steps.append({"type": t, "text": _clean_prose(s.get("text"))})
     if not any(s["type"] == "explain" for s in steps):
         raise ValueError("lesson without explain steps")
-    return _top_up({"intro": _clean_prose(raw.get("intro")), "steps": steps}, examples)
+    return _top_up({"intro": _clean_prose(raw.get("intro")), "steps": steps}, examples, notes=notes)
 
 
 def _fold(t: str) -> str:
@@ -701,12 +859,29 @@ def _fold(t: str) -> str:
 
 def _mark(shi: str, frag: str) -> Optional[str]:
     """Where `frag` is written inside `shi`: the piece itself when it is there letter for letter,
-    else the word that sounds like it («ghori» for «ɣur-i»), else nothing."""
+    then the same piece without the hyphen that marks an affix («-an» is how an ending is written,
+    «da-» how a particle is), and last the word that sounds like it («ghori» for «ɣur-i»)."""
     if not shi or not frag:
         return None
     low, fl = shi.lower(), frag.lower()
     if fl in low and len(frag) < len(shi):
         return shi[low.index(fl):low.index(fl) + len(fl)]
+    bare = fl.strip("-–—.·_ ")
+    if bare and bare != fl and len(bare) < len(shi):
+        # an ENDING is marked where a word ends with it, not at the first letters that match
+        if fl.startswith("-"):
+            for w in re.split(r"\s+", shi):
+                clean = w.strip(".,;:!?«»()")
+                if clean and clean.lower().endswith(bare) and len(bare) < len(clean):
+                    i = len(clean) - len(bare)
+                    return clean[i:]
+        elif fl.endswith("-"):
+            for w in re.split(r"\s+", shi):
+                clean = w.strip(".,;:!?«»()")
+                if clean and clean.lower().startswith(bare):
+                    return clean[:len(bare)]
+        if bare in low:
+            return shi[low.index(bare):low.index(bare) + len(bare)]
     key = _fold(frag)
     if not key:
         return None
@@ -721,7 +896,7 @@ def _kin(e: dict) -> set:
     return {w for w in re.findall(r"[^\W\d_]+", (e.get("shi") or "").lower()) if len(w) > 2}
 
 
-def _top_up(lesson: dict, examples: List[dict], want: int = 4) -> dict:
+def _top_up(lesson: dict, examples: List[dict], want: int = 4, notes: Optional[Dict[int, str]] = None) -> dict:
     """An explanation that quotes fewer than `want` sentences gets more from the unit's own pool:
     first the sentences that really contain the piece being taught (by sound, so another spelling of
     the same word counts); then, if the step is still short, the unit's sentences that share a word
@@ -769,6 +944,13 @@ def _top_up(lesson: dict, examples: List[dict], want: int = 4) -> dict:
                 if mark:
                     add["focus"] = mark
                     break
+            # a sentence with nothing marked and nothing said about it is noise under an
+            # explanation: the learner sees a bare sentence and cannot tell why it is there
+            why = (notes or {}).get(e["id"])
+            if not add.get("focus") and not why:
+                continue
+            if why:
+                add["why"] = why
             s["examples"].append(add); used.add(e["id"])
     return lesson
 
@@ -847,17 +1029,19 @@ def _review_quizzes(pool: List[dict], used: set, n_quiz: int, how_many: int) -> 
 
 
 def write_lesson(slug: str, grammar_md: str, examples: List[dict], sheet: Optional[str] = None,
-                 tables: Optional[List[dict]] = None) -> dict:
-    """Ask Gemini for the unit's steps and attach the examples and the quick checks."""
+                 tables: Optional[List[dict]] = None, notes: Optional[Dict[int, str]] = None,
+                 deep: bool = False) -> dict:
+    """Ask Gemini for the unit's steps and attach the examples and the quick checks. With `deep`,
+    the unit's second level: more steps, finer rules, and the sentences the first lesson left."""
     unit = next((u for u in UNITS if u["slug"] == slug), None)
     if unit is None:
         raise ValueError("unknown unit")
     from gemini_client import gemini_generate
     sheet = study(slug, grammar_md) if sheet is None else sheet
     answer = gemini_generate("You are a patient, clear teacher of Amazigh for beginners, writing in Catalan.",
-                             [{"role": "user", "text": _lesson_prompt(unit, examples, sheet, tables)}],
+                             [{"role": "user", "text": _lesson_prompt(unit, examples, sheet, tables, deep=deep)}],
                              max_output_tokens=9000, temperature=0.3, timeout=420)
-    lesson = _parse_lesson(answer, examples)
+    lesson = _parse_lesson(answer, examples, notes)
     lesson["study"] = sheet  # the rule sheet travels with the lesson (shown to admins)
     return _with_quizzes(lesson, examples)
 
@@ -876,12 +1060,18 @@ def quoted_ids(lesson: dict) -> set:
 GROWTH = 0.3  # a unit that gained this share of drills (and at least 5) gets its lesson written again
 
 
-def _current(row, unit_ids: Optional[set]) -> Optional[dict]:
+def _row_id(slug: str, deep: bool = False) -> str:
+    """Where a unit's lesson is kept. The second level sits in the same table under «deep:», the
+    way the rule sheet sits under «sheet:»."""
+    return f"deep:{slug}" if deep else slug
+
+
+def _current(row, unit_ids: Optional[set], deep: bool = False) -> Optional[dict]:
     """The stored lesson when it is up to date: right version; when the unit's drills are given,
     every sentence it quotes still in the unit (a reclassified unit gets its lesson written again)
     and the unit has not grown much since the lesson was written (new recordings and captures join
     the lesson, instead of waiting for a format change)."""
-    if row is None or (row.version or 0) < LESSON_VERSION:
+    if row is None or (row.version or 0) < (DEEP_VERSION if deep else LESSON_VERSION):
         return None
     try:
         lesson = json.loads(row.body)
@@ -916,44 +1106,48 @@ def _stored(row) -> Optional[dict]:
         return None
 
 
-def _store_lesson(db, slug: str, lesson: dict) -> None:
+def _store_lesson(db, slug: str, lesson: dict, deep: bool = False) -> None:
     from datetime import datetime
     from models import GrammarLesson
     body = json.dumps(lesson, ensure_ascii=False)
-    row = db.query(GrammarLesson).filter(GrammarLesson.id == slug).first()
+    version = DEEP_VERSION if deep else LESSON_VERSION
+    key = _row_id(slug, deep)
+    row = db.query(GrammarLesson).filter(GrammarLesson.id == key).first()
     if row is None:
-        db.add(GrammarLesson(id=slug, body=body, version=LESSON_VERSION))
+        db.add(GrammarLesson(id=key, body=body, version=version))
     else:
-        row.body = body; row.version = LESSON_VERSION; row.updated_at = datetime.utcnow()
+        row.body = body; row.version = version; row.updated_at = datetime.utcnow()
     db.commit()
 
 
 def _write_in_background(session_factory, slug: str, grammar_md: str, examples: List[dict], unit_ids: Optional[set],
-                         tables: Optional[List[dict]] = None) -> bool:
-    """Write the unit's lesson on a thread of its own, once at a time per unit. True when this call
-    started the writing."""
+                         tables: Optional[List[dict]] = None, deep: bool = False) -> bool:
+    """Write the unit's lesson — or its «a fons» level — on a thread of its own, once at a time per
+    unit and level. True when this call started the writing."""
+    key = _row_id(slug, deep)
     with _write_lock:
-        if slug in _writing:
+        if key in _writing:
             return False
-        _writing.add(slug)
+        _writing.add(key)
 
     def run():
         db = session_factory()
         try:
-            lesson = write_lesson(slug, grammar_md, examples, sheet=sheet_for(db, slug, grammar_md), tables=tables)
+            lesson = write_lesson(slug, grammar_md, examples, sheet=sheet_for(db, slug, grammar_md),
+                                  tables=tables, notes=notes_for(db, slug), deep=deep)
             if unit_ids is not None:
                 lesson["unit_size"] = len(unit_ids)  # so growth of the unit can be noticed later
-            _store_lesson(db, slug, lesson)
-            print(f"[GRAMMAR] lesson {slug}: written ({len(lesson.get('steps') or [])} steps)")
+            _store_lesson(db, slug, lesson, deep=deep)
+            print(f"[GRAMMAR] {'a fons' if deep else 'lesson'} {slug}: written ({len(lesson.get('steps') or [])} steps)")
         except Exception as e:
-            print(f"[GRAMMAR] lesson {slug}: {e}")
+            print(f"[GRAMMAR] {'a fons' if deep else 'lesson'} {slug}: {e}")
         finally:
             try:
                 db.close()
             except Exception:
                 pass
             with _write_lock:
-                _writing.discard(slug)
+                _writing.discard(key)
 
     threading.Thread(target=run, daemon=True).start()
     return True
@@ -967,6 +1161,24 @@ def _placeholder(slug: str, examples: List[dict]) -> dict:
                  "unitat; la lliçó apareixerà tota sola en un minut.",
          "examples": examples[:4]},
         {"type": "end"}]}
+
+
+def _with_notes(lesson, notes: Dict[int, str]):
+    """Put «why this sentence is here» on every sentence a lesson shows, matched by drill id. Late,
+    like the glosses: a note written after the lesson still reaches the learner."""
+    if not isinstance(lesson, dict) or not notes:
+        return lesson
+    for s in lesson.get("steps") or []:
+        if not isinstance(s, dict):
+            continue
+        shown = list(s.get("examples") or [])
+        if isinstance(s.get("example"), dict):
+            shown.append(s["example"])
+        for e in shown:
+            why = notes.get(e.get("id"))
+            if why:
+                e["why"] = why
+    return lesson
 
 
 def _with_glosses(lesson, examples: List[dict]):
@@ -990,27 +1202,50 @@ def _with_glosses(lesson, examples: List[dict]):
     return lesson
 
 
-def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool = False, unit_ids: Optional[set] = None,
-               session_factory=None, tables: Optional[List[dict]] = None) -> dict:
-    """The unit's lesson from the `grammar_lessons` table. A page NEVER waits for Gemini: when the
-    lesson is missing or outdated and a session factory is given, the writing starts on a thread and
-    the kept lesson (or a short placeholder) comes back at once, marked so the page can ask again."""
+def deep_first(db, slug: str, examples: List[dict]) -> List[dict]:
+    """The pool as the «a fons» level should see it: the sentences the first lesson does NOT quote
+    first, so the two levels teach the same point with different sentences."""
     from models import GrammarLesson
     row = db.query(GrammarLesson).filter(GrammarLesson.id == slug).first()
-    lesson = None if force else _current(row, unit_ids)
+    base = quoted_ids(_stored(row) or {}) if row is not None else set()
+    if not base:
+        return examples
+    return [e for e in examples if e["id"] not in base] + [e for e in examples if e["id"] in base]
+
+
+def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool = False, unit_ids: Optional[set] = None,
+               session_factory=None, tables: Optional[List[dict]] = None, deep: bool = False) -> dict:
+    """The unit's lesson from the `grammar_lessons` table — or, with `deep`, its «a fons» level. A
+    page NEVER waits for Gemini: when the lesson is missing or outdated and a session factory is
+    given, the writing starts on a thread and the kept lesson (or a short placeholder) comes back at
+    once, marked so the page can ask again."""
+    from models import GrammarLesson
+    try:
+        notes = notes_for(db, slug)
+    except Exception:  # a database that has not met the notes table yet must still serve the course
+        notes = {}
+
+    def dressed(lesson):
+        return _with_notes(_with_glosses(lesson, examples), notes)
+
+    if deep:
+        examples = deep_first(db, slug, examples)
+    row = db.query(GrammarLesson).filter(GrammarLesson.id == _row_id(slug, deep)).first()
+    lesson = None if force else _current(row, unit_ids, deep=deep)
     if lesson is not None:
-        return _with_glosses(lesson, examples)
+        return dressed(lesson)
     if session_factory is not None:
-        _write_in_background(session_factory, slug, grammar_md, examples, unit_ids, tables)
+        _write_in_background(session_factory, slug, grammar_md, examples, unit_ids, tables, deep=deep)
         kept = _stored(row)
-        return _with_glosses({**kept, "stale": True, "writing": True}, examples) if kept else _placeholder(slug, examples)
+        return dressed({**kept, "stale": True, "writing": True}) if kept else dressed(_placeholder(slug, examples))
     with _explain_lock:  # a script that asked for the lesson itself waits for it
-        row = db.query(GrammarLesson).filter(GrammarLesson.id == slug).first()
-        lesson = None if force else _current(row, unit_ids)
+        row = db.query(GrammarLesson).filter(GrammarLesson.id == _row_id(slug, deep)).first()
+        lesson = None if force else _current(row, unit_ids, deep=deep)
         if lesson is not None:
-            return _with_glosses(lesson, examples)
-        lesson = write_lesson(slug, grammar_md, examples, sheet=sheet_for(db, slug, grammar_md), tables=tables)
+            return dressed(lesson)
+        lesson = write_lesson(slug, grammar_md, examples, sheet=sheet_for(db, slug, grammar_md),
+                              tables=tables, notes=notes, deep=deep)
         if unit_ids is not None:
             lesson["unit_size"] = len(unit_ids)
-        _store_lesson(db, slug, lesson)
-        return lesson
+        _store_lesson(db, slug, lesson, deep=deep)
+        return dressed(lesson)

@@ -1565,6 +1565,11 @@ async def lifespan(app: FastAPI):
     if os.getenv("GRAMMAR_SELF_WRITE", "1") != "0":
         threading.Thread(target=_write_missing_lessons, daemon=True).start()
 
+    # And it explains its own examples: for every sentence a unit can quote, why that sentence is
+    # in that unit. Written here, never by a page. Set GRAMMAR_NOTES_WRITE=0 to leave them alone.
+    if os.getenv("GRAMMAR_NOTES_WRITE", "1") != "0":
+        threading.Thread(target=_write_missing_notes, daemon=True).start()
+
     # Add sample data if database is empty
     with SessionLocal() as db:
         count = db.query(DrillModel).count()
@@ -5895,6 +5900,21 @@ def grammar_units():
             "counts": grammar_course.counts(SessionLocal), "status": grammar_course.status()}
 
 
+def _write_missing_notes() -> None:
+    """Explain each unit's own examples: for every sentence a unit can quote, what that sentence
+    shows of that unit's point. Resumable, so a restart carries on where it stopped; the lessons
+    are written first because a page can wait for a note but not for a lesson."""
+    import time
+    time.sleep(240)  # the lessons go first, then this works through the library quietly
+    if not gemini_available():
+        print("[NOTES] skipped: no Gemini key")
+        return
+    try:
+        grammar_course.fill_notes(SessionLocal, _grammar_unit_rows, _load_grammar())
+    except Exception as e:
+        print(f"[NOTES] stopped: {e}")
+
+
 def _write_missing_lessons() -> None:
     """Write the lessons that are missing or outdated, oldest unit of the course first. One at a
     time: Gemini is slow and the free database has few connections."""
@@ -5924,7 +5944,8 @@ def _write_missing_lessons() -> None:
                 examples = grammar_course.pick_examples(rows, slug=slug)
                 lesson = grammar_course.write_lesson(slug, _load_grammar(), examples,
                                                      sheet=grammar_course.sheet_for(db, slug, _load_grammar()),
-                                                     tables=grammar_course.paradigms(rows))
+                                                     tables=grammar_course.paradigms(rows),
+                                                     notes=grammar_course.notes_for(db, slug))
                 lesson["unit_size"] = len({d.id for d in rows})
                 grammar_course._store_lesson(db, slug, lesson)
                 written += 1
@@ -5944,7 +5965,7 @@ def _grammar_unit_rows(db, slug: str, limit: int = 1500):
     return [d for d in rows if slug in grammar_course.parse(d.grammar)]
 
 
-def _grammar_unit_payload(db, slug: str, limit: int, force: bool):
+def _grammar_unit_payload(db, slug: str, limit: int, force: bool, deep: bool = False):
     unit = next((u for u in grammar_course.UNITS if u["slug"] == slug), None)
     if unit is None:
         raise HTTPException(status_code=404, detail="Unit not found")
@@ -5954,7 +5975,7 @@ def _grammar_unit_payload(db, slug: str, limit: int, force: bool):
     try:
         lesson = grammar_course.get_lesson(db, slug, _load_grammar() if gemini_available() else "", examples, force=force,
                                            unit_ids={d.id for d in rows}, session_factory=SessionLocal,
-                                           tables=grammar_course.paradigms(rows))
+                                           tables=grammar_course.paradigms(rows), deep=deep)
     except Exception as e:
         print(f"[GRAMMAR] lesson {slug}: {e}")
         lesson = {"intro": "", "steps": [{"type": "explain", "title": unit["title"], "text": "La lliçó encara no s’ha pogut escriure. Mira els exemples de la biblioteca mentrestant.", "examples": examples[:3]}, {"type": "end"}], "error": str(e)[:160]}
@@ -6027,6 +6048,36 @@ def grammar_run(force: bool = False, limit: int = 4000, ids: Optional[str] = Non
     if grammar_course.status()["running"]:
         return {"started": False, "reason": "already running", **grammar_course.status()}
     threading.Thread(target=grammar_course.run, args=(SessionLocal, force, limit, only), daemon=True).start()
+    return {"started": True}
+
+
+@app.get("/grammar/{slug}/deep")
+def grammar_deep(slug: str, limit: int = 60, db: Session = Depends(get_db)):
+    """The unit's «a fons» level: the same unit taken further, with the sentences the first lesson
+    does not use. Written the first time somebody opens it; the page polls while it is written."""
+    return _grammar_unit_payload(db, slug, limit, force=False, deep=True)
+
+
+@app.post("/grammar/{slug}/deep/rewrite")
+def grammar_deep_rewrite(slug: str, limit: int = 60, db: Session = Depends(get_db),
+                         _admin: UserModel = Depends(require_admin)):
+    """Admin: write the unit's «a fons» level again."""
+    return _grammar_unit_payload(db, slug, limit, force=True, deep=True)
+
+
+@app.get("/grammar/notes/status")
+def grammar_notes_status():
+    """How far the «why this sentence is here» pass has got."""
+    return grammar_course.notes_status()
+
+
+@app.post("/grammar/notes/run")
+def grammar_notes_run(slug: Optional[str] = None, _admin: UserModel = Depends(require_admin)):
+    """Admin: explain the sentences of one unit, or of the whole course, in the background."""
+    if grammar_course.notes_status()["running"]:
+        return {"started": False, "reason": "already running", **grammar_course.notes_status()}
+    threading.Thread(target=grammar_course.fill_notes,
+                     args=(SessionLocal, _grammar_unit_rows, _load_grammar(), slug), daemon=True).start()
     return {"started": True}
 
 

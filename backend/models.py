@@ -202,6 +202,20 @@ class GrammarLesson(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
 
 
+class GrammarNote(Base):
+    """Why ONE sentence sits in ONE grammar unit: what that sentence shows of that unit's point.
+    A sentence belongs to up to three units and shows something different in each, so the note is
+    kept per pair. Written once by the notes pass (grammar.py), shown under the sentence."""
+    __tablename__ = "grammar_notes"
+
+    id = Column(String, primary_key=True)             # f"{slug}:{drill_id}"
+    slug = Column(String, nullable=False, index=True)
+    drill_id = Column(Integer, nullable=False, index=True)
+    body = Column(Text, nullable=False)               # 25-45 words of plain Catalan
+    version = Column(Integer, nullable=True, default=1)
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
+
+
 class AppSetting(Base):
     """A server setting an admin can change from the app itself (the mail sender, today), so a
     deploy or a dashboard visit is not needed. Secrets live here instead of the environment and are

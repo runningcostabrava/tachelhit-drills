@@ -233,6 +233,9 @@ export const api = {
   grammarUnit: (slug: string, limit = 60) => request<GrammarUnitPage>(`/grammar/${slug}?limit=${limit}`),
   grammarRewrite: (slug: string) => request<GrammarUnitPage>(`/grammar/${slug}/rewrite`, { method: 'POST' }),
   grammarLesson: (slug: string) => request<{ slug: string; lesson: GrammarLesson; writing: boolean }>(`/grammar/${slug}/lesson`),
+  /** The unit's «a fons» level: same shape as the unit page, written on first open. */
+  grammarDeep: (slug: string, limit = 60) => request<GrammarUnitPage>(`/grammar/${slug}/deep?limit=${limit}`),
+  grammarDeepRewrite: (slug: string) => request<GrammarUnitPage>(`/grammar/${slug}/deep/rewrite`, { method: 'POST' }),
   grammarWishlist: () => request<{ units: GrammarWishUnit[] }>('/grammar/wishlist'),
   petitions: (kind: 'open' | 'synthetic' | 'aitmraw', limit = 40) => request<{ items: PetitionItem[]; total: number }>(`/petitions?kind=${kind}&limit=${limit}`),
   addPetition: (text_catalan: string, note: string | null) => request<Drill>('/petitions', { method: 'POST', body: JSON.stringify({ text_catalan, note }) }),
@@ -315,8 +318,9 @@ export const api = {
 export interface RelatedDrill { id: number; text_catalan?: string; text?: string; words: string[]; audio_url?: string | null; audio_tts_shi_url?: string | null; image_url?: string | null; region?: string | null }
 export interface GrammarUnit { slug: string; title: string; level: number }
 /** A drill as a lesson quotes it: both texts plus its picture and a voice (the speaker's when recorded). */
-/** `gloss`: the library's word-by-word reading of the sentence, refreshed on every serve. */
-export interface LessonExample { id: number; shi: string; ca: string; image_url?: string | null; audio_url?: string | null; recorded: boolean; author?: string | null; region?: string | null; origin?: string | null; focus?: string | null; gloss?: { shi: string; ca: string }[] | null; source_url?: string | null; source_channel?: string | null }
+/** `gloss`: the library's word-by-word reading of the sentence, refreshed on every serve.
+ *  `why`: what this sentence shows of THIS unit's point (stored per sentence and unit). */
+export interface LessonExample { id: number; shi: string; ca: string; image_url?: string | null; audio_url?: string | null; recorded: boolean; author?: string | null; region?: string | null; origin?: string | null; focus?: string | null; gloss?: { shi: string; ca: string }[] | null; why?: string | null; source_url?: string | null; source_channel?: string | null }
 export type LessonStep =
   | { type: 'explain'; title: string; text: string; examples: LessonExample[] }
   | { type: 'pattern'; title: string; rows: string[][] }

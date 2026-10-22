@@ -31,10 +31,10 @@ function saveProgress(slug: string, right: number, total: number) {
   try { localStorage.setItem(PROGRESS_KEY, JSON.stringify({ ...loadProgress(), [slug]: { right, total, at: new Date().toISOString() } })); } catch { /* private mode */ }
 }
 
-export default function GrammarPage() {
+export default function GrammarPage({ deep = false }: { deep?: boolean } = {}) {
   const { slug } = useParams<{ slug?: string }>();
   if (slug === 'gravacions') return <WishlistView />;
-  return slug ? <UnitView slug={slug} /> : <CourseView />;
+  return slug ? <UnitView key={`${slug}:${deep}`} slug={slug} deep={deep} /> : <CourseView />;
 }
 
 function CourseView() {
@@ -92,7 +92,7 @@ function CourseView() {
 
 type Card = { type: 'intro' } | LessonStep;
 
-function UnitView({ slug }: { slug: string }) {
+function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
   const navigate = useNavigate();
   const [page, setPage] = useState<GrammarUnitPage | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -112,23 +112,23 @@ function UnitView({ slug }: { slug: string }) {
 
   useEffect(() => {
     setPage(null); setError(null); setI(0); setAnswers({});
-    api.grammarUnit(slug).then(setPage).catch((e) => setError(e?.message || 'Error'));
+    (deep ? api.grammarDeep(slug) : api.grammarUnit(slug)).then(setPage).catch((e) => setError(e?.message || 'Error'));
     api.me().then((m) => { setIsAdmin(!!m?.is_admin); setSignedIn(!!m); if (m) loadProposals(); }).catch(() => {});
-  }, [slug, loadProposals]);
+  }, [slug, deep, loadProposals]);
   // a lesson being written arrives on its own: the page never waits for it
   const writing = !!page?.lesson?.writing;
   useEffect(() => {
     if (!writing) return;
     let alive = true;
     const t = window.setInterval(() => {
-      api.grammarLesson(slug).then((r) => {
+      (deep ? api.grammarDeep(slug, 1).then((r) => ({ lesson: r.lesson })) : api.grammarLesson(slug)).then((r) => {
         if (!alive || r.lesson.writing) return;
         setPage((p) => (p && p.slug === slug ? { ...p, lesson: r.lesson } : p));
         setI(0); setAnswers({});
       }).catch(() => {});
     }, 8000);
     return () => { alive = false; window.clearInterval(t); };
-  }, [writing, slug]);
+  }, [writing, slug, deep]);
   useEffect(() => { api.grammarUnits().then((r) => { setUnits(r.units); setCounts(r.counts); }).catch(() => {}); }, []);
   const nextUnit = useMemo(() => {
     const k = units.findIndex((u) => u.slug === slug);
@@ -180,7 +180,7 @@ function UnitView({ slug }: { slug: string }) {
   };
   const rewrite = async () => {
     setRewriting(true);
-    try { setPage(await api.grammarRewrite(slug)); setI(0); setAnswers({}); toast.success('Lliçó reescrita'); }
+    try { setPage(await (deep ? api.grammarDeepRewrite(slug) : api.grammarRewrite(slug))); setI(0); setAnswers({}); toast.success('Lliçó reescrita'); }
     catch { toast.error('No s’ha pogut reescriure la lliçó'); }
     finally { setRewriting(false); }
   };
@@ -200,7 +200,7 @@ function UnitView({ slug }: { slug: string }) {
       )}
       {page && card && view === 'document' && (
         <div style={{ paddingBottom: 24 }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>{LEVEL_LABEL[page.level]} · {cards.length - 2} passos</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>{LEVEL_LABEL[page.level]} · {cards.length - 2} passos{deep ? ' · a fons' : ''}</div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', margin: '2px 0 12px', lineHeight: 1.2 }}>{page.title}</h1>
           {cards.map((c, k) => (
             <div key={k} className="lesson-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', padding: '18px', marginTop: '12px', boxShadow: 'var(--shadow-sm)' }}>
@@ -209,7 +209,7 @@ function UnitView({ slug }: { slug: string }) {
               {c.type === 'pattern' && <PatternCard step={c} />}
               {c.type === 'quiz' && <QuizCard step={c} chosen={answers[k]} onChoose={(j) => setAnswers((a) => ({ ...a, [k]: j }))} />}
               {(c.type === 'tip' || c.type === 'dialect') && <NoteCard step={c} />}
-              {c.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} nextUnit={nextUnit} proposals={proposals} onDecided={loadProposals} />}
+              {c.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} nextUnit={nextUnit} proposals={proposals} onDecided={loadProposals} deep={deep} />}
               {(c.type === 'explain' || c.type === 'tip' || c.type === 'dialect' || c.type === 'intro') && page.lesson.steps.length > 0 && <ProposeChange slug={slug} step={k - 1} current={c.type === 'intro' ? page.lesson.intro : c.text} signedIn={signedIn} onSent={loadProposals} />}
             </div>
           ))}
@@ -220,7 +220,7 @@ function UnitView({ slug }: { slug: string }) {
       )}
       {page && card && view === 'cards' && (
         <>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>{LEVEL_LABEL[page.level]} · {i + 1} / {cards.length}</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700 }}>{LEVEL_LABEL[page.level]} · {i + 1} / {cards.length}{deep ? ' · a fons' : ''}</div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', margin: '2px 0 10px', lineHeight: 1.2 }}>{page.title}</h1>
           <Progress n={cards.length} i={i} answers={answers} cards={cards} />
           <div key={i} className="lesson-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', padding: '18px', marginTop: '12px', boxShadow: 'var(--shadow-sm)', minHeight: '240px' }}>
@@ -229,7 +229,7 @@ function UnitView({ slug }: { slug: string }) {
             {card.type === 'pattern' && <PatternCard step={card} />}
             {card.type === 'quiz' && <QuizCard step={card} chosen={answers[i]} onChoose={(k) => setAnswers((a) => ({ ...a, [i]: k }))} />}
             {(card.type === 'tip' || card.type === 'dialect') && <NoteCard step={card} />}
-            {card.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} nextUnit={nextUnit} proposals={proposals} onDecided={loadProposals} />}
+            {card.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} nextUnit={nextUnit} proposals={proposals} onDecided={loadProposals} deep={deep} />}
         {(card.type === 'explain' || card.type === 'tip' || card.type === 'dialect' || card.type === 'intro') && page.lesson.steps.length > 0 && <ProposeChange slug={slug} step={i - 1} current={card.type === 'intro' ? page.lesson.intro : card.text} signedIn={signedIn} onSent={loadProposals} />}
           </div>
           <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, padding: '10px 16px calc(10px + env(safe-area-inset-bottom))', background: 'var(--bg)', borderTop: '1px solid var(--border)', zIndex: 5 }}>
@@ -300,8 +300,9 @@ function ExplainCard({ step, onAsk }: { step: Extract<LessonStep, { type: 'expla
 function Example({ e, highlight, onAsk }: { e: LessonExample; highlight?: 'ok' | 'ko'; onAsk?: (a: { id: number; label: string }) => void }) {
   const play = () => { if (e.audio_url) new Audio(getMediaUrl(e.audio_url)).play().catch(() => {}); };
   const border = highlight === 'ok' ? 'var(--emerald)' : highlight === 'ko' ? 'var(--rose)' : 'var(--border)';
-  // the word-by-word reading the library already stores: shown on demand, no call to anything
+  // the word-by-word reading and why this sentence is in this unit: both stored, both free
   const [words, setWords] = useState(false);
+  const [why, setWhy] = useState(false);
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'var(--surface-2)', border: `1px solid ${border}`, borderRadius: 'var(--r-lg)', flexWrap: 'wrap' }}>
       {e.image_url && <img src={getMediaUrl(e.image_url)} alt="" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 'var(--r-md)', flexShrink: 0 }} onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = 'none'; }} />}
@@ -309,18 +310,35 @@ function Example({ e, highlight, onAsk }: { e: LessonExample; highlight?: 'ok' |
         <div style={{ fontWeight: 800, fontSize: '17px', color: 'var(--text)', lineHeight: 1.3 }}>{withFocus(e.shi, e.focus)}</div>
         <div style={{ fontSize: '14px', color: 'var(--text-soft)' }}>{e.ca}</div>
         {(e.recorded || e.origin || e.region) && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>{e.recorded ? `veu de ${e.author || 'parlant'}` : 'veu sintètica'}{e.origin || e.region ? ` · ${e.origin || e.region}` : ''}</div>}
-        {e.gloss && e.gloss.length > 0 && (
-          <button onClick={() => setWords((v) => !v)} style={{ marginTop: 4, padding: 0, border: 'none', background: 'none', color: 'var(--brand-1)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
-            {words ? 'amaga les paraules' : 'paraula per paraula'}
-          </button>
+        {((e.gloss && e.gloss.length > 0) || e.why) && (
+          <div style={{ display: 'flex', gap: '10px', marginTop: 4, flexWrap: 'wrap' }}>
+            {e.gloss && e.gloss.length > 0 && (
+              <button onClick={() => setWords((v) => !v)} style={linkBtn}>
+                {words ? 'amaga les paraules' : 'paraula per paraula'}
+              </button>
+            )}
+            {e.why && (
+              <button onClick={() => setWhy((v) => !v)} style={linkBtn}>
+                {why ? 'amaga el perquè' : 'per què és aquí'}
+              </button>
+            )}
+          </div>
         )}
       </div>
       {onAsk && <button onClick={() => onAsk({ id: e.id, label: e.ca || e.shi })} title="Explica'm aquesta frase paraula per paraula" aria-label="Explica'm aquesta frase" style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--brand-1)', cursor: 'pointer', fontSize: '15px', lineHeight: 1 }}>💡</button>}
       <button onClick={play} disabled={!e.audio_url} aria-label="Escolta" style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 'var(--r-pill)', border: 'none', background: e.audio_url ? (e.recorded ? 'var(--brand-1)' : 'var(--sky)') : 'var(--surface)', color: e.audio_url ? '#fff' : 'var(--text-muted)', cursor: e.audio_url ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={15} /></button>
       {words && e.gloss && <div style={{ flexBasis: '100%' }}><GlossWords words={e.gloss} size="sm" /></div>}
+      {why && e.why && (
+        <div style={{ flexBasis: '100%', marginTop: 8, padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--surface)', border: '1px solid var(--border)', fontSize: '13px', lineHeight: 1.5, color: 'var(--text-soft)' }}>
+          {e.why}
+        </div>
+      )}
     </div>
   );
 }
+
+// the two quiet links under a sentence: the words, and why the sentence is in this unit
+const linkBtn = { padding: 0, border: 'none', background: 'none', color: 'var(--brand-1)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' };
 
 function PatternCard({ step }: { step: Extract<LessonStep, { type: 'pattern' }> }) {
   return (
@@ -427,7 +445,7 @@ function ProposeChange({ slug, step, current, signedIn, onSent }: { slug: string
   );
 }
 
-function EndCard({ page, answers, cards, onTest, isAdmin, onRewrite, rewriting, nextUnit, proposals, onDecided }: { page: GrammarUnitPage; answers: Record<number, number>; cards: Card[]; onTest: () => void; isAdmin: boolean; onRewrite: () => void; rewriting: boolean; nextUnit: GrammarUnit | null; proposals: LessonProposal[]; onDecided: () => void }) {
+function EndCard({ page, answers, cards, onTest, isAdmin, onRewrite, rewriting, nextUnit, proposals, onDecided, deep }: { page: GrammarUnitPage; answers: Record<number, number>; cards: Card[]; onTest: () => void; isAdmin: boolean; onRewrite: () => void; rewriting: boolean; nextUnit: GrammarUnit | null; proposals: LessonProposal[]; onDecided: () => void; deep: boolean }) {
   const decide = async (id: number, accept: boolean) => {
     try { await api.decideProposal(id, accept); toast.success(accept ? 'Canvi aplicat a la lliçó' : 'Proposta rebutjada'); onDecided(); } catch (e: any) { toast.error(e?.message || 'No s’ha pogut'); }
   };
@@ -443,6 +461,8 @@ function EndCard({ page, answers, cards, onTest, isAdmin, onRewrite, rewriting, 
       <p style={{ margin: '0 0 14px', fontSize: '15px', lineHeight: 1.5, color: 'var(--text)' }}>Ara practica-ho: un test amb les {Math.min(page.practice?.length ?? page.drills.length, 200)} frases de la biblioteca que mostren aquest punt (només frases: ni paraules soltes ni llistes de conjugació).</p>
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         {nextUnit && <button onClick={() => navigate(`/grammar/${nextUnit.slug}`)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>Següent unitat: {nextUnit.title} <FaChevronRight /></button>}
+        {!deep && <button onClick={() => navigate(`/grammar/${page.slug}/a-fons`)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--brand-1)', background: 'var(--surface)', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer' }}><FaLightbulb /> A fons</button>}
+        {deep && <button onClick={() => navigate(`/grammar/${page.slug}`)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, cursor: 'pointer' }}><FaChevronLeft /> Torna a la lliçó</button>}
         {(page.practice?.length ?? page.drills.length) > 0 && <button onClick={onTest} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: 'var(--r-pill)', border: nextUnit ? '1px solid var(--brand-1)' : 'none', background: nextUnit ? 'var(--surface)' : 'var(--brand-gradient)', color: nextUnit ? 'var(--brand-1)' : '#fff', fontWeight: 700, cursor: 'pointer' }}><FaBullseye /> Practica aquesta unitat</button>}
         <button onClick={() => setShowAll((v) => !v)} style={{ padding: '10px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, cursor: 'pointer' }}>{showAll ? 'Amaga els exemples' : `Tots els exemples · ${page.total}`}</button>
         {isAdmin && page.lesson.study && <details style={{ width: '100%', order: 9 }}><summary style={{ cursor: 'pointer', fontSize: '13px', color: 'var(--text-soft)', fontWeight: 700 }}>Full d’estudi (del compendi, només administradors)</summary><pre style={{ whiteSpace: 'pre-wrap', fontSize: '13px', lineHeight: 1.5, color: 'var(--text)', fontFamily: 'var(--font-sans)', margin: '8px 0 0' }}>{page.lesson.study}</pre></details>}

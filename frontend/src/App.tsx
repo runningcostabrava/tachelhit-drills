@@ -200,6 +200,7 @@ function App() {
         <Route path="/corpus" element={<CorpusPage />} />
         <Route path="/grammar" element={<GrammarPage />} />
         <Route path="/grammar/:slug" element={<GrammarPage />} />
+        <Route path="/grammar/:slug/a-fons" element={<GrammarPage deep />} />
         <Route path="/verify" element={<VerifyQueue />} />
         {/* An unknown path (old link, typo, stale app shell) used to render an empty page. */}
         <Route path="*" element={<Navigate to="/" replace />} />

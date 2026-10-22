@@ -1,4 +1,6 @@
 """Grammar course: units, classification into units, the unit page with its lesson and examples."""
+import json
+
 import grammar
 import main
 from test_api import client
@@ -113,7 +115,10 @@ def test_practice_is_sentences_only_and_wishlist_names_what_our_speakers_could_r
     client.put(f"/drills/{other['id']}", json={"grammar": "aorist-ad", "grammar_source": "owner"})
     wanted = [d["id"] for d in next(x for x in client.get("/grammar/wishlist").json()["units"] if x["slug"] == "aorist-ad")["wanted"]]
     assert other["id"] in wanted
-    assert u["aitmraw_voiced"] == 1 and wanted[0] == sent["id"] and not {ours["id"], word["id"], lst["id"]} & set(wanted)  # the deck's sentence before a pictured-and-voiced one from elsewhere
+    # the deck's sentence before a pictured-and-voiced one from elsewhere. Relative, not first in
+    # the list: the sentences a lesson quotes are ranked ahead, and other tests leave lessons behind
+    assert u["aitmraw_voiced"] == 1 and wanted.index(sent["id"]) < wanted.index(other["id"])
+    assert not {ours["id"], word["id"], lst["id"]} & set(wanted)
     assert [x["aitmraw_voiced"] for x in w] == sorted(x["aitmraw_voiced"] for x in w)  # the units lacking voices first
     # a lesson whose quoted sentence leaves the unit is written again; one still quoting the unit is kept
     assert grammar.quoted_ids({"steps": [{"type": "explain", "examples": [{"id": 5}]}, {"type": "quiz", "example": {"id": 7}}]}) == {5, 7}
@@ -342,7 +347,8 @@ def test_the_lesson_shows_the_library_word_by_word():
 
 def test_a_thin_step_is_filled_with_kin_and_never_with_decoys():
     """When the piece taught is spelt that way nowhere else, the step takes the unit's sentences
-    that share a word with it — and nothing else: a lone example beats four unrelated ones."""
+    that share a word with it AND that the library can say something about — and nothing else: a
+    lone example beats four the learner cannot place."""
     import grammar, json as _json
     def e(i, shi, ca):
         return {"id": i, "shi": shi, "ca": ca, "image_url": None, "audio_url": None, "recorded": False,
@@ -352,12 +358,102 @@ def test_a_thin_step_is_filled_with_kin_and_never_with_decoys():
           e(5, "izri wass", "el dia ha passat"), e(6, "ssbah lxir", "bon dia")]
     answer = _json.dumps({"intro": "x", "steps": [{"type": "explain", "title": "-nu", "text": "El meu.",
                                                    "example_ids": [1], "focus": {"1": "-nu"}}]})
-    got = [x["id"] for x in grammar._parse_lesson(answer, ex)["steps"][0]["examples"]]
+    notes = {2: "«-nk» és el teu.", 3: "Aquí «tigmmi» va sola.", 4: "«wa» assenyala la casa.",
+             5: "Res a veure.", 6: "Res a veure."}
+    got = [x["id"] for x in grammar._parse_lesson(answer, ex, notes)["steps"][0]["examples"]]
     assert got[0] == 1 and len(got) == 4           # one example is no explanation
     assert set(got) == {1, 2, 3, 4}                # the sentences about a house, nearest first
-    assert 5 not in got and 6 not in got           # the day and the greeting share nothing
+    assert 5 not in got and 6 not in got           # the day and the greeting share no word
 
     alone = _json.dumps({"intro": "x", "steps": [{"type": "explain", "title": "t", "text": "x",
                                                   "example_ids": [5], "focus": {"5": "izri"}}]})
     kept = grammar._parse_lesson(alone, [ex[4], ex[5]])["steps"][0]["examples"]
     assert [x["id"] for x in kept] == [5]          # nothing is kin: left short rather than padded
+
+
+def test_an_ending_is_marked_where_it_is_written():
+    """The writer marks an ending «-an», the way an ending is written; the old matcher took only a
+    literal piece, so the mark vanished and the learner saw a bare word under the rule."""
+    import grammar
+    assert grammar._mark("šan", "-an") == "an"
+    assert grammar._mark("sġan", "-an") == "an"
+    assert grammar._mark("nša", "-n") == "n"
+    assert grammar._mark("da trsamgh", "da-") == "da"      # a particle is written with the hyphen after
+    assert grammar._mark("ssbbat", "ss-") == "ss"
+    assert grammar._mark("izri wass", "-an") is None       # never a mark where the piece is not
+    assert grammar._mark("tigmmi-nu", "-nu") == "-nu"      # a piece written with its hyphen still wins
+
+
+def test_a_sentence_with_nothing_marked_and_nothing_said_is_not_shown():
+    """Filling a short step with kin sentences may only add a sentence the learner can read: one
+    with the piece marked, or one the library can say something about."""
+    import grammar, json as _json
+    def e(i, shi, ca):
+        return {"id": i, "shi": shi, "ca": ca, "image_url": None, "audio_url": None, "recorded": False,
+                "author": None, "region": None, "origin": ""}
+    ex = [e(1, "tigmmi-nu", "la meva casa"), e(2, "tigmmi ixatr", "la casa es gran"),
+          e(3, "tigmmi n baba", "la casa del pare")]
+    answer = _json.dumps({"intro": "x", "steps": [{"type": "explain", "title": "-nu", "text": "El meu.",
+                                                   "example_ids": [1], "focus": {"1": "-nu"}}]})
+    bare = grammar._parse_lesson(answer, ex)["steps"][0]["examples"]
+    assert [x["id"] for x in bare] == [1]  # neither 2 nor 3 carries «-nu» and nothing is said of them
+    with_notes = grammar._parse_lesson(answer, ex, {2: "Aquí «tigmmi» va sola, sense el possessiu."})
+    got = with_notes["steps"][0]["examples"]
+    assert [x["id"] for x in got] == [1, 2] and got[1]["why"].startswith("Aquí")
+
+
+def test_why_this_sentence_is_here_is_kept_per_sentence_and_unit():
+    """The note is stored per (sentence, unit) — the same sentence shows something different in
+    another unit — and reaches a lesson already written, like the glosses do."""
+    import grammar, main
+    db = main.SessionLocal()
+    try:
+        grammar.store_notes(db, "possessius", {77: "«-nu» diu que la casa és meva.", 78: grammar.NO_NOTE})
+        grammar.store_notes(db, "noms-genere-nombre", {77: "«tigmmi» és un nom femení."})
+        assert grammar.notes_for(db, "possessius") == {77: "«-nu» diu que la casa és meva."}  # NO_NOTE hidden
+        assert grammar.notes_for(db, "noms-genere-nombre")[77].startswith("«tigmmi»")
+        assert grammar.asked_notes(db, "possessius") == {77, 78}  # asked, so never asked again
+        grammar.store_notes(db, "possessius", {77: "Millor dit: «-nu» és el meu."})
+        assert grammar.notes_for(db, "possessius")[77].startswith("Millor dit")
+    finally:
+        db.close()
+
+    kept = {"intro": "", "steps": [
+        {"type": "explain", "title": "t", "text": "x", "examples": [{"id": 77, "shi": "tigmmi-nu", "ca": "la meva casa"}]},
+        {"type": "quiz", "kind": "meaning", "question": "q", "options": ["a"], "answer": 0,
+         "example": {"id": 77, "shi": "tigmmi-nu", "ca": "la meva casa"}},
+        {"type": "end"}]}
+    fresh = grammar._with_notes(kept, {77: "«-nu» diu que la casa és meva."})
+    assert fresh["steps"][0]["examples"][0]["why"].startswith("«-nu»")
+    assert fresh["steps"][1]["example"]["why"].startswith("«-nu»")
+
+
+def test_the_second_level_asks_for_more_and_quotes_what_the_first_left():
+    """«A fons» is the same unit taken further: more steps, and the sentences the first lesson does
+    not use come first, so the two levels do not teach with the same examples."""
+    import grammar
+    unit = next(u for u in grammar.UNITS if u["slug"] == "possessius")
+    ex = [{"id": i, "shi": f"frase {i}", "ca": f"sentit {i}", "origin": "Beni Mellal", "recorded": False} for i in range(1, 6)]
+    base = grammar._lesson_prompt(unit, ex, "FULL")
+    deep = grammar._lesson_prompt(unit, ex, "FULL", deep=True)
+    assert "7 to 9 steps" in base and "SECOND LEVEL" not in base
+    assert "10 to 14 steps" in deep and "SECOND LEVEL" in deep and "7 to 9 steps" not in deep
+    assert 'Answer ONLY with a JSON object' in deep and '"dialect"' in deep
+    assert grammar._row_id("possessius") == "possessius"
+    assert grammar._row_id("possessius", deep=True) == "deep:possessius"
+
+
+def test_the_second_level_leaves_the_first_lesson_alone():
+    """Writing «a fons» must not touch the lesson the unit opens with: different row, own version."""
+    import grammar, main
+    db = main.SessionLocal()
+    try:
+        grammar._store_lesson(db, "numerals", {"intro": "la primera", "steps": [{"type": "end"}]})
+        grammar._store_lesson(db, "numerals", {"intro": "a fons", "steps": [{"type": "end"}]}, deep=True)
+        from models import GrammarLesson
+        rows = {r.id: r for r in db.query(GrammarLesson).filter(GrammarLesson.id.in_(["numerals", "deep:numerals"])).all()}
+        assert json.loads(rows["numerals"].body)["intro"] == "la primera"
+        assert json.loads(rows["deep:numerals"].body)["intro"] == "a fons"
+        assert rows["numerals"].version == grammar.LESSON_VERSION and rows["deep:numerals"].version == grammar.DEEP_VERSION
+    finally:
+        db.close()
