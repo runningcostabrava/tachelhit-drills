@@ -7026,7 +7026,14 @@ def ai_agent(
             "amb find_sentences_for_practice (o what_can_a_practice_be_about si no saps què hi ha a la "
             "biblioteca) i escriu-la amb build_practice. NOMÉS frases que t'hagin tornat aquelles eines: "
             "no te n'inventis cap id. Si vols afegir-ne a les que ja hi són, torna a escriure la "
-            "seqüència sencera, perquè build_practice la substitueix."
+            "seqüència sencera — o, millor, fes servir add_to_practice, que afegeix al final sense "
+            "tocar el que ja hi ha.\n"
+            "NO PREGUNTIS de què va la pràctica: mira-la amb read_practice i dedueix-ho de les seves "
+            "frases i del seu nom. Si et demanen «més del mateix tema», busca frases que s'hi "
+            "assemblin i afegeix-les. Si et demanen imatges, crida illustrate_sentence per a cada "
+            "frase de la pràctica que no en tingui: les imatges van a les FRASES, i així les té "
+            "tothom qui les faci servir. Fes les coses i després digues què has fet; pregunta "
+            "només si de debò no es pot endevinar."
         )
 
     contents = []
