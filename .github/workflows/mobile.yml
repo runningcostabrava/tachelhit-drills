@@ -95,7 +95,12 @@ jobs:
             sleep $(( t == 10 ? 10 : 15 ))
             xcrun simctl io "$UDID" screenshot "shots/home-after-${t}s.png"
           done
-          if ! xcrun simctl spawn "$UDID" launchctl list | grep -q "$BUNDLE"; then
+          # No pipe here on purpose: `launchctl list | grep -q` fails when it SUCCEEDS --
+          # grep -q leaves as soon as it matches, launchctl gets a SIGPIPE, and under
+          # `pipefail` that counts as the pipeline failing. The list goes to a file, which
+          # is then searched and kept as an artefact.
+          xcrun simctl spawn "$UDID" launchctl list > shots/launchctl.txt 2>&1 || true
+          if ! grep -q "$BUNDLE" shots/launchctl.txt; then
             echo "::error::the app is not running 45 s after launch"
             xcrun simctl spawn "$UDID" log show --last 3m --predicate 'process == "App"' --style compact | tail -200 || true
             exit 1
