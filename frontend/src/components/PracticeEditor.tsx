@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   FaArrowDown, FaArrowUp, FaCheck, FaClone, FaEye, FaGripVertical, FaImage, FaMagic,
-  FaMicrophone, FaPlay, FaPlus, FaTrash, FaVideo,
+  FaMicrophone, FaPaperPlane, FaPlay, FaPlus, FaRobot, FaTrash, FaVideo,
 } from 'react-icons/fa';
 import { api, type PracticeCollections, type PracticeList, type PracticeStep } from '../api';
 import { getMediaUrl } from '../config';
@@ -91,6 +91,10 @@ export default function PracticeEditor() {
   const [makingDrill, setMakingDrill] = useState(false);
   const [illustrating, setIllustrating] = useState<number | null>(null);
   const [dragging, setDragging] = useState<number | null>(null);
+  // The copilot, with its hands in this practice
+  const [ask, setAsk] = useState('');
+  const [talking, setTalking] = useState(false);
+  const [chat, setChat] = useState<{ role: 'user' | 'model'; text: string }[]>([]);
   const firstLoad = useRef(true);
 
   const remember = useCallback((list: Drill[]) => {
@@ -213,6 +217,29 @@ export default function PracticeEditor() {
   const duplicate = (i: number) => { const copy = [...steps]; copy.splice(i + 1, 0, { ...steps[i], id: undefined }); change(copy); };
   const remove = (i: number) => change(steps.filter((_, k) => k !== i));
 
+  // The copilot may rewrite the sequence underneath us, so the steps are read back after each turn.
+  const reloadSteps = async () => {
+    const r = await api.practiceSteps(id).catch(() => null);
+    if (!r) return;
+    setSteps(r.steps); setDirty(false);
+    const ids = Array.from(new Set(r.steps.map((x) => x.drill_id).filter(Boolean))) as number[];
+    if (ids.length) remember(await api.drillsByIds(ids).catch(() => [] as Drill[]));
+  };
+
+  const askTheCopilot = async (text?: string) => {
+    const message = (text ?? ask).trim();
+    if (!message || talking) return;
+    setAsk(''); setTalking(true);
+    setChat((c) => [...c, { role: 'user', text: message }]);
+    try {
+      const r = await api.aiAgent(message, [], chat.slice(-8), id);
+      setChat((c) => [...c, { role: 'model', text: r.answer || 'Fet.' }]);
+      if ((r.actions || []).some((a) => a.name === 'build_practice')) await reloadSteps();
+    } catch (e: any) {
+      setChat((c) => [...c, { role: 'model', text: e?.message || 'No he pogut fer-ho.' }]);
+    } finally { setTalking(false); }
+  };
+
   const rename = async () => {
     const name = title.trim();
     if (!practice || !name || name === practice.title) return;
@@ -292,6 +319,47 @@ export default function PracticeEditor() {
         <button onClick={() => setPreview((v) => !v)} style={{ ...secondary, color: preview ? 'var(--brand-1)' : 'var(--text)' }}>
           <FaEye /> {preview ? 'Torna a editar' : 'Mira com es veurà'}
         </button>
+      </div>
+
+      {/* The copilot, with its hands in this practice */}
+      <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', background: 'var(--surface)', padding: '12px 14px', marginBottom: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <FaRobot style={{ color: 'var(--brand-1)' }} />
+          <strong style={{ fontSize: 14 }}>Digues-li què vols i t’ho munta</strong>
+        </div>
+        {chat.length > 0 && (
+          <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
+            {chat.map((m, k) => (
+              <div key={k} style={{
+                alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%',
+                padding: '8px 12px', borderRadius: 'var(--r-lg)', fontSize: 13.5, lineHeight: 1.5,
+                background: m.role === 'user' ? 'var(--brand-gradient-soft)' : 'var(--surface-2)',
+              }}>{m.text}</div>
+            ))}
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input value={ask} onChange={(e) => setAsk(e.target.value)}
+                 onKeyDown={(e) => { if (e.key === 'Enter') askTheCopilot(); }}
+                 placeholder="p. ex. «munta’n una dels possessius amb 8 frases, de la més fàcil a la més difícil»"
+                 disabled={talking} style={{ ...input, flex: 1 }} />
+          <button onClick={() => askTheCopilot()} disabled={talking || !ask.trim()} style={{ ...primary, opacity: talking || !ask.trim() ? 0.5 : 1 }}>
+            <FaPaperPlane size={12} /> {talking ? 'Pensant…' : 'Envia'}
+          </button>
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+          {[
+            'Munta-la tu: tria el tema que vulguis i fes 8 passos variats',
+            'Afegeix-hi 5 frases més, més curtes que les que hi ha',
+            'Escriu una nota al principi que digui què s’hi aprèn',
+            'Canvia les eines perquè no es repeteixin tant',
+          ].map((t) => (
+            <button key={t} onClick={() => askTheCopilot(t)} disabled={talking} style={tiny}>{t}</button>
+          ))}
+        </div>
+        <p style={{ fontSize: 11.5, color: 'var(--text-muted)', margin: '8px 0 0', lineHeight: 1.45 }}>
+          Només pot fer servir frases senceres de la biblioteca, i només pot tocar les pràctiques teves.
+        </p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: 20, alignItems: 'start' }}>

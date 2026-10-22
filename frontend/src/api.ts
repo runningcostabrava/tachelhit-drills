@@ -253,10 +253,12 @@ export const api = {
    *  purpose, by a person — never by a machine pass. */
   editDrillText: (id: number, patch: { text_tachelhit?: string; text_catalan?: string }) =>
     request<Drill>(`/drills/${id}`, { method: 'PUT', body: JSON.stringify(patch) }),
-  aiAgent: (message: string, drillIds?: number[], history?: { role: string; text: string }[]) =>
+  // `testId` tells the copilot which practice is open, which is what lets it read and rewrite
+  // the sequence instead of only talking about it.
+  aiAgent: (message: string, drillIds?: number[], history?: { role: string; text: string }[], testId?: number) =>
     request<{ answer: string; actions: { name: string; args: any; result: any }[] }>('/ai/agent', {
       method: 'POST',
-      body: JSON.stringify({ message, drill_ids: drillIds ?? [], history: history ?? [] }),
+      body: JSON.stringify({ message, drill_ids: drillIds ?? [], history: history ?? [], test_id: testId ?? null }),
     }),
   aiSuggestTranslation: (drillId: number) =>
     request<{ field: string; suggestion: string }>(`/ai/suggest-translation/${drillId}`, { method: 'POST' }),

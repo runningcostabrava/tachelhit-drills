@@ -147,3 +147,39 @@ def retire_spoken_steps(session_factory) -> int:
         return len(rows)
     finally:
         db.close()
+
+
+def repair_pointless_steps(session_factory) -> int:
+    """Turn steps that point at no sentence into notes that say so.
+
+    Two ways one appears: the old editor let a note be switched to a tool that needs a sentence
+    (it then showed as «frase #», with nothing to do), and a step keeps its drill_id after the
+    drill itself is deleted. Either way the step cannot run.
+
+    Nothing is deleted, so a practice never silently loses its shape: the step stays in place as
+    a note, and whoever opens it reads what happened.
+    """
+    from models import Drill as DrillModel, PracticeStep
+    db = session_factory()
+    try:
+        rows = db.query(PracticeStep).all()
+        alive = {d[0] for d in db.query(DrillModel.id).all()}
+        fixed = 0
+        for r in rows:
+            needs_drill = KINDS.get(r.kind, (False, ""))[0]
+            if not needs_drill:
+                continue
+            if r.drill_id and r.drill_id in alive:
+                continue
+            why = ("La frase d'aquest pas s'ha esborrat."
+                   if r.drill_id else "Aquest pas demanava una frase i no en tenia cap.")
+            r.kind = "note"
+            r.payload = json.dumps({"heading": "Pas per refer", "text": why}, ensure_ascii=False)
+            r.drill_id = None
+            fixed += 1
+        if fixed:
+            db.commit()
+            print(f"[PRACTICE] {fixed} steps pointed at no sentence; turned into notes")
+        return fixed
+    finally:
+        db.close()

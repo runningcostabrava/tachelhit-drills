@@ -1576,6 +1576,7 @@ async def lifespan(app: FastAPI):
     try:
         practice_steps.convert_missing(SessionLocal)
         practice_steps.retire_spoken_steps(SessionLocal)
+        practice_steps.repair_pointless_steps(SessionLocal)
     except Exception as e:
         print(f"[PRACTICE] conversion skipped: {e}")
 
@@ -6614,6 +6615,55 @@ AGENT_TOOLS = [
         }, "required": ["query"]},
     },
     {
+        "name": "what_can_a_practice_be_about",
+        "description": ("Què pot oferir la biblioteca per a una pràctica: unitats de gramàtica, temes, "
+                        "qui parla, dies de gravació i etiquetes, amb quantes frases té cadascun. "
+                        "Crida-la abans de triar frases si no saps què hi ha."),
+        "parameters": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "find_sentences_for_practice",
+        "description": ("Frases que es poden posar en una pràctica. Només en torna de SENCERES: amb veu, "
+                        "amb el text amazic escrit i amb el significat en català. Van de més curta a més "
+                        "llarga, que és l'ordre en què s'aprenen. Filtra per text lliure o per una "
+                        "col·lecció (unit, topic, person, tag, day)."),
+        "parameters": {"type": "object", "properties": {
+            "query": {"type": "string", "description": "text lliure, en qualsevol de les llengües"},
+            "unit": {"type": "string", "description": "slug d'una unitat de gramàtica"},
+            "topic": {"type": "string", "description": "slug d'un tema"},
+            "person": {"type": "string", "description": "qui parla, p. ex. Halima"},
+            "tag": {"type": "string"},
+            "limit": {"type": "integer"},
+        }},
+    },
+    {
+        "name": "read_practice",
+        "description": "Què té ara mateix una pràctica: el seu nom i els seus passos en ordre.",
+        "parameters": {"type": "object", "properties": {
+            "test_id": {"type": "integer"},
+        }, "required": ["test_id"]},
+    },
+    {
+        "name": "build_practice",
+        "description": ("Escriu la seqüència d'una pràctica, substituint la que hi hagi. Cada pas té una "
+                        "eina (kind) i, si l'eina demana una frase, el seu drill_id. Eines: listen_pick "
+                        "(escolta i tria), write_heard (escolta i escriu), say_it (digues-ho i compara't), "
+                        "look_say (mira la imatge i digues-ho), fill_gap (omple el buit), word_by_word, "
+                        "script_swap (tifinag o llatí), pick_spelling, i note (una explicació, sense "
+                        "frase: posa-li heading i text). Comença amb una nota que digui què s'hi aprèn, "
+                        "i no repeteixis sempre la mateixa eina."),
+        "parameters": {"type": "object", "properties": {
+            "test_id": {"type": "integer"},
+            "steps": {"type": "array", "description": "els passos, en ordre", "items": {
+                "type": "object", "properties": {
+                    "kind": {"type": "string"},
+                    "drill_id": {"type": "integer"},
+                    "heading": {"type": "string", "description": "només per a kind=note"},
+                    "text": {"type": "string", "description": "només per a kind=note"},
+                }, "required": ["kind"]}},
+        }, "required": ["test_id", "steps"]},
+    },
+    {
         "name": "speak_tachelhit",
         "description": "Sintetitza veu en taixelhit d'un text perquè l'usuari el pugui escoltar. Retorna una URL d'àudio.",
         "parameters": {"type": "object", "properties": {
@@ -6622,8 +6672,11 @@ AGENT_TOOLS = [
     },
 ]
 
-def _agent_executor(db):
-    """Return a function(name, args)->dict that runs the agent's tool calls."""
+def _agent_executor(db, user=None):
+    """Return a function(name, args)->dict that runs the agent's tool calls.
+
+    `user` is whoever is talking to the copilot. It matters for the tools that write a practice:
+    a copilot is not a way around permissions."""
     ALLOWED = {"text_catalan", "text_tachelhit", "text_tachelhit_latin", "text_arabic", "variety", "region", "tag"}
 
     def run(name, args):
@@ -6657,6 +6710,53 @@ def _agent_executor(db):
             return {"count": len(rows), "drills": [
                 {"id": r.id, "catalan": r.text_catalan, "tachelhit": r.text_tachelhit,
                  "latin": r.text_tachelhit_latin} for r in rows]}
+        if name == "what_can_a_practice_be_about":
+            c = practice_mod.collections(db)
+            return {k: c.get(k, [])[:40] for k in ("units", "topics", "people", "tags", "days")}
+        if name == "find_sentences_for_practice":
+            lim = min(int(args.get("limit") or 12), 40)
+            picked = []
+            if (args.get("query") or "").strip():
+                from sqlalchemy import or_
+                like = f"%{args['query'].strip()}%"
+                rows = (grammar_course.not_excluded(db.query(DrillModel), DrillModel).filter(or_(
+                    DrillModel.text_tachelhit.ilike(like), DrillModel.text_tachelhit_latin.ilike(like),
+                    DrillModel.text_catalan.ilike(like), DrillModel.tag.ilike(like))).limit(300).all())
+                picked = [r for r in rows if practice_mod.practicable(r)]
+            else:
+                picked = practice_mod.session_rows(
+                    db, unit=args.get("unit"), topic=args.get("topic"), person=args.get("person"),
+                    tag=args.get("tag"), day=args.get("day"), with_voice=True, limit=300)
+            # shortest first: that is the order they are learned in
+            picked.sort(key=lambda d: (len((d.text_tachelhit or "").split()), len(d.text_tachelhit or "")))
+            return {"count": len(picked[:lim]), "sentences": [
+                {"drill_id": r.id, "tachelhit": r.text_tachelhit, "catalan": r.text_catalan,
+                 "has_picture": bool(r.image_url), "speaker": r.speaker or r.author}
+                for r in picked[:lim]]}
+        if name == "read_practice":
+            t = db.query(TestModel).filter(TestModel.id == args.get("test_id")).first()
+            if not t:
+                return {"error": f"no existeix la pr\u00e0ctica {args.get('test_id')}"}
+            return {"test_id": t.id, "title": t.title, "steps": practice_steps.steps_of(db, t.id)}
+        if name == "build_practice":
+            t = db.query(TestModel).filter(TestModel.id == args.get("test_id")).first()
+            if not t:
+                return {"error": f"no existeix la pr\u00e0ctica {args.get('test_id')}"}
+            if not may_change(t, user):
+                return {"error": "aquesta pr\u00e0ctica no \u00e9s teva; dem-ho a qui l'administra"}
+            steps = []
+            for raw_step in (args.get("steps") or []):
+                kind = (raw_step or {}).get("kind")
+                step = {"kind": kind, "drill_id": raw_step.get("drill_id")}
+                if kind == "note":
+                    step["payload"] = {k: raw_step.get(k) for k in ("heading", "text") if raw_step.get(k)}
+                steps.append(step)
+            try:
+                written = practice_steps.replace_steps(db, t.id, steps)
+            except practice_steps.StepError as e:
+                return {"error": str(e)}
+            return {"test_id": t.id, "written": len(written),
+                    "steps": [{"kind": x["kind"], "drill_id": x["drill_id"]} for x in written]}
         if name == "speak_tachelhit":
             text = (args.get("text") or "").strip()
             if not text:
@@ -6674,7 +6774,9 @@ def ai_agent(
     message: str = Body(..., embed=True),
     drill_ids: Optional[List[int]] = Body(None, embed=True),
     history: Optional[List[Dict]] = Body(None, embed=True),
+    test_id: Optional[int] = Body(None, embed=True),
     db: Session = Depends(get_db),
+    user: Optional[UserModel] = Depends(get_current_user),
     _gate: Dict[str, Any] = Depends(_ai_gate("agent")),
 ):
     """
@@ -6694,6 +6796,15 @@ def ai_agent(
         "cerca/filtra, fes exemples per escoltar). Per a traduir i desar, actualitza el drill. "
         "Per a exemples parlats, crida speak_tachelhit. Confirma breument què has fet."
     )
+    if test_id:
+        system += (
+            f"\n\nAra MATEIX l'usuari està fent la pràctica número {test_id} al taller. Quan et demani "
+            "muntar-la, canviar-la o afegir-hi frases: mira què hi ha amb read_practice, busca les frases "
+            "amb find_sentences_for_practice (o what_can_a_practice_be_about si no saps què hi ha a la "
+            "biblioteca) i escriu-la amb build_practice. NOMÉS frases que t'hagin tornat aquelles eines: "
+            "no te n'inventis cap id. Si vols afegir-ne a les que ja hi són, torna a escriure la "
+            "seqüència sencera, perquè build_practice la substitueix."
+        )
 
     contents = []
     for turn in (history or [])[-8:]:
@@ -6712,7 +6823,7 @@ def ai_agent(
     contents.append({"role": "user", "text": msg})
 
     try:
-        result = gemini_agent(system, contents, AGENT_TOOLS, _agent_executor(db))
+        result = gemini_agent(system, contents, AGENT_TOOLS, _agent_executor(db, user))
         return {"answer": result["text"], "actions": result["actions"]}
     except BudgetExceeded as e:
         raise HTTPException(status_code=429, detail=str(e))
