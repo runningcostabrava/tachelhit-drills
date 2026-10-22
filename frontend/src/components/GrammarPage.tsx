@@ -66,6 +66,7 @@ function CourseView() {
         </div>
       )}
       <div style={{ fontSize: '13px', color: 'var(--text-soft)', margin: '-8px 0 16px' }}>
+        <button onClick={() => navigate('/credits')} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontWeight: 600, cursor: 'pointer', padding: 0, marginLeft: 14, fontSize: '13px' }}>Crèdits i fonts</button>
         <button onClick={() => navigate('/veus')} style={{ background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 6 }}><FaMicrophone size={12} /> Veus</button>
         {' '}· demana com es diu una frase, o grava les que saps. A cada targeta del curs pots proposar un canvi.
       </div>

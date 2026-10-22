@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getUserToken, isNativeApp, setUserIdentity, clearUserIdentity } from '../config';
 import { Share } from '@capacitor/share';
 import { syncManager } from '../services/OfflineSyncManager';
@@ -203,6 +204,7 @@ function AdminResetCode() {
 }
 
 export default function ProfilePage() {
+  const navigate = useNavigate();
   const [me, setMe] = useState<Me | null>(null);
   const [streak, setStreak] = useState<{ streak_days: number; reviews_week: number } | null>(null);
   const [username, setUsername] = useState('');
@@ -564,6 +566,15 @@ export default function ProfilePage() {
           </>
         )}
       </div>
+
+      {/* What this app is built on. Some of those licences ask to be named where the work is
+          used, and the only place a learner looks is inside the app. */}
+      <p style={{ textAlign: 'center', margin: '28px 0 0', fontSize: '12.5px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+        Aquesta app s’aguanta en feina d’altra gent.{' '}
+        <button onClick={() => navigate('/credits')} style={{ background: 'transparent', border: 'none', padding: 0, color: 'var(--brand-1)', fontWeight: 700, fontSize: '12.5px', cursor: 'pointer', fontFamily: 'inherit' }}>
+          Crèdits i fonts
+        </button>
+      </p>
     </div>
   );
 }

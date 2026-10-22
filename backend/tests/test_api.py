@@ -879,3 +879,15 @@ def test_asking_for_one_drill_does_not_return_the_whole_library():
     wanted = everything[0]["id"]
     one = client.get(f"/drills/?ids={wanted}").json()
     assert [d["id"] for d in one] == [wanted]
+
+
+def test_the_credits_are_readable_from_inside_the_app():
+    """Some of what this app is built on asks to be named where the work is used (CC BY, and the
+    Awal set says it outright). A file in a repository nobody opens does not do that, so the app
+    serves the same file — one source, so the two can never drift apart."""
+    r = client.get("/credits")
+    assert r.status_code == 200
+    md = r.json()["markdown"]
+    for owed in ("CIEMEN", "Awal", "IRCAM", "Common Voice", "amazic.cat"):
+        assert owed in md, f"els crèdits no nomenen {owed}"
+    assert r.json()["source"] == "docs/CREDITS.md", "s'ha llegit el fitxer de debò, no el text de reserva"

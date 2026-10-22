@@ -302,6 +302,8 @@ export const api = {
   decideProposal: (id: number, accept: boolean) => request<{ id: number; status: string }>(`/grammar/proposals/${id}/decide`, { method: 'POST', body: JSON.stringify({ accept }) }),
   userPage: (username: string) => request<UserPublicPage>(`/users/by-name/${encodeURIComponent(username)}`),
   drillVariants: (id: number) => request<{ original: Drill; variants: Drill[] }>(`/drills/${id}/variants`),
+  // What the project owes to other people, read from the repository's own docs/CREDITS.md
+  credits: () => request<{ markdown: string; source: string }>('/credits'),
   practiceCollections: () => request<PracticeCollections>('/practice/collections'),
   practiceSession: (query: string) => request<{ drills: Drill[]; cards: PracticeCard[] }>(`/practice/session?${query}`),
   reviewsDue: (limit = 10) => request<Drill[]>(`/reviews/due?limit=${limit}`),

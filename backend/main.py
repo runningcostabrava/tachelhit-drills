@@ -6118,6 +6118,36 @@ def decide_lesson_proposal(proposal_id: int, accept: bool = Body(..., embed=True
 
 
 # ===================== PRÀCTICA (pronunciation sessions) =====================
+# ===================== CREDITS =====================
+_CREDITS_FALLBACK = (
+    "# Cr\u00e8dits i fonts\n\n"
+    "Aquesta app s'aguanta en feina d'altri: el **Compendi de Gram\u00e0tica Amaziga** d'amazic.cat "
+    "(Carles M\u00farcia i Salem Zenia), el l\u00e8xic de l'**IRCAM** (DGLAI i les conjugacions, CC BY-NC 4.0), "
+    "el transcriptor **ayymen/stt_zgh_fastconformer_ctc_small** (CC BY 4.0) amb l'alineador de "
+    "**NVIDIA NeMo** (Apache 2.0), i els corpus de **Mozilla Common Voice** (CC0), **Tamazight NLP** "
+    "(Apache 2.0) i el **projecte Awal / CIEMEN** (CC BY 4.0).\n\n"
+    "La llista sencera, amb cada llic\u00e8ncia i la citaci\u00f3 que demana, \u00e9s a `docs/CREDITS.md` del "
+    "repositori.\n"
+)
+
+
+@app.get("/credits")
+def credits():
+    """What the project owes to other people, read from docs/CREDITS.md.
+
+    One file, one truth: a copy inside the app would drift away from the one that is maintained.
+    """
+    here = os.path.dirname(os.path.abspath(__file__))
+    for path in (os.path.join(here, "..", "docs", "CREDITS.md"),
+                 os.path.join(here, "docs", "CREDITS.md")):
+        try:
+            with open(os.path.normpath(path), encoding="utf-8") as f:
+                return {"markdown": f.read(), "source": "docs/CREDITS.md"}
+        except OSError:
+            continue
+    return {"markdown": _CREDITS_FALLBACK, "source": "fallback"}
+
+
 @app.get("/practice/collections")
 def practice_collections(db: Session = Depends(get_db)):
     """How the library is offered for practice: by recording day (our speakers' sessions), by

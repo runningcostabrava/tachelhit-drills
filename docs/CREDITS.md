@@ -138,5 +138,6 @@ servidor i el web.
 6. Res de material de tercers (PDF, diccionaris, clips de corpus) es committeja al repositori.
 7. El que un parlant nostre ha dit és seu: no s'hi passa cap màquina per sobre.
 
-> **Falta encara:** això és un fitxer del repositori, i qui fa servir l'app no el veu. Els crèdits
-> s'han de poder llegir també a dins de l'app — issue oberta.
+> **Això també es llegeix des de l'app.** `GET /credits` serveix aquest mateix fitxer i la pantalla
+> «Crèdits i fonts» el pinta — hi ha enllaç al peu del perfil i a la pàgina de Gramàtica. Un sol
+> fitxer, però, perquè una còpia dins de l'app s'acabaria allunyant d'aquesta.
