@@ -518,8 +518,10 @@ export default function DrillsResponsive() {
           onUpdate={() => {
             fetchDrills();
             if (editingDrill) {
-              axios.get(`${API_BASE}/drills/`).then(response => {
-                const updated = response.data.find((d: Drill) => d.id === editingDrill.id);
+              // Just the one drill (`ids=`), not the whole library again: this used to pull every
+              // row a second time to pick a single one out of it (issue #190).
+              axios.get(`${API_BASE}/drills/?ids=${editingDrill.id}`).then(response => {
+                const updated = response.data[0];
                 if (updated) setEditingDrill(updated);
               });
             }

@@ -36,6 +36,7 @@ import gemini_client
 import ai_budget
 import dialect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, func as sa_func
 from sqlalchemy.orm import sessionmaker, Session
@@ -1776,6 +1777,11 @@ if DEVELOPMENT_MODE:
     )
 app.add_middleware(CORSMiddleware, **cors_kwargs)
 
+# JSON answers go out uncompressed otherwise -- the drills list alone was 5.7 MB over the wire
+# on every load (issue #190). Text like this shrinks about eight times. Anything under a kilobyte
+# is left alone: compressing it would cost more than it saves.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+
 import mimetypes
 
 # Ensure .webm is recognized as audio/webm
@@ -2352,7 +2358,10 @@ def get_drill_tombstones(since: Optional[str] = None, db: Session = Depends(get_
     rows = q.order_by(DrillTombstoneModel.deleted_at.desc()).limit(MAX_PAGE_LIMIT * 4).all()
     return [{"drill_id": t.drill_id, "deleted_at": iso_z(t.deleted_at)} for t in rows]
 
-@app.get("/drills/", response_model=list[Drill])
+# exclude_none: a drill has 40 fields and most rows leave most of them empty. Writing
+# `"field":null` 3.400 times was 43% of the whole answer (issue #190). A missing key and a
+# null key mean the same thing to every reader we have.
+@app.get("/drills/", response_model=list[Drill], response_model_exclude_none=True)
 def get_drills(response: Response, tag: Optional[str] = None, author: Optional[str] = None,
                ids: Optional[str] = None, since: Optional[str] = None, search: Optional[str] = None,
                limit: Optional[int] = None, offset: Optional[int] = None,
