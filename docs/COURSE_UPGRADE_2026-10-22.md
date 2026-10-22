@@ -36,6 +36,27 @@ Unitats amb més de 8 explicacions: possessius (10), temps i adverbis (12), demo
 preposicions i manlleus (9). Les que en tenen 5 o 6 són les de fons petit: derivació verbal (26
 frases), estat d'annexió (35, ara ampliat), aorist, adjectius i numerals.
 
+### Comprovat a producció (fdf232e, i després dbcb9ea)
+
+Fusionat el #176, Render va desplegar i el servidor va escriure les 23 lliçons ell sol. Obrint-les
+totes des de fora (`scratchpad/verify_lessons.py`):
+
+| | |
+|---|---|
+| unitats que citen Beni Mellal | **23 de 23** |
+| temps d'obrir una unitat | 0,6-2,0 s |
+| explicacions per unitat | 6-9 |
+| preguntes per unitat | 9-12 |
+| unitats amb taula de formes | 19 |
+
+La primera petició després d'un desplegament triga uns 45 s: el servidor acaba d'arrencar i està
+escrivint les 23 lliçons. Un minut després la mateixa pàgina va a 1,2 s.
+
+Explicacions amb menys de quatre frases: 14 unitats de 23 abans, 10 després d'omplir els passos
+curts amb les frases parentes de la unitat (#177). Les que queden ho són amb raó: ensenyen una
+paraula sola —«Azul!», «Maymi?»— i de frases no n'hi ha d'altres. Ensenyar-ne quatre caldria
+inventar-les.
+
 ## 3. Una unitat obre a l'instant
 
 Obrir «ser-tenir» trigava **22 segons** perquè la lliçó s'escrivia dins de la petició. Ara:
@@ -116,8 +137,8 @@ propi es deixa estar: «Driss» vol dir Driss.
 
 ## El que cal de tu
 
-**Fusionar el PR #176.** En aquest mode no puc fusionar jo. Quan hi sigui, Render desplega i el
-servidor escriu les 23 lliçons ell sol.
+**Fet.** El #176 i el #177 són a `main` (fdf232e, dbcb9ea), el #175 tancat per superat, i el
+servidor ha escrit les 23 lliçons ell sol. Queda el correu i `FRONTEND_URL`, aquí sota.
 
 ## Obert
 
