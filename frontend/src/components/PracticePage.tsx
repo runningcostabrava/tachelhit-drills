@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaListUl, FaMicrophone, FaPlus, FaVideo, FaUser, FaTag } from 'react-icons/fa';
+import { FaListUl, FaPlay, FaPlus, FaVideo, FaUser, FaTag } from 'react-icons/fa';
 import { api, type PracticeCollections } from '../api';
 import { toast } from '../toast';
 
@@ -50,19 +50,19 @@ export default function PracticePage() {
   const chip = (label: string, count: number, q: string, key: string) => (
     <div key={key} style={{ display: 'inline-flex', alignItems: 'stretch', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', overflow: 'hidden', background: 'var(--surface)' }}>
       <button onClick={() => grid(q)} title="Obre la llista" style={{ padding: '8px 12px', border: 'none', background: 'transparent', color: 'var(--text)', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label} <span style={{ color: 'var(--text-muted)' }}>{count}</span></button>
-      <button onClick={() => go(q)} title="Practica la pronúncia" aria-label={`Practica ${label}`} style={{ padding: '8px 10px', border: 'none', borderLeft: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--brand-1)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}><FaMicrophone size={11} /></button>
+      <button onClick={() => go(q)} title="Fes la sessió" aria-label={`Practica ${label}`} style={{ padding: '8px 10px', border: 'none', borderLeft: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--brand-1)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}><FaPlay size={11} /></button>
     </div>
   );
   const doneLine = (key: string) => done[key] ? `${done[key].right}/${done[key].total} bé` : null;
   return (
     <div style={{ padding: '20px 16px 32px', maxWidth: '900px', margin: '0 auto' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', margin: '0 0 4px' }}>Pràctica</h1>
-      <p style={{ color: 'var(--text-soft)', fontSize: '14px', margin: '0 0 16px' }}>Sessions curtes per aprendre a dir-ho com en Driss i la Halima: escolta, repeteix i mira quines paraules s’han entès.</p>
+      <p style={{ color: 'var(--text-soft)', fontSize: '14px', margin: '0 0 16px' }}>Sessions curtes amb les veus d’en Driss i la Halima: escolta-les, repeteix-les tu, i digues si ja te’n surts.</p>
 
       <button onClick={() => go('daily=1')} style={{ ...cardStyle, width: '100%', background: 'var(--brand-gradient)', color: '#fff', border: 'none', marginBottom: 20, gap: 6 }}>
         <span style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', opacity: 0.85 }}>Sessió d’avui</span>
         <span style={{ fontSize: '18px', fontWeight: 800 }}>Repàs: les frases que toca repetir avui</span>
-        <span style={{ fontSize: '13px', opacity: 0.9 }}>10 frases · uns 6 minuts · <FaMicrophone size={11} /> cal el micròfon</span>
+        <span style={{ fontSize: '13px', opacity: 0.9 }}>10 frases · uns 6 minuts · <FaPlay size={11} /> cal el micròfon</span>
       </button>
 
       {/* What you made yourself comes first: the automatic slices of the library are below. */}
@@ -83,7 +83,7 @@ export default function PracticePage() {
                 <button onClick={() => grid(`test_id=${t.id}&title=${encodeURIComponent(t.title)}`)} style={{ flex: 1, textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '14px', fontWeight: 700, color: 'var(--text)', padding: 0 }}>{t.title}</button>
                 <span style={{ fontSize: '12px', color: 'var(--text-soft)', fontWeight: 700, whiteSpace: 'nowrap' }}>{t.count} frases</span>
                 <button onClick={() => navigate(`/tests/${t.id}/editor`)} title="Edita els passos" style={{ marginLeft: 10, padding: '5px 10px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Edita</button>
-                <button onClick={() => go(`test_id=${t.id}`)} aria-label={`Practica ${t.title}`} title="Practica la pronúncia" style={{ marginLeft: 6, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--brand-1)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaMicrophone size={11} /></button>
+                <button onClick={() => go(`test_id=${t.id}`)} aria-label={`Practica ${t.title}`} title="Fes la sessió" style={{ marginLeft: 6, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--brand-1)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaPlay size={11} /></button>
               </div>
             ))}
             {col.lists.length === 0 && (
@@ -131,7 +131,7 @@ export default function PracticePage() {
               <div key={u.slug} style={{ ...cardStyle, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', cursor: 'default' }}>
                 <button onClick={() => grid(`unit=${u.slug}&title=${encodeURIComponent(u.title)}`)} style={{ flex: 1, textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '14px', fontWeight: 700, color: 'var(--text)', padding: 0 }}><span style={{ color: 'var(--text-muted)', marginRight: 8 }}>{i + 1}</span>{u.title}</button>
                 <span style={{ fontSize: '12px', color: done[`unit:${u.slug}`] ? 'var(--emerald)' : 'var(--text-soft)', fontWeight: 700, whiteSpace: 'nowrap' }}>{done[`unit:${u.slug}`] ? `${done[`unit:${u.slug}`].right}/${done[`unit:${u.slug}`].total} bé` : `${u.count} frases`}</span>
-                <button onClick={() => go(`unit=${u.slug}`)} aria-label={`Practica ${u.title}`} title="Practica la pronúncia" style={{ marginLeft: 10, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--brand-1)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaMicrophone size={11} /></button>
+                <button onClick={() => go(`unit=${u.slug}`)} aria-label={`Practica ${u.title}`} title="Fes la sessió" style={{ marginLeft: 10, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--brand-1)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaPlay size={11} /></button>
               </div>
             ))}
           </div>

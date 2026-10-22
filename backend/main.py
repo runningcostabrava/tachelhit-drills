@@ -1575,6 +1575,7 @@ async def lifespan(app: FastAPI):
     # like any other. Only those that have none, so this can run on every boot.
     try:
         practice_steps.convert_missing(SessionLocal)
+        practice_steps.retire_spoken_steps(SessionLocal)
     except Exception as e:
         print(f"[PRACTICE] conversion skipped: {e}")
 
@@ -5828,7 +5829,6 @@ def get_version():
             "lyrics_alignment": True,
             "ocr": bool(os.getenv("HUGGINGFACE_OCR_SPACE_URL")),
             "srs": True,
-            "pronunciation_check": True,
             "tachelhit_tts_fallback": True,
             "users": True,
             "corpus": True,
@@ -7140,95 +7140,7 @@ def apply_glossary(text: str, pairs) -> str:
             text = re.sub(rf"(?<!\w){re.escape(sound)}(?!\w)", spelling, text)
     return text
 
-def _phonetic_compare_key(text: str) -> str:
-    """Reduce text to the script-independent phonemic key (de-geminated,
-    schwa-stripped) so pronunciation scoring reflects SOUND, not spelling or
-    script. Falls back to orthographic normalization if nothing is mappable."""
-    from transliteration import phonemic_key
-    k = phonemic_key(text or "")
-    return k if k.strip() else _normalize_for_comparison(text)
 
-def _best_pronunciation_match(heard_fixed: str, drill) -> tuple:
-    """
-    Phoneme-level pronunciation scoring. Both the ASR output and the target are
-    reduced to a script-independent phonemic KEY, so the score reflects how the
-    utterance SOUNDS rather than which script/spelling the ASR happened to emit
-    (a correct pronunciation spelled in a different convention no longer tanks
-    the score). Still compares against the Tifinagh gold AND the Latin
-    romanization and keeps the best. Returns (matched_script, target_text, score).
-    """
-    import difflib
-    candidates = []
-    if drill.text_tachelhit:
-        candidates.append(("tifinagh", drill.text_tachelhit))
-    if drill.text_tachelhit_latin:
-        candidates.append(("latin", drill.text_tachelhit_latin))
-    heard_key = _phonetic_compare_key(heard_fixed)
-    best = ("", "", -1.0)
-    for script, target in candidates:
-        s = difflib.SequenceMatcher(None, heard_key, _phonetic_compare_key(target)).ratio()
-        if s > best[2]:
-            best = (script, target, s)
-    return best
-
-@app.post("/pronunciation/check")
-async def pronunciation_check(
-    drill_id: int = Form(...),
-    audio: UploadFile = File(...),
-    db: Session = Depends(get_db)
-):
-    """
-    Pronunciation feedback: transcribe the user's recording with the ASR
-    Space and fuzzy-compare it against the drill's Tachelhit text (after
-    word-boundary glossary normalization). Script-aware: scores against both
-    the Tifinagh text and the Latin romanization, keeping the best match, so
-    the ASR's output script never collapses the score. Nothing is stored.
-    """
-    drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
-    if not drill or not (drill.text_tachelhit or drill.text_tachelhit_latin):
-        raise HTTPException(status_code=404, detail="Drill not found or has no Tachelhit text in any script")
-
-    suffix = os.path.splitext(os.path.basename(audio.filename or ""))[1] or ".webm"
-    tmp_path = None
-    try:
-        content = await audio.read()
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            tmp.write(content)
-            tmp_path = tmp.name
-
-        asr_space_url = os.getenv("HUGGINGFACE_ASR_SPACE_URL", ASR_SPACE_DEFAULT)
-        rough = await asyncio.to_thread(hf_predict, asr_space_url, handle_file(tmp_path), api_name="/predict")
-        heard = str(rough or "").strip()
-
-        # Glossary normalization so known sound->spelling quirks don't penalize
-        pairs = [(g.word_sound, g.correct_spelling) for g in db.query(GlossaryItemModel).all()]
-        fixed = apply_glossary(heard, pairs)
-
-        matched_script, target, score = _best_pronunciation_match(fixed, drill)
-        latin = drill.text_tachelhit if re.search(r"[A-Za-z]", drill.text_tachelhit or "") else (drill.text_tachelhit_latin or drill.text_tachelhit or "")
-
-        return {
-            "drill_id": drill_id,
-            "target": target,
-            "matched_script": matched_script,
-            "heard": fixed,
-            "score": round(max(score, 0.0), 3),
-            "words": practice_mod.compare_words(latin, fixed),  # the speaker's words, each ok or not
-            "heard_latin": transliteration.to_forms(fixed)["clean_latin"] if fixed else "",  # what was heard, readable
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"[PRONUNCIATION] Error: {e}")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Pronunciation check failed: {str(e)}")
-    finally:
-        if tmp_path and os.path.exists(tmp_path):
-            try: os.unlink(tmp_path)
-            except OSError: pass
-
-# ===================== SPACED REPETITION (SRS) =====================
-# SM-2 style scheduling. Grades: 0=again, 1=hard, 2=good, 3=easy.
 
 @app.get("/reviews/due", response_model=list[Drill])
 def get_due_reviews(limit: int = 20, db: Session = Depends(get_db),

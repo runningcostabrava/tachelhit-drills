@@ -14,18 +14,27 @@ from __future__ import annotations
 import json
 from typing import Dict, List, Optional
 
+# Speaking stayed; MARKING it went, on 2026-10-22. Our transcriber gets a CER of 0.78 on our own
+# recordings (docs/ASR_EVAL_NOSTRA_2026-10-22.md), so a score built on it would be noise dressed
+# up as a mark -- and it was feeding the review schedule. A learner now records themselves, hears
+# the speaker and themselves one after the other, and says for themselves whether they have it.
+# The take never leaves the page.
+#
+# `record` is gone for another reason: it asked for a voice to KEEP in the library, which is a
+# different act with different consequences (a name, a place, a licence). That lives in Veus.
+RETIRED = {"record": "listen_pick"}
+
 # kind -> (needs a drill, what it asks of the learner)
 KINDS: Dict[str, tuple] = {
     "listen_pick":  (True,  "escolta la frase i tria què vol dir"),
     "write_heard":  (True,  "escolta i escriu el que sents"),
-    "say_it":       (True,  "digues-ho (es puntua la pronúncia)"),
+    "say_it":       (True,  "digues-ho i compara't amb la veu de debò (ningú no et posa nota)"),
     "look_say":     (True,  "mira la imatge i digues-ho"),
     "fill_gap":     (True,  "omple el tros que s'ensenya"),
     "word_by_word": (True,  "lliga cada paraula amb el que vol dir"),
     "script_swap":  (True,  "llegeix-ho en l'altra escriptura"),
     "pick_spelling": (True, "tria quina de les dues maneres de dir-ho és la d'aquest parlant"),
     "note":         (False, "llegeix: una explicació, un títol, una imatge"),
-    "record":       (True,  "grava aquesta frase amb la teva veu"),
 }
 
 # What an old practice becomes when it is converted (ADR 0002): the tool comes from the single
@@ -116,5 +125,25 @@ def convert_missing(session_factory, limit: int = 500) -> dict:
         if done:
             print(f"[PRACTICE] {done} practices converted to steps ({made} steps)")
         return {"practices": done, "steps": made}
+    finally:
+        db.close()
+
+
+def retire_spoken_steps(session_factory) -> int:
+    """Turn the steps that asked a learner to speak into ones we can honestly run.
+
+    Nothing is deleted: a step keeps its place and its sentence, and only the tool changes
+    (see RETIRED). Safe to run again -- once no step carries a retired kind, it does nothing.
+    """
+    from models import PracticeStep
+    db = session_factory()
+    try:
+        rows = db.query(PracticeStep).filter(PracticeStep.kind.in_(tuple(RETIRED))).all()
+        for r in rows:
+            r.kind = RETIRED[r.kind]
+        if rows:
+            db.commit()
+            print(f"[PRACTICE] {len(rows)} spoken steps turned into listening ones")
+        return len(rows)
     finally:
         db.close()

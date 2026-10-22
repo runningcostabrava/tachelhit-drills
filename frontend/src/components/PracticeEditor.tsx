@@ -15,13 +15,12 @@ import type { Drill } from '../types';
 const TOOLS: { kind: PracticeStep['kind']; label: string; needsDrill: boolean }[] = [
   { kind: 'listen_pick', label: 'escolta i tria', needsDrill: true },
   { kind: 'write_heard', label: 'escriu el que sents', needsDrill: true },
-  { kind: 'say_it', label: 'digues-ho', needsDrill: true },
+  { kind: 'say_it', label: 'digues-ho i compara', needsDrill: true },
   { kind: 'look_say', label: 'mira i digues-ho', needsDrill: true },
   { kind: 'fill_gap', label: 'omple el buit', needsDrill: true },
   { kind: 'word_by_word', label: 'paraula per paraula', needsDrill: true },
   { kind: 'script_swap', label: 'tifinag o llatí', needsDrill: true },
   { kind: 'pick_spelling', label: 'quina és la bona', needsDrill: true },
-  { kind: 'record', label: 'grava-la', needsDrill: true },
   { kind: 'note', label: 'nota que ensenya', needsDrill: false },
 ];
 
@@ -63,7 +62,7 @@ export default function PracticeEditor() {
 
   const add = (drill: Drill) => {
     remember([drill]);
-    setSteps((s) => [...s, { kind: drill.audio_url ? 'listen_pick' : 'record', drill_id: drill.id }]);
+    setSteps((s) => [...s, { kind: drill.audio_url ? 'listen_pick' : 'fill_gap', drill_id: drill.id }]);
     setDirty(true);
   };
   const addNote = () => { setSteps((s) => [...s, { kind: 'note', payload: { text: '' } }]); setDirty(true); };

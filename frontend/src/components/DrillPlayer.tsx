@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { answerSafeFilter } from '../utils/media';
 import SourceCredit from './SourceCredit';
 import { API_BASE, getMediaUrl } from '../config';
-import { fileNameFor, preferredRecorderMime, toPlayableAudioUrl } from '../utils/media';
+import { preferredRecorderMime, toPlayableAudioUrl } from '../utils/media';
 import { getMediaWithOfflineFallback } from '../utils/offlineCache';
 import { getYouTubeVideoId, loadYouTubeApi } from '../utils/youtubeUtils';
-import { FaVideo, FaVolumeUp, FaPlay, FaPause, FaSync, FaTimes, FaStepBackward, FaStepForward, FaBullseye, FaThumbsUp, FaRedo, FaExclamationTriangle, FaEye, FaStop, FaMicrophone, FaStar } from 'react-icons/fa';
+import { FaVideo, FaVolumeUp, FaPlay, FaPause, FaSync, FaTimes, FaStepBackward, FaStepForward, FaEye, FaStop, FaMicrophone } from 'react-icons/fa';
 import DrillVoices from './DrillVoices';
 import WordGloss from './WordGloss';
 import AiAssistant from './AiAssistant';
@@ -167,19 +167,18 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
   const [usingSyntheticVoice, setUsingSyntheticVoice] = useState(false);
   const [synthesizingVoice, setSynthesizingVoice] = useState(false);
 
-  // Pronunciation check (review mode): record -> ASR -> similarity score
+  // Say it yourself, then hear the two takes one after the other (review mode).
+  //
+  // Until 2026-10-22 this sent the recording away to be transcribed and turned into a percentage,
+  // and that percentage even suggested the review grade. We measured the transcriber: CER 0.78 on
+  // our own recordings, 0.87 on Aït Mraw (docs/ASR_EVAL_NOSTRA_2026-10-22.md). It was guessing,
+  // and the guess was steering the schedule. Nothing is analysed now: the take stays in the page,
+  // you compare it with the speaker, and you grade yourself.
   const pronunciationRecorderRef = useRef<MediaRecorder | null>(null);
   const [isCheckingRecording, setIsCheckingRecording] = useState(false);
-  const [pronunciationBusy, setPronunciationBusy] = useState(false);
-  const [pronunciationResult, setPronunciationResult] = useState<{ heard: string; score: number } | null>(null);
-
-  // Voice understanding guides scheduling: the score suggests a self-grade
-  // (learner still decides — the highlight is advice, not automation)
-  const suggestedGrade = pronunciationResult && pronunciationResult.score >= 0
-    ? (pronunciationResult.score >= 0.85 ? 3
-      : pronunciationResult.score >= 0.65 ? 2
-      : pronunciationResult.score >= 0.4 ? 1 : 0)
-    : null;
+  const [myTake, setMyTake] = useState<Blob | null>(null);
+  const myTakeUrl = useMemo(() => (myTake ? URL.createObjectURL(myTake) : ''), [myTake]);
+  useEffect(() => () => { if (myTakeUrl) URL.revokeObjectURL(myTakeUrl); }, [myTakeUrl]);
 
   const togglePronunciationRecording = async () => {
     if (isCheckingRecording) {
@@ -192,34 +191,15 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
       const recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
       const chunks: Blob[] = [];
       recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
-      recorder.onstop = async () => {
+      recorder.onstop = () => {
         stream.getTracks().forEach(t => t.stop());
         setIsCheckingRecording(false);
-        const drillId = drills[currentIndexRef.current]?.id;
-        if (!drillId || !chunks.length) return;
-        setPronunciationBusy(true);
-        try {
-          const blob = new Blob(chunks, { type: recorder.mimeType || mime || 'audio/webm' });
-          const fd = new FormData();
-          fd.append('drill_id', String(drillId));
-          fd.append('audio', blob, fileNameFor(blob, 'audio', 'pronunciation'));
-          const res = await fetch(`${API_BASE}/pronunciation/check`, { method: 'POST', body: fd });
-          if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || 'Pronunciation check failed');
-          }
-          const data = await res.json();
-          setPronunciationResult({ heard: data.heard, score: data.score });
-        } catch (e: any) {
-          console.error('Pronunciation check failed:', e);
-          setPronunciationResult({ heard: e.message || 'Error', score: -1 });
-        } finally {
-          setPronunciationBusy(false);
-        }
+        // Stays here: never uploaded, never transcribed, dropped when you move on.
+        if (chunks.length) setMyTake(new Blob(chunks, { type: recorder.mimeType || mime || 'audio/webm' }));
       };
       recorder.start();
       pronunciationRecorderRef.current = recorder;
-      setPronunciationResult(null);
+      setMyTake(null);
       setIsCheckingRecording(true);
     } catch (e) {
       console.error('Microphone access failed:', e);
@@ -320,8 +300,8 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
     // audio can't restart over the new drill
     audioTimersRef.current.forEach(t => window.clearTimeout(t));
     audioTimersRef.current = [];
-    // Reset pronunciation feedback for the new card
-    setPronunciationResult(null);
+    // The take belongs to the card you just left
+    setMyTake(null);
     if (pronunciationRecorderRef.current?.state === 'recording') {
       try { pronunciationRecorderRef.current.stop(); } catch { /* already stopped */ }
     }
@@ -1694,36 +1674,29 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
         </div>
       )}
 
-      {/* Pronunciation feedback chip */}
-      {reviewMode && (pronunciationResult || pronunciationBusy) && (
+      {/* Your own take, to hear next to the speaker's. Nothing is measured. */}
+      {reviewMode && (myTake || isCheckingRecording) && (
         <div style={{
           position: 'fixed', bottom: '80px', left: '50%', transform: 'translateX(-50%)',
           zIndex: 10001, maxWidth: '90vw',
           background: 'rgba(15, 23, 42, 0.9)', color: 'white',
           padding: '10px 18px', borderRadius: 'var(--r-lg)',
           backdropFilter: 'blur(8px)', boxShadow: 'var(--shadow-lg)',
-          fontSize: '14px', textAlign: 'center'
+          fontSize: '14px', textAlign: 'center',
+          display: 'inline-flex', alignItems: 'center', gap: '10px'
         }}>
-          {pronunciationBusy ? (
-            <span>👂 Escoltant la teva pronunciació…</span>
-          ) : pronunciationResult && pronunciationResult.score >= 0 ? (
-            <>
-              <span style={{
-                fontWeight: 800,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                color: pronunciationResult.score >= 0.8 ? 'var(--emerald)'
-                  : pronunciationResult.score >= 0.5 ? 'var(--saffron)' : 'var(--rose)'
-              }}>
-                {pronunciationResult.score >= 0.8 ? <FaBullseye /> : pronunciationResult.score >= 0.5 ? <FaThumbsUp /> : <FaRedo />}
-                {Math.round(pronunciationResult.score * 100)}%
-              </span>
-              <span style={{ margin: '0 8px', opacity: 0.5 }}>·</span>
-              <span style={{ fontFamily: 'var(--font-tifinagh)' }}>He sentit: “{pronunciationResult.heard}”</span>
-            </>
+          {isCheckingRecording ? (
+            <span>Parla… torna a prémer quan acabis</span>
           ) : (
-            <span style={{ color: 'var(--rose)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaExclamationTriangle /> {pronunciationResult?.heard}</span>
+            <>
+              <button
+                onClick={() => { if (myTakeUrl) new Audio(myTakeUrl).play().catch(() => {}); }}
+                style={{ padding: '7px 14px', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <FaPlay size={11} /> El que has dit
+              </button>
+              <span style={{ opacity: 0.6, fontSize: '12.5px' }}>compara-ho amb la veu de dalt</span>
+            </>
           )}
         </div>
       )}
@@ -1755,15 +1728,14 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
           <>
           <button
             onClick={togglePronunciationRecording}
-            disabled={pronunciationBusy}
-            aria-label={isCheckingRecording ? 'Atura i comprova la pronunciació' : 'Comprova la teva pronunciació'}
-            title={isCheckingRecording ? 'Atura i comprova' : 'Comprova la teva pronunciació'}
+            aria-label={isCheckingRecording ? 'Atura la gravació' : 'Grava’t i compara’t amb la veu'}
+            title={isCheckingRecording ? 'Atura' : 'Grava’t i compara’t amb la veu'}
             style={{
               padding: '10px 14px',
               background: isCheckingRecording ? 'var(--rose)' : 'rgba(255,255,255,0.15)',
               color: 'white', border: '1px solid rgba(255,255,255,0.3)',
               borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '15px',
-              cursor: pronunciationBusy ? 'wait' : 'pointer',
+              cursor: 'pointer',
               animation: isCheckingRecording ? 'pulse 1s infinite' : undefined,
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center'
             }}
@@ -1780,17 +1752,14 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               key={g}
               onClick={() => gradeAndAdvance(g)}
               aria-label={`${label} (tecla ${i + 1})`}
-              title={suggestedGrade === g ? 'Suggerit per la teva pronunciació' : undefined}
               style={{
                 padding: compactUi ? '10px 12px' : '10px 16px', background: bg, color: 'white', border: 'none',
                 borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: '14px', cursor: 'pointer',
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                boxShadow: suggestedGrade === g ? '0 0 0 3px rgba(255,255,255,0.85)' : undefined,
-                transform: suggestedGrade === g ? 'scale(1.08)' : undefined
+                display: 'inline-flex', alignItems: 'center', gap: '6px'
               }}
             >
               {!compactUi && <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', background: 'rgba(255,255,255,0.85)', borderRadius: 'var(--r-sm)', padding: '1px 5px', lineHeight: 1.4 }}>{i + 1}</span>}
-              {suggestedGrade === g ? <FaStar /> : null}{label}
+              {label}
             </button>
           ))}
           </>

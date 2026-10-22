@@ -73,12 +73,18 @@ def test_a_practice_is_a_sequence_of_steps_and_belongs_to_whoever_made_it():
     new_steps = [
         {"kind": "note", "payload": {"text": "Primer escolta, després digues-ho."}},
         {"kind": "say_it", "drill_id": d2["id"]},
-        {"kind": "record", "drill_id": d1["id"]},
+        {"kind": "look_say", "drill_id": d1["id"]},
     ]
     out = client.put(f"/tests/{made['id']}/steps", headers=hdr, json={"steps": new_steps}).json()
-    assert [s["kind"] for s in out["steps"]] == ["note", "say_it", "record"]
+    assert [s["kind"] for s in out["steps"]] == ["note", "say_it", "look_say"]
     assert [s["position"] for s in out["steps"]] == [0, 1, 2]
     assert out["steps"][0]["payload"]["text"].startswith("Primer")
+
+    # «record» asked for a voice to KEEP in the library, which is Veus's job, not a practice's
+    gone = client.put(f"/tests/{made['id']}/steps", headers=hdr,
+                      json={"steps": [{"kind": "record", "drill_id": d1["id"]}]})
+    assert gone.status_code == 400
+    assert [s["kind"] for s in client.get(f"/tests/{made['id']}/steps").json()["steps"]] == ["note", "say_it", "look_say"]
 
     # what cannot be a step is refused, and refused BEFORE anything is deleted
     bad = client.put(f"/tests/{made['id']}/steps", headers=hdr,

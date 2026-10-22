@@ -403,7 +403,8 @@ export interface PracticeCollections {
 export interface PracticeTip { sound: string; label: string; found: string; tip: string }
 export interface PracticeCard { speaker: string; origin: string; day: string | null; tips: PracticeTip[]; highlights: string[] }
 export interface PronunciationWord { word: string; ok: boolean; heard: string | null }
-export type PracticeMode = 'parla' | 'escolta' | 'auto';
+// «parla» (record and be scored) was dropped on 2026-10-22: see PracticeSession.tsx.
+export type PracticeMode = 'escolta' | 'auto';
 /** The mail sender as the app has it; the password itself is never sent back. */
 export interface MailSettings { SMTP_HOST: string; SMTP_PORT: string; SMTP_USER: string; SMTP_FROM: string; has_password: boolean; ready: boolean; from_app: Record<string, boolean>; MAIL_API_PROVIDER?: string; has_api_key?: boolean }
 /** A person's public page: who they are and what they gave the library. */

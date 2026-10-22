@@ -268,26 +268,6 @@ def test_glossary_word_boundaries():
     assert main.apply_glossary("tanayrit", pairs) == "tanayrit"
 
 
-def test_pronunciation_scores_on_phonemes_not_script():
-    class FakeDrill:
-        text_tachelhit = "ⵜⴰⵏⵎⵎⵉⵔⵜ"      # Tifinagh gold
-        text_tachelhit_latin = "tanmmirt"  # Latin romanization
-    # Latin ASR output scores high — and crucially NOT lower vs the Tifinagh
-    # target, because both reduce to the same phonemic key.
-    _, _, score = main._best_pronunciation_match("tanmmirt", FakeDrill())
-    assert score > 0.9
-    # Tifinagh ASR output also scores high against the same drill
-    _, _, score = main._best_pronunciation_match("ⵜⴰⵏⵎⵎⵉⵔⵜ", FakeDrill())
-    assert score > 0.9
-    # A different spelling of the SAME word (de-geminated) still scores high,
-    # where the old orthographic scorer would have penalised it.
-    _, _, score = main._best_pronunciation_match("tanmirt", FakeDrill())
-    assert score > 0.9
-    # A genuinely different word scores low
-    _, _, score = main._best_pronunciation_match("aghrum", FakeDrill())
-    assert score < 0.6
-
-
 def test_version_endpoint():
     r = client.get("/version")
     assert r.status_code == 200
