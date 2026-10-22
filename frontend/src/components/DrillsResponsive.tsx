@@ -1,7 +1,7 @@
 import '../agGridSetup';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { VARIETIES } from '../varieties';
-import { FaMicrophone, FaPlus, FaTimes, FaLink, FaChevronDown, FaSearch, FaBook, FaTrash, FaFileImport, FaFilm } from 'react-icons/fa';
+import { FaMicrophone, FaPlus, FaTimes, FaLink, FaChevronDown, FaSearch, FaBook, FaTrash, FaFileImport, FaFilm, FaBookOpen } from 'react-icons/fa';
 import axios from 'axios';
 import { API_BASE } from '../config';
 import { syncManager } from '../services/OfflineSyncManager';
@@ -375,6 +375,12 @@ export default function DrillsResponsive() {
                       style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', fontSize: '14px', background: 'none', border: 'none', borderTop: '1px solid var(--border)', textAlign: 'left', cursor: 'pointer', color: 'var(--text)', fontWeight: 600, whiteSpace: 'nowrap' }}
                     >
                       <FaFilm style={{ color: 'var(--amber-strong)' }} /> Biblioteca de vídeos
+                    </button>
+                    <button
+                      onClick={() => { navigate('/corpus'); setShowNewDrillOptions(false); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', fontSize: '14px', background: 'none', border: 'none', borderTop: '1px solid var(--border)', textAlign: 'left', cursor: 'pointer', color: 'var(--text)', fontWeight: 600, whiteSpace: 'nowrap' }}
+                    >
+                      <FaBookOpen style={{ color: 'var(--sky)' }} /> Corpus i exportacions
                     </button>
                     <button
                       onClick={() => { setShowGlossary(true); setShowNewDrillOptions(false); }}

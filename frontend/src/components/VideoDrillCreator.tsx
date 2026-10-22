@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { API_BASE } from '../config';
-import { FaHeadphones, FaBolt, FaGlobe, FaVideo, FaUpload, FaMusic, FaTimes, FaClock, FaSpellCheck, FaFont, FaComments } from 'react-icons/fa';
+import { FaHeadphones, FaBolt, FaGlobe, FaUpload, FaMusic, FaTimes, FaClock, FaSpellCheck, FaFont, FaComments } from 'react-icons/fa';
 import ServiceStatusBanner from './ServiceStatusBanner';
 import AutoCapturePanel from './AutoCapturePanel';
 import { toast } from '../toast';
@@ -54,7 +54,6 @@ const VideoDrillCreator: React.FC = () => {
   const [tag, setTag] = useState('video_capture');
   const [audioOnly, setAudioOnly] = useState(false);
   const [autoMode, setAutoMode] = useState(false);
-  const [makeReels, setMakeReels] = useState(false);
   const [foreignSource, setForeignSource] = useState(false);
   const [lyrics, setLyrics] = useState('');
   const [autoStatus, setAutoStatus] = useState<string | null>(null);
@@ -260,7 +259,6 @@ const VideoDrillCreator: React.FC = () => {
             audio_only: audioOnly,
             tag,
             lyrics: lyrics.trim() || null,
-            generate_reels: makeReels,
           }),
         });
         if (!response.ok) {
@@ -525,12 +523,6 @@ const VideoDrillCreator: React.FC = () => {
             <input type="checkbox" checked={foreignSource} onChange={(e) => setForeignSource(e.target.checked)} />
             <FaGlobe /> Font en una altra llengua (p. ex. anglès) → genera el amazic com a ESBORRANY per corregir
           </label>
-          {autoMode && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-soft)', fontWeight: 600, cursor: 'pointer' }}>
-              <input type="checkbox" checked={makeReels} onChange={(e) => setMakeReels(e.target.checked)} />
-              <FaVideo /> Genera també un reel vertical per cada drill
-            </label>
-          )}
         </div>
 
         <div style={{ padding: '20px', background: 'var(--surface-2)', borderRadius: 'var(--r-lg)', border: '2px dashed var(--border-strong)', textAlign: 'center' }}>
