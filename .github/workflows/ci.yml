@@ -1,0 +1,68 @@
+name: CI
+
+# The tests that decide whether a pull request may be merged. Until this existed, every backend
+# change merged with no check at all: `mobile.yml` only runs when `frontend/**` is touched, and
+# nothing anywhere ran pytest. See docs/adr/0001 and the project skill.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Proves del backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # The version the suite is developed against; the pins in requirements.txt follow it.
+          python-version: '3.14'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Instal·la les dependències
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-randomly pytest-subtests
+
+      - name: pytest
+        working-directory: backend
+        # -p no:randomly on purpose: one test still depends on the order of the others (issue #190).
+        # Fixing that test is its own issue; hiding it behind a random seed here would make the
+        # suite lie about itself.
+        run: python -m pytest tests -q -p no:randomly
+        env:
+          LEXICON_WARMUP: '0'
+
+  frontend:
+    name: Tipus i compilació del web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instal·la les dependències
+        working-directory: frontend
+        run: npm ci
+
+      - name: Tipus
+        working-directory: frontend
+        run: npx tsc -b
+
+      - name: Compilació
+        working-directory: frontend
+        run: npm run build
