@@ -88,8 +88,18 @@ def steps_of(db, test_id: int) -> List[dict]:
 def replace_steps(db, test_id: int, steps: List[dict]) -> List[dict]:
     """Rewrite a practice's steps from the order the editor sends. Everything is validated BEFORE
     anything is deleted: a practice is never left half-written because step nine was wrong."""
-    from models import PracticeStep
+    from models import Drill as DrillModel, PracticeStep
     cleaned = [validate(s) for s in (steps or [])]
+    # A step towards a sentence that no longer exists cannot be written: `drill_id` is a foreign
+    # key and Postgres enforces it. Caught here it is a sentence in words the editor can show;
+    # caught by the database it is a 500 after the old steps have already been deleted.
+    wanted = {s["drill_id"] for s in cleaned if s["drill_id"]}
+    if wanted:
+        alive = {d[0] for d in db.query(DrillModel.id).filter(DrillModel.id.in_(wanted)).all()}
+        gone = sorted(wanted - alive)
+        if gone:
+            raise StepError("aquests passos apunten a frases que ja no existeixen: "
+                            + ", ".join(str(g) for g in gone[:8]))
     db.query(PracticeStep).filter(PracticeStep.test_id == test_id).delete(synchronize_session=False)
     for i, s in enumerate(cleaned):
         db.add(PracticeStep(test_id=test_id, position=i, kind=s["kind"],
@@ -107,27 +117,48 @@ def from_legacy(test) -> List[dict]:
 
 def convert_missing(session_factory, limit: int = 500) -> dict:
     """Give steps to the practices that have none. Safe to run again: a practice that already has
-    steps is left alone, so this can live on startup without doubling anything."""
-    from models import PracticeStep, Test as TestModel
+    steps is left alone, so this can live on startup without doubling anything.
+
+    Two things this has to survive, and did not:
+
+    A sentence on the old flat list may be **gone**. `drill_ids` is just a list of numbers, and
+    numbers stop meaning anything as a library grows: nine of the first two hundred on practice
+    28 pointed at drills deleted since. `practice_steps.drill_id` is a foreign key, which
+    Postgres enforces, so a step towards one of those cannot be written at all.
+
+    And a failure must not spread. This used to commit ONCE, after every practice: one
+    impossible row at the end took the whole batch with it, the caller logged «conversion
+    skipped», and NO practice was ever converted — which is why a practice with 511 sentences
+    opened empty. Now each one is saved on its own and the one that fails says its name.
+    """
+    from models import Drill as DrillModel, PracticeStep, Test as TestModel
     db = session_factory()
-    done, made = 0, 0
+    done, made, failed = 0, 0, []
     try:
         with_steps = {r[0] for r in db.query(PracticeStep.test_id).distinct().all()}
+        alive = {d[0] for d in db.query(DrillModel.id).all()}
         for test in db.query(TestModel).order_by(TestModel.id.asc()).limit(limit).all():
             if test.id in with_steps:
                 continue
-            steps = from_legacy(test)
+            steps = [s for s in from_legacy(test) if s["drill_id"] in alive]
             if not steps:
                 continue
-            for i, s in enumerate(steps):
-                db.add(PracticeStep(test_id=test.id, position=i, kind=s["kind"],
-                                    drill_id=s["drill_id"], payload=None))
+            try:
+                for i, s in enumerate(steps):
+                    db.add(PracticeStep(test_id=test.id, position=i, kind=s["kind"],
+                                        drill_id=s["drill_id"], payload=None))
+                db.commit()
+            except Exception as e:                    # noqa: BLE001 — one bad practice, not all
+                db.rollback()
+                failed.append((test.id, str(e)[:120]))
+                continue
             done += 1
             made += len(steps)
-        db.commit()
         if done:
             print(f"[PRACTICE] {done} practices converted to steps ({made} steps)")
-        return {"practices": done, "steps": made}
+        for tid, why in failed:
+            print(f"[PRACTICE] practice {tid} could not be converted: {why}")
+        return {"practices": done, "steps": made, "failed": [t for t, _ in failed]}
     finally:
         db.close()
 

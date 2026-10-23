@@ -7,6 +7,9 @@ import type { Drill } from './types';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
+    // Mai del cau. Una llista que es torna a demanar just després d'escriure-hi ha d'arribar del
+    // servidor: servida del cau, una petició creada correctament es veu com si no existís.
+    cache: 'no-store',
     headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
     ...init,
   });
@@ -118,6 +121,54 @@ export interface Me {
   date_created: string;
   drills_contributed: number;
   cards_learning: number;
+}
+
+/** D'on surt el recorregut del Mètode, i què se'n pren i què no. Viatja amb cada capítol. */
+export interface MethodSource {
+  author: string; title: string; publisher: string; place: string; year: number;
+  italian: string; took: string; did_not_take: string;
+}
+
+export interface MethodSentence {
+  id: number;
+  text_tachelhit: string | null;
+  text_tachelhit_latin: string | null;
+  text_catalan: string | null;
+  audio_url: string | null;
+  image_url: string | null;
+  speaker: string | null;
+  variety: string | null;
+  region: string | null;
+  grammar: string | null;
+  topics: string | null;
+}
+
+export interface MethodChapterSummary {
+  n: number; slug: string; name: string | null; title: string; about: string;
+  functions: string[]; roles: string[];
+  grammar: { slug: string; title: string }[];
+  topics: string[];
+  sentences: number; with_voice: number; varieties: string[];
+  /** Seccions amb prou frases que es puguin escoltar, de les que té. No és el teu progrés. */
+  sections_ready: number; sections_total: number;
+}
+
+export interface MethodIndex { chapters: MethodChapterSummary[]; source: MethodSource }
+
+export interface MethodChapterData {
+  n: number; slug: string; name: string | null; title: string; about: string;
+  functions: string[]; roles: string[];
+  topics: { slug: string; label: string }[];
+  sections: { slug: string; title: string; sentences: MethodSentence[]; total: number; with_voice: number }[];
+  also: MethodSentence[];
+  sentences: number; with_voice: number;
+  sections_ready: number; sections_total: number;
+  missing: {
+    thin: { slug: string; title: string; sentences: number; with_voice: number; nowhere: boolean }[];
+    voiceless: { id: number; text_tachelhit: string | null; text_catalan: string | null }[];
+    voiceless_total: number;
+  };
+  source: MethodSource;
 }
 
 export interface CaptureCut {
@@ -343,6 +394,9 @@ export const api = {
   /** Admin: ask for every sentence the library cannot say out loud, in one pass. */
   askForEveryMissingVoice: () => request<{ asked: number; already_asked: number; with_a_take: number }>('/drills/voice-wanted/missing', { method: 'POST', body: JSON.stringify({ include_synthetic: true }) }),
   /** Ask our speakers to say this sentence out loud; it goes to the top of «Veus». */
+  // --- El Mètode: deu capítols fets amb la nostra biblioteca (ADR 0003) ---
+  methodIndex: () => request<MethodIndex>('/method/'),
+  methodChapter: (slug: string) => request<MethodChapterData>(`/method/${encodeURIComponent(slug)}`),
   askForVoice: (drillId: number, wanted = true) => request<{ id: number; voice_wanted: boolean; voice_wanted_by: string | null }>(`/drills/${drillId}/voice-wanted`, { method: 'POST', body: JSON.stringify({ wanted }) }),
   petitions: (kind: 'open' | 'synthetic' | 'aitmraw', limit = 40) => request<{ items: PetitionItem[]; total: number }>(`/petitions?kind=${kind}&limit=${limit}`),
   addPetition: (text_catalan: string, note: string | null) => request<Drill>('/petitions', { method: 'POST', body: JSON.stringify({ text_catalan, note }) }),

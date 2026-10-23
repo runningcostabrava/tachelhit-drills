@@ -4,6 +4,7 @@ import { FaMicrophone, FaPaperPlane, FaVolumeUp } from 'react-icons/fa';
 import { api, type PetitionItem, type Me } from '../api';
 import { getMediaUrl } from '../config';
 import { toast } from '../toast';
+import { whyItFailed } from '../utils/errors';
 import type { Drill } from '../types';
 import RecordAudioModal from './RecordAudioModal';
 
@@ -25,6 +26,7 @@ export default function VeusPage() {
   const navigate = useNavigate();
   const [kind, setKind] = useState<Kind>('open');
   const [items, setItems] = useState<PetitionItem[] | null>(null);
+  const [listFailed, setListFailed] = useState(false);
   const [total, setTotal] = useState(0);
   const [me, setMe] = useState<Me | null>(null);
   const [recording, setRecording] = useState<Drill | null>(null);
@@ -35,8 +37,10 @@ export default function VeusPage() {
 
   useEffect(() => { api.me().then(setMe).catch(() => setMe(null)); }, []);
   useEffect(() => {
-    setItems(null);
-    api.petitions(kind).then((r) => { setItems(r.items); setTotal(r.total); }).catch(() => toast.error('No s’ha pogut carregar la llista'));
+    setItems(null); setListFailed(false);
+    api.petitions(kind)
+      .then((r) => { setItems(r.items); setTotal(r.total); })
+      .catch((e) => { setListFailed(true); toast.error(whyItFailed(e, 'No s’ha pogut carregar la llista')); });
   }, [kind, tick]);
 
   const play = (url?: string | null) => { if (url) new Audio(getMediaUrl(url)).play().catch(() => {}); };
@@ -97,7 +101,13 @@ export default function VeusPage() {
       </div>
       <p style={{ fontSize: 13, color: 'var(--text-soft)', margin: '0 0 12px' }}>{tab.blurb}{items ? ` · ${total}` : ''}</p>
 
-      {!items && <div style={{ color: 'var(--text-muted)' }}>Carregant…</div>}
+      {/* Una llista que no s'ha pogut portar no pot semblar una llista buida. */}
+      {!items && listFailed
+        ? <div style={{ color: 'var(--text-soft)', fontSize: 14 }}>
+            No s’ha pogut portar la llista.{' '}
+            <button onClick={() => setTick((t) => t + 1)} style={{ background: 'transparent', border: 'none', padding: 0, color: 'var(--brand-1)', fontWeight: 700, fontSize: 'inherit', cursor: 'pointer', fontFamily: 'inherit' }}>Torna-ho a provar</button>
+          </div>
+        : !items && <div style={{ color: 'var(--text-muted)' }}>Carregant…</div>}
       {items && items.length === 0 && <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Res pendent aquí.</div>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {items?.map((it) => {
