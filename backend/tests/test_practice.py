@@ -341,3 +341,49 @@ def test_una_nota_amb_titol_i_sense_text_es_desa():
     assert empty.status_code == 400
     assert [x["kind"] for x in client.get(f"/tests/{made['id']}/steps").json()["steps"]] == \
         ["note", "listen_pick"], "el que ja hi havia no s'ha tocat"
+
+
+def test_una_practica_diu_quants_passos_te_i_quina_cara_fa():
+    """Every screen asked how big a practice is, and worked it out itself from `drill_ids` -- the
+    flat list a practice used to be. The workshop leaves that column empty (ADR 0002), so the
+    gallery called an eleven-step practice «0 drills» while the Pràctica screen called the same
+    one eleven. The practice now carries the number, and a picture to be recognised by: the first
+    of its sentences that has one."""
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("size_teller")}
+    plain = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "sal", "text_tachelhit": "tisent",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/s.mp3"}).json()
+    drawn = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "te", "text_tachelhit": "atay",
+        "image_url": "https://res.cloudinary.com/x/image/upload/v1/tea.jpg",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/t.mp3"}).json()
+
+    made = client.post("/tests/", headers=hdr, json={
+        "title": "Quants en t\u00e9", "question_type": "audio", "hint_level": "none",
+        "drill_ids": ""}).json()                       # empty on purpose: this is what the workshop makes
+    assert made["step_count"] == 0
+
+    client.put(f"/tests/{made['id']}/steps", headers=hdr, json={"steps": [
+        {"kind": "note", "payload": {"heading": "Per beure"}},
+        {"kind": "listen_pick", "drill_id": plain["id"]},
+        {"kind": "say_it", "drill_id": drawn["id"]},
+    ]})
+
+    one = client.get(f"/tests/{made['id']}").json()
+    assert one["drill_ids"] == "" and one["step_count"] == 3, "tres passos, encara que drill_ids sigui buit"
+    listed = next(t for t in client.get("/tests/?mine=1", headers=hdr).json() if t["id"] == made["id"])
+    assert listed["step_count"] == 3, "la llista ha de dir el mateix que la fitxa"
+
+    row = next(x for x in client.get("/practice/collections", headers=hdr).json()["lists"]
+               if x["id"] == made["id"])
+    assert row["count"] == 3
+    # the cover is the first sentence that has a picture, not the first sentence
+    assert row["cover"] == drawn["image_url"]
+
+    # an old practice, made of a flat list and never converted, still reports what it holds
+    old = client.post("/tests/", headers=hdr, json={
+        "title": "De les velles", "question_type": "audio", "hint_level": "none",
+        "drill_ids": f"{plain['id']},{drawn['id']}"}).json()
+    assert old["step_count"] == 2

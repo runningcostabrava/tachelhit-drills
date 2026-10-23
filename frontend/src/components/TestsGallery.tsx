@@ -32,6 +32,11 @@ interface Props {
 }
 
 const drillIdsOf = (t: Test) => t.drill_ids.split(',').map((x) => parseInt(x, 10)).filter((n) => !isNaN(n));
+// How big a practice is: the steps it holds (ADR 0002). `drill_ids` is the flat list a
+// practice used to be, and the workshop leaves it empty — so counting it called an
+// eleven-step practice «0 drills». The old column is only the fallback now.
+const sizeOf = (t: Test) => (t.step_count ?? drillIdsOf(t).length);
+const sizeLabel = (n: number) => (n === 1 ? '1 pas' : `${n} passos`);
 
 const fmtDate = (iso?: string) => {
   if (!iso) return '';
@@ -81,7 +86,7 @@ export default function TestsGallery(p: Props) {
           ? <img src={getMediaUrl(url)} alt="" draggable={false} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
           : <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: height > 160 ? '56px' : '36px', color: 'rgba(0,0,0,0.25)' }}><FaGraduationCap /></div>}
         <span style={{ position: 'absolute', left: '10px', bottom: '10px', ...pill, background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', backdropFilter: 'blur(4px)' }}>
-          <FaLayerGroup /> {drillIdsOf(t).length} drills
+          <FaLayerGroup /> {sizeLabel(sizeOf(t))}
         </span>
       </div>
     );
@@ -142,7 +147,7 @@ export default function TestsGallery(p: Props) {
               </div>
               {/* Configuration: one row of pills */}
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }} aria-label="Configuració del test">
-                <span style={pill}><FaLayerGroup /> {drillIdsOf(selectedTest).length} drills</span>
+                <span style={pill}><FaLayerGroup /> {sizeLabel(sizeOf(selectedTest))}</span>
                 <span style={pill}>{p.questionTypeLabel(selectedTest.question_type)}</span>
                 <span style={pill}>{p.hintLevelLabel(selectedTest.hint_level)}{selectedTest.hint_level === 'partial' ? ` ${selectedTest.hint_percentage ?? 0}%` : ''}{selectedTest.hint_level === 'full_after_tries' ? ` (${selectedTest.hint_tries_before_reveal ?? 0})` : ''}</span>
                 <span style={pill}>{(selectedTest.time_limit_seconds ?? 0) > 0 ? `${selectedTest.time_limit_seconds}s per pregunta` : 'Sense límit de temps'}</span>

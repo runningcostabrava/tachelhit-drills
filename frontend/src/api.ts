@@ -425,7 +425,8 @@ export interface PracticeCollections {
   days: { day: string; speaker: string; count: number }[];
   topics: { slug: string; label: string; count: number }[];
   units: { slug: string; title: string; level: number; count: number }[];
-  lists: { id: number; title: string; count: number }[];
+  /** `count` is the steps it holds; `cover` is its first illustrated sentence, if any. */
+  lists: { id: number; title: string; count: number; cover?: string | null }[];
   videos: { title: string; url: string | null; count: number }[];
   people: { name: string; count: number }[];
   tags: { tag: string; count: number }[];

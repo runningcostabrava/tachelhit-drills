@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaListUl, FaPlay, FaPlus, FaVideo, FaUser, FaTag } from 'react-icons/fa';
+import { FaListUl, FaPlay, FaPlus, FaVideo, FaUser, FaTag, FaPen, FaTrash } from 'react-icons/fa';
 import { api, type PracticeCollections } from '../api';
-import { hasIdentity } from '../config';
+import { getMediaUrl, hasIdentity } from '../config';
 import { toast } from '../toast';
 
 // Pràctica: the library offered as short pronunciation sessions, four ways — by recording day
@@ -47,6 +47,20 @@ export default function PracticePage() {
     finally { setMaking(false); }
   };
   const [col, setCol] = useState<PracticeCollections | null>(null);
+  // Throwing a practice away asks twice, in the button itself: a browser dialog stops the whole
+  // page and hides WHICH one you are about to lose.
+  const [confirming, setConfirming] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState<number | null>(null);
+  const removePractice = async (id: number, title: string) => {
+    if (confirming !== id) { setConfirming(id); window.setTimeout(() => setConfirming((c) => (c === id ? null : c)), 4000); return; }
+    setConfirming(null); setDeleting(id);
+    try {
+      await api.deletePractice(id);
+      setCol((c) => (c ? { ...c, lists: c.lists.filter((x) => x.id !== id) } : c));
+      toast.success(`«${title}» llençada`);
+    } catch (e: any) { toast.error(e?.message || 'No s’ha pogut esborrar'); }
+    finally { setDeleting(null); }
+  };
   const [done] = useState<Done>(loadDone);
   const [allTopics, setAllTopics] = useState(false);
   const [allVideos, setAllVideos] = useState(false);
@@ -86,13 +100,38 @@ export default function PracticePage() {
               <button onClick={() => navigate('/tests/llistes')} style={{ background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4 }}><FaListUl size={11} /> Gestiona-les</button>
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {col.lists.slice(0, 6).map((t) => (
-              <div key={t.id} style={{ ...cardStyle, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', cursor: 'default' }}>
-                <button onClick={() => grid(`test_id=${t.id}&title=${encodeURIComponent(t.title)}`)} style={{ flex: 1, textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '14px', fontWeight: 700, color: 'var(--text)', padding: 0 }}>{t.title}</button>
-                <span style={{ fontSize: '12px', color: 'var(--text-soft)', fontWeight: 700, whiteSpace: 'nowrap' }}>{t.count} frases</span>
-                <button onClick={() => navigate(`/tests/${t.id}/editor`)} title="Edita els passos" style={{ marginLeft: 10, padding: '5px 10px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Edita</button>
-                <button onClick={() => go(`test_id=${t.id}`)} aria-label={`Practica ${t.title}`} title="Fes la sessió" style={{ marginLeft: 6, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--brand-1)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaPlay size={11} /></button>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 12 }}>
+            {col.lists.slice(0, 12).map((t) => (
+              <div key={t.id} style={{ ...cardStyle, padding: 0, overflow: 'hidden', cursor: 'default', gap: 0 }}>
+                {/* the picture of its first illustrated sentence, so a practice is something you recognise */}
+                <button
+                  onClick={() => grid(`test_id=${t.id}&title=${encodeURIComponent(t.title)}`)}
+                  title="Obre la llista"
+                  style={{ border: 'none', padding: 0, cursor: 'pointer', background: t.cover ? 'var(--surface-2)' : 'var(--brand-gradient-soft)', height: 104, display: 'block', width: '100%' }}
+                >
+                  {t.cover
+                    ? <img src={getMediaUrl(t.cover)} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    : <span style={{ display: 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--brand-1)', opacity: 0.5 }}><FaListUl size={22} /></span>}
+                </button>
+                <div style={{ padding: '10px 12px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <button onClick={() => grid(`test_id=${t.id}&title=${encodeURIComponent(t.title)}`)} style={{ textAlign: 'left', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '14px', fontWeight: 700, color: 'var(--text)', padding: 0, lineHeight: 1.3 }}>{t.title}</button>
+                  <span style={{ fontSize: '12px', color: 'var(--text-soft)', fontWeight: 700 }}>
+                    {t.count === 0 ? 'encara buida' : `${t.count} ${t.count === 1 ? 'pas' : 'passos'}`}
+                  </span>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <button onClick={() => go(`test_id=${t.id}`)} disabled={t.count === 0} aria-label={`Practica ${t.title}`} title={t.count === 0 ? 'Encara no hi ha res per practicar' : 'Fes la sessió'} style={{ flex: 1, padding: '6px 10px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, fontSize: 12, cursor: t.count === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: t.count === 0 ? 0.45 : 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><FaPlay size={10} /> Fes-la</button>
+                    <button onClick={() => navigate(`/tests/${t.id}/editor`)} aria-label={`Edita ${t.title}`} title="Obre el taller" style={{ padding: '6px 10px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 5 }}><FaPen size={10} /> Edita</button>
+                    <button
+                      onClick={() => removePractice(t.id, t.title)}
+                      disabled={deleting === t.id}
+                      aria-label={confirming === t.id ? `Confirma esborrar ${t.title}` : `Esborra ${t.title}`}
+                      title={confirming === t.id ? 'Prem un altre cop per llençar-la' : 'Llença la pràctica'}
+                      style={{ padding: '6px 9px', borderRadius: 'var(--r-pill)', border: `1px solid ${confirming === t.id ? 'var(--rose, #b3261e)' : 'var(--border)'}`, background: confirming === t.id ? 'var(--rose-soft, #fdecea)' : 'var(--surface)', color: confirming === t.id ? 'var(--rose, #b3261e)' : 'var(--text-muted)', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                    >
+                      {deleting === t.id ? '…' : confirming === t.id ? 'Segur?' : <FaTrash size={10} />}
+                    </button>
+                  </div>
+                </div>
               </div>
             ))}
             {col.lists.length === 0 && (
