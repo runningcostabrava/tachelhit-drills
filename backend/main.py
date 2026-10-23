@@ -4813,12 +4813,49 @@ def capture_request(
     return {"request_id": req.id, "status": "pending"}
 
 
+# Un reclam que no torna. L'agent es queda la petició mentre la baixa i la puja; quan ha pujat
+# diu «processing» o «done». Si no diu mai res —ha petat, s'ha quedat sense xarxa, la màquina
+# s'ha adormit— la fila es quedava a «claimed» per sempre: la cua ensenyava «en curs»
+# indefinidament i l'agent no la tornava a agafar mai, perquè ja no era pending.
+#
+# Mitja hora és molt generós per a baixar i pujar, fins i tot un vídeo llarg amb mala connexió.
+STALE_CLAIM = timedelta(minutes=30)
+GIVE_UP_AFTER = 3          # una URL que l'agent no pot pair no pot girar per sempre
+
+
+def _requeue_abandoned_claims(db: Session) -> int:
+    """Torna a la cua els reclams que ningú no ha contestat, i es rendeix al tercer.
+
+    Es crida des d'on ja es passa —la consulta de l'agent i la de la pantalla— perquè el forat
+    no demana cap tasca de fons: demana que algú se'n recordi."""
+    cutoff = datetime.utcnow() - STALE_CLAIM
+    stale = (db.query(CaptureRequestModel)
+             .filter(CaptureRequestModel.status == "claimed",
+                     CaptureRequestModel.claimed_at != None,          # noqa: E711
+                     CaptureRequestModel.claimed_at < cutoff).all())
+    for req in stale:
+        tries = (req.attempts or 0) + 1
+        req.attempts = tries
+        if tries >= GIVE_UP_AFTER:
+            req.status = "failed"
+            req.error = (f"L'agent se la va endur {tries} vegades i no va tornar a dir res. "
+                         "Mira que l'agent estigui engegat, i que aquest enllaç es pugui baixar.")
+        else:
+            req.status = "pending"
+            req.claimed_at = None
+    if stale:
+        db.commit()
+        print(f"[CAPTURE] {len(stale)} reclams abandonats tornats a la cua")
+    return len(stale)
+
+
 @app.get("/capture/pending")
 def capture_pending(request: Request, db: Session = Depends(get_db)):
     """The local agent polls this: returns and CLAIMS the oldest pending
     request, or {request: null} when the queue is empty."""
     _capture_agent_seen["at"] = datetime.utcnow()
     _capture_agent_seen["version"] = request.headers.get("X-Agent-Version")
+    _requeue_abandoned_claims(db)
     req = (db.query(CaptureRequestModel)
            .filter(CaptureRequestModel.status == "pending")
            .order_by(CaptureRequestModel.created_at.asc()).first())
@@ -4826,6 +4863,7 @@ def capture_pending(request: Request, db: Session = Depends(get_db)):
         return {"request": None}
     req.status = "claimed"
     req.claimed_at = datetime.utcnow()
+    req.attempts = (req.attempts or 0)
     db.commit()
     db.refresh(req)
     return {"request": {
@@ -4944,8 +4982,13 @@ def capture_forget(request_id: int, db: Session = Depends(get_db),
 @app.get("/capture/queue")
 def capture_queue(limit: int = 40, db: Session = Depends(get_db)):
     """The last `limit` capture requests, newest first, with state, drill count and error:
-    what the agent is doing, for the Captura tab. Read-only (unlike /capture/pending, which
-    claims a request and is for the agent only)."""
+    what the agent is doing, for the Captura tab.
+
+    It also returns abandoned claims to the queue before answering. That is not housekeeping
+    out of place: when the agent dies holding a request, NOBODY polls /capture/pending any more,
+    so the only thing that can notice is the screen somebody opens to ask why it is stuck.
+    """
+    _requeue_abandoned_claims(db)
     rows = (db.query(CaptureRequestModel).order_by(CaptureRequestModel.created_at.desc())
             .limit(max(1, min(limit, 200))).all())
     out = []

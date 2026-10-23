@@ -337,6 +337,10 @@ class CaptureRequest(Base):
     error = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     claimed_at = Column(DateTime, nullable=True)
+    # Quantes vegades l'agent se l'ha endut. Un reclam que no torna es desfà (l'agent pot haver
+    # petat o haver perdut la xarxa), però no indefinidament: una URL que no es pot pair giraria
+    # per sempre. Columna nul·lable, així que la sincronització d'esquema l'afegeix sola.
+    attempts = Column(Integer, nullable=True, default=0)
 
 
 class Recording(Base):
