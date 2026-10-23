@@ -25,6 +25,7 @@ const PublicTestView = lazy(() => import('./components/PublicTestView'));
 const VideoDrillCreator = lazy(() => import('./components/VideoDrillCreator'));
 const SrtImport = lazy(() => import('./components/SrtImport'));
 const VideoLibraryPage = lazy(() => import('./components/VideoLibraryPage'));
+const CaptureReview = lazy(() => import('./components/CaptureReview'));
 const ProfilePage = lazy(() => import('./components/ProfilePage'));
 const AuthPage = lazy(() => import('./components/AuthPage'));
 const CorpusPage = lazy(() => import('./components/CorpusPage'));
@@ -199,6 +200,8 @@ function App() {
         <Route path="/srt-import" element={<SrtImport />} />
         <Route path="/player" element={<DrillPlayerPage />} />
         <Route path="/library" element={<VideoLibraryPage />} />
+        {/* What a video gave us, and the chance to move a cut or correct its words. */}
+        <Route path="/captura/video" element={<CaptureReview />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/signin" element={<AuthPage />} />
         <Route path="/corpus" element={<CorpusPage />} />

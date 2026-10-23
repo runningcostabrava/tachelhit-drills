@@ -120,6 +120,40 @@ export interface Me {
   cards_learning: number;
 }
 
+export interface CaptureCut {
+  id: number;
+  start: number | null;
+  end: number | null;
+  text_tachelhit: string | null;
+  text_catalan: string | null;
+  text_tachelhit_suggested: string | null;
+  audio_url: string | null;
+  video_url: string | null;
+  image_url: string | null;
+  verified: boolean;
+  variety: string | null;
+  author: string | null;
+  tag: string | null;
+  topics: string | null;
+}
+
+export interface CaptureVideo {
+  source_url: string;
+  title: string | null;
+  channel: string | null;
+  playlist: string | null;
+  license: string | null;
+  cuts: CaptureCut[];
+  covered_from: number | null;
+  covered_to: number | null;
+  /** Stretches of the video nothing was taken from: the machine may have skipped something. */
+  holes: { from: number; to: number; after: number; before: number }[];
+  /** Cuts that step on each other: one of them may be carrying the other's words. */
+  overlaps: { by: number; a: number; b: number }[];
+  with_voice: number;
+  verified: number;
+}
+
 export interface CaptureStatus {
   id: number;
   status: string;                 // pending | claimed | processing | done | failed
@@ -346,6 +380,17 @@ export const api = {
     request<TransliterationForms>(`/transliterate?text=${encodeURIComponent(text)}`),
 
   // --- one drill's picture: Gemini draws the sentence in the flashcard style; `hint` says what to draw ---
+  /** What a video gave us: its cuts in time order, plus the holes and the overlaps between them. */
+  captureVideo: (url: string) => request<CaptureVideo>(`/capture/video?url=${encodeURIComponent(url)}`),
+  /** Cut this sentence's clip again from the ORIGINAL video — the only way to make a cut longer. */
+  recutDrill: (drillId: number, start_time: number, end_time: number) =>
+    request<{ id: number; video_url: string; image_url: string | null; video_start_time: number; video_end_time: number; kept_drawing: boolean }>(
+      `/drills/${drillId}/recut`, { method: 'POST', body: JSON.stringify({ start_time, end_time }) }),
+  /** Change only the fields you pass. The server leaves everything else exactly as it was. */
+  updateDrill: (drillId: number, patch: Record<string, unknown>) =>
+    request<Drill>(`/drills/${drillId}`, { method: 'PUT', body: JSON.stringify(patch) }),
+  deleteDrill: (drillId: number) =>
+    request<{ detail?: string }>(`/drills/${drillId}`, { method: 'DELETE' }),
   illustrateDrill: (drillId: number, hint?: string) =>
     request<{ image_url: string; photographer: string }>(`/generate-image/${drillId}`, {
       method: 'POST', body: JSON.stringify({ use_ai: true, search_query: hint?.trim() || null }),

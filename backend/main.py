@@ -4707,6 +4707,63 @@ async def auto_drills_from_upload(
 _capture_agent_seen: Dict[str, Any] = {"at": None, "version": None}
 
 
+# Declared before `/capture/{request_id}`: FastAPI tries routes in the order they are
+# written, so with this below it the word «video» was read as a request id and answered
+# 422. The same trap `/drills/similar` has to dodge.
+@app.get("/capture/video")
+def capture_video(url: str, db: Session = Depends(get_db)):
+    """What a video gave us: its cuts in time order, and where it was left untouched.
+
+    The capture screen could show what the machine was ABOUT to create and then never again.
+    Once the drills existed there was no way back to the video they came from, even though every
+    one of them carries `source_url`, `video_start_time` and `video_end_time`.
+
+    The gaps are the point. A forty-second hole in the middle of a video means something was
+    skipped; two cuts that overlap mean one of them is carrying the other's words -- which is
+    exactly the fault that made drill 6854 say one thing and sound like another.
+    """
+    rows = (db.query(DrillModel)
+            .filter(DrillModel.source_url == url)
+            .order_by(sa_func.coalesce(DrillModel.video_start_time, 0).asc(),
+                      DrillModel.id.asc()).all())
+    if not rows:
+        raise HTTPException(status_code=404, detail="D'aquest vídeo no en tenim cap frase")
+
+    cuts = []
+    for d in rows:
+        cuts.append({
+            "id": d.id, "start": d.video_start_time, "end": d.video_end_time,
+            "text_tachelhit": d.text_tachelhit, "text_catalan": d.text_catalan,
+            "text_tachelhit_suggested": d.text_tachelhit_suggested,
+            "audio_url": d.audio_url, "video_url": d.video_url, "image_url": d.image_url,
+            "verified": bool(d.verified), "variety": d.variety, "author": d.author,
+            "tag": d.tag, "topics": d.topics,
+        })
+
+    # the holes and the overlaps, between one cut and the next
+    timed = [c for c in cuts if c["start"] is not None and c["end"] is not None]
+    holes, overlaps = [], []
+    for a, b in zip(timed, timed[1:]):
+        between = b["start"] - a["end"]
+        if between >= 3.0:
+            holes.append({"from": a["end"], "to": b["start"], "after": a["id"], "before": b["id"]})
+        elif between < -0.25:
+            overlaps.append({"by": round(-between, 2), "a": a["id"], "b": b["id"]})
+
+    first = rows[0]
+    return {
+        "source_url": url,
+        "title": first.source_title, "channel": first.source_channel,
+        "playlist": first.source_playlist, "license": first.license,
+        "cuts": cuts,
+        "covered_from": timed[0]["start"] if timed else None,
+        "covered_to": max((c["end"] for c in timed), default=None),
+        "holes": holes, "overlaps": overlaps,
+        "with_voice": sum(1 for c in cuts if c["audio_url"]),
+        "verified": sum(1 for c in cuts if c["verified"]),
+    }
+
+
 @app.get("/capture/agent")
 def capture_agent_status():
     at = _capture_agent_seen.get("at")
@@ -8613,6 +8670,57 @@ async def retranscribe_drill(drill_id: int, variety: Optional[str] = Body(None, 
     drill.updated_at = datetime.utcnow()
     db.commit()
     return {"id": drill.id, "variety": v, **out}
+
+
+@app.post("/drills/{drill_id}/recut")
+def recut_drill_from_source(drill_id: int,
+                            start_time: float = Body(..., embed=True),
+                            end_time: float = Body(..., embed=True),
+                            db: Session = Depends(get_db),
+                            user: Optional[UserModel] = Depends(get_current_user)):
+    """Cut this sentence's clip again from the ORIGINAL video.
+
+    `trim-audio` and `trim-video` cut the clip we already hold, so a cut the machine made too
+    short can never be made longer by them: what was left out is not in the file. This goes back
+    to `source_url` and cuts again, which is the only way to recover it.
+
+    The sentence's TEXT is not touched. Moving the cut and changing the words are two different
+    decisions and they are taken one at a time.
+
+    A picture that was DRAWN for this sentence is not replaced by a frame grab: illustrations live
+    under `tachelhit/images` and frames under `tachelhit/image_segments`, so one that did not come
+    from cutting the video was made on purpose and stays.
+    """
+    drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+    if not drill:
+        raise HTTPException(status_code=404, detail="Drill not found")
+    owner_or_admin(drill, user)
+    if not (drill.source_url or "").strip():
+        raise HTTPException(status_code=400, detail="Aquesta frase no ve de cap vídeo: no hi ha d'on tornar a tallar.")
+    if start_time < 0 or end_time <= start_time:
+        raise HTTPException(status_code=400, detail="El tram no té sentit: el final ha d'anar després de l'inici.")
+    if end_time - start_time > 120:
+        raise HTTPException(status_code=400, detail="Dos minuts és massa per a una frase. Escurça el tram.")
+    if not os.getenv("HUGGINGFACE_SPACE_URL"):
+        raise HTTPException(status_code=503, detail="Ara mateix no es pot tallar: el servei de vídeo no està configurat.")
+
+    try:
+        res = remote_process_and_upload_segment(drill.source_url, start_time, end_time, drill.id)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"No s'ha pogut tallar: {str(e)[:160]}")
+
+    drill.video_url = normalize_media_url(res["video_url"])
+    was_a_frame = "image_segments" in (drill.image_url or "")
+    if res.get("image_url") and (not drill.image_url or was_a_frame):
+        drill.image_url = normalize_media_url(res["image_url"])
+    drill.video_start_time = start_time
+    drill.video_end_time = end_time
+    drill.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(drill)
+    return {"id": drill.id, "video_url": drill.video_url, "image_url": drill.image_url,
+            "video_start_time": drill.video_start_time, "video_end_time": drill.video_end_time,
+            "kept_drawing": bool(drill.image_url) and not was_a_frame}
 
 
 @app.post("/drills/{drill_id}/trim-audio")
