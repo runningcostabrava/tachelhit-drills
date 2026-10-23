@@ -13,7 +13,11 @@ citació va aquí sencera, tal com la demanen.
 ## 1. Les veus i les frases
 
 El gruix de la biblioteca són gravacions de parlants que han dit les frases per a aquest projecte
-— Halima i Driss (Aït Mraw), i els reculls de Beni Mellal i Azilal. Cada drill porta qui parla
+— **Halima Akajji** i **Driss Akajji** (Aït Mraw), i els reculls de Beni Mellal i Azilal.
+Sense les seves veus no hi hauria ni curs ni Mètode: la llengua que s'ensenya aquí és la que
+diuen ells.
+
+Cada drill porta qui parla
 (`speaker`, `author`), d'on és (`variety`, `region`) i la llicència que va triar qui va gravar
 (`license`; el reproductor la mostra al costat del so). El text del parlant no es reescriu mai amb
 una màquina: la sortida automàtica va a `*_suggested` i la decideix una persona.

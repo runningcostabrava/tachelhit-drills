@@ -40,6 +40,92 @@ function Tif({ t, size = 12.5 }: { t?: string | null; size?: number }) {
   );
 }
 
+/** El text d'una secció: el llapis per a qui administra, i «proposa un canvi» per a tothom.
+ *
+ *  Una secció és una explicació, i una explicació es pot millorar: una errada, una paraula que
+ *  al teu poble no es diu així, una frase que no s'entén. Qui administra ho canvia allà mateix;
+ *  qui no, ho proposa i va a la mateixa cua que les propostes del curs de gramàtica.
+ */
+function SectionText({
+  slug, index, title, text, deep, ours, canEdit, signedIn, onSave,
+}: {
+  slug: string; index: number;
+  title: string; text?: string; deep?: string; ours?: string;
+  canEdit: boolean; signedIn: boolean;
+  onSave: (p: { title: string; text: string; deep: string; ours: string }) => Promise<void>;
+}) {
+  const [edit, setEdit] = useState<{ title: string; text: string; deep: string; ours: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [propose, setPropose] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+
+  if (edit) {
+    return (
+      <div style={{ padding: '10px 0 14px' }}>
+        <label style={lbl}>El títol de la secció</label>
+        <input value={edit.title} onChange={(e) => setEdit({ ...edit, title: e.target.value })} style={field} />
+        <label style={lbl}>L’explicació</label>
+        <textarea value={edit.text} onChange={(e) => setEdit({ ...edit, text: e.target.value })} rows={5} style={{ ...field, resize: 'vertical' }} />
+        <label style={lbl}>A fons <span style={{ fontWeight: 400 }}>— el que el manual dóna per sabut</span></label>
+        <textarea value={edit.deep} onChange={(e) => setEdit({ ...edit, deep: e.target.value })} rows={5} style={{ ...field, resize: 'vertical' }} />
+        <label style={lbl}>A l’Atles central <span style={{ fontWeight: 400 }}>— el que la nostra varietat fa d’una altra manera</span></label>
+        <textarea value={edit.ours} onChange={(e) => setEdit({ ...edit, ours: e.target.value })} rows={3} style={{ ...field, resize: 'vertical' }} />
+        <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+          <button disabled={saving} onClick={async () => {
+            setSaving(true);
+            try { await onSave({ title: edit.title.trim(), text: edit.text.trim(), deep: edit.deep.trim(), ours: edit.ours.trim() }); setEdit(null); }
+            finally { setSaving(false); }
+          }} style={{ ...pill, borderColor: 'var(--brand-1)', color: 'var(--brand-1)' }}>
+            <FaCheck size={10} /> {saving ? 'Desant…' : 'Desa'}
+          </button>
+          <button onClick={() => setEdit(null)} style={pill}>Deixa-ho</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18, margin: '0 0 6px', flex: 1 }}>{title}</h3>
+        {canEdit && (
+          <button onClick={() => setEdit({ title, text: text || '', deep: deep || '', ours: ours || '' })}
+                  aria-label="Corregeix aquesta secció" title="Corregeix-la" style={iconBtn}>
+            <FaPen size={10} />
+          </button>
+        )}
+      </div>
+      {text && <p style={{ fontSize: 14.5, lineHeight: 1.65, margin: '0 0 6px', whiteSpace: 'pre-line' }}>{text}</p>}
+      {deep && <Deep text={deep} />}
+      {!canEdit && (
+        propose === null ? (
+          <button onClick={() => { if (!signedIn) { toast.error('Per proposar un canvi et cal un nom: fes-te’n un al perfil.'); return; } setPropose(text || ''); }}
+                  style={glossBtn}>Proposa un canvi en aquesta explicació</button>
+        ) : (
+          <div style={{ margin: '6px 0 10px' }}>
+            <textarea value={propose} onChange={(e) => setPropose(e.target.value)} rows={4} style={{ ...field, resize: 'vertical' }}
+                      placeholder="Com ho diries tu" />
+            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+              <button disabled={sending} onClick={async () => {
+                setSending(true);
+                try {
+                  await api.proposeLessonChange(`metode:${slug}`, index, propose.trim());
+                  setPropose(null);
+                  toast.success('Enviada. Qui administra la veurà.');
+                } catch (e) { toast.error(whyItFailed(e, 'No s’ha pogut enviar')); }
+                finally { setSending(false); }
+              }} style={{ ...pill, borderColor: 'var(--brand-1)', color: 'var(--brand-1)' }}>
+                {sending ? 'Enviant…' : 'Envia la proposta'}
+              </button>
+              <button onClick={() => setPropose(null)} style={pill}>Deixa-ho</button>
+            </div>
+          </div>
+        )
+      )}
+    </>
+  );
+}
+
 /** El que el manual dóna per sabut, explicat. Tancat, perquè qui només vol la frase la té. */
 function Deep({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
@@ -137,6 +223,14 @@ function BookLine({
                aria-label="Text amazic" style={{ ...field, fontWeight: 700, color: 'var(--brand-1)' }} />
         <input value={edit.ca} onChange={(e) => setEdit({ ...edit, ca: e.target.value })}
                lang="ca" aria-label="Català" style={{ ...field, marginTop: 5 }} />
+        {/* Si la línia ja s'ha gravat, el text del capítol i el de la gravació poden separar-se:
+            la frase de la biblioteca es queda com la va dir qui la va dir, i això no es toca. */}
+        {drillId && (
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '6px 0 0', lineHeight: 1.5 }}>
+            Aquesta línia ja és una frase de la biblioteca i algú hi pot haver posat la veu. El
+            text de la gravació no canviarà: es queda com la va dir qui la va dir.
+          </p>
+        )}
         <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
           <button disabled={saving} onClick={async () => {
             setSaving(true);
@@ -220,6 +314,7 @@ export default function MethodLesson({
 }) {
   const [openDialogue, setOpenDialogue] = useState(true);
   const [body, setBody] = useState<MethodContent>(content);
+  const signedIn = hasIdentity();
 
   /** Canvia una línia i desa el capítol sencer: el cos és el format que l'endpoint torna. */
   const saveLine = async (where: Where, shi: string, ca: string) => {
@@ -232,6 +327,23 @@ export default function MethodLesson({
       await api.saveMethodContent(slug, next);
       setBody(next);
       toast.success('Corregit');
+      onChanged();
+    } catch (e) { toast.error(whyItFailed(e, 'No s’ha pogut desar')); }
+  };
+
+  /** Canvia el text d'una secció sencera i desa el capítol. El mateix camí que una línia. */
+  const saveSection = async (i: number, p: { title: string; text: string; deep: string; ours: string }) => {
+    const next: MethodContent = JSON.parse(JSON.stringify(body));
+    const s = (next.sections || [])[i];
+    if (!s) return;
+    s.title = p.title;
+    for (const [k, v] of [['text', p.text], ['deep', p.deep], ['ours', p.ours]] as const) {
+      if (v) (s as Record<string, unknown>)[k] = v; else delete (s as Record<string, unknown>)[k];
+    }
+    try {
+      await api.saveMethodContent(slug, next);
+      setBody(next);
+      toast.success('Corregida');
       onChanged();
     } catch (e) { toast.error(whyItFailed(e, 'No s’ha pogut desar')); }
   };
@@ -254,11 +366,11 @@ export default function MethodLesson({
         línia passa a ser una frase de la nostra biblioteca, amb la seva veu i el seu poble.
       </p>
 
-      {(body.sections || []).map((s) => (
+      {(body.sections || []).map((s, si) => (
         <section key={s.id} style={{ marginBottom: 26 }}>
-          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18, margin: '0 0 6px' }}>{s.title}</h3>
-          {s.text && <p style={{ fontSize: 14.5, lineHeight: 1.65, margin: '0 0 6px', whiteSpace: 'pre-line' }}>{s.text}</p>}
-          {s.deep && <Deep text={s.deep} />}
+          <SectionText slug={slug} index={si} title={s.title} text={s.text} deep={s.deep} ours={s.ours}
+                       canEdit={canEdit} signedIn={signedIn}
+                       onSave={(p) => saveSection(si, p)} />
 
           {s.table && (
             <div style={{ marginTop: 8, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
@@ -505,6 +617,10 @@ const glossBtn: React.CSSProperties = {
   background: 'transparent', border: 'none', padding: '2px 0', margin: 0, cursor: 'pointer',
   color: 'var(--text-muted)', fontSize: 11.5, fontWeight: 700, fontFamily: 'inherit',
   textDecoration: 'underline', textUnderlineOffset: 3,
+};
+const lbl: React.CSSProperties = {
+  display: 'block', fontSize: 11.5, fontWeight: 800, color: 'var(--text-muted)',
+  textTransform: 'uppercase', letterSpacing: '0.05em', margin: '10px 0 3px',
 };
 const field: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box', padding: '8px 10px', fontSize: 14.5,
