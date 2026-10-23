@@ -36,8 +36,12 @@ SOURCE = {
     "year": 2009,
     "italian": ("Metodo di tachelhit. Lingua amazigh (berbera) del sud del Marocco, "
                 "Università degli Studi di Napoli «L'Orientale», 2017"),
-    "took": "el pla: quines situacions, en quin ordre, i quina gramàtica demana cadascuna",
-    "did_not_take": "el text, els diàlegs, els exemples i el lèxic, que són tots nostres",
+    # El que es llegeix a la pantalla és «Basat en…», i res més: la citació diu d'on ve el
+    # material, no quins permisos tenim. Què ens deixa fer l'autor és cosa nostra i del registre
+    # (ADR 0004), no de la targeta d'un capítol.
+    "based_on": "Basat en",
+    "took": "les explicacions, l'estructura, els diàlegs i el lèxic, adaptats a la nostra varietat",
+    "did_not_take": "les veus: cada frase la diu una persona de debò que el projecte coneix",
 }
 
 # `grammar` són slugs de grammar.UNITS; `topics` són slugs de topics.TOPICS. Els dos es

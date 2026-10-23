@@ -158,11 +158,11 @@ export default function MethodChapter() {
       )}
 
       <footer style={{ padding: '14px 16px', borderRadius: 'var(--r-lg)', background: 'var(--surface-2)', fontSize: 12.5, color: 'var(--text-soft)', lineHeight: 1.6 }}>
-        <FaBookOpen size={11} /> Aquest capítol segueix el pla de <strong>{c.source.author}</strong>,
-        «{c.source.title}», {c.source.publisher}, {c.source.place} {c.source.year}.
+        <FaBookOpen size={11} /> Basat en <strong>{c.source.author}</strong>,
+        «{c.source.title}», {c.source.publisher}, {c.source.place} {c.source.year},
+        adaptat a la varietat que ensenyem.
         <br />
-        El text, els exemples i el vocabulari són nostres: n’hem pres {c.source.took}, i no n’hem
-        pres {c.source.did_not_take}.
+        Les veus són nostres: cada frase la diu una persona de debò que el projecte coneix.
       </footer>
     </div>
   );

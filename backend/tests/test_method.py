@@ -60,15 +60,19 @@ def test_un_capitol_s_omple_amb_la_nostra_biblioteca_i_deixa_fora_el_que_toca():
     assert r["functions"], "ha de dir què en sabràs fer"
 
 
-def test_el_capitol_diu_d_on_surt_el_seu_pla_i_que_no_n_ha_pres():
-    """El Mètode segueix el pla d'un manual publicat i no en pren ni una paraula (ADR 0003). La
-    citació no és una nota a peu de pàgina de la pàgina de crèdits: viatja amb cada capítol, de
-    manera que no es pot ensenyar un capítol sense ensenyar d'on surt."""
+def test_el_capitol_diu_sempre_d_on_surt():
+    """El Mètode és una adaptació d'un manual publicat (ADR 0004). La citació no és una nota a
+    peu de la pàgina de crèdits: viatja amb cada capítol, de manera que no es pot ensenyar un
+    capítol sense ensenyar d'on surt.
+
+    I el que es llegeix és «Basat en…» i res més: la targeta d'un capítol diu d'on ve el
+    material, no quins permisos tenim. Això és del registre intern, no de la pantalla."""
     r = client.get("/method/la-botiga").json()
     src = r["source"]
     assert "El Mountassir" in src["author"] and src["year"] == 2009
-    assert "pla" in src["took"]
-    assert "lèxic" in src["did_not_take"] or "lexic" in src["did_not_take"]
+    assert src["based_on"] == "Basat en"
+    assert "permís" not in " ".join(str(v) for v in src.values()).lower()
+    assert "veus" in src["did_not_take"], "el que no ve del llibre són les veus"
 
     index = client.get("/method/").json()
     assert len(index["chapters"]) == 10 and index["source"]["author"] == src["author"]

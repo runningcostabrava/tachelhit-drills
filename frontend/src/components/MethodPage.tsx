@@ -83,10 +83,10 @@ export default function MethodPage() {
       </div>
 
       <footer style={{ marginTop: 24, padding: '14px 16px', borderRadius: 'var(--r-lg)', background: 'var(--surface-2)', fontSize: 12.5, color: 'var(--text-soft)', lineHeight: 1.6 }}>
-        <FaBookOpen size={11} /> El recorregut segueix el pla de <strong>{data.source.author}</strong>,
+        <FaBookOpen size={11} /> Basat en <strong>{data.source.author}</strong>,
         «{data.source.title}», {data.source.publisher}, {data.source.place} {data.source.year}.
         <br />
-        N’hem pres {data.source.took}. No n’hem pres {data.source.did_not_take}.
+        Les veus són nostres: cada frase la diu una persona de debò.
       </footer>
     </div>
   );

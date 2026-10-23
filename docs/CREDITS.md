@@ -39,9 +39,9 @@ les seccions numerades per escriure cada unitat. **Els PDF no es committegen**:
 > de copyright per al compendi. Mentre no ho sapiguem, el tractem com a material de tercers amb
 > tots els drets reservats: se cita, no es redistribueix, i el text extret no surt del repositori.
 
-## 2b. El recorregut del Mètode
+## 2b. El Mètode
 
-L'àrea **El Mètode** segueix, capítol per capítol, el pla d'un manual publicat:
+L'àrea **El Mètode** és una adaptació, capítol per capítol, d'un manual publicat:
 
 > **Abdallah El Mountassir**, *Méthode de Tachelhit. Langue amazighe (berbère) du sud du Maroc*,
 > L'Asiathèque — Maison des langues du monde, Collection Langues & Mondes, París, 2009.
@@ -49,20 +49,26 @@ L'àrea **El Mètode** segueix, capítol per capítol, el pla d'un manual public
 > Università degli Studi di Napoli «L'Orientale», Studi Africanistici — Quaderni di Studi Berberi
 > e Libico-berberi 6, 2017.
 
-**Què n'hem pres:** el pla. Quines situacions s'ensenyen i en quin ordre, quina gramàtica demana
-cadascuna, i de quins camps de vocabulari va. El recorregut d'un curs és un fet sobre com
-s'ensenya una llengua.
+El Mètode el **segueix tan a prop com calgui**: explicacions, estructura, diàlegs i lèxic. El
+que es canvia és el que la nostra varietat (Atles central) diu d'una altra manera; la resta es
+queda com és. L'autor n'està assabentat i hi està d'acord (23-10-2026).
 
-**Què NO n'hem pres, i no en prendrem:** cap frase, cap diàleg, cap explicació —ni traduïda—, cap
-entrada del seu lèxic. Tot el text del Mètode és nostre, i tots els exemples surten de la nostra
-biblioteca i del compendi d'amazic.cat, com la resta del curs. El que un capítol demana i la
-biblioteca no té no es copia: es demana a un parlant.
+**El que segueix sent nostre i no ve d'enlloc més:** les veus. Cap frase del Mètode sona si no la
+diu una persona de debò que el projecte conegui, i cap veu sintètica es fa passar per amazic. El
+llibre pot donar el text; qui el diu el posem nosaltres.
 
-Cada capítol porta aquesta citació al peu. La decisió i el seu perquè són a
-[ADR 0003](adr/0003-el-metode-pren-el-pla-mai-les-paraules.md).
+**La varietat es diu sempre.** El manual és tachelhit del Souss i nosaltres ensenyem Atles
+central: quan una frase ve del llibre i encara no està adaptada, es diu, i quan en tenim una de
+nostra que diu la mateixa cosa, s'ensenyen de costat.
 
-> **Pendent:** escriure a l'autor per dir-li què n'hem fet. No ens cal permís per al que fem
-> —prenem el pla, no el text—, però és la manera correcta de fer-ho i obre la porta a més.
+Cada capítol porta aquesta citació al peu. La decisió és a
+[ADR 0004](adr/0004-el-metode-parteix-del-llibre.md), que substitueix
+l'[ADR 0003](adr/0003-el-metode-pren-el-pla-mai-les-paraules.md) (el que es va decidir abans de
+tenir permís, i que es conserva com a registre).
+
+> **Apuntat per si algun dia fa falta:** el que hi ha és de paraula, i l'edició italiana es va
+> fer «per gentile concessione dell'autore **e di L'Asiathèque**» — també de l'editorial, que té
+> els drets d'edició del llibre de 2009. Un correu que ho deixi per escrit no costa res.
 
 ## 3. El lèxic
 
