@@ -3246,6 +3246,17 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 # ===================== TEST CRUD =====================
+def _with_step_count(db: Session, tests):
+    """Stamp each practice with how many steps it holds, for the response model.
+
+    One grouped query for the lot. A practice that never got steps falls back to the length of
+    its old flat list, so an unconverted one still reports what it has."""
+    rows = tests if isinstance(tests, list) else [tests]
+    sizes = practice_mod.practice_sizes(db, rows)
+    for t in rows:
+        t.step_count = sizes.get(t.id, 0)
+    return tests
+
 @app.get("/tests/", response_model=list[Test])
 def get_tests(response: Response, since: Optional[str] = None, mine: bool = False,
               limit: Optional[int] = None, offset: Optional[int] = None,
@@ -3266,14 +3277,15 @@ def get_tests(response: Response, since: Optional[str] = None, mine: bool = Fals
         query = query.filter(
             sa_func.coalesce(TestModel.updated_at, TestModel.date_created) >= _parse_since(since)
         )
-    return _paginate(query.order_by(TestModel.date_created.desc()), response, limit, offset)
+    return _with_step_count(db, _paginate(query.order_by(TestModel.date_created.desc()),
+                                         response, limit, offset))
 
 @app.get("/tests/{test_id}", response_model=Test)
 def get_test(test_id: int, db: Session = Depends(get_db)):
     test = db.query(TestModel).filter(TestModel.id == test_id).first()
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
-    return test
+    return _with_step_count(db, test)
 
 @app.post("/tests/", response_model=Test)
 def create_test(test: TestCreate, db: Session = Depends(get_db),
@@ -3304,7 +3316,7 @@ def create_test(test: TestCreate, db: Session = Depends(get_db),
             practice_steps.replace_steps(db, db_test.id, steps)
     except Exception as e:
         print(f"[PRACTICE] steps for test {db_test.id}: {e}")
-    return db_test
+    return _with_step_count(db, db_test)
 
 @app.put("/tests/{test_id}", response_model=Test)
 def update_test(test_id: int, update_data: TestUpdate, db: Session = Depends(get_db),
@@ -3324,7 +3336,7 @@ def update_test(test_id: int, update_data: TestUpdate, db: Session = Depends(get
     test.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(test)
-    return test
+    return _with_step_count(db, test)
 
 @app.delete("/tests/{test_id}")
 def delete_test(test_id: int, db: Session = Depends(get_db),

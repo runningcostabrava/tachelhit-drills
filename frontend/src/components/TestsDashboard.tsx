@@ -28,6 +28,8 @@ export interface Test {
   passing_score: number;
   video_url?: string;
   drill_ids: string;
+  /** How many steps it holds. The server works it out; `drill_ids` is only the fallback. */
+  step_count?: number | null;
 }
 
 interface TestStats {
@@ -331,7 +333,9 @@ export default function TestsDashboard() {
         onSelect={(t) => { setSelectedTest(t); setStats(null); if (t) fetchStats(t.id); }}
         onTake={(t) => setTakingTestId(t.id)}
         onListen={(t) => navigate(`/tests/${t.id}/listen`)}
-        onEdit={(t) => setEditingTestId(t.id)}
+        // One place edits a practice, and it is the workshop. The old panel edits the flat
+        // list of ids a practice used to be, which is a different thing wearing the same name.
+        onEdit={(t) => navigate(`/tests/${t.id}/editor`)}
         onPlayDrills={async (t) => {
           const drillIds = t.drill_ids.split(',').map((id: string) => parseInt(id));
           try {

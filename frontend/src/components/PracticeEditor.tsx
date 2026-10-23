@@ -93,6 +93,9 @@ export default function PracticeEditor() {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [unsaved, setUnsaved] = useState<string | null>(null);   // why the last save did not land
+  // Throwing it away asks twice, in the button: a browser dialog stops the page and hides what
+  // it is about to take.
+  const [killing, setKilling] = useState<'ask' | 'doing' | null>(null);
   const [view, setView] = useState<'edit' | 'preview' | 'document'>('edit');
   const preview = view === 'preview';
   const [about, setAbout] = useState('');
@@ -148,6 +151,16 @@ export default function PracticeEditor() {
     }
     finally { setSaving(false); }
   }, [id]);
+
+  const throwAway = async () => {
+    if (killing !== 'ask') { setKilling('ask'); window.setTimeout(() => setKilling((k) => (k === 'ask' ? null : k)), 4000); return; }
+    setKilling('doing');
+    try {
+      await api.deletePractice(id);
+      toast.success('Llen\u00e7ada');
+      navigate('/tests');
+    } catch (e) { toast.error(whyItFailed(e, 'No s\u2019ha pogut esborrar')); setKilling(null); }
+  };
 
   useEffect(() => {
     if (firstLoad.current) { firstLoad.current = false; return; }
@@ -335,7 +348,17 @@ export default function PracticeEditor() {
 
   return (
     <div style={{ padding: '18px 16px 60px', maxWidth: 1180, margin: '0 auto' }}>
-      <button onClick={() => navigate('/tests')} style={back}>← Pràctiques</button>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <button onClick={() => navigate('/tests')} style={back}>← Pràctiques</button>
+        <button
+          onClick={throwAway}
+          disabled={killing === 'doing'}
+          title={killing === 'ask' ? 'Prem un altre cop per llençar-la' : 'Llença aquesta pràctica'}
+          style={{ padding: '5px 12px', borderRadius: 'var(--r-pill)', border: `1px solid ${killing === 'ask' ? 'var(--rose, #b3261e)' : 'var(--border)'}`, background: killing === 'ask' ? 'var(--rose-soft, #fdecea)' : 'transparent', color: killing === 'ask' ? 'var(--rose, #b3261e)' : 'var(--text-muted)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        >
+          <FaTrash size={11} /> {killing === 'doing' ? 'Llençant…' : killing === 'ask' ? 'Segur que la vols llençar?' : 'Llença-la'}
+        </button>
+      </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '6px 0 4px' }}>
         <input

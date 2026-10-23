@@ -174,6 +174,10 @@ class Test(TestBase):
     updated_at: Optional[datetime] = None
     created_by_user_id: Optional[int] = None   # whose list it is: «les meves» is built on this
     visibility: Optional[str] = None           # private | shared
+    # How many steps it really holds (ADR 0002). `drill_ids` is the flat list a practice used to
+    # be and the workshop never writes it, so every practice built there read as «0 drills» on
+    # the screens that still count that column.
+    step_count: Optional[int] = None
 
     @field_serializer('date_created', 'updated_at', when_used='json')
     def _ser_dt(self, v: Optional[datetime]) -> Optional[str]:

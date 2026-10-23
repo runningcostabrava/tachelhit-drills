@@ -197,6 +197,34 @@ def practice_sizes(db, tests) -> Dict[int, int]:
             for t in tests}
 
 
+def practice_covers(db, tests) -> Dict[int, Optional[str]]:
+    """A picture for each practice: the first of its sentences that has one.
+
+    Everything else on the Pràctica screen is a card you can recognise at a glance; the practices
+    a person made themselves were the one list with nothing to look at. The picture is the one
+    already drawn for a sentence, so this costs two queries and no new storage.
+    """
+    from models import Drill as DrillModel, PracticeStep
+    ids = [t.id for t in tests]
+    if not ids:
+        return {}
+    order: Dict[int, List[int]] = {}
+    rows = (db.query(PracticeStep.test_id, PracticeStep.drill_id)
+            .filter(PracticeStep.test_id.in_(ids), PracticeStep.drill_id != None)  # noqa: E711
+            .order_by(PracticeStep.position.asc(), PracticeStep.id.asc()).all())
+    for tid, did in rows:
+        order.setdefault(tid, []).append(did)
+    for t in tests:        # an old practice that never got steps still has its flat list
+        order.setdefault(t.id, [int(x) for x in (t.drill_ids or "").split(",") if x.strip().isdigit()])
+    wanted = {d for v in order.values() for d in v}
+    if not wanted:
+        return {t.id: None for t in tests}
+    pics = dict(db.query(DrillModel.id, DrillModel.image_url)
+                .filter(DrillModel.id.in_(wanted), DrillModel.image_url != None,  # noqa: E711
+                        DrillModel.image_url != "").all())
+    return {t.id: next((pics[d] for d in order.get(t.id, []) if d in pics), None) for t in tests}
+
+
 def collections(db, user=None) -> dict:
     from models import Drill as DrillModel
     rows = grammar.not_excluded(db.query(DrillModel).filter(DrillModel.text_tachelhit != None, DrillModel.text_tachelhit != ""), DrillModel).all()
@@ -243,7 +271,9 @@ def collections(db, user=None) -> dict:
     # hand-made lists: this person's own, counted by the steps they really hold
     tests = my_practices(db, user)
     sizes = practice_sizes(db, tests)
-    list_list = [{"id": t.id, "title": t.title, "count": sizes.get(t.id, 0)} for t in tests]
+    covers = practice_covers(db, tests)
+    list_list = [{"id": t.id, "title": t.title, "count": sizes.get(t.id, 0),
+                  "cover": covers.get(t.id)} for t in tests]
     return {"days": day_list, "topics": topic_list, "units": unit_list, "lists": list_list,
             "videos": video_list, "people": people_list, "tags": tag_list}
 
