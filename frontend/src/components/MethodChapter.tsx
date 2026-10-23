@@ -125,6 +125,34 @@ export default function MethodChapter() {
                       onChanged={() => api.methodChapter(slug).then(setC).catch(() => {})} />
       )}
 
+      {/* La sortida del capítol.
+
+          Un capítol s'acabava i no tornava mai: es llegia, i la següent vegada que la llengua
+          et calia ja no te'n recordaves. La pràctica és el que ho arregla — puntua cada frase
+          i el repàs espaiat les fa tornar soles, sense que te n'hagis de recordar tu.
+
+          Les veus de la pràctica són de la biblioteca, no del manual: allà on el capítol
+          escriu dar-, les nostres diuen ɣur-. És la mateixa cosa dita a l'Atles. */}
+      {c.practice_test && (
+        <section style={{ marginTop: 24, padding: '16px 18px', borderRadius: 'var(--r-lg)', background: 'var(--brand-gradient-soft)', border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--brand-1)', letterSpacing: '0.07em' }}>
+            I ARA, A PROVAR-HO
+          </div>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 19, margin: '3px 0 5px' }}>
+            {c.practice_test.title}
+          </h3>
+          <p style={{ fontSize: 13.5, color: 'var(--text-soft)', lineHeight: 1.6, margin: '0 0 12px' }}>
+            {c.practice_test.steps} passos amb veus d’Aït Mraw: escoltar i triar, omplir el buit,
+            escriure el que sents i dir-ho tu. El que marquis com a « encara no » tornarà sol
+            d’aquí a uns dies.
+          </p>
+          <button onClick={() => navigate(`/tests/${c.practice_test!.id}`)}
+                  style={{ padding: '10px 18px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, fontSize: 14.5, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Fes la pràctica →
+          </button>
+        </section>
+      )}
+
       {proposals.length > 0 && (
         <section style={{ marginTop: 22, padding: '12px 16px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)' }}>
           <h3 style={h3}>{me?.is_admin ? 'PROPOSTES PER DECIDIR' : 'EL QUE HAS PROPOSAT'}</h3>
