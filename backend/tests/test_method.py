@@ -567,9 +567,10 @@ def test_corregir_el_capitol_no_desvincula_les_veus():
               "vocabulary": [{"shi": "aman", "ca": "aigua"}]}
     client.put("/method/la-botiga/content", headers=hdr, json=escrit)
 
+    # (tant li fa si la línia ja era una frase d'una altra prova: el que es mira és que hi segueixi)
     made = client.post("/method/la-botiga/line", headers=hdr,
                        json={"kind": "example", "section": "iri", "index": 0}).json()
-    assert made["created"] is True
+    assert made["drill_id"]
 
     # i ara algú torna a pujar el capítol tal com el té escrit, sense cap número
     escrit["sections"][0]["examples"][0]["ca"] = "Que en vols, d'aigua?"
