@@ -29,6 +29,7 @@ from tts_text import tts_text, VOICE_VERSION
 import topics as topics_catalog
 import grammar as grammar_course
 import practice_steps
+import method as method_mod
 import practice as practice_mod
 import stories as stories_mod
 import word_audio
@@ -6416,6 +6417,70 @@ def credits():
         except OSError:
             continue
     return {"markdown": _CREDITS_FALLBACK, "source": "fallback"}
+
+
+@app.get("/method/")
+def method_index(db: Session = Depends(get_db),
+                 user: Optional[UserModel] = Depends(get_current_user)):
+    """Els deu capítols del Mètode, i quant en tenim recollit de cadascun.
+
+    La barra de cada capítol NO és el progrés de qui aprèn: és quantes frases nostres fan el que
+    el capítol demana. Un capítol curt vol dir que d'allò encara no n'hem gravat, i és l'argument
+    per anar-hi. Vegeu ADR 0003: del manual se'n pren el pla, mai el text.
+    """
+    out = []
+    for c in method_mod.index():
+        rows = method_mod.sentences_for(db, c["slug"])
+        out.append({**c,
+                    **method_mod.readiness(c, rows),
+                    "sentences": len(rows),
+                    "with_voice": sum(1 for d in rows if d.audio_url),
+                    "varieties": sorted({(d.variety or "").strip() for d in rows if (d.variety or "").strip()})})
+    return {"chapters": out, "source": method_mod.SOURCE}
+
+
+@app.get("/method/{slug}")
+def method_chapter(slug: str, db: Session = Depends(get_db),
+                   user: Optional[UserModel] = Depends(get_current_user)):
+    """Un capítol: què en sabràs fer, les frases nostres que ho fan, i el que ens falta."""
+    c = method_mod.chapter(slug)
+    if not c:
+        raise HTTPException(status_code=404, detail="Aquest capítol no existeix")
+    rows = method_mod.sentences_for(db, c["slug"])
+    titles = {u["slug"]: u["title"] for u in grammar_course.UNITS}
+    labels = {t["slug"]: t["label"] for t in topics_catalog.TOPICS}
+
+    def card(d):
+        return {"id": d.id, "text_tachelhit": d.text_tachelhit,
+                "text_tachelhit_latin": d.text_tachelhit_latin,
+                "text_catalan": d.text_catalan, "audio_url": d.audio_url,
+                "image_url": d.image_url, "speaker": d.speaker or d.author,
+                "variety": d.variety, "region": d.region,
+                "grammar": d.grammar, "topics": d.topics}
+
+    # per unitat de gramàtica, que és com es llegeix un capítol: una cosa després de l'altra
+    sections = []
+    used = set()
+    for g in c["grammar"]:
+        here = [d for d in rows if g in grammar_course.parse(d.grammar)]
+        used.update(d.id for d in here)
+        sections.append({"slug": g, "title": titles.get(g, g),
+                         "sentences": [card(d) for d in here[:8]], "total": len(here),
+                         "with_voice": sum(1 for d in here if d.audio_url)})
+    rest = [d for d in rows if d.id not in used]
+
+    return {
+        "n": c["n"], "slug": c["slug"], "name": c["name"], "title": c["title"],
+        "about": c["about"], "functions": c["functions"], "roles": c["roles"],
+        "topics": [{"slug": t, "label": labels.get(t, t)} for t in c["topics"]],
+        "sections": sections,
+        "also": [card(d) for d in rest[:12]],
+        "sentences": len(rows),
+        "with_voice": sum(1 for d in rows if d.audio_url),
+        **method_mod.readiness(c, rows),
+        "missing": method_mod.what_is_missing(c, rows),
+        "source": method_mod.SOURCE,
+    }
 
 
 @app.get("/practice/collections")

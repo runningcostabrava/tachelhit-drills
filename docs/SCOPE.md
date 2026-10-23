@@ -45,9 +45,20 @@ No és un diccionari, ni un traductor automàtic, ni un curs genèric d'«amazic
   fins que algú la hi posi a mà. `POST /drills/{id}/retranscribe` ho refusa.
 - **Una veu diu qui és.** Una gravació de qui aprèn hi té lloc, però queda marcada: no pot passar
   per model de pronúncia.
-- **Material exclòs**: res gravat en càmera de «Tamazight For All»; els drills de Beni Mellal van
-  etiquetats «private»; cap drill etiquetat irlandès entra al curs.
-- **El curs cita només** la nostra biblioteca i el compendi d'amazic.cat.
+- **Material exclòs**: res gravat en càmera de «Tamazight For All»; cap drill etiquetat irlandès
+  entra al curs.
+- **El recull de Beni Mellal s'ensenya, però no es publica.** Va etiquetat «private», i això vol
+  dir que **no es redistribueix** — no surt en cap exportació ni corpus. Sí que es pot fer servir
+  com a exemple dins de l'app: l'amo en té permís (decisió de 23-10-2026). Són dos terços de la
+  biblioteca, i la regla d'abans es llegia com si fossin material exclòs del curs, que no ho són.
+- **Les nostres veus van davant.** Quan hi ha més d'una frase que serveix, s'ensenya primer la
+  que diu la Halima o en Driss: porten una persona que el projecte coneix, amb el seu poble i la
+  seva varietat. Són 69 frases de 3.390, i sense aquesta regla no es veurien mai.
+- **El curs cita només** la nostra biblioteca i el compendi d'amazic.cat. Això inclou **El
+  Mètode**: d'un manual publicat se'n pot prendre el pla —quina situació va abans de quina i
+  quina gramàtica demana—, mai el text, els diàlegs, els exemples ni el lèxic. El que un capítol
+  demana i no tenim es demana a un parlant; no es copia
+  ([ADR 0003](adr/0003-el-metode-pren-el-pla-mai-les-paraules.md)).
 - **Això no es ven mai.** L'app no tindrà ús comercial (decisió de l'amo, 22-10-2026). No és una
   conseqüència de les llicències: és el projecte. De retruc, el material CC BY-NC —el lèxic
   d'IRCAM— hi pot ser; vegeu [CREDITS.md](CREDITS.md).
