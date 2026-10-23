@@ -60,6 +60,8 @@ export default function MethodChapter() {
   // Qui administra pot corregir el text del capítol allà mateix, sense desplegar res.
   const [me, setMe] = useState<{ is_admin?: boolean } | null>(null);
   useEffect(() => { api.me().then(setMe).catch(() => setMe(null)); }, []);
+  // La llista per unitat de gramàtica, plegada quan el capítol ja té text (vegeu més avall).
+  const [openRest, setOpenRest] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -113,17 +115,29 @@ export default function MethodChapter() {
                       onChanged={() => api.methodChapter(slug).then(setC).catch(() => {})} />
       )}
 
-      {c.content && c.sections.some((s) => s.sentences.length > 0) && (
-        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18, margin: '26px 0 2px' }}>
-          Dit per les nostres veus
-        </h3>
-      )}
+      {/* La llista de frases per unitat de gramàtica.
+
+          Quan el capítol JA TÉ text, això no és el capítol: són totes les frases que porten
+          alguna de les seves unitats, i l'amo ho va veure de seguida — «és realment aquest el
+          mètode? vols dir que aquests drills il·lustren bé la secció "Els noms…"?». No: les
+          frases triades per a cada secció són a dins de la lliçó, al costat del que expliquen.
+          Això és la resta de la biblioteca, i va plegat i dit pel seu nom.
+
+          Un capítol que encara no s'ha escrit no té res més, i llavors la llista ÉS la pàgina. */}
       {c.content && (
-        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '0 0 12px', lineHeight: 1.55 }}>
-          Les frases de la biblioteca que fan el que aquest capítol ensenya, amb qui les diu i d’on és.
-        </p>
+        <button onClick={() => setOpenRest((v) => !v)}
+                style={{ width: '100%', textAlign: 'left', marginTop: 26, padding: '12px 16px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--text)' }}>
+          <span style={{ fontWeight: 800, fontSize: 15 }}>
+            {openRest ? '▾' : '▸'} La resta de la biblioteca d’aquest capítol
+          </span>
+          <span style={{ display: 'block', fontSize: 12.5, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.5 }}>
+            Totes les frases que porten alguna de les unitats de gramàtica del capítol, agrupades
+            per unitat. No estan triades per a cap secció: les triades són a dins de la lliçó.
+          </span>
+        </button>
       )}
 
+      {(!c.content || openRest) && <div style={{ marginTop: 14 }}>
       {c.sections.map((s, k) => (
         <section key={s.slug} style={{ marginBottom: 22 }}>
           <h3 style={{ ...h3, fontSize: 12.5 }}>{k + 1}. {s.title.toUpperCase()}</h3>
@@ -159,6 +173,7 @@ export default function MethodChapter() {
           </div>
         </section>
       )}
+      </div>}
 
       {(c.missing.thin.length > 0 || c.missing.voiceless_total > 0) && (
         <section style={{ padding: '14px 16px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', marginBottom: 20 }}>
