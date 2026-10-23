@@ -9,6 +9,7 @@ import { API_BASE, getMediaUrl, isNativeApp } from '../config';
 import { syncManager, type Drill } from '../services/OfflineSyncManager';
 import { toast } from '../toast';
 import { fileNameFor, kindOf, type MediaKind } from '../utils/media';
+import { whyItFailed } from '../utils/errors';
 
 interface MobileDrillCreatorProps {
     onClose: () => void;
@@ -205,7 +206,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             const result = await VoiceRecorder.startRecording();
             if (result.value) setIsRecording(true);
         } catch (err: any) {
-            toast.error(`Micròfon: ${errMsg(err, 'no disponible')}`);
+            toast.error(whyItFailed(err, `Micròfon: ${errMsg(err, 'no disponible')}`));
         }
     };
 

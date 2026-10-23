@@ -270,7 +270,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       const result = await VoiceRecorder.startRecording();
       if (result.value) setIsRecording(true);
     } catch (err: any) {
-      toast.error(`Micròfon: ${err?.message || 'no disponible'}`);
+      toast.error(whyItFailed(err, `Micròfon: ${err?.message || 'no disponible'}`));
     }
   };
 
