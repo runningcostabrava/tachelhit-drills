@@ -10,6 +10,8 @@
 // Both shapes are read: the typed client in api.ts puts `status` on the error it throws, and
 // axios hangs the response off `response` with FastAPI's `detail` inside it.
 
+import { isStaleBuildError, noteStaleBuild } from './freshness';
+
 type MaybeAxios = {
   status?: number;
   message?: string;
@@ -18,6 +20,12 @@ type MaybeAxios = {
 
 /** The server's own words when it gave any, else a sentence about what went wrong, else `doing`. */
 export function whyItFailed(e: unknown, doing: string): string {
+  // Una app vella demanant un tros que ja no hi és no és un error del servidor ni de l'usuari:
+  // és un desplegament que ha passat mentre la pestanya era oberta.
+  if (isStaleBuildError(e)) {
+    noteStaleBuild();
+    return 'L\u2019app s\u2019ha actualitzat mentre la tenies oberta. Recarrega la pàgina per continuar.';
+  }
   const err = (e || {}) as MaybeAxios;
   const status = err.response?.status ?? err.status;
   const detail = err.response?.data?.detail;

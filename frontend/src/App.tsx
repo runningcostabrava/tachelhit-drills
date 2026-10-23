@@ -8,6 +8,7 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaBookOpen, FaMicrophone } from 'react-icons/fa';
 import { syncManager } from './services/OfflineSyncManager';
 import ToastHost from './components/ToastHost';
+import StaleBuildBanner from './components/StaleBuildBanner';
 import AiCopilot from './components/AiCopilot';
 import './App.css';
 
@@ -159,6 +160,7 @@ function App() {
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <ToastHost />
+      <StaleBuildBanner />
       {aiOpen && <AiCopilot onClose={() => setAiOpen(false)} />}
 
       {showNav && (
