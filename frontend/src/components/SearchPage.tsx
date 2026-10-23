@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FaMicrophone, FaPlay, FaSearch } from 'react-icons/fa';
 import { api } from '../api';
 import type { Drill } from '../types';
-import { getMediaUrl, hasIdentity } from '../config';
+import { getMediaUrl, hasIdentity, thumb } from '../config';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import RecordAudioModal from './RecordAudioModal';
@@ -100,7 +100,7 @@ export default function SearchPage() {
             {rows.map((d) => (
               <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)' }}>
                 {d.image_url && (
-                  <img src={getMediaUrl(d.image_url)} alt="" loading="lazy"
+                  <img src={thumb(getMediaUrl(d.image_url), 120)} alt="" loading="lazy"
                        style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 'var(--r-md)', flexShrink: 0 }}
                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
                 )}

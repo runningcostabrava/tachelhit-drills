@@ -1171,3 +1171,27 @@ def test_cercar_una_frase_en_qualsevol_escriptura():
     assert mine["id"] in found("pa de casa"), "i pel seu significat"
     assert not any(d["text_tachelhit"] == "Maidin Mhaith"
                    for d in client.get("/corpus/search?q=Maidin&limit=50").json()), "l'irlandès no hi és"
+
+
+def test_la_gamma_grega_i_la_llatina_son_la_mateixa_lletra():
+    """Un auditor amazigòleg va comptar 59 línies del capítol 4 amb una consonant de menys a la
+    tifinagh. La causa: el text estava escrit amb la GAMMA GREGA (γ, U+03B3) i l'EPSILON GREGA
+    (ε, U+03B5), que a la pantalla semblen les llatines (ɣ U+0263, ɛ U+025B) i no ho són. El que
+    el mapa no coneixia, el transliterador ho llençava en silenci: «riγ» sortia ⵔⵉ («ri»),
+    «aγrum» «pa» sortia ⴰⵖ… no: sortia ⴰⵔⵓⵎ, que ja és una altra paraula, i l'imperatiu «sγ»
+    «compra» sortia ⵙ, una sola lletra.
+
+    Ara les gregues —i la ġ de molts reculls— són la mateixa lletra que les llatines, també per
+    a la comparació per so: si no, una secció no pot ni trobar les seves pròpies frases."""
+    import practice
+    import transliteration
+
+    for greek, latin in (("riγ", "riɣ"), ("aγrum", "aɣrum"), ("sγ", "sɣ"),
+                         ("εcrin", "ɛcrin"), ("rubuε", "rubuɛ")):
+        assert transliteration.to_forms(greek)["tifinagh"] == transliteration.to_forms(latin)["tifinagh"], greek
+        assert practice.sound_key(greek) == practice.sound_key(latin), greek
+
+    assert transliteration.to_forms("aγrum")["tifinagh"] == "ⴰⵖⵔⵓⵎ"
+    assert transliteration.to_forms("sγ")["tifinagh"] == "ⵙⵖ"
+    # i la ġ dels reculls (yaġht) tampoc no es perd
+    assert "ⵖ" in transliteration.to_forms("yaġht")["tifinagh"]

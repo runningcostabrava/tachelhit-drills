@@ -31,6 +31,12 @@ _DEMOTIC = {
     # academic Berber-Latin pass-through
     "ḥ": "ḥ", "ɛ": "ɛ", "ɣ": "ɣ", "ḍ": "ḍ", "ṭ": "ṭ", "ṣ": "ṣ",
     "ṛ": "ṛ", "ẓ": "ẓ", "š": "š", "ž": "j", "ʒ": "j", "č": "š",
+    # Les lletres GREGUES que tothom escriu en comptes de les llatines, i la ġ de molts
+    # reculls. Semblen iguals a la pantalla i no ho són (γ U+03B3 ≠ ɣ U+0263), i el que el mapa
+    # no coneixia, el transliterador el llençava en silenci: «riγ» sortia ⵔⵉ («ri») i «aγrum»
+    # «pa» sortia ⴰⵔⵓⵎ, que ja és una altra paraula. Ho va trobar un auditor comptant 59 línies
+    # del capítol 4 amb una consonant de menys.
+    "γ": "ɣ", "ε": "ɛ", "ġ": "ɣ", "ε̣": "ɛ", "Γ": "ɣ", "Ε": "ɛ", "Ġ": "ɣ",
     # single letters (Berber-Latin conventions: c=š, e=schwa, o->u, no p/v)
     "a": "a", "b": "b", "c": "š", "d": "d", "e": "ə", "f": "f",
     "g": "g", "h": "h", "i": "i", "j": "j", "k": "k", "l": "l",
