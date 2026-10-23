@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from 'react';
-import { FaPlay, FaCommentDots, FaMicrophone, FaPen, FaCheck } from 'react-icons/fa';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { FaPlay, FaStop, FaCommentDots, FaMicrophone, FaPen, FaCheck, FaTags, FaBookOpen, FaHandPointer } from 'react-icons/fa';
 import { api, type MethodContent, type MethodExample, type MethodGloss } from '../api';
 import type { Drill } from '../types';
 import { getMediaUrl, hasIdentity } from '../config';
@@ -204,11 +204,15 @@ function LineTools({
  *  corregir la rèplica que hi ha tres dits més avall.
  */
 function BookLine({
-  slug, where, look, who, shi, ca, note, tif, gloss, drillId, canEdit, extra, onSave, onRecorded,
+  slug, where, look, who, shi, ca, note, tif, gloss, drillId, canEdit, extra, audio, image,
+  speaker, playing, onPlay, onSave, onRecorded,
 }: {
   slug: string; where: Where; look: 'row' | 'turn' | 'word';
   who?: string; shi: string; ca?: string; note?: string; tif?: string | null; gloss?: MethodGloss[];
   drillId?: number; canEdit: boolean; extra?: ReactNode;
+  /** El que la biblioteca ja en té: la veu d'algú, la seva imatge, i qui la diu. */
+  audio?: string | null; image?: string | null; speaker?: string | null;
+  playing?: boolean; onPlay?: () => void;
   onSave: (shi: string, ca: string) => Promise<void>;
   onRecorded: (drillId: number) => void;
 }) {
@@ -247,8 +251,16 @@ function BookLine({
   }
 
   const tools = (
-    <LineTools slug={slug} where={where} shi={shi} drillId={drillId} canEdit={canEdit}
-               onRecorded={onRecorded} onEdit={() => setEdit({ shi, ca: ca || '' })} />
+    <span style={{ marginInlineStart: 'auto', display: 'inline-flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+      {audio && onPlay && (
+        <button onClick={onPlay} aria-label={`Escolta «${shi}»`} title={speaker ? `Ho diu ${speaker}` : 'Escolta-la'}
+                style={{ ...iconBtn, border: 'none', background: playing ? 'var(--brand-1)' : 'var(--brand-gradient)', color: '#fff' }}>
+          <FaPlay size={9} />
+        </button>
+      )}
+      <LineTools slug={slug} where={where} shi={shi} drillId={drillId} canEdit={canEdit}
+                 onRecorded={onRecorded} onEdit={() => setEdit({ shi, ca: ca || '' })} />
+    </span>
   );
   const words = gloss && gloss.length > 0 ? (
     <div style={{ flexBasis: '100%' }}>
@@ -261,7 +273,9 @@ function BookLine({
 
   if (look === 'turn') {
     return (
-      <div style={{ padding: '10px 12px', borderRadius: 'var(--r-lg)', background: 'var(--surface)', border: '1px solid var(--border)' }}>
+      <div style={{ padding: '10px 12px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)',
+                    background: playing ? 'var(--brand-gradient-soft)' : 'var(--surface)',
+                    borderColor: playing ? 'var(--brand-1)' : 'var(--border)' }}>
         {who && <div style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{who}</div>}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 180 }}>
@@ -278,14 +292,22 @@ function BookLine({
 
   if (look === 'word') {
     return (
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '5px 10px', borderRadius: 'var(--r-md)', background: 'var(--surface-2)', fontSize: 13.5 }}>
-        <span>
-          <span lang="shi" style={{ fontWeight: 700, color: 'var(--brand-1)' }}>{shi}</span>
-          <Tif t={tif} size={11.5} />
-        </span>
-        <span style={{ color: 'var(--text-soft)' }}>{ca}</span>
-        {extra}
-        {tools}
+      <div style={{ borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', overflow: 'hidden',
+                    background: playing ? 'var(--brand-gradient-soft)' : 'var(--surface)' }}>
+        {image && (
+          <img src={getMediaUrl(image)} alt="" loading="lazy"
+               style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', display: 'block' }}
+               onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+        )}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '7px 10px', fontSize: 13.5 }}>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span lang="shi" style={{ fontWeight: 800, color: 'var(--brand-1)' }}>{shi}</span>
+            <Tif t={tif} size={11.5} />
+            <span style={{ display: 'block', color: 'var(--text-soft)' }}>{ca}</span>
+          </span>
+          {extra}
+          {tools}
+        </div>
       </div>
     );
   }
@@ -359,16 +381,141 @@ export default function MethodLesson({
     });
   };
 
+  // ───────────────────────────────────────────────────────────────────────────────────────
+  // El PLAY del capítol.
+  //
+  // L'amo: «recorda que haig de poder posar play a la lliçó». Un capítol és per escoltar-lo, no
+  // per llegir-lo: això ajunta tot el que ja té veu —les rèpliques del diàleg, les paraules i
+  // els exemples que algú ha gravat— i ho diu de dalt a baix, marcant la línia que sona. El que
+  // encara no s'ha gravat no s'hi inventa: se salta, i el micròfon és allà per omplir-lo.
+  const tracks: { key: string; url: string }[] = [];
+  const push = (key: string, url?: string | null) => { if (url) tracks.push({ key, url: getMediaUrl(url) }); };
+  (body.dialogue?.turns || []).forEach((t, k) => push(`turn:${k}`, t.audio_url));
+  (body.vocabulary || []).forEach((v, k) => push(`vocabulary:${k}`, v.audio_url));
+  (body.sections || []).forEach((sec) => {
+    (sec.examples || []).forEach((e, k) => push(`example:${sec.id}:${k}`, e.audio_url));
+    (sec.ours_drills || []).forEach((d) => push(`ours:${d.id}`, d.audio_url));
+  });
+
+  const [sounding, setSounding] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const chainRef = useRef(false);
+
+  const stop = () => {
+    chainRef.current = false;
+    audioRef.current?.pause();
+    audioRef.current = null;
+    setSounding(null);
+  };
+
+  const playFrom = (i: number) => {
+    const t = tracks[i];
+    if (!t) { stop(); return; }
+    audioRef.current?.pause();
+    const a = new Audio(t.url);
+    audioRef.current = a;
+    setSounding(t.key);
+    const next = () => { if (chainRef.current) playFrom(i + 1); else setSounding(null); };
+    a.onended = next;
+    a.onerror = next;
+    a.play().catch(next);
+  };
+
+  const playAll = () => {
+    if (sounding) { stop(); return; }
+    chainRef.current = true;
+    playFrom(0);
+  };
+
+  const playOne = (key: string) => {
+    const i = tracks.findIndex((t) => t.key === key);
+    if (i < 0) return;
+    chainRef.current = false;
+    if (sounding === key) { stop(); return; }
+    playFrom(i);
+  };
+
+  useEffect(() => stop, []);
+
   return (
     <>
-      {body.intro && <p style={{ fontSize: 15, lineHeight: 1.65, margin: '0 0 8px' }}>{body.intro}</p>}
-      <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: '0 0 20px', lineHeight: 1.55 }}>
-        <FaMicrophone size={10} /> Cada línia es pot gravar. La primera vegada que algú ho fa, la
-        línia passa a ser una frase de la nostra biblioteca, amb la seva veu i el seu poble.
-      </p>
+      {body.intro && <p style={{ fontSize: 15, lineHeight: 1.65, margin: '0 0 10px' }}>{body.intro}</p>}
 
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', margin: '0 0 22px' }}>
+        <button onClick={playAll} disabled={tracks.length === 0}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 'var(--r-pill)', border: 'none', cursor: tracks.length ? 'pointer' : 'default', fontFamily: 'inherit', fontWeight: 800, fontSize: 14, color: '#fff', background: tracks.length ? 'var(--brand-gradient)' : 'var(--surface-2)', boxShadow: tracks.length ? 'var(--shadow-brand)' : 'none' }}>
+          {sounding ? <FaStop size={12} /> : <FaPlay size={12} />}
+          {sounding ? 'Atura' : 'Escolta el capítol'}
+        </button>
+        <span style={{ fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.5, flex: '1 1 240px' }}>
+          {tracks.length
+            ? `${tracks.length} ${tracks.length === 1 ? 'frase es pot escoltar' : 'frases es poden escoltar'}. La resta espera una veu: prem el micròfon de qualsevol línia.`
+            : 'Encara no hi ha cap línia gravada. Prem el micròfon de qualsevol línia i la primera serà la teva.'}
+        </span>
+      </div>
+
+      {/* 1 · EL DIÀLEG — l'escena sencera. Va primer perquè és el capítol: tot el que ve després
+          explica el que aquí passa d'una tirada, i aquest és també l'ordre del manual. */}
+      {body.dialogue && (
+        <section style={{ marginBottom: 30 }}>
+          <Part n={1} title={body.dialogue.title} icon={<FaCommentDots size={13} />}
+                what={body.dialogue.scene} onToggle={() => setOpenDialogue((v) => !v)} open={openDialogue} />
+          {openDialogue && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {body.dialogue.turns.map((t, k) => {
+                const where: Where = { kind: 'turn', index: k };
+                return (
+                  <BookLine key={k} slug={slug} where={where} look="turn" who={t.who}
+                            shi={t.shi} ca={t.ca} tif={t.tif} gloss={t.gloss}
+                            drillId={t.drill_id} canEdit={canEdit}
+                            audio={t.audio_url} speaker={t.speaker}
+                            playing={sounding === `turn:${k}`} onPlay={() => playOne(`turn:${k}`)}
+                            onSave={(shi, ca) => saveLine(where, shi, ca)}
+                            onRecorded={noteDrill(where)} />
+                );
+              })}
+            </div>
+          )}
+          <p style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.55 }}>
+            Aquest diàleg és del manual, i per tant en tachelhit del Souss. Grava’n una rèplica i
+            hi anirà la teva manera de dir-la, amb el teu poble al costat.
+          </p>
+        </section>
+      )}
+
+      {/* 2 · LES PARAULES — amb la seva imatge i la seva veu quan la biblioteca ja en té. */}
+      {body.vocabulary && body.vocabulary.length > 0 && (
+        <section style={{ marginBottom: 30 }}>
+          <Part n={2} title="Les paraules d’aquest capítol" icon={<FaTags size={12} />}
+                what="Les que surten al diàleg i a les explicacions. Les que la biblioteca ja té surten amb la seva imatge i la seva veu." />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 10 }}>
+            {body.vocabulary.map((v, k) => {
+              const where: Where = { kind: 'vocabulary', index: k };
+              return (
+                <BookLine key={k} slug={slug} where={where} look="word"
+                          shi={v.shi} ca={v.ca} tif={v.tif}
+                          drillId={v.drill_id} canEdit={canEdit}
+                          audio={v.audio_url} image={v.image_url} speaker={v.speaker}
+                          playing={sounding === `vocabulary:${k}`} onPlay={() => playOne(`vocabulary:${k}`)}
+                          onSave={(shi, ca) => saveLine(where, shi, ca)}
+                          onRecorded={noteDrill(where)} />
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* 3 · COM FUNCIONA — les seccions numerades: el que el manual explica i, tot seguit, com
+          ho diu la gent que coneixem. */}
+      {(body.sections || []).length > 0 && (
+        <Part n={3} title="Com funciona" icon={<FaBookOpen size={12} />}
+              what="Una cosa per secció: el que el manual explica, i tot seguit com ho diu la gent que coneixem." />
+      )}
       {(body.sections || []).map((s, si) => (
-        <section key={s.id} style={{ marginBottom: 26 }}>
+        <section key={s.id} style={{ marginBottom: 26, paddingInlineStart: 14, borderInlineStart: '3px solid var(--border)' }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--brand-1)', letterSpacing: '0.08em' }}>
+            3.{si + 1}
+          </div>
           <SectionText slug={slug} index={si} title={s.title} text={s.text} deep={s.deep} ours={s.ours}
                        canEdit={canEdit} signedIn={signedIn}
                        onSave={(p) => saveSection(si, p)} />
@@ -431,10 +578,13 @@ export default function MethodLesson({
             <div style={{ display: 'flex', flexDirection: 'column', marginTop: 8 }}>
               {s.examples.map((e: MethodExample, k) => {
                 const where: Where = { kind: 'example', index: k, section: s.id };
+                const key = `example:${s.id}:${k}`;
                 return (
                   <BookLine key={k} slug={slug} where={where} look="row"
                             shi={e.shi} ca={e.ca} note={e.note} tif={e.tif} gloss={e.gloss}
                             drillId={e.drill_id} canEdit={canEdit}
+                            audio={e.audio_url} speaker={e.speaker}
+                            playing={sounding === key} onPlay={() => playOne(key)}
                             onSave={(shi, ca) => saveLine(where, shi, ca)}
                             onRecorded={noteDrill(where)} />
                 );
@@ -458,7 +608,9 @@ export default function MethodLesson({
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 8 }}>
                 {s.ours_drills.map((d) => (
-                  <div key={d.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', background: 'var(--surface)' }}>
+                  <div key={d.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden',
+                                           background: sounding === `ours:${d.id}` ? 'var(--brand-gradient-soft)' : 'var(--surface)',
+                                           borderColor: sounding === `ours:${d.id}` ? 'var(--brand-1)' : 'var(--border)' }}>
                     {d.image_url && (
                       <img src={getMediaUrl(d.image_url)} alt="" loading="lazy"
                            style={{ width: '100%', aspectRatio: '16 / 10', objectFit: 'cover', display: 'block' }}
@@ -485,7 +637,7 @@ export default function MethodLesson({
                           )}
                         </span>
                         {d.audio_url && (
-                          <button onClick={() => new Audio(getMediaUrl(d.audio_url as string)).play().catch(() => {})}
+                          <button onClick={() => playOne(`ours:${d.id}`)}
                                   aria-label="Escolta-la" title="Escolta-la"
                                   style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', background: 'var(--brand-gradient)', color: '#fff', cursor: 'pointer', flexShrink: 0 }}>
                             <FaPlay size={10} />
@@ -506,91 +658,83 @@ export default function MethodLesson({
         </section>
       ))}
 
-      {body.dialogue && (
-        <section style={{ marginBottom: 26 }}>
-          <button onClick={() => setOpenDialogue((v) => !v)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', color: 'var(--text)' }}>
-            <FaCommentDots size={14} style={{ color: 'var(--brand-1)' }} />
-            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18, margin: 0 }}>{body.dialogue.title}</h3>
-          </button>
-          {body.dialogue.scene && (
-            <p style={{ fontSize: 13.5, color: 'var(--text-soft)', margin: '4px 0 10px', lineHeight: 1.55 }}>{body.dialogue.scene}</p>
-          )}
-          {openDialogue && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {body.dialogue.turns.map((t, k) => {
-                const where: Where = { kind: 'turn', index: k };
-                return (
-                  <BookLine key={k} slug={slug} where={where} look="turn" who={t.who}
-                            shi={t.shi} ca={t.ca} tif={t.tif} gloss={t.gloss}
-                            drillId={t.drill_id} canEdit={canEdit}
-                            onSave={(shi, ca) => saveLine(where, shi, ca)}
-                            onRecorded={noteDrill(where)} />
-                );
-              })}
-            </div>
-          )}
-          <p style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 8, lineHeight: 1.55 }}>
-            Aquest diàleg és del manual, i per tant en tachelhit del Souss. Grava’n una rèplica i
-            hi anirà la teva manera de dir-la, amb el teu poble al costat.
-          </p>
-        </section>
-      )}
-
-      {body.practice && (
-        <section style={{ marginBottom: 26, padding: '14px 16px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)' }}>
-          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 17, margin: '0 0 4px' }}>{body.practice.title}</h3>
-          {body.practice.scene && <p style={{ fontSize: 13.5, color: 'var(--text-soft)', margin: '0 0 10px' }}>{body.practice.scene}</p>}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
-            {body.practice.pattern.map((t, k) => (
-              <div key={k} style={{ fontSize: 14 }}>
-                <span style={{ color: 'var(--text-muted)', fontSize: 12, marginRight: 6 }}>{t.who}</span>
-                <span lang="shi" style={{ fontWeight: 700, color: 'var(--brand-1)' }}>{t.shi}</span>
-                <span style={{ color: 'var(--text-soft)' }}> — {t.ca}</span>
-                <Tif t={t.tif} size={11.5} />
-              </div>
-            ))}
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 6 }}>
-            {body.practice.fills.map((f, k) => (
-              <div key={k} style={{ padding: '7px 10px', borderRadius: 'var(--r-md)', background: 'var(--surface-2)', fontSize: 13 }}>
-                <span lang="shi" style={{ fontWeight: 700, color: 'var(--brand-1)' }}>{f.shi}</span>
-                <span style={{ color: 'var(--text-soft)' }}> {f.ca}</span>
-                <Tif t={f.tif} size={11} />
-                <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-                  <span lang="shi">{f.qty_shi}</span> · {f.qty_ca}
-                </div>
-                <Tif t={f.qty_tif} size={11} />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {body.vocabulary && body.vocabulary.length > 0 && (
-        <section style={{ marginBottom: 26 }}>
-          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18, margin: '0 0 8px' }}>Les paraules d’aquest capítol</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 5 }}>
-            {body.vocabulary.map((v, k) => {
-              const where: Where = { kind: 'vocabulary', index: k };
-              return (
-                <BookLine key={k} slug={slug} where={where} look="word"
-                          shi={v.shi} ca={v.ca} tif={v.tif}
-                          drillId={v.drill_id} canEdit={canEdit}
-                          extra={v.audio_url ? (
-                            <button onClick={() => new Audio(v.audio_url as string).play().catch(() => {})}
-                                    aria-label={`Escolta ${v.shi}`} style={{ ...iconBtn, border: 'none' }}>
-                              <FaPlay size={9} />
-                            </button>
-                          ) : null}
-                          onSave={(shi, ca) => saveLine(where, shi, ca)}
-                          onRecorded={noteDrill(where)} />
-              );
-            })}
-          </div>
-        </section>
-      )}
+      {/* 4 · FES-HO TU — el mateix diàleg canviant el que compres: es tria, no es llegeix. */}
+      {body.practice && <Practice practice={body.practice} n={4} />}
     </>
+  );
+}
+
+/** El títol d'una part del capítol: el número gros, el nom, i què hi fas.
+ *
+ *  L'amo: «s'ha de veure la jerarquia del document». Un capítol té quatre parts i vuit seccions,
+ *  i fins ara tots els títols eren iguals: no es distingia una part d'una secció ni una secció
+ *  d'un exemple, i el diàleg quedava enterrat al final com si fos un afegit.
+ */
+function Part({ n, title, what, icon, open, onToggle }: {
+  n: number; title: string; what?: string; icon?: ReactNode; open?: boolean; onToggle?: () => void;
+}) {
+  const head = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <span aria-hidden style={{ width: 28, height: 28, borderRadius: 9, background: 'var(--brand-gradient)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, flexShrink: 0 }}>{n}</span>
+      <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, margin: 0, flex: 1, textAlign: 'start' }}>{title}</h2>
+      {icon && <span style={{ color: 'var(--brand-1)' }}>{icon}</span>}
+      {onToggle && <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{open ? '▾' : '▸'}</span>}
+    </div>
+  );
+  return (
+    <div style={{ margin: '0 0 10px', paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+      {onToggle
+        ? <button onClick={onToggle} style={{ width: '100%', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', color: 'var(--text)' }}>{head}</button>
+        : head}
+      {what && <p style={{ fontSize: 13, color: 'var(--text-soft)', margin: '4px 0 10px', lineHeight: 1.55 }}>{what}</p>}
+    </div>
+  );
+}
+
+/** Fes-ho tu: el mateix diàleg canviant el que compres.
+ *
+ *  L'amo: «coses com aquestes poden ser interactives». Una llista de productes al costat d'un
+ *  patró és una cosa per MIRAR; triar el producte i veure com queda la frase sencera és una cosa
+ *  per FER, que és el que un mètode demana.
+ */
+function Practice({ practice, n }: { practice: NonNullable<MethodContent['practice']>; n: number }) {
+  const [pick, setPick] = useState(0);
+  const f = practice.fills[pick];
+  const put = (t: string, shi: boolean) => (t || '')
+    .replace(/\{producte\}/g, (shi ? f?.shi : f?.ca) || '…')
+    .replace(/\{quantitat\}/g, (shi ? f?.qty_shi : f?.qty_ca) || '…');
+
+  return (
+    <section style={{ marginBottom: 26 }}>
+      <Part n={n} title={practice.title} icon={<FaHandPointer size={12} />} what={practice.scene} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+        {practice.fills.map((x, k) => (
+          <button key={k} onClick={() => setPick(k)}
+                  style={{ padding: '7px 12px', borderRadius: 'var(--r-pill)', cursor: 'pointer', fontFamily: 'inherit',
+                           border: `1px solid ${k === pick ? 'var(--brand-1)' : 'var(--border)'}`,
+                           background: k === pick ? 'var(--brand-gradient-soft)' : 'var(--surface)',
+                           color: 'var(--text)', fontSize: 13 }}>
+            <span lang="shi" style={{ fontWeight: 800, color: 'var(--brand-1)' }}>{x.shi}</span>
+            <span style={{ color: 'var(--text-soft)' }}> {x.ca}</span>
+          </button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '14px 16px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)' }}>
+        {practice.pattern.map((t, k) => (
+          <div key={k}>
+            <div style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t.who}</div>
+            <div lang="shi" style={{ fontSize: 16.5, fontWeight: 700, color: 'var(--brand-1)', lineHeight: 1.35 }}>{put(t.shi, true)}</div>
+            <div style={{ fontSize: 14, color: 'var(--text-soft)' }}>{put(t.ca, false)}</div>
+          </div>
+        ))}
+        {f && (
+          <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
+            Ara compres <strong lang="shi">{f.shi}</strong> ({f.ca}) i en demanes{' '}
+            <strong lang="shi">{f.qty_shi}</strong> ({f.qty_ca}). Tria’n un altre i torna-ho a dir.
+          </p>
+        )}
+      </div>
+    </section>
   );
 }
 

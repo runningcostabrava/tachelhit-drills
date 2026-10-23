@@ -418,3 +418,78 @@ def test_una_altra_manera_de_dir_ho_es_veu_amb_qui_la_diu():
     assert main._another_way("is ɣur-k tudit?", "is dar-k tudit?") is True
     assert main._another_way("is dark tudit?", "is dar-k tudit?") is False
     assert main._another_way("", "is dar-k tudit?") is False
+
+
+def test_el_capitol_es_pot_escoltar_i_les_paraules_porten_imatge():
+    """L'amo: «recorda que haig de poder posar play a la lliçó».
+
+    Un capítol és per escoltar-lo. Les línies que algú ja ha gravat porten la seva veu enganxada
+    en servir el capítol, i per això es poden sentir una a una o totes seguides. I una paraula
+    del vocabulari que la biblioteca ja té surt amb la seva imatge i la seva veu: una paraula amb
+    la seva imatge s'aprèn d'una altra manera que una paraula dins d'una llista.
+
+    El que no s'ha gravat no s'inventa: es queda com era, esperant el micròfon."""
+    import main
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("qui_escolta_el_capitol")}
+    db = main.SessionLocal()
+    try:
+        me = client.get("/users/me", headers=hdr).json()
+        db.query(main.UserModel).filter(main.UserModel.id == me["id"]).first().is_admin = True
+        db.commit()
+    finally:
+        db.close()
+
+    # Una frase de la biblioteca que diu exactament una paraula del capítol, amb veu i imatge.
+    # Res de menjar: el catàleg de temes el classificaria i es colaria a les llistes de pràctica
+    # d'una altra prova, que comparteix aquesta base de dades (ens va passar: `[81, 13] == [81]`).
+    word = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "la porta", "text_tachelhit": "tiflut", "author": "Prova-veu",
+        "grammar": "noms-genere-nombre", "grammar_source": "owner",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/porta.mp3",
+        "image_url": "https://res.cloudinary.com/x/image/upload/v1/porta.jpg"}).json()
+
+    client.put("/method/la-botiga/content", headers=hdr, json={
+        "sections": [{"id": "dar", "title": "dar", "examples": [{"shi": "dar ugzzar", "ca": "a cal carnisser"}]}],
+        "dialogue": {"title": "A la botiga", "turns": [{"who": "la dona", "shi": "is dar-k tudit?", "ca": "Que tens oli?"}]},
+        "vocabulary": [{"shi": "tiflut", "ca": "la porta"}, {"shi": "zzaytun", "ca": "olives"}]})
+
+    body = client.get("/method/la-botiga").json()["content"]
+    porta, olives = body["vocabulary"]
+    assert porta["audio_url"] and porta["image_url"], "la paraula que la biblioteca té surt amb veu i imatge"
+    assert porta["speaker"] == "Prova-veu", "i amb qui la diu"
+    assert not olives.get("audio_url") and not olives.get("image_url"), "la que no hi és, es queda com era"
+
+    # gravar una línia del diàleg la fa sonar al capítol
+    made = client.post("/method/la-botiga/line", headers=hdr,
+                       json={"kind": "turn", "index": 0}).json()
+    db = main.SessionLocal()
+    try:
+        d = db.query(main.DrillModel).filter(main.DrillModel.id == made["drill_id"]).first()
+        d.audio_url = "https://res.cloudinary.com/x/video/upload/v1/dialeg.mp3"
+        d.speaker = "Driss"
+        db.commit()
+    finally:
+        db.close()
+    turn = client.get("/method/la-botiga").json()["content"]["dialogue"]["turns"][0]
+    assert turn["audio_url"].endswith("dialeg.mp3") and turn["speaker"] == "Driss"
+
+    # i res d'això es desa: es calcula en servir, com la tifinagh
+    client.put("/method/la-botiga/content", headers=hdr, json=client.get("/method/la-botiga").json()["content"])
+    import json
+
+    from models import MethodChapter
+    db = main.SessionLocal()
+    try:
+        stored = json.loads(db.query(MethodChapter).filter(MethodChapter.slug == "la-botiga").first().body)
+    finally:
+        db.close()
+    assert "audio_url" not in stored["dialogue"]["turns"][0]
+    assert "image_url" not in stored["vocabulary"][0]
+
+    # I es recull el que ha embrutat. Aquestes proves comparteixen UNA base de dades, i una frase
+    # amb veu i imatge que es queda per aquí entra a les llistes de pràctica d'una altra prova i
+    # la fa caure (ens va passar: `[14, 13] == [13]`).
+    for drill_id in (word["id"], made["drill_id"]):
+        client.delete(f"/drills/{drill_id}", headers=hdr)

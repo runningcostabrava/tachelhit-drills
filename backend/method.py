@@ -286,7 +286,7 @@ def content_of(db, slug: str) -> Optional[Dict]:
 #: Qui administra corregeix una línia i el navegador torna el capítol sencer tal com el tenia a
 #: la pantalla: amb la tifinagh de cada línia i amb les frases nostres repartides per dins. Això
 #: no és el capítol, és el que n'hem calculat; desar-ho el congelaria amb les frases d'aquell dia.
-COMPUTED = {"ours_drills", "ours_total"}
+COMPUTED = {"ours_drills", "ours_total", "audio_url", "image_url", "speaker", "from_drill_id"}
 
 
 def strip_computed(body: Dict) -> Dict:
@@ -608,7 +608,71 @@ def content_with_ours(db, slug: str, rows: List, card) -> Optional[Dict]:
              "why": why_here(said[d.id], keys_of[s["id"]], unit, d)}
             for d in picked]
         s["ours_total"] = len(scored)
-    return with_tifinagh(body)
+    return with_tifinagh(attach_library(db, body, rows))
+
+
+def attach_library(db, body: Optional[Dict], rows: List) -> Optional[Dict]:
+    """Enganxa a cada línia del capítol el que la biblioteca ja en té: la veu i la imatge.
+
+    Dues coses, i totes dues fan el capítol una altra cosa:
+
+    · una línia que algú ha gravat es pot ESCOLTAR allà mateix, i per tant el capítol sencer es
+      pot escoltar de dalt a baix. Fins ara el micròfon deia «grava-la» i prou, i la veu que algú
+      hi havia posat no es podia sentir des del capítol;
+    · una PARAULA del vocabulari que la biblioteca ja té surt amb la seva imatge i la seva veu.
+      No és una imatge decorativa: és la que fem per a aquella frase, i una paraula amb la seva
+      imatge s'aprèn d'una altra manera que una paraula dins d'una llista.
+
+    No inventa res: si la biblioteca no en té, la línia es queda com era.
+    """
+    import practice
+    if not body:
+        return body
+
+    by_id = {d.id: d for d in rows}
+
+    def from_drill(line, d):
+        if d.audio_url:
+            line["audio_url"] = d.audio_url
+            line["speaker"] = d.speaker or d.author
+        if d.image_url:
+            line["image_url"] = d.image_url
+
+    for kind in LINE_KINDS:
+        for line in _lines_of(body, kind):
+            d = by_id.get(line.get("drill_id"))
+            if d is not None:
+                from_drill(line, d)
+
+    # les paraules del capítol: la frase de la biblioteca que diu exactament això
+    said = {}
+    for d in rows:
+        k = " ".join(practice.sound_key(w) for w in practice.words_of(d.text_tachelhit or ""))
+        if not k:
+            continue
+        have = said.get(k)
+        # la que es pugui mirar i escoltar primer; si no, la que tingui veu
+        rank = lambda x: (0 if (x.image_url and x.audio_url) else 1 if x.audio_url else 2 if x.image_url else 3)
+        if have is None or rank(d) < rank(have):
+            said[k] = d
+    for word in (body.get("vocabulary") or []):
+        if word.get("drill_id"):
+            continue
+        k = " ".join(practice.sound_key(w) for w in practice.words_of(word.get("shi") or ""))
+        d = said.get(k)
+        if d is not None:
+            from_drill(word, d)
+            word["from_drill_id"] = d.id
+    return body
+
+
+def _lines_of(body: Dict, kind: str) -> List[Dict]:
+    """Totes les línies d'una mena, en l'ordre en què surten al capítol."""
+    if kind == "example":
+        return [e for s in (body.get("sections") or []) for e in (s.get("examples") or [])]
+    if kind == "turn":
+        return list((body.get("dialogue") or {}).get("turns") or [])
+    return list(body.get("vocabulary") or [])
 
 
 #: On hi ha amazic dins del cos d'un capítol, i on va la seva tifinagh.
