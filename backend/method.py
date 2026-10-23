@@ -646,7 +646,11 @@ def attach_library(db, body: Optional[Dict], rows: List) -> Optional[Dict]:
         if d.audio_url:
             line["audio_url"] = d.audio_url
             line["speaker"] = d.speaker or d.author
-        if d.image_url:
+        # Només les il·lustracions que DIBUIXEM per a una frase. Les de la carpeta vella de
+        # fotos buscades no il·lustren la paraula: a «aɣrum» «pa» li havia tocat la façana d'un
+        # hostal americà i a «tasarut» «clau», una mà amb polseres. Val més una targeta sense
+        # imatge que una imatge que ensenya una altra cosa.
+        if d.image_url and "/illustrations/" in (d.image_url or ""):
             line["image_url"] = d.image_url
 
     for kind in LINE_KINDS:

@@ -452,7 +452,7 @@ def test_el_capitol_es_pot_escoltar_i_les_paraules_porten_imatge():
         "text_catalan": "la porta", "text_tachelhit": "tiflut", "author": "Prova-veu",
         "grammar": "noms-genere-nombre", "grammar_source": "owner",
         "audio_url": "https://res.cloudinary.com/x/video/upload/v1/porta.mp3",
-        "image_url": "https://res.cloudinary.com/x/image/upload/v1/porta.jpg"}).json()
+        "image_url": "https://res.cloudinary.com/x/image/upload/v1/tachelhit/illustrations/porta.webp"}).json()
 
     client.put("/method/la-botiga/content", headers=hdr, json={
         "sections": [{"id": "dar", "title": "dar", "examples": [{"shi": "dar ugzzar", "ca": "a cal carnisser"}]}],
@@ -462,6 +462,7 @@ def test_el_capitol_es_pot_escoltar_i_les_paraules_porten_imatge():
     body = client.get("/method/la-botiga").json()["content"]
     porta, olives = body["vocabulary"]
     assert porta["audio_url"] and porta["image_url"], "la paraula que la biblioteca té surt amb veu i imatge"
+    assert "/illustrations/" in porta["image_url"], "i només si és un dibuix nostre, no una foto buscada"
     assert porta["speaker"] == "Prova-veu", "i amb qui la diu"
     assert not olives.get("audio_url") and not olives.get("image_url"), "la que no hi és, es queda com era"
 
