@@ -5,7 +5,7 @@ import {
   FaPlay, FaPlus, FaRedo, FaSearch, FaVideo,
 } from 'react-icons/fa';
 import { api, type HomeData } from '../api';
-import { getMediaUrl } from '../config';
+import { getMediaUrl, thumb } from '../config';
 
 // La casa.
 //
@@ -24,6 +24,21 @@ import { getMediaUrl } from '../config';
 //
 // Tot plegat és UNA crida que només compta files (`/home`): obrir l'app no ha de baixar la
 // biblioteca.
+
+//: Els dibuixos de les portes, sabuts de memòria.
+//
+// No és una còpia de la veritat: la veritat la diu `/artwork` i mana tan bon punt arriba. Però
+// el navegador no pot començar a baixar una imatge fins que en sap l'adreça, i l'adreça venia
+// després de l'API — que és un servei gratuït que s'adorm. Sabent-les, les portes es pinten
+// mentre l'API encara s'aixeca.
+const DOORS_KNOWN: Record<string, string> = {
+  method: 'https://res.cloudinary.com/du26ppvh0/image/upload/v1792770886/tachelhit/app/porta-method.webp',
+  grammar: 'https://res.cloudinary.com/du26ppvh0/image/upload/v1792770883/tachelhit/app/porta-grammar.webp',
+  practice: 'https://res.cloudinary.com/du26ppvh0/image/upload/v1792770886/tachelhit/app/porta-practice.webp',
+  library: 'https://res.cloudinary.com/du26ppvh0/image/upload/v1792770884/tachelhit/app/porta-library.webp',
+  stories: 'https://res.cloudinary.com/du26ppvh0/image/upload/v1792770887/tachelhit/app/porta-stories.webp',
+  capture: 'https://res.cloudinary.com/du26ppvh0/image/upload/v1792770883/tachelhit/app/porta-capture.webp',
+};
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -146,21 +161,21 @@ export default function HomePage() {
       {/* Les portes. Cadascuna amb el seu número: on ets i què falta, a la mateixa línia. */}
       <h2 style={sectionTitle}>Per on vols entrar</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 10, marginBottom: 28 }}>
-        <Door to="/metode" Icon={FaBookOpen} title="El Mètode" cover={d?.covers.method}
+        <Door to="/metode" Icon={FaBookOpen} title="El Mètode" cover={d?.covers.method || DOORS_KNOWN.method}
               what="Deu capítols, de saludar a fer la compra, amb les nostres veus a dins."
               count={d && `${n(d.method.written)} de ${n(d.method.chapters)} capítols escrits`} />
-        <Door to="/grammar" Icon={FaBook} title="La gramàtica" cover={d?.covers.grammar}
+        <Door to="/grammar" Icon={FaBook} title="La gramàtica" cover={d?.covers.grammar || DOORS_KNOWN.grammar}
               what="Les regles, explicades només amb frases que algú ha dit de debò."
               count={d && `${n(d.grammar.with_lesson)} de ${n(d.grammar.units)} unitats amb lliçó`} />
-        <Door to="/tests" Icon={FaGraduationCap} title="La pràctica" cover={d?.covers.practice}
+        <Door to="/tests" Icon={FaGraduationCap} title="La pràctica" cover={d?.covers.practice || DOORS_KNOWN.practice}
               what="Llistes per repassar i per posar-te a prova, teves o de tothom."
               count={d && `${n(d.practice.all)} pràctiques${d.practice.mine ? ` · ${n(d.practice.mine)} teves` : ''}`} />
-        <Door to="/drills" Icon={FaLayerGroup} title="La biblioteca" cover={d?.covers.library}
+        <Door to="/drills" Icon={FaLayerGroup} title="La biblioteca" cover={d?.covers.library || DOORS_KNOWN.library}
               what="Totes les frases, una a una: qui les diu, d’on són i com sonen."
               count={d && `${n(d.library.sentences)} frases · ${n(d.library.with_voice)} amb veu`} />
-        <Door to="/stories" Icon={FaBookOpen} title="Històries i cançons" cover={d?.covers.stories}
+        <Door to="/stories" Icon={FaBookOpen} title="Històries i cançons" cover={d?.covers.stories || DOORS_KNOWN.stories}
               what="El que es llegeix de cap a cap: contes, cançons, converses senceres." />
-        <Door to="/video-creator" Icon={FaVideo} title="Captura" cover={d?.covers.capture}
+        <Door to="/video-creator" Icon={FaVideo} title="Captura" cover={d?.covers.capture || DOORS_KNOWN.capture}
               what="Un vídeo entra, frases en surten: talla, escolta i decideix."
               count={d && `${n(d.library.videos)} vídeos a la biblioteca`} />
       </div>
@@ -247,7 +262,7 @@ function Door({ to, Icon, title, what, count, cover }: {
     <button onClick={() => navigate(to)}
             style={{ textAlign: 'left', padding: 0, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--text)', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 112 }}>
       {cover && (
-        <img src={getMediaUrl(cover)} alt="" loading="lazy"
+        <img src={thumb(getMediaUrl(cover), 560)} alt="" loading="eager" fetchPriority="high"
              style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', display: 'block' }}
              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
       )}

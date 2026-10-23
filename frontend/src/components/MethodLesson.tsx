@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { FaPlay, FaStop, FaCommentDots, FaMicrophone, FaPen, FaCheck, FaTags, FaBookOpen, FaHandPointer } from 'react-icons/fa';
 import { api, type MethodContent, type MethodExample, type MethodGloss } from '../api';
 import type { Drill } from '../types';
-import { getMediaUrl, hasIdentity } from '../config';
+import { getMediaUrl, hasIdentity, thumb } from '../config';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import RecordAudioModal from './RecordAudioModal';
@@ -295,7 +295,7 @@ function BookLine({
       <div style={{ borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', overflow: 'hidden',
                     background: playing ? 'var(--brand-gradient-soft)' : 'var(--surface)' }}>
         {image && (
-          <img src={getMediaUrl(image)} alt="" loading="lazy"
+          <img src={thumb(getMediaUrl(image), 380)} alt="" loading="lazy"
                style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', display: 'block' }}
                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
         )}
@@ -634,7 +634,7 @@ export default function MethodLesson({
                 {s.ours_drills.map((d) => (
                   <div key={d.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', background: 'var(--surface)' }}>
                     {d.image_url && (
-                      <img src={getMediaUrl(d.image_url)} alt="" loading="lazy"
+                      <img src={thumb(getMediaUrl(d.image_url), 460)} alt="" loading="lazy"
                            style={{ width: '100%', aspectRatio: '16 / 10', objectFit: 'cover', display: 'block' }}
                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
                     )}
@@ -651,11 +651,16 @@ export default function MethodLesson({
                       <SentenceVariants variants={d.variants} size="sm" />
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                         <span style={{ fontSize: 11.5, color: 'var(--text-muted)', flex: 1 }}>
-                          {d.speaker || 'sense nom'}
+                          {d.from_book
+                            ? <span style={{ fontWeight: 700 }}>del manual{d.speaker ? `, dit per ${d.speaker}` : ', encara sense parlant'}</span>
+                            : (d.speaker || 'sense nom')}
                           {(d.variety || d.region) && (
                             <span style={{ fontSize: 10.5, opacity: 0.6 }}>
                               {d.variety ? ` · ${d.variety}` : ''}{d.region ? ` · ${d.region}` : ''}
                             </span>
+                          )}
+                          {d.from_book && !d.variety && (
+                            <span style={{ fontSize: 10.5, opacity: 0.6 }}> · tachelhit del Souss</span>
                           )}
                         </span>
                         {d.audio_url && (

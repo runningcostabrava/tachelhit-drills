@@ -6595,7 +6595,10 @@ def _library_mark(db, slug: str) -> tuple:
     from models import MethodChapter
     n, last = db.query(func.count(DrillModel.id), func.max(DrillModel.updated_at)).one()
     row = db.query(MethodChapter.updated_at).filter(MethodChapter.slug == slug).first()
-    return (n, str(last), str(row[0]) if row else None)
+    # i el dibuix del capítol, que també és part del que es veu: sense això, canviar-lo no es
+    # notava fins que es movia una frase (ho va ensenyar una prova que va fallar sola)
+    art = db.query(AppSettingModel.updated_at).filter(AppSettingModel.key == "artwork_method").first()
+    return (n, str(last), str(row[0]) if row else None, str(art[0]) if art else None)
 
 
 @app.get("/method/{slug}")
@@ -6621,6 +6624,11 @@ def method_chapter(slug: str, db: Session = Depends(get_db),
                 "image_url": d.image_url, "speaker": d.speaker or d.author,
                 "variety": d.variety, "region": d.region,
                 "grammar": d.grammar, "topics": d.topics,
+                # D'on surt: una línia del manual gravada no és una atestació de l'Atles, i a la
+                # pantalla s'han de poder distingir (ho va dir un auditor dialectòleg veient
+                # «is trit aman?» sota «Dit per les nostres veus», sense parlant ni poble).
+                "tag": d.tag,
+                "from_book": "del llibre" in (d.tag or ""),
                 # paraula per paraula, igual que al curs de gramàtica: una frase que s'ensenya
                 # i no es pot desmuntar és una frase que només es pot repetir
                 "gloss": grammar_course.gloss_of(d),

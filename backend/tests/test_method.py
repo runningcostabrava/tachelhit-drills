@@ -200,6 +200,10 @@ def test_cada_seccio_ensenya_les_nostres_frases_al_costat_del_que_explica():
     assert born["text_tachelhit"] == "fkiγ-as tasarut"
     assert "metode-la-botiga" in (born.get("tag") or ""), "diu d'on surt"
     assert born.get("voice_wanted") is True, "neix demanant una veu"
+    # i NO es queda etiquetada amb la gramàtica ni el tema del capítol: una línia del llibre no
+    # és un exemple de les quatre unitats del capítol, i amb el segell «owner» entrava a les
+    # seves lliçons i feia que el capítol es certifiqués a si mateix (auditor dialectòleg)
+    assert not born.get("grammar") and not born.get("topics")
 
     # la segona vegada no se'n fa una altra: s'hi afegeix una veu
     again = client.post("/method/la-botiga/line", headers=hdr,

@@ -626,10 +626,21 @@ def attach_library(db, body: Optional[Dict], rows: List) -> Optional[Dict]:
     No inventa res: si la biblioteca no en té, la línia es queda com era.
     """
     import practice
+    from models import Drill as DrillModel
     if not body:
         return body
 
+    # Les línies del capítol es busquen PEL SEU NÚMERO, no entre les frases del capítol: una
+    # línia del llibre gravada ja no porta cap unitat de gramàtica (i no n'ha de portar cap),
+    # de manera que no surt a `rows` i, buscant-la allà, el capítol no podia sentir-se a si
+    # mateix.
+    wanted = {line.get("drill_id") for kind in LINE_KINDS for line in _lines_of(body, kind)}
+    wanted = {i for i in wanted if isinstance(i, int)}
     by_id = {d.id: d for d in rows}
+    missing = wanted - set(by_id)
+    if missing:
+        for d in db.query(DrillModel).filter(DrillModel.id.in_(missing)).all():
+            by_id[d.id] = d
 
     def from_drill(line, d):
         if d.audio_url:
@@ -767,8 +778,15 @@ def drill_for_line(db, slug: str, kind: str, section: Optional[str], index: int,
         # D'on surt, dit a la cara: ve del manual, que és del Souss, i encara no l'ha dit ningú.
         tag=f"metode-{slug}, del llibre",
         author=None, variety=None,
-        grammar=", ".join(c.get("grammar") or []) or None, grammar_source="owner",
-        topics=", ".join(c.get("topics") or []) or None, topics_source="owner",
+        # Ni gramàtica ni tema. Això ho va trobar un auditor dialectòleg: una línia del llibre
+        # es desava amb LES QUATRE unitats del capítol i `grammar_source="owner"`, el segell de
+        # màxima confiança. «is trit aman?» quedava desada com a exemple de `clitics-objecte` i
+        # de `numerals`, que és fals; entrava a les lliçons d'aquelles unitats; i, com que
+        # «seccions a punt» es compta per unitat declarada, cada línia gravada comptava a les
+        # quatre alhora — el capítol es certificava a si mateix.
+        #
+        # D'on surt ja ho diu l'etiqueta. Què ensenya ho dirà qui ho sàpiga, o el classificador.
+        grammar=None, topics=None,
         voice_wanted=True,
         voice_wanted_by=(getattr(user, "display_name", None) or getattr(user, "username", None)),
         created_by_user_id=getattr(user, "id", None),

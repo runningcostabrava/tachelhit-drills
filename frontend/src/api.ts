@@ -145,6 +145,9 @@ export interface MethodSentence {
   gloss?: { shi: string; ca?: string | null; tif?: string | null }[] | null;
   /** La frase en tifinagh, del nostre transliterador, per posar-la sota la llatina. */
   tif?: string | null;
+  /** D'on surt: una línia del manual que algú ha gravat no és una atestació de l'Atles. */
+  tag?: string | null;
+  from_book?: boolean;
   /** Per què aquesta frase és en aquesta secció. El tria la secció, no l'atzar. */
   why?: string | null;
   /** Les altres maneres de dir-la: la gravació de qui la diu diferent, amb el seu nom i el seu

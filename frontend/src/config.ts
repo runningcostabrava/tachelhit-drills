@@ -24,6 +24,19 @@ const rawApiBase =
 // 404s. This makes the base robust regardless of how the env var is written.
 export const API_BASE = rawApiBase.replace(/\/+$/, '');
 
+// La mida que de debò es veu a la pantalla.
+//
+// Una il·lustració nostra pesa 29 KB i es mostra en una targeta de 230 px: demanar-la a la
+// mida bona en baixa a 17 KB, i Cloudinary la fa al vol i la guarda. No és el servei el que
+// va lent —ja és una CDN i una imatge triga dues dècimes—, és que el navegador no pot
+// començar a baixar-la fins que l'API li ha dit l'adreça.
+export function thumb(url: string | null | undefined, width: number): string {
+  const u = (url || '').trim();
+  if (!u || !u.includes('res.cloudinary.com') || !u.includes('/image/upload/')) return u;
+  if (/\/image\/upload\/[a-z]_/.test(u)) return u;          // ja porta transformació
+  return u.replace('/image/upload/', `/image/upload/f_auto,q_auto,w_${Math.round(width)}/`);
+}
+
 // ---- Identity & API-key header injection ----
 // Components call axios and fetch directly all over the codebase, so until
 // there is a shared API client both headers are injected globally here:
