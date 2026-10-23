@@ -1195,3 +1195,33 @@ def test_la_gamma_grega_i_la_llatina_son_la_mateixa_lletra():
     assert transliteration.to_forms("sγ")["tifinagh"] == "ⵙⵖ"
     # i la ġ dels reculls (yaġht) tampoc no es perd
     assert "ⵖ" in transliteration.to_forms("yaġht")["tifinagh"]
+
+
+def test_les_dues_llistes_que_faltaven_a_posa_hi_veu():
+    """L'amo: «falten la llista de totes les frases sense veu, i les frases amb veu però sense
+    transcripció».
+
+    La primera hi era a mitges: «Només hi parla una màquina» és la mateixa llista filtrada pel
+    que el curs pot citar i ordenada per unitats, i per tant amaga frases. La segona no hi era
+    gens, i és l'altra meitat de la feina: una gravació que ningú no ha escrit no es pot buscar,
+    ni citar, ni entrar a cap lliçó — i qui la va dir ja va fer la part difícil."""
+    hdr = {"X-User-Token": register("qui_mira_el_que_falta")}
+    muda = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "la finestra", "text_tachelhit": "tabburt n-usmmiḍ"}).json()
+    client.put(f"/drills/{muda['id']}", headers=hdr, json={"audio_url": None, "audio_tts_shi_url": None})
+    sense_text = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "una cosa que algú va dir",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/veu.webm"}).json()
+
+    muts = client.get("/petitions?kind=voiceless&limit=200").json()
+    assert any(x["drill"]["id"] == muda["id"] for x in muts["items"]), "la muda hi és"
+    assert muts["total"] >= 1
+
+    sense = client.get("/petitions?kind=untranscribed&limit=200").json()
+    assert any(x["drill"]["id"] == sense_text["id"] for x in sense["items"]), "la veu sense escriure hi és"
+    assert all(not (x["drill"].get("text_tachelhit") or "") for x in sense["items"]), "i només n'hi ha d'aquestes"
+
+    assert client.get("/petitions?kind=no-existeix").status_code == 400
+
+    for drill_id in (muda["id"], sense_text["id"]):
+        client.delete(f"/drills/{drill_id}", headers=hdr)
