@@ -1227,7 +1227,7 @@ def test_les_dues_llistes_que_faltaven_a_posa_hi_veu():
         client.delete(f"/drills/{drill_id}", headers=hdr)
 
 
-def test_la_primera_veu_mana_pero_no_la_de_qui_apren():
+def test_la_primera_veu_mana_pero_no_la_de_qui_apren(monkeypatch):
     """La primera veu d'una frase muda passa a ser la seva veu principal, que és el que l'amo
     va demanar. Amb una condició que han posat els auditors: la d'algú que APRÈN, no.
 
@@ -1236,6 +1236,11 @@ def test_la_primera_veu_mana_pero_no_la_de_qui_apren():
     aprèn es convertiria en l'objectiu que els altres han d'encertar. La gravació hi és igual i
     s'escolta igual; el que no fa és manar."""
     import io
+
+    import main
+    # a la CI no hi ha Cloudinary: la pujada es fa de mentida, que no és el que es mesura aquí
+    monkeypatch.setattr(main.cloudinary.uploader, "upload",
+                        lambda *a, **k: {"secure_url": "https://res.cloudinary.com/x/video/upload/v1/tachelhit/recordings/rec_prova.webm"})
 
     hdr = {"X-User-Token": register("qui_apren_i_grava")}
     muda = client.post("/drills/", headers=hdr, json={
