@@ -1,0 +1,224 @@
+import { useEffect, useState, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  FaBook, FaBookOpen, FaChevronRight, FaFire, FaGraduationCap, FaLayerGroup, FaMicrophone,
+  FaPlay, FaRedo, FaVideo,
+} from 'react-icons/fa';
+import { api, type HomeData } from '../api';
+import { getMediaUrl } from '../config';
+
+// La casa.
+//
+// Fins avui la portada era la graella de drills: s'obria l'app i et queia a sobre una taula de
+// mil sis-centes files de sis megues, amb la resta de l'app penjada d'una barra a dalt. Les
+// parts hi eren totes i no es veia cap de les dues coses que importen: QUÈ pots fer, i QUANT
+// n'hi ha fet.
+//
+// Això és el que la casa ha de dir, en aquest ordre:
+//
+//   1. el que has de fer ara (el repàs que tens pendent, o posar-te a practicar);
+//   2. les portes, cadascuna amb el seu número de debò — no una graella d'icones boniques:
+//      «8 de 10 capítols escrits» diu alhora on ets i què falta;
+//   3. com està la biblioteca, que és el projecte mateix: frases, veus, varietats. Una frase
+//      sense veu és feina pendent, i per això el número que falta també hi surt.
+//
+// Tot plegat és UNA crida que només compta files (`/home`): obrir l'app no ha de baixar la
+// biblioteca.
+
+export default function HomePage() {
+  const navigate = useNavigate();
+  const [d, setD] = useState<HomeData | null>(null);
+  // Si els comptes no arriben, la casa segueix sent la casa: les portes hi són i no s'hi queda
+  // cap «…» penjat ni un «0% es pot escoltar» que seria mentida.
+  const [failed, setFailed] = useState(false);
+  const [due, setDue] = useState<{ due: number; new: number } | null>(null);
+  const [streak, setStreak] = useState(0);
+
+  useEffect(() => {
+    document.title = 'Tamazight';
+    api.home().then(setD).catch(() => setFailed(true));
+    api.reviewStats().then((s) => setDue({ due: s.due, new: s.new })).catch(() => {});
+    api.reviewStreak().then((s) => setStreak(s.streak_days || 0)).catch(() => {});
+  }, []);
+
+  const n = (x?: number) => (x === undefined ? '…' : x.toLocaleString('ca-ES'));
+  const pending = (due?.due || 0) + (due?.new || 0);
+  const voiced = d && d.library.sentences ? Math.round((d.library.with_voice / d.library.sentences) * 100) : 0;
+
+  return (
+    <div style={{ padding: '22px 16px 48px', maxWidth: 920, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+        <span aria-hidden style={{ width: 42, height: 42, borderRadius: 13, background: 'var(--brand-gradient)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#fff', flexShrink: 0 }}>ⵣ</span>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 27, margin: 0, lineHeight: 1.1 }}>
+          {d?.you.name ? `Azul, ${d.you.name}` : 'Tamazight'}
+        </h1>
+      </div>
+      <p style={{ color: 'var(--text-soft)', fontSize: 14.5, lineHeight: 1.6, margin: '0 0 18px', maxWidth: 620 }}>
+        Una biblioteca viva d’amazic de l’Atles central, dita per gent amb nom i amb poble. Tot el
+        que s’ensenya aquí surt d’aquí: cap frase inventada, cap veu de màquina fent-se passar per
+        ningú.
+      </p>
+
+      {/* El que toca ara. Una sola cosa, grossa: si tens repàs pendent, el repàs. */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 26 }}>
+        <button onClick={() => navigate(pending ? '/player?mode=review' : '/player')}
+                style={{ flex: '1 1 260px', display: 'inline-flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderRadius: 'var(--r-lg)', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', color: '#fff', background: pending ? 'var(--saffron)' : 'var(--brand-gradient)', boxShadow: 'var(--shadow-brand)' }}>
+          {pending ? <FaRedo size={18} /> : <FaPlay size={16} />}
+          <span style={{ flex: 1 }}>
+            <span style={{ display: 'block', fontWeight: 800, fontSize: 16 }}>
+              {pending ? `Repassa ${pending}` : 'Practica'}
+            </span>
+            <span style={{ display: 'block', fontSize: 12.5, opacity: 0.9 }}>
+              {pending
+                ? `${due?.due || 0} per repassar · ${due?.new || 0} de nou`
+                : 'Tot repassat: fes una volta per la biblioteca'}
+            </span>
+          </span>
+          {streak > 0 && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: 800, fontSize: 14 }}>
+              <FaFire size={13} />{streak}
+            </span>
+          )}
+        </button>
+
+        <button onClick={() => navigate('/veus')}
+                style={{ flex: '1 1 260px', display: 'inline-flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', color: 'var(--text)' }}>
+          <FaMicrophone size={17} style={{ color: 'var(--brand-1)' }} />
+          <span style={{ flex: 1 }}>
+            <span style={{ display: 'block', fontWeight: 800, fontSize: 16 }}>Posa-hi veu</span>
+            <span style={{ display: 'block', fontSize: 12.5, color: 'var(--text-soft)' }}>
+              {d ? `${n(d.library.wanted)} frases esperen que algú les digui` : 'Frases que esperen una veu'}
+            </span>
+          </span>
+          <FaChevronRight size={12} style={{ color: 'var(--text-muted)' }} />
+        </button>
+      </div>
+
+      {/* Les portes. Cadascuna amb el seu número: on ets i què falta, a la mateixa línia. */}
+      <h2 style={sectionTitle}>Per on vols entrar</h2>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 10, marginBottom: 28 }}>
+        <Door to="/metode" Icon={FaBookOpen} title="El Mètode" cover={d?.covers.method}
+              what="Deu capítols, de saludar a fer la compra, amb les nostres veus a dins."
+              count={d && `${n(d.method.written)} de ${n(d.method.chapters)} capítols escrits`} />
+        <Door to="/grammar" Icon={FaBook} title="La gramàtica" cover={d?.covers.grammar}
+              what="Les regles, explicades només amb frases que algú ha dit de debò."
+              count={d && `${n(d.grammar.with_lesson)} de ${n(d.grammar.units)} unitats amb lliçó`} />
+        <Door to="/tests" Icon={FaGraduationCap} title="La pràctica" cover={d?.covers.practice}
+              what="Llistes per repassar i per posar-te a prova, teves o de tothom."
+              count={d && `${n(d.practice.all)} pràctiques${d.practice.mine ? ` · ${n(d.practice.mine)} teves` : ''}`} />
+        <Door to="/drills" Icon={FaLayerGroup} title="La biblioteca" cover={d?.covers.library}
+              what="Totes les frases, una a una: qui les diu, d’on són i com sonen."
+              count={d && `${n(d.library.sentences)} frases · ${n(d.library.with_voice)} amb veu`} />
+        <Door to="/stories" Icon={FaBookOpen} title="Històries i cançons" cover={d?.covers.stories}
+              what="El que es llegeix de cap a cap: contes, cançons, converses senceres." />
+        <Door to="/video-creator" Icon={FaVideo} title="Captura" cover={d?.covers.capture}
+              what="Un vídeo entra, frases en surten: talla, escolta i decideix."
+              count={d && `${n(d.library.videos)} vídeos a la biblioteca`} />
+      </div>
+
+      {/* La biblioteca és el projecte. Que es vegi créixer, i que es vegi què li falta. */}
+      {!failed && <h2 style={sectionTitle}>La biblioteca ara mateix</h2>}
+      {!failed && <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', background: 'var(--surface)', padding: '16px 18px', marginBottom: 26 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 14 }}>
+          <Figure what="frases" value={n(d?.library.sentences)} />
+          <Figure what="amb veu" value={n(d?.library.with_voice)} tone="var(--emerald)" />
+          <Figure what="veus diferents" value={n(d?.library.speakers)} />
+          <Figure what="varietats" value={n(d?.library.varieties)} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
+          <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'var(--surface-2)', overflow: 'hidden' }}>
+            <div style={{ width: `${voiced}%`, height: 8, background: 'var(--emerald)' }} />
+          </div>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+            {voiced}% es pot escoltar
+          </span>
+        </div>
+        {d && d.library.wanted > 0 && (
+          <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: '8px 0 0', lineHeight: 1.5 }}>
+            La resta és feina de gravació, no un error: {n(d.library.wanted)} frases ja demanen
+            una veu.
+          </p>
+        )}
+      </div>}
+
+      {/* Qui ets aquí. Sense nom no es pot gravar ni guardar el repàs, i val més dir-ho que amagar-ho. */}
+      {d && !d.you.signed_in && (
+        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', background: 'var(--brand-gradient-soft)', padding: '14px 18px', marginBottom: 22 }}>
+          <strong style={{ fontSize: 15 }}>Fes-te un nom</strong>
+          <p style={{ fontSize: 13.5, color: 'var(--text-soft)', margin: '4px 0 10px', lineHeight: 1.55 }}>
+            Amb un nom pots gravar la teva veu, guardar el teu repàs i que les teves frases portin
+            qui les diu. No cal cap correu.
+          </p>
+          <button onClick={() => navigate('/signin')} style={{ padding: '9px 18px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Entra o fes-te’n un
+          </button>
+        </div>
+      )}
+      {d && d.you.signed_in && d.you.recordings > 0 && (
+        <p style={{ fontSize: 13, color: 'var(--text-soft)', margin: '0 0 22px' }}>
+          <FaMicrophone size={11} style={{ color: 'var(--brand-1)' }} /> Hi has posat la veu{' '}
+          <strong>{n(d.you.recordings)}</strong> {d.you.recordings === 1 ? 'vegada' : 'vegades'}. Gràcies.
+        </p>
+      )}
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <Small to="/library">Els vídeos</Small>
+        <Small to="/corpus">El corpus</Small>
+        <Small to="/credits">D’on surt tot</Small>
+        <Small to="/profile">El teu perfil</Small>
+        {d?.you.is_admin && <Small to="/verify">Per verificar</Small>}
+      </div>
+    </div>
+  );
+}
+
+// Una porta porta la seva imatge: les mateixes il·lustracions que la resta de l'app fa servir per
+// a una frase. No és decoració — és el que l'app ja és per dins, ensenyat a la portada.
+function Door({ to, Icon, title, what, count, cover }: {
+  to: string; Icon: typeof FaBook; title: string; what: string;
+  count?: string | null | false; cover?: string | null;
+}) {
+  const navigate = useNavigate();
+  return (
+    <button onClick={() => navigate(to)}
+            style={{ textAlign: 'left', padding: 0, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--text)', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 112 }}>
+      {cover && (
+        <img src={getMediaUrl(cover)} alt="" loading="lazy"
+             style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', display: 'block' }}
+             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+      )}
+      <span style={{ display: 'flex', flexDirection: 'column', gap: 5, padding: '12px 15px 13px', flex: 1 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <Icon size={14} style={{ color: 'var(--brand-1)' }} />
+          <span style={{ fontWeight: 800, fontSize: 15.5 }}>{title}</span>
+        </span>
+        <span style={{ fontSize: 13, color: 'var(--text-soft)', lineHeight: 1.5, flex: 1 }}>{what}</span>
+        {count && <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>{count}</span>}
+      </span>
+    </button>
+  );
+}
+
+function Figure({ what, value, tone }: { what: string; value: string; tone?: string }) {
+  return (
+    <div>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 23, fontWeight: 800, color: tone || 'var(--text)', lineHeight: 1.1 }}>{value}</div>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{what}</div>
+    </div>
+  );
+}
+
+function Small({ to, children }: { to: string; children: ReactNode }) {
+  const navigate = useNavigate();
+  return (
+    <button onClick={() => navigate(to)}
+            style={{ padding: '7px 14px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit' }}>
+      {children}
+    </button>
+  );
+}
+
+const sectionTitle: React.CSSProperties = {
+  fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em',
+  color: 'var(--text-muted)', margin: '0 0 8px',
+};

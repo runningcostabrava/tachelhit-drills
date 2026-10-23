@@ -14,6 +14,7 @@ import './App.css';
 
 // Route-level code splitting: each page loads its chunk on first visit,
 // keeping the initial bundle small (AG Grid, players, creators all split out)
+const HomePage = lazy(() => import('./components/HomePage'));
 const DrillsResponsive = lazy(() => import('./components/DrillsResponsive'));
 const TestsDashboard = lazy(() => import('./components/TestsDashboard'));
 const PracticePage = lazy(() => import('./components/PracticePage'));
@@ -138,11 +139,14 @@ function App() {
   // Immersive routes render full-screen; the nav would collide with them
   const showNav = !location.pathname.startsWith('/player') && !/^\/tests\/\d/.test(location.pathname) && location.pathname !== '/tests/sessio';
   const compactNav = useIsMobileLayout(); // phones: icon-only tabs, so none of them is hidden off-screen
-  // Five doors, and each one is something you DO: look at the library, record new material, learn,
-  // practise, lend your voice. What only an editor needs (the corpus and its exports) hangs off the
-  // Drills page's "Més" menu instead of standing in the main menu.
+  // Each one is something you DO: look at the library, record new material, learn, practise, lend
+  // your voice. What only an editor needs (the corpus and its exports) hangs off the Drills
+  // page's "Més" menu instead of standing in the main menu.
+  //
+  // The logo goes home, and home is now a page of its own: the library's grid weighs six megabytes
+  // and was no way to open the app.
   const navLinks = [
-    { to: '/', label: 'Drills', Icon: FaLayerGroup },
+    { to: '/drills', label: 'Drills', Icon: FaLayerGroup },
     { to: '/video-creator', label: 'Captura', Icon: FaVideo },
     { to: '/grammar', label: 'Gramàtica', Icon: FaBook },
     { to: '/tests', label: 'Pràctica', Icon: FaGraduationCap },
@@ -177,7 +181,7 @@ function App() {
           <div style={{ display: 'flex', gap: compactNav ? '2px' : '4px', overflowX: 'auto', flex: 1, minWidth: 0, padding: '2px 0', scrollbarWidth: 'none' }}>
             {navLinks.map(l => (
               <button key={l.to} onClick={() => navigate(l.to)} title={l.label} aria-label={l.label}
-                style={navBtn(l.to === '/' ? location.pathname === '/' : location.pathname.startsWith(l.to))}>
+                style={navBtn(location.pathname === l.to || (l.to !== '/' && location.pathname.startsWith(l.to + '/')))}>
                 <l.Icon size={compactNav ? 16 : 14} />{!compactNav && l.label}
               </button>
             ))}
@@ -191,7 +195,8 @@ function App() {
       <main style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <Suspense fallback={<RouteLoader />}>
       <Routes>
-        <Route path="/" element={<DrillsResponsive />} />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/drills" element={<DrillsResponsive />} />
         <Route path="/tests" element={<PracticePage />} />
         <Route path="/tests/sessio" element={<PracticeSession />} />
         <Route path="/tests/grup" element={<PracticeGroupPage />} />

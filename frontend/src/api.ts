@@ -161,6 +161,17 @@ export interface MethodChapterSummary {
 
 export interface MethodIndex { chapters: MethodChapterSummary[]; source: MethodSource }
 
+/** La portada. Tot són comptes: la graella de drills pesa sis megues i no pot obrir l'app. */
+export interface HomeData {
+  library: { sentences: number; with_voice: number; speakers: number; varieties: number; videos: number; wanted: number };
+  /** Una imatge per porta, de les nostres il·lustracions. Mai una imatge trobada per la xarxa. */
+  covers: { method: string | null; grammar: string | null; practice: string | null; library: string | null; stories: string | null; capture: string | null };
+  method: { chapters: number; written: number };
+  grammar: { units: number; with_lesson: number };
+  practice: { all: number; mine: number };
+  you: { signed_in: boolean; name: string | null; is_admin: boolean; recordings: number };
+}
+
 /** El text d'un capítol: l'explicació, el diàleg i el vocabulari. Viu a la base de dades, no al
  *  repositori, i per això qui administra el pot corregir sense desplegar res. */
 /** `drill_id` apareix quan algú ha volgut dir aquesta línia: llavors és una frase de la nostra
@@ -447,6 +458,8 @@ export const api = {
   /** Ask our speakers to say this sentence out loud; it goes to the top of «Veus». */
   // --- El Mètode: deu capítols fets amb la nostra biblioteca (ADR 0003) ---
   methodIndex: () => request<MethodIndex>('/method/'),
+  /** El que hi ha a casa: les portes i quant hi ha darrere de cadascuna. Només comptes. */
+  home: () => request<HomeData>('/home'),
   methodChapter: (slug: string) => request<MethodChapterData>(`/method/${encodeURIComponent(slug)}`),
   /** La frase nostra darrere una línia del capítol, creant-la el primer cop que algú la vol dir. */
   methodLineDrill: (slug: string, kind: 'example' | 'turn' | 'vocabulary', index: number, section?: string) =>

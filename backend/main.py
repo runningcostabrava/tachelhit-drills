@@ -7645,6 +7645,151 @@ def corpus_flywheel(verified_only: bool = False, format: str = "json", db: Sessi
         )
     return {"count": len(pairs), "pairs": pairs}
 
+#: Els dibuixos de l'app: els que expliquen què és cada part, no els d'una frase.
+#:
+#: Viuen a la base de dades i no al codi perquè es puguin canviar sense desplegar res — es
+#: dibuixen un dia, es miren, i el que no agrada es torna a dibuixar. Cada joc és un diccionari
+#: {nom: adreça}: «home» per a les portes de la portada, «method» per als capítols del Mètode.
+ARTWORK = ("home", "method")
+
+
+def artwork(db, which: str) -> Dict[str, str]:
+    """Els dibuixos d'un joc, o un diccionari buit si encara no n'hi ha cap."""
+    row = db.query(AppSettingModel).filter(AppSettingModel.key == f"artwork_{which}").first()
+    if not row or not (row.value or "").strip():
+        return {}
+    try:
+        got = json.loads(row.value)
+    except Exception:
+        return {}
+    return {str(k): v for k, v in got.items() if isinstance(v, str) and v.strip()} if isinstance(got, dict) else {}
+
+
+@app.get("/artwork")
+def get_artwork(db: Session = Depends(get_db)):
+    """Els dibuixos de l'app, per joc. Qualsevol els pot llegir: són el que es veu a la pantalla."""
+    return {w: artwork(db, w) for w in ARTWORK}
+
+
+@app.put("/artwork/{which}")
+def put_artwork(which: str, covers: Dict[str, Optional[str]] = Body(..., embed=True),
+                db: Session = Depends(get_db), _admin: UserModel = Depends(require_admin)):
+    """Desa els dibuixos d'un joc. Una adreça buida treu el dibuix i torna al que hi havia."""
+    if which not in ARTWORK:
+        raise HTTPException(status_code=404, detail=f"«{which}» no és cap joc de dibuixos")
+    keep = {str(k): v.strip() for k, v in covers.items() if isinstance(v, str) and v.strip()}
+    row = db.query(AppSettingModel).filter(AppSettingModel.key == f"artwork_{which}").first()
+    if row is None:
+        row = AppSettingModel(key=f"artwork_{which}")
+        db.add(row)
+    row.value = json.dumps(keep, ensure_ascii=False)
+    db.commit()
+    return {"which": which, "covers": keep}
+
+
+@app.get("/home")
+def home(db: Session = Depends(get_db),
+         user: Optional[UserModel] = Depends(get_current_user)):
+    """El que hi ha a casa: les portes de l'app i quant hi ha darrere de cadascuna.
+
+    La portada era la graella de drills, i per això l'app semblava una taula amb coses penjades
+    al voltant. Això són els NOMBRES que fan que la portada digui alguna cosa: quantes frases hi
+    ha i quantes es poden escoltar, quants capítols del Mètode estan escrits, quantes unitats
+    tenen lliçó, quantes pràctiques hi ha i quantes són teves, i quantes frases esperen una veu.
+
+    Tot són comptes: no en surt cap fila. La graella de drills pesa sis megues i no pot ser el
+    que es carrega en obrir l'app.
+    """
+    from sqlalchemy import func
+
+    from models import GrammarLesson, MethodChapter
+    mine = grammar_course.not_excluded(db.query(DrillModel), DrillModel)
+    voiced = mine.filter(DrillModel.audio_url.isnot(None), DrillModel.audio_url != "")
+    lessons = db.query(func.count(GrammarLesson.id)).filter(
+        ~GrammarLesson.id.like("sheet:%"), ~GrammarLesson.id.like("deep:%")).scalar() or 0
+
+    # Una imatge per porta, de les NOSTRES: les il·lustracions que fem per a una frase, que són
+    # les que ja es veuen a tot arreu de l'app. Mai una imatge trobada per la xarxa (vegeu
+    # `grammar.our_picture`): a la portada enganyaria igual que enganyava en una pregunta.
+    # Les il·lustracions que dibuixem per a una frase primer, i els fotogrames de vídeo després:
+    # un dibuix fet per a aquella frase diu alguna cosa, i un fotograma qualsevol no. Van en dues
+    # consultes perquè, en una de sola, els últims vuitanta drills són tot fotogrames.
+    def pictures(only_drawn: bool):
+        q = db.query(DrillModel.image_url, DrillModel.grammar, DrillModel.tag, DrillModel.source_url) \
+              .filter(DrillModel.image_url.isnot(None), DrillModel.image_url != "")
+        q = q.filter(DrillModel.image_url.ilike("%/illustrations/%") if only_drawn
+                     else ~DrillModel.image_url.ilike("%/illustrations/%"))
+        return [r for r in q.order_by(DrillModel.id.desc()).limit(40).all()
+                if grammar_course.our_picture(r[0])]
+
+    pool = pictures(True) + pictures(False)
+    taken: set = set()
+    from_video: set = set()
+
+    def cover(*wants) -> Optional[str]:
+        """La primera imatge que compleix el que la porta demana, i si no, la següent lliure.
+
+        Dues portes no ensenyen mai dos fotogrames del MATEIX vídeo: serien la mateixa cara dues
+        vegades i la portada semblaria trencada.
+        """
+        for want in (*wants, lambda r: True):
+            for r in pool:
+                if r[0] in taken or (r[3] and r[3] in from_video) or not want(r):
+                    continue
+                taken.add(r[0])
+                if r[3]:
+                    from_video.add(r[3])
+                return r[0]
+        return None
+
+    # Si hi ha dibuixos fets per a les portes (`/artwork`), manen: són els que expliquen què és
+    # cada part. Mentre no n'hi hagi, s'agafa una imatge de la biblioteca, que és millor que res.
+    drawn = artwork(db, "home")
+
+    def pick(door, *wants):
+        return drawn.get(door) or cover(*wants)
+
+    covers = {
+        "method": pick("method", lambda r: "metode" in (r[2] or "").lower()),
+        "grammar": pick("grammar", lambda r: bool(r[1])),
+        "practice": pick("practice", lambda r: bool(r[1])),
+        "library": pick("library"),
+        "stories": pick("stories", lambda r: bool(r[3])),
+        "capture": pick("capture", lambda r: bool(r[3])),
+    }
+    tests = db.query(func.count(TestModel.id)).scalar() or 0
+    return {
+        "library": {
+            "sentences": mine.count(),
+            "with_voice": voiced.count(),
+            "speakers": db.query(func.count(func.distinct(DrillModel.author))).filter(
+                DrillModel.author.isnot(None), DrillModel.author != "",
+                DrillModel.audio_url.isnot(None), DrillModel.audio_url != "").scalar() or 0,
+            "varieties": db.query(func.count(func.distinct(DrillModel.variety))).filter(
+                DrillModel.variety.isnot(None), DrillModel.variety != "").scalar() or 0,
+            "videos": db.query(func.count(func.distinct(DrillModel.source_url))).filter(
+                DrillModel.source_url.isnot(None), DrillModel.source_url != "").scalar() or 0,
+            # el que espera una veu: és la feina que hi ha, dita en un número
+            "wanted": mine.filter(DrillModel.voice_wanted.is_(True),
+                                  (DrillModel.audio_url.is_(None)) | (DrillModel.audio_url == "")).count(),
+        },
+        "covers": covers,
+        "method": {"chapters": len(method_mod.CHAPTERS),
+                   "written": db.query(func.count(MethodChapter.slug)).scalar() or 0},
+        "grammar": {"units": len(grammar_course.UNITS), "with_lesson": lessons},
+        "practice": {"all": tests,
+                     "mine": (db.query(func.count(TestModel.id)).filter(
+                         TestModel.created_by_user_id == user.id).scalar() or 0) if user else 0},
+        "you": {
+            "signed_in": bool(user),
+            "name": (user.display_name or user.username) if user else None,
+            "is_admin": bool(user and user.is_admin),
+            "recordings": (db.query(func.count(RecordingModel.id)).filter(
+                RecordingModel.user_id == user.id).scalar() or 0) if user else 0,
+        },
+    }
+
+
 @app.get("/corpus/stats")
 def corpus_stats(db: Session = Depends(get_db)):
     """Corpus health overview: sizes, media coverage, varieties, regions."""

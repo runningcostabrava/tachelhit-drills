@@ -1073,3 +1073,79 @@ def test_cap_resposta_de_l_api_es_pot_reaprofitar():
     assert after["total"] == before + 1
     assert made.json()["id"] in [x["drill"]["id"] for x in after["items"]], \
         "el que acabes de demanar ha de sortir a la llista"
+
+
+def test_la_portada_diu_que_hi_ha_a_casa_sense_baixar_la_biblioteca():
+    """La portada era la graella de drills: sis megues de taula per obrir l'app, i la resta de
+    les parts penjades d'una barra a dalt. Ara `/home` diu el que hi ha darrere de cada porta
+    —capítols escrits, unitats amb lliçó, pràctiques, frases amb veu, frases que n'esperen— i
+    tot són COMPTES: no en surt ni una fila."""
+    r = client.get("/home")
+    assert r.status_code == 200, r.text
+    h = r.json()
+    for part, keys in (("library", ("sentences", "with_voice", "speakers", "varieties", "videos", "wanted")),
+                       ("method", ("chapters", "written")),
+                       ("grammar", ("units", "with_lesson")),
+                       ("practice", ("all", "mine"))):
+        for k in keys:
+            assert isinstance(h[part][k], int), f"{part}.{k} ha de ser un compte"
+    assert h["method"]["chapters"] == 10, "el Mètode té deu capítols"
+    assert h["grammar"]["units"] > 0
+    assert set(h["you"]) == {"signed_in", "name", "is_admin", "recordings"}
+    assert isinstance(h["you"]["recordings"], int)
+
+    # amb una frase gravada, els números es mouen; i qui té nom es veu reconegut
+    hdr = {"X-User-Token": register("qui_mira_la_portada")}
+    before = client.get("/home").json()["library"]
+    client.post("/drills/", headers=hdr, json={
+        "text_catalan": "la clau", "text_tachelhit": "tasarut", "author": "Halima",
+        "variety": "Aït Mraw", "audio_url": "https://res.cloudinary.com/x/video/upload/v1/k.mp3"}).raise_for_status()
+    after = client.get("/home", headers=hdr).json()
+    assert after["library"]["sentences"] == before["sentences"] + 1
+    assert after["library"]["with_voice"] == before["with_voice"] + 1
+    assert after["you"]["signed_in"] is True and after["you"]["name"]
+
+    # i una imatge per porta, de les nostres. Una imatge trobada per la xarxa no hi entra: a la
+    # portada enganyaria igual que enganyava fent-ne una pregunta
+    client.post("/drills/", headers=hdr, json={
+        "text_catalan": "el pa", "text_tachelhit": "aɣrum",
+        "image_url": "https://thumb.wikimedia.org/trobada_per_la_xarxa.jpg"}).raise_for_status()
+    ours = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "la porta", "text_tachelhit": "tiflut",
+        "image_url": "https://res.cloudinary.com/du26ppvh0/image/upload/v1/tachelhit/illustrations/ill_1.webp"}).json()
+    covers = client.get("/home").json()["covers"]
+    assert set(covers) == {"method", "grammar", "practice", "library", "stories", "capture"}
+    assert ours["image_url"] in covers.values(), "la nostra il·lustració sí"
+    assert not any("wikimedia" in (c or "") for c in covers.values()), "la trobada per la xarxa no"
+    shown = [c for c in covers.values() if c]
+    assert len(shown) == len(set(shown)), "cap porta repeteix la imatge d'una altra"
+
+
+def test_els_dibuixos_de_lapp_es_canvien_sense_desplegar_res():
+    """Els dibuixos que expliquen què és cada part viuen a la base de dades: es dibuixen un dia,
+    es miren, i el que no agrada es torna a dibuixar sense tornar a desplegar l'app. Mentre no
+    n'hi ha cap, la portada agafa una imatge de la biblioteca, que és millor que una porta buida."""
+    import main
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("qui_dibuixa")}
+    db = main.SessionLocal()
+    try:
+        me = client.get("/users/me", headers=hdr).json()
+        db.query(main.UserModel).filter(main.UserModel.id == me["id"]).first().is_admin = True
+        db.commit()
+    finally:
+        db.close()
+
+    drawn = "https://res.cloudinary.com/du26ppvh0/image/upload/v1/tachelhit/app/porta-metode.webp"
+    r = client.put("/artwork/home", headers=hdr, json={"covers": {"method": drawn, "grammar": "  "}})
+    assert r.status_code == 200, r.text
+    assert r.json()["covers"] == {"method": drawn}, "una adreça buida no es desa"
+    assert client.get("/artwork").json()["home"] == {"method": drawn}
+
+    home = client.get("/home").json()["covers"]
+    assert home["method"] == drawn, "el dibuix de la porta mana"
+    assert home["grammar"] != drawn, "i la resta segueix agafant el que hi ha"
+
+    assert client.put("/artwork/no-existeix", headers=hdr, json={"covers": {}}).status_code == 404
+    assert client.put("/artwork/home", json={"covers": {}}).status_code in (401, 403), "només qui administra"

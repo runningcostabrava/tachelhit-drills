@@ -113,7 +113,7 @@ export default function DrillPlayerPage() {
           <h2 style={{ margin: '0 0 10px', fontSize: '22px', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>{reviewMode ? 'Res per repassar!' : 'Cap drill encara'}</h2>
           <p style={{ color: 'var(--text-soft)', margin: '0 0 24px', fontSize: '15px', lineHeight: 1.5 }}>{reviewMode ? 'Has acabat el repàs d\'avui. Torna més tard o crea drills nous.' : 'Crea alguns drills primer per fer servir el reproductor.'}</p>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate(reviewMode ? '/' : '/drills')}
             style={{
               padding: '12px 28px',
               background: 'var(--brand-1)',
