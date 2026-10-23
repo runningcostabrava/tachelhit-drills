@@ -261,6 +261,155 @@ def chapter(slug_or_n) -> Optional[Dict]:
     return next((c for c in CHAPTERS if c["n"] == n), None)
 
 
+def content_of(db, slug: str) -> Optional[Dict]:
+    """El text d'aquest capítol, si ja s'hi ha posat.
+
+    Un capítol sense text no és un error: és un capítol que encara no s'ha escrit, i la pantalla
+    ensenya igualment les frases de la biblioteca que li toquen.
+    """
+    import json
+    from models import MethodChapter
+    row = db.query(MethodChapter).filter(MethodChapter.slug == slug).first()
+    if not row:
+        return None
+    try:
+        body = json.loads(row.body)
+    except (ValueError, TypeError):
+        return None
+    body["updated_at"] = row.updated_at.isoformat() + "Z" if row.updated_at else None
+    body["updated_by"] = row.updated_by
+    return body
+
+
+def store_content(db, slug: str, body: Dict, who: Optional[str] = None) -> Dict:
+    """Desa o reemplaça el text d'un capítol. Només per a qui administra."""
+    import json
+    from datetime import datetime
+    from models import MethodChapter
+    if slug not in BY_SLUG:
+        raise ValueError(f"«{slug}» no és cap capítol del Mètode")
+    row = db.query(MethodChapter).filter(MethodChapter.slug == slug).first()
+    if not row:
+        row = MethodChapter(slug=slug)
+        db.add(row)
+    row.body = json.dumps(body, ensure_ascii=False)
+    row.updated_at = datetime.utcnow()
+    row.updated_by = who
+    db.commit()
+    return body
+
+
+#: Quantes frases nostres s'ensenyen dins d'una secció. Una secció és una idea, no un magatzem:
+#: més enllà d'això deixa d'explicar i es torna una llista.
+OURS_PER_SECTION = 4
+
+
+def content_with_ours(db, slug: str, rows: List, card) -> Optional[Dict]:
+    """El text del capítol amb les NOSTRES frases repartides per dins.
+
+    Això és el que fa que el Mètode no sigui el llibre traduït. Cada secció explica una cosa i,
+    tot seguit, ensenya com la diu la gent que coneixem: amb la seva veu, la seva imatge, el seu
+    poble i la seva varietat. El llibre hi posa el recorregut; la biblioteca, les persones.
+
+    Una secció diu de quina unitat de gramàtica va (`unit`) i d'allà surten les seves frases. Les
+    que tenen VEU i IMATGE van primer, perquè una targeta que es pot escoltar i mirar ensenya
+    més que una línia de text. Si una secció no diu cap unitat, no se li posa res: val més una
+    secció sense frases que una secció amb frases que no hi fan res.
+    """
+    body = content_of(db, slug)
+    if not body:
+        return None
+    used = set()
+    for s in (body.get("sections") or []):
+        unit = s.get("unit")
+        if not unit:
+            continue
+        here = [d for d in rows if unit in grammar.parse(d.grammar)]
+        here.sort(key=lambda d: (0 if (d.audio_url and d.image_url) else 1 if d.audio_url else 2,
+                                 0 if grammar.our_speaker(d) else 1, d.id))
+        picked = [d for d in here if d.id not in used][:OURS_PER_SECTION]
+        used.update(d.id for d in picked)
+        s["ours_drills"] = [card(d) for d in picked]
+        s["ours_total"] = len(here)
+    return body
+
+
+#: Les tres menes de línia d'un capítol que es poden dir en veu alta, i on viuen dins del cos.
+LINE_KINDS = ("example", "turn", "vocabulary")
+
+
+def line_at(body: Dict, kind: str, section: Optional[str], index: int) -> Optional[Dict]:
+    """La línia d'un capítol, pel seu lloc. Retorna el diccionari mateix, per poder-hi escriure."""
+    if kind == "example":
+        for s in (body.get("sections") or []):
+            if s.get("id") == section:
+                items = s.get("examples") or []
+                return items[index] if 0 <= index < len(items) else None
+        return None
+    if kind == "turn":
+        items = ((body.get("dialogue") or {}).get("turns")) or []
+        return items[index] if 0 <= index < len(items) else None
+    if kind == "vocabulary":
+        items = body.get("vocabulary") or []
+        return items[index] if 0 <= index < len(items) else None
+    return None
+
+
+def drill_for_line(db, slug: str, kind: str, section: Optional[str], index: int, user) -> Dict:
+    """La frase nostra que hi ha darrere una línia del capítol, creant-la el primer cop.
+
+    El Mètode no estarà acabat fins que les seves línies es puguin **escoltar**, i una línia del
+    manual no és encara una frase de la biblioteca: és text dins del capítol. Per poder-la gravar
+    ha de ser un drill.
+
+    Això tanca el cercle: **gravar una línia del llibre la converteix en una frase nostra.** El
+    llibre hi posa l'amazic i el català; qui grava hi posa la veu, la seva manera d'escriure-ho,
+    la seva varietat i el seu poble. El capítol es queda amb el número de la frase, de manera que
+    la segona vegada s'hi afegeix una veu en comptes de crear-ne una altra.
+    """
+    import json
+    from models import Drill as DrillModel, MethodChapter
+    row = db.query(MethodChapter).filter(MethodChapter.slug == slug).first()
+    if not row:
+        raise ValueError("aquest capítol encara no té text")
+    body = json.loads(row.body)
+    line = line_at(body, kind, section, index)
+    if line is None:
+        raise ValueError("aquí no hi ha cap línia")
+
+    existing = line.get("drill_id")
+    if existing:
+        d = db.query(DrillModel).filter(DrillModel.id == existing).first()
+        if d:
+            return {"drill_id": d.id, "created": False}
+
+    shi = (line.get("shi") or "").strip()
+    ca = (line.get("ca") or "").strip()
+    if not shi:
+        raise ValueError("aquesta línia no té text amazic per dir")
+
+    c = BY_SLUG.get(slug) or {}
+    d = DrillModel(
+        text_tachelhit=shi, text_catalan=ca or None,
+        # D'on surt, dit a la cara: ve del manual, que és del Souss, i encara no l'ha dit ningú.
+        tag=f"metode-{slug}, del llibre",
+        author=None, variety=None,
+        grammar=", ".join(c.get("grammar") or []) or None, grammar_source="owner",
+        topics=", ".join(c.get("topics") or []) or None, topics_source="owner",
+        voice_wanted=True,
+        voice_wanted_by=(getattr(user, "display_name", None) or getattr(user, "username", None)),
+        created_by_user_id=getattr(user, "id", None),
+    )
+    db.add(d)
+    db.commit()
+    db.refresh(d)
+
+    line["drill_id"] = d.id
+    row.body = json.dumps(body, ensure_ascii=False)
+    db.commit()
+    return {"drill_id": d.id, "created": True}
+
+
 def sentences_for(db, slug: str) -> List:
     """Les frases NOSTRES que fan el que aquest capítol demana.
 

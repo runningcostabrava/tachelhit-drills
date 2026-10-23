@@ -6497,6 +6497,7 @@ def method_index(db: Session = Depends(get_db),
         rows = method_mod.sentences_for(db, c["slug"])
         out.append({**c,
                     **method_mod.readiness(c, rows),
+                    "written": method_mod.content_of(db, c["slug"]) is not None,
                     "sentences": len(rows),
                     "with_voice": sum(1 for d in rows if d.audio_url),
                     "varieties": sorted({(d.variety or "").strip() for d in rows if (d.variety or "").strip()})})
@@ -6536,6 +6537,12 @@ def method_chapter(slug: str, db: Session = Depends(get_db),
     return {
         "n": c["n"], "slug": c["slug"], "name": c["name"], "title": c["title"],
         "about": c["about"], "functions": c["functions"], "roles": c["roles"],
+        # El text del capítol, amb les NOSTRES frases repartides per dins.
+        #
+        # No és el llibre traduït i, a part, un munt de frases nostres al final: cada secció
+        # ensenya el que explica i tot seguit com ho diu la gent que coneixem, amb la seva veu i
+        # la seva imatge. El llibre hi posa el recorregut; la biblioteca, les persones.
+        "content": method_mod.content_with_ours(db, c["slug"], rows, card),
         "topics": [{"slug": t, "label": labels.get(t, t)} for t in c["topics"]],
         "sections": sections,
         "also": [card(d) for d in rest[:12]],
@@ -6545,6 +6552,52 @@ def method_chapter(slug: str, db: Session = Depends(get_db),
         "missing": method_mod.what_is_missing(c, rows),
         "source": method_mod.SOURCE,
     }
+
+
+@app.post("/method/{slug}/line")
+def method_line_drill(slug: str,
+                      kind: str = Body(..., embed=True),
+                      index: int = Body(..., embed=True),
+                      section: Optional[str] = Body(None, embed=True),
+                      db: Session = Depends(get_db),
+                      user: UserModel = Depends(require_user)):
+    """La frase nostra que hi ha darrere una línia d'un capítol, creant-la el primer cop.
+
+    El Mètode no estarà acabat fins que les seves línies es puguin escoltar, i una línia del
+    manual no és encara una frase de la biblioteca: és text dins del capítol. Perquè algú la pugui
+    gravar, ha de ser un drill.
+
+    Això no és paperassa: **gravar una línia del llibre la converteix en una frase nostra**, i
+    aquell és el camí pel qual un capítol adaptat del Souss es torna una recollida de l'Atles.
+    Qualsevol que tingui nom pot fer-ho; el que no pot fer qualsevol és canviar el TEXT del
+    capítol, que segueix sent de qui administra.
+    """
+    if kind not in method_mod.LINE_KINDS:
+        raise HTTPException(status_code=400, detail=f"kind ha de ser un de {method_mod.LINE_KINDS}")
+    if not method_mod.chapter(slug):
+        raise HTTPException(status_code=404, detail="Aquest capítol no existeix")
+    try:
+        out = method_mod.drill_for_line(db, slug, kind, section, int(index), user)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    d = db.query(DrillModel).filter(DrillModel.id == out["drill_id"]).first()
+    return {**out, "drill": Drill.model_validate(d, from_attributes=True)}
+
+
+@app.put("/method/{slug}/content")
+def put_method_content(slug: str, body: dict = Body(...),
+                       db: Session = Depends(get_db),
+                       user: UserModel = Depends(require_admin)):
+    """Desa el text d'un capítol: l'explicació, el diàleg i el vocabulari.
+
+    Viu a la base de dades i no al repositori (vegeu `models.MethodChapter`), i per això es
+    corregeix des d'aquí: qui administra pot arreglar una frase sense desplegar res.
+    """
+    try:
+        saved = method_mod.store_content(db, slug, body, who=(user.display_name or user.username))
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return {"slug": slug, "ok": True, "sections": len(saved.get("sections") or [])}
 
 
 @app.get("/practice/collections")

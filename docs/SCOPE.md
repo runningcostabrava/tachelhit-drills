@@ -55,10 +55,11 @@ No és un diccionari, ni un traductor automàtic, ni un curs genèric d'«amazic
   que diu la Halima o en Driss: porten una persona que el projecte coneix, amb el seu poble i la
   seva varietat. Són 69 frases de 3.390, i sense aquesta regla no es veurien mai.
 - **El curs cita només** la nostra biblioteca i el compendi d'amazic.cat.
-- **El Mètode segueix el manual d'El Mountassir tan a prop com calgui**: explicacions,
-  estructura, diàlegs i lèxic. El que es canvia és el que la **nostra varietat** diu d'una altra
-  manera — el manual és del Souss i nosaltres ensenyem Atles central, i una forma correcta allà
-  pot ser falsa aquí. Això es mira frase per frase; la resta es queda com és
+- **El Mètode és el manual d'El Mountassir, enriquit amb els nostres drills i les nostres
+  explicacions**: el llibre es tradueix i es fa servir, i hi afegim la frase nostra al costat de
+  cada exemple, el que la nostra varietat diu d'una altra manera, i les nostres veus. El manual
+  és del Souss i nosaltres ensenyem Atles central, i una forma correcta allà pot ser falsa aquí:
+  es mira frase per frase. **I es dona crèdit sempre**, a cada capítol
   ([ADR 0004](adr/0004-el-metode-parteix-del-llibre.md), que substitueix
   l'[ADR 0003](adr/0003-el-metode-pren-el-pla-mai-les-paraules.md)).
 - **La veu és sempre nostra.** El llibre pot donar el text; qui el diu és sempre una persona que

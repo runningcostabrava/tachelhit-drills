@@ -28,14 +28,27 @@ explicacions no és un curs: és una llista.
 
 ## La decisió
 
-**El Mètode segueix el llibre tan a prop com calgui.** Explicacions, estructura, diàlegs i
-lèxic. No cal dir-ho amb altres paraules per dir-ho d'una altra manera: si la manera del llibre
-és la bona, es fa servir.
+**El nostre Mètode és el llibre, enriquit amb els nostres drills i les nostres explicacions.**
+(Precisió de l'amo, 23-10-2026.)
 
-L'adaptació no és una obligació d'estil, és una qüestió de llengua: **es canvia el que la nostra
-varietat diu d'una altra manera**, i prou. El manual és tachelhit del Souss i nosaltres ensenyem
-Atles central, així que una forma que allà és correcta aquí pot ser senzillament falsa. Això
-s'ha de mirar frase per frase; el que no demana cap canvi es queda com és.
+Això vol dir, sense voltes: **el llibre es tradueix i es fa servir.** Les explicacions es
+tradueixen al català, els diàlegs es porten, el lèxic es porta. No es reescriu per reescriure.
+
+El que hi afegim —i que és el que el fa nostre— és:
+
+- **els nostres drills**: al costat de cada exemple del llibre, la frase nostra que diu el mateix,
+  amb la veu de qui la diu, el seu poble i la seva varietat;
+- **les nostres explicacions**: on la nostra varietat funciona d'una altra manera, o on el
+  compendi d'amazic.cat ho diu millor, o on falta alguna cosa que un catalanoparlant necessita i
+  un italià no;
+- **les nostres veus**, que no són del llibre ni poden ser-ho.
+
+L'adaptació és una qüestió de llengua, no d'estil: **es canvia el que la nostra varietat diu
+d'una altra manera**. El manual és tachelhit del Souss i nosaltres ensenyem Atles central, així
+que una forma correcta allà pot ser falsa aquí. Es mira frase per frase; la resta es queda com és.
+
+**I es dona crèdit, sempre.** Cada capítol porta d'on surt. Això no és una formalitat: és la
+condició.
 
 Tres coses que **no** canvien:
 
@@ -47,7 +60,8 @@ Tres coses que **no** canvien:
    nostra i diu la mateixa cosa d'una altra manera, s'ensenyen de costat.
 3. **La citació viatja amb cada capítol**, i diu **«Basat en…»** i res més. A la pantalla s'hi
    diu d'on ve el material, no quins permisos tenim: què ens deixa fer l'autor és cosa nostra i
-   d'aquest registre, no de la targeta d'un capítol. (Decisió de l'amo, el mateix dia.)
+   d'aquest registre, no de la targeta d'un capítol. (Decisió de l'amo, el mateix dia.) Que el
+   crèdit hi sigui **no és negociable**: és la condició amb què es fa tot això.
 
 ## Què en ve al darrere
 
