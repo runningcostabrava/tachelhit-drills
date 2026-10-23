@@ -5,11 +5,12 @@ import axios from 'axios';
 import { API_BASE } from './config';
 import { api } from './api';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaBookOpen, FaMicrophone } from 'react-icons/fa';
+import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaBookOpen, FaMicrophone, FaInfo } from 'react-icons/fa';
 import { syncManager } from './services/OfflineSyncManager';
 import ToastHost from './components/ToastHost';
 import StaleBuildBanner from './components/StaleBuildBanner';
 import AiCopilot from './components/AiCopilot';
+import AboutPanel from './components/AboutPanel';
 import './App.css';
 
 // Route-level code splitting: each page loads its chunk on first visit,
@@ -97,6 +98,7 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const [aiOpen, setAiOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   // Offline sync bootstrap. All queue processing lives in OfflineSyncManager;
   // this effect just pushes pending actions and refreshes the local caches on
@@ -166,6 +168,7 @@ function App() {
       <ToastHost />
       <StaleBuildBanner />
       {aiOpen && <AiCopilot onClose={() => setAiOpen(false)} />}
+      {aboutOpen && <AboutPanel onClose={() => setAboutOpen(false)} />}
 
       {showNav && (
         <nav style={{
@@ -187,6 +190,11 @@ function App() {
             ))}
           </div>
           <ReviewNavButton compact={compactNav} />
+          {/* Per què existeix això: al menú, que és d'on es pot arribar des de qualsevol pantalla */}
+          <button onClick={() => setAboutOpen(true)} title="Per què existeix això" aria-label="Per què existeix això"
+                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: compactNav ? 33 : 35, height: compactNav ? 33 : 35, borderRadius: 'var(--r-pill)', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)' }}>
+            <FaInfo size={13} />
+          </button>
           <button onClick={() => setAiOpen(v => !v)} title="Copilot" aria-label="Copilot" style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: compactNav ? '9px 10px' : '9px 12px', borderRadius: 'var(--r-pill)', cursor: 'pointer', border: 'none', background: aiOpen ? 'var(--brand-1)' : 'var(--brand-gradient)', color: '#fff' }}><FaComments size={15} /></button>
           <button onClick={() => navigate('/profile')} title="Perfil" aria-label="Perfil" style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: compactNav ? '9px 10px' : '9px 12px', borderRadius: 'var(--r-pill)', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)' }}><FaUser size={15} /></button>
         </nav>
