@@ -1225,3 +1225,36 @@ def test_les_dues_llistes_que_faltaven_a_posa_hi_veu():
 
     for drill_id in (muda["id"], sense_text["id"]):
         client.delete(f"/drills/{drill_id}", headers=hdr)
+
+
+def test_la_primera_veu_mana_pero_no_la_de_qui_apren():
+    """La primera veu d'una frase muda passa a ser la seva veu principal, que és el que l'amo
+    va demanar. Amb una condició que han posat els auditors: la d'algú que APRÈN, no.
+
+    `drill.audio_url` és el que sona al Mètode, el que sona a la pràctica i el que la comparació
+    de pronunciació fa servir de referència per puntuar tothom. Una primera presa d'algú que
+    aprèn es convertiria en l'objectiu que els altres han d'encertar. La gravació hi és igual i
+    s'escolta igual; el que no fa és manar."""
+    import io
+
+    hdr = {"X-User-Token": register("qui_apren_i_grava")}
+    muda = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "la clau", "text_tachelhit": "tasarut"}).json()
+    client.put(f"/drills/{muda['id']}", headers=hdr, json={"audio_url": None, "audio_tts_shi_url": None})
+
+    fitxer = ("veu.webm", io.BytesIO(b"RIFF....WEBM" + b"0" * 2048), "audio/webm")
+    r = client.post(f"/drills/{muda['id']}/recordings", headers=hdr,
+                    files={"file": fitxer}, data={"is_native": "false"})
+    assert r.status_code == 200, r.text
+    after = client.get(f"/drills/{muda['id']}").json()
+    assert not (after.get("audio_url") or ""), "la veu de qui aprèn no passa a ser la principal"
+    preses = client.get(f"/drills/{muda['id']}/recordings").json()
+    assert len(preses) == 1 and preses[0]["is_native"] is False, "però la gravació hi és i s'escolta"
+
+    fitxer2 = ("veu2.webm", io.BytesIO(b"RIFF....WEBM" + b"0" * 2048), "audio/webm")
+    client.post(f"/drills/{muda['id']}/recordings", headers=hdr,
+                files={"file": fitxer2}, data={"is_native": "true"})
+    after = client.get(f"/drills/{muda['id']}").json()
+    assert (after.get("audio_url") or ""), "la d'un parlant sí"
+
+    client.delete(f"/drills/{muda['id']}", headers=hdr)
