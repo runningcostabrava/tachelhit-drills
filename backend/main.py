@@ -6634,7 +6634,11 @@ def _library_mark(db, slug: str) -> tuple:
     # i el dibuix del capítol, que també és part del que es veu: sense això, canviar-lo no es
     # notava fins que es movia una frase (ho va ensenyar una prova que va fallar sola)
     art = db.query(AppSettingModel.updated_at).filter(AppSettingModel.key == "artwork_method").first()
-    return (n, str(last), str(row[0]) if row else None, str(art[0]) if art else None)
+    # i les pràctiques: la sortida del capítol apareix quan se'n crea una, no quan
+    # es toca una frase
+    pn, plast = db.query(func.count(TestModel.id), func.max(TestModel.updated_at)).one()
+    return (n, str(last), str(row[0]) if row else None, str(art[0]) if art else None,
+            pn, str(plast))
 
 
 @app.get("/method/{slug}")
@@ -6701,6 +6705,12 @@ def method_chapter(slug: str, db: Session = Depends(get_db),
         **method_mod.readiness(c, rows),
         "missing": method_mod.what_is_missing(c, rows),
         "source": method_mod.SOURCE,
+        # La sortida del capítol: la pràctica que en comprova les funcions. Fins ara un capítol
+        # s'acabava i no tornava mai; una pràctica, en canvi, puntua cada frase i el repàs
+        # espaiat les fa tornar soles.
+        "practice_test": next(({"id": t.id, "title": t.title, "steps": len(practice_steps.steps_of(db, t.id))}
+                          for t in db.query(TestModel).filter(
+                              TestModel.title.ilike(f"%Capítol {c['n']} ·%")).all()), None),
     }
     _CHAPTER_CACHE[slug] = (mark, out)
     return out

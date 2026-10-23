@@ -581,3 +581,43 @@ def test_corregir_el_capitol_no_desvincula_les_veus():
     assert back.get("drill_id") == made["drill_id"], "i la veu no s'ha desvinculat"
 
     client.delete(f"/drills/{made['drill_id']}", headers=hdr)
+
+
+def test_el_capitol_porta_a_la_seva_practica():
+    """La sortida del capítol.
+
+    Un capítol s'acabava i no tornava mai: es llegia i prou. La pràctica és el que ho arregla
+    —puntua cada frase i el repàs espaiat les fa tornar soles—, i fins ara no hi havia cap
+    manera d'arribar-hi des del capítol: s'havia de saber que existia i buscar-la a «Pràctica».
+
+    El capítol la troba pel seu nom («Capítol 4 · …») i diu quants passos té. I l'ha de trobar
+    de seguida: la pàgina del capítol es serveix d'una memòria que fins ara només es renovava
+    quan es tocava una frase, i una pràctica nova no és una frase (el capítol l'hauria ensenyada
+    l'endemà).
+    """
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("chapter_exit")}
+    abans = client.get("/method/la-botiga").json()
+    assert abans.get("practice_test") is None, "cap pràctica encara"
+
+    test = client.post("/tests/", headers=hdr, json={
+        "title": "Capítol 4 · prova d'aquesta prova",
+        "description": "d'usar i llençar", "question_type": "audio",
+        "hint_level": "none", "hint_percentage": 30, "hint_tries_before_reveal": 3,
+        "passing_score": 70, "drill_ids": "", "visibility": "shared"}).json()
+    try:
+        steps = [{"kind": "note", "payload": {"heading": "Hola", "text": "Dues passes."}},
+                 {"kind": "note", "payload": {"heading": "Adeu", "text": "I ja està."}}]
+        assert client.put(f"/tests/{test['id']}/steps", headers=hdr,
+                          json={"steps": steps}).status_code == 200
+
+        out = client.get("/method/la-botiga").json()
+        assert out["practice_test"], "el capítol ha de portar a la pràctica tot seguit"
+        assert out["practice_test"]["id"] == test["id"]
+        assert out["practice_test"]["steps"] == 2, "i dir quants passos té"
+    finally:
+        client.delete(f"/tests/{test['id']}", headers=hdr)
+
+    assert client.get("/method/la-botiga").json().get("practice_test") is None, \
+        "i deixa de portar-hi quan la pràctica ja no hi és"

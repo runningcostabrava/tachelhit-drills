@@ -242,6 +242,8 @@ export interface MethodChapterData {
   also: MethodSentence[];
   sentences: number; with_voice: number;
   sections_ready: number; sections_total: number;
+  /** La pràctica que comprova les funcions del capítol, si se n'ha fet cap. */
+  practice_test?: { id: number; title: string; steps: number } | null;
   missing: {
     thin: { slug: string; title: string; sentences: number; with_voice: number; nowhere: boolean }[];
     voiceless: { id: number; text_tachelhit: string | null; text_catalan: string | null }[];
