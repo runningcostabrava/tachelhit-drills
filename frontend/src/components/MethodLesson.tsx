@@ -394,8 +394,12 @@ export default function MethodLesson({
   (body.vocabulary || []).forEach((v, k) => push(`vocabulary:${k}`, v.audio_url));
   (body.sections || []).forEach((sec) => {
     (sec.examples || []).forEach((e, k) => push(`example:${sec.id}:${k}`, e.audio_url));
-    (sec.ours_drills || []).forEach((d) => push(`ours:${d.id}`, d.audio_url));
   });
+  // Les frases de la biblioteca NO entren al play del capítol, encara que siguin les que tenen
+  // més veu. Un auditor pedagògic ho va comptar: de 24 talls que sonaven, 20 eren frases d'una
+  // altra cosa —«La vaig agafar a casa del reparador de bicicletes», «Em vaig penedir»— i del
+  // capítol se'n sentien quatre paraules soltes. El botó deia «escolta el capítol» i feia sonar
+  // una altra cosa. Cada targeta nostra conserva el seu play, que és on té sentit.
 
   const [sounding, setSounding] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -449,8 +453,8 @@ export default function MethodLesson({
         </button>
         <span style={{ fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.5, flex: '1 1 240px' }}>
           {tracks.length
-            ? `${tracks.length} ${tracks.length === 1 ? 'frase es pot escoltar' : 'frases es poden escoltar'}. La resta espera una veu: prem el micròfon de qualsevol línia.`
-            : 'Encara no hi ha cap línia gravada. Prem el micròfon de qualsevol línia i la primera serà la teva.'}
+            ? `${tracks.length} ${tracks.length === 1 ? 'línia del capítol es pot escoltar' : 'línies del capítol es poden escoltar'}. La resta espera una veu: prem el micròfon de qualsevol línia i la primera serà la teva.`
+            : 'Cap línia del capítol no s’ha gravat encara. Prem el micròfon de qualsevol línia i la primera serà la teva.'}
         </span>
       </div>
 
@@ -628,9 +632,7 @@ export default function MethodLesson({
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 8 }}>
                 {s.ours_drills.map((d) => (
-                  <div key={d.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden',
-                                           background: sounding === `ours:${d.id}` ? 'var(--brand-gradient-soft)' : 'var(--surface)',
-                                           borderColor: sounding === `ours:${d.id}` ? 'var(--brand-1)' : 'var(--border)' }}>
+                  <div key={d.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', background: 'var(--surface)' }}>
                     {d.image_url && (
                       <img src={getMediaUrl(d.image_url)} alt="" loading="lazy"
                            style={{ width: '100%', aspectRatio: '16 / 10', objectFit: 'cover', display: 'block' }}
@@ -657,7 +659,7 @@ export default function MethodLesson({
                           )}
                         </span>
                         {d.audio_url && (
-                          <button onClick={() => playOne(`ours:${d.id}`)}
+                          <button onClick={() => new Audio(getMediaUrl(d.audio_url as string)).play().catch(() => {})}
                                   aria-label="Escolta-la" title="Escolta-la"
                                   style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', background: 'var(--brand-gradient)', color: '#fff', cursor: 'pointer', flexShrink: 0 }}>
                             <FaPlay size={10} />
