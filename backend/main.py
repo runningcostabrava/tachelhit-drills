@@ -6492,10 +6492,13 @@ def method_index(db: Session = Depends(get_db),
     el capítol demana. Un capítol curt vol dir que d'allò encara no n'hem gravat, i és l'argument
     per anar-hi. Vegeu ADR 0003: del manual se'n pren el pla, mai el text.
     """
+    drawn = artwork(db, "method")
     out = []
     for c in method_mod.index():
         rows = method_mod.sentences_for(db, c["slug"])
         out.append({**c,
+                    # el dibuix del capítol: diu de què va abans de llegir-ne una paraula
+                    "cover": drawn.get(c["slug"]),
                     **method_mod.readiness(c, rows),
                     "written": method_mod.content_of(db, c["slug"]) is not None,
                     "sentences": len(rows),
@@ -6541,6 +6544,7 @@ def method_chapter(slug: str, db: Session = Depends(get_db),
     return {
         "n": c["n"], "slug": c["slug"], "name": c["name"], "title": c["title"],
         "about": c["about"], "functions": c["functions"], "roles": c["roles"],
+        "cover": artwork(db, "method").get(c["slug"]),
         # El text del capítol, amb les NOSTRES frases repartides per dins.
         #
         # No és el llibre traduït i, a part, un munt de frases nostres al final: cada secció
