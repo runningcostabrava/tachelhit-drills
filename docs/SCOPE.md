@@ -39,6 +39,10 @@ No és un diccionari, ni un traductor automàtic, ni un curs genèric d'«amazic
 - **Res de veus sintètiques en amazic al curs.** I el so sintètic en català no es fa passar mai
   per amazic: si una frase no té veu amazic, no sona.
 - **La varietat importa.** Cada frase porta d'on és; no es barregen varietats sense dir-ho.
+- **Una línia cantada surt del vídeo.** La lletra es pren del text sobreimprès o dels subtítols, i
+  d'enlloc més: el transcriptor no sap cantar, i quan s'hi posa torna frases que semblen frases i
+  no ho són (decisió de l'amo, 23-10-2026). Una cançó sense lletra al vídeo es queda sense text
+  fins que algú la hi posi a mà. `POST /drills/{id}/retranscribe` ho refusa.
 - **Una veu diu qui és.** Una gravació de qui aprèn hi té lloc, però queda marcada: no pot passar
   per model de pronúncia.
 - **Material exclòs**: res gravat en càmera de «Tamazight For All»; els drills de Beni Mellal van

@@ -77,3 +77,32 @@ def test_transcribe_returns_latin_and_tifinagh_together(monkeypatch):
     assert r.status_code == 200 and r.json()["corrected_transcription"] == "mana lun tja ttfḥti · ⵎⴰⵏⴰ ⵍⵓⵏ ⵜⵊⴰ ⵜⵜⴼⵃⵜⵉ"
     monkeypatch.setattr(main, "_transcribe_short_clip_with_gemini", lambda *a, **k: {"latin": "ⵃⵓ", "tifinagh": "ⵃⵓ"})
     assert client.post("/transcribe/", json={"audio_url": "https://example.test/a.webm"}).status_code == 502
+
+
+def test_el_transcriptor_no_llegeix_les_linies_cantades():
+    """A sung line's words come from the video, never from the transcriber (ruling 2026-10-23).
+
+    Our transcriber cannot do singing, and it does not fail politely: on the 92 sung cuts of the
+    blind-reading audit it answered with things that read like sentences and were not, and on two
+    of them it looped on one word fifty times. Those drafts go to `text_tachelhit_suggested`,
+    which is the verify queue -- so the machine was asking a person to judge noise, ninety-odd
+    times. A sung drill is only used when its text can be had from the video itself: the burned-in
+    lyrics or a subtitle track.
+
+    The refusal happens before the recording is fetched, so no transcriber is mocked here: not
+    attempting the reading is the whole point."""
+    from test_api import client
+
+    sung = client.post("/drills/", json={
+        "text_catalan": "el meu cor", "text_tachelhit": "ul inu",
+        "variety": "tzm", "topics": "canco",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/song.mp3"}).json()
+    r = client.post(f"/drills/{sung['id']}/retranscribe", json={"variety": "tzm"})
+    assert r.status_code == 400, r.text
+    detail = r.json()["detail"]
+    assert "cantada" in detail and ("subt\u00edtols" in detail or "sobreimpr\u00e8s" in detail), detail
+
+    # and the draft is left exactly as it was: empty
+    back = client.get(f"/drills/{sung['id']}").json()
+    assert not (back.get("text_tachelhit_suggested") or "").strip()
+    assert back["text_tachelhit"] == "ul inu", "el text del parlant no es toca mai"

@@ -8533,6 +8533,16 @@ async def retranscribe_drill(drill_id: int, variety: Optional[str] = Body(None, 
     source = drill.audio_url or drill.video_url
     if not source:
         raise HTTPException(status_code=400, detail="Aquest drill no té cap gravació")
+    # Singing is not speech, and our transcriber does not pretend otherwise gracefully: on the
+    # sung cuts it answers with something that reads like a sentence and is not one, and twice it
+    # looped on a single word fifty times. A draft like that lands in the verify queue asking a
+    # person to judge noise. A sung line's words come from the video -- burned-in lyrics or a
+    # subtitle track -- and from nowhere else (owner's ruling, 2026-10-23).
+    if "canco" in topics_catalog.parse(getattr(drill, "topics", None)):
+        raise HTTPException(
+            status_code=400,
+            detail="Això és una línia cantada, i el transcriptor no sap cantar. La lletra ha de "
+                   "sortir del vídeo mateix: el text sobreimprès o els subtítols.")
     v = (variety or drill.variety or "").strip().lower()
     if not dialect.profile(v):
         raise HTTPException(status_code=400, detail="Cal una varietat coneguda (shi, tzm, tdl, zgh, rif, kab) per triar el transcriptor")
