@@ -49,6 +49,10 @@ export default function PracticePage() {
   const [col, setCol] = useState<PracticeCollections | null>(null);
   // Throwing a practice away asks twice, in the button itself: a browser dialog stops the whole
   // page and hides WHICH one you are about to lose.
+  // La graella ensenyava dotze pràctiques i amagava la resta sense dir-ho: les que tenies de
+  // més senzillament no existien.
+  const PER_PAGE = 12;
+  const [showing, setShowing] = useState(PER_PAGE);
   const [confirming, setConfirming] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
   const removePractice = async (id: number, title: string) => {
@@ -101,7 +105,7 @@ export default function PracticePage() {
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 12 }}>
-            {col.lists.slice(0, 12).map((t) => (
+            {col.lists.slice(0, showing).map((t) => (
               <div key={t.id} style={{ ...cardStyle, padding: 0, overflow: 'hidden', cursor: 'default', gap: 0 }}>
                 {/* the picture of its first illustrated sentence, so a practice is something you recognise */}
                 <button
@@ -134,6 +138,16 @@ export default function PracticePage() {
                 </div>
               </div>
             ))}
+          </div>
+          {col.lists.length > showing && (
+            <button
+              onClick={() => setShowing((n) => n + PER_PAGE)}
+              style={{ marginTop: 12, padding: '9px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--brand-1)', fontWeight: 800, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', width: '100%' }}
+            >
+              Ensenya&apos;n més ({col.lists.length - showing} {col.lists.length - showing === 1 ? 'pràctica' : 'pràctiques'} més)
+            </button>
+          )}
+          <div>
             {col.lists.length === 0 && (
               <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                 Encara no en tens cap. «Nova pràctica» obre el taller: hi poses les frases que vulguis, en l’ordre que vulguis, i cada pas pot demanar una cosa diferent.
