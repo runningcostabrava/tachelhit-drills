@@ -79,27 +79,100 @@ export default function StepSession({ testId, title, onExit }: Props) {
     if (drill && (step.kind === 'listen_pick' || step.kind === 'write_heard')) play(1);
   }, [i, step?.kind, drill?.id]);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Three Catalan meanings, one of them true: the other two come from this practice, so they are
-  // plausible instead of absurd.
+  // Meanings to choose between, when the practice alone cannot give enough.
+  //
+  // The distractors used to come ONLY from this practice, so a two-sentence practice offered two
+  // buttons and a one-sentence practice offered one — a choice that is not a choice. The
+  // practice still comes first (its sentences are the material being learned, so they are the
+  // most honest wrong answers); the library fills in, and only from the same subject or the same
+  // grammar unit, never at random. One request per session.
+  const [pool, setPool] = useState<string[]>([]);
+  useEffect(() => {
+    if (!steps) return;
+    const mine = steps.map((x) => (x.drill_id ? drills[x.drill_id] : undefined)).filter(Boolean) as Drill[];
+    const enough = new Set(mine.map((d) => (d.text_catalan || '').trim()).filter(Boolean)).size;
+    if (enough >= 4 || !mine.length) return;
+    const count = (pick: (d: Drill) => string | null | undefined) => {
+      const c: Record<string, number> = {};
+      mine.forEach((d) => (pick(d) || '').split(',').map((x) => x.trim()).filter(Boolean)
+        .forEach((k) => { c[k] = (c[k] || 0) + 1; }));
+      return Object.entries(c).sort((a, b) => b[1] - a[1])[0]?.[0];
+    };
+    const topic = count((d) => d.topics);
+    const unit = topic ? null : count((d) => d.grammar);
+    if (!topic && !unit) return;
+    const q = topic ? `topic=${encodeURIComponent(topic)}` : `unit=${encodeURIComponent(unit as string)}`;
+    api.practiceSession(`${q}&with_voice=0&limit=40`)
+      .then((r) => setPool(r.drills.map((d) => (d.text_catalan || '').trim()).filter(Boolean)))
+      .catch(() => {});
+  }, [steps, drills]);  // eslint-disable-line react-hooks/exhaustive-deps
+
   const options = useMemo(() => {
     if (!steps || !drill || step?.kind !== 'listen_pick') return [];
-    const others = steps
-      .map((s) => (s.drill_id ? drills[s.drill_id] : undefined))
+    const truth = (drill.text_catalan || '').trim();
+    const fromHere = steps
+      .map((x) => (x.drill_id ? drills[x.drill_id] : undefined))
       .filter((d): d is Drill => !!d && d.id !== drill.id && !!(d.text_catalan || '').trim())
-      .map((d) => d.text_catalan as string);
-    const picked = Array.from(new Set(others)).slice(0, 8)
-      .sort(() => Math.random() - 0.5).slice(0, 2);
-    return [drill.text_catalan as string, ...picked].sort(() => Math.random() - 0.5);
-  }, [steps, drills, drill?.id, step?.kind]);  // eslint-disable-line react-hooks/exhaustive-deps
+      .map((d) => (d.text_catalan as string).trim());
+    const seen = new Set([truth]);
+    const take = (from: string[]) => from.filter((t) => !seen.has(t) && (seen.add(t), true));
+    const here = take(Array.from(new Set(fromHere))).sort(() => Math.random() - 0.5);
+    const wide = take(Array.from(new Set(pool))).sort(() => Math.random() - 0.5);
+    const picked = [...here, ...wide].slice(0, 2);
+    return [truth, ...picked].sort(() => Math.random() - 0.5);
+  }, [steps, drills, pool, drill?.id, step?.kind]);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // The gap: one real word taken out of the sentence.
+  // The gap: one real word taken out of the sentence, BY POSITION.
+  //
+  // `text.replace(word, '···')` hides the first place that STRING occurs, which is not the same
+  // thing: «tanmirt tan tanmirt» with «tan» chosen came out `···mirt ··· ···mirt`, unreadable at
+  // the very step that asks you to read it. Splitting on the separators and blanking one index
+  // hides exactly one word, repeated or not.
   const gap = useMemo(() => {
     const text = (drill?.text_tachelhit || '').trim();
-    const words = text.split(/\s+/).filter((w) => w.length > 2);
+    if (!text) return null;
+    const parts = text.split(/(\s+)/);                       // the separators are kept
+    const words = parts.map((_, k) => k).filter((k) => parts[k].trim().length > 2);
     if (!words.length) return null;
-    const hidden = words[Math.floor(words.length / 2)];
-    return { hidden, shown: text.replace(hidden, '·'.repeat(Math.max(3, hidden.length))) };
+    const at = words[Math.floor(words.length / 2)];
+    const hidden = parts[at];
+    const masked = parts.slice();
+    masked[at] = '·'.repeat(Math.max(3, hidden.length));
+    return { hidden, shown: masked.join('') };
   }, [drill?.id]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---- which spelling is the speaker's -------------------------------------------------
+  // The other way of writing the SAME sentence. Never an invented word: either the second
+  // spelling this sentence already carries, or the same sentence through the swaps people
+  // really make (ɣ/gh, x/kh, ɛ/3, ḥ/7, the emphatics, the doubled consonants).
+  const SWAPS: [RegExp, string][] = [
+    [/\u0263/g, 'gh'], [/gh/g, '\u0263'], [/x/g, 'kh'], [/kh/g, 'x'],
+    [/\u025b/g, '3'], [/3/g, '\u025b'], [/\u1e25/g, '7'], [/7/g, '\u1e25'],
+    [/\u1e0d/g, 'd'], [/\u1e63/g, 's'], [/\u1e93/g, 'z'], [/\u1e6d/g, 't'],
+  ];
+  const otherSpelling = (text: string, second?: string | null): string | null => {
+    const a = (text || '').trim();
+    if (!a) return null;
+    const b = (second || '').trim();
+    if (b && b !== a && norm(b) !== '' ) return b;        // the one it already carries
+    for (const [pat, rep] of SWAPS) {
+      if (pat.test(a)) {
+        const made = a.replace(pat, rep);
+        if (made !== a) return made;
+      }
+    }
+    // nothing else to change: double the first long-enough word's first letter
+    const w = a.split(/\s+/).find((x) => x.length > 2);
+    return w ? a.replace(w, w[0] + w) : null;
+  };
+
+  const spellings = useMemo(() => {
+    if (step?.kind !== 'pick_spelling' || !drill) return [];
+    const mine = (drill.text_tachelhit || '').trim();
+    const other = otherSpelling(mine, drill.text_tachelhit_latin);
+    if (!mine || !other || other === mine) return [];
+    return [mine, other].sort(() => Math.random() - 0.5);
+  }, [drill?.id, step?.kind]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const startRecording = async () => {
     if (recording) return;
@@ -119,8 +192,10 @@ export default function StepSession({ testId, title, onExit }: Props) {
   };
   const stopRecording = () => { if (recorderRef.current?.state === 'recording') recorderRef.current.stop(); };
 
-  const check = (given: string, target: string) => {
-    const ok = near(given, target);
+  const check = (given: string, target: string, exact = false) => {
+    // `near` forgives the accents on purpose — except when the accents ARE the question, which is
+    // what «which spelling is the speaker's» asks.
+    const ok = exact ? given.trim() === target.trim() : near(given, target);
     setRight(ok); setShown(true);
     if (ok) setKnew((k) => k + 1);
     if (drill) api.reviewGrade(drill.id, ok ? 3 : 1).catch(() => {});
@@ -180,6 +255,9 @@ export default function StepSession({ testId, title, onExit }: Props) {
   const tool = step?.kind;
   const meaning = drill?.text_catalan || '';
   const written = drill?.text_tachelhit || '';
+  // The tools nobody marks for you. `pick_spelling` has left this group: it asks a question with
+  // a right answer now, so it is checked like the others.
+  const selfMarked = tool === 'say_it' || tool === 'look_say' || tool === 'word_by_word' || tool === 'script_swap';
 
   return (
     <div style={{ padding: '20px 16px 32px', maxWidth: 520, margin: '0 auto', minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -314,20 +392,42 @@ export default function StepSession({ testId, title, onExit }: Props) {
               <p style={{ margin: '0 0 12px', fontSize: 13.5, color: 'var(--text-muted)', lineHeight: 1.5 }}>
                 Escolta i tria com ho escriu qui parla. No hi ha una ortografia oficial: la bona és la seva.
               </p>
-              <button onClick={() => play(1)} style={{ ...btn('primary'), width: '100%', marginBottom: 10 }}><FaPlay size={12} /> Escolta</button>
-              {!shown
-                ? <button onClick={() => { setShown(true); setRight(true); }} style={{ ...btn('ghost'), width: '100%' }}>Ensenya-me-ho</button>
-                : <p style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>{written}</p>}
+              {voice && <button onClick={() => play(1)} style={{ ...btn('primary'), width: '100%', marginBottom: 10 }}><FaPlay size={12} /> Escolta</button>}
+              {spellings.length === 2 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {spellings.map((o) => {
+                    const isRight = o.trim() === written.trim();
+                    const chosen = answer === o;
+                    return (
+                      <button key={o} disabled={shown} onClick={() => { setAnswer(o); check(o, written, true); }}
+                              style={{ ...btn('ghost'), height: 'auto', padding: '14px 16px', fontSize: 19, fontWeight: 800,
+                                       borderColor: shown && isRight ? 'var(--emerald)' : chosen && !isRight ? 'var(--rose)' : 'var(--brand-1)',
+                                       color: shown && isRight ? 'var(--emerald)' : 'var(--text)' }}>
+                        {o}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                // Nothing to choose between: this sentence has only one spelling anywhere. Say so
+                // instead of pretending to ask.
+                <>
+                  <p style={{ margin: '0 0 6px', fontSize: 13, color: 'var(--text-muted)' }}>
+                    D’aquesta frase només en tenim una manera d’escriure-la.
+                  </p>
+                  <p style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>{written}</p>
+                </>
+              )}
             </>
           )}
 
-          {shown && right !== null && (tool === 'listen_pick' || tool === 'write_heard' || tool === 'fill_gap') && (
+          {shown && right !== null && (tool === 'listen_pick' || tool === 'write_heard' || tool === 'fill_gap' || tool === 'pick_spelling') && (
             <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 'var(--r-lg)', background: right ? 'var(--emerald-soft, #E5F2EA)' : 'var(--brand-gradient-soft)' }}>
               <div style={{ fontWeight: 800, fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 {right ? <><FaCheck /> Sí</> : 'Era:'}
               </div>
               {!right && <div style={{ fontSize: 18, fontWeight: 800, marginTop: 4 }}>{tool === 'fill_gap' ? gap?.hidden : written}</div>}
-              {!right && tool !== 'fill_gap' && <div style={{ fontSize: 14, color: 'var(--text-soft)' }}>{meaning}</div>}
+              {!right && tool !== 'fill_gap' && tool !== 'pick_spelling' && <div style={{ fontSize: 14, color: 'var(--text-soft)' }}>{meaning}</div>}
             </div>
           )}
         </section>
@@ -335,17 +435,20 @@ export default function StepSession({ testId, title, onExit }: Props) {
 
       <div style={{ flex: 1 }} />
 
+      {/* The steps you mark yourself keep their two buttons whether or not you asked to see the
+          answer. Hiding them once `shown` was true meant «Ensenya-me-la» silently marked the step
+          failed: the only way to say «ja la sé» was never to look. */}
       {tool === 'note' || !drill ? (
         <button onClick={next} style={{ ...btn('primary'), marginTop: 20 }}>Continua</button>
-      ) : shown ? (
-        <button onClick={next} style={{ ...btn('primary'), marginTop: 20 }}>
-          {i + 1 >= steps.length ? 'Acaba' : 'Següent'}
-        </button>
-      ) : (tool === 'say_it' || tool === 'look_say' || tool === 'word_by_word' || tool === 'script_swap' || tool === 'pick_spelling') ? (
+      ) : selfMarked ? (
         <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
           <button onClick={() => markAndNext(false)} style={{ ...btn('ghost'), flex: 1 }}>Encara no</button>
           <button onClick={() => markAndNext(true)} style={{ ...btn('primary'), flex: 1 }}>Ja la sé</button>
         </div>
+      ) : shown ? (
+        <button onClick={next} style={{ ...btn('primary'), marginTop: 20 }}>
+          {i + 1 >= steps.length ? 'Acaba' : 'Següent'}
+        </button>
       ) : (
         <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, marginTop: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
           <FaLightbulb size={11} /> Respon per continuar
