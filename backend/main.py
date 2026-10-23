@@ -2463,6 +2463,48 @@ def get_drills(response: Response, tag: Optional[str] = None, author: Optional[s
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
+@app.get("/drills/similar")
+def similar_drills(text: str, field: str = "tachelhit", exclude_id: Optional[int] = None,
+                   limit: int = 5, db: Session = Depends(get_db)):
+    """Sentences the library may already hold that say this.
+
+    Declared before `/drills/{drill_id}` on purpose: that route would otherwise swallow the word
+    «similar» and try to read it as a number.
+
+    Matched by SOUND, not by spelling (`practice.sound_key`, the same key the practice screen
+    compares with), so «aghrum», «aɣrum» and «ⴰⵖⵔⵓⵎ» land together -- which a text search never
+    would. Nothing is forbidden by this: saying the same sentence another way is what the variants
+    are for. It is here so the person can choose before writing a second copy of what we have.
+    """
+    said = (text or "").strip()
+    if len(said) < 3:
+        return {"query": said, "field": field, "matches": []}
+    col = DrillModel.text_catalan if field == "catalan" else DrillModel.text_tachelhit
+
+    def key(t: str) -> str:
+        return " ".join(practice_mod.sound_key(w) for w in practice_mod.words_of(t or ""))
+
+    want = key(said)
+    if not want:
+        return {"query": said, "field": field, "matches": []}
+    # Two columns of every sentence, not whole rows: the comparison is by sound, so no SQL filter
+    # can narrow it first -- a LIKE on «aghrum» never reaches «aɣrum». Reading (id, text) for the
+    # library is a few hundred kilobytes; reading the rows themselves would not be.
+    q = db.query(DrillModel.id, col).filter(col != None, col != "")        # noqa: E711
+    if exclude_id:
+        q = q.filter(DrillModel.id != exclude_id)
+    hits = [i for i, other in q.order_by(DrillModel.id.desc()).all() if key(other) == want]
+    hits = hits[:max(1, min(limit, 20))]
+    if not hits:
+        return {"query": said, "field": field, "matches": []}
+    rows = {d.id: d for d in db.query(DrillModel).filter(DrillModel.id.in_(hits)).all()}
+    return {"query": said, "field": field, "matches": [
+        {"id": d.id, "text_tachelhit": d.text_tachelhit, "text_catalan": d.text_catalan,
+         "author": d.author, "variety": d.variety,
+         "has_voice": bool(d.audio_url), "image_url": d.image_url}
+        for d in (rows[i] for i in hits if i in rows)]}
+
+
 @app.get("/drills/{drill_id}", response_model=Drill)
 def get_drill(drill_id: int, db: Session = Depends(get_db)):
     """One drill by id (P4.1); 404 when it does not exist."""
@@ -5714,6 +5756,7 @@ def get_me(user: Optional[UserModel] = Depends(get_current_user), db: Session = 
     drills_contributed = db.query(DrillModel).filter(DrillModel.created_by_user_id == user.id).count()
     cards_learning = db.query(DrillReviewModel).filter(DrillReviewModel.user_id == user.id).count()
     return {
+        "id": user.id,            # so the app can tell whose a sentence is, as may_change does
         "username": user.username,
         "display_name": user.display_name,
         "email": user.email,

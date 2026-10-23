@@ -930,7 +930,10 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
 
     // 🖥️ DESKTOP INTERFACE: Standard High-Performance spreadsheet view
     const columnDefs: ColDef<Drill>[] = [
-        { field: 'id', headerName: 'ID', width: 80, sortable: true, editable: true },
+        // Not editable: a drill's id is not a field of the drill. Typing in this cell used to
+        // change the number on screen, send it, and have the server ignore it — so until you
+        // refreshed it looked like it had worked.
+        { field: 'id', headerName: 'ID', width: 80, sortable: true, editable: false },
         { field: 'verified', headerName: '✓', width: 52, sortable: true, headerTooltip: 'Verificat per un parlant',
           cellRenderer: (p: any) => (p.value ? <span title="Verificat" style={{ color: 'var(--emerald)', fontWeight: 800 }}>✓</span> : null) },
         {

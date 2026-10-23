@@ -1,7 +1,7 @@
 import '../agGridSetup';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { VARIETIES } from '../varieties';
-import { FaMicrophone, FaPlay, FaPlus, FaTimes, FaLink, FaChevronDown, FaSearch, FaBook, FaTrash, FaFileImport, FaFilm, FaBookOpen } from 'react-icons/fa';
+import { FaPlay, FaPlus, FaTimes, FaLink, FaChevronDown, FaSearch, FaBook, FaTrash, FaFileImport, FaFilm, FaBookOpen } from 'react-icons/fa';
 import axios from 'axios';
 import { API_BASE, hasIdentity } from '../config';
 import { syncManager } from '../services/OfflineSyncManager';
@@ -12,7 +12,6 @@ import MobileDrillEditor from './MobileDrillEditor';
 import DrillPlayer from './DrillPlayer';
 import DrillsGrid from './DrillsGrid';
 import { parseTopics, topicLabel, topicsSearchText, topicsMatch } from '../utils/topics';
-import VoiceDrillCreator from './VoiceDrillCreator';
 import MobileDrillCreator from './MobileDrillCreator';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { isMobileLayout } from '../utils/layout';
@@ -100,7 +99,6 @@ export default function DrillsResponsive() {
   const [isMobile, setIsMobile] = useState(isMobileLayout);
   const [drills, setDrills] = useState<Drill[]>([]);
   const [editingDrill, setEditingDrill] = useState<Drill | null>(null);
-  const [showVoiceCreator, setShowVoiceCreator] = useState(false);
   const [showMobileDrillCreator, setShowMobileDrillCreator] = useState(false);
   const [showNewDrillOptions, setShowNewDrillOptions] = useState(false);
   const [showGlossary, setShowGlossary] = useState(false);
@@ -567,22 +565,6 @@ export default function DrillsResponsive() {
         />
       )}
 
-      {showVoiceCreator && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(17, 24, 39, 0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20000, backdropFilter: 'blur(8px)' }}>
-          <div style={{ backgroundColor: 'var(--surface)', padding: '40px', borderRadius: 'var(--r-xl)', width: '600px', maxWidth: '90vw', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                <div style={{ background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)', width: '50px', height: '50px', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <FaMicrophone size={24} />
-                </div>
-                <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 800, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>Creador de drills per veu</h2>
-              </div>
-              <button onClick={() => setShowVoiceCreator(false)} style={{ background: 'var(--surface-2)', border: 'none', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-soft)' }}><FaTimes size={20} /></button>
-            </div>
-            <VoiceDrillCreator onClose={() => setShowVoiceCreator(false)} onDrillCreated={() => { setNewestFirst(true); fetchDrills(); setShowVoiceCreator(false); }} />
-          </div>
-        </div>
-      )}
 
       {playing && <DrillPlayer drills={playing} onExit={() => setPlaying(null)} />}
       {showGlossary && <GlossaryModal onClose={() => setShowGlossary(false)} />}

@@ -53,6 +53,20 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const drillRef = useRef(drill);
     drillRef.current = drill;
 
+    // What the library may already hold that says this. Looked up when you stop typing, not on
+    // every keystroke, and never blocking: it is something to know, not a rule.
+    const [already, setAlready] = useState<{ id: number; text_tachelhit: string | null; text_catalan: string | null; author: string | null; has_voice: boolean }[]>([]);
+    const lookForTwins = async (text: string, field: 'tachelhit' | 'catalan') => {
+        const said = (text || '').trim();
+        if (said.length < 3) { setAlready([]); return; }
+        try {
+            const r = await axios.get(`${API_BASE}/drills/similar`, {
+                params: { text: said, field, limit: 4, ...(serverIdRef.current ? { exclude_id: serverIdRef.current } : {}) },
+            });
+            setAlready(r.data?.matches || []);
+        } catch { /* a warning that cannot be fetched is not worth a message */ }
+    };
+
     const [isRecording, setIsRecording] = useState(false);
     const [corpusConsent, setCorpusConsent] = useState(true);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -537,8 +551,27 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 </label>
 
                 <div style={{ background: 'var(--surface)', padding: '20px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div><label htmlFor="new-catalan" style={labelStyle}>Català</label><textarea id="new-catalan" lang="ca" value={drill.text_catalan || ''} onChange={(e) => setField('text_catalan', e.target.value)} rows={3} style={inputStyle} /></div>
-                    <div><label htmlFor="new-tachelhit" style={labelStyle}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label><textarea id="new-tachelhit" lang="shi" autoCapitalize="off" autoCorrect="off" spellCheck={false} value={drill.text_tachelhit || ''} onChange={(e) => setField('text_tachelhit', e.target.value)} rows={3} style={{ ...inputStyle, color: 'var(--brand-1)', fontWeight: 700, fontFamily: 'var(--font-tifinagh)' }} /></div>
+                    <div><label htmlFor="new-catalan" style={labelStyle}>Català</label><textarea id="new-catalan" lang="ca" value={drill.text_catalan || ''} onChange={(e) => setField('text_catalan', e.target.value)} onBlur={(e) => { if (!(drill.text_tachelhit || '').trim()) lookForTwins(e.target.value, 'catalan'); }} rows={3} style={inputStyle} /></div>
+                    <div><label htmlFor="new-tachelhit" style={labelStyle}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label><textarea id="new-tachelhit" lang="shi" autoCapitalize="off" autoCorrect="off" spellCheck={false} value={drill.text_tachelhit || ''} onChange={(e) => setField('text_tachelhit', e.target.value)} onBlur={(e) => lookForTwins(e.target.value, 'tachelhit')} rows={3} style={{ ...inputStyle, color: 'var(--brand-1)', fontWeight: 700, fontFamily: 'var(--font-tifinagh)' }} /></div>
+
+                    {/* The library may already say this. Not a rule — saying it another way is what
+                        the variants are for — but you should know before writing a second copy. */}
+                    {already.length > 0 && (
+                        <div style={{ padding: '12px 14px', borderRadius: 'var(--r-lg)', border: '1px solid var(--amber-strong, #8a6100)', background: 'var(--amber-soft, #fdf3e0)', fontSize: '13px', lineHeight: 1.5 }}>
+                            <strong>{already.length === 1 ? 'La biblioteca ja diu això.' : `La biblioteca ja diu això de ${already.length} maneres.`}</strong>{' '}
+                            Si la teva és una altra manera de dir-la, millor apuntar-la com a variant de la que hi ha que no pas fer-ne una de nova.
+                            <ul style={{ margin: '8px 0 0', paddingInlineStart: 18 }}>
+                                {already.map((m) => (
+                                    <li key={m.id} style={{ marginBottom: 3 }}>
+                                        <span style={{ fontWeight: 700 }}>{m.text_tachelhit || '—'}</span>
+                                        {m.text_catalan ? <span style={{ color: 'var(--text-soft)' }}> · {m.text_catalan}</span> : null}
+                                        {m.author ? <span style={{ color: 'var(--text-muted)' }}> · {m.author}</span> : null}
+                                        {m.has_voice ? <span style={{ color: 'var(--emerald)' }}> · amb veu</span> : null}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                     <div><label htmlFor="new-arabic" style={labelStyle}>Àrab (العربية)</label><textarea id="new-arabic" lang="ar" dir="rtl" value={drill.text_arabic || ''} onChange={(e) => setField('text_arabic', e.target.value)} rows={2} style={inputStyle} /></div>
                     <div><label htmlFor="new-tag" style={labelStyle}>Tag</label><input id="new-tag" type="text" value={drill.tag || ''} onChange={(e) => setField('tag', e.target.value)} style={inputStyle} /></div>
                     {serverId && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Drill #{serverId}</div>}
