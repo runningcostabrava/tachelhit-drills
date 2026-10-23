@@ -7638,7 +7638,9 @@ def corpus_search(
     """Search the corpus across all text fields; filter by variety/region/tag.
     Paginate with limit/offset."""
     from sqlalchemy import or_
-    query = db.query(DrillModel)
+    # Les etiquetes excloses (proves, irlandès) no surten a la cerca: qui busca una frase busca
+    # la llengua d'aquesta biblioteca, no el que hi ha entrat per fer proves.
+    query = grammar_course.not_excluded(db.query(DrillModel), DrillModel)
     if q:
         like = f"%{q}%"
         from transliteration import phonemic_key as _pk

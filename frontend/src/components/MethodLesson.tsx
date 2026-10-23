@@ -454,10 +454,30 @@ export default function MethodLesson({
         </span>
       </div>
 
+      {/* La barra de dalt: on és cada cosa, i s'hi va amb un dit.
+          L'amo: «crec que en els capítols a l'inici, en una barra horitzontal, hi hauria d'haver
+          botons a les diferents seccions del capítol». Un capítol té quatre parts i vuit
+          seccions: sense això, per tornar als datius s'ha de baixar mig quilòmetre. */}
+      <nav aria-label="Les parts del capítol"
+           style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8, marginBottom: 18, scrollbarWidth: 'none' }}>
+        {[
+          ...(body.dialogue ? [{ id: 'part-dialeg', label: body.dialogue.title }] : []),
+          ...((body.vocabulary || []).length ? [{ id: 'part-paraules', label: 'Les paraules' }] : []),
+          ...(body.sections || []).map((s) => ({ id: `part-${s.id}`, label: s.title.split(':')[0] })),
+          ...(body.practice ? [{ id: 'part-fes-ho-tu', label: 'Fes-ho tu' }] : []),
+        ].map((x) => (
+          <button key={x.id}
+                  onClick={() => document.getElementById(x.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  style={{ flexShrink: 0, padding: '6px 13px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+            {x.label}
+          </button>
+        ))}
+      </nav>
+
       {/* 1 · EL DIÀLEG — l'escena sencera. Va primer perquè és el capítol: tot el que ve després
           explica el que aquí passa d'una tirada, i aquest és també l'ordre del manual. */}
       {body.dialogue && (
-        <section style={{ marginBottom: 30 }}>
+        <section id="part-dialeg" style={{ marginBottom: 30, scrollMarginTop: 'calc(var(--nav-h) + 10px)' }}>
           <Part n={1} title={body.dialogue.title} icon={<FaCommentDots size={13} />}
                 what={body.dialogue.scene} onToggle={() => setOpenDialogue((v) => !v)} open={openDialogue} />
           {openDialogue && (
@@ -485,7 +505,7 @@ export default function MethodLesson({
 
       {/* 2 · LES PARAULES — amb la seva imatge i la seva veu quan la biblioteca ja en té. */}
       {body.vocabulary && body.vocabulary.length > 0 && (
-        <section style={{ marginBottom: 30 }}>
+        <section id="part-paraules" style={{ marginBottom: 30, scrollMarginTop: 'calc(var(--nav-h) + 10px)' }}>
           <Part n={2} title="Les paraules d’aquest capítol" icon={<FaTags size={12} />}
                 what="Les que surten al diàleg i a les explicacions. Les que la biblioteca ja té surten amb la seva imatge i la seva veu." />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 10 }}>
@@ -512,7 +532,7 @@ export default function MethodLesson({
               what="Una cosa per secció: el que el manual explica, i tot seguit com ho diu la gent que coneixem." />
       )}
       {(body.sections || []).map((s, si) => (
-        <section key={s.id} style={{ marginBottom: 26, paddingInlineStart: 14, borderInlineStart: '3px solid var(--border)' }}>
+        <section key={s.id} id={`part-${s.id}`} style={{ marginBottom: 26, paddingInlineStart: 14, borderInlineStart: '3px solid var(--border)', scrollMarginTop: 'calc(var(--nav-h) + 10px)' }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--brand-1)', letterSpacing: '0.08em' }}>
             3.{si + 1}
           </div>
@@ -659,7 +679,11 @@ export default function MethodLesson({
       ))}
 
       {/* 4 · FES-HO TU — el mateix diàleg canviant el que compres: es tria, no es llegeix. */}
-      {body.practice && <Practice practice={body.practice} n={4} />}
+      {body.practice && (
+        <div id="part-fes-ho-tu" style={{ scrollMarginTop: 'calc(var(--nav-h) + 10px)' }}>
+          <Practice practice={body.practice} n={4} />
+        </div>
+      )}
     </>
   );
 }
