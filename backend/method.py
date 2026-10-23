@@ -281,6 +281,27 @@ def content_of(db, slug: str) -> Optional[Dict]:
     return body
 
 
+#: El que el servidor POSA en servir un capítol, i que per tant no s'ha de desar quan torna.
+#:
+#: Qui administra corregeix una línia i el navegador torna el capítol sencer tal com el tenia a
+#: la pantalla: amb la tifinagh de cada línia i amb les frases nostres repartides per dins. Això
+#: no és el capítol, és el que n'hem calculat; desar-ho el congelaria amb les frases d'aquell dia.
+COMPUTED = {"ours_drills", "ours_total"}
+
+
+def strip_computed(body: Dict) -> Dict:
+    """El capítol tal com s'escriu, sense res del que el servidor hi afegeix en servir-lo."""
+    drop = COMPUTED | {dst for _, dst in TIF_FIELDS}
+
+    def clean(x):
+        if isinstance(x, list):
+            return [clean(i) for i in x]
+        if isinstance(x, dict):
+            return {k: clean(v) for k, v in x.items() if k not in drop}
+        return x
+    return clean(body)
+
+
 def store_content(db, slug: str, body: Dict, who: Optional[str] = None) -> Dict:
     """Desa o reemplaça el text d'un capítol. Només per a qui administra."""
     import json
@@ -292,7 +313,7 @@ def store_content(db, slug: str, body: Dict, who: Optional[str] = None) -> Dict:
     if not row:
         row = MethodChapter(slug=slug)
         db.add(row)
-    row.body = json.dumps(body, ensure_ascii=False)
+    row.body = json.dumps(strip_computed(body), ensure_ascii=False)
     row.updated_at = datetime.utcnow()
     row.updated_by = who
     db.commit()
@@ -303,34 +324,322 @@ def store_content(db, slug: str, body: Dict, who: Optional[str] = None) -> Dict:
 #: més enllà d'això deixa d'explicar i es torna una llista.
 OURS_PER_SECTION = 4
 
+#: El que el manual diu i el que es diu a Aït Mraw.
+#:
+#: El llibre és tachelhit del Souss i la nostra biblioteca és Atles central, i no fan servir les
+#: mateixes paraules per a les mateixes coses. Buscar les frases nostres amb les paraules del
+#: llibre no troba res: `dar-` surt a 5 frases i cap no té veu, `mnckk` a cap. Les que de debò
+#: tenim són `ɣur` (76 frases, 59 amb veu) i `mšta` (13, 11 amb veu).
+#:
+#: Això no ho pot endevinar una màquina: ho sap qui parla la llengua. Creix quan l'amo n'hi
+#: afegeix (aquestes dues les va dir ell, 2026-10-23).
+ALSO_SAID = {
+    "dar": ["ɣur", "ghor", "ghur", "xor"],          # tenir: nkki ɣur-i, is illa ɣur-š?
+    "mnckk": ["mšta", "mshta", "mcta", "mchta"],    # quant / quants
+}
+
+#: Paraules catalanes que no diuen res de què va una frase: no es busquen.
+STOP_CA = {
+    "el", "la", "els", "les", "un", "una", "uns", "unes", "de", "del", "dels", "a", "al", "als",
+    "en", "amb", "per", "que", "què", "qui", "és", "son", "són", "hi", "ha", "no", "sí", "si",
+    "i", "o", "em", "et", "es", "ens", "us", "se", "li", "jo", "tu", "ell", "ella", "aquest",
+    "aquesta", "això", "allò", "molt", "més", "cap", "res", "com", "ho", "d", "l", "s", "n",
+}
+
+
+def _ca_words(text: Optional[str]) -> set:
+    """Les paraules catalanes que diuen alguna cosa de què va una frase."""
+    import re
+    out = set()
+    for w in re.findall(r"[\wàèéíòóúïüç·]+", (text or "").lower()):
+        w = w.strip("·")
+        if len(w) > 2 and w not in STOP_CA:
+            out.add(w)
+    return out
+
+
+#: Una paraula que surt a més d'aquesta part de la biblioteca no diu res de què va una frase.
+#:
+#: Filtrar per LONGITUD seria el remei fàcil i seria dolent: els imperatius que el capítol
+#: ensenya —`ẓr` mira, `sɣ` compra, `ml` ensenya— fan dues lletres, i són justament les paraules
+#: que s'han de buscar. El que no diu res no és el que és curt, és el que és a tot arreu: `n`,
+#: `d`, `a`, `g`. Això es mesura, no s'endevina.
+TOO_COMMON = 0.06
+
+#: Per sota d'aquestes frases no es mesura què és comú: no hi ha prou biblioteca per dir-ho.
+FEW = 50
+
+
+def section_keys(s: Dict) -> Dict[str, set]:
+    """De què va una secció, dit amb paraules que es puguin buscar a la biblioteca.
+
+    Hi ha dues maneres, i la bona és la primera:
+
+    **El que la secció DIU que ensenya** (`keys` i `keys_ca`). Una secció no va de les coses que
+    surten als seus exemples, va d'una cosa: la dels datius va dels datius, encara que els seus
+    exemples parlin d'aigua, d'ous i d'una clau. Buscar «aigua» a la biblioteca treu frases que
+    parlen d'aigua i no tenen cap datiu, i això és el que l'amo ha vist dues vegades. Quan la
+    secció declara les seves paraules, són EXACTAMENT aquelles: el que diuen els exemples és
+    il·lustració, no matèria.
+
+    **El que es pot deduir de les seves línies**, quan no en declara cap. Val per a les seccions
+    de vocabulari, on els exemples SÓN la matèria.
+
+    Una clau que comença amb guió —`-as`, `-awn`— no és una paraula: és el tros que s'enganxa al
+    final («fkiγ-as», «imla-yyi»). Es busca només allà, perquè `aγaras` «camí» acaba en `as` i no
+    té cap datiu.
+
+    L'amazic s'eixampla sempre amb el que es diu a Aït Mraw: el manual escriu `dar-k` i aquí es
+    diu `ɣur-k`, i sense aquesta passa no es trobaria ni una frase nostra.
+    """
+    import practice
+    shi, tail, ca = set(), set(), set()
+    declared = bool(s.get("keys") or s.get("keys_ca"))
+    if declared:
+        for w in (s.get("keys") or []):
+            w = str(w).lower().strip()
+            if w.startswith("-"):
+                tail.add(w.lstrip("-"))
+            else:
+                shi.add(w)
+                shi.update(ALSO_SAID.get(w, []))
+        ca |= set(x.lower() for x in (s.get("keys_ca") or []))
+    else:
+        lines = list(s.get("examples") or [])
+        for col in (s.get("columns") or []):
+            lines += list(col.get("rows") or [])
+        for line in lines:
+            for w in practice.words_of(line.get("shi") or ""):
+                w = w.strip("-?!.,¿¡").lower()
+                if len(w) < 2:
+                    continue
+                shi.add(w)
+                for alt in ALSO_SAID.get(w.split("-")[0], []):
+                    shi.add(alt)
+            ca |= _ca_words(line.get("ca"))
+    # Una clau d'una lletra no identifica res: `sγ` «compra» sona «s», i «s» és la preposició
+    # «a», que és a mig catàleg. El que no es pot buscar, no es busca.
+    return {"shi": {k for k in (practice.sound_key(w) for w in shi if w) if len(k) > 1},
+            "tail": {k for k in (practice.sound_key(w) for w in tail if w) if len(k) > 1},
+            "ca": ca}
+
+
+def _said(d) -> Dict[str, set]:
+    """Què diu una frase, de tres maneres: per so, pel final enganxat, i pel significat.
+
+    Dues coses alhora. Per SO, perquè `ghor`, `ɣur` i `xor` són la mateixa paraula escrita de
+    tres maneres. I pels COMENÇAMENTS, perquè l'amazic enganxa la persona al mot: al llibre hi
+    ha `dar-k`, i el que la gent diu és `ɣur-i`, `ɣur-š`, `ɣur-nɣ`. Comparant paraules senceres,
+    `ɣur` encaixava amb 2 frases de 1.607; amb els començaments, amb les 22 que de debò ho diuen.
+
+    El mateix passa amb els imperatius que el capítol ensenya —`ml`, `ẓr`, `sɣ`— que a les
+    frases de debò gairebé no surten mai nus.
+
+    Una clau de dues lletres, però, només casa amb la paraula SENCERA: `ml` «ensenya» per
+    començament s'enduia `mlaqayx` «vaig quedar», que no hi té res a veure. De tres lletres en
+    amunt el començament ja diu prou.
+
+    I a part, els FINALS enganxats: `fkiγ-as` «li he donat» és el verb més el datiu, i el datiu
+    només és datiu quan va darrere del guió. Buscar-lo com a final de paraula qualsevol s'enduria
+    `aγaras` «camí»; buscar-lo com el tros de darrere el guió no s'endú res que no sigui això.
+    """
+    import practice
+    out, tails = set(), set()
+    for w in practice.words_of((d.text_tachelhit or "") + " " + (d.text_tachelhit_latin or "")):
+        k = practice.sound_key(w)
+        if k:
+            out.add(k)                              # la paraula sencera
+            # i els seus començaments, però només els que deixen DOS lletres o menys al darrere:
+            # això és un afix (`ɣur-i`, `ɣur-š`) i no una altra paraula. Sense aquest fre, `ttam`
+            # «vuit» —que sona «tam»— s'enduia `tamttut` «dona», i la secció dels números
+            # ensenyava una frase que no en diu cap.
+            for i in range(max(3, len(k) - 2), len(k)):
+                out.add(k[:i])
+        pieces = str(w).split("-")
+        if len(pieces) > 1:
+            stem = practice.sound_key(pieces[0])    # el guió ja diu on acaba la paraula
+            if stem:
+                out.add(stem)
+            for piece in pieces[1:]:
+                t = practice.sound_key(piece)
+                if t:
+                    tails.add(t)
+    return {"shi": out, "tail": tails, "ca": _ca_words(d.text_catalan)}
+
+
+def _uninformative(index: List[set]) -> set:
+    """Les paraules que surten a tot arreu, i que per tant no diuen de què va res.
+
+    Es mesura contra la biblioteca mateixa en comptes de tenir-ne una llista escrita a mà: el que
+    no diu res no és el que és curt —`ml` «ensenya» fa dues lletres i és el que es busca— sinó el
+    que és a mig catàleg.
+    """
+    from collections import Counter
+    # Amb quatre frases no es pot mesurar què és comú: una paraula que surt a la meitat d'una
+    # biblioteca de dues frases no és una paraula corrent, és la biblioteca. Per sota d'aquí, res
+    # no es descarta (i una prova amb dues frases segueix trobant-les).
+    if len(index) < FEW:
+        return set()
+    n = max(1, len(index))
+    c = Counter()
+    for words in index:
+        c.update(words)
+    return {w for w, k in c.items() if k / n > TOO_COMMON}
+
+
+def why_here(said: Dict[str, set], keys: Dict[str, set], unit: Optional[str], d) -> Optional[str]:
+    """Per què aquesta frase és en aquesta secció, dit amb paraules.
+
+    El curs de gramàtica ja ho fa —«per què és aquí» a cada exemple— i aquí ha de passar el
+    mateix: una frase que apareix sense dir què hi fa és soroll, per bona que sigui.
+
+    No és una explicació inventada: és la raó de debò per la qual la tria l'ha agafada, la
+    paraula que diu o el significat que comparteix. Si l'única raó és la unitat de gramàtica,
+    també es diu, perquè és una raó més fluixa i qui llegeix ho ha de saber.
+    """
+    words = sorted(said["shi"] & keys["shi"], key=len, reverse=True)[:2]
+    tails = sorted(said["tail"] & keys["tail"])[:2]
+    senses = sorted(said["ca"] & keys["ca"])[:2]
+    if tails:
+        return f"hi porta «-{tails[0]}» enganxat al darrere"
+    if words and senses:
+        return f"diu «{words[0]}», i parla de {', '.join(senses)}"
+    if words:
+        return f"diu «{words[0]}»" + (f" i «{words[1]}»" if len(words) > 1 else "")
+    if senses:
+        return f"parla de {', '.join(senses)}"
+    if unit:
+        titles = {u["slug"]: u["title"] for u in grammar.UNITS}
+        return f"és d'aquesta part de la gramàtica: {titles.get(unit, unit).lower()}"
+    return None
+
+
+def _score(said: Dict[str, set], keys: Dict[str, set], unit: Optional[str], d) -> int:
+    """Com de bé va aquesta frase en aquesta secció. Zero vol dir que no hi va.
+
+    Es compta QUANTES coses de la secció diu, no si en diu alguna: una frase que ensenya tres
+    números val més que una que esmenta «1987», i això és el que fa que la rellevància guanyi la
+    preferència per la veu o pel poble. La unitat de gramàtica només desempata.
+    """
+    hit_shi = len(said["shi"] & keys["shi"])
+    hit_tail = len(said["tail"] & keys["tail"])
+    hit_ca = len(said["ca"] & keys["ca"])
+    # La PARAULA fa entrar; el significat només ordena. Deixar entrar pel català sol és el que
+    # feia que la secció de la preposició `dar` ensenyés «El forn va escalfar la casa»: parla de
+    # forns i de cases, i no hi surt la preposició enlloc. Una frase que no diu el que la secció
+    # ensenya no ensenya la secció, per bé que hi vagi de tema.
+    if not (hit_shi or hit_tail):
+        return 0
+    score = hit_tail * 4 + hit_shi * 3 + hit_ca * 2
+    if unit and unit in grammar.parse(d.grammar):
+        score += 1
+    return score
+
 
 def content_with_ours(db, slug: str, rows: List, card) -> Optional[Dict]:
     """El text del capítol amb les NOSTRES frases repartides per dins.
 
     Això és el que fa que el Mètode no sigui el llibre traduït. Cada secció explica una cosa i,
     tot seguit, ensenya com la diu la gent que coneixem: amb la seva veu, la seva imatge, el seu
-    poble i la seva varietat. El llibre hi posa el recorregut; la biblioteca, les persones.
+    poble i la seva varietat.
 
-    Una secció diu de quina unitat de gramàtica va (`unit`) i d'allà surten les seves frases. Les
-    que tenen VEU i IMATGE van primer, perquè una targeta que es pot escoltar i mirar ensenya
-    més que una línia de text. Si una secció no diu cap unitat, no se li posa res: val més una
-    secció sense frases que una secció amb frases que no hi fan res.
+    Com es tria, i per què no n'hi ha prou amb la unitat de gramàtica: `noms-genere-nombre` és
+    cert de 683 frases, així que una secció sobre pesos i mesures acabava ensenyant «Oriol està
+    molt enfadat» i «A les tres de la tarda». Ara una frase hi entra si **diu** una de les
+    paraules de la secció (comparades per so, de manera que `ghor`, `ɣur` i `xor` són la
+    mateixa) o si **vol dir** una de les seves coses (el català). La unitat només desempata.
+
+    I una frase que no encaixa amb res **no hi surt**: val més una secció sense frases nostres,
+    que es veu i es pot omplir, que una secció amb quatre que no hi fan res.
     """
     body = content_of(db, slug)
     if not body:
         return None
-    used = set()
-    for s in (body.get("sections") or []):
+    sections = body.get("sections") or []
+    if not sections:
+        return with_tifinagh(body)
+
+    said = {d.id: _said(d) for d in rows}
+    noise = _uninformative([x["shi"] for x in said.values()])
+
+    keys_of = {}
+    for s in sections:
+        k = section_keys(s)
+        keys_of[s["id"]] = {"shi": k["shi"] - noise, "tail": k["tail"], "ca": k["ca"]}
+
+    # Cada frase a la secció on encaixa MILLOR, no a la primera que la trobi. Anar-les repartint
+    # per ordre feia que «Pesos i mesures» s'endugués `sin` «dos» i `kraḍ` «tres» abans que la
+    # secció dels números hi arribés.
+    best: Dict[int, tuple] = {}
+    for d in rows:
+        for s in sections:
+            n = _score(said[d.id], keys_of[s["id"]], s.get("unit"), d)
+            if n and n > best.get(d.id, (0, None))[0]:
+                best[d.id] = (n, s["id"])
+
+    by_section: Dict[str, List[tuple]] = {s["id"]: [] for s in sections}
+    for d in rows:
+        if d.id in best:
+            by_section[best[d.id][1]].append((best[d.id][0], d))
+
+    for s in sections:
+        scored = by_section[s["id"]]
+        # el que encaixa millor; després el que es pot escoltar i mirar; després les nostres veus
+        scored.sort(key=lambda t: (-t[0],
+                                   0 if (t[1].audio_url and t[1].image_url) else 1 if t[1].audio_url else 2,
+                                   0 if grammar.our_speaker(t[1]) else 1, t[1].id))
+        # i que no siguin quatre vegades la mateixa paraula: una secció ensenya, no repeteix
+        picked, seen_keys = [], set()
+        for _, d in scored:
+            hits = said[d.id]["shi"] & keys_of[s["id"]]["shi"]
+            if hits and hits <= seen_keys and len(picked) >= 2:
+                continue
+            picked.append(d)
+            seen_keys |= hits
+            if len(picked) >= OURS_PER_SECTION:
+                break
+        # Una secció curta es queda curta. Omplir-la amb la unitat de gramàtica era el que hi
+        # posava frases que no hi feien res —`noms-genere-nombre` és cert de 683 frases, i per
+        # això «Pesos i mesures» acabava ensenyant «Oriol està molt enfadat»—, i l'amo ho ha
+        # vist dues vegades. Val més una secció buida, que es veu i es pot omplir gravant.
         unit = s.get("unit")
-        if not unit:
-            continue
-        here = [d for d in rows if unit in grammar.parse(d.grammar)]
-        here.sort(key=lambda d: (0 if (d.audio_url and d.image_url) else 1 if d.audio_url else 2,
-                                 0 if grammar.our_speaker(d) else 1, d.id))
-        picked = [d for d in here if d.id not in used][:OURS_PER_SECTION]
-        used.update(d.id for d in picked)
-        s["ours_drills"] = [card(d) for d in picked]
-        s["ours_total"] = len(here)
+        s["ours_drills"] = [
+            {**card(d),
+             "why": why_here(said[d.id], keys_of[s["id"]], unit, d)}
+            for d in picked]
+        s["ours_total"] = len(scored)
+    return with_tifinagh(body)
+
+
+#: On hi ha amazic dins del cos d'un capítol, i on va la seva tifinagh.
+#:
+#: El capítol s'escriu en llatí perquè així és el manual i així escriu la gent que grava, però
+#: l'escriptura de la llengua va amb la llengua: a sota, petita, a totes les línies. Es calcula
+#: en servir i no es desa, perquè és una transliteració del nostre transliterador i no una cosa
+#: que ningú hagi escrit: si el transliterador millora, el capítol millora sol.
+TIF_FIELDS = (("shi", "tif"), ("v", "v_tif"), ("m", "m_tif"), ("f", "f_tif"),
+              ("qty_shi", "qty_tif"))
+
+
+def with_tifinagh(body: Optional[Dict]) -> Optional[Dict]:
+    """El mateix cos, amb la tifinagh de cada línia amazic al costat."""
+    def walk(x):
+        if isinstance(x, list):
+            for i in x:
+                walk(i)
+            return
+        if not isinstance(x, dict):
+            return
+        for src, dst in TIF_FIELDS:
+            v = x.get(src)
+            if isinstance(v, str) and v.strip() and not x.get(dst):
+                t = grammar.tifinagh(v)
+                if t and t != v.strip():
+                    x[dst] = t
+        for v in x.values():
+            walk(v)
+    if body:
+        walk(body)
     return body
 
 

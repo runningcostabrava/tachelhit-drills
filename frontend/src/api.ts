@@ -141,6 +141,12 @@ export interface MethodSentence {
   region: string | null;
   grammar: string | null;
   topics: string | null;
+  /** Paraula per paraula, com al curs de gramàtica: la frase es pot desmuntar, no només repetir. */
+  gloss?: { shi: string; ca?: string | null; tif?: string | null }[] | null;
+  /** La frase en tifinagh, del nostre transliterador, per posar-la sota la llatina. */
+  tif?: string | null;
+  /** Per què aquesta frase és en aquesta secció. El tria la secció, no l'atzar. */
+  why?: string | null;
 }
 
 export interface MethodChapterSummary {
@@ -159,15 +165,24 @@ export interface MethodIndex { chapters: MethodChapterSummary[]; source: MethodS
  *  repositori, i per això qui administra el pot corregir sense desplegar res. */
 /** `drill_id` apareix quan algú ha volgut dir aquesta línia: llavors és una frase de la nostra
  *  biblioteca, amb la seva veu i el seu poble. */
-export interface MethodExample { shi: string; ca: string; note?: string; drill_id?: number }
+export interface MethodGloss { shi: string; ca?: string | null; tif?: string | null }
+export interface MethodExample {
+  shi: string; ca: string; note?: string; drill_id?: number;
+  /** La mateixa línia en tifinagh. La posa el servidor en servir-la; no s'escriu a mà. */
+  tif?: string | null;
+  /** Paraula per paraula, escrita amb el capítol: és el que converteix una frase en una lliçó. */
+  gloss?: MethodGloss[];
+}
 export interface MethodContent {
   intro?: string;
   sections?: {
     id: string; title: string; text?: string;
     examples?: MethodExample[];
-    table?: { title: string; rows: { p: string; v: string }[] };
-    columns?: { title: string; rows: { shi: string; ca: string }[] }[];
-    numbers?: { n: number; m: string; f?: string }[];
+    table?: { title: string; rows: { p: string; v: string; v_tif?: string | null }[] };
+    columns?: { title: string; rows: { shi: string; ca: string; tif?: string | null }[] }[];
+    numbers?: { n: number; m: string; f?: string; m_tif?: string | null; f_tif?: string | null }[];
+    /** Més a fons: el que el manual dóna per sabut i aquí s'explica. S'obre qui vol. */
+    deep?: string;
     /** El que la NOSTRA varietat fa d'una altra manera. Això no ve del llibre. */
     ours?: string;
     /** La unitat de gramàtica de què va aquesta secció: d'aquí surten les nostres frases. */
@@ -176,13 +191,13 @@ export interface MethodContent {
     ours_drills?: MethodSentence[];
     ours_total?: number;
   }[];
-  dialogue?: { title: string; scene?: string; turns: { who: string; shi: string; ca: string; drill_id?: number }[] };
+  dialogue?: { title: string; scene?: string; turns: { who: string; shi: string; ca: string; drill_id?: number; tif?: string | null; gloss?: MethodGloss[] }[] };
   practice?: {
     title: string; scene?: string;
-    pattern: { who: string; shi: string; ca: string }[];
-    fills: { shi: string; ca: string; qty_shi: string; qty_ca: string }[];
+    pattern: { who: string; shi: string; ca: string; tif?: string | null }[];
+    fills: { shi: string; ca: string; qty_shi: string; qty_ca: string; tif?: string | null; qty_tif?: string | null }[];
   };
-  vocabulary?: { shi: string; ca: string; audio_url?: string | null; drill_id?: number }[];
+  vocabulary?: { shi: string; ca: string; audio_url?: string | null; drill_id?: number; tif?: string | null }[];
   source_note?: string;
   source_pages?: string;
   updated_at?: string | null;

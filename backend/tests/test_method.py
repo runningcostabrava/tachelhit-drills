@@ -145,7 +145,11 @@ def test_cada_seccio_ensenya_les_nostres_frases_al_costat_del_que_explica():
     gramàtica va i d'allà surten les seves frases; les que es poden ESCOLTAR i MIRAR van davant,
     perquè una targeta amb veu i imatge ensenya més que una línia de text.
 
-    I una línia del llibre encara no és una frase nostra: ho esdevé quan algú la grava."""
+    I una línia del llibre encara no és una frase nostra: ho esdevé quan algú la grava.
+
+    Hi entra la frase que DIU el que la secció ensenya, no la que és de la mateixa unitat de
+    gramàtica: la unitat `noms-genere-nombre` és certa de 683 frases, i omplir-hi amb això feia
+    que «Pesos i mesures» ensenyés «Oriol està molt enfadat»."""
     import main
     from test_api import client, register
 
@@ -164,7 +168,11 @@ def test_cada_seccio_ensenya_les_nostres_frases_al_costat_del_que_explica():
         "audio_url": "https://res.cloudinary.com/x/video/upload/v1/k.mp3",
         "image_url": "https://res.cloudinary.com/x/image/upload/v1/k.jpg"}).json()
     mute = client.post("/drills/", headers=hdr, json={
-        "text_catalan": "la porta", "text_tachelhit": "tiflut",
+        "text_catalan": "la porta", "text_tachelhit": "fkiγ-as tiflut",
+        "grammar": "clitics-objecte", "grammar_source": "owner"}).json()
+    # de la mateixa unitat, i no diu res del que la secció ensenya: no hi ha de sortir
+    apart = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "Oriol està molt enfadat", "text_tachelhit": "luryl yaġht ljnn",
         "grammar": "clitics-objecte", "grammar_source": "owner"}).json()
 
     client.put("/method/la-botiga/content", headers=hdr, json={
@@ -179,6 +187,8 @@ def test_cada_seccio_ensenya_les_nostres_frases_al_costat_del_que_explica():
     assert ours.index(rich["id"]) < (ours.index(mute["id"]) if mute["id"] in ours else 99), \
         "amb veu i imatge, davant"
     assert sec["ours_total"] >= 2
+    assert apart["id"] not in ours, "la unitat sola no fa entrar una frase que no ho ensenya"
+    assert all(d.get("why") for d in sec["ours_drills"]), "cada frase diu què hi fa"
 
     # i la línia del llibre: encara no és nostra, i gravar-la la converteix
     assert "drill_id" not in sec["examples"][0]
@@ -216,3 +226,83 @@ def test_el_que_falta_es_mesura_amb_la_veu_no_amb_el_text():
     assert r["sections_ready"] <= r["sections_total"]
 
     assert client.get("/method/no-existeix").status_code == 404
+
+
+def test_cada_linia_porta_la_seva_tifinagh_i_el_seu_paraula_per_paraula():
+    """Dues coses que l'amo ha demanat i que valen per a tot el Mètode.
+
+    La TIFINAGH: el capítol s'escriu en llatí perquè així és el manual i així escriu qui grava,
+    però l'escriptura de la llengua va amb la llengua. No es desa: es calcula en servir, i per
+    això millora sola quan millora el transliterador.
+
+    El PARAULA PER PARAULA: igual que al curs de gramàtica. Una frase que s'ensenya i no es pot
+    desmuntar és una frase que només es pot repetir. Aquest sí que s'escriu amb el capítol,
+    perquè el significat de cada tros no es pot endevinar."""
+    import main
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("tif_filler")}
+    db = main.SessionLocal()
+    try:
+        me = client.get("/users/me", headers=hdr).json()
+        db.query(main.UserModel).filter(main.UserModel.id == me["id"]).first().is_admin = True
+        db.commit()
+    finally:
+        db.close()
+
+    client.put("/method/la-botiga/content", headers=hdr, json={
+        "sections": [{"id": "dar", "title": "dar", "examples": [
+            {"shi": "dar ugzzar", "ca": "a la carnisseria",
+             "gloss": [{"shi": "dar", "ca": "a cal"}, {"shi": "ugzzar", "ca": "carnisser"}]}]}],
+        "dialogue": {"title": "A la botiga", "turns": [{"who": "la dona", "shi": "is dar-k tudit?",
+                                                        "ca": "Que tens oli d'argan?"}]},
+        "vocabulary": [{"shi": "aγrum", "ca": "pa"}],
+    })
+
+    body = client.get("/method/la-botiga").json()["content"]
+    line = body["sections"][0]["examples"][0]
+    assert line["tif"] and line["tif"] != line["shi"], "la línia porta la seva tifinagh"
+    assert [g["ca"] for g in line["gloss"]] == ["a cal", "carnisser"], "i el paraula per paraula"
+    assert line["gloss"][0].get("tif"), "cada paraula també la porta"
+    assert body["dialogue"]["turns"][0]["tif"], "les rèpliques del diàleg també"
+    assert body["vocabulary"][0]["tif"], "i les paraules"
+
+
+def test_el_que_el_servidor_calcula_no_es_desa_amb_el_capitol():
+    """Qui administra corregeix una línia i el navegador torna el capítol tal com el tenia a la
+    pantalla: amb la tifinagh i amb les frases nostres repartides per dins. Desar-ho congelaria
+    el capítol amb les frases d'aquell dia, i la tifinagh deixaria de millorar quan millora el
+    transliterador. El que el servidor posa en servir, el servidor l'ha de treure en desar."""
+    import json
+
+    import main
+    import method as method_mod
+    from models import MethodChapter
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("round_tripper")}
+    db = main.SessionLocal()
+    try:
+        me = client.get("/users/me", headers=hdr).json()
+        db.query(main.UserModel).filter(main.UserModel.id == me["id"]).first().is_admin = True
+        db.commit()
+    finally:
+        db.close()
+
+    client.put("/method/la-botiga/content", headers=hdr, json={
+        "sections": [{"id": "dar", "title": "dar", "examples": [{"shi": "dar ugzzar", "ca": "a cal carnisser"}]}]})
+    served = client.get("/method/la-botiga").json()["content"]
+    assert served["sections"][0]["examples"][0]["tif"], "servit, porta la tifinagh"
+
+    # i això mateix és el que el navegador torna en corregir una línia
+    client.put("/method/la-botiga/content", headers=hdr, json=served)
+    db = main.SessionLocal()
+    try:
+        stored = json.loads(db.query(MethodChapter).filter(MethodChapter.slug == "la-botiga").first().body)
+    finally:
+        db.close()
+    sec = stored["sections"][0]
+    assert "ours_drills" not in sec and "ours_total" not in sec, "les frases nostres no es desen"
+    assert "tif" not in sec["examples"][0], "la tifinagh tampoc: es calcula"
+    assert sec["examples"][0]["shi"] == "dar ugzzar", "i el que s'escriu, s'hi queda"
+    assert method_mod.strip_computed({"a": [{"tif": 1, "shi": "x"}]}) == {"a": [{"shi": "x"}]}
