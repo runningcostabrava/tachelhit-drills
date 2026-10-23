@@ -6812,6 +6812,27 @@ def put_grammar_lesson(slug: str, lesson: Dict[str, Any] = Body(..., embed=True)
     return {"slug": slug, "hand_written": True, "steps": len(steps)}
 
 
+@app.post("/grammar/{slug}/row")
+def grammar_row_drill(slug: str,
+                      step: int = Body(..., embed=True),
+                      row: int = Body(..., embed=True),
+                      deep: bool = Body(False, embed=True),
+                      db: Session = Depends(get_db),
+                      user: UserModel = Depends(require_user)):
+    """La frase de la biblioteca darrere una fila d'una taula de formes, creant-la el primer cop.
+
+    Una taula de formes és on la gramàtica es veu d'un cop d'ull, i era l'únic lloc de la lliçó
+    que no es podia dir. Gravar-ne una fila la converteix en una frase nostra, igual que al
+    Mètode: qualsevol que tingui nom pot fer-ho.
+    """
+    try:
+        out = grammar_course.drill_for_row(db, slug, int(step), int(row), user, deep=deep)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    d = db.query(DrillModel).filter(DrillModel.id == out["drill_id"]).first()
+    return {**out, "drill": Drill.model_validate(d, from_attributes=True)}
+
+
 @app.post("/grammar/{slug}/lesson/release")
 def release_grammar_lesson(slug: str, db: Session = Depends(get_db),
                            _admin: UserModel = Depends(require_admin)):

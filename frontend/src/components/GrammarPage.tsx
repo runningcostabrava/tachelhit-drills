@@ -218,8 +218,8 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
             <div key={k} className="lesson-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', padding: '18px', marginTop: '12px', boxShadow: 'var(--shadow-sm)' }}>
               {c.type === 'intro' && <IntroCard page={page} cover={cover?.image_url || null} />}
               {c.type === 'explain' && <ExplainCard step={c} onAsk={setAsk} onRecord={recordExample} onWant={wantVoice} signedIn={signedIn} isAdmin={isAdmin} />}
-              {c.type === 'pattern' && <PatternCard step={c} />}
-              {c.type === 'quiz' && <QuizCard step={c} chosen={answers[k]} onChoose={(j) => setAnswers((a) => ({ ...a, [k]: j }))} active={false} />}
+              {c.type === 'pattern' && <PatternCard step={c} slug={slug} index={k - 1} deep={deep} signedIn={signedIn} onRecord={setRecording} />}
+              {c.type === 'quiz' && <QuizCard step={c} chosen={answers[k]} onChoose={(j) => setAnswers((a) => ({ ...a, [k]: j }))} active={false} onEdit={isAdmin ? () => navigate(`/grammar/${slug}/editor?step=${k - 1}`) : undefined} />}
               {(c.type === 'tip' || c.type === 'dialect') && <NoteCard step={c} />}
               {c.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} onEdit={() => navigate(`/grammar/${slug}/editor`)} nextUnit={nextUnit} proposals={proposals} onDecided={loadProposals} deep={deep} />}
               {(c.type === 'explain' || c.type === 'tip' || c.type === 'dialect' || c.type === 'intro') && page.lesson.steps.length > 0 && <ProposeChange slug={slug} step={k - 1} current={c.type === 'intro' ? page.lesson.intro : c.text} signedIn={signedIn} onSent={loadProposals} />}
@@ -238,8 +238,8 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
           <div key={i} className="lesson-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', padding: '18px', marginTop: '12px', boxShadow: 'var(--shadow-sm)', minHeight: '240px' }}>
             {card.type === 'intro' && <IntroCard page={page} cover={cover?.image_url || null} />}
             {card.type === 'explain' && <ExplainCard step={card} onAsk={setAsk} onRecord={recordExample} onWant={wantVoice} signedIn={signedIn} isAdmin={isAdmin} />}
-            {card.type === 'pattern' && <PatternCard step={card} />}
-            {card.type === 'quiz' && <QuizCard step={card} chosen={answers[i]} onChoose={(k) => setAnswers((a) => ({ ...a, [i]: k }))} />}
+            {card.type === 'pattern' && <PatternCard step={card} slug={slug} index={i - 1} deep={deep} signedIn={signedIn} onRecord={setRecording} />}
+            {card.type === 'quiz' && <QuizCard step={card} chosen={answers[i]} onChoose={(k) => setAnswers((a) => ({ ...a, [i]: k }))} onEdit={isAdmin ? () => navigate(`/grammar/${slug}/editor?step=${i - 1}`) : undefined} />}
             {(card.type === 'tip' || card.type === 'dialect') && <NoteCard step={card} />}
             {card.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} onEdit={() => navigate(`/grammar/${slug}/editor`)} nextUnit={nextUnit} proposals={proposals} onDecided={loadProposals} deep={deep} />}
         {(card.type === 'explain' || card.type === 'tip' || card.type === 'dialect' || card.type === 'intro') && page.lesson.steps.length > 0 && <ProposeChange slug={slug} step={i - 1} current={card.type === 'intro' ? page.lesson.intro : card.text} signedIn={signedIn} onSent={loadProposals} />}
@@ -413,26 +413,66 @@ function Example({ e, highlight, onAsk, onRecord, onWant, signedIn, isAdmin }: {
 // the two quiet links under a sentence: the words, and why the sentence is in this unit
 const linkBtn = { padding: 0, border: 'none', background: 'none', color: 'var(--brand-1)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' };
 
-function PatternCard({ step }: { step: Extract<LessonStep, { type: 'pattern' }> }) {
+// Una taula de formes és on la gramàtica es veu d'un cop d'ull —ɣur-i, ɣur-k, ɣur-s— i era
+// l'únic lloc de la lliçó que no es podia DIR. Ara cada fila porta micròfon: la primera vegada
+// que algú el prem, la forma es torna una frase de la biblioteca i s'obre la gravadora. Una
+// forma que no s'ha sentit mai no se sap dir.
+function PatternCard({ step, slug, index, deep, signedIn, onRecord }: {
+  step: Extract<LessonStep, { type: 'pattern' }>;
+  slug: string; index: number; deep: boolean; signedIn: boolean;
+  onRecord: (d: Drill) => void;
+}) {
+  const [busy, setBusy] = useState<number | null>(null);
+  const [made, setMade] = useState<Record<string, number>>(step.drill_ids || {});
+
+  const record = async (k: number) => {
+    if (!signedIn) { toast.error('Per gravar et cal un nom: fes-te’n un al perfil.'); return; }
+    setBusy(k);
+    try {
+      const r = await api.grammarRowDrill(slug, index, k, deep);
+      setMade((m) => ({ ...m, [String(k)]: r.drill_id }));
+      onRecord(r.drill);
+    } catch (e) { toast.error(whyItFailed(e, 'No s’ha pogut preparar la gravació')); }
+    finally { setBusy(null); }
+  };
+
   return (
     <div>
       <h2 style={{ fontSize: '18px', margin: '0 0 10px' }}>{step.title || 'Les formes'}</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '15px' }}>
         <tbody>
-          {step.rows.map((r, k) => (
-            <tr key={k} style={{ borderTop: k ? '1px solid var(--border)' : 'none' }}>
-              <td style={{ padding: '8px 6px 8px 0', fontWeight: 800, whiteSpace: 'nowrap', color: 'var(--brand-1)' }}>{r[0]}</td>
-              <td style={{ padding: '8px 6px', color: 'var(--text)' }}>{r[1]}</td>
-              <td style={{ padding: '8px 0 8px 6px', color: 'var(--text-soft)', fontSize: '14px' }}>{r[2]}</td>
-            </tr>
-          ))}
+          {step.rows.map((r, k) => {
+            const mine = made[String(k)];
+            return (
+              <tr key={k} style={{ borderTop: k ? '1px solid var(--border)' : 'none' }}>
+                <td style={{ padding: '8px 6px 8px 0', fontWeight: 800, whiteSpace: 'nowrap', color: 'var(--brand-1)' }}>{r[0]}</td>
+                <td style={{ padding: '8px 6px', color: 'var(--text)' }}>{r[1]}</td>
+                <td style={{ padding: '8px 0 8px 6px', color: 'var(--text-soft)', fontSize: '14px' }}>{r[2]}</td>
+                <td style={{ padding: '4px 0 4px 6px', width: 34 }}>
+                  <button onClick={() => record(k)} disabled={busy === k}
+                          aria-label={mine ? `Afegeix la teva veu a ${r[0]}` : `Grava ${r[0]}`}
+                          title={mine ? 'Afegeix-hi la teva veu' : 'Grava-la: la farà nostra'}
+                          style={{ width: 28, height: 28, borderRadius: 'var(--r-pill)', padding: 0,
+                                   border: `1px solid ${mine ? 'var(--emerald)' : 'var(--border)'}`,
+                                   background: 'var(--surface)', color: mine ? 'var(--emerald)' : 'var(--brand-1)',
+                                   cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                   fontFamily: 'inherit', fontSize: 11 }}>
+                    {busy === k ? '…' : <FaMicrophone size={11} />}
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
   );
 }
 
-function QuizCard({ step, chosen, onChoose, active = true }: { step: Extract<LessonStep, { type: 'quiz' }>; chosen?: number; onChoose: (k: number) => void; active?: boolean }) {
+// El llapis d'una pregunta: l'amo n'ha vista una amb el català de la frase mal escrit («Com es
+// diu "M'agrada mola"?») i no tenia per on tocar-la. Va a l'editor de la lliçó, obert per aquest
+// pas mateix, que és on es canvien l'enunciat, les respostes i quina és la bona.
+function QuizCard({ step, chosen, onChoose, active = true, onEdit }: { step: Extract<LessonStep, { type: 'quiz' }>; chosen?: number; onChoose: (k: number) => void; active?: boolean; onEdit?: () => void }) {
   const answered = chosen !== undefined;
   const kind = step.kind || 'meaning';
   const play = useCallback(() => { if (step.example.audio_url) new Audio(getMediaUrl(step.example.audio_url)).play().catch(() => {}); }, [step.example.audio_url]);
@@ -446,7 +486,15 @@ function QuizCard({ step, chosen, onChoose, active = true }: { step: Extract<Les
   };
   return (
     <div>
-      <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--saffron-strong)', marginBottom: 6 }}>{kind === 'listen' ? 'Escolta' : kind === 'picture' ? 'Mira' : 'Pregunta ràpida'}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--saffron-strong)', flex: 1 }}>{kind === 'listen' ? 'Escolta' : kind === 'picture' ? 'Mira' : 'Pregunta ràpida'}</div>
+        {onEdit && (
+          <button onClick={onEdit} aria-label="Corregeix aquesta pregunta" title="Corregeix-la"
+                  style={{ width: 26, height: 26, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+            <FaPen size={10} />
+          </button>
+        )}
+      </div>
       <h2 style={{ fontSize: '18px', margin: '0 0 12px', lineHeight: 1.3 }}>{step.question}</h2>
       {kind === 'listen' && (
         <button onClick={play} aria-label="Torna a escoltar" style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 auto 14px', padding: '14px 22px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 700, fontSize: '15px', cursor: 'pointer', boxShadow: 'var(--shadow-brand)' }}><FaVolumeUp size={20} /> Torna a escoltar</button>

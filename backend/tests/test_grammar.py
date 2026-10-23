@@ -575,3 +575,48 @@ def test_a_lesson_written_by_hand_is_never_overwritten_by_the_machine():
     assert grammar._current(row, unit_ids=None) is None   # out of date again, so it gets rewritten
     json.loads(row.body)
     db.close()
+
+
+def test_una_fila_duna_taula_de_formes_es_pot_gravar():
+    """Una taula de formes és on la gramàtica es veu d'un cop d'ull —ɣur-i, ɣur-k, ɣur-s— i era
+    l'únic lloc de la lliçó que no es podia DIR. L'amo: «crec que aquí s'hauria de poder gravar
+    la veu». La primera vegada, la fila es torna una frase de la biblioteca que demana veu; la
+    segona, s'hi afegeix una veu en comptes de crear-ne una altra."""
+    import json
+
+    import main
+    from models import GrammarLesson
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("taula_gravadora")}
+    db = main.SessionLocal()
+    try:
+        db.add(GrammarLesson(id="ser-tenir", version=0, body=json.dumps({
+            "intro": "", "steps": [
+                {"type": "explain", "title": "u", "text": "t", "examples": []},
+                {"type": "pattern", "title": "Formes de «tenir»",
+                 "rows": [["ɣur-i", "tinc", "ɣur-i yan wuccn"], ["ɣur-k", "tens (home)", ""]]},
+            ]}, ensure_ascii=False)))
+        db.commit()
+    finally:
+        db.close()
+
+    r = client.post("/grammar/ser-tenir/row", headers=hdr, json={"step": 1, "row": 0})
+    assert r.status_code == 200, r.text
+    made = r.json()
+    assert made["created"] is True
+    d = made["drill"]
+    assert d["text_tachelhit"] == "ɣur-i" and d["text_catalan"] == "tinc"
+    assert d["voice_wanted"] is True, "neix demanant una veu"
+    assert "taula de formes" in (d.get("tag") or ""), "diu d'on surt"
+    assert "ser-tenir" in (d.get("grammar") or "")
+
+    again = client.post("/grammar/ser-tenir/row", headers=hdr, json={"step": 1, "row": 0}).json()
+    assert again["created"] is False and again["drill_id"] == made["drill_id"], "la segona vegada, una veu més"
+
+    # i la lliçó se'n recorda, perquè el micròfon pugui canviar de color
+    assert client.get("/grammar/ser-tenir/lesson", headers=hdr).json()["lesson"]["steps"][1]["drill_ids"]["0"] == made["drill_id"]
+
+    # el que no és una taula, o una fila que no hi és, no fa res
+    assert client.post("/grammar/ser-tenir/row", headers=hdr, json={"step": 0, "row": 0}).status_code == 400
+    assert client.post("/grammar/ser-tenir/row", headers=hdr, json={"step": 1, "row": 9}).status_code == 400
