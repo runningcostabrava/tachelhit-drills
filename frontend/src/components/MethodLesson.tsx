@@ -49,11 +49,15 @@ function Tif({ t, size = 12.5 }: { t?: string | null; size?: number }) {
  */
 function SectionText({
   slug, index, title, text, deep, ours, canEdit, signedIn, onSave,
+  folded = false, open = true, onToggle, summary, unit, oursTotal,
 }: {
   slug: string; index: number;
   title: string; text?: string; deep?: string; ours?: string;
   canEdit: boolean; signedIn: boolean;
   onSave: (p: { title: string; text: string; deep: string; ours: string }) => Promise<void>;
+  /** Una secció de la segona zona: plegada, però mai tancada amb clau. */
+  folded?: boolean; open?: boolean; onToggle?: () => void;
+  summary?: string; unit?: string; oursTotal?: number;
 }) {
   const [edit, setEdit] = useState<{ title: string; text: string; deep: string; ours: string } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -85,10 +89,28 @@ function SectionText({
     );
   }
 
+  if (folded && !open) {
+    return (
+      <>
+        <button onClick={onToggle} style={{ width: '100%', textAlign: 'left', background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', color: 'var(--text)' }}>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 17, margin: '0 0 2px' }}>▸ {title}</h3>
+          {summary && <p style={{ fontSize: 13.5, color: 'var(--text-soft)', margin: '0 0 4px', lineHeight: 1.55 }}>{summary}</p>}
+        </button>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+          {typeof oursTotal === 'number' && oursTotal > 0 && `${oursTotal} frases nostres · `}
+          {unit && <a href={`/grammar/${unit}`} style={{ color: 'var(--brand-1)', fontWeight: 700, textDecoration: 'none' }}>la unitat sencera al curs →</a>}
+        </p>
+      </>
+    );
+  }
+
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18, margin: '0 0 6px', flex: 1 }}>{title}</h3>
+        <h3 onClick={folded ? onToggle : undefined}
+            style={{ fontFamily: 'var(--font-display)', fontSize: 18, margin: '0 0 6px', flex: 1, cursor: folded ? 'pointer' : 'auto' }}>
+          {folded ? '▾ ' : ''}{title}
+        </h3>
         {canEdit && (
           <button onClick={() => setEdit({ title, text: text || '', deep: deep || '', ours: ours || '' })}
                   aria-label="Corregeix aquesta secció" title="Corregeix-la" style={iconBtn}>
@@ -98,6 +120,12 @@ function SectionText({
       </div>
       {text && <p style={{ fontSize: 14.5, lineHeight: 1.65, margin: '0 0 6px', whiteSpace: 'pre-line' }}>{text}</p>}
       {deep && <Deep text={deep} />}
+      {unit && (
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 6px' }}>
+          Això, sencer, és a{' '}
+          <a href={`/grammar/${unit}`} style={{ color: 'var(--brand-1)', fontWeight: 700, textDecoration: 'none' }}>la seva unitat del curs</a>.
+        </p>
+      )}
       {!canEdit && (
         propose === null ? (
           <button onClick={() => { if (!signedIn) { toast.error('Per proposar un canvi et cal un nom: fes-te’n un al perfil.'); return; } setPropose(text || ''); }}
@@ -336,6 +364,10 @@ export default function MethodLesson({
   onChanged: () => void;
 }) {
   const [openDialogue, setOpenDialogue] = useState(true);
+  // Quines seccions de la segona zona ha obert qui llegeix. Plegades, però mai tancades amb
+  // clau: qui obre un capítol pot ser un parlant que ve a corregir la taula dels datius, i
+  // aquesta persona no ha de passar cap examen (el pedagog, quan vaig proposar el desbloqueig).
+  const [openAside, setOpenAside] = useState<Record<string, boolean>>({});
   const [body, setBody] = useState<MethodContent>(content);
   const signedIn = hasIdentity();
 
@@ -467,12 +499,12 @@ export default function MethodLesson({
         {[
           ...(body.dialogue ? [{ id: 'part-dialeg', label: body.dialogue.title }] : []),
           ...((body.vocabulary || []).length ? [{ id: 'part-paraules', label: 'Les paraules' }] : []),
-          ...(body.sections || []).map((s) => ({ id: `part-${s.id}`, label: s.title.split(':')[0] })),
+          ...(body.sections || []).map((s) => ({ id: `part-${s.id}`, label: s.title.split(':')[0], aside: s.zone === 'aside' })),
           ...(body.practice ? [{ id: 'part-fes-ho-tu', label: 'Fes-ho tu' }] : []),
         ].map((x) => (
           <button key={x.id}
                   onClick={() => document.getElementById(x.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-                  style={{ flexShrink: 0, padding: '6px 13px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                  style={{ flexShrink: 0, padding: '6px 13px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: (x as { aside?: boolean }).aside ? 'var(--surface-2)' : 'var(--surface)', color: 'var(--text-soft)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap', opacity: (x as { aside?: boolean }).aside ? 0.75 : 1 }}>
             {x.label}
           </button>
         ))}
@@ -535,14 +567,24 @@ export default function MethodLesson({
         <Part n={3} title="Com funciona" icon={<FaBookOpen size={12} />}
               what="Una cosa per secció: el que el manual explica, i tot seguit com ho diu la gent que coneixem." />
       )}
-      {(body.sections || []).map((s, si) => (
-        <section key={s.id} id={`part-${s.id}`} style={{ marginBottom: 26, paddingInlineStart: 14, borderInlineStart: '3px solid var(--border)', scrollMarginTop: 'calc(var(--nav-h) + 10px)' }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--brand-1)', letterSpacing: '0.08em' }}>
-            3.{si + 1}
+      {(body.sections || []).map((s, si) => {
+        const aside = s.zone === 'aside';
+        const shown = !aside || !!openAside[s.id];
+        return (
+        <section key={s.id} id={`part-${s.id}`} style={{ marginBottom: aside && !shown ? 14 : 26, paddingInlineStart: 14, borderInlineStart: `3px solid ${aside ? 'var(--surface-2)' : 'var(--border)'}`, scrollMarginTop: 'calc(var(--nav-h) + 10px)' }}>
+          {aside && (body.sections || [])[si - 1]?.zone !== 'aside' && (
+            <Part n={4} title="El que la mateixa escena et deixa veure"
+                  what="Això no et cal per fer la compra: hi surt, i si vols saber per què funciona, obre-ho. Cada cosa té la seva unitat sencera al curs de gramàtica." />
+          )}
+          <div style={{ fontSize: 11, fontWeight: 800, color: aside ? 'var(--text-muted)' : 'var(--brand-1)', letterSpacing: '0.08em' }}>
+            {aside ? 4 : 3}.{si + 1}
           </div>
           <SectionText slug={slug} index={si} title={s.title} text={s.text} deep={s.deep} ours={s.ours}
                        canEdit={canEdit} signedIn={signedIn}
+                       folded={aside} open={shown} summary={s.summary} unit={s.unit} oursTotal={s.ours_total}
+                       onToggle={() => setOpenAside((o) => ({ ...o, [s.id]: !o[s.id] }))}
                        onSave={(p) => saveSection(si, p)} />
+          {shown && <>
 
           {s.table && (
             <div style={{ marginTop: 8, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
@@ -682,8 +724,10 @@ export default function MethodLesson({
               )}
             </div>
           )}
+          </>}
         </section>
-      ))}
+        );
+      })}
 
       {/* 4 · FES-HO TU — el mateix diàleg canviant el que compres: es tria, no es llegeix. */}
       {body.practice && (

@@ -206,6 +206,10 @@ export interface MethodContent {
     numbers?: { n: number; m: string; f?: string; m_tif?: string | null; f_tif?: string | null }[];
     /** Més a fons: el que el manual dóna per sabut i aquí s'explica. S'obre qui vol. */
     deep?: string;
+    /** De quina zona del capítol és: el que cal per fer la compra, o el que l'escena deixa veure. */
+    zone?: 'shop' | 'aside';
+    /** Una línia que es llegeix amb la secció plegada: què hi trobaràs. */
+    summary?: string;
     /** El que la NOSTRA varietat fa d'una altra manera. Això no ve del llibre. */
     ours?: string;
     /** La unitat de gramàtica de què va aquesta secció: d'aquí surten les nostres frases. */
