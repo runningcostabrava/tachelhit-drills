@@ -9,6 +9,7 @@ import { API_BASE, getMediaUrl } from '../config';
 import RecordAudioModal from './RecordAudioModal';
 import AiAssistant from './AiAssistant';
 import { GlossWords } from './WordGloss';
+import SentenceVariants from './SentenceVariants';
 import type { Drill } from '../types';
 
 // The grammar course: the library organised as a sequence of grammar units (backend/grammar.py).
@@ -374,6 +375,8 @@ function Example({ e, highlight, onAsk, onRecord, onWant, signedIn, isAdmin }: {
       {onAsk && <button onClick={() => onAsk({ id: e.id, label: e.ca || e.shi })} title="Explica'm aquesta frase paraula per paraula" aria-label="Explica'm aquesta frase" style={{ flexShrink: 0, width: 36, height: 36, padding: 0, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--brand-1)', cursor: 'pointer', fontSize: '15px', lineHeight: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>💡</button>}
       <button onClick={play} disabled={!e.audio_url} aria-label="Escolta" style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 'var(--r-pill)', border: 'none', background: e.audio_url ? (e.recorded ? 'var(--brand-1)' : 'var(--sky)') : 'var(--surface)', color: e.audio_url ? '#fff' : 'var(--text-muted)', cursor: e.audio_url ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={15} /></button>
       {words && e.gloss && <div style={{ flexBasis: '100%' }}><GlossWords words={e.gloss} size="sm" /></div>}
+      {/* I com ho diu qui ho diu d'una altra manera, amb el seu nom i el seu poble. */}
+      {e.variants && e.variants.length > 0 && <div style={{ flexBasis: '100%' }}><SentenceVariants variants={e.variants} size="sm" /></div>}
       {suggest !== null && (
         <div style={{ flexBasis: '100%', display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
           <div style={{ fontSize: '12px', color: 'var(--text-soft)' }}>Com ho dius tu? Es desa com una segona versió d&apos;aquesta frase, amb el mateix significat.</div>

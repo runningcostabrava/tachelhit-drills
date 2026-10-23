@@ -147,6 +147,9 @@ export interface MethodSentence {
   tif?: string | null;
   /** Per què aquesta frase és en aquesta secció. El tria la secció, no l'atzar. */
   why?: string | null;
+  /** Les altres maneres de dir-la: la gravació de qui la diu diferent, amb el seu nom i el seu
+   *  poble. No són correccions de la de dalt: són dues maneres, i totes dues són bones. */
+  variants?: { id: number; text: string; tif?: string | null; audio_url: string; speaker: string | null; variety: string | null; region: string | null; is_native?: boolean | null }[];
 }
 
 export interface MethodChapterSummary {
@@ -589,7 +592,9 @@ export interface GrammarUnit { slug: string; title: string; level: number }
 /** A drill as a lesson quotes it: both texts plus its picture and a voice (the speaker's when recorded). */
 /** `gloss`: the library's word-by-word reading of the sentence, refreshed on every serve.
  *  `why`: what this sentence shows of THIS unit's point (stored per sentence and unit). */
-export interface LessonExample { id: number; shi: string; ca: string; image_url?: string | null; audio_url?: string | null; recorded: boolean; author?: string | null; region?: string | null; origin?: string | null; focus?: string | null; gloss?: { shi: string; ca: string; tif?: string | null }[] | null; why?: string | null; tif?: string | null; source_url?: string | null; source_channel?: string | null }
+export interface LessonExample { id: number; shi: string; ca: string; image_url?: string | null; audio_url?: string | null; recorded: boolean; author?: string | null; region?: string | null; origin?: string | null; focus?: string | null; gloss?: { shi: string; ca: string; tif?: string | null }[] | null; why?: string | null; tif?: string | null; source_url?: string | null; source_channel?: string | null;
+  /** Les altres maneres de dir-la: la gravació de qui la diu diferent, amb el seu nom i el seu poble. */
+  variants?: { id: number; text: string; tif?: string | null; audio_url: string; speaker: string | null; variety: string | null; region: string | null; is_native?: boolean | null }[] }
 export type LessonStep =
   | { type: 'explain'; title: string; text: string; examples: LessonExample[] }
   /** `drill_ids`: la frase de la biblioteca darrere cada fila, quan algú ja l'ha volguda dir. */

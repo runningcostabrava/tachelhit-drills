@@ -6541,6 +6541,43 @@ def method_index(db: Session = Depends(get_db),
     return {"chapters": out, "source": method_mod.SOURCE}
 
 
+def _another_way(said: Optional[str], written: Optional[str]) -> bool:
+    """Si això que algú ha dit és de debò una altra manera de dir-ho, i no la mateixa escrita
+    igual (o escrita amb gh en comptes de ɣ, que és la mateixa paraula)."""
+    import practice as practice_mod
+    key = lambda t: " ".join(practice_mod.sound_key(w) for w in practice_mod.words_of(t or ""))
+    return bool((said or "").strip()) and key(said) != key(written)
+
+
+def other_ways(db) -> Dict[int, List[dict]]:
+    """Les altres maneres de dir una frase: les gravacions que porten el text de qui les diu.
+
+    L'amo: «si jo gravo i canvio el text, el sistema hauria de mostrar també l'altra versió de la
+    mateixa frase amb la seva gravació, i hauria de mostrar l'autor i la zona».
+
+    Això ja existia a mitges: la gravadora pregunta «com ho dius tu?» i el que s'hi escriu es
+    desa amb la gravació (`recordings.text`), però no es veia enlloc fora del reproductor. Una
+    frase dita d'una altra manera no és una correcció de l'altra: són dues maneres, i totes dues
+    porten el nom de qui la diu i el seu poble. La del llibre no mana sobre la del poble.
+
+    Només surten les gravacions que PORTEN text propi: una gravació sense text és la mateixa
+    frase amb una altra veu, i això ja ho diu el reproductor.
+    """
+    out: Dict[int, List[dict]] = {}
+    rows = (db.query(RecordingModel)
+            .filter(RecordingModel.text.isnot(None), RecordingModel.text != "")
+            .order_by(RecordingModel.date_created.asc()).all())
+    for r in rows:
+        out.setdefault(r.drill_id, []).append({
+            "id": r.id, "text": (r.text or "").strip(),
+            "tif": grammar_course.tifinagh((r.text or "").strip()),
+            "audio_url": normalize_media_url(r.audio_url),
+            "speaker": r.speaker, "variety": r.variety, "region": r.region,
+            "is_native": r.is_native,
+        })
+    return out
+
+
 @app.get("/method/{slug}")
 def method_chapter(slug: str, db: Session = Depends(get_db),
                    user: Optional[UserModel] = Depends(get_current_user)):
@@ -6551,6 +6588,7 @@ def method_chapter(slug: str, db: Session = Depends(get_db),
     rows = method_mod.sentences_for(db, c["slug"])
     titles = {u["slug"]: u["title"] for u in grammar_course.UNITS}
     labels = {t["slug"]: t["label"] for t in topics_catalog.TOPICS}
+    said = other_ways(db)
 
     def card(d):
         return {"id": d.id, "text_tachelhit": d.text_tachelhit,
@@ -6562,7 +6600,9 @@ def method_chapter(slug: str, db: Session = Depends(get_db),
                 # paraula per paraula, igual que al curs de gramàtica: una frase que s'ensenya
                 # i no es pot desmuntar és una frase que només es pot repetir
                 "gloss": grammar_course.gloss_of(d),
-                "tif": grammar_course.tifinagh(d.text_tachelhit or "")}
+                "tif": grammar_course.tifinagh(d.text_tachelhit or ""),
+                # i les altres maneres de dir-ho, cadascuna amb qui la diu i d'on és
+                "variants": [v for v in said.get(d.id, []) if _another_way(v["text"], d.text_tachelhit)]}
 
     # per unitat de gramàtica, que és com es llegeix un capítol: una cosa després de l'altra
     sections = []
@@ -6750,6 +6790,17 @@ def _grammar_unit_payload(db, slug: str, limit: int, force: bool, deep: bool = F
     except Exception as e:
         print(f"[GRAMMAR] lesson {slug}: {e}")
         lesson = {"intro": "", "steps": [{"type": "explain", "title": unit["title"], "text": "La lliçó encara no s’ha pogut escriure. Mira els exemples de la biblioteca mentrestant.", "examples": examples[:3]}, {"type": "end"}], "error": str(e)[:160]}
+    # Les altres maneres de dir cada frase citada. La lliçó es va escriure un dia i es desa tal
+    # com va quedar; això s'hi afegeix en SERVIR-LA, perquè una veu gravada avui s'ha de veure
+    # avui i no quan es torni a escriure la lliçó.
+    said = other_ways(db)
+    if said:
+        for step in (lesson.get("steps") or []):
+            for e in (step.get("examples") or []):
+                e["variants"] = [v for v in said.get(e.get("id"), []) if _another_way(v["text"], e.get("shi"))]
+            if step.get("example"):
+                step["example"]["variants"] = [v for v in said.get(step["example"].get("id"), [])
+                                               if _another_way(v["text"], step["example"].get("shi"))]
     total = len(rows)  # the rows are already every drill of the unit (the query's limit is far above any unit)
     return {**{k: unit[k] for k in ("slug", "title", "level")}, "lesson": lesson, "total": total,
             "practice": [d.id for d in practice],
