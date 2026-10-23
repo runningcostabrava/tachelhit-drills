@@ -7,6 +7,7 @@ import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import RecordAudioModal from './RecordAudioModal';
 import { GlossWords } from './WordGloss';
+import SentenceVariants from './SentenceVariants';
 
 // La lliçó d'un capítol: l'explicació, el diàleg i el vocabulari.
 //
@@ -473,6 +474,7 @@ export default function MethodLesson({
                         </div>
                       )}
                       {d.gloss && d.gloss.length > 0 && <GlossWords words={d.gloss} size="sm" />}
+                      <SentenceVariants variants={d.variants} size="sm" />
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                         <span style={{ fontSize: 11.5, color: 'var(--text-muted)', flex: 1 }}>
                           {d.speaker || 'sense nom'}

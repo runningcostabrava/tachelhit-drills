@@ -376,3 +376,45 @@ def test_una_seccio_es_pot_corregir_i_es_pot_proposar_un_canvi():
     # un capítol que no existeix, no
     assert client.post("/grammar/metode:no-existeix/proposals", headers=someone,
                        json={"step": 0, "text": "hola que tal"}).status_code == 404
+
+def test_una_altra_manera_de_dir_ho_es_veu_amb_qui_la_diu():
+    """L'amo: «si jo gravo i canvio el text, el sistema hauria de mostrar també l'altra versió de
+    la mateixa frase amb la seva gravació, i hauria de mostrar l'autor i la zona».
+
+    Ja es desava —la gravadora pregunta «com ho dius tu?»— i no es veia enlloc fora del
+    reproductor. Una frase dita d'una altra manera no és una correcció de l'altra: són dues
+    maneres, i totes dues porten el nom de qui la diu i el seu poble.
+
+    I una gravació que escriu la MATEIXA frase no és cap altra manera: `ghur` i `ɣur` són la
+    mateixa paraula escrita de dues maneres, i allò ja ho diu el reproductor."""
+    import main
+    from models import Recording
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("qui_ho_diu_daltra_manera")}
+    d = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "Que tens oli d'argan?", "text_tachelhit": "is dar-k tudit?",
+        "grammar": "ser-tenir", "grammar_source": "owner"}).json()
+
+    db = main.SessionLocal()
+    try:
+        db.add(Recording(drill_id=d["id"], audio_url="https://res.cloudinary.com/x/video/upload/v1/h.mp3",
+                         text="is ɣur-k tudit?", speaker="Halima Akajji",
+                         variety="Central Atlas", region="Aït Mraw (Boutharar, Azilal)"))
+        db.add(Recording(drill_id=d["id"], audio_url="https://res.cloudinary.com/x/video/upload/v1/i.mp3",
+                         text="is dark tudit?", speaker="Driss Akajji", region="Aït Mraw"))
+        db.commit()
+    finally:
+        db.close()
+
+    said = main.other_ways(main.SessionLocal())
+    mine = said[d["id"]]
+    assert len(mine) == 2
+    assert [v["speaker"] for v in mine] == ["Halima Akajji", "Driss Akajji"]
+    assert mine[0]["tif"], "l'altra manera també porta la seva tifinagh"
+    assert mine[0]["region"], "i d'on és qui la diu"
+
+    # la d'en Driss és la mateixa frase escrita d'una altra manera: no és cap altra manera de dir-ho
+    assert main._another_way("is ɣur-k tudit?", "is dar-k tudit?") is True
+    assert main._another_way("is dark tudit?", "is dar-k tudit?") is False
+    assert main._another_way("", "is dar-k tudit?") is False

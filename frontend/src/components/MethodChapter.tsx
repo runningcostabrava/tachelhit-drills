@@ -6,6 +6,7 @@ import { getMediaUrl, hasIdentity } from '../config';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import MethodLesson from './MethodLesson';
+import SentenceVariants from './SentenceVariants';
 
 // Un capítol del Mètode.
 //
@@ -36,6 +37,7 @@ function Sentence({ s }: { s: MethodSentence }) {
           {s.speaker || 'sense nom'}{s.variety ? ` · ${s.variety}` : ''}{s.region ? ` · ${s.region}` : ''}
           {!s.audio_url && ' · encara sense veu'}
         </div>
+        <SentenceVariants variants={s.variants} size="sm" />
       </div>
       {s.audio_url ? (
         <button onClick={play} aria-label="Escolta-la" title="Escolta-la"
