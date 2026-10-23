@@ -5,7 +5,7 @@ import axios from 'axios';
 import { API_BASE } from './config';
 import { api } from './api';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaBookOpen, FaMicrophone, FaInfo, FaSearch } from 'react-icons/fa';
+import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaBookOpen, FaMicrophone, FaInfo, FaSearch, FaPlus } from 'react-icons/fa';
 import { syncManager } from './services/OfflineSyncManager';
 import ToastHost from './components/ToastHost';
 import StaleBuildBanner from './components/StaleBuildBanner';
@@ -17,6 +17,7 @@ import './App.css';
 // keeping the initial bundle small (AG Grid, players, creators all split out)
 const HomePage = lazy(() => import('./components/HomePage'));
 const SearchPage = lazy(() => import('./components/SearchPage'));
+const AddSentencePage = lazy(() => import('./components/AddSentencePage'));
 const DrillsResponsive = lazy(() => import('./components/DrillsResponsive'));
 const TestsDashboard = lazy(() => import('./components/TestsDashboard'));
 const PracticePage = lazy(() => import('./components/PracticePage'));
@@ -192,6 +193,11 @@ function App() {
           </div>
           {/* Cercar una frase: a l'abast des de qualsevol pantalla. L'amo ho va dir: «una cosa
               primordial a l'aplicació hauria de ser buscar una frase o paraula». */}
+          {/* Afegir una frase: el + que l'amo trobava a faltar, al costat de la lupa. */}
+          <button onClick={() => navigate('/afegeix')} title="Afegeix una frase" aria-label="Afegeix una frase"
+                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: compactNav ? 33 : 35, height: compactNav ? 33 : 35, borderRadius: 'var(--r-pill)', cursor: 'pointer', border: '1px solid var(--brand-1)', background: 'var(--surface)', color: 'var(--brand-1)' }}>
+            <FaPlus size={14} />
+          </button>
           <button onClick={() => navigate('/cerca')} title="Cerca una frase" aria-label="Cerca una frase"
                   style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: compactNav ? 33 : 35, height: compactNav ? 33 : 35, borderRadius: 'var(--r-pill)', cursor: 'pointer', border: '1px solid var(--border)', background: location.pathname === '/cerca' ? 'var(--brand-gradient-soft)' : 'var(--surface)', color: location.pathname === '/cerca' ? 'var(--brand-1)' : 'var(--text-soft)' }}>
             <FaSearch size={13} />
@@ -213,6 +219,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/drills" element={<DrillsResponsive />} />
         <Route path="/cerca" element={<SearchPage />} />
+        <Route path="/afegeix" element={<AddSentencePage />} />
         <Route path="/tests" element={<PracticePage />} />
         <Route path="/tests/sessio" element={<PracticeSession />} />
         <Route path="/tests/grup" element={<PracticeGroupPage />} />

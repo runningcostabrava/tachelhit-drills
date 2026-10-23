@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FaBook, FaBookOpen, FaChevronRight, FaFire, FaGraduationCap, FaLayerGroup, FaMicrophone,
-  FaPlay, FaRedo, FaSearch, FaVideo,
+  FaPlay, FaPlus, FaRedo, FaSearch, FaVideo,
 } from 'react-icons/fa';
 import { api, type HomeData } from '../api';
 import { getMediaUrl } from '../config';
@@ -35,9 +35,22 @@ export default function HomePage() {
   const [streak, setStreak] = useState(0);
   const [find, setFind] = useState('');
 
+  // Si els comptes triguen, es diu. El servidor és gratuït i quan s'ha adormit triga mig minut
+  // a aixecar-se: una portada muda sembla una app trencada, i no ho és.
+  const [slow, setSlow] = useState(false);
+  const [tries, setTries] = useState(0);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setSlow(true), 2500);
+    api.home()
+      .then((h) => { setD(h); setFailed(false); })
+      .catch(() => setFailed(true))
+      .finally(() => { window.clearTimeout(t); setSlow(false); });
+    return () => window.clearTimeout(t);
+  }, [tries]);
+
   useEffect(() => {
     document.title = 'Tamazight';
-    api.home().then(setD).catch(() => setFailed(true));
     api.reviewStats().then((s) => setDue({ due: s.due, new: s.new })).catch(() => {});
     api.reviewStreak().then((s) => setStreak(s.streak_days || 0)).catch(() => {});
   }, []);
@@ -72,7 +85,24 @@ export default function HomePage() {
                 style={{ padding: '11px 18px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
           <FaSearch size={13} />
         </button>
+        {/* I el signe de sumar, que és l'altra cosa que es vol fer amb una biblioteca: afegir-hi.
+            L'amo: «falta un símbol + gran per crear un nou drill». */}
+        <button type="button" onClick={() => navigate('/afegeix')} aria-label="Afegeix una frase"
+                title="Afegeix una frase"
+                style={{ padding: '11px 18px', borderRadius: 'var(--r-pill)', border: '1px solid var(--brand-1)', background: 'var(--surface)', color: 'var(--brand-1)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+          <FaPlus size={14} />
+        </button>
       </form>
+
+      {(slow || failed) && !d && (
+        <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: '-8px 0 14px', lineHeight: 1.55 }}>
+          {failed ? 'No s’ha pogut parlar amb el servidor. ' : 'El servidor s’està despertant: el primer cop després d’una estona triga mig minut. '}
+          <button onClick={() => setTries((n) => n + 1)}
+                  style={{ background: 'transparent', border: 'none', padding: 0, color: 'var(--brand-1)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}>
+            Torna-ho a provar
+          </button>
+        </p>
+      )}
 
       {/* El que toca ara. Una sola cosa, grossa: si tens repàs pendent, el repàs. */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 26 }}>
