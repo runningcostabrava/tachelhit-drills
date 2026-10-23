@@ -980,3 +980,68 @@ def test_drafting_the_missing_words_never_touches_the_speakers_own_text(monkeypa
     kept = client.get(f"/drills/{spoken['id']}").json()
     assert kept["text_tachelhit"] == "aman"
     assert not kept.get("text_tachelhit_suggested"), "qui ja té paraules escrites no es toca"
+
+
+def test_la_biblioteca_diu_si_ja_te_una_frase_que_soni_igual():
+    """Three doors create sentences and none looked whether the library already held this one.
+
+    The comparison is by SOUND, not by spelling, because a text search would never put «aghrum»
+    and «aɣrum» together -- and those are the copies that actually happen. Nothing is forbidden:
+    saying the same sentence another way is what the variants are for. This only lets the person
+    know before writing a second copy of what we have."""
+    from test_api import client
+
+    first = client.post("/drills/", json={
+        "text_catalan": "el pa", "text_tachelhit": "a\u0263rum",
+        "author": "Halima"}).json()
+
+    # the same words in another spelling: no LIKE would find this
+    r = client.get("/drills/similar", params={"text": "aghrum", "field": "tachelhit"}).json()
+    assert first["id"] in [m["id"] for m in r["matches"]], r
+
+    # and in Tifinagh
+    r = client.get("/drills/similar", params={"text": "\u2d30\u2d56\u2d54\u2d53\u2d4e"}).json()
+    assert first["id"] in [m["id"] for m in r["matches"]]
+
+    # what it is not: another sentence
+    r = client.get("/drills/similar", params={"text": "aman d waman"}).json()
+    assert first["id"] not in [m["id"] for m in r["matches"]]
+
+    # the sentence being written does not match itself
+    r = client.get("/drills/similar", params={"text": "a\u0263rum", "exclude_id": first["id"]}).json()
+    assert first["id"] not in [m["id"] for m in r["matches"]]
+
+    # too short to mean anything
+    assert client.get("/drills/similar", params={"text": "a"}).json()["matches"] == []
+
+    # by meaning too, for when only the Catalan is written yet
+    r = client.get("/drills/similar", params={"text": "el pa", "field": "catalan"}).json()
+    assert first["id"] in [m["id"] for m in r["matches"]]
+
+
+def test_canviar_una_etiqueta_no_reescriu_el_text_del_parlant():
+    """The edit sheet used to PUT the whole row, so a new tag carried a stale copy of every other
+    field -- the speaker's own words included -- and quietly reverted anything changed meanwhile.
+    It now sends only what it touched. This is the server half: a partial body must leave the
+    rest exactly as it was."""
+    from test_api import client
+
+    d = client.post("/drills/", json={
+        "text_catalan": "la casa", "text_tachelhit": "tigmmi", "tag": "primer",
+        "text_tachelhit_suggested": "esborrany de la m\u00e0quina"}).json()
+
+    client.put(f"/drills/{d['id']}", json={"tag": "segon"})
+    back = client.get(f"/drills/{d['id']}").json()
+    assert back["tag"] == "segon"
+    assert back["text_tachelhit"] == "tigmmi", "el text del parlant no es toca"
+    assert back["text_catalan"] == "la casa"
+    assert back["text_tachelhit_suggested"] == "esborrany de la m\u00e0quina"
+
+
+def test_qui_pregunta_sap_quin_numero_te():
+    """The screen has to know whose a sentence is to say so before the work rather than after the
+    save; `may_change` compares ids, and /users/me did not give one."""
+    from test_api import client
+
+    me = client.get("/users/me").json()
+    assert isinstance(me.get("id"), int) and me["id"] > 0, me

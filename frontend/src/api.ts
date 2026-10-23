@@ -105,6 +105,7 @@ export interface AdminUser {
   drills: number; takes: number; date_created: string;
 }
 export interface Me {
+  id: number;
   email?: string | null;
   is_admin?: boolean;
   /** Speaks Tamazight from home (true), is learning it (false), or has never said (null). */
