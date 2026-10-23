@@ -54,11 +54,15 @@ No és un diccionari, ni un traductor automàtic, ni un curs genèric d'«amazic
 - **Les nostres veus van davant.** Quan hi ha més d'una frase que serveix, s'ensenya primer la
   que diu la Halima o en Driss: porten una persona que el projecte coneix, amb el seu poble i la
   seva varietat. Són 69 frases de 3.390, i sense aquesta regla no es veurien mai.
-- **El curs cita només** la nostra biblioteca i el compendi d'amazic.cat. Això inclou **El
-  Mètode**: d'un manual publicat se'n pot prendre el pla —quina situació va abans de quina i
-  quina gramàtica demana—, mai el text, els diàlegs, els exemples ni el lèxic. El que un capítol
-  demana i no tenim es demana a un parlant; no es copia
-  ([ADR 0003](adr/0003-el-metode-pren-el-pla-mai-les-paraules.md)).
+- **El curs cita només** la nostra biblioteca i el compendi d'amazic.cat.
+- **El Mètode segueix el manual d'El Mountassir tan a prop com calgui**: explicacions,
+  estructura, diàlegs i lèxic. El que es canvia és el que la **nostra varietat** diu d'una altra
+  manera — el manual és del Souss i nosaltres ensenyem Atles central, i una forma correcta allà
+  pot ser falsa aquí. Això es mira frase per frase; la resta es queda com és
+  ([ADR 0004](adr/0004-el-metode-parteix-del-llibre.md), que substitueix
+  l'[ADR 0003](adr/0003-el-metode-pren-el-pla-mai-les-paraules.md)).
+- **La veu és sempre nostra.** El llibre pot donar el text; qui el diu és sempre una persona que
+  el projecte coneix. Cap veu sintètica es fa passar per amazic.
 - **Això no es ven mai.** L'app no tindrà ús comercial (decisió de l'amo, 22-10-2026). No és una
   conseqüència de les llicències: és el projecte. De retruc, el material CC BY-NC —el lèxic
   d'IRCAM— hi pot ser; vegeu [CREDITS.md](CREDITS.md).

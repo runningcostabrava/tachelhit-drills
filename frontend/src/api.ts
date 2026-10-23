@@ -126,7 +126,7 @@ export interface Me {
 /** D'on surt el recorregut del Mètode, i què se'n pren i què no. Viatja amb cada capítol. */
 export interface MethodSource {
   author: string; title: string; publisher: string; place: string; year: number;
-  italian: string; took: string; did_not_take: string;
+  italian: string; based_on: string; took: string; did_not_take: string;
 }
 
 export interface MethodSentence {
