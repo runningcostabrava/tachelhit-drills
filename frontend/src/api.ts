@@ -188,6 +188,10 @@ export interface MethodExample {
   tif?: string | null;
   /** Paraula per paraula, escrita amb el capítol: és el que converteix una frase en una lliçó. */
   gloss?: MethodGloss[];
+  /** El que la biblioteca ja en té, enganxat en servir el capítol: la veu, qui la diu, la imatge. */
+  audio_url?: string | null;
+  image_url?: string | null;
+  speaker?: string | null;
 }
 export interface MethodContent {
   intro?: string;
@@ -207,13 +211,13 @@ export interface MethodContent {
     ours_drills?: MethodSentence[];
     ours_total?: number;
   }[];
-  dialogue?: { title: string; scene?: string; turns: { who: string; shi: string; ca: string; drill_id?: number; tif?: string | null; gloss?: MethodGloss[] }[] };
+  dialogue?: { title: string; scene?: string; turns: { who: string; shi: string; ca: string; drill_id?: number; tif?: string | null; gloss?: MethodGloss[]; audio_url?: string | null; image_url?: string | null; speaker?: string | null }[] };
   practice?: {
     title: string; scene?: string;
     pattern: { who: string; shi: string; ca: string; tif?: string | null }[];
     fills: { shi: string; ca: string; qty_shi: string; qty_ca: string; tif?: string | null; qty_tif?: string | null }[];
   };
-  vocabulary?: { shi: string; ca: string; audio_url?: string | null; drill_id?: number; tif?: string | null }[];
+  vocabulary?: { shi: string; ca: string; audio_url?: string | null; drill_id?: number; tif?: string | null; image_url?: string | null; speaker?: string | null; from_drill_id?: number }[];
   source_note?: string;
   source_pages?: string;
   updated_at?: string | null;
