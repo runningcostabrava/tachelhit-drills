@@ -63,7 +63,20 @@ export default function StepSession({ testId, title, onExit }: Props) {
 
   const step = steps?.[i];
   const drill = step?.drill_id ? drills[step.drill_id] : undefined;
-  const voice = drill ? (drill.audio_url || drill.audio_tts_shi_url || '') : '';
+  // LA VEU D'UN PAS, i quan NO pot ser de màquina.
+  //
+  // Això queia a `audio_tts_shi_url` sempre que no hi havia gravació, i per tant un «digues-ho i
+  // compara't amb la veu de debò» feia sonar una síntesi: qui ho feia s'emmotllava a una
+  // pronúncia de màquina creient que imitava algú. En una llengua que documentem a partir de
+  // parlants, és exactament el que no podem fer (docs/SCOPE.md).
+  //
+  // L'asimetria és volguda: per ESCOLTAR, la veu de màquina fa servei i només cal dir-ho; per
+  // IMITAR, o hi ha una gravació d'una persona o el pas no pot fer el que promet.
+  const human = drill?.audio_url || '';
+  const machine = drill?.audio_tts_shi_url || '';
+  const imitating = step?.kind === 'say_it' || step?.kind === 'look_say';
+  const voice = imitating ? human : (human || machine);
+  const bySynth = !!voice && voice === machine;
 
   const play = useCallback((rate = 1) => {
     if (!voice) return;
@@ -291,9 +304,19 @@ export default function StepSession({ testId, title, onExit }: Props) {
           )}
 
           {(tool === 'listen_pick' || tool === 'write_heard') && (
-            <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-              <button onClick={() => play(1)} style={{ ...btn('primary'), flex: 1, height: 44, fontSize: 14 }}><FaPlay size={12} /> Torna-ho a sentir</button>
-              <button onClick={() => play(0.7)} style={{ ...btn('ghost'), flex: 1, height: 44, fontSize: 14 }}>A poc a poc</button>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={() => play(1)} style={{ ...btn('primary'), flex: 1, height: 44, fontSize: 14 }}><FaPlay size={12} /> Torna-ho a sentir</button>
+                <button onClick={() => play(0.7)} style={{ ...btn('ghost'), flex: 1, height: 44, fontSize: 14 }}>A poc a poc</button>
+              </div>
+              {/* Escoltar per entendre no és imitar, i per això la veu de màquina pot quedar-s'hi
+                  —però dient-ho. Mentre no ho digui és la mateixa mentida que un botó que promet
+                  el capítol i fa sonar una altra cosa. */}
+              {bySynth && (
+                <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
+                  Aquesta la diu una veu de màquina: ningú no l’ha gravada encara.
+                </p>
+              )}
             </div>
           )}
 
@@ -331,7 +354,28 @@ export default function StepSession({ testId, title, onExit }: Props) {
             </>
           )}
 
-          {(tool === 'say_it' || tool === 'look_say') && (
+          {(tool === 'say_it' || tool === 'look_say') && !human && (
+            <>
+              <p style={{ margin: '0 0 6px', fontSize: 16, color: 'var(--text-soft)' }}>{meaning}</p>
+              <p style={{ margin: '0 0 10px', fontSize: 23, fontWeight: 800, lineHeight: 1.3 }}>{written}</p>
+              {/* Sense gravació d'una persona, aquest pas no pot fer el que diu: no hi ha res amb
+                  què comparar-se. Abans la frase sonava igualment, sintetitzada. I el refús ha de
+                  produir l'arranjament, no un forat: d'aquí el botó. */}
+              <p style={{ margin: '0 0 10px', fontSize: 13.5, color: 'var(--text-soft)', lineHeight: 1.6 }}>
+                D’aquesta frase no en tenim cap veu nostra: no hi ha res amb què comparar-se.
+                Demana-la a les nostres veus i aquest pas funcionarà quan algú la digui.
+              </p>
+              <button onClick={async () => {
+                if (!drill) return;
+                try { await api.askForVoice(drill.id); toast.success('Demanada a les nostres veus'); }
+                catch { toast.error('No s’ha pogut demanar'); }
+              }} style={{ ...btn('ghost'), width: '100%' }}>
+                <FaMicrophone size={12} /> Demana-la a les nostres veus
+              </button>
+            </>
+          )}
+
+          {(tool === 'say_it' || tool === 'look_say') && human && (
             <>
               <p style={{ margin: '0 0 6px', fontSize: 16, color: 'var(--text-soft)' }}>{meaning}</p>
               {shown && <p style={{ margin: '0 0 10px', fontSize: 23, fontWeight: 800, lineHeight: 1.3 }}>{written}</p>}

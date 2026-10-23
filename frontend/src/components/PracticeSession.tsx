@@ -162,8 +162,15 @@ export default function PracticeSession() {
   }, [testId]);
 
   const drill = drills[i]; const card = cards[i];
+  // Aquí escoltar és la feina, i per això la veu de màquina pot sonar quan ningú no ha gravat la
+  // frase. El que no pot fer és passar per una persona: el nom del parlant surt igualment de la
+  // targeta, i comparar la teva pronúncia amb una síntesi mentre la pantalla et posa el nom d'algú
+  // al costat és ensenyar-te a imitar una màquina sense dir-t'ho.
   const voice = drill ? (drill.audio_url || drill.audio_tts_shi_url || '') : '';
-  const speakerLabel = card ? (card.origin && card.origin !== card.speaker ? `${card.speaker} · ${card.origin}` : card.speaker) : '';
+  const bySynth = !!voice && !drill?.audio_url;
+  const speakerLabel = bySynth
+    ? 'una veu de màquina · encara ningú no l’ha gravada'
+    : card ? (card.origin && card.origin !== card.speaker ? `${card.speaker} · ${card.origin}` : card.speaker) : '';
 
   const play = useCallback((rate = 1) => {
     if (!voice) return;
@@ -285,7 +292,14 @@ export default function PracticeSession() {
       {bar}
       {modeBar}
       <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--brand-1)' }}>{mode === 'auto' ? 'Reproducció automàtica' : 'Escolta i digues-ho'}</div>
-      <h2 style={{ margin: '2px 0 14px', fontSize: 19, lineHeight: 1.25 }}>{mode === 'auto' ? 'Escolta; passa sola a la següent' : `Escolta ${card?.speaker === 'Halima' ? 'la Halima' : card?.speaker === 'Driss' ? 'en Driss' : 'la veu'} i prova de dir-ho igual`}</h2>
+      {/* «Prova de dir-ho igual» NO es demana d'una síntesi: copiar-la és aprendre una pronúncia
+          que no és de ningú. Amb veu de màquina, la frase es pot escoltar per entendre-la, i el
+          que falta es diu en comptes d'invitar a imitar-la. */}
+      <h2 style={{ margin: '2px 0 14px', fontSize: 19, lineHeight: 1.25 }}>
+        {mode === 'auto' ? 'Escolta; passa sola a la següent'
+          : bySynth ? 'Escolta-la per entendre-la: aquesta encara no la diu ningú'
+            : `Escolta ${card?.speaker === 'Halima' ? 'la Halima' : card?.speaker === 'Driss' ? 'en Driss' : 'la veu'} i prova de dir-ho igual`}
+      </h2>
 
       <div style={{ padding: 14, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {drill.image_url && <div style={{ position: 'relative', width: '100%', aspectRatio: '16 / 9', borderRadius: 'var(--r-md)', overflow: 'hidden', background: 'var(--surface-2)' }}><img src={getMediaUrl(drill.image_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = 'none'; }} /><span style={{ position: 'absolute', left: 10, bottom: 10, fontSize: 12, fontWeight: 700, background: 'rgba(255,255,255,0.92)', color: 'var(--text)', padding: '4px 10px', borderRadius: 'var(--r-pill)' }}>{speakerLabel}</span></div>}
@@ -304,11 +318,12 @@ export default function PracticeSession() {
 
       {myTake && (
         <div style={{ marginTop: 12, padding: 12, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Waveform src={voice || null} label={card?.speaker || 'la veu'} color="var(--brand-1)" />
+          <Waveform src={voice || null} label={bySynth ? 'veu de màquina' : (card?.speaker || 'la veu')} color="var(--brand-1)" />
           <Waveform src={myTake} label="tu" color="var(--saffron-dark, #B7791F)" />
           <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.45 }}>
-            Escolta’ls un darrere l’altre i compara el ritme i on cau la força. Ningú no et posa nota:
-            la teva gravació no surt d’aquesta pantalla i es perd quan passis de frase.
+            {bySynth
+              ? 'Aquesta frase no l’ha gravada ningú: el que sents és una síntesi, i no serveix per copiar-ne la pronúncia. Demana-la a les nostres veus des de la seva targeta.'
+              : 'Escolta’ls un darrere l’altre i compara el ritme i on cau la força. Ningú no et posa nota: la teva gravació no surt d’aquesta pantalla i es perd quan passis de frase.'}
           </div>
         </div>
       )}
@@ -328,6 +343,12 @@ export default function PracticeSession() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginTop: 20 }}>
+          {bySynth && (
+            <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.5, maxWidth: 360 }}>
+              Pots gravar-te per sentir-te, però no te la comparis: la veu que sona és una síntesi.
+              Demana-la a les nostres veus des de la seva targeta i tindràs amb què comparar-te.
+            </p>
+          )}
           <button
             onPointerDown={(e) => { e.preventDefault(); startRecording(); }} onPointerUp={stopRecording}
             onPointerLeave={stopRecording} onPointerCancel={stopRecording}
