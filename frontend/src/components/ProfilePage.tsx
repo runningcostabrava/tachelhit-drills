@@ -412,6 +412,21 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
+            {/* Que vol dir posar-hi la veu, dit al perfil i no només a la pàgina de gravar:
+                aquí és on algú mira qui és dins d'aquesta biblioteca. */}
+            <div style={{ padding: '12px 14px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface-2)', marginBottom: '18px' }}>
+              <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '4px' }}>La teva veu</div>
+              <p style={{ fontSize: '13.5px', color: 'var(--text-soft)', lineHeight: 1.6, margin: '0 0 8px' }}>
+                Quan graves una frase, la teva gravació queda amb el teu nom i el teu poble, i
+                qualsevol que l’escolti sap de qui està aprenent. Escriu-la com la dius tu: no cal
+                seguir cap ortografia, i si al teu poble es diu d’una altra manera, aquesta és la
+                bona. Pots gravar la mateixa frase que ja ha dit algú altre — dues maneres de
+                dir-ho no es trepitgen, es guarden totes dues.
+              </p>
+              <a href="/veus" style={{ color: 'var(--brand-1)', fontWeight: 700, fontSize: '13.5px', textDecoration: 'none' }}>
+                Mira què espera una veu →
+              </a>
+            </div>
             <div style={{ marginBottom: '18px', paddingTop: '18px', borderTop: '1px solid var(--border)' }}>
               {originFields}
               <div style={{ marginTop: '18px', paddingTop: '14px', borderTop: '1px solid var(--border)' }}>

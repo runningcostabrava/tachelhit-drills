@@ -85,9 +85,13 @@ export default function HomePage() {
                 style={{ flex: '1 1 260px', display: 'inline-flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', color: 'var(--text)' }}>
           <FaMicrophone size={17} style={{ color: 'var(--brand-1)' }} />
           <span style={{ flex: 1 }}>
-            <span style={{ display: 'block', fontWeight: 800, fontSize: 16 }}>Posa-hi veu</span>
+            {/* L'amo: «aquí l'explicació seria: si us plau, necessitem la teva veu». Una frase
+                sense veu no és una fitxa incompleta, és una cosa que ningú no sap dir encara. */}
+            <span style={{ display: 'block', fontWeight: 800, fontSize: 16 }}>Si us plau, necessitem la teva veu</span>
             <span style={{ display: 'block', fontSize: 12.5, color: 'var(--text-soft)' }}>
-              {d ? `${n(d.library.wanted)} frases esperen que algú les digui` : 'Frases que esperen una veu'}
+              {d && d.library.wanted
+                ? `${n(d.library.wanted)} ${d.library.wanted === 1 ? 'frase espera' : 'frases esperen'} que algú les digui en veu alta`
+                : 'Grava una frase que saps dir, o demana’n una que vols saber dir'}
             </span>
           </span>
           <FaChevronRight size={12} style={{ color: 'var(--text-muted)' }} />
