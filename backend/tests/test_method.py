@@ -493,3 +493,43 @@ def test_el_capitol_es_pot_escoltar_i_les_paraules_porten_imatge():
     # la fa caure (ens va passar: `[14, 13] == [13]`).
     for drill_id in (word["id"], made["drill_id"]):
         client.delete(f"/drills/{drill_id}", headers=hdr)
+
+
+def test_el_capitol_servit_es_guarda_fet_fins_que_alguna_cosa_es_mou():
+    """Servir un capítol vol dir llegir les frases que hi poden anar i puntuar-les secció per
+    secció: a producció, deu segons cada vegada que algú l'obre. I entre una visita i la següent
+    no canvia res si no ha canviat ni el text del capítol ni la biblioteca.
+
+    Així que es guarda fet. El que el torna a fer és que es mogui una de les dues coses: una
+    frase nova o tocada, o el capítol reescrit. Res de temps: una frase gravada ara s'ha de
+    veure ara."""
+    import main
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("qui_mira_dos_cops")}
+    db = main.SessionLocal()
+    try:
+        me = client.get("/users/me", headers=hdr).json()
+        db.query(main.UserModel).filter(main.UserModel.id == me["id"]).first().is_admin = True
+        db.commit()
+    finally:
+        db.close()
+    client.put("/method/la-botiga/content", headers=hdr, json={
+        "sections": [{"id": "dar", "title": "dar", "examples": [{"shi": "dar ugzzar", "ca": "a cal carnisser"}]}]})
+
+    first = client.get("/method/la-botiga").json()
+    assert client.get("/method/la-botiga").json() == first, "sense tocar res, el mateix"
+
+    # una frase nova a la biblioteca i el capítol es torna a fer
+    made = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "a cal fuster", "text_tachelhit": "dar unjjar",
+        "grammar": "clitics-objecte", "grammar_source": "owner"}).json()
+    assert client.get("/method/la-botiga").json()["sentences"] != first["sentences"]
+
+    # i tocar el text del capítol també
+    before = client.get("/method/la-botiga").json()
+    client.put("/method/la-botiga/content", headers=hdr, json={
+        "sections": [{"id": "dar", "title": "dar: a cal", "examples": [{"shi": "dar ugzzar", "ca": "a cal carnisser"}]}]})
+    assert client.get("/method/la-botiga").json()["content"]["sections"][0]["title"] != before["content"]["sections"][0]["title"]
+
+    client.delete(f"/drills/{made['id']}", headers=hdr)
