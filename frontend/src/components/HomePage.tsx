@@ -137,12 +137,27 @@ export default function HomePage() {
             {voiced}% es pot escoltar
           </span>
         </div>
-        {d && d.library.wanted > 0 && (
-          <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: '8px 0 0', lineHeight: 1.5 }}>
-            La resta és feina de gravació, no un error: {n(d.library.wanted)} frases ja demanen
-            una veu.
+        {/* El que falta, dit amb el número de debò —les frases que ningú no ha dit mai, no només
+            les que algú ha demanat— i amb la invitació que l'amo vol: fes-te un compte i posa-hi
+            la veu. Una frase muda no és una fitxa incompleta: és una cosa que encara no s'ha
+            sentit. */}
+        {d && d.library.sentences > d.library.with_voice && (
+          <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: '8px 0 0', lineHeight: 1.55 }}>
+            La resta és feina de gravació, no un error: {n(d.library.sentences - d.library.with_voice)} frases
+            encara no les ha dites ningú{d.library.wanted ? `, i ${n(d.library.wanted)} ja demanen una veu` : ''}.
           </p>
         )}
+        <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <p style={{ fontSize: 13, color: 'var(--text-soft)', margin: 0, lineHeight: 1.55, flex: '1 1 260px' }}>
+            <strong>Parles amazic?</strong> Fes-te un compte i posa-hi la veu: qualsevol frase
+            muda es pot gravar en trenta segons, i les preguntes de qui està aprenent esperen que
+            algú les contesti. Cada gravació queda amb el teu nom i el teu poble.
+          </p>
+          <button onClick={() => navigate(d?.you.signed_in ? '/veus' : '/signin')}
+                  style={{ padding: '9px 16px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+            {d?.you.signed_in ? 'Grava’n una' : 'Fes-te un compte i grava'}
+          </button>
+        </div>
       </div>}
 
       {/* Qui ets aquí. Sense nom no es pot gravar ni guardar el repàs, i val més dir-ho que amagar-ho. */}
