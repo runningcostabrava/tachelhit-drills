@@ -1045,3 +1045,31 @@ def test_qui_pregunta_sap_quin_numero_te():
 
     me = client.get("/users/me").json()
     assert isinstance(me.get("id"), int) and me["id"] > 0, me
+
+
+def test_cap_resposta_de_l_api_es_pot_reaprofitar():
+    """Una llista demanada just després d'escriure-hi no pot arribar d'abans d'escriure-hi.
+
+    Va passar de debò: una petició creada correctament a «Posa-hi veu» va aparèixer com a «res
+    pendent aquí», perquè la llista que es va tornar a demanar venia de just abans de crear-la.
+    Cap resposta d'aquesta API portava `Cache-Control`, i sense cap directiva un navegador aplica
+    el seu propi criteri.
+
+    Res del que torna val per a dues persones diferents ni per a dos moments diferents: les
+    llistes depenen de qui pregunta i canvien així que algú escriu."""
+    from test_api import client, register
+
+    for path in ("/health", "/petitions?kind=open", "/drills/?limit=1", "/method/"):
+        r = client.get(path)
+        assert r.headers.get("cache-control") == "no-store", (path, dict(r.headers))
+
+    # i el cas que ho va destapar, de punta a punta: demanar-ho i veure-ho
+    hdr = {"X-User-Token": register("petition_asker")}
+    before = client.get("/petitions?kind=open").json()["total"]
+    made = client.post("/petitions", headers=hdr,
+                       json={"text_catalan": "Em sap molt de greu", "note": None})
+    assert made.status_code == 200, made.text
+    after = client.get("/petitions?kind=open").json()
+    assert after["total"] == before + 1
+    assert made.json()["id"] in [x["drill"]["id"] for x in after["items"]], \
+        "el que acabes de demanar ha de sortir a la llista"

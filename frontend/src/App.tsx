@@ -5,7 +5,7 @@ import axios from 'axios';
 import { API_BASE } from './config';
 import { api } from './api';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaMicrophone } from 'react-icons/fa';
+import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaBookOpen, FaMicrophone } from 'react-icons/fa';
 import { syncManager } from './services/OfflineSyncManager';
 import ToastHost from './components/ToastHost';
 import AiCopilot from './components/AiCopilot';
@@ -26,6 +26,8 @@ const VideoDrillCreator = lazy(() => import('./components/VideoDrillCreator'));
 const SrtImport = lazy(() => import('./components/SrtImport'));
 const VideoLibraryPage = lazy(() => import('./components/VideoLibraryPage'));
 const CaptureReview = lazy(() => import('./components/CaptureReview'));
+const MethodPage = lazy(() => import('./components/MethodPage'));
+const MethodChapter = lazy(() => import('./components/MethodChapter'));
 const ProfilePage = lazy(() => import('./components/ProfilePage'));
 const AuthPage = lazy(() => import('./components/AuthPage'));
 const CorpusPage = lazy(() => import('./components/CorpusPage'));
@@ -143,6 +145,7 @@ function App() {
     { to: '/video-creator', label: 'Captura', Icon: FaVideo },
     { to: '/grammar', label: 'Gramàtica', Icon: FaBook },
     { to: '/tests', label: 'Pràctica', Icon: FaGraduationCap },
+    { to: '/metode', label: 'Mètode', Icon: FaBookOpen },
     { to: '/veus', label: 'Posa-hi veu', Icon: FaMicrophone },   // the route keeps its old name: links point at it
   ];
   const navBtn = (active: boolean): React.CSSProperties => ({
@@ -192,6 +195,9 @@ function App() {
         <Route path="/tests/grup" element={<PracticeGroupPage />} />
         <Route path="/tests/llistes" element={<TestsDashboard />} />
         <Route path="/tests/:testId/editor" element={<PracticeEditor />} />
+        {/* El Mètode: deu capítols fets amb la nostra biblioteca (ADR 0003). */}
+        <Route path="/metode" element={<MethodPage />} />
+        <Route path="/metode/:slug" element={<MethodChapter />} />
         <Route path="/veus" element={<VeusPage />} />
         <Route path="/u/:username" element={<UserPage />} />
         <Route path="/tests/:testId" element={<PublicTestView />} />

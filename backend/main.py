@@ -1724,6 +1724,23 @@ API_KEY = (os.getenv("API_KEY") or "").strip()
 PROTECTED_METHODS = {"POST", "PUT", "DELETE", "PATCH"}
 
 @app.middleware("http")
+async def never_serve_yesterday(request, call_next):
+    """Cap resposta d'aquesta API es pot reaprofitar.
+
+    Res del que torna val per a dues persones diferents ni per a dos moments diferents: les
+    llistes depenen de qui pregunta i canvien així que algú escriu. Sense cap directiva, un
+    navegador aplica el seu propi criteri i pot servir una resposta desada fa un instant — i
+    això va passar: una petició creada correctament va aparèixer com a «res pendent aquí»,
+    perquè la llista que es va tornar a demanar venia de just abans de crear-la.
+
+    Els fitxers de debò (imatges, àudio, vídeo) no passen per aquí: són a Cloudinary.
+    """
+    response = await call_next(request)
+    response.headers.setdefault("Cache-Control", "no-store")
+    return response
+
+
+@app.middleware("http")
 async def require_api_key(request, call_next):
     if API_KEY and request.method in PROTECTED_METHODS:
         provided = request.headers.get("x-api-key", "")

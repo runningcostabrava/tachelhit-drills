@@ -387,3 +387,68 @@ def test_una_practica_diu_quants_passos_te_i_quina_cara_fa():
         "title": "De les velles", "question_type": "audio", "hint_level": "none",
         "drill_ids": f"{plain['id']},{drawn['id']}"}).json()
     assert old["step_count"] == 2
+
+
+def test_una_practica_antiga_no_es_queda_en_blanc_per_una_frase_esborrada():
+    """La pràctica 28 portava 511 frases i s'obria amb «0 passos».
+
+    La llista plana d'una pràctica antiga és una llista de números, i un número deixa de voler
+    dir res quan la frase s'esborra: nou dels primers dos-cents d'aquella apuntaven a frases que
+    ja no hi són. `practice_steps.drill_id` és una clau forana, que a Postgres s'aplica de debò,
+    així que aquells passos no es podien escriure — i la conversió feia un sol `commit()` al
+    final de TOTES les pràctiques, de manera que una fila impossible en tombava el lot sencer i
+    cap pràctica no es convertia mai.
+
+    Ara una frase morta se salta i la pràctica es converteix igual."""
+    import practice_steps
+    import main
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("legacy_owner")}
+    alive = [client.post("/drills/", headers=hdr, json={
+        "text_catalan": f"frase {i}", "text_tachelhit": f"tafrast {i}"}).json() for i in range(3)]
+    doomed = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "la que marxa", "text_tachelhit": "ad ftugh"}).json()
+
+    old = client.post("/tests/", headers=hdr, json={
+        "title": "De les velles", "question_type": "audio", "hint_level": "none",
+        "drill_ids": ",".join(str(d["id"]) for d in [alive[0], doomed, alive[1], alive[2]])}).json()
+    # la pràctica neix amb els passos de la llista; els esborrem per deixar-la com les d'abans
+    client.put(f"/tests/{old['id']}/steps", headers=hdr, json={"steps": []})
+    assert client.get(f"/tests/{old['id']}/steps").json()["steps"] == []
+
+    client.delete(f"/drills/{doomed['id']}", headers=hdr)
+
+    out = practice_steps.convert_missing(main.SessionLocal)
+    assert out["practices"] >= 1, out
+    steps = client.get(f"/tests/{old['id']}/steps").json()["steps"]
+    assert [x["drill_id"] for x in steps] == [alive[0]["id"], alive[1]["id"], alive[2]["id"]], \
+        "les vives hi són, en ordre, i la morta se salta"
+    assert [x["position"] for x in steps] == [0, 1, 2], "sense forats a l'ordre"
+
+
+def test_desar_un_pas_cap_a_una_frase_morta_ho_diu_en_comptes_de_petar():
+    """`drill_id` és una clau forana. Un pas cap a una frase esborrada no es pot escriure, i si
+    ho descobreix la base de dades és un 500 **després** d'haver esborrat els passos que hi
+    havia. Es comprova abans, i es diu amb paraules que l'editor pot ensenyar."""
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("step_saver")}
+    good = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "aigua", "text_tachelhit": "aman"}).json()
+    doomed = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "pa", "text_tachelhit": "aɣrum"}).json()
+    p = client.post("/tests/", headers=hdr, json={
+        "title": "Amb una morta", "question_type": "audio", "hint_level": "none",
+        "drill_ids": ""}).json()
+    client.put(f"/tests/{p['id']}/steps", headers=hdr, json={"steps": [
+        {"kind": "listen_pick", "drill_id": good["id"]}]})
+
+    client.delete(f"/drills/{doomed['id']}", headers=hdr)
+    bad = client.put(f"/tests/{p['id']}/steps", headers=hdr, json={"steps": [
+        {"kind": "listen_pick", "drill_id": good["id"]},
+        {"kind": "say_it", "drill_id": doomed["id"]}]})
+    assert bad.status_code == 400
+    assert "ja no existeixen" in bad.json()["detail"]
+    # i el que ja hi havia segueix sent-hi: no s'esborra res fins que tot és possible
+    assert [x["drill_id"] for x in client.get(f"/tests/{p['id']}/steps").json()["steps"]] == [good["id"]]
