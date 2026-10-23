@@ -209,6 +209,14 @@ export default function AutoCapturePanel() {
                         {busyRow === r.id ? '…' : 'Torna-ho a provar'}
                       </button>
                     )}
+                    {/* quins drills n'han sortit: la cua deia el NOMBRE i no hi havia manera
+                        d'arribar-hi */}
+                    {r.status === 'done' && (
+                      <button onClick={() => navigate(`/captura/video?url=${encodeURIComponent(r.url)}`)}
+                              style={rowBtn} title="Mira els talls que n'han sortit">
+                        Veu-los
+                      </button>
+                    )}
                     {finished && (
                       <button onClick={() => forget(r.id)} disabled={busyRow === r.id} style={{ ...rowBtn, color: 'var(--text-muted)' }} title="Treu-la de la llista">×</button>
                     )}
