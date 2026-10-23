@@ -6,6 +6,7 @@ import { getMediaUrl, hasIdentity, thumb } from '../config';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import MethodLesson from './MethodLesson';
+import { useIsMobileLayout } from '../utils/layout';
 import SentenceVariants from './SentenceVariants';
 
 // Un capítol del Mètode.
@@ -54,9 +55,37 @@ function Sentence({ s }: { s: MethodSentence }) {
   );
 }
 
+/** La línia de la capçalera: només números d'aquest capítol, i cadascun una cosa que es veu.
+ *
+ *  Es construeix amb el que el capítol porta i prou: una part que val zero no s'escriu (un
+ *  capítol sense diàleg no ha de dir «diàleg de 0 rèpliques»). A mòbil cau «i N al voltant»,
+ *  que és el que el pedagog va dir que trauria si no hi cabia.
+ */
+function chapterLine(c: MethodChapterData, isMobile: boolean): string {
+  const b = c.content;
+  const bits: string[] = [];
+  const turns = b?.dialogue?.turns?.length || 0;
+  if (turns) bits.push(`Diàleg de ${turns} ${turns === 1 ? 'rèplica' : 'rèpliques'}`);
+  const words = b?.vocabulary?.length || 0;
+  if (words) bits.push(`${words} ${words === 1 ? 'paraula' : 'paraules'}`);
+  const secs = b?.sections || [];
+  const aside = secs.filter((x) => x.zone === 'aside').length;
+  const main = secs.length - aside;
+  if (main) {
+    bits.push(`${main} ${main === 1 ? 'explicació' : 'explicacions'} de com funciona`
+              + (aside && !isMobile ? ` i ${aside} al voltant` : ''));
+  }
+  const p = c.practice_test;
+  if (p) bits.push(`una pràctica de ${p.steps} ${p.steps === 1 ? 'pas' : 'passos'}`);
+  // Un capítol que encara no s'ha escrit no té res d'això: llavors la pàgina són les frases de
+  // la biblioteca que li toquen, i aquí es diu això mateix en comptes de callar.
+  return bits.length ? bits.join(' · ') : 'Aquest capítol encara no s’ha escrit.';
+}
+
 export default function MethodChapter() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const isMobile = useIsMobileLayout();
   const [c, setC] = useState<MethodChapterData | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Qui administra pot corregir el text del capítol allà mateix, sense desplegar res.
@@ -101,9 +130,31 @@ export default function MethodChapter() {
       {c.name && <h1 lang="shi" style={{ fontFamily: 'var(--font-display)', fontSize: 27, margin: '2px 0 0' }}>{c.name}</h1>}
       <h2 style={{ fontFamily: 'var(--font-display)', fontSize: c.name ? 19 : 26, fontWeight: c.name ? 600 : 800, color: c.name ? 'var(--text-soft)' : 'var(--text)', margin: '0 0 8px' }}>{c.title}</h2>
       <p style={{ color: 'var(--text-soft)', fontSize: 14.5, margin: '0 0 6px', lineHeight: 1.55 }}>{c.about}</p>
-      <p style={{ color: 'var(--text-muted)', fontSize: 12.5, margin: '0 0 18px' }}>
-        {c.sentences} frases · {c.with_voice} amb veu · {c.sections_ready} de {c.sections_total} seccions a punt
+      {/* Què hi ha EN AQUEST CAPÍTOL, i res més.
+
+          Abans deia «3.412 frases · 1.180 amb veu · 4 de 4 seccions a punt». Cap dels tres
+          números era del capítol: els dos primers compten tota la biblioteca que porta alguna de
+          les seves unitats de gramàtica —fa dos dies deien 1.608 · 1.337, i en dos dies el total
+          va pujar 1.800 i les veus van BAIXAR 157: això no descriu un capítol, descriu
+          importacions— i el tercer era el capítol posant-se nota a si mateix, amb el denominador
+          triat per qui el posava.
+
+          Ara cada element és una promesa que la pàgina compleix tres dits més avall, i en
+          l'ordre de les preguntes de qui l'obre: què hi passa, quantes paraules, quanta
+          gramàtica (i que n'hi ha de secundària, que és el que les dues zones volen dir), i si
+          en acabar hi ha res a fer. Cap número de veus: n'hi ha un de millor al botó de play, i
+          dos comptadors de veus a la mateixa pantalla és el pecat original d'aquesta pàgina. */}
+      <p style={{ color: 'var(--text-muted)', fontSize: 12.5, margin: '0 0 18px', lineHeight: 1.55 }}>
+        {chapterLine(c, isMobile)}
       </p>
+      {/* El comptador de manteniment: què queda per fer. No és per a qui aprèn —«a punt» no li
+          vol dir res— i el capítol no s'ha de poder certificar a si mateix davant seu. */}
+      {me?.is_admin && (
+        <p style={{ color: 'var(--text-muted)', fontSize: 11.5, margin: '-12px 0 18px' }}>
+          Manteniment: {c.sections_ready} de {c.sections_total} unitats del capítol tenen prou veu
+          a la biblioteca.
+        </p>
+      )}
 
       <section style={{ padding: '14px 16px', borderRadius: 'var(--r-lg)', background: 'var(--brand-gradient-soft)', marginBottom: 20 }}>
         <h3 style={h3}>Què en sabràs fer</h3>
@@ -200,8 +251,10 @@ export default function MethodChapter() {
             {openRest ? '▾' : '▸'} La resta de la biblioteca d’aquest capítol
           </span>
           <span style={{ display: 'block', fontSize: 12.5, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.5 }}>
-            Totes les frases que porten alguna de les unitats de gramàtica del capítol, agrupades
-            per unitat. No estan triades per a cap secció: les triades són a dins de la lliçó.
+            {c.sentences} frases, {c.with_voice} amb veu: totes les que porten alguna de les
+            unitats de gramàtica del capítol, agrupades per unitat. No estan triades per a cap
+            secció —les triades són a dins de la lliçó— i el número puja cada vegada que
+            s’importa material, sense que el capítol hagi canviat.
           </span>
         </button>
       )}

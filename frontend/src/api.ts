@@ -195,6 +195,8 @@ export interface MethodExample {
   audio_url?: string | null;
   image_url?: string | null;
   speaker?: string | null;
+  /** D'on és qui la diu: el crèdit és d'una persona i d'un poble, i la varietat no s'amaga. */
+  region?: string | null;
 }
 export interface MethodContent {
   intro?: string;
@@ -218,13 +220,13 @@ export interface MethodContent {
     ours_drills?: MethodSentence[];
     ours_total?: number;
   }[];
-  dialogue?: { title: string; scene?: string; turns: { who: string; shi: string; ca: string; drill_id?: number; tif?: string | null; gloss?: MethodGloss[]; audio_url?: string | null; image_url?: string | null; speaker?: string | null }[] };
+  dialogue?: { title: string; scene?: string; turns: { who: string; shi: string; ca: string; drill_id?: number; tif?: string | null; gloss?: MethodGloss[]; audio_url?: string | null; image_url?: string | null; speaker?: string | null; region?: string | null }[] };
   practice?: {
     title: string; scene?: string;
     pattern: { who: string; shi: string; ca: string; tif?: string | null }[];
     fills: { shi: string; ca: string; qty_shi: string; qty_ca: string; tif?: string | null; qty_tif?: string | null }[];
   };
-  vocabulary?: { shi: string; ca: string; audio_url?: string | null; drill_id?: number; tif?: string | null; image_url?: string | null; speaker?: string | null; from_drill_id?: number }[];
+  vocabulary?: { shi: string; ca: string; audio_url?: string | null; drill_id?: number; tif?: string | null; image_url?: string | null; speaker?: string | null; region?: string | null; from_drill_id?: number }[];
   source_note?: string;
   source_pages?: string;
   updated_at?: string | null;

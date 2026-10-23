@@ -349,6 +349,9 @@ def store_content(db, slug: str, body: Dict, who: Optional[str] = None) -> Dict:
 #: més enllà d'això deixa d'explicar i es torna una llista.
 OURS_PER_SECTION = 4
 
+#: I quantes a les seccions de la segona zona, les que van plegades.
+ASIDE_PER_SECTION = 2
+
 #: El que el manual diu i el que es diu a Aït Mraw.
 #:
 #: El llibre és tachelhit del Souss i la nostra biblioteca és Atles central, i no fan servir les
@@ -621,7 +624,10 @@ def content_with_ours(db, slug: str, rows: List, card) -> Optional[Dict]:
                 continue
             picked.append(d)
             seen_keys |= hits
-            if len(picked) >= OURS_PER_SECTION:
+            # La segona zona (el que l'escena deixa veure, plegat) en porta dues, no quatre: s'hi
+            # arriba tafanejant i no s'hi estudia. El total segueix sent el de debò, i la línia
+            # «i N més a la biblioteca» hi porta: no desapareix cap frase.
+            if len(picked) >= (ASIDE_PER_SECTION if s.get("zone") == "aside" else OURS_PER_SECTION):
                 break
         # Una secció curta es queda curta. Omplir-la amb la unitat de gramàtica era el que hi
         # posava frases que no hi feien res —`noms-genere-nombre` és cert de 683 frases, i per
@@ -671,6 +677,10 @@ def attach_library(db, body: Optional[Dict], rows: List) -> Optional[Dict]:
         if d.audio_url:
             line["audio_url"] = d.audio_url
             line["speaker"] = d.speaker or d.author
+            # i d'on és qui ho diu. El nom d'un parlant no és un indicador d'estat: és un
+            # crèdit a una persona, i un crèdit sense poble deixa la varietat amagada, que
+            # és justament el que aquest projecte no fa (docs/SCOPE.md).
+            line["region"] = d.region or d.variety
         # Només les il·lustracions que DIBUIXEM per a una frase. Les de la carpeta vella de
         # fotos buscades no il·lustren la paraula: a «aɣrum» «pa» li havia tocat la façana d'un
         # hostal americà i a «tasarut» «clau», una mà amb polseres. Val més una targeta sense

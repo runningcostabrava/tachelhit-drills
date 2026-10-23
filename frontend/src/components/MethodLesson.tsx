@@ -49,7 +49,7 @@ function Tif({ t, size = 12.5 }: { t?: string | null; size?: number }) {
  */
 function SectionText({
   slug, index, title, text, deep, ours, canEdit, signedIn, onSave,
-  folded = false, open = true, onToggle, summary, unit, oursTotal,
+  folded = false, open = true, onToggle, summary, unit, oursTotal, afterTitle,
 }: {
   slug: string; index: number;
   title: string; text?: string; deep?: string; ours?: string;
@@ -58,6 +58,9 @@ function SectionText({
   /** Una secció de la segona zona: plegada, però mai tancada amb clau. */
   folded?: boolean; open?: boolean; onToggle?: () => void;
   summary?: string; unit?: string; oursTotal?: number;
+  /** El que va entre el títol i el text. A la zona plegada hi van les targetes amb veu: qui
+   *  obre una secció d'aquelles està tafanejant, i el que mereix el seu dit és el que sona. */
+  afterTitle?: ReactNode;
 }) {
   const [edit, setEdit] = useState<{ title: string; text: string; deep: string; ours: string } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -118,6 +121,7 @@ function SectionText({
           </button>
         )}
       </div>
+      {afterTitle}
       {text && <p style={{ fontSize: 14.5, lineHeight: 1.65, margin: '0 0 6px', whiteSpace: 'pre-line' }}>{text}</p>}
       {deep && <Deep text={deep} />}
       {unit && (
@@ -233,13 +237,15 @@ function LineTools({
  */
 function BookLine({
   slug, where, look, who, shi, ca, note, tif, gloss, drillId, canEdit, extra, audio, image,
-  speaker, playing, onPlay, onSave, onRecorded,
+  speaker, region, failed, playing, onPlay, onSave, onRecorded,
 }: {
   slug: string; where: Where; look: 'row' | 'turn' | 'word';
   who?: string; shi: string; ca?: string; note?: string; tif?: string | null; gloss?: MethodGloss[];
   drillId?: number; canEdit: boolean; extra?: ReactNode;
-  /** El que la biblioteca ja en té: la veu d'algú, la seva imatge, i qui la diu. */
-  audio?: string | null; image?: string | null; speaker?: string | null;
+  /** El que la biblioteca ja en té: la veu d'algú, la seva imatge, i qui la diu, i d'on és. */
+  audio?: string | null; image?: string | null; speaker?: string | null; region?: string | null;
+  /** El so hi és i no s'ha pogut carregar. No és el mateix que no tenir-ne. */
+  failed?: boolean;
   playing?: boolean; onPlay?: () => void;
   onSave: (shi: string, ca: string) => Promise<void>;
   onRecorded: (drillId: number) => void;
@@ -278,10 +284,43 @@ function BookLine({
     );
   }
 
+  // Els TRES ESTATS d'una veu, que mai no s'han de confondre:
+  //
+  //   (a) la biblioteca la té        → l'altaveu, i el crèdit de qui la diu i d'on és;
+  //   (b) ningú no l'ha dita         → ho diu, i ofereix demanar-la o gravar-la;
+  //   (c) hi és i el so no carrega   → el nom ES QUEDA (la persona sí que la va dir, la culpa
+  //                                     és nostra) i es diu què passa.
+  //
+  // Abans (b) i (c) es veien igual: totes dues com una línia qualsevol sense altaveu. «Ningú no
+  // ho ha dit» és una tasca per a la comunitat i «no t'ho podem fer sentir» és una errada
+  // nostra; si es veuen igual, les peticions de gravació s'omplen de frases ja gravades.
+  const credit = speaker
+    ? `${speaker}${region ? ` · ${region}` : ''}`
+    : 'una de les nostres veus';
+  const voice = !audio ? (
+    <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>Encara no l’ha dita ningú</span>
+  ) : failed ? (
+    <span style={{ fontSize: 11.5, color: 'var(--amber, var(--text-soft))' }}>
+      La diu {credit}, però ara el so no es carrega. Torna-ho a provar.
+    </span>
+  ) : (
+    <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>Ho diu {credit}</span>
+  );
+
+  // A la fila d'un exemple del llibre, el mateix dit curt: una secció en té sis i sis frases
+  // seguides dient «Encara no l'ha dita ningú» és soroll, no informació. El que no es perd és
+  // la distinció entre les tres coses.
+  // Però el so trencat NO s'escurça fins a assemblar-se a «sense veu encara»: (b) i (c)
+  // tornarien a ser el mateix justament allà on s'han separat, i el nom s'ha de quedar, que la
+  // persona sí que la va dir. Encara que sigui la línia més llarga de les sis.
+  const voiceShort = !audio
+    ? 'sense veu encara'
+    : failed ? `ho diu ${credit}, però ara el so no es carrega` : `ho diu ${credit}`;
+
   const tools = (
     <span style={{ marginInlineStart: 'auto', display: 'inline-flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
       {audio && onPlay && (
-        <button onClick={onPlay} aria-label={`Escolta «${shi}»`} title={speaker ? `Ho diu ${speaker}` : 'Escolta-la'}
+        <button onClick={onPlay} aria-label={`Escolta «${shi}»`} title={`Ho diu ${credit}`}
                 style={{ ...iconBtn, border: 'none', background: playing ? 'var(--brand-1)' : 'var(--brand-gradient)', color: '#fff' }}>
           <FaPlay size={9} />
         </button>
@@ -310,6 +349,7 @@ function BookLine({
             <div lang="shi" style={{ fontSize: 16.5, fontWeight: 700, color: 'var(--brand-1)', lineHeight: 1.35, marginTop: 2 }}>{shi}</div>
             <Tif t={tif} size={13} />
             <div style={{ fontSize: 14, color: 'var(--text-soft)' }}>{ca}</div>
+            <div style={{ marginTop: 2 }}>{voice}</div>
           </div>
           {tools}
           {words}
@@ -332,6 +372,7 @@ function BookLine({
             <span lang="shi" style={{ fontWeight: 800, color: 'var(--brand-1)' }}>{shi}</span>
             <Tif t={tif} size={11.5} />
             <span style={{ display: 'block', color: 'var(--text-soft)' }}>{ca}</span>
+            <span style={{ display: 'block', marginTop: 1 }}>{voice}</span>
           </span>
           {extra}
           {tools}
@@ -348,6 +389,7 @@ function BookLine({
       </span>
       {ca && <span style={{ fontSize: 14, color: 'var(--text)' }}>{ca}</span>}
       {note && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>· {note}</span>}
+      <span style={{ fontSize: 11.5, color: failed ? 'var(--text-soft)' : 'var(--text-muted)' }}>· {voiceShort}</span>
       {tools}
       {words}
     </div>
@@ -433,6 +475,34 @@ export default function MethodLesson({
   // capítol se'n sentien quatre paraules soltes. El botó deia «escolta el capítol» i feia sonar
   // una altra cosa. Cada targeta nostra conserva el seu play, que és on té sentit.
 
+  // El NOM i el PEU del botó.
+  //
+  // Es deia «Escolta el capítol» i no pot fer el capítol: les set rèpliques del diàleg no estan
+  // gravades i el play les salta sense dir-ho. Un botó que promet el capítol i fa sonar les
+  // paraules soltes és el mateix engany que ja vam treure d'aquí (abans feia sonar vint frases
+  // d'una altra cosa). Així que el botó diu el que farà, i el peu diu què s'ha quedat fora.
+  const turns = body.dialogue?.turns || [];
+  const silentTurns = turns.filter((t) => !t.audio_url).length;
+  const voiceless = silentTurns > 0;
+  const saidWords = (body.vocabulary || []).filter((v) => v.audio_url).length;
+  const saidLines = (body.sections || [])
+    .reduce((n, sec) => n + (sec.examples || []).filter((e) => e.audio_url).length, 0);
+  const some = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+  // Un zero no s'escriu: «2 paraules i 0 frases dites per gent de debò» és una manera rebuscada
+  // de dir «dues paraules».
+  const said = [saidWords ? some(saidWords, 'paraula', 'paraules') : '',
+                saidLines ? some(saidLines, 'frase', 'frases') : ''].filter(Boolean).join(' i ');
+  const playFoot = tracks.length === 0
+    ? 'Cap línia del capítol no s’ha gravat encara. Prem el micròfon de qualsevol línia i la primera serà la teva.'
+    : voiceless
+      ? `${said} ${saidWords + saidLines === 1 ? 'dita' : 'dites'} per gent de debò. `
+        + `El diàleg encara no: ${silentTurns === 1 ? 'la rèplica que queda espera' : `les ${silentTurns} rèpliques esperen`} una veu, i el botó les saltarà.`
+      : `El diàleg sencer i ${some(saidWords + saidLines, 'frase més', 'frases més')}, dites per gent de debò.`;
+
+  // Quines línies tenen el so trencat. Fins ara un tall que no sonava se saltava en silenci i la
+  // línia es veia igual que una que ningú no ha dit: són dues coses diferents —una errada nostra
+  // i una tasca per a la comunitat— i el pedagog va demanar que es distingissin.
+  const [broken, setBroken] = useState<Record<string, boolean>>({});
   const [sounding, setSounding] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const chainRef = useRef(false);
@@ -452,9 +522,10 @@ export default function MethodLesson({
     audioRef.current = a;
     setSounding(t.key);
     const next = () => { if (chainRef.current) playFrom(i + 1); else setSounding(null); };
+    const failed = () => { setBroken((b) => ({ ...b, [t.key]: true })); next(); };
     a.onended = next;
-    a.onerror = next;
-    a.play().catch(next);
+    a.onerror = failed;
+    a.play().catch(failed);
   };
 
   const playAll = () => {
@@ -481,12 +552,10 @@ export default function MethodLesson({
         <button onClick={playAll} disabled={tracks.length === 0}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 'var(--r-pill)', border: 'none', cursor: tracks.length ? 'pointer' : 'default', fontFamily: 'inherit', fontWeight: 800, fontSize: 14, color: '#fff', background: tracks.length ? 'var(--brand-gradient)' : 'var(--surface-2)', boxShadow: tracks.length ? 'var(--shadow-brand)' : 'none' }}>
           {sounding ? <FaStop size={12} /> : <FaPlay size={12} />}
-          {sounding ? 'Atura' : 'Escolta el capítol'}
+          {sounding ? 'Atura' : voiceless ? 'Escolta les frases que ja tenen veu' : 'Escolta el capítol'}
         </button>
         <span style={{ fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.5, flex: '1 1 240px' }}>
-          {tracks.length
-            ? `${tracks.length} ${tracks.length === 1 ? 'línia del capítol es pot escoltar' : 'línies del capítol es poden escoltar'}. La resta espera una veu: prem el micròfon de qualsevol línia i la primera serà la teva.`
-            : 'Cap línia del capítol no s’ha gravat encara. Prem el micròfon de qualsevol línia i la primera serà la teva.'}
+          {playFoot}
         </span>
       </div>
 
@@ -524,7 +593,8 @@ export default function MethodLesson({
                   <BookLine key={k} slug={slug} where={where} look="turn" who={t.who}
                             shi={t.shi} ca={t.ca} tif={t.tif} gloss={t.gloss}
                             drillId={t.drill_id} canEdit={canEdit}
-                            audio={t.audio_url} speaker={t.speaker}
+                            audio={t.audio_url} speaker={t.speaker} region={t.region}
+                            failed={!!broken[`turn:${k}`]}
                             playing={sounding === `turn:${k}`} onPlay={() => playOne(`turn:${k}`)}
                             onSave={(shi, ca) => saveLine(where, shi, ca)}
                             onRecorded={noteDrill(where)} />
@@ -551,7 +621,8 @@ export default function MethodLesson({
                 <BookLine key={k} slug={slug} where={where} look="word"
                           shi={v.shi} ca={v.ca} tif={v.tif}
                           drillId={v.drill_id} canEdit={canEdit}
-                          audio={v.audio_url} image={v.image_url} speaker={v.speaker}
+                          audio={v.audio_url} image={v.image_url} speaker={v.speaker} region={v.region}
+                          failed={!!broken[`vocabulary:${k}`]}
                           playing={sounding === `vocabulary:${k}`} onPlay={() => playOne(`vocabulary:${k}`)}
                           onSave={(shi, ca) => saveLine(where, shi, ca)}
                           onRecorded={noteDrill(where)} />
@@ -570,6 +641,66 @@ export default function MethodLesson({
       {(body.sections || []).map((s, si) => {
         const aside = s.zone === 'aside';
         const shown = !aside || !!openAside[s.id];
+        // I com ho diu la gent que coneixem. Això és el que el llibre no té: la mateixa cosa
+        // dita per algú, amb la seva veu, el seu poble i la seva imatge. Cada targeta diu
+        // QUÈ HI FA: una frase que apareix sense dir què hi fa és soroll, per bona que sigui.
+        const oursCards = s.ours_drills && s.ours_drills.length > 0 ? (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 6 }}>
+                Dit per les nostres veus
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 8 }}>
+                {s.ours_drills.map((d) => (
+                  <div key={d.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', background: 'var(--surface)' }}>
+                    {d.image_url && (
+                      <img src={thumb(getMediaUrl(d.image_url), 460)} alt="" loading="lazy"
+                           style={{ width: '100%', aspectRatio: '16 / 10', objectFit: 'cover', display: 'block' }}
+                           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                    )}
+                    <div style={{ padding: '8px 10px' }}>
+                      <div lang="shi" style={{ fontWeight: 800, fontSize: 15, color: 'var(--brand-1)', lineHeight: 1.3 }}>{d.text_tachelhit}</div>
+                      <Tif t={d.tif} size={12} />
+                      <div style={{ fontSize: 13, color: 'var(--text-soft)' }}>{d.text_catalan}</div>
+                      {d.why && (
+                        <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.4 }}>
+                          És aquí perquè {d.why}
+                        </div>
+                      )}
+                      {d.gloss && d.gloss.length > 0 && <GlossWords words={d.gloss} size="sm" />}
+                      <SentenceVariants variants={d.variants} size="sm" />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                        <span style={{ fontSize: 11.5, color: 'var(--text-muted)', flex: 1 }}>
+                          {d.from_book
+                            ? <span style={{ fontWeight: 700 }}>del manual{d.speaker ? `, dit per ${d.speaker}` : ', encara sense parlant'}</span>
+                            : (d.speaker || 'sense nom')}
+                          {(d.variety || d.region) && (
+                            <span style={{ fontSize: 10.5, opacity: 0.6 }}>
+                              {d.variety ? ` · ${d.variety}` : ''}{d.region ? ` · ${d.region}` : ''}
+                            </span>
+                          )}
+                          {d.from_book && !d.variety && (
+                            <span style={{ fontSize: 10.5, opacity: 0.6 }}> · tachelhit del Souss</span>
+                          )}
+                        </span>
+                        {d.audio_url && (
+                          <button onClick={() => new Audio(getMediaUrl(d.audio_url as string)).play().catch(() => {})}
+                                  aria-label="Escolta-la" title="Escolta-la"
+                                  style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', background: 'var(--brand-gradient)', color: '#fff', cursor: 'pointer', flexShrink: 0 }}>
+                            <FaPlay size={10} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {typeof s.ours_total === 'number' && s.ours_total > s.ours_drills.length && (
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '6px 0 0' }}>
+                  i {s.ours_total - s.ours_drills.length} més a la biblioteca
+                </p>
+              )}
+            </div>
+          ) : null;
         return (
         <section key={s.id} id={`part-${s.id}`} style={{ marginBottom: aside && !shown ? 14 : 26, paddingInlineStart: 14, borderInlineStart: `3px solid ${aside ? 'var(--surface-2)' : 'var(--border)'}`, scrollMarginTop: 'calc(var(--nav-h) + 10px)' }}>
           {aside && (body.sections || [])[si - 1]?.zone !== 'aside' && (
@@ -582,6 +713,7 @@ export default function MethodLesson({
           <SectionText slug={slug} index={si} title={s.title} text={s.text} deep={s.deep} ours={s.ours}
                        canEdit={canEdit} signedIn={signedIn}
                        folded={aside} open={shown} summary={s.summary} unit={s.unit} oursTotal={s.ours_total}
+                       afterTitle={aside ? oursCards : undefined}
                        onToggle={() => setOpenAside((o) => ({ ...o, [s.id]: !o[s.id] }))}
                        onSave={(p) => saveSection(si, p)} />
           {shown && <>
@@ -649,7 +781,8 @@ export default function MethodLesson({
                   <BookLine key={k} slug={slug} where={where} look="row"
                             shi={e.shi} ca={e.ca} note={e.note} tif={e.tif} gloss={e.gloss}
                             drillId={e.drill_id} canEdit={canEdit}
-                            audio={e.audio_url} speaker={e.speaker}
+                            audio={e.audio_url} speaker={e.speaker} region={e.region}
+                            failed={!!broken[`example:${s.id}:${k}`]}
                             playing={sounding === key} onPlay={() => playOne(key)}
                             onSave={(shi, ca) => saveLine(where, shi, ca)}
                             onRecorded={noteDrill(where)} />
@@ -664,66 +797,7 @@ export default function MethodLesson({
             </p>
           )}
 
-          {/* I com ho diu la gent que coneixem. Això és el que el llibre no té: la mateixa cosa
-              dita per algú, amb la seva veu, el seu poble i la seva imatge. Cada targeta diu
-              QUÈ HI FA: una frase que apareix sense dir què hi fa és soroll, per bona que sigui. */}
-          {s.ours_drills && s.ours_drills.length > 0 && (
-            <div style={{ marginTop: 12 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 6 }}>
-                Dit per les nostres veus
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 8 }}>
-                {s.ours_drills.map((d) => (
-                  <div key={d.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', background: 'var(--surface)' }}>
-                    {d.image_url && (
-                      <img src={thumb(getMediaUrl(d.image_url), 460)} alt="" loading="lazy"
-                           style={{ width: '100%', aspectRatio: '16 / 10', objectFit: 'cover', display: 'block' }}
-                           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-                    )}
-                    <div style={{ padding: '8px 10px' }}>
-                      <div lang="shi" style={{ fontWeight: 800, fontSize: 15, color: 'var(--brand-1)', lineHeight: 1.3 }}>{d.text_tachelhit}</div>
-                      <Tif t={d.tif} size={12} />
-                      <div style={{ fontSize: 13, color: 'var(--text-soft)' }}>{d.text_catalan}</div>
-                      {d.why && (
-                        <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.4 }}>
-                          És aquí perquè {d.why}
-                        </div>
-                      )}
-                      {d.gloss && d.gloss.length > 0 && <GlossWords words={d.gloss} size="sm" />}
-                      <SentenceVariants variants={d.variants} size="sm" />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                        <span style={{ fontSize: 11.5, color: 'var(--text-muted)', flex: 1 }}>
-                          {d.from_book
-                            ? <span style={{ fontWeight: 700 }}>del manual{d.speaker ? `, dit per ${d.speaker}` : ', encara sense parlant'}</span>
-                            : (d.speaker || 'sense nom')}
-                          {(d.variety || d.region) && (
-                            <span style={{ fontSize: 10.5, opacity: 0.6 }}>
-                              {d.variety ? ` · ${d.variety}` : ''}{d.region ? ` · ${d.region}` : ''}
-                            </span>
-                          )}
-                          {d.from_book && !d.variety && (
-                            <span style={{ fontSize: 10.5, opacity: 0.6 }}> · tachelhit del Souss</span>
-                          )}
-                        </span>
-                        {d.audio_url && (
-                          <button onClick={() => new Audio(getMediaUrl(d.audio_url as string)).play().catch(() => {})}
-                                  aria-label="Escolta-la" title="Escolta-la"
-                                  style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', background: 'var(--brand-gradient)', color: '#fff', cursor: 'pointer', flexShrink: 0 }}>
-                            <FaPlay size={10} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {typeof s.ours_total === 'number' && s.ours_total > s.ours_drills.length && (
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '6px 0 0' }}>
-                  i {s.ours_total - s.ours_drills.length} més a la biblioteca
-                </p>
-              )}
-            </div>
-          )}
+          {!aside && oursCards}
           </>}
         </section>
         );

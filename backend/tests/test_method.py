@@ -158,6 +158,14 @@ def test_cada_seccio_ensenya_les_nostres_frases_al_costat_del_que_explica():
     try:
         me = client.get("/users/me", headers=hdr).json()
         db.query(main.UserModel).filter(main.UserModel.id == me["id"]).first().is_admin = True
+        # Aquest test comprova que una línia del llibre ENCARA no és una frase nostra, i això
+        # només és cert si el capítol surt sense escriure. La base de proves no es llença entre
+        # execucions i desar un capítol conserva el `drill_id` de les línies que ja s'han gravat
+        # (keep_voices), de manera que la segona vegada la línia ja en portava un i el test queia
+        # segons l'ordre. S'esborra el capítol abans de començar, i així cada execució parteix
+        # d'on diu que parteix.
+        from models import MethodChapter
+        db.query(MethodChapter).filter(MethodChapter.slug == "la-botiga").delete()
         db.commit()
     finally:
         db.close()
@@ -621,3 +629,80 @@ def test_el_capitol_porta_a_la_seva_practica():
 
     assert client.get("/method/la-botiga").json().get("practice_test") is None, \
         "i deixa de portar-hi quan la pràctica ja no hi és"
+
+
+def test_la_segona_zona_en_posa_dues_i_el_credit_diu_d_on_es():
+    """Dues coses de l'auditoria pedagògica, i la segona és un canvi de criteri.
+
+    LES DUES TARGETES. El pedagog va demanar retallar les seccions de la segona zona i després
+    ho va retirar ell mateix, amb el principi que val per a tot el projecte: «no esborris mai el
+    que ha escrit una persona; limita lliurement el que ha produït una consulta». Els exemples
+    del manual són triats i traduïts a mà i es queden tots; les targetes «dit per les nostres
+    veus» són el resultat d'una cerca que es torna a executar a cada càrrega, i allà sí que hi va
+    el límit. El total segueix sent el de debò, perquè és el que fa la línia «i N més a la
+    biblioteca»: no desapareix cap frase.
+
+    EL CRÈDIT. El nom de qui diu una línia no és un indicador d'estat: és un crèdit a una
+    persona, i un crèdit sense poble deixa la varietat amagada, que és justament el que aquest
+    projecte no fa.
+    """
+    import main
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("zona_aside")}
+    db = main.SessionLocal()
+    try:
+        me = client.get("/users/me", headers=hdr).json()
+        db.query(main.UserModel).filter(main.UserModel.id == me["id"]).first().is_admin = True
+        db.commit()
+    finally:
+        db.close()
+
+    nats = []
+    for n, (shi, ca) in enumerate((("imi n-tgmmi", "la porta de casa"),
+                                   ("imi ad", "aquesta boca"),
+                                   ("imi nns", "la seva boca"),
+                                   ("imi lli", "aquella boca"))):
+        nats.append(client.post("/drills/", headers=hdr, json={
+            "text_catalan": ca, "text_tachelhit": shi, "author": "Veu-zona",
+            "speaker": "Veu-zona", "region": "Aït Mraw (Azilal)",
+            "grammar": "possessius", "grammar_source": "owner",
+            "audio_url": f"https://res.cloudinary.com/x/video/upload/v1/imi{n}.mp3"}).json())
+
+    # El capítol que s'escriu aquí s'esborra al final: un capítol escrit canvia el que veuen
+    # els altres tests —un d'ells comprova justament que un capítol sense escriure no té text—
+    # i amb l'ordre aleatori això es paga una vegada de cada deu.
+    try:
+        client.put("/method/que-fas/content", headers=hdr, json={
+            "sections": [
+                {"id": "oberta", "title": "La boca, oberta", "keys": ["imi"],
+                 "examples": [{"shi": "imi", "ca": "la boca"}]},
+                {"id": "plegada", "title": "La boca, al voltant", "zone": "aside",
+                 "summary": "El que l'escena deixa veure.", "keys": ["imi"]},
+            ],
+            "vocabulary": [{"shi": "imi n-tgmmi", "ca": "la porta de casa"}],
+        })
+        body = client.get("/method/que-fas").json()["content"]
+        oberta, plegada = body["sections"]
+
+        assert len(plegada["ours_drills"]) <= 2, "la zona plegada en posa dues, no quatre"
+        assert plegada["ours_total"] >= len(plegada["ours_drills"]), \
+            "i el total segueix sent el de debò: és el que porta a la biblioteca"
+        assert len(oberta["ours_drills"]) >= len(plegada["ours_drills"]), \
+            "la zona oberta no es retalla: allà s'estudia"
+
+        # el crèdit: qui ho diu i d'on és, a la paraula que la biblioteca ja té
+        word = body["vocabulary"][0]
+        assert word.get("audio_url"), "la paraula que la biblioteca té surt amb veu"
+        assert word.get("speaker") == "Veu-zona"
+        assert word.get("region") == "Aït Mraw (Azilal)", "i d'on és qui la diu"
+    finally:
+        from models import MethodChapter
+        db = main.SessionLocal()
+        try:
+            db.query(MethodChapter).filter(MethodChapter.slug == "que-fas").delete()
+            for d in nats:
+                db.query(main.DrillModel).filter(main.DrillModel.id == d["id"]).delete()
+            db.commit()
+        finally:
+            db.close()
