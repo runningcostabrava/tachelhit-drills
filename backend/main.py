@@ -3719,7 +3719,7 @@ def delete_short(short_id: int, db: Session = Depends(get_db)):
 # wrote fake res.cloudinary.com/demo/... URLs into real drills) were removed.
 # The real pipeline lives under /video-analysis/*.
 
-from video_utils import get_video_metadata, get_video_segments, process_and_upload_segment, remote_process_and_upload_segment, get_yt_dlp_cookie_file, download_video_to_dir, process_and_upload_audio_segment, is_audio_file
+from video_utils import video_key, get_video_metadata, get_video_segments, process_and_upload_segment, remote_process_and_upload_segment, get_yt_dlp_cookie_file, download_video_to_dir, process_and_upload_audio_segment, is_audio_file
 
 # All video uploads live under one parent dir so that (a) stale files from the
 # two-step upload -> create-drills flow can be purged by age instead of leaking
@@ -4740,10 +4740,14 @@ def capture_video(url: str, db: Session = Depends(get_db)):
     skipped; two cuts that overlap mean one of them is carrying the other's words -- which is
     exactly the fault that made drill 6854 say one thing and sound like another.
     """
-    rows = (db.query(DrillModel)
-            .filter(DrillModel.source_url == url)
+    # Pel vídeo, no per la cadena: els talls d'un mateix vídeo porten cadascun el seu segon
+    # dins del `source_url` (`&t=509`, `&t=521`…), i comparar-la sencera no en trobava cap.
+    want = video_key(url)
+    rows = [d for d in db.query(DrillModel)
+            .filter(DrillModel.source_url != None, DrillModel.source_url != "")   # noqa: E711
             .order_by(sa_func.coalesce(DrillModel.video_start_time, 0).asc(),
-                      DrillModel.id.asc()).all())
+                      DrillModel.id.asc()).all()
+            if video_key(d.source_url) == want]
     if not rows:
         raise HTTPException(status_code=404, detail="D'aquest vídeo no en tenim cap frase")
 
@@ -7606,7 +7610,9 @@ def corpus_sources(db: Session = Depends(get_db)):
     rows = db.query(DrillModel).filter(DrillModel.source_url != None, DrillModel.source_url != '').all()
     videos: Dict[str, Dict[str, Any]] = {}
     for d in rows:
-        v = videos.setdefault(d.source_url, {
+        # agrupat pel VÍDEO: la mateixa captura escriu una URL diferent per tall (hi posa el
+        # segon on comença), i agrupar per la cadena comptava un vídeo per cada tall
+        v = videos.setdefault(video_key(d.source_url), {
             "source_url": d.source_url, "title": None, "channel": None, "playlist": None, "license": None,
             "drills": 0, "with_video": 0, "with_audio": 0, "verified": 0, "varieties": set(), "tags": set(),
             "from_s": None, "to_s": None, "ids": []})

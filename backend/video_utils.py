@@ -141,6 +141,27 @@ def download_video_from_url(url: str, drill_id: int) -> str:
         else:
             raise Exception("Failed to download video file")
 
+def video_key(url: Optional[str]) -> str:
+    """What makes two links the SAME video.
+
+    A drill's `source_url` carries the second it starts at: the fifteen cuts of one video are
+    `...watch?v=OhdpI4AaRNk&t=509`, `&t=521`, `&t=534`... Comparing the whole string splits one
+    video into as many «videos» as it has cuts, which is why the capture queue could not link to
+    its own drills and why the source catalogue counted too many.
+
+    A video's identity is its id, not its address: YouTube's `v=` (or what follows /shorts/,
+    /embed/ or youtu.be/), and for anything else the address without the query or the fragment.
+    """
+    import re as _re
+    u = (url or "").strip()
+    if not u:
+        return ""
+    m = _re.search(r"(?:youtube\.com/(?:watch\?(?:.*&)?v=|shorts/|embed/|live/)|youtu\.be/)([\w-]{6,})", u)
+    if m:
+        return f"yt:{m.group(1)}"
+    return _re.split(r"[?#]", u, maxsplit=1)[0].rstrip("/").lower()
+
+
 def download_video_to_dir(url: str, dest_dir: str, cookies_str: Optional[str] = None, audio_only: bool = False) -> Tuple[str, Dict[str, Any]]:
     """
     Download media from any yt-dlp-supported site (YouTube, Instagram, TikTok,

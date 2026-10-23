@@ -84,3 +84,37 @@ def test_tornar_a_tallar_demana_un_video_i_un_tram_que_tingui_sentit():
     back = client.get(f"/drills/{from_video['id']}").json()
     assert back["text_tachelhit"] == "aman"
     assert back["video_start_time"] == 5.0 and back["video_end_time"] == 8.0
+
+
+def test_dos_enllacos_del_mateix_video_son_el_mateix_video():
+    """Un drill capturat guarda el segon on comença DINS del `source_url`.
+
+    Els quinze talls d'un vídeo són `...watch?v=XXX&t=509`, `&t=521`, `&t=534`… Comparar la
+    cadena sencera parteix un vídeo en tants «vídeos» com talls té: per això la cua de captures
+    deia «fet · 15 drills» i la pantalla per mirar-los tornava 404, i per això el catàleg de
+    fonts en comptava de més.
+
+    La identitat d'un vídeo és el seu identificador, no la seva adreça."""
+    from video_utils import video_key
+    from test_api import client
+
+    base = "https://www.youtube.com/watch?v=OhdpI4AaRNk"
+    assert video_key(base) == video_key(base + "&t=509") == video_key(base + "&t=521")
+    assert video_key("https://youtu.be/OhdpI4AaRNk?si=x") == video_key(base)
+    assert video_key("https://www.youtube.com/shorts/Ntn-N0tLMmk") == "yt:Ntn-N0tLMmk"
+    assert video_key(base) != video_key("https://www.youtube.com/watch?v=NIUsYt7HjYA")
+    assert video_key(None) == "" and video_key("") == ""
+    # el que no es YouTube: sense la consulta ni l'ancora
+    assert video_key("https://x.test/a/b?utm=1#t") == video_key("https://x.test/a/b/")
+
+    # i de punta a punta: tres talls amb tres adreces diferents, un sol vídeo
+    for t, a, b in ((509, 509.0, 512.0), (521, 521.0, 524.0), (534, 534.0, 537.5)):
+        client.post("/drills/", json={
+            "text_catalan": f"tall {t}", "text_tachelhit": f"amud {t}",
+            "source_url": f"{base}&t={t}", "source_title": "Un de sencer",
+            "video_start_time": a, "video_end_time": b})
+
+    r = client.get("/capture/video", params={"url": base}).json()
+    assert len(r["cuts"]) == 3, "els tres talls, demanats per l'adreça neta"
+    assert r["title"] == "Un de sencer"
+    assert [c["start"] for c in r["cuts"]] == [509.0, 521.0, 534.0]
