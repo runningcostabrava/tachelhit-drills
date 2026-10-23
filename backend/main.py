@@ -5974,13 +5974,26 @@ async def add_recording(
         text=own_words or None,
     )
     db.add(rec)
-    # promote to the drill's primary audio if it has none yet
-    if not (drill.audio_url or "").strip():
+    # La primera veu d'una frase muda passa a ser la seva veu principal — amb UNA condició que
+    # ens han posat els auditors i que val la pena: la d'algú que APRÈN, no.
+    #
+    # No és un judici sobre ningú: `drill.audio_url` és el que sona al Mètode, el que sona a la
+    # pràctica i el que `compare_words` fa servir de REFERÈNCIA per puntuar la pronunciació de
+    # tothom. Una primera presa d'algú que aprèn es convertiria en l'objectiu que els altres han
+    # d'encertar. La gravació hi és igual, i s'escolta igual; el que no fa és manar.
+    learner = rec.is_native is False
+    if not (drill.audio_url or "").strip() and not learner:
         drill.audio_url = url
     # a petition (Catalan only) gets its Tamazight from the first speaker who answers it, in their
-    # own spelling; their variety and town travel with it
+    # own spelling; their variety and town travel with it.
+    #
+    # Mai, però, a una línia del manual: si s'hi copiés, hauríem reescrit el text d'El Mountassir
+    # amb una forma de l'Atles mentre el peu segueix dient «Basat en El Mountassir». Aquelles
+    # línies reben VEU —que és el que els falta— i frases nostres al costat, però el text no se'ls
+    # toca des d'una gravació (ADR 0004).
+    from_book = "del llibre" in (drill.tag or "")
     variant = None
-    if not (drill.text_tachelhit or "").strip() and (text or "").strip():
+    if not (drill.text_tachelhit or "").strip() and (text or "").strip() and not from_book:
         drill.text_tachelhit = (text or "").strip()
         drill.variety = drill.variety or rec.variety
         drill.region = drill.region or rec.region
