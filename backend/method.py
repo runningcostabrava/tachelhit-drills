@@ -302,6 +302,28 @@ def strip_computed(body: Dict) -> Dict:
     return clean(body)
 
 
+def keep_voices(old: Optional[Dict], new: Dict) -> Dict:
+    """Les línies que ja són frases de la biblioteca segueixen sent-ho després d'una correcció.
+
+    Una línia del capítol es torna una frase nostra quan algú la grava, i el capítol se'n recorda
+    amb un `drill_id`. Qui corregeix el text no ha de saber res d'això: puja el capítol tal com
+    l'escriu, sense números, i si no els recuperéssim, **cada correcció desvincularia totes les
+    veus**. La gravació seguiria existint i la línia tornaria a dir «grava-la», com si ningú no
+    l'hagués dita mai — i això no es veu fins que algú busca el botó de reproduir.
+
+    Ho va trobar un auditor comparant dues lectures del capítol 4 amb cinc hores de diferència:
+    l'única línia d'exemple amb veu de tot el capítol l'havia perduda.
+    """
+    if not old:
+        return new
+    for kind in LINE_KINDS:
+        was, now = _lines_of(old, kind), _lines_of(new, kind)
+        for before, after in zip(was, now):
+            if before.get("drill_id") and not after.get("drill_id"):
+                after["drill_id"] = before["drill_id"]
+    return new
+
+
 def store_content(db, slug: str, body: Dict, who: Optional[str] = None) -> Dict:
     """Desa o reemplaça el text d'un capítol. Només per a qui administra."""
     import json
@@ -309,11 +331,14 @@ def store_content(db, slug: str, body: Dict, who: Optional[str] = None) -> Dict:
     from models import MethodChapter
     if slug not in BY_SLUG:
         raise ValueError(f"«{slug}» no és cap capítol del Mètode")
+    # El que hi havia es llegeix ABANS de tocar la fila: si no, la consulta fa sortir la fila
+    # nova a mig fer i la base es queixa que el cos és buit.
+    body = keep_voices(content_of(db, slug), strip_computed(body))
     row = db.query(MethodChapter).filter(MethodChapter.slug == slug).first()
     if not row:
         row = MethodChapter(slug=slug)
         db.add(row)
-    row.body = json.dumps(strip_computed(body), ensure_ascii=False)
+    row.body = json.dumps(body, ensure_ascii=False)
     row.updated_at = datetime.utcnow()
     row.updated_by = who
     db.commit()

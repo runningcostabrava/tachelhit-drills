@@ -538,3 +538,45 @@ def test_el_capitol_servit_es_guarda_fet_fins_que_alguna_cosa_es_mou():
     assert client.get("/method/la-botiga").json()["content"]["sections"][0]["title"] != before["content"]["sections"][0]["title"]
 
     client.delete(f"/drills/{made['id']}", headers=hdr)
+
+
+def test_corregir_el_capitol_no_desvincula_les_veus():
+    """Una línia del capítol es torna una frase de la biblioteca quan algú la grava, i el capítol
+    se'n recorda amb un `drill_id`. Qui corregeix el text puja el capítol tal com l'escriu, sense
+    aquells números — i si no es recuperessin, cada correcció desvincularia totes les veus: la
+    gravació seguiria existint i la línia tornaria a dir «grava-la», com si ningú no l'hagués
+    dita mai.
+
+    Ho va trobar un auditor comparant dues lectures del capítol 4 amb cinc hores de diferència:
+    l'única línia d'exemple amb veu de tot el capítol l'havia perduda, i la va perdre jo, en
+    tornar a pujar el text."""
+    import main
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("qui_corregeix_el_text")}
+    db = main.SessionLocal()
+    try:
+        me = client.get("/users/me", headers=hdr).json()
+        db.query(main.UserModel).filter(main.UserModel.id == me["id"]).first().is_admin = True
+        db.commit()
+    finally:
+        db.close()
+
+    escrit = {"sections": [{"id": "iri", "title": "iri", "examples": [{"shi": "is trit aman?", "ca": "Que vols aigua?"}]}],
+              "dialogue": {"title": "A la botiga", "turns": [{"who": "la dona", "shi": "is dar-k tudit?", "ca": "Que tens mantega?"}]},
+              "vocabulary": [{"shi": "aman", "ca": "aigua"}]}
+    client.put("/method/la-botiga/content", headers=hdr, json=escrit)
+
+    made = client.post("/method/la-botiga/line", headers=hdr,
+                       json={"kind": "example", "section": "iri", "index": 0}).json()
+    assert made["created"] is True
+
+    # i ara algú torna a pujar el capítol tal com el té escrit, sense cap número
+    escrit["sections"][0]["examples"][0]["ca"] = "Que en vols, d'aigua?"
+    client.put("/method/la-botiga/content", headers=hdr, json=escrit)
+
+    back = client.get("/method/la-botiga").json()["content"]["sections"][0]["examples"][0]
+    assert back["ca"] == "Que en vols, d'aigua?", "la correcció s'ha desat"
+    assert back.get("drill_id") == made["drill_id"], "i la veu no s'ha desvinculat"
+
+    client.delete(f"/drills/{made['drill_id']}", headers=hdr)
