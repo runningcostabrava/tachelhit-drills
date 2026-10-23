@@ -5,6 +5,7 @@ import { api, type MethodChapterData, type MethodSentence } from '../api';
 import { getMediaUrl, hasIdentity } from '../config';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
+import MethodLesson from './MethodLesson';
 
 // Un capítol del Mètode.
 //
@@ -56,6 +57,9 @@ export default function MethodChapter() {
   const navigate = useNavigate();
   const [c, setC] = useState<MethodChapterData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Qui administra pot corregir el text del capítol allà mateix, sense desplegar res.
+  const [me, setMe] = useState<{ is_admin?: boolean } | null>(null);
+  useEffect(() => { api.me().then(setMe).catch(() => setMe(null)); }, []);
 
   useEffect(() => {
     if (!slug) return;
@@ -94,6 +98,25 @@ export default function MethodChapter() {
           </p>
         )}
       </section>
+
+      {/* La lliçó: el text del capítol, adaptat del manual i desat a la base de dades. Un capítol
+          que encara no s'ha escrit no en té, i llavors la pàgina són les frases de la biblioteca
+          que li toquen, que és el que hi havia fins ara. */}
+      {c.content && slug && (
+        <MethodLesson slug={slug} content={c.content} canEdit={!!me?.is_admin}
+                      onChanged={() => api.methodChapter(slug).then(setC).catch(() => {})} />
+      )}
+
+      {c.content && c.sections.some((s) => s.sentences.length > 0) && (
+        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 18, margin: '26px 0 2px' }}>
+          Dit per les nostres veus
+        </h3>
+      )}
+      {c.content && (
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '0 0 12px', lineHeight: 1.55 }}>
+          Les frases de la biblioteca que fan el que aquest capítol ensenya, amb qui les diu i d’on és.
+        </p>
+      )}
 
       {c.sections.map((s, k) => (
         <section key={s.slug} style={{ marginBottom: 22 }}>

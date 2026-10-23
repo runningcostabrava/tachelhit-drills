@@ -155,10 +155,46 @@ export interface MethodChapterSummary {
 
 export interface MethodIndex { chapters: MethodChapterSummary[]; source: MethodSource }
 
+/** El text d'un capítol: l'explicació, el diàleg i el vocabulari. Viu a la base de dades, no al
+ *  repositori, i per això qui administra el pot corregir sense desplegar res. */
+/** `drill_id` apareix quan algú ha volgut dir aquesta línia: llavors és una frase de la nostra
+ *  biblioteca, amb la seva veu i el seu poble. */
+export interface MethodExample { shi: string; ca: string; note?: string; drill_id?: number }
+export interface MethodContent {
+  intro?: string;
+  sections?: {
+    id: string; title: string; text?: string;
+    examples?: MethodExample[];
+    table?: { title: string; rows: { p: string; v: string }[] };
+    columns?: { title: string; rows: { shi: string; ca: string }[] }[];
+    numbers?: { n: number; m: string; f?: string }[];
+    /** El que la NOSTRA varietat fa d'una altra manera. Això no ve del llibre. */
+    ours?: string;
+    /** La unitat de gramàtica de què va aquesta secció: d'aquí surten les nostres frases. */
+    unit?: string;
+    /** Les nostres, amb veu i imatge, dins de la secció que expliquen. */
+    ours_drills?: MethodSentence[];
+    ours_total?: number;
+  }[];
+  dialogue?: { title: string; scene?: string; turns: { who: string; shi: string; ca: string; drill_id?: number }[] };
+  practice?: {
+    title: string; scene?: string;
+    pattern: { who: string; shi: string; ca: string }[];
+    fills: { shi: string; ca: string; qty_shi: string; qty_ca: string }[];
+  };
+  vocabulary?: { shi: string; ca: string; audio_url?: string | null; drill_id?: number }[];
+  source_note?: string;
+  source_pages?: string;
+  updated_at?: string | null;
+  updated_by?: string | null;
+}
+
 export interface MethodChapterData {
   n: number; slug: string; name: string | null; title: string; about: string;
   functions: string[]; roles: string[];
   topics: { slug: string; label: string }[];
+  /** El text del capítol. Nul mentre no s'hagi escrit: llavors el capítol són les frases soles. */
+  content: MethodContent | null;
   sections: { slug: string; title: string; sentences: MethodSentence[]; total: number; with_voice: number }[];
   also: MethodSentence[];
   sentences: number; with_voice: number;
@@ -397,6 +433,16 @@ export const api = {
   // --- El Mètode: deu capítols fets amb la nostra biblioteca (ADR 0003) ---
   methodIndex: () => request<MethodIndex>('/method/'),
   methodChapter: (slug: string) => request<MethodChapterData>(`/method/${encodeURIComponent(slug)}`),
+  /** La frase nostra darrere una línia del capítol, creant-la el primer cop que algú la vol dir. */
+  methodLineDrill: (slug: string, kind: 'example' | 'turn' | 'vocabulary', index: number, section?: string) =>
+    request<{ drill_id: number; created: boolean; drill: Drill }>(
+      `/method/${encodeURIComponent(slug)}/line`,
+      { method: 'POST', body: JSON.stringify({ kind, index, section: section ?? null }) }),
+  /** Desa el text d'un capítol. Només qui administra. */
+  saveMethodContent: (slug: string, body: MethodContent) =>
+    request<{ slug: string; ok: boolean; sections: number }>(
+      `/method/${encodeURIComponent(slug)}/content`,
+      { method: 'PUT', body: JSON.stringify(body) }),
   askForVoice: (drillId: number, wanted = true) => request<{ id: number; voice_wanted: boolean; voice_wanted_by: string | null }>(`/drills/${drillId}/voice-wanted`, { method: 'POST', body: JSON.stringify({ wanted }) }),
   petitions: (kind: 'open' | 'synthetic' | 'aitmraw', limit = 40) => request<{ items: PetitionItem[]; total: number }>(`/petitions?kind=${kind}&limit=${limit}`),
   addPetition: (text_catalan: string, note: string | null) => request<Drill>('/petitions', { method: 'POST', body: JSON.stringify({ text_catalan, note }) }),

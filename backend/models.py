@@ -228,6 +228,26 @@ class GrammarLesson(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
 
 
+class MethodChapter(Base):
+    """El text d'un capítol del Mètode: l'explicació, el diàleg i el vocabulari.
+
+    Viu aquí i no al repositori a posta. El Mètode és el manual d'El Mountassir traduït i
+    enriquit (ADR 0004), i el repositori és públic: penjar-hi la traducció capítol per capítol
+    és una altra cosa que fer-la servir a l'app. Aquí, l'app el serveix amb el seu crèdit, i qui
+    administra el pot corregir des de la mateixa app sense desplegar res.
+
+    `body` és el JSON del capítol; `method.py` hi posa l'estructura (quines seccions, quina
+    gramàtica) i les frases de la biblioteca.
+    """
+    __tablename__ = "method_chapters"
+
+    slug = Column(String, primary_key=True)        # el nom curt del capítol, de method.CHAPTERS
+    body = Column(Text, nullable=False)            # JSON: intro, sections, dialogue, vocabulary
+    version = Column(Integer, nullable=True, default=1)
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
+    updated_by = Column(String, nullable=True)
+
+
 class WordAudio(Base):
     """When one word is spoken inside one recording (#  hear a word on its own).
 
