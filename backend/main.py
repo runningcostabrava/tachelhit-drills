@@ -6318,11 +6318,34 @@ def petitions(kind: str = "open", limit: int = 40, offset: int = 0, topic: Optio
         items.sort(key=lambda x: (x["level"], not x["drill"].image_url, -x["drill"].id))
         return {"items": items[max(0, offset):max(0, offset) + max(1, min(limit, 200))], "total": len(items),
                 "without_any_voice": sum(1 for x in items if not x["drill"].audio_tts_shi_url)}
+    if kind == "voiceless":
+        # TOTES les que ningú no ha dit mai, sense triar-ne cap: l'amo va trobar a faltar
+        # justament la llista sencera. «synthetic» és aquesta mateixa llista, però filtrada pel
+        # que el curs pot citar i ordenada per unitats; aquesta no amaga res.
+        rows = base.filter(DrillModel.text_tachelhit.isnot(None), DrillModel.text_tachelhit != "",
+                           (DrillModel.audio_url.is_(None)) | (DrillModel.audio_url == "")).order_by(
+                               DrillModel.image_url.isnot(None).desc(), DrillModel.id.desc()).all()
+        if topic:
+            rows = [d for d in rows if topic in topics_catalog.parse(d.topics)]
+        if unit:
+            rows = [d for d in rows if unit in grammar_course.parse(d.grammar)]
+        items = [_petition_row(d, units_level) for d in rows]
+        return {"items": items[max(0, offset):max(0, offset) + max(1, min(limit, 200))], "total": len(items)}
+    if kind == "untranscribed":
+        # Veus que ningú no ha escrit. És l'altra meitat de la feina i no es veia enlloc: una
+        # gravació sense text no es pot buscar, ni citar, ni entrar a cap lliçó — i qui la va
+        # dir ja ha fet la part difícil.
+        rows = base.filter(DrillModel.audio_url.isnot(None), DrillModel.audio_url != "",
+                           (DrillModel.text_tachelhit.is_(None)) | (DrillModel.text_tachelhit == "")).order_by(
+                               DrillModel.id.desc()).all()
+        items = [_petition_row(d, units_level) for d in rows]
+        return {"items": items[max(0, offset):max(0, offset) + max(1, min(limit, 200))], "total": len(items)}
     if kind == "aitmraw":
         w = grammar_wishlist(per_unit=6, db=db)["units"]
         items = [{"drill": d, "units": [u["slug"]], "level": u["level"], "requested_by": None, "note": f"Unitat «{u['title']}»: {u['aitmraw_voiced']} veus d'Aït Mraw"} for u in w for d in u["wanted"]]
         return {"items": items[:max(1, min(limit, 200))], "total": len(items)}
-    raise HTTPException(status_code=400, detail="kind must be open, synthetic or aitmraw")
+    raise HTTPException(status_code=400,
+                        detail="kind must be open, synthetic, voiceless, untranscribed or aitmraw")
 
 
 @app.post("/petitions")

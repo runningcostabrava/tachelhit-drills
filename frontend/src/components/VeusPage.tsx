@@ -15,8 +15,10 @@ import RecordAudioModal from './RecordAudioModal';
 // It used to be called «Veus», which named a thing instead of what you do here, and the tabs were
 // named after how the server groups the rows (#200). The route stays /veus so links keep working.
 
-type Kind = 'open' | 'synthetic' | 'aitmraw';
+type Kind = 'open' | 'synthetic' | 'voiceless' | 'untranscribed' | 'aitmraw';
 const TABS: { kind: Kind; label: string; blurb: string }[] = [
+  { kind: 'voiceless', label: 'Ningú no les ha dites', blurb: 'Totes les frases escrites que encara no té cap veu humana, sense triar-ne cap: les que tenen imatge van primer, perquè es graven mirant-la.' },
+  { kind: 'untranscribed', label: 'Veus sense escriure', blurb: 'Gravacions que ningú no ha escrit. És l’altra meitat de la feina: una veu sense text no es pot buscar, ni citar, ni entrar a cap lliçó, i qui la va dir ja va fer la part difícil.' },
   { kind: 'open', label: 'Algú ho ha demanat', blurb: 'Algú vol saber dir això i espera una veu. Si ho saps dir, grava-ho: la teva manera de dir-ho i d’escriure-ho és la bona.' },
   { kind: 'synthetic', label: 'Només hi parla una màquina', blurb: 'Aquestes frases només tenen una veu sintètica, i una llengua no s’aprèn d’una màquina. Les primeres unitats del curs van al davant.' },
   { kind: 'aitmraw', label: 'Dites a Aït Mraw', blurb: 'Frases d’altres llocs que valdria la pena sentir dites a Aït Mraw, com les diuen la Halima i en Driss.' },
