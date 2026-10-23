@@ -108,6 +108,21 @@ def replace_steps(db, test_id: int, steps: List[dict]) -> List[dict]:
     return steps_of(db, test_id)
 
 
+def forget(db, test_id: int) -> int:
+    """Els passos d'una pràctica que se'n va. Torna quants n'hi havia.
+
+    Això no es deixa al `ON DELETE CASCADE` de la clau forana. Postgres el fa; SQLite no aplica
+    les claus foranes si no s'ha activat `PRAGMA foreign_keys=ON`, i no l'activem enlloc. En
+    local i a les proves, doncs, els passos sobrevivien a la seva pràctica —i com que SQLite
+    reutilitza l'id que s'acaba d'alliberar, la pràctica següent naixia amb els passos de
+    l'anterior, que és com es va trobar (una prova que demanava zero passos i en veia dos).
+    """
+    from models import PracticeStep
+    n = db.query(PracticeStep).filter(PracticeStep.test_id == test_id).delete(
+        synchronize_session=False)
+    return n
+
+
 def from_legacy(test) -> List[dict]:
     """The steps an old practice becomes: one per sentence, with the tool it used to carry."""
     kind = FROM_LEGACY.get((test.question_type or "").strip(), DEFAULT_KIND)
