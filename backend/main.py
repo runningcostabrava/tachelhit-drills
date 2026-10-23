@@ -6521,7 +6521,11 @@ def method_chapter(slug: str, db: Session = Depends(get_db),
                 "text_catalan": d.text_catalan, "audio_url": d.audio_url,
                 "image_url": d.image_url, "speaker": d.speaker or d.author,
                 "variety": d.variety, "region": d.region,
-                "grammar": d.grammar, "topics": d.topics}
+                "grammar": d.grammar, "topics": d.topics,
+                # paraula per paraula, igual que al curs de gramàtica: una frase que s'ensenya
+                # i no es pot desmuntar és una frase que només es pot repetir
+                "gloss": grammar_course.gloss_of(d),
+                "tif": grammar_course.tifinagh(d.text_tachelhit or "")}
 
     # per unitat de gramàtica, que és com es llegeix un capítol: una cosa després de l'altra
     sections = []
