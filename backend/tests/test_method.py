@@ -306,3 +306,30 @@ def test_el_que_el_servidor_calcula_no_es_desa_amb_el_capitol():
     assert "tif" not in sec["examples"][0], "la tifinagh tampoc: es calcula"
     assert sec["examples"][0]["shi"] == "dar ugzzar", "i el que s'escriu, s'hi queda"
     assert method_mod.strip_computed({"a": [{"tif": 1, "shi": "x"}]}) == {"a": [{"shi": "x"}]}
+
+
+def test_cada_capitol_pot_portar_el_seu_dibuix():
+    """«I think some ilustrations and style would be nice here», va dir l'amo mirant la llista de
+    capítols. Un dibuix diu de què va el capítol abans de llegir-ne una paraula.
+
+    Els dibuixos viuen a `/artwork` i no al codi, perquè es puguin tornar a dibuixar sense
+    desplegar res. Un capítol sense dibuix segueix sent un capítol: no se n'inventa cap."""
+    import main
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("qui_dibuixa_capitols")}
+    db = main.SessionLocal()
+    try:
+        me = client.get("/users/me", headers=hdr).json()
+        db.query(main.UserModel).filter(main.UserModel.id == me["id"]).first().is_admin = True
+        db.commit()
+    finally:
+        db.close()
+
+    drawn = "https://res.cloudinary.com/du26ppvh0/image/upload/v1/tachelhit/app/capitol-la-botiga.webp"
+    client.put("/artwork/method", headers=hdr, json={"covers": {"la-botiga": drawn}})
+
+    chapters = {c["slug"]: c for c in client.get("/method/").json()["chapters"]}
+    assert chapters["la-botiga"]["cover"] == drawn
+    assert chapters["sons"]["cover"] is None, "el que no en té, no se n'inventa cap"
+    assert client.get("/method/la-botiga").json()["cover"] == drawn

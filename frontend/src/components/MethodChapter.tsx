@@ -79,6 +79,12 @@ export default function MethodChapter() {
     <div style={{ padding: '18px 16px 40px', maxWidth: 760, margin: '0 auto' }}>
       <button onClick={() => navigate('/metode')} style={{ ...pill, marginBottom: 12 }}>← El Mètode</button>
 
+      {/* El dibuix del capítol: de què va, abans de llegir-ne una paraula. */}
+      {c.cover && (
+        <img src={c.cover} alt="" loading="lazy"
+             style={{ width: '100%', aspectRatio: '16 / 7', objectFit: 'cover', display: 'block', borderRadius: 'var(--r-lg)', marginBottom: 14 }}
+             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+      )}
       <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--brand-1)', letterSpacing: '0.06em' }}>CAPÍTOL {c.n}</div>
       {c.name && <h1 lang="shi" style={{ fontFamily: 'var(--font-display)', fontSize: 27, margin: '2px 0 0' }}>{c.name}</h1>}
       <h2 style={{ fontFamily: 'var(--font-display)', fontSize: c.name ? 19 : 26, fontWeight: c.name ? 600 : 800, color: c.name ? 'var(--text-soft)' : 'var(--text)', margin: '0 0 8px' }}>{c.title}</h2>

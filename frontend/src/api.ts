@@ -151,6 +151,8 @@ export interface MethodSentence {
 
 export interface MethodChapterSummary {
   n: number; slug: string; name: string | null; title: string; about: string;
+  /** El dibuix del capítol: diu de què va abans de llegir-ne una paraula. Viu a `/artwork`. */
+  cover?: string | null;
   functions: string[]; roles: string[];
   grammar: { slug: string; title: string }[];
   topics: string[];
@@ -218,6 +220,7 @@ export interface MethodContent {
 export interface MethodChapterData {
   n: number; slug: string; name: string | null; title: string; about: string;
   functions: string[]; roles: string[];
+  cover?: string | null;
   topics: { slug: string; label: string }[];
   /** El text del capítol. Nul mentre no s'hagi escrit: llavors el capítol són les frases soles. */
   content: MethodContent | null;

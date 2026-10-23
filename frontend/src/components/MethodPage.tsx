@@ -49,8 +49,14 @@ export default function MethodPage() {
             <button
               key={c.slug}
               onClick={() => navigate(`/metode/${c.slug}`)}
-              style={{ textAlign: 'left', padding: '14px 16px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--text)', display: 'flex', flexDirection: 'column', gap: 6 }}
+              style={{ textAlign: 'left', padding: 0, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--text)', display: 'flex', gap: 14, overflow: 'hidden', alignItems: 'stretch' }}
             >
+              {c.cover && (
+                <img src={c.cover} alt="" loading="lazy"
+                     style={{ width: 150, alignSelf: 'stretch', objectFit: 'cover', display: 'block', flexShrink: 0 }}
+                     onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '14px 16px 14px 0', flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--brand-1)', letterSpacing: '0.06em' }}>
                   CAPÍTOL {c.n}
@@ -76,6 +82,7 @@ export default function MethodPage() {
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                 {c.sentences} {c.sentences === 1 ? 'frase' : 'frases'} · <FaMicrophone size={9} /> {c.with_voice} amb veu
                 {c.varieties.length > 0 && ` · ${c.varieties.join(', ')}`}
+              </div>
               </div>
             </button>
           );
