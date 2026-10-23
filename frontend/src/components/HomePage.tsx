@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FaBook, FaBookOpen, FaChevronRight, FaFire, FaGraduationCap, FaLayerGroup, FaMicrophone,
-  FaPlay, FaRedo, FaVideo,
+  FaPlay, FaRedo, FaSearch, FaVideo,
 } from 'react-icons/fa';
 import { api, type HomeData } from '../api';
 import { getMediaUrl } from '../config';
@@ -33,6 +33,7 @@ export default function HomePage() {
   const [failed, setFailed] = useState(false);
   const [due, setDue] = useState<{ due: number; new: number } | null>(null);
   const [streak, setStreak] = useState(0);
+  const [find, setFind] = useState('');
 
   useEffect(() => {
     document.title = 'Tamazight';
@@ -58,6 +59,20 @@ export default function HomePage() {
         que s’ensenya aquí surt d’aquí: cap frase inventada, cap veu de màquina fent-se passar per
         ningú.
       </p>
+
+      {/* Cercar: la primera cosa que algú vol fer amb una biblioteca. */}
+      <form onSubmit={(e) => { e.preventDefault(); navigate(`/cerca?q=${encodeURIComponent(find.trim())}`); }}
+            style={{ display: 'flex', gap: 8, margin: '0 0 18px' }}>
+        <input value={find} onChange={(e) => setFind(e.target.value)}
+               placeholder="Cerca una frase o una paraula: pa, aɣrum, «tinc gana»…"
+               aria-label="Cerca una frase o una paraula"
+               autoCapitalize="off" autoCorrect="off" spellCheck={false}
+               style={{ flex: 1, minWidth: 0, padding: '11px 16px', fontSize: 14.5, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontFamily: 'inherit' }} />
+        <button type="submit" aria-label="Cerca"
+                style={{ padding: '11px 18px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+          <FaSearch size={13} />
+        </button>
+      </form>
 
       {/* El que toca ara. Una sola cosa, grossa: si tens repàs pendent, el repàs. */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 26 }}>

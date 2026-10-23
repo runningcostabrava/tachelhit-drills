@@ -5,7 +5,7 @@ import axios from 'axios';
 import { API_BASE } from './config';
 import { api } from './api';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaBookOpen, FaMicrophone, FaInfo } from 'react-icons/fa';
+import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaBookOpen, FaMicrophone, FaInfo, FaSearch } from 'react-icons/fa';
 import { syncManager } from './services/OfflineSyncManager';
 import ToastHost from './components/ToastHost';
 import StaleBuildBanner from './components/StaleBuildBanner';
@@ -16,6 +16,7 @@ import './App.css';
 // Route-level code splitting: each page loads its chunk on first visit,
 // keeping the initial bundle small (AG Grid, players, creators all split out)
 const HomePage = lazy(() => import('./components/HomePage'));
+const SearchPage = lazy(() => import('./components/SearchPage'));
 const DrillsResponsive = lazy(() => import('./components/DrillsResponsive'));
 const TestsDashboard = lazy(() => import('./components/TestsDashboard'));
 const PracticePage = lazy(() => import('./components/PracticePage'));
@@ -189,6 +190,12 @@ function App() {
               </button>
             ))}
           </div>
+          {/* Cercar una frase: a l'abast des de qualsevol pantalla. L'amo ho va dir: «una cosa
+              primordial a l'aplicació hauria de ser buscar una frase o paraula». */}
+          <button onClick={() => navigate('/cerca')} title="Cerca una frase" aria-label="Cerca una frase"
+                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: compactNav ? 33 : 35, height: compactNav ? 33 : 35, borderRadius: 'var(--r-pill)', cursor: 'pointer', border: '1px solid var(--border)', background: location.pathname === '/cerca' ? 'var(--brand-gradient-soft)' : 'var(--surface)', color: location.pathname === '/cerca' ? 'var(--brand-1)' : 'var(--text-soft)' }}>
+            <FaSearch size={13} />
+          </button>
           <ReviewNavButton compact={compactNav} />
           {/* Per què existeix això: al menú, que és d'on es pot arribar des de qualsevol pantalla */}
           <button onClick={() => setAboutOpen(true)} title="Per què existeix això" aria-label="Per què existeix això"
@@ -205,6 +212,7 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/drills" element={<DrillsResponsive />} />
+        <Route path="/cerca" element={<SearchPage />} />
         <Route path="/tests" element={<PracticePage />} />
         <Route path="/tests/sessio" element={<PracticeSession />} />
         <Route path="/tests/grup" element={<PracticeGroupPage />} />

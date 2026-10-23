@@ -388,6 +388,9 @@ export const api = {
   aiExplainDrill: (drillId: number) =>
     request<{ explanation: string; draft: boolean; related: RelatedDrill[] }>(`/ai/explain/${drillId}`, { method: 'POST' }),
   drill: (id: number) => request<Drill>(`/drills/${id}`),
+  /** Una frase nova. Amb el text amazic buit, neix esperant que algú la digui. */
+  createDrill: (d: { text_catalan: string; text_tachelhit?: string; note?: string | null }) =>
+    request<Drill>('/drills/', { method: 'POST', body: JSON.stringify(d) }),
   // --- Pràctiques: una seqüència de passos, no una llista de números (ADR 0002) ---
   /** The steps of a practice, in the order a learner meets them, plus the tools that exist. */
   practiceSteps: (testId: number) => request<{ test_id: number; steps: PracticeStep[]; kinds: Record<string, { needs_drill: boolean; asks: string }> }>(`/tests/${testId}/steps`),

@@ -1149,3 +1149,25 @@ def test_els_dibuixos_de_lapp_es_canvien_sense_desplegar_res():
 
     assert client.put("/artwork/no-existeix", headers=hdr, json={"covers": {}}).status_code == 404
     assert client.put("/artwork/home", json={"covers": {}}).status_code in (401, 403), "només qui administra"
+
+
+def test_cercar_una_frase_en_qualsevol_escriptura():
+    """L'amo: «una cosa primordial a l'aplicació hauria de ser buscar una frase o paraula».
+
+    Es busca per les dues llengües i per qualsevol escriptura: la mateixa frase es troba
+    escrivint «aghrum», «aɣrum» o «ⴰⵖⵔⵓⵎ», perquè el servidor compara també per so. I el que ha
+    entrat per fer proves no hi surt: qui busca busca la llengua d'aquesta biblioteca."""
+    hdr = {"X-User-Token": register("qui_cerca")}
+    mine = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "el pa de casa", "text_tachelhit": "aɣrum n-tgmmi"}).json()
+    client.post("/drills/", headers=hdr, json={
+        "text_catalan": "Bon dia", "text_tachelhit": "Maidin Mhaith", "tag": "Irish"}).raise_for_status()
+
+    def found(q):
+        return [d["id"] for d in client.get(f"/corpus/search?q={q}&limit=50").json()]
+
+    assert mine["id"] in found("aghrum"), "escrit a la manera del telèfon"
+    assert mine["id"] in found("a%C9%A3rum"), "escrit amb ɣ"
+    assert mine["id"] in found("pa de casa"), "i pel seu significat"
+    assert not any(d["text_tachelhit"] == "Maidin Mhaith"
+                   for d in client.get("/corpus/search?q=Maidin&limit=50").json()), "l'irlandès no hi és"
