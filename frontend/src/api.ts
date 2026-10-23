@@ -458,6 +458,11 @@ export const api = {
     request<{ slug: string; ok: boolean; sections: number }>(
       `/method/${encodeURIComponent(slug)}/content`,
       { method: 'PUT', body: JSON.stringify(body) }),
+  /** La frase darrere una fila d'una taula de formes: la crea el primer cop i obre la gravadora. */
+  grammarRowDrill: (slug: string, step: number, row: number, deep = false) =>
+    request<{ drill_id: number; created: boolean; drill: Drill }>(`/grammar/${slug}/row`, {
+      method: 'POST', body: JSON.stringify({ step, row, deep }),
+    }),
   askForVoice: (drillId: number, wanted = true) => request<{ id: number; voice_wanted: boolean; voice_wanted_by: string | null }>(`/drills/${drillId}/voice-wanted`, { method: 'POST', body: JSON.stringify({ wanted }) }),
   petitions: (kind: 'open' | 'synthetic' | 'aitmraw', limit = 40) => request<{ items: PetitionItem[]; total: number }>(`/petitions?kind=${kind}&limit=${limit}`),
   addPetition: (text_catalan: string, note: string | null) => request<Drill>('/petitions', { method: 'POST', body: JSON.stringify({ text_catalan, note }) }),
@@ -571,7 +576,8 @@ export interface GrammarUnit { slug: string; title: string; level: number }
 export interface LessonExample { id: number; shi: string; ca: string; image_url?: string | null; audio_url?: string | null; recorded: boolean; author?: string | null; region?: string | null; origin?: string | null; focus?: string | null; gloss?: { shi: string; ca: string; tif?: string | null }[] | null; why?: string | null; tif?: string | null; source_url?: string | null; source_channel?: string | null }
 export type LessonStep =
   | { type: 'explain'; title: string; text: string; examples: LessonExample[] }
-  | { type: 'pattern'; title: string; rows: string[][] }
+  /** `drill_ids`: la frase de la biblioteca darrere cada fila, quan algú ja l'ha volguda dir. */
+  | { type: 'pattern'; title: string; rows: string[][]; drill_ids?: Record<string, number> }
   | { type: 'quiz'; kind: 'meaning' | 'listen' | 'picture'; question: string; options: string[]; answer: number; example: LessonExample }
   | { type: 'tip'; text: string }
   | { type: 'dialect'; text: string }

@@ -1139,6 +1139,63 @@ def quoted_ids(lesson: dict) -> set:
     return {i for i in ids if i is not None}
 
 
+def drill_for_row(db, slug: str, step: int, row: int, user, deep: bool = False) -> dict:
+    """La frase de la biblioteca que hi ha darrere una fila d'una taula de formes.
+
+    Una taula de formes és el lloc on la gramàtica es veu d'un cop d'ull —ɣur-i, ɣur-k, ɣur-s—
+    i fins ara era l'únic lloc de la lliçó que no es podia **dir**. L'amo: «crec que aquí
+    s'hauria de poder gravar la veu». Té raó: una forma que no s'ha sentit mai no se sap dir.
+
+    Funciona com les línies del Mètode: la primera vegada la fila es torna una frase de la
+    biblioteca (amb la seva unitat i demanant veu), i d'aleshores ençà s'hi afegeixen veus. La
+    lliçó se'n recorda, i per això el micròfon canvia de color quan ja és nostra.
+    """
+    import json
+
+    from models import Drill as DrillModel, GrammarLesson
+    r = db.query(GrammarLesson).filter(GrammarLesson.id == _row_id(slug, deep)).first()
+    if r is None:
+        raise ValueError("aquesta unitat encara no té lliçó")
+    lesson = json.loads(r.body)
+    steps = lesson.get("steps") or []
+    if not (0 <= step < len(steps)) or steps[step].get("type") != "pattern":
+        raise ValueError("aquí no hi ha cap taula de formes")
+    rows = steps[step].get("rows") or []
+    if not (0 <= row < len(rows)):
+        raise ValueError("aquí no hi ha cap fila")
+
+    ids = steps[step].get("drill_ids") or {}
+    got = ids.get(str(row))
+    if got:
+        d = db.query(DrillModel).filter(DrillModel.id == got).first()
+        if d:
+            return {"drill_id": d.id, "created": False}
+
+    cells = list(rows[row]) + ["", ""]
+    shi, ca = _clean_text(cells[0]), _clean_text(cells[1])
+    if not shi:
+        raise ValueError("aquesta fila no té cap forma per dir")
+
+    d = DrillModel(
+        text_tachelhit=shi, text_catalan=ca or None,
+        # D'on surt, dit a la cara: és una forma d'una taula del curs, no una frase que hagi dit ningú.
+        tag=f"gramatica-{slug}, taula de formes",
+        grammar=slug, grammar_source="owner",
+        voice_wanted=True,
+        voice_wanted_by=(getattr(user, "display_name", None) or getattr(user, "username", None)),
+        created_by_user_id=getattr(user, "id", None),
+    )
+    db.add(d)
+    db.commit()
+    db.refresh(d)
+
+    ids[str(row)] = d.id
+    steps[step]["drill_ids"] = ids
+    r.body = json.dumps(lesson, ensure_ascii=False)
+    db.commit()
+    return {"drill_id": d.id, "created": True}
+
+
 GROWTH = 0.3  # a unit that gained this share of drills (and at least 5) gets its lesson written again
 
 
