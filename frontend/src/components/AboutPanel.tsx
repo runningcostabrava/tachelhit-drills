@@ -16,14 +16,14 @@ import { FaTimes } from 'react-icons/fa';
 const CA = [
   'Aquest projecte va néixer de la meva necessitat i de les meves ganes d’aprendre la llengua que parla la gent més maca que conec: els imazighen.',
   'No hi ha cap ànim de lucre, ni n’hi haurà mai. Tothom hi és benvingut.',
-  'Existeix gràcies a molts investigadors que he consultat per fer aquest treball d’antropologia lingüística. Gràcies a tots ells per la seva feina: hi són tots, amb el seu nom i la seva llicència, a la pàgina de crèdits.',
+  'Existeix gràcies a molts investigadors que he consultat per fer aquest treball d’antropologia lingüística. Gràcies a tots ells per la seva feina: els trobaràs tots a la pàgina de crèdits.',
   'I encara més gràcies als nostres amics imazighen, que han compartit la seva veu i el que saben de la seva llengua.',
 ];
 
 const EN = [
   'This project was born from my own need, and my wish, to learn the language spoken by the kindest people I know: the Imazighen.',
   'It is not for profit, and it never will be. Everyone is welcome.',
-  'It exists thanks to the many researchers whose work I consulted for this piece of linguistic anthropology. Thank you all: every one of them is named, with their licence, on the credits page.',
+  'It exists thanks to the many researchers whose work I consulted for this piece of linguistic anthropology. Thank you all: you will find every one of them on the credits page.',
   'And thank you even more to our Imazighen friends, who have shared their voice and what they know of their language.',
 ];
 
@@ -60,6 +60,8 @@ export default function AboutPanel({ onClose }: { onClose: () => void }) {
         {CA.map((p) => (
           <p key={p} style={{ fontSize: 14.5, lineHeight: 1.65, color: 'var(--text)', margin: '0 0 10px' }}>{p}</p>
         ))}
+        {/* Qui ho diu. Ho signa amb el seu nom i prou. */}
+        <p style={{ fontSize: 14.5, lineHeight: 1.65, color: 'var(--text)', margin: '0 0 12px', fontWeight: 700 }}>Pablo</p>
 
         <button onClick={() => { onClose(); navigate('/credits'); }}
                 style={{ marginTop: 2, padding: '9px 16px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit' }}>

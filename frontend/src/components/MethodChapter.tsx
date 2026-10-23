@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FaBookOpen, FaMicrophone, FaPlay, FaTag } from 'react-icons/fa';
-import { api, type MethodChapterData, type MethodSentence } from '../api';
+import { api, type LessonProposal, type MethodChapterData, type MethodSentence } from '../api';
 import { getMediaUrl, hasIdentity } from '../config';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
@@ -62,6 +62,14 @@ export default function MethodChapter() {
   useEffect(() => { api.me().then(setMe).catch(() => setMe(null)); }, []);
   // La llista per unitat de gramàtica, plegada quan el capítol ja té text (vegeu més avall).
   const [openRest, setOpenRest] = useState(false);
+  // El que algú ha proposat per a aquest capítol: qui administra les veu totes i les decideix,
+  // qui no, veu les seves. Mateixa cua que les propostes del curs de gramàtica.
+  const [proposals, setProposals] = useState<LessonProposal[]>([]);
+  const loadProposals = () => {
+    if (!slug) return;
+    api.lessonProposals(`metode:${slug}`).then(setProposals).catch(() => setProposals([]));
+  };
+  useEffect(loadProposals, [slug]);
 
   useEffect(() => {
     if (!slug) return;
@@ -115,6 +123,36 @@ export default function MethodChapter() {
                       onChanged={() => api.methodChapter(slug).then(setC).catch(() => {})} />
       )}
 
+      {proposals.length > 0 && (
+        <section style={{ marginTop: 22, padding: '12px 16px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)' }}>
+          <h3 style={h3}>{me?.is_admin ? 'PROPOSTES PER DECIDIR' : 'EL QUE HAS PROPOSAT'}</h3>
+          {proposals.map((p) => (
+            <div key={p.id} style={{ padding: '8px 0', borderTop: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                {p.display_name || 'algú'}{p.region ? ` · ${p.region}` : ''} · secció {p.step + 1}
+              </div>
+              <p style={{ fontSize: 13.5, lineHeight: 1.55, margin: '4px 0 6px', whiteSpace: 'pre-line' }}>{p.text}</p>
+              {me?.is_admin && (
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button onClick={async () => {
+                    try {
+                      await api.decideProposal(p.id, true);
+                      toast.success('Acceptada');
+                      loadProposals();
+                      if (slug) api.methodChapter(slug).then(setC).catch(() => {});
+                    } catch (e) { toast.error(whyItFailed(e, 'No s’ha pogut acceptar')); }
+                  }} style={{ ...pill, borderColor: 'var(--emerald)', color: 'var(--emerald)' }}>Posa-la al capítol</button>
+                  <button onClick={async () => {
+                    try { await api.decideProposal(p.id, false); loadProposals(); }
+                    catch (e) { toast.error(whyItFailed(e, 'No s’ha pogut fer')); }
+                  }} style={pill}>Deixa-ho estar</button>
+                </div>
+              )}
+            </div>
+          ))}
+        </section>
+      )}
+
       {/* La llista de frases per unitat de gramàtica.
 
           Quan el capítol JA TÉ text, això no és el capítol: són totes les frases que porten
@@ -124,6 +162,7 @@ export default function MethodChapter() {
           Això és la resta de la biblioteca, i va plegat i dit pel seu nom.
 
           Un capítol que encara no s'ha escrit no té res més, i llavors la llista ÉS la pàgina. */}
+
       {c.content && (
         <button onClick={() => setOpenRest((v) => !v)}
                 style={{ width: '100%', textAlign: 'left', marginTop: 26, padding: '12px 16px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--text)' }}>

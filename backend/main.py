@@ -6349,13 +6349,34 @@ def lesson_proposals(slug: str, db: Session = Depends(get_db), user: Optional[Us
              "status": p.status, "created_at": p.created_at.isoformat()} for p in q.order_by(LessonProposalModel.id.desc()).all()]
 
 
+#: Una proposta per a un capítol del Mètode porta el capítol al davant: «metode:la-botiga».
+#:
+#: És la mateixa cua de propostes que la del curs de gramàtica, i ha de ser-ho: qui llegeix veu
+#: una explicació i hi vol dir alguna cosa, tant li fa de quina part de l'app sigui. El que
+#: canvia és on s'escriu quan s'accepta, i això ho decideix aquest prefix.
+METHOD_PROPOSAL = "metode:"
+
+
+def _proposal_target(slug: str) -> str:
+    """De quina part de l'app és aquesta proposta: «grammar» o «method». 404 si no existeix."""
+    if slug.startswith(METHOD_PROPOSAL):
+        if not method_mod.chapter(slug[len(METHOD_PROPOSAL):]):
+            raise HTTPException(status_code=404, detail="Aquest capítol no existeix")
+        return "method"
+    if slug not in grammar_course.TITLES:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    return "grammar"
+
+
 @app.post("/grammar/{slug}/proposals")
 def propose_lesson_change(slug: str, step: int = Body(..., embed=True), text: str = Body(..., embed=True), kind: str = Body("text", embed=True),
                           db: Session = Depends(get_db), user: UserModel = Depends(require_user)):
     """A learner or speaker proposes a change to a card (step index; -1 = the intro): a new text,
-    or a note. Kept for an admin to accept or reject."""
-    if slug not in grammar_course.TITLES:
-        raise HTTPException(status_code=404, detail="Unit not found")
+    or a note. Kept for an admin to accept or reject.
+
+    The slug is a grammar unit, or a Method chapter written «metode:la-botiga» — same queue, and
+    the step is then the section's place in the chapter."""
+    _proposal_target(slug)
     t = (text or "").strip()
     if len(t) < 3:
         raise HTTPException(status_code=400, detail="Escriu la proposta")
@@ -6372,7 +6393,20 @@ def decide_lesson_proposal(proposal_id: int, accept: bool = Body(..., embed=True
     p = db.query(LessonProposalModel).filter(LessonProposalModel.id == proposal_id).first()
     if not p:
         raise HTTPException(status_code=404, detail="Proposal not found")
-    if accept and p.kind == "text":
+    if accept and p.kind == "text" and p.slug.startswith(METHOD_PROPOSAL):
+        chapter = p.slug[len(METHOD_PROPOSAL):]
+        body = method_mod.content_of(db, chapter)
+        if not body:
+            raise HTTPException(status_code=409, detail="Aquest capítol encara no té text")
+        sections = body.get("sections") or []
+        if p.step == -1:
+            body["intro"] = p.text
+        elif 0 <= p.step < len(sections):
+            sections[p.step]["text"] = p.text
+        else:
+            raise HTTPException(status_code=409, detail="Aquesta secció ja no hi és")
+        method_mod.store_content(db, chapter, body, who=f"proposta de {p.display_name or 'algú'}")
+    elif accept and p.kind == "text":
         row = db.query(GrammarLesson).filter(GrammarLesson.id == p.slug).first()
         if not row:
             raise HTTPException(status_code=409, detail="The lesson is not written yet")

@@ -333,3 +333,46 @@ def test_cada_capitol_pot_portar_el_seu_dibuix():
     assert chapters["la-botiga"]["cover"] == drawn
     assert chapters["sons"]["cover"] is None, "el que no en té, no se n'inventa cap"
     assert client.get("/method/la-botiga").json()["cover"] == drawn
+
+
+def test_una_seccio_es_pot_corregir_i_es_pot_proposar_un_canvi():
+    """L'amo: «aquí hauria d'haver-hi un llapis per editar el text si sóc administrador, o
+    suggerir el canvi per qualsevol altre usuari».
+
+    Una secció és una explicació, i una explicació es pot millorar. Qui administra la canvia
+    allà mateix; qui no, ho proposa, i va a la MATEIXA cua que les propostes del curs de
+    gramàtica — amb el capítol al davant del nom, «metode:la-botiga», que és el que diu on
+    s'escriu quan s'accepta."""
+    import main
+    from test_api import client, register
+
+    boss = {"X-User-Token": register("qui_mana_al_metode")}
+    db = main.SessionLocal()
+    try:
+        me = client.get("/users/me", headers=boss).json()
+        db.query(main.UserModel).filter(main.UserModel.id == me["id"]).first().is_admin = True
+        db.commit()
+    finally:
+        db.close()
+    client.put("/method/la-botiga/content", headers=boss, json={
+        "sections": [{"id": "preu", "title": "mnckk a…: quant val?", "text": "Per preguntar el preu es fa servir skr."}]})
+
+    # qualsevol que tingui nom pot proposar un canvi
+    someone = {"X-User-Token": register("qui_hi_vol_dir_la_seva")}
+    sent = client.post("/grammar/metode:la-botiga/proposals", headers=someone,
+                       json={"step": 0, "text": "Aquí es diu mšta, no mnckk."})
+    assert sent.status_code == 200, sent.text
+
+    # qui administra les veu; qui les ha fetes, les seves
+    assert len(client.get("/grammar/metode:la-botiga/proposals", headers=boss).json()) == 1
+    assert len(client.get("/grammar/metode:la-botiga/proposals").json()) == 0
+
+    # i acceptar-la escriu al capítol, no a cap lliçó de gramàtica
+    pid = sent.json()["id"]
+    assert client.post(f"/grammar/proposals/{pid}/decide", headers=boss, json={"accept": True}).status_code == 200
+    body = client.get("/method/la-botiga").json()["content"]
+    assert body["sections"][0]["text"] == "Aquí es diu mšta, no mnckk."
+
+    # un capítol que no existeix, no
+    assert client.post("/grammar/metode:no-existeix/proposals", headers=someone,
+                       json={"step": 0, "text": "hola que tal"}).status_code == 404
