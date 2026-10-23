@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from '../toast';
+import { whyItFailed } from '../utils/errors';
 import { FaBullseye, FaCheck, FaChevronLeft, FaChevronRight, FaLightbulb, FaMapMarkerAlt, FaMicrophone, FaPen, FaRedo, FaTimes, FaVolumeUp } from 'react-icons/fa';
 import { api, type GrammarUnit, type GrammarUnitPage, type GrammarWishUnit, type LessonExample, type LessonProposal, type LessonStep } from '../api';
 import { API_BASE, getMediaUrl } from '../config';
@@ -179,7 +180,7 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
       });
       toast.success(`Test «${page.title}» creat amb ${ids.length} frases`);
       navigate('/tests');
-    } catch { toast.error('No s’ha pogut crear el test'); }
+    } catch (e) { toast.error(whyItFailed(e, 'No s’ha pogut crear el test')); }
   };
   // a speaker records the sentence where they met it; anyone else can ask for a voice
   const recordExample = useCallback((e: LessonExample) => {

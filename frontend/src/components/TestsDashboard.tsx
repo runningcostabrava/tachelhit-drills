@@ -10,7 +10,7 @@ import TestsGallery from './TestsGallery';
 import { useIsMobileLayout } from '../utils/layout';
 import DrillPlayer from './DrillPlayer';
 import VideoLoopPlayer from './VideoLoopPlayer';
-import { API_BASE } from '../config';
+import { API_BASE, hasIdentity } from '../config';
 import { toast } from '../toast';
 import { FaPlus, FaDumbbell } from 'react-icons/fa';
 
@@ -73,7 +73,11 @@ export default function TestsDashboard() {
         }
       } else {
         if (status.connected) {
-          const response = await axios.get(`${API_BASE}/tests/`);
+          // «Les meves llistes»: the practices this person may change. Without `mine` the screen
+          // showed everyone's, offered a Delete that came back 403, and nobody could tell which
+          // were theirs. Without a name there are none, and that is what we say.
+          if (!hasIdentity()) { setTests([]); setLoading(false); return; }
+          const response = await axios.get(`${API_BASE}/tests/`, { params: { mine: 1 } });
           setTests(response.data);
           await syncManager.saveTestsToCache(response.data);
         } else {
@@ -308,6 +312,14 @@ export default function TestsDashboard() {
           {tests.length} {tests.length === 1 ? 'test' : 'tests'}
         </span>
       </div>
+
+      {/* A practice belongs to whoever made it, so without a name there are none to manage. */}
+      {!hasIdentity() && !loading && (
+        <p style={{ color: 'var(--text-soft)', fontSize: '14px', margin: '0 0 16px' }}>
+          Aquí hi ha les pràctiques que has fet tu. Per tenir-ne, fes-te un nom al teu perfil:
+          és gratis, triga un moment, i és el que fa que les puguis tornar a obrir i canviar.
+        </p>
+      )}
 
       {/* Content: a gallery of tests (one card per test, with a picture) and a detail sheet */}
       <TestsGallery

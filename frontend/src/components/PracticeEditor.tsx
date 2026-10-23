@@ -8,6 +8,7 @@ import {
 import { api, type PracticeCollections, type PracticeList, type PracticeStep } from '../api';
 import { getMediaUrl } from '../config';
 import { toast } from '../toast';
+import { whyItFailed } from '../utils/errors';
 import MobileDrillCreator from './MobileDrillCreator';
 import RecordAudioModal from './RecordAudioModal';
 import type { Drill } from '../types';
@@ -36,19 +37,9 @@ const TOOLS: { kind: PracticeStep['kind']; label: string; needsDrill: boolean; n
   { kind: 'note', label: 'nota que ensenya', needsDrill: false, needsVoice: false },
 ];
 const toolOf = (k: PracticeStep['kind']) => TOOLS.find((t) => t.kind === k);
-
-// The status rides along with every error (#196). «Alguna cosa ha anat malament» is the one
-// answer that never helps: being throttled, being logged out and being offline are three
-// different problems with three different things to do about them.
-function whyItFailed(e: unknown, doing: string): string {
-  const status = (e as { status?: number })?.status;
-  if (status === 429) return 'El servidor ens frena un moment (massa peticions seguides). Torna-ho a provar d’aquí a un minut.';
-  if (status === 401) return 'Per a això et cal un nom. Fes-te’n un al teu perfil.';
-  if (status === 403) return 'Aquesta pràctica no és teva: demana-ho a qui l’administra.';
-  if (status && status >= 500) return 'El servidor no respon bé ara mateix. Espera una mica i torna-hi.';
-  if (status === undefined) return 'No s’ha pogut arribar al servidor. Mira la connexió.';
-  return (e as Error)?.message || doing;
-}
+/** A note with neither title nor text: a line about to be written, not a step yet. */
+const blank = (step: PracticeStep) =>
+  step.kind === 'note' && !(step.payload?.heading || '').trim() && !(step.payload?.text || '').trim();
 
 // Where sentences come from. Everything but «cerca» is a collection the server already knows how
 // to slice, so the workshop asks for it instead of making the person type a word and hope.
@@ -101,6 +92,7 @@ export default function PracticeEditor() {
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [unsaved, setUnsaved] = useState<string | null>(null);   // why the last save did not land
   const [view, setView] = useState<'edit' | 'preview' | 'document'>('edit');
   const preview = view === 'preview';
   const [about, setAbout] = useState('');
@@ -120,8 +112,7 @@ export default function PracticeEditor() {
 
   useEffect(() => {
     if (!id) return;
-    api.practices().then((all) => {
-      const p = all.find((x) => x.id === id) || null;
+    api.practice(id).then((p) => {
       setPractice(p); setTitle(p?.title || ''); setAbout(p?.description || '');
     }).catch(() => {});
     api.practiceCollections().then(setCollections).catch(() => {});
@@ -133,14 +124,28 @@ export default function PracticeEditor() {
   }, [id, remember]);
 
   // ---- saving itself ----------------------------------------------------------------
+  // A note with neither title nor text cannot be saved: it teaches nothing, and the server says
+  // so. But a save is all-or-nothing on purpose -- a practice is never left half-written -- so
+  // ONE blank note used to refuse the whole batch, and with it every sentence added just before.
+  // A blank note is not work to be lost either: it is a line about to be written. So it stays
+  // here, in its place, and is left out of what is sent; everything around it saves, and it goes
+  // up with the rest as soon as it says something.
   const save = useCallback(async (next: PracticeStep[]) => {
     setSaving(true);
+    const held = next.map(blank);              // which places are blank notes
     try {
-      const clean = next.map(({ kind, drill_id, payload }) => ({ kind, drill_id, payload }));
+      const clean = next.filter((_, i) => !held[i])
+        .map(({ kind, drill_id, payload }) => ({ kind, drill_id, payload }));
       const r = await api.savePracticeSteps(id, clean);
-      setSteps(r.steps); setDirty(false);
+      // what came back, with the blank notes put back where they were
+      let k = 0;
+      setSteps(next.map((step, i) => (held[i] ? step : r.steps[k++])));
+      setDirty(false); setUnsaved(null);
       setSavedAt(new Date().toLocaleTimeString('ca-ES', { hour: '2-digit', minute: '2-digit' }));
-    } catch (e) { toast.error(whyItFailed(e, 'No s’ha pogut desar')); }
+    } catch (e) {
+      const why = whyItFailed(e, 'No s’ha pogut desar');
+      setUnsaved(why); toast.error(why);
+    }
     finally { setSaving(false); }
   }, [id]);
 
@@ -341,13 +346,27 @@ export default function PracticeEditor() {
           style={{ flex: 1, minWidth: 220, fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, padding: '4px 8px', border: '1px solid transparent', borderRadius: 'var(--r-md)', background: 'transparent', color: 'var(--text)' }}
           onFocus={(e) => { e.target.style.border = '1px solid var(--border)'; e.target.style.background = 'var(--surface)'; }}
         />
-        <span style={{ fontSize: 12.5, fontWeight: 700, color: saving ? 'var(--text-muted)' : dirty ? 'var(--saffron-dark, #7A4A12)' : 'var(--emerald)' }}>
-          {saving ? 'Desant…' : dirty ? 'canvis sense desar' : savedAt ? <><FaCheck size={10} /> desat a les {savedAt}</> : 'desat'}
+        <span style={{ fontSize: 12.5, fontWeight: 700, color: saving ? 'var(--text-muted)' : (unsaved || dirty) ? 'var(--saffron-dark, #7A4A12)' : 'var(--emerald)' }}>
+          {saving ? 'Desant…' : unsaved ? 'sense desar' : dirty ? 'canvis sense desar' : savedAt ? <><FaCheck size={10} /> desat a les {savedAt}</> : 'desat'}
         </span>
+        {/* A failed save used to leave the work in the air with nothing to push it but typing more. */}
+        {(unsaved || dirty) && !saving && (
+          <button onClick={() => save(steps)} style={{ padding: '5px 12px', borderRadius: 'var(--r-pill)', border: '1px solid var(--brand-1)', background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Desa-ho ara
+          </button>
+        )}
       </div>
       <p style={{ color: 'var(--text-soft)', fontSize: 13, margin: '0 0 12px' }}>
         {steps.length} {steps.length === 1 ? 'pas' : 'passos'} · es desa sol
+        {steps.filter(blank).length > 0 && <> · {steps.filter(blank).length === 1
+          ? 'una nota en blanc, que no es desa fins que digui alguna cosa'
+          : `${steps.filter(blank).length} notes en blanc, que no es desen fins que diguin alguna cosa`}</>}
       </p>
+      {unsaved && (
+        <div role="alert" style={{ padding: '10px 14px', borderRadius: 'var(--r-lg)', border: '1px solid var(--saffron-dark, #7A4A12)', marginBottom: 14, fontSize: 13.5, lineHeight: 1.5 }}>
+          <strong>No s’ha desat.</strong> {unsaved} La feina segueix aquí: prova <em>Desa-ho ara</em>.
+        </div>
+      )}
 
       {(problems.noText.length > 0 || problems.noVoice.length > 0) && (
         <div style={{ padding: '10px 14px', borderRadius: 'var(--r-lg)', background: 'var(--brand-gradient-soft)', marginBottom: 14, fontSize: 13.5, lineHeight: 1.5 }}>

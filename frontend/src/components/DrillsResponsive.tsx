@@ -17,6 +17,7 @@ import MobileDrillCreator from './MobileDrillCreator';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { isMobileLayout } from '../utils/layout';
 import { toast } from '../toast';
+import { whyItFailed } from '../utils/errors';
 
 import type { Drill } from '../types';
 
@@ -514,7 +515,7 @@ export default function DrillsResponsive() {
                     });
                     toast.success(`Test «${topicLabel(searchQuery)}» creat amb ${ids.length} drills`);
                     navigate('/tests');
-                  } catch { toast.error('No s\'ha pogut crear el test'); }
+                  } catch (e) { toast.error(whyItFailed(e, 'No s\'ha pogut crear el test')); }
                 }}
                 title={`Crea un test amb els ${Math.min(filteredDrills.length, 200)} drills d'aquest tema`}
                 style={{ flexShrink: 0, padding: '5px 10px', borderRadius: 'var(--r-pill)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', border: '1px solid var(--brand-1)', background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)' }}

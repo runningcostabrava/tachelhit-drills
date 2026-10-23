@@ -238,7 +238,11 @@ export const api = {
     request<{ test_id: number; steps: PracticeStep[] }>(`/tests/${testId}/steps`, { method: 'PUT', body: JSON.stringify({ steps }) }),
   /** Find sentences for a practice without downloading the library. */
   searchDrills: (q: string, limit = 40) => request<Drill[]>(`/drills/?search=${encodeURIComponent(q)}&limit=${limit}`),
-  practices: () => request<PracticeList[]>('/tests/'),
+  /** Every practice. `mine` keeps only the ones the person may call theirs — what «les meves
+   *  llistes» means, and what that screen was not doing: it listed everybody's. */
+  practices: (mine = false) => request<PracticeList[]>(`/tests/${mine ? '?mine=1' : ''}`),
+  /** One practice, without downloading the whole list to find it. */
+  practice: (id: number) => request<PracticeList>(`/tests/${id}`),
   /** The sentences a practice's steps point at, in one request. */
   drillsByIds: (ids: number[]) => request<Drill[]>(`/drills/?ids=${ids.join(',')}`),
   updatePractice: (id: number, patch: { title?: string; description?: string }) =>

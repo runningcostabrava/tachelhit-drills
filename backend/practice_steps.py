@@ -59,9 +59,12 @@ def validate(step: dict) -> dict:
         raise StepError(f"«{kind}» necessita una frase")
     payload = step.get("payload")
     if kind == "note":
-        text = (payload or {}).get("text") if isinstance(payload, dict) else None
-        if not (text or "").strip():
-            raise StepError("una nota sense text no ensenya res")
+        # A heading alone is a note: «Saludar» over the next three sentences teaches where you are.
+        # Only one with nothing at all in it is refused -- and the editor keeps those to itself
+        # rather than sending them, because refusing one used to refuse the whole sequence with it.
+        d = payload if isinstance(payload, dict) else {}
+        if not (d.get("text") or "").strip() and not (d.get("heading") or "").strip():
+            raise StepError("una nota sense títol ni text no ensenya res")
     return {"kind": kind, "drill_id": int(drill_id) if drill_id else None,
             "payload": json.dumps(payload, ensure_ascii=False) if payload else None}
 

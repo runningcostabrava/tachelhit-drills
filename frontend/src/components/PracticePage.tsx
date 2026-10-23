@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaListUl, FaPlay, FaPlus, FaVideo, FaUser, FaTag } from 'react-icons/fa';
 import { api, type PracticeCollections } from '../api';
+import { hasIdentity } from '../config';
 import { toast } from '../toast';
 
 // Pràctica: the library offered as short pronunciation sessions, four ways — by recording day
@@ -30,6 +31,14 @@ export default function PracticePage() {
   // order you want, and every step can ask for something different (ADR 0002).
   const [making, setMaking] = useState(false);
   const newPractice = async () => {
+    // A name first. A practice belongs to whoever made it, and one made without a name belonged
+    // to nobody: the editor opened, everything you put in it came back 403 on saving, and it
+    // could not even be thrown away. Asking here costs a click; the other way cost the work.
+    if (!hasIdentity()) {
+      toast.error('Per fer-te una pràctica et cal un nom: fes-te’n un al perfil i torna-hi.');
+      navigate('/profile');
+      return;
+    }
     setMaking(true);
     try {
       const made = await api.createPractice('Pràctica nova');

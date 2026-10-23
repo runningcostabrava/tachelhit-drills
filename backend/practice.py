@@ -20,6 +20,9 @@ import difflib
 import re
 from typing import Dict, List, Optional
 
+from sqlalchemy import or_ as sa_or
+from sqlalchemy.sql import func as sa_func
+
 import grammar
 import topics as topics_catalog
 
@@ -154,8 +157,48 @@ def tags_of(d) -> List[str]:
     return [t.strip() for t in (d.tag or "").split(",") if t.strip() and t.strip().lower() != "private"]
 
 
-def collections(db) -> dict:
-    from models import Drill as DrillModel, Test as TestModel
+def my_practices(db, user) -> List:
+    """The hand-made practices this person may call theirs, newest first.
+
+    «Les meves llistes» used to be everybody's: the query had no owner in it, so a learner opening
+    Pràctica saw every practice anyone had ever made and could not tell which were theirs. A
+    practice belongs to whoever made it, and an unclaimed one (made before practices had owners,
+    or by a visitor without a name) reads as the administrator's -- the same rule as a sentence's,
+    in `may_change` -- so the administrator is the one who can still see and tidy those.
+    """
+    from models import Test as TestModel
+    if user is None:
+        return []
+    q = db.query(TestModel)
+    if user.is_admin:
+        q = q.filter(sa_or(TestModel.created_by_user_id == user.id,
+                           TestModel.created_by_user_id == None))  # noqa: E711
+    else:
+        q = q.filter(TestModel.created_by_user_id == user.id)
+    return q.order_by(TestModel.id.desc()).all()
+
+
+def practice_sizes(db, tests) -> Dict[int, int]:
+    """How many steps each practice holds.
+
+    The count shown next to a practice came from `drill_ids`, the flat list a practice used to be.
+    A practice built in the workshop keeps its sentences in its STEPS and leaves `drill_ids` empty,
+    so every one of them was offered as «0» -- it looked empty when it was not. Steps win; the old
+    column is the fallback for the practices that never got converted.
+    """
+    from models import PracticeStep
+    ids = [t.id for t in tests]
+    if not ids:
+        return {}
+    rows = (db.query(PracticeStep.test_id, sa_func.count(PracticeStep.id))
+            .filter(PracticeStep.test_id.in_(ids)).group_by(PracticeStep.test_id).all())
+    counted = {tid: n for tid, n in rows}
+    return {t.id: counted.get(t.id) or len([x for x in (t.drill_ids or "").split(",") if x.strip()])
+            for t in tests}
+
+
+def collections(db, user=None) -> dict:
+    from models import Drill as DrillModel
     rows = grammar.not_excluded(db.query(DrillModel).filter(DrillModel.text_tachelhit != None, DrillModel.text_tachelhit != ""), DrillModel).all()
     # by recording day: our speakers' sessions (a recorded voice, grouped by day and speaker)
     days: Dict[tuple, int] = Counter()
@@ -197,9 +240,10 @@ def collections(db) -> dict:
     video_list = [{"title": k, "url": vurl.get(k) or None, "count": n} for k, n in vcount.most_common() if n >= 3]
     people_list = [{"name": k, "count": n} for k, n in pcount.most_common() if n >= 3]
     tag_list = [{"tag": k, "count": n} for k, n in gcount.most_common() if n >= 3]
-    # hand-made lists
-    tests = db.query(TestModel).order_by(TestModel.id.desc()).all()
-    list_list = [{"id": t.id, "title": t.title, "count": len([x for x in (t.drill_ids or "").split(",") if x.strip()])} for t in tests]
+    # hand-made lists: this person's own, counted by the steps they really hold
+    tests = my_practices(db, user)
+    sizes = practice_sizes(db, tests)
+    list_list = [{"id": t.id, "title": t.title, "count": sizes.get(t.id, 0)} for t in tests]
     return {"days": day_list, "topics": topic_list, "units": unit_list, "lists": list_list,
             "videos": video_list, "people": people_list, "tags": tag_list}
 

@@ -40,7 +40,7 @@ import dialect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import create_engine, func as sa_func
+from sqlalchemy import create_engine, false as sa_false, func as sa_func
 from sqlalchemy.orm import sessionmaker, Session
 import requests
 from dotenv import load_dotenv
@@ -1965,12 +1965,20 @@ def may_change(drill, user: Optional[UserModel]) -> bool:
     return bool(drill.created_by_user_id) and drill.created_by_user_id == user.id
 
 
-def owner_or_admin(drill, user: Optional[UserModel]) -> None:
-    """Raise unless this person may change this drill, saying which of the two it is."""
+def owner_or_admin(drill, user: Optional[UserModel], what: str = "frase") -> None:
+    """Raise unless this person may change this thing, saying which of the two it is.
+
+    `what` is the word for it, because the same rule guards sentences and practices and the
+    screens now show the server's own sentence: telling somebody their PRACTICE «és una frase de
+    la biblioteca» is us talking about something they cannot see."""
     if may_change(drill, user):
         return
     if user is None:
         raise HTTPException(status_code=401, detail="Entra-hi per canviar res")
+    if what == "pràctica":
+        if not drill.created_by_user_id:
+            raise HTTPException(status_code=403, detail="Aquesta pràctica no és de ningú: demana-ho a qui administra la biblioteca")
+        raise HTTPException(status_code=403, detail="Aquesta pràctica és d'algú altre: fes-te'n una de teva")
     if not drill.created_by_user_id:
         raise HTTPException(status_code=403, detail="Aquesta frase és de la biblioteca: demana-ho a qui l'administra, o desa la teva versió")
     raise HTTPException(status_code=403, detail="Aquesta frase és d'algú altre: desa la teva versió")
@@ -3239,12 +3247,21 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
 
 # ===================== TEST CRUD =====================
 @app.get("/tests/", response_model=list[Test])
-def get_tests(response: Response, since: Optional[str] = None,
+def get_tests(response: Response, since: Optional[str] = None, mine: bool = False,
               limit: Optional[int] = None, offset: Optional[int] = None,
-              db: Session = Depends(get_db)):
+              db: Session = Depends(get_db),
+              user: Optional[UserModel] = Depends(get_current_user)):
     """List tests, newest first. Same `since`/`limit`/`offset`/X-Total-Count
-    contract as GET /drills/ (no pagination unless limit or offset is sent)."""
+    contract as GET /drills/ (no pagination unless limit or offset is sent).
+
+    `mine=1` keeps only the practices the asking person may call theirs -- what «les meves
+    llistes» is supposed to show, and what it did not: the screen listed everyone's."""
     query = db.query(TestModel)
+    if mine:
+        if not user:
+            raise HTTPException(status_code=401, detail="mine=1 requires X-User-Token")
+        ids = [t.id for t in practice_mod.my_practices(db, user)]
+        query = query.filter(TestModel.id.in_(ids)) if ids else query.filter(sa_false())
     if since:
         query = query.filter(
             sa_func.coalesce(TestModel.updated_at, TestModel.date_created) >= _parse_since(since)
@@ -3262,9 +3279,20 @@ def get_test(test_id: int, db: Session = Depends(get_db)):
 def create_test(test: TestCreate, db: Session = Depends(get_db),
                 user: Optional[UserModel] = Depends(get_current_user)):
     """Make a practice. It belongs to whoever made it (#199): that is what «les meves llistes»
-    is built on, and what decides later who may change it."""
+    is built on, and what decides later who may change it.
+
+    A name is asked for BEFORE it is made, not after. Until 2026-10-23 a visitor without one got
+    a practice that belonged to nobody -- and `may_change` reads an unclaimed thing as the
+    administrator's, so every later save came back 403, it could not be renamed, it could not be
+    deleted, and the work put into it was gone. Better a sentence asking for a name than a
+    practice that cannot be used."""
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Una pràctica és d'algú: fes-te un nom al teu perfil (és gratis i triga un "
+                   "moment) i la tindràs a «les meves llistes», per editar-la i refer-la quan vulguis.")
     db_test = TestModel(**test.model_dump())
-    if user and not getattr(db_test, "created_by_user_id", None):
+    if not getattr(db_test, "created_by_user_id", None):
         db_test.created_by_user_id = user.id
     db.add(db_test)
     db.commit()
@@ -3287,7 +3315,7 @@ def update_test(test_id: int, update_data: TestUpdate, db: Session = Depends(get
     test = db.query(TestModel).filter(TestModel.id == test_id).first()
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
-    owner_or_admin(test, user)
+    owner_or_admin(test, user, "pràctica")
 
     update_dict = update_data.model_dump(exclude_unset=True)
     for key, value in update_dict.items():
@@ -3305,7 +3333,7 @@ def delete_test(test_id: int, db: Session = Depends(get_db),
     test = db.query(TestModel).filter(TestModel.id == test_id).first()
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
-    owner_or_admin(test, user)
+    owner_or_admin(test, user, "pràctica")
     db.delete(test)
     db.commit()
     return {"detail": "Deleted"}
@@ -3356,7 +3384,7 @@ def put_practice_steps(test_id: int, steps: List[dict] = Body(..., embed=True),
     test = db.query(TestModel).filter(TestModel.id == test_id).first()
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
-    owner_or_admin(test, user)
+    owner_or_admin(test, user, "pràctica")
     try:
         return {"test_id": test_id, "steps": practice_steps.replace_steps(db, test_id, steps)}
     except practice_steps.StepError as e:
@@ -6279,10 +6307,11 @@ def credits():
 
 
 @app.get("/practice/collections")
-def practice_collections(db: Session = Depends(get_db)):
+def practice_collections(db: Session = Depends(get_db),
+                         user: Optional[UserModel] = Depends(get_current_user)):
     """How the library is offered for practice: by recording day (our speakers' sessions), by
-    subject, by grammar unit, and the hand-made lists."""
-    return practice_mod.collections(db)
+    subject, by grammar unit, and the hand-made lists. The lists are the asking person's own."""
+    return practice_mod.collections(db, user)
 
 
 @app.get("/practice/session")
@@ -7747,7 +7776,8 @@ def create_test_from_weakest(
         hint_level="partial",
         hint_percentage=30,
         passing_score=70.0,
-        drill_ids=",".join(str(i) for i in drill_ids)
+        drill_ids=",".join(str(i) for i in drill_ids),
+        created_by_user_id=uid,          # it is built from THEIR review history: it is theirs
     )
     db.add(test)
     db.commit()
@@ -8655,7 +8685,8 @@ def trim_drill_video(
 
 # ===================== SRT IMPORT =====================
 @app.post("/srt/import", response_model=SrtImportResponse)
-def import_srt_content(request: SrtImportRequest, db: Session = Depends(get_db)):
+def import_srt_content(request: SrtImportRequest, db: Session = Depends(get_db),
+                       user: Optional[UserModel] = Depends(get_current_user)):
     """
     Import SRT subtitle content and create drills for each segment.
     Each drill will have a video URL with timestamp for the specific segment.
@@ -8728,7 +8759,8 @@ def import_srt_content(request: SrtImportRequest, db: Session = Depends(get_db))
                     description=test_description,
                     drill_ids=",".join(str(did) for did in drill_ids),
                     question_type="text_input",
-                    hint_level="none"
+                    hint_level="none",
+                    created_by_user_id=user.id if user else None,
                 )
                 db.add(db_test)
                 db.commit()

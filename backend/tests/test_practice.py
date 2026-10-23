@@ -240,3 +240,104 @@ def test_a_practice_made_of_steps_can_actually_be_played():
     played = client.get(f"/practice/session?test_id={made['id']}&limit=10").json()["drills"]
     assert [d["id"] for d in played] == [second["id"], first["id"]], "l'ordre el tria qui la fa"
     assert all((d.get("text_tachelhit") or "").strip() for d in played), "la nota no hi és"
+
+
+def test_una_practica_no_neix_sense_amo():
+    """A practice belongs to whoever made it, and one made by nobody cannot be used by anybody.
+
+    `may_change` reads an unclaimed thing as the administrator's -- right for a sentence from
+    before accounts existed, wrong for something created a second ago. A visitor without a name
+    got a practice, an editor that opened, and a 403 on every save afterwards; it could not be
+    renamed and it could not be thrown away. The name is asked for before, not after."""
+    from test_api import client, as_stranger
+
+    before = len(client.get("/tests/").json())
+    with as_stranger():
+        refused = client.post("/tests/", json={
+            "title": "D'alg\u00fa?", "question_type": "audio", "hint_level": "none", "drill_ids": ""})
+    assert refused.status_code == 401
+    assert "nom" in refused.json()["detail"], "ha de dir qu\u00e8 li falta, no nom\u00e9s que no"
+    assert len(client.get("/tests/").json()) == before, "no se n'ha de crear cap"
+
+
+def test_les_meves_llistes_son_meves_i_es_compten_pels_passos():
+    """«Les meves llistes» showed everyone's, and said 0 of all of them.
+
+    Two faults in one row: the query had no owner in it, so a learner saw every practice anybody
+    had ever made; and the count came from `drill_ids`, the flat list a practice used to be. A
+    practice built in the workshop keeps its sentences in its STEPS and leaves that column empty,
+    so every one of them was offered as empty when it was not."""
+    from test_api import client, as_stranger
+
+    a = client.post("/auth/signup", json={"email": "owner-a@example.com",
+                                          "password": "mine-alone-123", "username": "owner_a"}).json()
+    b = client.post("/auth/signup", json={"email": "owner-b@example.com",
+                                          "password": "yours-alone-123", "username": "owner_b"}).json()
+    ha, hb = {"X-User-Token": a["token"]}, {"X-User-Token": b["token"]}
+
+    d = client.post("/drills/", headers=ha, json={
+        "text_catalan": "aigua", "text_tachelhit": "aman",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/w.mp3"}).json()
+    mine = client.post("/tests/", headers=ha, json={
+        "title": "La meva", "question_type": "audio", "hint_level": "none", "drill_ids": ""}).json()
+    yours = client.post("/tests/", headers=hb, json={
+        "title": "La teva", "question_type": "audio", "hint_level": "none", "drill_ids": ""}).json()
+
+    # two steps, and `drill_ids` left empty: this is what the workshop makes
+    put = client.put(f"/tests/{mine['id']}/steps", headers=ha, json={"steps": [
+        {"kind": "listen_pick", "drill_id": d["id"]},
+        {"kind": "note", "payload": {"heading": "Saludar"}},
+    ]})
+    assert put.status_code == 200, put.text
+
+    def listed(h):
+        return [t["id"] for t in client.get("/tests/?mine=1", headers=h).json()]
+
+    assert mine["id"] in listed(ha) and yours["id"] not in listed(ha)
+    assert yours["id"] in listed(hb) and mine["id"] not in listed(hb)
+    with as_stranger():
+        assert client.get("/tests/?mine=1").status_code == 401
+
+    col = client.get("/practice/collections", headers=ha).json()
+    row = next(x for x in col["lists"] if x["id"] == mine["id"])
+    assert row["count"] == 2, "el compte surt dels passos, no de drill_ids"
+    assert all(x["id"] != yours["id"] for x in col["lists"]), "la d'un altre no hi ha de ser"
+
+    # and the refusal talks about a practice, because that is what the person is looking at
+    denied = client.put(f"/tests/{mine['id']}/steps", headers=hb,
+                        json={"steps": [{"kind": "listen_pick", "drill_id": d["id"]}]})
+    assert denied.status_code == 403 and "pr\u00e0ctica" in denied.json()["detail"]
+
+
+def test_una_nota_amb_titol_i_sense_text_es_desa():
+    """A heading is a note: «Saludar» over the next three sentences teaches where you are.
+
+    It used to be refused -- and a save is all-or-nothing on purpose, so that one refusal took
+    down every other step sent with it: the three sentences added just before were lost, and the
+    autosave never tried again. A note with NOTHING in it is still not a step; the editor keeps
+    those to itself instead of sending them, so a blank line can no longer cost the work."""
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("note_titler")}
+    d = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "bon dia", "text_tachelhit": "sbaḥ lxir",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/bd.mp3"}).json()
+    made = client.post("/tests/", headers=hdr, json={
+        "title": "Amb t\u00edtols", "question_type": "audio", "hint_level": "none", "drill_ids": ""}).json()
+
+    ok = client.put(f"/tests/{made['id']}/steps", headers=hdr, json={"steps": [
+        {"kind": "note", "payload": {"heading": "Saludar"}},
+        {"kind": "listen_pick", "drill_id": d["id"]},
+    ]})
+    assert ok.status_code == 200, ok.text
+    steps = ok.json()["steps"]
+    assert [x["kind"] for x in steps] == ["note", "listen_pick"]
+    assert steps[0]["payload"]["heading"] == "Saludar"
+
+    # nothing at all in it is still nothing to show, and it must not take the rest down with it
+    empty = client.put(f"/tests/{made['id']}/steps", headers=hdr, json={"steps": [
+        {"kind": "note", "payload": {"heading": "  ", "text": ""}},
+    ]})
+    assert empty.status_code == 400
+    assert [x["kind"] for x in client.get(f"/tests/{made['id']}/steps").json()["steps"]] == \
+        ["note", "listen_pick"], "el que ja hi havia no s'ha tocat"

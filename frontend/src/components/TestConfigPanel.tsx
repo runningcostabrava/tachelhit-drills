@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
 import { toast } from '../toast';
+import { whyItFailed } from '../utils/errors';
 import { TOPIC_LABELS, parseTopics, topicLabel, topicsSearchText } from '../utils/topics';
 
 interface Drill {
@@ -103,7 +104,7 @@ export default function TestConfigPanel({ onClose, onTestCreated, initialSelecte
       onClose();
     } catch (error) {
       console.error('Error creating test:', error);
-      toast.error('No s\'ha pogut crear el test');
+      toast.error(whyItFailed(error, 'No s\'ha pogut crear el test'));
     }
   };
 
