@@ -590,6 +590,8 @@ def well_formed(shi: str, slug: Optional[str] = None) -> bool:
     t = _clean_text(shi)
     if re.search(r"\w\.\w", t) or "+" in t:
         return False  # «ⵜ.ⵅⵙ.ⵛ», «a.b.c», «Mana Lun ija +tEli»: capture artefacts
+    if "…" in t or "..." in t:
+        return False  # «ɣuri … / dari …» és un motlle, no una frase: no es pot ni dir ni endevinar
     return True
 
 
@@ -836,6 +838,15 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str, tables: Optiona
         "The sentences are written as their speakers wrote them (spelling varies: 3 for ɛ, gh for ɣ, kh for x, "
         "capitals for emphatics): when your text names a form, give the standard spelling and, if the sentence spells "
         "it differently, say so in a few words.\n"
+        # Dues errades que el curs ha fet de debò, i que un lector les ha vistes (2026-10-23):
+        # la targeta «iga» deia que serveix «per al passat» i anomenava el verb `g` mentre totes
+        # les frases citades el diuen amb j (ija, nja, jan).
+        "TRUTH: a state verb in the perfective means NOW, not the past: «iga» is «he is», «ira» "
+        "«he wants», «illa» «there is». Never call such a form a past tense. And when the "
+        "sentences you quote pronounce or spell the form differently from the name you give it "
+        "(our speakers say ija, nja, jan where the sheet writes iga, nga, gan), say so in the "
+        "same breath, in the same step: a reader who sees a rule about one letter and six "
+        "sentences with another letter cannot follow the lesson.\n"
         "STYLE: Latin script only (never Arabic script, never transliterations in brackets). Never mention example "
         "ids or numbers in the texts: refer to a sentence by quoting a few of its words. Talk to the learner («veuràs», "
         "«fixa't»), never about «the sheet» or «the reference».\n\n"
@@ -993,6 +1004,32 @@ def _words(t: str) -> int:
     return len(re.findall(r"[^\W\d_]+", t or ""))
 
 
+#: On viuen les imatges que hem triat nosaltres: les il·lustracions que fem per a una frase i el
+#: que puja l'amo. La resta són imatges trobades per la xarxa amb llicència lliure.
+OUR_MEDIA = ("res.cloudinary.com",)
+
+
+def our_picture(url: Optional[str]) -> bool:
+    """Si aquesta imatge la vam triar per a AQUESTA frase.
+
+    Una imatge trobada il·lustra com a molt una paraula, i de vegades ni això: a «ɣuri … / dari …»
+    «tinc …» li havia tocat una estàtua daurada d'un casino de Macau. Serveix per acompanyar una
+    frase que ja es llegeix; no serveix per a una pregunta on la imatge és l'enunciat, perquè
+    llavors la pregunta no es pot contestar. L'amo ho va dir així: «aquí no entenc la pregunta,
+    potser la imatge està malament»."""
+    u = (url or "").strip().lower()
+    return bool(u) and any(h in u for h in OUR_MEDIA)
+
+
+def _askable(kind: str, e: dict) -> bool:
+    """Si d'aquesta frase se'n pot fer una pregunta d'aquesta mena."""
+    if kind == "listen":
+        return bool(e.get("audio_url"))
+    if kind == "picture":
+        return our_picture(e.get("image_url"))
+    return True
+
+
 def _with_quizzes(lesson: dict, examples: List[dict]) -> dict:
     """A quick check after every explanation and a short review before the end, three kinds in turn:
     read the meaning and pick the sentence; listen to the voice and pick the meaning; look at the
@@ -1010,9 +1047,8 @@ def _with_quizzes(lesson: dict, examples: List[dict]) -> dict:
         if len(pool) < 4:
             continue
         kind = ("meaning", "listen", "picture")[n_quiz % 3]
-        need = {"listen": "audio_url", "picture": "image_url"}.get(kind)
         fresh = [e for e in s["examples"] if e["id"] not in used] + [e for e in pool if e["id"] not in used]
-        target = next((e for e in fresh if e in pool and (not need or e.get(need))), None)
+        target = next((e for e in fresh if e in pool and _askable(kind, e)), None)
         if target is None:
             kind, target = "meaning", next((e for e in fresh if e in pool), None)
         if target is None:
@@ -1048,10 +1084,9 @@ def _review_quizzes(pool: List[dict], used: set, n_quiz: int, how_many: int) -> 
     out = []
     for _ in range(how_many):
         kind = ("meaning", "listen", "picture")[n_quiz % 3]
-        need = {"listen": "audio_url", "picture": "image_url"}.get(kind)
-        target = next((e for e in pool if e["id"] not in used and (not need or e.get(need))), None)
+        target = next((e for e in pool if e["id"] not in used and _askable(kind, e)), None)
         if target is None:
-            kind, need = "meaning", None
+            kind = "meaning"
             target = next((e for e in pool if e["id"] not in used), None)
         if target is None:
             break

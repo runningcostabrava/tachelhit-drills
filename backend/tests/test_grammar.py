@@ -293,11 +293,21 @@ def test_quizzes_and_excluded_language(monkeypatch):
     q = quizzes[0]
     assert q["kind"] == "meaning" and q["example"]["id"] == 1 and len(q["options"]) == 4 and q["options"][q["answer"]] == "frase 1" and q["question"] == "Com es diu «sentit 1»?"
     assert quizzes[1]["kind"] == "meaning"  # no voice in this pool: the listening check falls back to reading
-    voiced = [{**e, "audio_url": "https://x/a.webm", "image_url": "https://x/i.jpg"} for e in ex]
+    voiced = [{**e, "audio_url": "https://x/a.webm",
+               "image_url": f"https://res.cloudinary.com/du26ppvh0/image/upload/v1/tachelhit/illustrations/ill_{e['id']}.webp"} for e in ex]
     lesson = grammar._with_quizzes({"intro": "", "steps": [{"type": "explain", "title": "u", "text": "t", "examples": [voiced[0]]}] * 6}, voiced)
     kinds = [(s["kind"], s["options"][s["answer"]]) for s in lesson["steps"] if s["type"] == "quiz"]
     assert [k for k, _ in kinds] == ["meaning", "listen", "picture", "meaning", "listen", "picture"]
     assert kinds[1][1].startswith("sentit") and kinds[2][1].startswith("frase")  # listening: pick the meaning; picture: pick the sentence
+    # i una imatge TROBADA per la xarxa no fa cap pregunta: il·lustra com a molt una paraula, i
+    # com a enunciat no es pot contestar («ɣuri … / dari …» amb una estàtua d'un casino de Macau)
+    found = [{**e, "audio_url": "https://x/a.webm", "image_url": "https://thumb.wikimedia.org/x/golden_statue.jpg"} for e in ex]
+    lesson = grammar._with_quizzes({"intro": "", "steps": [{"type": "explain", "title": "u", "text": "t", "examples": [found[0]]}] * 6}, found)
+    assert "picture" not in [s["kind"] for s in lesson["steps"] if s["type"] == "quiz"]
+    assert grammar.our_picture("https://res.cloudinary.com/du26ppvh0/image/upload/v1/x.webp")
+    assert not grammar.our_picture("https://thumb.wikimedia.org/x.jpg") and not grammar.our_picture(None)
+    # i un motlle no és una frase: no es pot ni dir ni endevinar
+    assert not grammar.well_formed("ɣuri … / dari …") and not grammar.well_formed("ɣuri ... / dari ...")
     twin = ex + [{**ex[0], "id": 9, "shi": "una altra frase", "ca": "sentit 2"}]  # same meaning: never a wrong answer
     lesson = grammar._with_quizzes({"intro": "", "steps": [{"type": "explain", "title": "u", "text": "t", "examples": []}, {"type": "explain", "title": "d", "text": "t", "examples": [ex[1]]}]}, twin)
     asked = next(s for s in lesson["steps"] if s["type"] == "quiz" and s["example"]["id"] == 2)
