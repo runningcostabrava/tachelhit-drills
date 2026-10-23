@@ -69,12 +69,25 @@ export default function VeusPage() {
 
   return (
     <div style={{ padding: '20px 16px 32px', maxWidth: '900px', margin: '0 auto' }}>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', margin: '0 0 4px' }}>Posa-hi veu</h1>
-      <p style={{ color: 'var(--text-soft)', fontSize: '14px', margin: '0 0 14px', lineHeight: 1.5 }}>
-        Aquí es fan dues coses, i totes dues fan créixer la biblioteca: <strong>demanar</strong> una frase que vols
-        saber dir, i <strong>gravar-ne</strong> una que saps dir. Si en graves, escriu-la com la dius tu —no cal
-        seguir cap ortografia— i digue’ns de quin poble ets: cada veu porta el seu lloc i el nom de qui parla.
+      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', margin: '0 0 4px' }}>Si us plau, necessitem la teva veu</h1>
+      <p style={{ color: 'var(--text-soft)', fontSize: '14.5px', margin: '0 0 10px', lineHeight: 1.6 }}>
+        Aquesta biblioteca només té el que la gent hi ha posat. Una frase escrita i muda ensenya a
+        llegir-la, no a dir-la, i una veu de màquina no ensenya a parlar amb ningú: per això una
+        frase no està acabada fins que algú la diu.
       </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 10, margin: '0 0 16px' }}>
+        {[
+          ['Grava’n una que sàpigues dir', 'Prem el micròfon de qualsevol frase. Trenta segons i ja està.'],
+          ['Digue-la com la dius tu', 'Amb les teves paraules i la teva manera d’escriure-la: no cal seguir cap ortografia, i si al teu poble es diu d’una altra manera, aquesta és la bona.'],
+          ['Queda amb el teu nom', 'Cada veu porta qui parla i de quin poble és. Qui l’escolti sabrà de qui està aprenent.'],
+          ['Demana el que vols saber dir', 'Si no saps com es diu una cosa, escriu-la en català aquí sota i algú que ho sàpiga la gravarà.'],
+        ].map(([t, w]) => (
+          <div key={t} style={{ padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+            <div style={{ fontWeight: 800, fontSize: 13.5, marginBottom: 2 }}>{t}</div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-soft)', lineHeight: 1.5 }}>{w}</div>
+          </div>
+        ))}
+      </div>
 
       {me?.is_admin && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
