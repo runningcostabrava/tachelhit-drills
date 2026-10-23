@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FaPlay } from 'react-icons/fa';
+import { FaPlay, FaCut } from 'react-icons/fa';
 import { API_BASE } from '../config';
 import { getYouTubeVideoId } from '../utils/youtubeUtils';
 import type { Drill } from '../types';
@@ -33,6 +34,7 @@ export const groupLibraryVideos = (drills: Drill[]): LibraryVideo[] => {
 };
 
 export default function VideoLibraryPage() {
+  const navigate = useNavigate();
   const [drills, setDrills] = useState<Drill[]>([]);
   const [active, setActive] = useState<LibraryVideo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,11 +71,14 @@ export default function VideoLibraryPage() {
           </div>
         )}
         {videos.map(v => (
-          <button
+          <div
             key={v.id}
+            style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', padding: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)', color: 'var(--text)' }}
+          >
+          <button
             onClick={() => setActive(v)}
             aria-label={`Reprodueix el vídeo sencer: ${v.title}`}
-            style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', padding: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', cursor: 'pointer', boxShadow: 'var(--shadow-sm)', color: 'var(--text)' }}
+            style={{ display: 'block', textAlign: 'left', padding: 0, background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit', fontFamily: 'inherit' }}
           >
             <div style={{ position: 'relative', aspectRatio: '16 / 9', background: 'var(--surface-2)' }}>
               <img src={`https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -88,6 +93,14 @@ export default function VideoLibraryPage() {
               </div>
             </div>
           </button>
+          {/* The other door: not watching it, auditing it. */}
+          <button
+            onClick={() => navigate(`/captura/video?url=${encodeURIComponent(v.url)}`)}
+            style={{ margin: '0 14px 14px', padding: '7px 12px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-soft)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+          >
+            <FaCut size={11} /> Revisa els talls
+          </button>
+          </div>
         ))}
       </div>
 
