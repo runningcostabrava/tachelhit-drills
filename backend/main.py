@@ -6578,6 +6578,26 @@ def other_ways(db) -> Dict[int, List[dict]]:
     return out
 
 
+#: El capítol servit l'últim cop, i amb quina biblioteca es va fer.
+#:
+#: Servir un capítol vol dir llegir les mil sis-centes frases que hi poden anar i puntuar-les
+#: secció per secció: deu segons. I no canvia entre una visita i la següent si no ha canviat ni
+#: el text del capítol ni la biblioteca, així que es guarda fet i es torna a fer quan alguna de
+#: les dues coses es mou. No hi ha res de qui mira: el capítol és el mateix per a tothom.
+_CHAPTER_CACHE: Dict[str, tuple] = {}
+
+
+def _library_mark(db, slug: str) -> tuple:
+    """La marca del moment: quantes frases hi ha, l'última que s'ha tocat, i quan es va escriure
+    el capítol. Si les tres són iguals, el capítol servit també ho és."""
+    from sqlalchemy import func
+
+    from models import MethodChapter
+    n, last = db.query(func.count(DrillModel.id), func.max(DrillModel.updated_at)).one()
+    row = db.query(MethodChapter.updated_at).filter(MethodChapter.slug == slug).first()
+    return (n, str(last), str(row[0]) if row else None)
+
+
 @app.get("/method/{slug}")
 def method_chapter(slug: str, db: Session = Depends(get_db),
                    user: Optional[UserModel] = Depends(get_current_user)):
@@ -6585,6 +6605,10 @@ def method_chapter(slug: str, db: Session = Depends(get_db),
     c = method_mod.chapter(slug)
     if not c:
         raise HTTPException(status_code=404, detail="Aquest capítol no existeix")
+    mark = _library_mark(db, slug)
+    done = _CHAPTER_CACHE.get(slug)
+    if done and done[0] == mark:
+        return done[1]
     rows = method_mod.sentences_for(db, c["slug"])
     titles = {u["slug"]: u["title"] for u in grammar_course.UNITS}
     labels = {t["slug"]: t["label"] for t in topics_catalog.TOPICS}
@@ -6615,7 +6639,7 @@ def method_chapter(slug: str, db: Session = Depends(get_db),
                          "with_voice": sum(1 for d in here if d.audio_url)})
     rest = [d for d in rows if d.id not in used]
 
-    return {
+    out = {
         "n": c["n"], "slug": c["slug"], "name": c["name"], "title": c["title"],
         "about": c["about"], "functions": c["functions"], "roles": c["roles"],
         "cover": artwork(db, "method").get(c["slug"]),
@@ -6634,6 +6658,8 @@ def method_chapter(slug: str, db: Session = Depends(get_db),
         "missing": method_mod.what_is_missing(c, rows),
         "source": method_mod.SOURCE,
     }
+    _CHAPTER_CACHE[slug] = (mark, out)
+    return out
 
 
 @app.post("/method/{slug}/line")
@@ -6790,6 +6816,16 @@ def _grammar_unit_payload(db, slug: str, limit: int, force: bool, deep: bool = F
     except Exception as e:
         print(f"[GRAMMAR] lesson {slug}: {e}")
         lesson = {"intro": "", "steps": [{"type": "explain", "title": unit["title"], "text": "La lliçó encara no s’ha pogut escriure. Mira els exemples de la biblioteca mentrestant.", "examples": examples[:3]}, {"type": "end"}], "error": str(e)[:160]}
+    # La tifinagh de cada so citat, al títol i al text. S'hi posa en SERVIR la lliçó i no en
+    # escriure-la, perquè les que ja hi ha escrites també l'han de portar: no es poden reescriure
+    # —el compte de Gemini és sense crèdit— i l'amo ho va demanar per a tot arreu.
+    for step in (lesson.get("steps") or []):
+        for field in ("title", "text", "question"):
+            if isinstance(step.get(field), str):
+                step[field] = grammar_course.with_letters(step[field])
+    if isinstance(lesson.get("intro"), str):
+        lesson["intro"] = grammar_course.with_letters(lesson["intro"])
+
     # Les altres maneres de dir cada frase citada. La lliçó es va escriure un dia i es desa tal
     # com va quedar; això s'hi afegeix en SERVIR-LA, perquè una veu gravada avui s'ha de veure
     # avui i no quan es torni a escriure la lliçó.

@@ -315,6 +315,48 @@ PLAIN_WORDS = [
 ]
 
 
+#: Els sons que la llengua escriu amb dues lletres: així «gh» també rep la seva tifinagh.
+PAIRS = {"gh", "kh", "sh", "ch", "gw", "kw", "qw", "tt", "kk", "ll", "dj"}
+
+#: Un so citat al text d'una lliçó, entre cometes: «ɛ», «gh», 'ẓ'.
+_QUOTED = re.compile(r"[«\"'‘“]([^«»\"'’”]{1,3})[»\"'’”]")
+
+
+def with_letters(t: str) -> str:
+    """El mateix text amb la tifinagh de cada so citat al costat: «ɛ» → «ɛ ⵄ».
+
+    L'amo: «la tifinagh ha de ser present a tot arreu, també al títol de l'explicació dels sons».
+    Una lliçó que ensenya un so citant-lo en llatí ensenya el so i no ensenya la lletra, i aquesta
+    app ensenya les dues coses.
+
+    Només toca el que és CITAT i curt —un so, no una paraula—, i només si el transliterador en
+    treu una tifinagh diferent del que ja hi ha. Si no, el text es queda tal com és: val més una
+    lliçó sense una lletra que una lliçó amb una lletra inventada.
+    """
+    if not t or "ⵣ" in t:
+        return t
+
+    def one(m):
+        raw = m.group(1).strip()
+        # Nom\u00E9s un SO: una lletra sola, o un dels parells que la llengua escriu junts. Dues o
+        # tres lletres qualssevol serien paraules catalanes citades \u2014\u00ABno\u00BB, \u00ABfer\u00BB, \u00ABcas\u00BB\u2014 i els
+        # penjar\u00EDem al costat una tifinagh que no vol dir res.
+        if len(raw) != 1 and raw.lower() not in PAIRS:
+            return m.group(0)
+        if not raw or re.search(r"[\u2D30-\u2D7F]", raw):
+            return m.group(0)
+        try:
+            import transliteration
+            tif = (transliteration.to_forms(raw)["tifinagh"] or "").strip()
+        except Exception:
+            return m.group(0)
+        if not tif or tif == raw:
+            return m.group(0)
+        return m.group(0).replace(raw, f"{raw} {tif}", 1)
+
+    return _QUOTED.sub(one, t)
+
+
 def _plain(t: str) -> str:
     """Say it as a lesson would: no word the learner would have to look up."""
     for pat, rep in PLAIN_WORDS:
@@ -331,7 +373,7 @@ def _clean_prose(s: Optional[str]) -> str:
     t = re.sub(r"\s*\((?:exemples?|ids?)\s*[\d,\s]+(?:i\s*\d+)?\)", "", t, flags=re.I)
     t = re.sub(r"\b(?:en\s+|a\s+)?(?:als?|els?|l')\s*exemples?\s+\d+(?:\s*(?:,|i)\s*\d+)*", "", t, flags=re.I)
     t = re.sub(r"\bexemples?\s+\d+(?:\s*(?:,|i)\s*\d+)*", "", t, flags=re.I)
-    return _plain(re.sub(r"\s+", " ", t).replace(" ,", ",").replace(" .", ".").strip())
+    return with_letters(_plain(re.sub(r"\s+", " ", t).replace(" ,", ",").replace(" .", ".").strip()))
 
 
 def gloss_of(d) -> Optional[List[dict]]:

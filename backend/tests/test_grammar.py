@@ -620,3 +620,42 @@ def test_una_fila_duna_taula_de_formes_es_pot_gravar():
     # el que no és una taula, o una fila que no hi és, no fa res
     assert client.post("/grammar/ser-tenir/row", headers=hdr, json={"step": 0, "row": 0}).status_code == 400
     assert client.post("/grammar/ser-tenir/row", headers=hdr, json={"step": 1, "row": 9}).status_code == 400
+
+
+def test_un_so_citat_porta_la_seva_tifinagh():
+    """L'amo: «és important que fem servir la lletra tifinagh… la tifinagh ha de ser present a
+    tot arreu, també al títol de l'explicació dels sons».
+
+    Una lliçó que ensenya un so citant-lo en llatí ensenya el so i no ensenya la lletra. Ara, un
+    so citat entre cometes porta la seva tifinagh al costat, al títol i al text.
+
+    El que NO fa: penjar una tifinagh a una paraula catalana citada. Un so és una lletra sola o
+    un dels parells que la llengua escriu junts; «fer» i «cas» es queden com són."""
+    import grammar
+
+    assert grammar.with_letters('El so «3» o «ɛ»') == 'El so «3 ⵄ» o «ɛ ⵄ»'
+    assert grammar.with_letters('la «gh» sona com la «ɣ»') == 'la «gh ⵖ» sona com la «ɣ ⵖ»'
+    assert grammar.with_letters('Vol dir «fer», no «cas»') == 'Vol dir «fer», no «cas»'
+    assert grammar.with_letters('ja porta ⵣ i «ɛ»') == 'ja porta ⵣ i «ɛ»', "si ja n'hi ha, no s'hi torna"
+    assert grammar.with_letters('') == ''
+
+    # i la lliçó servida la porta, encara que s'hagués escrit abans
+    import json
+
+    import main
+    from models import GrammarLesson
+    db = main.SessionLocal()
+    try:
+        row = db.query(GrammarLesson).filter(GrammarLesson.id == "sons-i-escriptura").first()
+        if row is None:
+            row = GrammarLesson(id="sons-i-escriptura", version=0, body="")
+            db.add(row)
+        row.hand_written = True
+        row.body = json.dumps({"intro": "", "steps": [
+            {"type": "explain", "title": 'El so «ɛ»', "text": 'La «ɛ» és faringi.', "examples": []},
+            {"type": "end"}]}, ensure_ascii=False)
+        db.commit()
+    finally:
+        db.close()
+    step = client.get("/grammar/sons-i-escriptura").json()["lesson"]["steps"][0]
+    assert step["title"] == 'El so «ɛ ⵄ»' and "ⵄ" in step["text"]
