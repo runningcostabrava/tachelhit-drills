@@ -17,6 +17,7 @@ NVIDIA/NeMo tools/nemo_forced_aligner, Apache 2.0): /align aligns the text you g
 and groups words into segments at pauses.
 """
 import json
+import math
 import os
 import tempfile
 import threading
@@ -55,15 +56,45 @@ def _to_wav(src_path: str, dst_path: str) -> float:
     return duration
 
 
-def _transcribe(wav_path: str) -> str:
+def _transcribe(wav_path: str):
+    """The text, and how sure the model says it is (0..1, or None when it will not say).
+
+    The number matters downstream: the app keeps a queue of recordings nobody has written yet,
+    and a transcript is only ever a PROPOSAL there. Without a confidence, the clean recording
+    and the unintelligible one sit in that queue weighing the same, and whoever confirms them
+    has to find out by listening to each. With it, the likely ones come first.
+
+    NeMo's CTC hypothesis carries `score`, the sum of the log-probabilities of the path it took.
+    Summed, it punishes long sentences for being long, so it is averaged per character and
+    turned back into a probability-like number with exp(). Best effort on purpose: an older NeMo
+    that does not take `return_hypotheses`, or a hypothesis without a score, simply gives no
+    number — never an error, and never a made-up 1.0.
+    """
+    hyp = None
     with _lock:
-        out = model.transcribe([wav_path], batch_size=1, verbose=False)
-    text = out[0]
+        try:
+            out = model.transcribe([wav_path], batch_size=1, verbose=False,
+                                   return_hypotheses=True)
+            hyp = out[0][0] if isinstance(out, (list, tuple)) and isinstance(out[0], (list, tuple)) else out[0]
+        except TypeError:
+            out = model.transcribe([wav_path], batch_size=1, verbose=False)
+            hyp = out[0]
+    text = hyp
     if isinstance(text, (list, tuple)):
         text = text[0]
     if hasattr(text, "text"):
         text = text.text
-    return (text or "").strip()
+    text = (text or "").strip()
+
+    conf = None
+    score = getattr(hyp, "score", None)
+    if score is not None and text:
+        try:
+            conf = round(float(math.exp(float(score) / max(1, len(text)))), 3)
+            conf = max(0.0, min(1.0, conf))
+        except (TypeError, ValueError, OverflowError):
+            conf = None
+    return text, conf
 
 
 def _read_ctm(path: str):
@@ -128,16 +159,16 @@ def transcribe_file(src_path: str) -> dict:
     with tempfile.TemporaryDirectory() as tmp:
         wav = os.path.join(tmp, "in.wav")
         duration = _to_wav(src_path, wav)
-        text = _transcribe(wav)
+        text, conf = _transcribe(wav)
         if not text:
-            return {"text": "", "segments": [], "model": MODEL_ID}
+            return {"text": "", "segments": [], "confidence": None, "model": MODEL_ID}
         try:
             al = _align(wav, text, tmp)
             segments = _segments_from_words(al["words"], duration, text)
         except Exception as e:  # alignment is best-effort; the transcript still goes out
             print(f"[ASR] alignment failed: {e}")
             segments = [{"start": 0.0, "end": round(duration, 2), "text": text}]
-        return {"text": text, "segments": segments, "model": MODEL_ID}
+        return {"text": text, "segments": segments, "confidence": conf, "model": MODEL_ID}
 
 
 def align_file(src_path: str, text: str, split_on_newline: bool = True) -> dict:
@@ -146,7 +177,7 @@ def align_file(src_path: str, text: str, split_on_newline: bool = True) -> dict:
         wav = os.path.join(tmp, "in.wav")
         duration = _to_wav(src_path, wav)
         if not text:
-            text = _transcribe(wav)
+            text, _ = _transcribe(wav)
             if not text:
                 return {"text": "", "segments": [], "words": [], "model": MODEL_ID, "note": "no speech detected"}
         if split_on_newline:
