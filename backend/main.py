@@ -9,7 +9,6 @@ import json
 import traceback
 import tempfile
 import shutil
-import yt_dlp
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from urllib.parse import quote
@@ -47,7 +46,27 @@ import requests
 from dotenv import load_dotenv
 import cloudinary
 import cloudinary.uploader
-from gradio_client import Client, handle_file
+
+# El que NO es carrega en arrencar.
+#
+# El servei gratuït s'adorm als 15 minuts, de manera que cada visita desperta un servidor nou i
+# qui obre l'app paga l'arrencada sencera. Importar-ho tot d'entrada costava 18 segons, i 13
+# eren llibreries que la immensa majoria de peticions no toquen mai: moviepy i yt-dlp (vídeo),
+# el client d'OpenAI (correcció) i el de Gradio (els Spaces de Hugging Face).
+#
+# Aquesta funció manté el nom i difereix el mòdul: les crides no canvien, i el mòdul de debò
+# s'importa la primera vegada que algú el fa servir. La primera petició de vídeo paga els seus
+# segons; la resta, cap.
+def _lazy(module: str, name: str):
+    def call(*args, **kwargs):
+        import importlib
+        return getattr(importlib.import_module(module), name)(*args, **kwargs)
+    call.__name__ = name
+    return call
+
+
+Client = _lazy("gradio_client", "Client")
+handle_file = _lazy("gradio_client", "handle_file")
 
 from deep_translator import GoogleTranslator
 
@@ -74,7 +93,6 @@ cloudinary.config(
 
 from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel, LessonProposal as LessonProposalModel, AppSetting as AppSettingModel, CaptureRequest as CaptureRequestModel, DrillTombstone as DrillTombstoneModel, UserSession as UserSessionModel, GeminiUsage as GeminiUsageModel  # ← Alias for ORM models
 from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort, VideoProcessingJobCreate, VideoProcessingJob, VideoSegmentCreate, VideoSegment, TranscribeRequest, TranscribeResponse, TranslateRequest, TranslateResponse, DrillPairInfo, GlossaryItem, GlossaryItemCreate, SrtImportRequest, SrtImportResponse, SrtSegment, BulkVideoUrlUpdateRequest, BulkVideoUrlUpdateResponse, iso_z  # ← Pydantic schemas
-from correction_service import get_correction_service
 from srt_parser import parse_srt_content, create_youtube_url_with_timestamp
 
 def normalize_media_url(url: str) -> str:
@@ -3725,7 +3743,27 @@ def delete_short(short_id: int, db: Session = Depends(get_db)):
 # wrote fake res.cloudinary.com/demo/... URLs into real drills) were removed.
 # The real pipeline lives under /video-analysis/*.
 
-from video_utils import video_key, get_video_metadata, get_video_segments, process_and_upload_segment, remote_process_and_upload_segment, get_yt_dlp_cookie_file, download_video_to_dir, process_and_upload_audio_segment, is_audio_file
+# Les eines de vídeo, carregades la PRIMERA VEGADA QUE ES FAN SERVIR i no en arrencar.
+#
+# `video_utils` arrossega moviepy i yt-dlp, i `correction_service` arrossega el client d'OpenAI.
+# Importar-ho tot d'entrada costava 13 dels 18 segons que trigava `import main`, i aquests
+# segons els paga qui obre l'app: el servei gratuït s'adorm als 15 minuts, i cada visita en
+# desperta un de nou. La immensa majoria de peticions —el Mètode, la gramàtica, les frases— no
+# toquen cap vídeo ni cap correcció, i ara no en paguen l'arrencada.
+#
+# Els noms es mantenen perquè les 19 crides no canvien: el que es crida és una funció que
+# importa el mòdul de debò el primer cop i després li passa la pilota. La primera petició de
+# vídeo paga els 8 segons; la resta, cap.
+video_key = _lazy("video_utils", "video_key")
+get_video_metadata = _lazy("video_utils", "get_video_metadata")
+get_video_segments = _lazy("video_utils", "get_video_segments")
+process_and_upload_segment = _lazy("video_utils", "process_and_upload_segment")
+remote_process_and_upload_segment = _lazy("video_utils", "remote_process_and_upload_segment")
+get_yt_dlp_cookie_file = _lazy("video_utils", "get_yt_dlp_cookie_file")
+download_video_to_dir = _lazy("video_utils", "download_video_to_dir")
+process_and_upload_audio_segment = _lazy("video_utils", "process_and_upload_audio_segment")
+is_audio_file = _lazy("video_utils", "is_audio_file")
+get_correction_service = _lazy("correction_service", "get_correction_service")
 
 # All video uploads live under one parent dir so that (a) stale files from the
 # two-step upload -> create-drills flow can be purged by age instead of leaking
