@@ -124,6 +124,15 @@ perdut una lletra, sempre la mateixa mena — la `ʷ` alçada, la `ġ` i la `ε`
 (les altres: 448, 3414, 3934, 3974, 6704, 6705). Es refà amb el transliterador, que ja ho entén
 des de #296: no és text de ningú, és una conversió.
 
+> **Esmena, el mateix dia.** Nou n'eren poques. Aquesta comparació es va fer amb el text tal com
+> ve de la base de dades, i resulta que **283 frases —275 amb veu— guarden les lletres separades**:
+> la `š` és una `s` i un capelló a part, la `ġ` és una `g` i un punt a sobre a part. El
+> transliterador no les veia i servia una ALTRA lletra: `sġix` sortia `ⵙⴳⵉⵅ` (una g) i `3afaš`,
+> `ⵄⴰⴼⴰⵙ` (una s) — totes dues, exemples d'aquesta mateixa unitat dels sons. Arreglat a **#304**
+> (PR #305): `to_forms()` i `sound_key()` ajunten el text abans de mirar-lo. Qualsevol comprovació
+> futura sobre `ɣ ɛ ḥ ḍ ṭ ẓ ṣ ṛ š` dins el text d'un drill ha de fer el mateix, o es deixa una
+> desena part de la biblioteca fora sense adonar-se'n.
+
 ---
 
 ## Què s'ha de fer, per ordre

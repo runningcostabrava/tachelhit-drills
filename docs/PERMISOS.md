@@ -59,6 +59,9 @@ que ja tenim, o una veu nostra.
 
 ## Si diuen que no, o no contesten
 
-Les 33 lletres es graven amb les nostres veus. Són 33 paraules, una per lletra, i resol a més a
-més una cosa que ja sabem que falta: de les 338 paraules soles que tenim gravades, **cap** no
-porta ḍ, ḥ, ɛ, ṛ, ɣ, ṣ, ṭ, ẓ ni kʷ (vegeu #302).
+Les lletres es graven amb les nostres veus. I ja no caldria anar a buscar les paraules enlloc:
+**el manual en té trenta-una, una per lletra, a la pàgina 30** —argaz, baba, dar, aḍar, fk,
+gawr, ɣama, ɣʷi, hul, ḥbu, xsi, imi, jjawn, krz, kʷti, ls, mun, ngi, qqan, rar, ṛbbi, su, ṣug,
+amtcu, ttu, ṭṭf, wwarg, aydi, zri, ẓri, ɛmmi— i del llibre en tenim permís (§2b de
+[CREDITS.md](CREDITS.md)). Gravar-les resol a més una cosa que ja sabem que falta: de les 338
+paraules soles que tenim gravades, **cap** no porta ḍ, ḥ, ɛ, ṛ, ɣ, ṣ, ṭ, ẓ ni kʷ (#302).
