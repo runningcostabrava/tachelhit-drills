@@ -4,11 +4,18 @@
 // sites migrate incrementally.
 import { API_BASE } from './config';
 import type { Drill } from './types';
+import { markFresh, markStale, markWaking } from './utils/dataState';
+import { dropCached, fingerprint, readCached, resourceOf, writeCached } from './utils/readCache';
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+/** Quant s'espera la xarxa abans d'ensenyar la còpia desada, si n'hi ha. */
+const STALE_AFTER_MS = 1200;
+
+/** Una petició al servidor, sempre fresca. El cau no hi entra: això és el que mana. */
+async function fromNetwork<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
-    // Mai del cau. Una llista que es torna a demanar just després d'escriure-hi ha d'arribar del
-    // servidor: servida del cau, una petició creada correctament es veu com si no existís.
+    // Mai del cau DEL NAVEGADOR: el nostre (readCache) sap quan s'ha d'oblidar, i el del
+    // navegador no. Una llista que es torna a demanar just després d'escriure-hi ha d'arribar
+    // del servidor: servida del cau, una petició creada correctament es veu com si no existís.
     cache: 'no-store',
     headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
     ...init,
@@ -26,6 +33,66 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw Object.assign(new Error(detail), { status: res.status, code });
   }
   return res.json() as Promise<T>;
+}
+
+/**
+ * Una lectura, amb l'última resposta desada per si la xarxa no hi és o va lenta.
+ *
+ * Mana la xarxa: es demana sempre, i si contesta de pressa és la que es veu. El cau serveix per
+ * a una sola cosa —tenir què ensenyar mentre el servidor es desperta (Render gratuït s'adorm
+ * als 15 minuts) i seguir funcionant sense connexió—, i mai en silenci: quan s'ensenya una
+ * còpia es diu, i si la xarxa acaba portant una cosa diferent, també.
+ */
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const method = (init?.method || 'GET').toUpperCase();
+  const net = fromNetwork<T>(path, init)
+    .then((body) => ({ ok: true as const, body }))
+    .catch((err) => ({ ok: false as const, err }));
+
+  if (method !== 'GET') {
+    const out = await net;
+    if (!out.ok) throw out.err;
+    // Escriure oblida el recurs: és el cas que el `no-store` protegia, i l'únic on una còpia
+    // vella faria mal de debò.
+    dropCached(resourceOf(path)).catch(() => {});
+    return out.body;
+  }
+
+  const saved = readCached(path).catch(() => null);
+  const raced = await Promise.race([
+    net,
+    new Promise<'slow'>((r) => setTimeout(() => r('slow'), STALE_AFTER_MS)),
+  ]);
+
+  if (raced !== 'slow') {
+    if (raced.ok) { writeCached(path, raced.body).catch(() => {}); return raced.body; }
+    // La xarxa ha fallat: val més el que teníem desat que una pantalla d'error.
+    const copy = await saved;
+    if (copy) { markStale(path, copy.at, 'offline'); return copy.body as T; }
+    throw raced.err;
+  }
+
+  const copy = await saved;
+  if (!copy) {
+    // No hi ha res per ensenyar: s'espera, però dient que s'espera.
+    markWaking(true);
+    try {
+      const out = await net;
+      if (!out.ok) throw out.err;
+      writeCached(path, out.body).catch(() => {});
+      return out.body;
+    } finally {
+      markWaking(false);
+    }
+  }
+
+  markStale(path, copy.at, 'slow');
+  net.then((out) => {
+    if (!out.ok) return;
+    writeCached(path, out.body).catch(() => {});
+    if (fingerprint(out.body) !== copy.fingerprint) markFresh(path);
+  });
+  return copy.body as T;
 }
 
 export interface ReviewStats {

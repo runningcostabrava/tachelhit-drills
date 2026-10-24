@@ -9,6 +9,7 @@ import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaF
 import { syncManager } from './services/OfflineSyncManager';
 import ToastHost from './components/ToastHost';
 import StaleBuildBanner from './components/StaleBuildBanner';
+import DataNotice from './components/DataNotice';
 import AiCopilot from './components/AiCopilot';
 import AboutPanel from './components/AboutPanel';
 import './App.css';
@@ -169,6 +170,7 @@ function App() {
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <ToastHost />
       <StaleBuildBanner />
+      <DataNotice />
       {aiOpen && <AiCopilot onClose={() => setAiOpen(false)} />}
       {aboutOpen && <AboutPanel onClose={() => setAboutOpen(false)} />}
 
