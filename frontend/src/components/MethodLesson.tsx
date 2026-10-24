@@ -802,8 +802,11 @@ export default function MethodLesson({
             </div>
           )}
 
+          {/* `pre-line`: aquesta nota té paràgrafs i es llegien tots seguits. Divuit línies sense
+              cap respirador amaguen justament el que han de deixar clar —què hi falta i per què—,
+              que és on la pàgina diu el que no sap. */}
           {s.ours && (
-            <p style={{ marginTop: 10, padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--brand-gradient-soft)', fontSize: 13.5, lineHeight: 1.6 }}>
+            <p style={{ marginTop: 10, padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--brand-gradient-soft)', fontSize: 13.5, lineHeight: 1.6, whiteSpace: 'pre-line' }}>
               <strong>A l’Atles central:</strong> {s.ours}
             </p>
           )}
