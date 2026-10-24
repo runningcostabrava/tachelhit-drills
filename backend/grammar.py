@@ -322,7 +322,15 @@ PAIRS = {"gh", "kh", "sh", "ch", "gw", "kw", "qw", "tt", "kk", "ll", "dj",
          "kʷ", "gʷ", "qʷ", "xʷ", "ɣʷ"}
 
 #: Un so citat al text d'una lliçó, entre cometes: «ɛ», «gh», 'ẓ'.
-_QUOTED = re.compile(r"[«\"'‘“]([^«»\"'’”]{1,3})[»\"'’”]")
+#:
+#: L'apòstrof només obre una citació si al davant NO hi ha una lletra. En català l'apòstrof
+#: viu dins les paraules —«ajuda'm», «l'home», «dóna'm»— i si es prenia per una cometa, una
+#: nota com «vol dir 'ajuda'm'» es llegia com si hi hagués citat el so «m» i en sortia
+#: «vol dir 'ajuda'm ⵎ'». La ⵎ no la volia ningú.
+_QUOTED = re.compile(
+    r"[«\"‘“]([^«»\"'’”]{1,3})[»\"’”]"
+    r"|(?<![^\W\d_])['’]([^«»\"'’”]{1,3})['’](?![^\W\d_])"
+)
 
 
 def with_letters(t: str) -> str:
@@ -340,7 +348,7 @@ def with_letters(t: str) -> str:
         return t
 
     def one(m):
-        raw = m.group(1).strip()
+        raw = (m.group(1) or m.group(2) or "").strip()
         # Nom\u00E9s un SO: una lletra sola, o un dels parells que la llengua escriu junts. Dues o
         # tres lletres qualssevol serien paraules catalanes citades \u2014\u00ABno\u00BB, \u00ABfer\u00BB, \u00ABcas\u00BB\u2014 i els
         # penjar\u00EDem al costat una tifinagh que no vol dir res.
