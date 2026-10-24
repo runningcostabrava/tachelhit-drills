@@ -31,6 +31,7 @@ import practice_steps
 import method as method_mod
 import practice as practice_mod
 import stories as stories_mod
+import night_asr
 import word_audio
 import transliteration
 from gemini_client import gemini_generate, gemini_available, gemini_agent, BudgetExceeded
@@ -6554,6 +6555,37 @@ def word_align_status():
                 "recordings": db.query(WordAudio.drill_id).distinct().count()}
     finally:
         db.close()
+
+
+@app.get("/asr/night/status")
+def night_asr_status():
+    """Com va la tanda de transcripcions, i quantes gravacions esperen."""
+    from models import Drill as D
+    db = SessionLocal()
+    try:
+        esperen = db.query(D).filter(
+            D.audio_url.isnot(None), D.audio_url != "",
+            (D.text_tachelhit.is_(None)) | (D.text_tachelhit == "")).count()
+        proposades = db.query(D).filter(
+            D.text_tachelhit_suggested.isnot(None), D.text_tachelhit_suggested != "",
+            (D.text_tachelhit.is_(None)) | (D.text_tachelhit == "")).count()
+        return {**night_asr.state(), "waiting": esperen, "proposed": proposades}
+    finally:
+        db.close()
+
+
+@app.post("/asr/night/run")
+def night_asr_run(limit: int = 50, redo: bool = False, _admin: UserModel = Depends(require_admin)):
+    """Proposa el text de les gravacions que ningú no ha escrit.
+
+    En un fil, com l'alineador i pel mateix motiu: el Space és una sola CPU i triga un minut per
+    gravació. És pensat perquè ho cridi un rellotge de nit, no una persona esperant.
+
+    El que surt no és el text del parlant: va a `text_tachelhit_suggested` amb la certesa al
+    costat, i `text_tachelhit` es queda buit fins que algú ho confirma.
+    """
+    night_asr.run(SessionLocal, limit=limit, redo=redo)
+    return {"started": True, **night_asr.state()}
 
 
 @app.post("/words/align/run")

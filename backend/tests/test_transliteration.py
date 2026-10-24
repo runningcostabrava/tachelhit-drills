@@ -89,3 +89,33 @@ def test_multiword_keeps_spaces_and_normalizes():
     assert " " in f["tifinagh"]
     # key drops schwa and collapses the geminate ll -> l
     assert f["key"] == "azul flawn"
+
+
+def test_th_is_two_letters_not_a_digraph():
+    """«th» és t + h, i a la nostra llengua és freqüentíssim.
+
+    El prefix de 3a persona femenina és «t-» i hi ha arrels que comencen per h-: «thnna» («va
+    bé»), «thlla», «thanut» («la botiga»). Mentre «th» va ser un dígraf, el mapa se'n menjava la
+    h a les tres cares alhora —tifinagh, clau de cerca i `clean_latin`, que és la que el mòdul
+    promet com a citable— i produïa «tnna», que no és cap paraula.
+
+    Comptat al corpus: 75 aparicions de «th» i cap no és el dígraf cabilenc.
+    """
+    f = to_forms("thnna")
+    assert f["clean_latin"] == "thnna"
+    assert f["tifinagh"] == "ⵜⵀⵏⵏⴰ"
+    assert f["key"] == "thna", "la clau col·lapsa la geminada, però no es menja la h"
+
+    assert to_forms("thanut")["tifinagh"] == "ⵜⵀⴰⵏⵓⵜ"
+    assert to_forms("thlla")["clean_latin"] == "thlla"
+    # i la h que no va darrere d'una t ja anava bé: que segueixi igual
+    assert to_forms("ihnna")["clean_latin"] == "ihnna"
+
+
+def test_the_other_digraphs_stay():
+    """Els que sí que són com la gent escriu: gh 936 aparicions, sh 569, ch 174, kh 141, ou 21."""
+    assert to_forms("aghrum")["clean_latin"] == "aɣrum"
+    assert to_forms("akhir")["clean_latin"] == "axir"
+    assert to_forms("ashku")["clean_latin"] == "ašku"
+    assert to_forms("achku")["clean_latin"] == "ašku"
+    assert to_forms("souq")["clean_latin"] == "suq"
