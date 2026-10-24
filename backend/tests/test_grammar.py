@@ -659,3 +659,44 @@ def test_un_so_citat_porta_la_seva_tifinagh():
         db.close()
     step = client.get("/grammar/sons-i-escriptura").json()["lesson"]["steps"][0]
     assert step["title"] == 'El so «ɛ ⵄ»' and "ⵄ" in step["text"]
+
+
+def test_una_nota_que_parla_com_un_llibre_de_fonetica_no_sarriba_a_servir():
+    """La lliçó dels sons servia «la 'x' és una consonant uvular… un al·lòfon de la vocal
+    bàsica» a una unitat de nivell 1. Una nota així no es desa i, si ja està desada, no se serveix."""
+    import grammar as grammar_course
+    dolenta = ("La paraula «rix» mostra la vocal 'i' i la consonant 'x'. La 'x' és una consonant "
+               "uvular que pot obrir la vocal 'i', un al·lòfon de la vocal bàsica.")
+    assert grammar_course.note_problem(dolenta, "rix") is not None
+    bona = "El tros «rix» acaba en «x», el so raspat del fons de la boca: és el que ensenya aquesta unitat."
+    assert grammar_course.note_problem(bona, "rix") is None
+
+
+def test_una_taula_no_pot_citar_una_paraula_que_no_es_a_la_unitat():
+    """La taula «Sons difícils i la seva escriptura» citava «meddn» per a la ḍ (que no en té, de
+    ḍ) i «Tabrat» per a la ṭ: dues paraules que no surten a cap frase de la unitat."""
+    import grammar as grammar_course
+    taula = {"type": "pattern", "title": "Sons difícils", "rows": [
+        ["ɣ", "com la 'r' francesa", "Zrgh"],
+        ["ḍ", "una 'd' emfàtica", "meddn"],
+        ["ṭ", "una 't' emfàtica", "Tabrat"],
+    ]}
+    exemples = [{"shi": "Zrgh", "ca": "jo he vist"}, {"shi": "rix", "ca": "jo vull"}]
+    assert grammar_course.table_words_not_in_library(taula, exemples) == ["meddn", "Tabrat"]
+    exemples.append({"shi": "meddn", "ca": "la gent"})
+    assert grammar_course.table_words_not_in_library(taula, exemples) == ["Tabrat"]
+
+
+def test_el_compendi_arriba_a_qui_escrigui_la_llico_encara_que_gemini_hagi_caigut(monkeypatch):
+    """Abans el compendi només es carregava «si hi ha Gemini»: amb Gemini sense crèdit, la
+    reserva hauria escrit les lliçons sense la gramàtica d'amazic.cat a la mà."""
+    import main
+    monkeypatch.setattr(main, "gemini_available", lambda: False)
+    monkeypatch.setattr(main, "_load_grammar", lambda: "EL COMPENDI")
+    import deepseek_client
+    monkeypatch.setattr(deepseek_client, "deepseek_available", lambda: True)
+    assert main.writer_available() is True
+    assert main.grammar_reference() == "EL COMPENDI"
+    monkeypatch.setattr(deepseek_client, "deepseek_available", lambda: False)
+    assert main.writer_available() is False
+    assert main.grammar_reference() == ""
