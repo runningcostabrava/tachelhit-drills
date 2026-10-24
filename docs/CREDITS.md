@@ -170,6 +170,31 @@ recull veu — el seu article parla de «6,421 translation pairs and 3 hours of 
 aquelles gravacions **no són** dins del conjunt publicat. Si algun dia n'entra res a l'app, l'avís
 de dalt ja hi és i s'ha de poder llegir també dins de l'app.
 
+## 5b. Dos vídeos de l'alfabet — PERMÍS DEMANAT, ENCARA NO CONCEDIT
+
+Per al capítol dels sons hem estudiat dos vídeos públics de YouTube. **Cap dels dos no és
+a l'app**: ni el so, ni les imatges, ni cap retall. Són material amb tots els drets reservats
+(llicència estàndard de YouTube), i fins que qui els va fer no digui que sí, aquí només
+hi ha la nota i les còpies de treball, fora del repositori.
+
+| | |
+|---|---|
+| **«Apprends le Tamaziɣt berbère, leçon N°1 — L'alphabet gréco-latin et tifinaɣ avec les illustrations»** | Brahim Mansoub (muntatge: Mohamed Elaamrani) · [youtube.com/watch?v=MZJVoHUGljE](https://www.youtube.com/watch?v=MZJVoHUGljE) · 18-06-2020 · 11 min |
+| Què n'hem tret | El vocabulari il·lustrat: una o dues paraules per lletra amb el seu significat en francès (`aɣrum` pa, `afus` mà, `tasa` fetge, `udem` cara, `adrar` muntanya…). |
+| **«ⵉⵙⴽⴽⵉⵍⵏ ⵏⵜⵎⴰⵣⵉⵖⵜ — Amazigh alphabet»** | canal *Atlas* · [youtube.com/watch?v=ASkEo4Y9IEI](https://www.youtube.com/watch?v=ASkEo4Y9IEI) · 03-03-2018 · 1 min 29 |
+| Què n'hem tret | La veu de les 33 lletres, una per una: 33 talls alineats amb la lletra que es veia a la pantalla en dir-la (`ⴰ` Ya, `ⴱ` Yab, `ⴳⵯ` Yagʷ…). |
+
+**El que falta fer, per ordre:**
+
+1. Escriure a tots dos canals i demanar permís per fer servir, a una app gratuïta per aprendre
+   la llengua, (a) el vocabulari il·lustrat i (b) els 33 talls de veu, amb el seu nom a sota.
+2. Mentre no contestin: el capítol dels sons pot fer servir les **paraules** (una paraula i el
+   seu significat no són seus: són de la llengua) però cap **imatge** i cap **so** d'ells.
+3. Si diuen que sí: pujar els talls amb `license` i `source_url`, i el nom del canal visible al
+   costat del botó de so, com qualsevol altra font.
+4. Si diuen que no, o no contesten: gravar les 33 lletres amb les nostres veus (Halima, Driss)
+   i esborrar les còpies de treball.
+
 ## 6. Eines i serveis
 
 **Google Gemini** escriu els esborranys de lliçó i dibuixa les il·lustracions de les targetes (cap
