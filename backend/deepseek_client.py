@@ -20,8 +20,19 @@ import requests
 
 BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
 
-#: El de pressa i barat per a lots; `deepseek-v4-pro` per al que demana pensar.
-MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-flash")
+#: El model de xat de tota la vida. NO el de raonar.
+#:
+#: Amb `deepseek-flash` la reserva no escrivia res i produccio deia «DeepSeek returned empty
+#: text» a cada lliçó. El motiu, mesurat: flash és un model que pensa abans de contestar, i el
+#: que pensa surt per un camp a part (`reasoning_content`) pero es cobra del mateix sostre. Amb
+#: max_tokens=1500 es gastava els 1.499 pensant, tornava `content: ""` i `finish_reason: length`.
+#: El de xat contesta la mateixa pregunta amb 552 fitxes i sense pensar en veu alta.
+MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+
+#: Si algu torna a posar-hi un model que pensa, que almenys tingui lloc per contestar: el que
+#: es demana es un sostre, i nomes es paga el que es genera.
+THINKER_FLOOR = 6000
+THINKERS = ("flash", "reasoner", "r1", "think")
 
 
 def deepseek_available() -> bool:
@@ -43,18 +54,31 @@ def deepseek_generate(system_instruction: str, contents: list, *,
     for c in contents:
         messages.append({"role": "assistant" if c.get("role") == "model" else "user",
                          "content": c.get("text", "")})
+    used = model or MODEL
+    room = max_output_tokens
+    if any(t in used.lower() for t in THINKERS):
+        room = max(room, THINKER_FLOOR)
     r = requests.post(
         f"{BASE_URL}/chat/completions",
         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-        json={"model": model or MODEL, "messages": messages,
-              "max_tokens": max_output_tokens, "temperature": temperature},
+        json={"model": used, "messages": messages,
+              "max_tokens": room, "temperature": temperature},
         timeout=timeout)
     if r.status_code != 200:
         raise RuntimeError(f"DeepSeek API {r.status_code}: {r.text[:300]}")
-    choices = (r.json() or {}).get("choices") or []
-    text = (choices[0].get("message", {}).get("content") or "").strip() if choices else ""
+    data = r.json() or {}
+    choices = data.get("choices") or []
+    first = choices[0] if choices else {}
+    text = (first.get("message", {}).get("content") or "").strip()
     if not text:
-        raise RuntimeError("DeepSeek returned empty text")
+        # Dir QUE no ha contestat no serveix de res; cal dir PER QUE. El cas que ens va passar
+        # es aquest: s'ha begut el sostre pensant i no ha arribat a escriure la resposta.
+        spent = ((data.get("usage") or {}).get("completion_tokens_details") or {}).get("reasoning_tokens")
+        why = f"{used} no ha contestat"
+        if spent:
+            why += f": s'ha gastat {spent} fitxes pensant i no n'hi ha quedat cap per escriure"
+            why += f" (sostre {room}, final «{first.get('finish_reason')}»)"
+        raise RuntimeError(why)
     return text
 
 

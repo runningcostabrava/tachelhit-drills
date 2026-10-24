@@ -595,6 +595,11 @@ def test_una_fila_duna_taula_de_formes_es_pot_gravar():
     hdr = {"X-User-Token": register("taula_gravadora")}
     db = main.SessionLocal()
     try:
+        # La base de proves sobreviu entre execucions i una altra prova pot haver deixat aquesta
+        # lliçó escrita: sense esborrar-la primer, la inserció peta amb UNIQUE i la prova falla
+        # segons l'ordre en què s'executi, no pel que comprova.
+        db.query(GrammarLesson).filter(GrammarLesson.id == "ser-tenir").delete()
+        db.commit()
         db.add(GrammarLesson(id="ser-tenir", version=0, body=json.dumps({
             "intro": "", "steps": [
                 {"type": "explain", "title": "u", "text": "t", "examples": []},
