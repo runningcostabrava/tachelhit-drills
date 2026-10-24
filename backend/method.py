@@ -5,10 +5,12 @@ quatre caselles escrites per nosaltres llegint-lo — quines funcions comunicati
 gramàtica demana, de quins camps de vocabulari va, i qui hi parla. El recorregut d'un curs és un
 fet sobre com s'ensenya una llengua; el text d'un llibre és d'algú.
 
-Ni una frase, ni un diàleg, ni una explicació, ni una entrada de lèxic surten del llibre. Tot el
-que es veurà en un capítol surt de la nostra biblioteca i del compendi d'amazic.cat, igual que el
-curs de gramàtica, i el que un capítol demana i no tenim es converteix en una frase catalana
-sense amazic que va a demanar veu (ADR 0003, docs/CREDITS.md §2b).
+Això ha canviat: l'**ADR 0004** (23-10-2026) substitueix l'ADR 0003. Ara el Mètode **segueix el
+llibre tan a prop com calgui** —explicacions, estructura, diàlegs i lèxic— amb el permís de
+l'autor, i el que es canvia és el que la nostra varietat diu d'una altra manera. El que segueix
+sent nostre i no ve d'enlloc més són **les veus**: cap frase d'un capítol no sona si no l'ha dita
+una persona de la biblioteca, i el que un capítol demana i no tenim gravat va a demanar veu
+(docs/CREDITS.md §2b).
 
 El pla seguit és:
     Abdallah El Mountassir, «Méthode de Tachelhit. Langue amazighe (berbère) du sud du Maroc»,
@@ -100,7 +102,11 @@ CHAPTERS: List[Dict] = [
             "dir de quin poble és una cosa o una persona",
             "dir on treballa algú",
         ],
-        "grammar": ["estat-annexio", "preposicions", "ser-tenir", "preguntes"],
+        # El capítol escrit ensenya també els parentius, les fórmules de cortesia, la marca de
+        # persona dins del verb i els llocs de treball manllevats. Si no es declaren aquí,
+        # `sentences_for()` no hi arriba i aquelles seccions es queden sense cap frase nostra.
+        "grammar": ["estat-annexio", "preposicions", "ser-tenir", "preguntes",
+                    "possessius", "formules", "perfectiu", "manlleus"],
         "topics": ["viatge", "feina", "casa"],
         "roles": ["qui pregunta", "qui coneix el lloc"],
     },
