@@ -24,7 +24,10 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
+import re
+
 import grammar
+import transliteration
 import topics as topics_catalog
 
 # La citació, que va al peu de cada capítol i enlloc més amagada.
@@ -640,7 +643,7 @@ def content_with_ours(db, slug: str, rows: List, card) -> Optional[Dict]:
              "why": why_here(said[d.id], keys_of[s["id"]], unit, d)}
             for d in picked]
         s["ours_total"] = len(scored)
-    return with_tifinagh(attach_library(db, body, rows))
+    return with_letters_everywhere(with_tifinagh(attach_library(db, body, rows)))
 
 
 def attach_library(db, body: Optional[Dict], rows: List) -> Optional[Dict]:
@@ -736,6 +739,106 @@ TIF_FIELDS = (("shi", "tif"), ("v", "v_tif"), ("m", "m_tif"), ("f", "f_tif"),
               ("qty_shi", "qty_tif"))
 
 
+#: On hi ha PROSA del capítol, que pot portar sons citats («ɛ», «kʷ») dins d'una frase catalana.
+#:
+#: El curs de gramàtica ja els posa la tifinagh al costat des de fa temps (`grammar.with_letters`)
+#: i el Mètode no hi passava. Es notava justament al capítol 1, que és el DELS SONS: deia «cinc
+#: consonants: kʷ, gʷ, ɣʷ, xʷ, qʷ» i no n'ensenyava ni una en tifinagh. Una lliçó que ensenya un
+#: so citant-lo en llatí ensenya el so i no ensenya la lletra, i aquesta app ensenya les dues.
+PROSE_FIELDS = ("intro", "text", "deep", "ours", "summary", "scene", "note", "v", "ca")
+
+
+#: Les lletres que el català no té. Una paraula que en porta una NO és catalana.
+#:
+#: És el criteri per saber quines paraules d'una frase catalana són amazigues sense haver-ho
+#: d'endevinar: «com la r francesa de Paris — aɣyul «ase», awraɣ «groc»» porta dues paraules
+#: amazigues (aɣyul, awraɣ) i la resta és català. Transliterar-ho tot escriuria el català en
+#: tifinagh, que és el que feia abans i no vol dir res.
+#:
+#: És un criteri CURT a posta: deixa fora paraules amazigues que només porten lletres llatines
+#: («afrux», «qqn»). Val més una lletra de menys que una frase catalana disfressada.
+AMAZIGH_ONLY = "ɣɛḥḍṭẓṣṛšžčǧʷ"
+_WORD_IN_PROSE = re.compile(r"[A-Za-zÀ-ÿ" + AMAZIGH_ONLY + r"\-]{2,}")
+
+
+def amazigh_words_in(t: str) -> str:
+    """La tifinagh de les paraules amazigues que hi ha dins d'una frase catalana.
+
+    L'amo, veient el capítol 1: «a “com la r francesa de «Paris» — aɣyul «ase»”, el que ha
+    d'estar també en tifinagh és aɣyul, no la frase».
+    """
+    if not t or "ⵣ" in t:
+        return t
+
+    def one(m):
+        raw = m.group(0)
+        if not any(c in raw for c in AMAZIGH_ONLY):
+            return raw
+        tif = (transliteration.to_forms(raw)["tifinagh"] or "").strip()
+        return f"{raw} {tif}" if tif and tif != raw else raw
+
+    return _WORD_IN_PROSE.sub(one, t)
+
+
+def with_letters_everywhere(body: Optional[Dict]) -> Optional[Dict]:
+    """La tifinagh dels sons citats dins de la prosa del capítol.
+
+    Només toca el que `grammar.with_letters` considera citat i curt —un so, no una paraula—, i
+    només si el transliterador en treu una tifinagh de debò: val més una lliçó sense una lletra
+    que una lliçó amb una lletra inventada.
+    """
+    if not body:
+        return body
+
+    def walk(x):
+        if isinstance(x, list):
+            for i in x:
+                walk(i)
+            return
+        if not isinstance(x, dict):
+            return
+        for k in PROSE_FIELDS:
+            v = x.get(k)
+            if isinstance(v, str) and v.strip():
+                x[k] = amazigh_words_in(grammar.with_letters(v))
+        # La taula de l'alfabet del capítol 1 és el cas que la funció de dalt no veu: allà la
+        # lletra NO va citada dins d'una frase, és la fila sencera («ɣ» | «com la r francesa»).
+        p = x.get("p")
+        if isinstance(p, str) and 0 < len(p.strip()) <= 2 and "ⵣ" not in p:
+            tif = grammar.tifinagh(p.strip())
+            if tif and tif != p.strip():
+                x["p"] = f"{p.strip()} {tif}"
+        for v in x.values():
+            walk(v)
+
+    walk(body)
+    return body
+
+
+#: Paraules que, si surten senceres, fan que la línia sigui catalana i no amazic. Una frase
+#: catalana pot portar una paraula amaziga a dins («com la r francesa — aɣyul «ase»») i llavors
+#: mirar si hi ha lletres amazigues no serveix de res: el que la delata és el català.
+_CATALAN_MARKERS = re.compile(
+    r"\b(com|una|amb|per|que|del|dels|les|aquesta|aquest|molt|sense|també|però|això|"
+    r"quan|cada|fins|dins|cap|els|són|està|fer|dir)\b", re.I)
+
+
+def _looks_amazigh(v: str) -> bool:
+    """Una línia amazic, o una frase catalana que algú ha posat on no tocava?
+
+    El capítol 1 va posar prosa catalana a la columna  —que és la de l'amazic— i la pàgina va
+    ensenyar «com la r francesa de Paris» escrit en tifinagh. Allò no vol dir res, i el que s'hi
+    havia de veure era la tifinagh de les paraules AMAZIGUES de dins (això ho fa
+    ).
+
+    El pany és curt: si no porta cap lletra que el català no tingui I té més de tres paraules,
+    és una frase catalana i no es transliterarà.
+    """
+    if _CATALAN_MARKERS.search(v):
+        return False
+    return True
+
+
 def with_tifinagh(body: Optional[Dict]) -> Optional[Dict]:
     """El mateix cos, amb la tifinagh de cada línia amazic al costat."""
     def walk(x):
@@ -747,7 +850,7 @@ def with_tifinagh(body: Optional[Dict]) -> Optional[Dict]:
             return
         for src, dst in TIF_FIELDS:
             v = x.get(src)
-            if isinstance(v, str) and v.strip() and not x.get(dst):
+            if isinstance(v, str) and v.strip() and not x.get(dst) and _looks_amazigh(v):
                 t = grammar.tifinagh(v)
                 if t and t != v.strip():
                     x[dst] = t
