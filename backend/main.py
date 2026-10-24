@@ -3406,6 +3406,12 @@ def delete_test(test_id: int, db: Session = Depends(get_db),
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
     owner_or_admin(test, user, "pràctica")
+    # Els passos s'esborren aquí i no es deixen al `ON DELETE CASCADE` de la clau forana:
+    # Postgres el fa, però SQLite no aplica les claus foranes si no s'ha activat
+    # `PRAGMA foreign_keys=ON`, i no l'activem enlloc. En local i a les proves, doncs, els
+    # passos sobrevivien a la seva pràctica — i com que SQLite reutilitza l'id més alt que
+    # s'acaba d'esborrar, la pràctica següent naixia amb els passos de l'anterior.
+    practice_steps.forget(db, test_id)
     db.delete(test)
     db.commit()
     return {"detail": "Deleted"}

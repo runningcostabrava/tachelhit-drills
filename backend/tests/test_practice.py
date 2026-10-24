@@ -452,3 +452,54 @@ def test_desar_un_pas_cap_a_una_frase_morta_ho_diu_en_comptes_de_petar():
     assert "ja no existeixen" in bad.json()["detail"]
     # i el que ja hi havia segueix sent-hi: no s'esborra res fins que tot és possible
     assert [x["drill_id"] for x in client.get(f"/tests/{p['id']}/steps").json()["steps"]] == [good["id"]]
+
+
+def test_esborrar_una_practica_s_endu_els_seus_passos():
+    """Una pràctica que se'n va no deixa els seus passos enrere.
+
+    Això es confiava al `ON DELETE CASCADE` de la clau forana. Postgres el fa; SQLite no aplica
+    les claus foranes si no s'ha activat `PRAGMA foreign_keys=ON`, i no l'activem enlloc. Els
+    passos sobrevivien a la seva pràctica, i com que SQLite reutilitza l'id que s'acaba
+    d'alliberar, la pràctica SEGÜENT naixia amb els passos de l'anterior: una prova que demanava
+    zero passos en veia dos, i la culpa semblava de qui els comptava.
+    """
+    import main
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("step_sweeper")}
+    d = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "la finestra", "text_tachelhit": "tiflut n-ufrag",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/f.mp3"}).json()
+    made = client.post("/tests/", headers=hdr, json={
+        "title": "Se'n va amb els seus passos", "question_type": "audio",
+        "hint_level": "none", "drill_ids": ""}).json()
+    assert client.put(f"/tests/{made['id']}/steps", headers=hdr, json={"steps": [
+        {"kind": "note", "payload": {"heading": "Hola"}},
+        {"kind": "listen_pick", "drill_id": d["id"]},
+    ]}).status_code == 200
+
+    db = main.SessionLocal()
+    try:
+        from models import PracticeStep
+        assert db.query(PracticeStep).filter(PracticeStep.test_id == made["id"]).count() == 2
+    finally:
+        db.close()
+
+    assert client.delete(f"/tests/{made['id']}", headers=hdr).status_code == 200
+
+    db = main.SessionLocal()
+    try:
+        from models import PracticeStep
+        left = db.query(PracticeStep).filter(PracticeStep.test_id == made["id"]).count()
+        assert left == 0, f"{left} passos han sobreviscut a la seva pràctica"
+    finally:
+        db.close()
+
+    # i la següent pràctica neix buida, encara que el motor li doni el mateix id
+    nova = client.post("/tests/", headers=hdr, json={
+        "title": "La següent", "question_type": "audio", "hint_level": "none",
+        "drill_ids": ""}).json()
+    try:
+        assert nova["step_count"] == 0, "una pràctica nova no hereta els passos de cap altra"
+    finally:
+        client.delete(f"/tests/{nova['id']}", headers=hdr)
