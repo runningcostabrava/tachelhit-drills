@@ -860,31 +860,60 @@ AMAZIGH_ONLY = "ɣɛḥḍṭẓṣṛšžčǧʷ"
 _WORD_IN_PROSE = re.compile(r"[A-Za-zÀ-ÿ" + AMAZIGH_ONLY + r"\-]{2,}")
 
 
+#: Un tros citat dins la prosa: «mani-ɣ illa uɣaras?». Si a dins hi ha MÉS D'UNA paraula
+#: amaziga, la tifinag va al final de la citació sencera i no paraula per paraula.
+_QUOTED_RUN = re.compile(r"«([^»]{2,80})»")
+
+
 def amazigh_words_in(t: str) -> str:
     """La tifinagh de les paraules amazigues que hi ha dins d'una frase catalana.
 
     L'amo, veient el capítol 1: «a “com la r francesa de «Paris» — aɣyul «ase»”, el que ha
     d'estar també en tifinagh és aɣyul, no la frase».
+
+    Una paraula solta porta la seva tifinag al costat. Una FRASE citada sencera, no: el capítol
+    3 servia «ɣur-i ⵖⵓⵔⵉ yan gʷma ⴳⵯⵎⴰ», amb la tifinag escampada entre les paraules i la frase
+    il·legible. Quan la citació porta més d'una paraula amaziga, la seva tifinag va tota junta
+    al final.
+
+    Es fa en una sola passada: el text es parteix en trossos citats i trossos de fora, i cada
+    tros es tracta una vegada. Passar-hi dos cops hi deixava les dues coses alhora.
     """
     if not t or "ⵣ" in t:
         return t
 
-    def one(m):
-        raw = m.group(0)
-        if not any(c in raw for c in AMAZIGH_ONLY):
-            return raw
-        tif = (transliteration.to_forms(raw)["tifinagh"] or "").strip()
-        if not tif or tif == raw:
-            return raw
-        # Si la tifinag ja hi és al darrere, no se n'hi posa una altra. Això es calcula en SERVIR
-        # el capítol, i qui administra desa el capítol tal com el veu a la pantalla: sense aquesta
-        # comprovació, cada correcció hi afegia una còpia més i «aḍar» acabava sent
-        # «aḍar ⴰⴹⴰⵔ ⴰⴹⴰⵔ ⴰⴹⴰⵔ».
-        if m.string[m.end():].lstrip().startswith(tif):
-            return raw
-        return f"{raw} {tif}"
+    def word_by_word(chunk: str) -> str:
+        def one(m):
+            raw = m.group(0)
+            if not any(c in raw for c in AMAZIGH_ONLY):
+                return raw
+            tif = (transliteration.to_forms(raw)["tifinagh"] or "").strip()
+            if not tif or tif == raw:
+                return raw
+            # Si la tifinag ja hi és al darrere, no se n'hi posa una altra: això es calcula en
+            # SERVIR el capítol i qui administra el desa tal com el veu, de manera que sense
+            # aquesta comprovació cada correcció hi afegia una còpia més.
+            if m.string[m.end():].lstrip().startswith(tif):
+                return raw
+            return f"{raw} {tif}"
+        return _WORD_IN_PROSE.sub(one, chunk)
 
-    return _WORD_IN_PROSE.sub(one, t)
+    out, last = [], 0
+    for m in _QUOTED_RUN.finditer(t):
+        out.append(word_by_word(t[last:m.start()]))
+        inside = m.group(1)
+        amazigh = [w for w in _WORD_IN_PROSE.findall(inside)
+                   if any(c in w for c in AMAZIGH_ONLY)]
+        if len(amazigh) >= 2:
+            tif = (transliteration.to_forms(inside)["tifinagh"] or "").strip()
+            after = t[m.end():].lstrip()
+            out.append(m.group(0) if (not tif or tif == inside or after.startswith(tif))
+                       else f"«{inside}» {tif}")
+        else:
+            out.append(f"«{word_by_word(inside)}»")
+        last = m.end()
+    out.append(word_by_word(t[last:]))
+    return "".join(out)
 
 
 def with_letters_everywhere(body: Optional[Dict]) -> Optional[Dict]:

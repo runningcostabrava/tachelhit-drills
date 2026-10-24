@@ -866,3 +866,23 @@ def test_la_tifinag_de_la_prosa_no_sacumula_quan_algu_torna_a_desar_el_capitol()
     dues = method.with_letters_everywhere(copy.deepcopy(una))
     assert una == dues, "servir-ho dues vegades ha de donar el mateix"
     assert una["sections"][0]["text"].count("ⴰⴹⴰⵔ") == 1
+
+
+def test_una_frase_citada_porta_la_tifinag_una_vegada_al_final():
+    """El capítol 3 servia «ɣur-i ⵖⵓⵔⵉ yan gʷma ⴳⵯⵎⴰ»: la tifinag escampada entre les paraules
+    deixa la frase il·legible. Una paraula solta sí que la porta al costat; una frase citada
+    sencera la porta tota junta al final."""
+    import method
+    frase = method.amazigh_words_in("Si «ɣur-i yan gʷma» és «tinc un germà», digues-ho tu.")
+    assert "«ɣur-i yan gʷma» ⵖⵓⵔⵉ ⵢⴰⵏ ⴳⵯⵎⴰ" in frase, frase
+    assert "ɣur-i ⵖⵓⵔⵉ yan" not in frase, "res de tifinag entremig de la frase"
+
+    solta = method.amazigh_words_in("Mira «aḍar» i prou.")
+    assert solta == "Mira «aḍar ⴰⴹⴰⵔ» i prou.", solta
+
+    # i el cas de l'amo del capítol 1 segueix igual
+    cap1 = method.amazigh_words_in("com la r francesa de «Paris» — aɣyul «ase»")
+    assert "aɣyul ⴰⵖⵢⵓⵍ" in cap1 and "ⴱⴰⵔⵉⵙ" not in cap1
+
+    # servir-ho dues vegades dona el mateix
+    assert method.amazigh_words_in(frase) == frase
