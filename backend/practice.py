@@ -65,7 +65,11 @@ def sound_key(word: str) -> str:
     """A spelling- and script-independent key of how a word sounds: Tifinagh (what the speech
     recogniser answers) and any Latin spelling (gh/ġ/ɣ, kh/x, 3/ɛ, emphatics) land on the same key."""
     import transliteration
-    w = word.lower().strip("'’\"«»()[]¿?¡!.,;:-")
+    import unicodedata
+    # Ajuntades primer: la biblioteca guarda 283 frases amb les lletres descompostes («š» = una
+    # s i un capelló a part) i, sense ajuntar-les, la mateixa paraula escrita de dues maneres
+    # donava dues claus — i per tant la frase gravada no es trobava mai.
+    w = unicodedata.normalize("NFC", word or "").lower().strip("'’\"«»()[]¿?¡!.,;:-")
     for pat, rep in _FOLD:
         w = re.sub(pat, rep, w)
     k = transliteration.phonemic_key(w) if w else ""

@@ -16,6 +16,7 @@ import os
 import re
 import threading
 import time
+import unicodedata
 from typing import Dict, List, Optional
 
 # slug, Catalan title, chapters of the compendium that explain it, hint for the classifier
@@ -1510,6 +1511,81 @@ def _with_notes(lesson, notes: Dict[int, str]):
     return lesson
 
 
+#: Com escriuen els nostres parlants cada so. La unitat ensenya que la ɛ s'escriu «ɛ», i la
+#: biblioteca l'escriu «3» (vegeu #302): per saber si una frase PORTA el so que s'explica, s'han
+#: de conèixer les dues maneres.
+SOUND_SPELLINGS: Dict[str, tuple] = {
+    "ɣ": ("ɣ", "ġ", "gh"),
+    "x": ("x", "kh"),
+    "ɛ": ("ɛ", "ε", "3"),
+    "ḥ": ("ḥ",),
+    "š": ("š", "c", "sh", "ch"),
+    "ḍ": ("ḍ",),
+    "ṭ": ("ṭ",),
+    "ṣ": ("ṣ",),
+    "ẓ": ("ẓ",),
+    "q": ("q", "Q"),
+    "ž": ("ž",),
+    "kʷ": ("kʷ", "kw"),
+    "gʷ": ("gʷ", "gw"),
+}
+
+
+def step_sounds(title: str) -> set:
+    """Quins sons ensenya aquest pas.
+
+    Dues maneres de dir-ho, i totes dues surten a les lliçons escrites: citat —«El so 'gh' o
+    'ɣ': una 'r' francesa»— i llistat —«Consonants emfàtiques: ṭ, ḍ, ṣ, ẓ». La tifinag que el
+    servidor penja al costat del so («'gh ⵖ'») no compta per a la cerca."""
+    t = re.sub(r"[ⴰ-⵿]+", " ", title or "")
+    found = set()
+    for m in _QUOTED.finditer(t):
+        bit = (m.group(1) or "").strip()
+        for sound, spellings in SOUND_SPELLINGS.items():
+            if bit == sound or bit in spellings:
+                found.add(sound)
+    if not found:
+        # una llista de sons sense cometes: cada lletra sola, entre comes o espais
+        for sound in SOUND_SPELLINGS:
+            if re.search(r"(?<![^\W\d_])" + re.escape(sound) + r"(?![^\W\d_])", t):
+                found.add(sound)
+    return found
+
+
+def has_sound(shi: str, sound: str) -> bool:
+    """Si aquesta frase porta aquest so, escrit com sigui.
+
+    La biblioteca guarda les lletres DESCOMPOSTES —«sġix» és una g i un punt a sobre a part,
+    «3afaš» és una s i un capelló a part— i per això una comparació lletra a lletra amb «ġ» o
+    «š» no les trobava mai. Es compara sempre amb el text ajuntat (NFC)."""
+    low = unicodedata.normalize("NFC", shi or "").lower()
+    return any(unicodedata.normalize("NFC", sp).lower() in low
+               for sp in SOUND_SPELLINGS.get(sound, (sound,)))
+
+
+def with_the_sound_it_teaches(lesson, slug: str):
+    """A la unitat dels sons, un exemple ha de PORTAR el so que el pas explica.
+
+    El pas de la š ensenyava «skrtn» «mireu-les», que no en té cap, de š. Es treuen els que no
+    el porten —però només si al pas n'hi queda algun que sí—, perquè un pas sense cap exemple
+    seria pitjor que un pas amb exemples barrejats, i perquè així una frase escrita d'una manera
+    que encara no sabem llegir no desapareix de la lliçó sense que ningú se n'adoni.
+    """
+    if slug != SOUNDS_UNIT or not isinstance(lesson, dict):
+        return lesson
+    for s in lesson.get("steps") or []:
+        if s.get("type") != "explain" or not s.get("examples"):
+            continue
+        sounds = step_sounds(s.get("title") or "")
+        if not sounds:
+            continue
+        keep = [e for e in s["examples"]
+                if any(has_sound(e.get("shi") or "", so) for so in sounds)]
+        if keep and len(keep) < len(s["examples"]):
+            s["examples"] = keep
+    return lesson
+
+
 def _with_glosses(lesson, examples: List[dict]):
     """Put the library's CURRENT word-by-word readings into a kept lesson, matched by drill id, so
     a gloss that improves reaches the course without the lesson being written again."""
@@ -1555,7 +1631,7 @@ def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool
         notes = {}
 
     def dressed(lesson):
-        return _with_notes(_with_glosses(lesson, examples), notes)
+        return with_the_sound_it_teaches(_with_notes(_with_glosses(lesson, examples), notes), slug)
 
     if deep:
         examples = deep_first(db, slug, examples)

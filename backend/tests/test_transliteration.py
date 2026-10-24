@@ -119,3 +119,27 @@ def test_the_other_digraphs_stay():
     assert to_forms("ashku")["clean_latin"] == "ašku"
     assert to_forms("achku")["clean_latin"] == "ašku"
     assert to_forms("souq")["clean_latin"] == "suq"
+
+
+def test_una_lletra_descomposta_dona_la_mateixa_tifinag_que_una_dajuntada():
+    """La biblioteca guarda 283 frases amb les lletres descompostes: «sġix» amb la g i el punt a
+    sobre a part, «3afaš» amb la s i el capelló a part. Sense ajuntar-les, el transliterador no
+    veia ni la ġ ni la š i servia una ALTRA lletra: «sġix» sortia ⵙⴳⵉⵅ (una g) i «3afaš»,
+    ⵄⴰⴼⴰⵙ (una s). Qui aprenia llegia una tifinag equivocada."""
+    import unicodedata
+    import transliteration
+    for word, tifinagh in (("sġix", "ⵙⵖⵉⵅ"), ("3afaš", "ⵄⴰⴼⴰⵛ"), ("awraɣ", "ⴰⵡⵔⴰⵖ")):
+        trencada = unicodedata.normalize("NFD", word)
+        sencera = unicodedata.normalize("NFC", word)
+        assert transliteration.to_forms(sencera)["tifinagh"] == tifinagh
+        assert transliteration.to_forms(trencada)["tifinagh"] == tifinagh, f"«{word}» descomposta"
+
+
+def test_la_mateixa_paraula_escrita_de_dues_maneres_te_una_sola_clau():
+    """I per això una frase gravada es troba: si la clau depengués de com estigui ajuntat el
+    text, la mateixa paraula tindria dues claus i el capítol no trobaria mai la seva veu."""
+    import unicodedata
+    import practice
+    for word in ("3afaš", "sġix", "aḍar", "tiṭṭ"):
+        assert (practice.sound_key(unicodedata.normalize("NFD", word))
+                == practice.sound_key(unicodedata.normalize("NFC", word))), word
