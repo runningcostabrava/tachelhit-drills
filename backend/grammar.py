@@ -316,7 +316,9 @@ PLAIN_WORDS = [
 
 
 #: Els sons que la llengua escriu amb dues lletres: així «gh» també rep la seva tifinagh.
-PAIRS = {"gh", "kh", "sh", "ch", "gw", "kw", "qw", "tt", "kk", "ll", "dj"}
+PAIRS = {"gh", "kh", "sh", "ch", "gw", "kw", "qw", "tt", "kk", "ll", "dj",
+         # els mateixos sons arrodonits escrits com els escriu el llibre: kʷ, gʷ, qʷ, xʷ, ɣʷ
+         "kʷ", "gʷ", "qʷ", "xʷ", "ɣʷ"}
 
 #: Un so citat al text d'una lliçó, entre cometes: «ɛ», «gh», 'ẓ'.
 _QUOTED = re.compile(r"[«\"'‘“]([^«»\"'’”]{1,3})[»\"'’”]")

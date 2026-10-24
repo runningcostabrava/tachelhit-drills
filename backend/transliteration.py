@@ -23,6 +23,9 @@ so the generated forms are SUGGESTIONS a human confirms — not gold.
 _DEMOTIC = {
     # labialized (explicit)
     "gw": "gʷ", "kw": "kʷ", "qw": "qʷ",
+    # La ʷ VOLADA (U+02B7), que és com l'escriuen els manuals —i el capítol 1 del Mètode:
+    # «kʷ, gʷ, ɣʷ, xʷ, qʷ». Sense això la lliçó dels sons ensenyava el so i no la lletra.
+    "gʷ": "gʷ", "kʷ": "kʷ", "qʷ": "qʷ", "ʷ": "ʷ",
     # digraphs (demotic + some spirantized conventions)
     "gh": "ɣ", "kh": "x", "ch": "š", "sh": "š", "ou": "u",
     "dj": "j", "th": "t", "dh": "ḍ",
@@ -52,12 +55,13 @@ _TIFINAGH = {
     "l": "ⵍ", "m": "ⵎ", "n": "ⵏ", "u": "ⵓ", "r": "ⵔ", "ṛ": "ⵕ",
     "ɣ": "ⵖ", "s": "ⵙ", "ṣ": "ⵚ", "š": "ⵛ", "t": "ⵜ", "ṭ": "ⵟ",
     "w": "ⵡ", "y": "ⵢ", "z": "ⵣ", "ẓ": "ⵥ",
+    "ʷ": "ⵯ",   # la marca de labialització, que acompanya la lletra de davant
 }
 
 # phoneme -> clean academic Latin. Schwa is 'e'; labialization is written with
 # an ASCII 'w' (gw/kw/qw) rather than the superscript ʷ, so clean_latin re-parses
 # losslessly back to the same phonemes/key (the input map knows gw/kw/qw).
-_CLEAN = {"ə": "e", "gʷ": "gw", "kʷ": "kw", "qʷ": "qw"}
+_CLEAN = {"ə": "e", "gʷ": "gw", "kʷ": "kw", "qʷ": "qw", "ʷ": "w"}
 
 # Accept Tifinagh as input too, so the phonemic key is script-INDEPENDENT
 # (ASR may emit either script; the gold field is often Tifinagh). Longest-match

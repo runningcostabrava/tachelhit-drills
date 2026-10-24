@@ -383,7 +383,11 @@ def test_una_seccio_es_pot_corregir_i_es_pot_proposar_un_canvi():
     pid = sent.json()["id"]
     assert client.post(f"/grammar/proposals/{pid}/decide", headers=boss, json={"accept": True}).status_code == 200
     body = client.get("/method/la-botiga").json()["content"]
-    assert body["sections"][0]["text"] == "Aquí es diu mšta, no mnckk."
+    # El text desat és el que va escriure la persona; el que se serveix hi afegeix la tifinag de
+    # les paraules amazigues («mšta» → «mšta ⵎⵛⵜⴰ»), que és el que fa la pàgina a tot arreu.
+    servit = body["sections"][0]["text"]
+    assert servit.startswith("Aquí es diu mšta") and servit.endswith("no mnckk.")
+    assert "ⵎⵛⵜⴰ" in servit, "la paraula amaziga porta la seva tifinag"
 
     # un capítol que no existeix, no
     assert client.post("/grammar/metode:no-existeix/proposals", headers=someone,
@@ -706,3 +710,34 @@ def test_la_segona_zona_en_posa_dues_i_el_credit_diu_d_on_es():
             db.commit()
         finally:
             db.close()
+
+
+def test_els_sons_citats_al_metode_porten_la_seva_tifinag():
+    """Una lliçó que ensenya un so citant-lo en llatí ensenya el so i no ensenya la lletra.
+
+    El curs de gramàtica ja hi passava des de fa temps; el Mètode no, i es notava al capítol 1,
+    que és el DELS SONS: deia «cinc consonants: kʷ, gʷ, ɣʷ…» sense ensenyar-ne cap en tifinag.
+    """
+    import method
+
+    cos = method.with_letters_everywhere({
+        "intro": "La «ɛ» no existeix en català.",
+        "sections": [{
+            "id": "x",
+            "text": "Cinc consonants s'arrodoneixen: «kʷ», «gʷ».",
+            "table": {"title": "Com es diuen", "rows": [{"p": "ɣ", "v": "com la r francesa"}]},
+        }],
+    })
+    assert "ⵄ" in cos["intro"], "el so citat a l'entradeta porta la seva tifinag"
+    assert "ⴽⵯ" in cos["sections"][0]["text"], "i els del text també"
+    # la fila de la taula de l'alfabet: allà la lletra NO va citada, és la fila sencera
+    assert cos["sections"][0]["table"]["rows"][0]["p"].startswith("ɣ ⵖ")
+
+
+def test_i_no_s_inventa_lletres_on_no_n_hi_ha():
+    """Només el que és citat i curt. Una paraula catalana citada no porta tifinag."""
+    import method
+
+    cos = method.with_letters_everywhere({"sections": [{"text": "Això vol dir «mantega», no «oli»."}]})
+    text = cos["sections"][0]["text"]
+    assert "mantega»" in text and "ⵣ" not in text
