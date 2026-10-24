@@ -835,7 +835,10 @@ TIF_FIELDS = (("shi", "tif"), ("v", "v_tif"), ("m", "m_tif"), ("f", "f_tif"),
 #: i el Mètode no hi passava. Es notava justament al capítol 1, que és el DELS SONS: deia «cinc
 #: consonants: kʷ, gʷ, ɣʷ, xʷ, qʷ» i no n'ensenyava ni una en tifinagh. Una lliçó que ensenya un
 #: so citant-lo en llatí ensenya el so i no ensenya la lletra, i aquesta app ensenya les dues.
-PROSE_FIELDS = ("intro", "text", "deep", "ours", "summary", "scene", "note", "v", "ca")
+#: «q» i «a» són la pregunta i la resposta del «Comprova-ho» que tanca una secció: també són
+#: prosa del capítol, i una paraula amaziga que hi surti ha de portar la seva tifinag com a
+#: tot arreu.
+PROSE_FIELDS = ("intro", "text", "deep", "ours", "summary", "scene", "note", "v", "ca", "q", "a")
 
 
 #: Les lletres que el català no té. Una paraula que en porta una NO és catalana.
@@ -865,7 +868,15 @@ def amazigh_words_in(t: str) -> str:
         if not any(c in raw for c in AMAZIGH_ONLY):
             return raw
         tif = (transliteration.to_forms(raw)["tifinagh"] or "").strip()
-        return f"{raw} {tif}" if tif and tif != raw else raw
+        if not tif or tif == raw:
+            return raw
+        # Si la tifinag ja hi és al darrere, no se n'hi posa una altra. Això es calcula en SERVIR
+        # el capítol, i qui administra desa el capítol tal com el veu a la pantalla: sense aquesta
+        # comprovació, cada correcció hi afegia una còpia més i «aḍar» acabava sent
+        # «aḍar ⴰⴹⴰⵔ ⴰⴹⴰⵔ ⴰⴹⴰⵔ».
+        if m.string[m.end():].lstrip().startswith(tif):
+            return raw
+        return f"{raw} {tif}"
 
     return _WORD_IN_PROSE.sub(one, t)
 

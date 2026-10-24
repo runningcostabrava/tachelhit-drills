@@ -281,6 +281,10 @@ export interface MethodContent {
     numbers?: { n: number; m: string; f?: string; note?: string; m_tif?: string | null; f_tif?: string | null }[];
     /** Més a fons: el que el manual dóna per sabut i aquí s'explica. S'obre qui vol. */
     deep?: string;
+    /** Comprova-ho: una o dues preguntes al final de la secció, amb la resposta plegada.
+     *  S'escriuen amb el capítol —no les fa cap màquina— i es responen amb el que acaba de
+     *  llegir-se: una secció que no et demana res no es fixa. */
+    questions?: { q: string; a: string }[];
     /** De quina zona del capítol és: el que cal per fer la compra, o el que l'escena deixa veure. */
     zone?: 'shop' | 'aside';
     /** Una línia que es llegeix amb la secció plegada: què hi trobaràs. */

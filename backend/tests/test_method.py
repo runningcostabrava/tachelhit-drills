@@ -820,3 +820,49 @@ def test_la_parella_minima_es_pot_escoltar_i_no_es_desa_la_veu_dins_del_text():
     net = method.strip_computed({"sections": [{"columns": [{"rows": [dict(fila)]}]}]})
     desada = net["sections"][0]["columns"][0]["rows"][0]
     assert set(desada) == {"shi", "ca"}, f"només el que algú ha escrit, i hi ha {sorted(desada)}"
+
+
+def test_una_seccio_pot_acabar_amb_una_pregunta_i_la_seva_resposta():
+    """Una secció que explica i no et demana res es llegeix i no es fixa. El «Comprova-ho» és
+    la pregunta i la resposta que s'escriuen AMB el capítol —cap màquina no se les inventa— i
+    passen pel mateix tracte que la resta de la prosa: les paraules amazigues hi porten la seva
+    tifinag, i el que és calculat no es desa dins del text."""
+    import main, method
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("qui_pregunta_al_capitol")}
+    db = main.SessionLocal()
+    try:
+        me = client.get("/users/me", headers=hdr).json()
+        db.query(main.UserModel).filter(main.UserModel.id == me["id"]).first().is_admin = True
+        db.commit()
+    finally:
+        db.close()
+
+    client.put("/method/sons/content", headers=hdr, json={
+        "sections": [{"id": "emfatiques", "title": "El punt a sota", "text": "Les del punt.",
+                      "questions": [{"q": "Quina de les dues porta punt a sota, aḍar o adan?",
+                                     "a": "aḍar. L'altra té una d normal."}]}]})
+
+    sec = client.get("/method/sons").json()["content"]["sections"][0]
+    assert len(sec["questions"]) == 1
+    q = sec["questions"][0]
+    assert q["q"].startswith("Quina de les dues")
+    assert "ⴰⴹⴰⵔ" in q["q"] and "ⴰⴹⴰⵔ" in q["a"], "la paraula amaziga porta la seva tifinag"
+    # i el que s'ha desat és el que va escriure la persona, sense la tifinag calculada
+    net = method.strip_computed({"sections": [{"questions": [dict(q)]}]})
+    assert set(net["sections"][0]["questions"][0]) == {"q", "a"}
+
+
+def test_la_tifinag_de_la_prosa_no_sacumula_quan_algu_torna_a_desar_el_capitol():
+    """La tifinag de les paraules amazigues es calcula en SERVIR el capítol, i qui administra el
+    desa tal com el veu a la pantalla. Sense cap comprovació, cada correcció hi afegia una còpia
+    més i «aḍar» acabava sent «aḍar ⴰⴹⴰⵔ ⴰⴹⴰⵔ ⴰⴹⴰⵔ»."""
+    import copy
+    import method
+    body = {"sections": [{"id": "x", "text": "Mira aḍar i awraɣ.",
+                          "questions": [{"q": "Quina porta punt, aḍar?", "a": "aḍar."}]}]}
+    una = method.with_letters_everywhere(copy.deepcopy(body))
+    dues = method.with_letters_everywhere(copy.deepcopy(una))
+    assert una == dues, "servir-ho dues vegades ha de donar el mateix"
+    assert una["sections"][0]["text"].count("ⴰⴹⴰⵔ") == 1

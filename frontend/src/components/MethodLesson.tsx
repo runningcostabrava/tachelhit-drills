@@ -229,6 +229,41 @@ function LineTools({
   );
 }
 
+/** Comprova-ho: les preguntes del final d'una secció, amb la resposta plegada.
+ *
+ *  Una secció que explica i no et demana res es llegeix i no es fixa. La resposta es tapa fins
+ *  que la demanes, perquè una resposta a la vista estalvia el pensar-hi: és tot el truc.
+ *
+ *  Les pregunta i la resposta s'escriuen amb el capítol. Cap màquina no se les inventa, i una
+ *  secció sense preguntes no en fabrica: no surt el bloc i prou.
+ */
+function CheckYourself({ questions }: { questions: { q: string; a: string }[] }) {
+  const [open, setOpen] = useState<Record<number, boolean>>({});
+  if (!questions || questions.length === 0) return null;
+  return (
+    <div style={{ marginTop: 12, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
+      <div style={{ padding: '6px 12px', background: 'var(--surface-2)', fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        Comprova-ho
+      </div>
+      {questions.map((q, k) => (
+        <div key={k} style={{ padding: '9px 12px', borderTop: k ? '1px solid var(--border)' : 'none' }}>
+          <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55 }}>{q.q}</p>
+          {open[k] ? (
+            <p style={{ margin: '6px 0 0', fontSize: 13.5, lineHeight: 1.55, color: 'var(--text-soft)', whiteSpace: 'pre-line' }}>
+              {q.a}
+            </p>
+          ) : (
+            <button onClick={() => setOpen((o) => ({ ...o, [k]: true }))}
+                    style={{ marginTop: 6, padding: '4px 10px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--brand-1)', fontFamily: 'inherit', fontWeight: 700, fontSize: 12.5, cursor: 'pointer' }}>
+              Mostra la resposta
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Una línia del llibre: el text, la tifinagh, el paraula per paraula i les seves eines.
  *
  *  El llapis és el mateix a tot arreu —exemples, rèpliques del diàleg i vocabulari— perquè una
@@ -827,6 +862,8 @@ export default function MethodLesson({
               <strong>A l’Atles central:</strong> {s.ours}
             </p>
           )}
+
+          {s.questions && <CheckYourself questions={s.questions} />}
 
           {!aside && oursCards}
           </>}
