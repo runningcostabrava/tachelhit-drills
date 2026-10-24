@@ -290,7 +290,8 @@ def content_of(db, slug: str) -> Optional[Dict]:
 #: Qui administra corregeix una línia i el navegador torna el capítol sencer tal com el tenia a
 #: la pantalla: amb la tifinagh de cada línia i amb les frases nostres repartides per dins. Això
 #: no és el capítol, és el que n'hem calculat; desar-ho el congelaria amb les frases d'aquell dia.
-COMPUTED = {"ours_drills", "ours_total", "audio_url", "image_url", "speaker", "from_drill_id"}
+COMPUTED = {"ours_drills", "ours_total", "audio_url", "image_url", "speaker", "region",
+            "from_drill_id"}
 
 
 def strip_computed(body: Dict) -> Dict:
