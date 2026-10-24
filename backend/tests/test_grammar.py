@@ -735,3 +735,15 @@ def test_una_llico_que_no_sha_pogut_escriure_diu_per_que(monkeypatch):
     finally:
         grammar_course._failures.clear()
         db.close()
+
+
+def test_lapostrof_del_catala_no_es_una_cometa():
+    """En català l'apòstrof viu dins les paraules —«ajuda'm», «l'aigua»— i es prenia per una
+    cometa: una nota que deia «vol dir 'ajuda'm'» sortia «vol dir 'ajuda'm ⵎ'». La ⵎ no la volia
+    ningú, i això ho llegia qui aprèn."""
+    import grammar as grammar_course
+    assert grammar_course.with_letters("«A3wni» vol dir 'ajuda'm'.") == "«A3wni» vol dir 'ajuda'm'."
+    assert grammar_course.with_letters("Diu 'dóna'm' i 'l'aigua'.") == "Diu 'dóna'm' i 'l'aigua'."
+    # i un so citat de debò segueix rebent la seva tifinag
+    assert grammar_course.with_letters("El so 'ɛ' es fa a la gola.") == "El so 'ɛ ⵄ' es fa a la gola."
+    assert grammar_course.with_letters("El so «gh».") == "El so «gh ⵖ»."

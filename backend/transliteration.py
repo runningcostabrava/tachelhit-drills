@@ -18,6 +18,8 @@ genuinely underdetermined (schwa, gemination, labialization, spirantization),
 so the generated forms are SUGGESTIONS a human confirms — not gold.
 """
 
+import unicodedata
+
 # Demotic/academic spelling -> internal phoneme symbol (clean Berber-Latin).
 # Longest keys are matched first, so digraphs beat single letters.
 _DEMOTIC = {
@@ -105,7 +107,11 @@ def to_forms(raw: str) -> dict:
     Returns {input, clean_latin, tifinagh, key}. Idempotent-ish: feeding
     clean_latin back in reproduces the same tifinagh/key.
     """
-    raw = raw or ""
+    # Les lletres AJUNTADES abans de res. La biblioteca en guarda 283 de descompostes —«sġix»
+    # amb la g i el punt a sobre a part, «3afaš» amb la s i el capelló a part— i llavors el
+    # parser no veia ni la ġ ni la š: «sġix» sortia ⵙⴳⵉⵅ (una g) i «3afaš», ⵄⴰⴼⴰⵙ (una s). És a
+    # dir, la tifinag que llegia qui aprèn deia una altra lletra.
+    raw = unicodedata.normalize("NFC", raw or "")
     toks = _tokenize(raw.lower())
     clean, tif, key = [], [], []
     prev = None
