@@ -414,12 +414,25 @@ def notes_status() -> dict:
     return dict(_notes_state)
 
 
-def notes_for(db, slug: str) -> Dict[int, str]:
+def notes_for(db, slug: str, texts: Optional[Dict[int, tuple]] = None) -> Dict[int, str]:
     """What the library can say about each sentence of ONE unit: why it is there. By drill id, and
-    without the ones whose honest answer was «it shows nothing of this unit»."""
+    without the ones whose honest answer was «it shows nothing of this unit».
+
+    També es queden fora, aquí mateix, les notes ja desades que no passarien avui: les que parlen
+    com un llibre de fonètica i les que citen un tros que no és a la frase. Es filtren en SERVIR
+    i no només en escriure, perquè les que hi ha escrites no es poden refer d'un dia per l'altre
+    i mentrestant la persona que aprèn les llegeix. `texts` són les frases per id, quan qui
+    pregunta les té; sense elles només es comprova el jargó."""
     from models import GrammarNote
     rows = db.query(GrammarNote.drill_id, GrammarNote.body).filter(GrammarNote.slug == slug).all()
-    return {int(i): b for i, b in rows if b and b != NO_NOTE}
+    out: Dict[int, str] = {}
+    for i, b in rows:
+        if not b or b == NO_NOTE:
+            continue
+        shi, ca = (texts or {}).get(int(i)) or ("", "")
+        if note_problem(b, shi, ca) is None:
+            out[int(i)] = b
+    return out
 
 
 def asked_notes(db, slug: str) -> set:
@@ -439,14 +452,105 @@ def _notes_prompt(unit: dict, sheet: str, batch: List[dict]) -> str:
         "frase és el que ensenya el punt i què hi fa. De 25 a 45 paraules, en català planer, com ho "
         "diria un mestre al costat de la frase.\n"
         "- anomena el tros tal com està escrit a la frase, entre cometes;\n"
-        "- no facis servir mots de gramàtic (ni «inacomplert», ni «clític», ni «díctic»…): digues-ho "
-        "a la manera planera;\n"
+        "- no facis servir mots de gramàtic ni de fonetista: res de «clític», «morfema», "
+        "«inacomplert», «díctic», «uvular», «faringal», «al·lòfon», «nucli sil·làbic», "
+        "«tautosil·làbic», «fricativa», «fonema». Digues-ho a la manera planera: «el so que es fa "
+        "al fons de la gola», «la lletra enganxada al final»;\n"
+        "- el tros que citis ha de ser DINS la frase, lletra per lletra. Si no hi és, no el citis;\n"
         "- no citis mai números d'identificació ni diguis «aquesta frase» dues vegades;\n"
         "- si la frase no mostra res d'aquesta unitat, respon exactament «-» i prou. Val més dir-ho "
         "que inventar-s'ho.\n\n"
         f"FRASES\n{lines}\n\n"
         'Respon NOMÉS amb un objecte JSON {"<id>": "<el que mostra, 25-45 paraules>"}.'
     )
+
+
+#: Paraules de gramàtic i de fonetista. La nota que en porta una no s'arriba a desar: val més
+#: una frase sense nota que una frase amb una nota que ningú no entén. (BANNED_TERMS són les
+#: que es demanen al redactor; aquestes són les que es comproven DESPRÉS, perquè demanar-ho no
+#: ha bastat: les lliçons servides parlen de nuclis sil·làbics a una unitat de nivell 1.)
+NOTE_JARGON = (
+    "uvular", "faringal", "faringi", "al·lòfon", "alòfon", "al·lofòn", "tautosil", "nucli sil",
+    "atac sil", "coda sil", "sil·labic", "sil·làbic", "fonològic", "fonologic", "fonema",
+    "fricativa", "oclusiva", "africada", "sonoritat", "ultrabreu", "schwa", "morfema", "lexema",
+    "al·lomorf", "alomorf", "clític", "clitic", "díctic", "dictic", "deíctic", "sintagma",
+    "desinència", "flexiu", "apofonia", "diàtesi", "tema verbal",
+)
+
+#: Un tros citat entre cometes dins la nota: «3wn», «-nnx», «ad».
+_QUOTED_BIT = re.compile(r"«([^»]{1,24})»|'([^']{1,24})'")
+
+#: Tot el que no és lletra: guionets, cometes, punts, espais. Comparar «-nnx» amb «nnx» o
+#: «ajuda'm» amb «ajudam» ha de donar igual.
+_NOT_A_LETTER = re.compile(r"[^\wƀ-ɏʰ-˿]+")
+
+
+def _letters_only(s: Optional[str]) -> str:
+    return _NOT_A_LETTER.sub("", (s or "").lower())
+
+
+def note_problem(note: str, shi: str = "", ca: str = "") -> Optional[str]:
+    """Per què aquesta nota no es pot servir — o None si es pot.
+
+    Una sola cosa, i segura: el jargó. «La 'x' és una consonant uvular… un al·lòfon de la vocal
+    bàsica» és el que la unitat dels sons, de nivell 1, serveix avui. La frase i el seu
+    significat es demanen per si un dia fa falta mirar-hi dins; de moment no s'hi mira, perquè
+    una nota ben feta cita el significat català tant com el tros amazic i no es pot distingir
+    una cita bona d'una d'inventada sense endevinar.
+
+    Les paraules inventades sí que es comproven on van aparèixer de debò: a les taules de formes
+    (`table_words_not_in_library`).
+    """
+    low = (note or "").lower()
+    for w in NOTE_JARGON:
+        if w in low:
+            return f"paraula de gramàtic: «{w}»"
+    return None
+
+
+def table_words_not_in_library(step: dict, examples: List[dict]) -> List[str]:
+    """Les paraules amazigues d'una taula de formes que no surten a cap frase de la unitat.
+
+    La taula «Sons difícils i la seva escriptura» citava `meddn` per a la ḍ (que no en té, de ḍ)
+    i `Tabrat` per a la ṭ: dues paraules que no són enlloc de la unitat ni, de fet, de la
+    biblioteca. Una taula de numerals pot ensenyar el «sis» encara que no el tinguem gravat
+    —és una taula, ha de ser sencera—, però el que no pot fer és citar una paraula que no
+    existeix com si fos un exemple."""
+    pool = set()
+    for e in examples or []:
+        for w in re.findall(r"[^\W\d_]+", (e.get("shi") or "").lower()):
+            pool.add(w)
+    out = []
+    for row in (step.get("rows") or []):
+        for cell in (row if isinstance(row, list) else [row]):
+            text = str(cell or "").strip()
+            words = re.findall(r"[^\W\d_]+", text.lower())
+            if len(words) != 1 or len(words[0]) < 4:
+                continue
+            if _looks_catalan(words[0]):
+                continue
+            if words[0] not in pool:
+                out.append(text)
+    return out
+
+
+#: Les caselles catalanes d'una taula («encara», «vosaltres», «febre»): accent, ce trencada, o
+#: una de les poques paraules planes que hi surten. No cal que sigui perfecte —això és una
+#: comprovació per mirar-s'hi, no una cosa que esborri res— però sí que ha de deixar passar
+#: `meddn`, `Tabrat`, `smmus`, `allig`, `nttat`.
+_CATALAN_PLAIN = {
+    "aquest", "aquesta", "aquells", "aquelles", "nosaltres", "vosaltres", "ells", "elles",
+    "encara", "sempre", "avui", "ahir", "demà", "ara", "aqui", "allà", "massa", "molt", "poc",
+    "gran", "petit", "negre", "blanc", "febre", "mare", "pare", "peixos", "ulls", "casa",
+    "aigua", "home", "dona", "quant", "quants", "quina", "quines", "perque", "perquè", "sobre",
+    "sota", "dins", "amb", "sense", "primer", "segon", "tercer", "cinc", "sis", "set", "vuit",
+    "nou", "deu", "onze", "dotze", "tretze", "catorze", "vint", "trenta", "cent", "mil",
+    "tinc", "tens", "tenim", "teniu", "tenen", "una", "dues", "tres", "quatre",
+}
+
+
+def _looks_catalan(word: str) -> bool:
+    return bool(re.search(r"[àèéíòóúïüç]", word)) or word in _CATALAN_PLAIN
 
 
 def write_notes(unit: dict, sheet: str, batch: List[dict]) -> Dict[int, str]:
@@ -460,7 +564,7 @@ def write_notes(unit: dict, sheet: str, batch: List[dict]) -> Dict[int, str]:
     if not m:
         raise ValueError("notes without JSON")
     got = json.loads(re.sub(r",\s*([}\]])", r"\1", m.group(0)))
-    ids = {e["id"] for e in batch}
+    by_id = {e["id"]: e for e in batch}
     out: Dict[int, str] = {}
     for k, v in (got or {}).items():
         try:
@@ -468,8 +572,19 @@ def write_notes(unit: dict, sheet: str, batch: List[dict]) -> Dict[int, str]:
         except ValueError:
             continue
         body = _clean_prose(str(v or "").strip())
-        if i in ids and body:
-            out[i] = NO_NOTE if body.strip(" .-") == "" else body
+        if i not in by_id or not body:
+            continue
+        if body.strip(" .-") == "":
+            out[i] = NO_NOTE
+            continue
+        why_not = note_problem(body, by_id[i].get("shi") or "", by_id[i].get("ca") or "")
+        if why_not:
+            # es desa com a «no en tenim»: així no es torna a demanar en cada passada i, sobretot,
+            # la frase surt sense nota en comptes de sortir amb una nota que diu una cosa falsa
+            print(f"[NOTES] {unit['slug']} {i}: nota descartada ({why_not})")
+            out[i] = NO_NOTE
+            continue
+        out[i] = body
     return out
 
 
@@ -869,8 +984,10 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str, tables: Optiona
         "bare greeting, a bare noun, a bare number) and each step builds on the previous one, so the longest "
         "sentences come last. Never open a unit with a long sentence.\n")
         + "- 1 or 2 steps of type \"pattern\" (one after the first explanations, one near the end): a title and 3-8 rows of [form, meaning, "
-        "example], the forms in standard Latin spelling (ɣ, ḥ, ṣ, ṭ, ẓ, ɛ, š), the example taken from our sentences "
-        "when one exists."
+        "example], the forms in standard Latin spelling (ɣ, ḥ, ṣ, ṭ, ẓ, ɛ, š). The THIRD cell, the example, must be "
+        "a word COPIED from one of OUR SENTENCES below, letter for letter. If no sentence of this unit shows that "
+        "form, leave the third cell empty — never invent a word to fill it. (A sounds table once cited «meddn» for "
+        "ḍ, a word with no ḍ in it, and «Tabrat» for ṭ: neither is anywhere in the library.)"
         + (" OUR LISTS below are the paradigms our own speakers wrote for this unit: build the table from THEM, "
            "form by form as they are written, and never put in a form that is in neither the lists nor our "
            "sentences." if tables else "")
@@ -1325,7 +1442,9 @@ def _write_in_background(session_factory, slug: str, grammar_md: str, examples: 
         db = session_factory()
         try:
             lesson = write_lesson(slug, grammar_md, examples, sheet=sheet_for(db, slug, grammar_md),
-                                  tables=tables, notes=notes_for(db, slug), deep=deep)
+                                  tables=tables,
+                                  notes=notes_for(db, slug, {e["id"]: (e.get("shi") or "", e.get("ca") or "") for e in examples}),
+                                  deep=deep)
             if unit_ids is not None:
                 lesson["unit_size"] = len(unit_ids)  # so growth of the unit can be noticed later
             _store_lesson(db, slug, lesson, deep=deep)
@@ -1412,7 +1531,7 @@ def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool
     once, marked so the page can ask again."""
     from models import GrammarLesson
     try:
-        notes = notes_for(db, slug)
+        notes = notes_for(db, slug, {e["id"]: (e.get("shi") or "", e.get("ca") or "") for e in examples})
     except Exception:  # a database that has not met the notes table yet must still serve the course
         notes = {}
 

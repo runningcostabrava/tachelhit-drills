@@ -6206,6 +6206,27 @@ def _load_grammar() -> str:
             _GRAMMAR_TEXT = ""
     return _GRAMMAR_TEXT
 
+
+def writer_available() -> bool:
+    """Is there anybody at all who can write a lesson — Gemini, o DeepSeek quan Gemini cau?
+
+    Abans aquesta pregunta era «hi ha Gemini?», i amb Gemini sense crèdit el curs es quedava
+    sense redactor. Pitjor encara: el compendi d'amazic.cat només es carregava si hi havia
+    Gemini, de manera que la reserva hauria escrit les lliçons **sense la gramàtica a la mà**.
+    """
+    if gemini_available():
+        return True
+    try:
+        from deepseek_client import deepseek_available
+        return deepseek_available()
+    except Exception:
+        return False
+
+
+def grammar_reference() -> str:
+    """El compendi per a qui escrigui la lliçó. Buit només si no hi ha ningú per escriure-la."""
+    return _load_grammar() if writer_available() else ""
+
 AI_SYSTEM_ROLE = """Ets l'assistent lingüístic de "Tamazight Drills", una aplicació per aprendre la llengua amaziga taixelhit (tachelhit/tashelhit) fent servir el català com a llengua de referència, amb l'àrab i els alfabets tifinag i llatí.
 
 El teu paper:
@@ -6873,11 +6894,11 @@ def _write_missing_notes() -> None:
     are written first because a page can wait for a note but not for a lesson."""
     import time
     time.sleep(240)  # the lessons go first, then this works through the library quietly
-    if not gemini_available():
-        print("[NOTES] skipped: no Gemini key")
+    if not writer_available():
+        print("[NOTES] skipped: no AI writer configured")
         return
     try:
-        grammar_course.fill_notes(SessionLocal, _grammar_unit_rows, _load_grammar())
+        grammar_course.fill_notes(SessionLocal, _grammar_unit_rows, grammar_reference())
     except Exception as e:
         print(f"[NOTES] stopped: {e}")
 
@@ -6887,8 +6908,8 @@ def _write_missing_lessons() -> None:
     time: Gemini is slow and the free database has few connections."""
     import time
     time.sleep(20)  # let the server answer its first requests first
-    if not gemini_available():
-        print("[GRAMMAR] self-write skipped: no Gemini key")
+    if not writer_available():
+        print("[GRAMMAR] self-write skipped: no AI writer configured")
         return
     written = 0
     for unit in grammar_course.UNITS:
@@ -6912,7 +6933,9 @@ def _write_missing_lessons() -> None:
                 lesson = grammar_course.write_lesson(slug, _load_grammar(), examples,
                                                      sheet=grammar_course.sheet_for(db, slug, _load_grammar()),
                                                      tables=grammar_course.paradigms(rows),
-                                                     notes=grammar_course.notes_for(db, slug))
+                                                     notes=grammar_course.notes_for(
+                                                         db, slug,
+                                                         {e["id"]: (e.get("shi") or "", e.get("ca") or "") for e in examples}))
                 lesson["unit_size"] = len({d.id for d in rows})
                 grammar_course._store_lesson(db, slug, lesson)
                 written += 1
@@ -6940,7 +6963,7 @@ def _grammar_unit_payload(db, slug: str, limit: int, force: bool, deep: bool = F
     examples = grammar_course.pick_examples(rows, slug=slug)
     practice = grammar_course.practice_rows(rows, slug=slug)  # the test: sentences (and words, in the units about words)
     try:
-        lesson = grammar_course.get_lesson(db, slug, _load_grammar() if gemini_available() else "", examples, force=force,
+        lesson = grammar_course.get_lesson(db, slug, grammar_reference(), examples, force=force,
                                            unit_ids={d.id for d in rows}, session_factory=SessionLocal,
                                            tables=grammar_course.paradigms(rows), deep=deep)
     except Exception as e:
@@ -7020,7 +7043,7 @@ def grammar_lesson(slug: str, db: Session = Depends(get_db)):
     """Just the unit's lesson: what a page asks for again while a new one is being written."""
     rows = _grammar_unit_rows(db, slug)
     examples = grammar_course.pick_examples(rows, slug=slug)
-    lesson = grammar_course.get_lesson(db, slug, _load_grammar() if gemini_available() else "", examples,
+    lesson = grammar_course.get_lesson(db, slug, grammar_reference(), examples,
                                        unit_ids={d.id for d in rows}, session_factory=SessionLocal,
                                        tables=grammar_course.paradigms(rows))
     from models import GrammarLesson
