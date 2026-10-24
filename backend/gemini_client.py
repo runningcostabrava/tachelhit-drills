@@ -142,16 +142,36 @@ def gemini_generate(system_instruction: str, contents: list, *,
             "thinkingConfig": {"thinkingBudget": thinking_budget},
         },
     }
-    data = _generate_content(payload, timeout)
-    candidates = data.get("candidates", [])
-    if not candidates:
-        raise RuntimeError(f"Gemini returned no candidates: {str(data)[:300]}")
-    parts = candidates[0].get("content", {}).get("parts", [])
-    text = "".join(p.get("text", "") for p in parts).strip()
-    if not text:
-        finish = candidates[0].get("finishReason", "?")
-        raise RuntimeError(f"Gemini returned empty text (finishReason={finish})")
-    return text
+    try:
+        data = _generate_content(payload, timeout)
+        candidates = data.get("candidates", [])
+        if not candidates:
+            raise RuntimeError(f"Gemini returned no candidates: {str(data)[:300]}")
+        parts = candidates[0].get("content", {}).get("parts", [])
+        text = "".join(p.get("text", "") for p in parts).strip()
+        if not text:
+            finish = candidates[0].get("finishReason", "?")
+            raise RuntimeError(f"Gemini returned empty text (finishReason={finish})")
+        return text
+    except BudgetExceeded:
+        # El nostre propi límit de despesa: aquest no es tomba canviant de proveïdor.
+        raise
+    except Exception as err:
+        # Quan el que falla és el PROVEÏDOR i no la pregunta —sense crèdit, massa peticions,
+        # la porta tancada— es prova el segon de la fila. El 24-10-2026 l'assistent de l'app
+        # responia «Gemini API 402: Your prepayment credits are depleted» a tothom qui
+        # preguntava què vol dir una frase, i qui obre l'app no ha de saber ni què és un
+        # crèdit ni de qui és.
+        #
+        # Davant de qualsevol altre error NO es canvia: repetir una pregunta mal feta a un
+        # altre model dona la mateixa resposta mal feta, i amaga l'errada de debò.
+        import deepseek_client
+        if not (deepseek_client.is_quota_error(err) and deepseek_client.deepseek_available()):
+            raise
+        print(f"[AI] Gemini no pot ({str(err)[:80]}); ho demano a DeepSeek")
+        return deepseek_client.deepseek_generate(
+            system_instruction, contents, max_output_tokens=max_output_tokens,
+            temperature=temperature, timeout=timeout)
 
 
 def gemini_agent(system_instruction: str, contents: list, tools: list, executor,

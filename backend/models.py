@@ -37,6 +37,13 @@ class Drill(Base):
     # above so an approximation (often a different variety) never overwrites
     # what a real speaker collected.
     text_tachelhit_suggested = Column(String, nullable=True)
+    # Quanta certesa diu el transcriptor que té del que acaba de proposar, de 0 a 1.
+    #
+    # Sense això la cua de confirmació és un sac on la gravació neta i la inintel·ligible pesen
+    # igual, i qui s'hi asseu ha de descobrir-ho escoltant-les una per una. Amb això es confirma
+    # primer el que té números de ser bo. És el número del model (NeMo CTC), no una opinió: una
+    # frase amb certesa alta també pot ser errònia, i per això segueix sent una PROPOSTA.
+    suggested_confidence = Column(Float, nullable=True)
     text_catalan_suggested = Column(String, nullable=True)
     # Meaning check of text_tachelhit_suggested (draft_check.py): JSON with the draft
     # checked, its blind back-translation, verdict yes/roughly/no, confidence, note.
