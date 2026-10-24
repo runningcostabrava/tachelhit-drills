@@ -120,6 +120,24 @@ clips no sabríem què val res. **Sí que hi ha una condició que vam acceptar e
 intentar esbrinar qui són els parlants («you agree to not determine the identity of speakers in
 the dataset»). Els clips es queden fora del repositori.
 
+### Tutlait v1 (Ma-OpenHub)
+
+**CC BY 4.0.** 21 hores de tamazight parlat per 118 persones, amb l'accent etiquetat: **9.053
+talls de l'Atles**, 3.015 del Souss, i restes del Rif i de Cabília. Cada tall porta
+identificador de parlant i una **traducció a l'àrab estàndard — no una transcripció**: el que es
+va dir en amazic no està escrit enlloc, i això és justament el que el fa útil i el que el limita.
+
+La llicència demana atribució, i aquí queda:
+
+> Chadi, Mohamed-Amine; Ait El Arbi, Ezzahra; Khayoub, Ismail; Fadili, Aymane; Ennhili, Yassine;
+> Bouali, Jadjigua; Inhid, Hanane; Ameksa, Mohammed; Mousannif, Hajar (2026).
+> *Tutlait v1: Tamazight Speech with Arabic Translations*. Hugging Face.
+> https://huggingface.co/datasets/Ma-OpenHub/Tutlait-v1
+
+Cada frase que n'entri a la biblioteca porta `license = CC BY 4.0`, `source_url` a aquesta
+pàgina i, com a parlant, l'identificador del corpus («TutlAit · spk_010»), no un nom nostre: són
+veus que el projecte no coneix i no ho faran veure.
+
 ### Awal Tamazight Dataset (CIEMEN / projecte Awal)
 
 **CC BY 4.0.** Condició que posa el mateix conjunt de dades, textualment:
