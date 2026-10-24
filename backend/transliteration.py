@@ -25,7 +25,18 @@ _DEMOTIC = {
     "gw": "gʷ", "kw": "kʷ", "qw": "qʷ",
     # digraphs (demotic + some spirantized conventions)
     "gh": "ɣ", "kh": "x", "ch": "š", "sh": "š", "ou": "u",
-    "dj": "j", "th": "t", "dh": "ḍ",
+    "dj": "j", "dh": "ḍ",
+    # «th» NO hi és, i té història. Hi era com a dígraf (la t espirantitzada que els cabilencs
+    # escriuen «th»), i a la nostra llengua es menjava una seqüència freqüentíssima: el prefix
+    # de 3a persona femenina «t-» davant d'arrels que comencen per h-. «thnna» («va bé») sortia
+    # «tnna», «thlla» sortia «tlla», i «thanut» («la botiga») sortia «tanut» — a la pantalla, a
+    # la tifinagh I a `clean_latin`, que és la forma que el mòdul promet com a citable.
+    #
+    # Comptat al corpus sencer (3.401 frases): «th» hi surt 75 vegades i NI UNA no és el dígraf
+    # —thanut (13), thla (6), thnna (3), thdar, buthanut…—, mentre que gh (936), sh (569), ch
+    # (174), kh (141) i ou (21) sí que són com la gent escriu. Per això cau aquest i es queden
+    # els altres. Ho va trobar un auditor llegint una frase nostra que el capítol justificava
+    # dient «diu tna», que no és cap paraula.
     # Arabic chat-alphabet numerals
     "3": "ɛ", "7": "ḥ", "9": "q", "5": "x", "8": "ɣ",
     # academic Berber-Latin pass-through
