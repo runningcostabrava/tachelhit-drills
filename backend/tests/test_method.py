@@ -741,3 +741,47 @@ def test_i_no_s_inventa_lletres_on_no_n_hi_ha():
     cos = method.with_letters_everywhere({"sections": [{"text": "Això vol dir «mantega», no «oli»."}]})
     text = cos["sections"][0]["text"]
     assert "mantega»" in text and "ⵣ" not in text
+
+
+def test_un_capitol_sense_frases_propies_troba_la_veu_a_la_biblioteca():
+    """El capítol 1 —el DELS SONS— no té cap frase assignada, i per això sortia mut: ni els
+    exemples ni les parelles mínimes es podien escoltar. Un capítol que diu «no passis d'aquí
+    fins que distingeixis `imi` de `immi`» i no deixa sentir cap de les dues no es pot fer servir.
+
+    Ara qualsevol línia del capítol —exemple, paraula o fila d'una columna— busca a TOTA la
+    biblioteca la frase que diu exactament això, i se'n queda la veu. El que ningú no ha gravat
+    es queda com era."""
+    import main
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("qui_escolta_els_sons")}
+    db = main.SessionLocal()
+    try:
+        me = client.get("/users/me", headers=hdr).json()
+        db.query(main.UserModel).filter(main.UserModel.id == me["id"]).first().is_admin = True
+        db.commit()
+    finally:
+        db.close()
+
+    # dues frases de la biblioteca SENSE cap unitat de gramàtica: no són «del capítol dels sons»
+    for ca, shi in (("la boca", "imi"), ("la mare", "immi")):
+        client.post("/drills/", headers=hdr, json={
+            "text_catalan": ca, "text_tachelhit": shi, "author": "Prova-sons",
+            "audio_url": f"https://res.cloudinary.com/x/video/upload/v1/{shi}.mp3"})
+
+    client.put("/method/sons/content", headers=hdr, json={
+        "sections": [{"id": "tensio", "title": "La doble dura més",
+                      "examples": [{"shi": "imi", "ca": "boca"}],
+                      "columns": [{"title": "simple", "rows": [{"shi": "imi", "ca": "boca"}]},
+                                  {"title": "doble", "rows": [{"shi": "immi", "ca": "mare"},
+                                                              {"shi": "tissi", "ca": "beguda"}]}]}],
+        "vocabulary": [{"shi": "immi", "ca": "mare"}]})
+
+    body = client.get("/method/sons").json()["content"]
+    sec = body["sections"][0]
+    assert sec["examples"][0].get("audio_url"), "l'exemple del capítol es pot escoltar"
+    simple, doble = sec["columns"]
+    assert simple["rows"][0].get("audio_url"), "la parella mínima, també"
+    assert doble["rows"][0].get("audio_url") and doble["rows"][0].get("speaker") == "Prova-sons"
+    assert not doble["rows"][1].get("audio_url"), "«tissi», que ningú no ha gravat, es queda com era"
+    assert body["vocabulary"][0].get("audio_url"), "i la paraula del vocabulari"

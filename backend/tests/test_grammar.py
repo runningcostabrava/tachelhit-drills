@@ -700,3 +700,38 @@ def test_el_compendi_arriba_a_qui_escrigui_la_llico_encara_que_gemini_hagi_caigu
     monkeypatch.setattr(deepseek_client, "deepseek_available", lambda: False)
     assert main.writer_available() is False
     assert main.grammar_reference() == ""
+
+
+def test_una_llico_que_no_sha_pogut_escriure_diu_per_que(monkeypatch):
+    """Amb Gemini sense crèdit, els 22 nivells «a fons» que falten han dit «s'està escrivint ara
+    mateix» tota la nit, cada vegada que algú els obria, sense que res digués per què. Una
+    escriptura que falla ho ha de dir."""
+    import grammar as grammar_course
+
+    class _Esclatat(RuntimeError):
+        pass
+
+    def esclata(*a, **k):
+        raise _Esclatat("Gemini API 402: sense crèdit")
+
+    monkeypatch.setattr(grammar_course, "write_lesson", esclata)
+    monkeypatch.setattr(grammar_course, "sheet_for", lambda *a, **k: "")
+    grammar_course._failures.clear()
+
+    import main
+    db = main.SessionLocal()
+    try:
+        started = grammar_course._write_in_background(main.SessionLocal, "imperatiu", "", [], None, deep=True)
+        assert started
+        for _ in range(100):           # el fil escriu de seguida; no s'espera més del que cal
+            if grammar_course._failures:
+                break
+            import time as _t; _t.sleep(0.05)
+        buit = grammar_course._placeholder("imperatiu", [], deep=True)
+        assert buit["writing"] is False
+        assert "402" in buit["failed"] and "402" in buit["steps"][0]["text"]
+        # i el nivell normal de la mateixa unitat segueix dient que s'està escrivint
+        assert grammar_course._placeholder("imperatiu", [], deep=False)["writing"] is True
+    finally:
+        grammar_course._failures.clear()
+        db.close()
