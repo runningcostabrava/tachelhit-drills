@@ -322,11 +322,15 @@ def test_quizzes_and_excluded_language(monkeypatch):
         def __init__(self, id, shi, ca): self.id, self.text_tachelhit, self.text_catalan, self.image_url, self.audio_url, self.author, self.region, self.tag = id, shi, ca, None, None, None, None, None
     picked = grammar.pick_examples([R(1, "rix, trid, iri, nri", "voler"), R(2, "text", "x"), R(3, "ur ssinɣ", "no ho sé"), R(4, "UR SSINƔ", "no ho sé (bis)")])
     assert [e["id"] for e in picked] == [3]
-    # our speakers from Aït Mraw come first, then the Beni Mellal deck, then the rest
-    h = R(5, "ur ssinx", "no sé"); h.author = "Halima"
-    b = R(6, "ur ssinɣ ša", "no sé pas"); b.tag = "benimellal-anki, private"
+    # our speakers from Aït Mraw come first, then the Beni Mellal deck, then the rest — among
+    # sentences you can equally hear. A voiced sentence comes before a mute one whatever its
+    # source: see test_la_llico_tria_primer_les_frases_que_es_poden_escoltar.
+    h = R(5, "ur ssinx", "no sé"); h.author = "Halima"; h.audio_url = "https://x/h.webm"
+    b = R(6, "ur ssinɣ ša", "no sé pas"); b.tag = "benimellal-anki, private"; b.audio_url = "https://x/b.webm"
     o = R(7, "ur ssin", "no sap"); o.audio_url = "https://x/a.webm"
     assert [e["id"] for e in grammar.pick_examples([o, b, h])] == [5, 6, 7]
+    h.audio_url = None  # i la muda de casa cedeix el torn a les que sonen
+    assert [e["id"] for e in grammar.pick_examples([o, b, h])] == [6, 7, 5]
     assert grammar.pick_examples([h])[0]["origin"] == grammar.AIT_MRAW
     t = R(8, "ur ssinx", "no sé"); t.tag = "frase, Driss"  # the owner tags Driss's recordings by name
     assert grammar.our_speaker(t) == "Driss" and grammar.origin(t) == grammar.AIT_MRAW and grammar.our_speaker(o) is None
@@ -761,3 +765,28 @@ def test_una_llico_ja_escrita_serveix_la_tifinag_daram_no_la_del_dia_que_es_va_e
     daram = [{"id": 7, "shi": "sġix", "ca": "jo compro", "tif": "ⵙⵖⵉⵅ", "gloss": None}]
     servida = grammar_course._with_glosses(guardada, daram)
     assert servida["steps"][0]["examples"][0]["tif"] == "ⵙⵖⵉⵅ"
+
+
+def test_la_llico_tria_primer_les_frases_que_es_poden_escoltar():
+    """«numerals» servia 18 exemples muts de 42, i 10 sortien de la font que ja havia gastat les
+    seves gravades mentre una altra font encara en tenia. El repartiment entre fonts es manté,
+    però es fa primer amb les frases amb veu i només després amb les mudes."""
+    import grammar as grammar_course
+    paraules = ["argaz", "tigmmi", "afus", "imi", "aman", "tafukt", "azru", "agadir",
+                "ayyur", "tayri", "adrar", "akal", "alim", "almu", "tasa", "ul", "tawla", "axlul"]
+
+    def ex(i, origin, amb_veu):
+        return {"id": i, "shi": paraules[i % len(paraules)], "ca": "x", "image_url": None,
+                "audio_url": ("https://exemple/so.mp3" if amb_veu else None), "origin": origin}
+
+    # una font amb 2 gravades i 6 mudes, una altra amb 10 gravades
+    cands = ([ex(i, grammar_course.AIT_MRAW, i < 2) for i in range(8)]
+             + [ex(8 + i, "Beni Mellal", True) for i in range(10)])
+
+    deu = grammar_course._spread(cands, 10)
+    assert all(e["audio_url"] for e in deu), "amb dotze gravades, cap muda a les deu primeres"
+    assert {e["origin"] for e in deu} == {grammar_course.AIT_MRAW, "Beni Mellal"}, "i les dues fonts hi són"
+
+    totes = grammar_course._spread(cands, 18)
+    assert sum(1 for e in totes if not e["audio_url"]) == 6, "les mudes hi entren quan no queda res més"
+    assert all(e["audio_url"] for e in totes[:12]), "i sempre al final"

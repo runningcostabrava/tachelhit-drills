@@ -855,14 +855,21 @@ def _spread(cands: List[dict], limit: int) -> List[dict]:
             continue
         seen.add(key)
         buckets[origin_rank(e)].append(e)
-    out, turns, k = [], (0, 0, 1, 1, 2), 0
-    while len(out) < limit and any(buckets):
-        b = buckets[turns[k % len(turns)]]
-        k += 1
-        if b:
-            out.append(b.pop(0))
-        elif not any(buckets):
-            break
+    # Primer les que es poden ESCOLTAR, repartides igual entre les tres fonts; i només quan
+    # s'han acabat, les mudes. Repartir-les totes barrejades feia que una font que ja no tenia
+    # veus seguís posant frases mudes mentre una altra encara en tenia de gravades: «numerals»
+    # servia 18 exemples sense veu de 42, i 10 d'aquests sortien de la font que n'havia exhaurit
+    # les gravades. Dins de cada tanda el repartiment és el de sempre.
+    voiced = [[e for e in b if e.get("audio_url")] for b in buckets]
+    silent = [[e for e in b if not e.get("audio_url")] for b in buckets]
+    out: List[dict] = []
+    for pool in (voiced, silent):
+        turns, k = (0, 0, 1, 1, 2), 0
+        while len(out) < limit and any(pool):
+            b = pool[turns[k % len(turns)]]
+            k += 1
+            if b:
+                out.append(b.pop(0))
     return out
 
 
