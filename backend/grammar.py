@@ -722,7 +722,11 @@ def origin(d) -> str:
         return AIT_MRAW
     if "benimellal" in tag or region.lower().startswith("beni mellal"):
         return "Beni Mellal"
-    return region or ("gravació" if d.audio_url else "")
+    # I si no en sabem el poble, no se n'inventa cap. Abans aquí hi deia «gravació», que a la
+    # targeta sortia com «veu de parlant · gravació»: ocupava el lloc de la procedència sense
+    # dir-ne res. Qui ho llegeix ha de poder distingir una frase d'un poble d'una frase que no
+    # sabem d'on és —són dues coses diferents, i la segona és feina pendent, no un lloc.
+    return region
 
 
 def origin_rank(e: dict) -> int:

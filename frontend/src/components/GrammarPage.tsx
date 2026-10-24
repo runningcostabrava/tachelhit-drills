@@ -341,7 +341,11 @@ function Example({ e, highlight, onAsk, onRecord, onWant, signedIn, isAdmin }: {
         <div style={{ fontWeight: 800, fontSize: '17px', color: 'var(--text)', lineHeight: 1.3 }}>{withFocus(shown.shi, e.focus)}</div>
         {e.tif && <div lang="zgh" style={{ fontFamily: 'var(--font-tifinagh)', fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.4 }}>{e.tif}</div>}
         <div style={{ fontSize: '14px', color: 'var(--text-soft)' }}>{shown.ca}</div>
-        {(e.recorded || e.origin || e.region) && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>{e.recorded ? `veu de ${e.author || 'parlant'}` : 'veu sintètica'}{e.origin || e.region ? ` · ${e.origin || e.region}` : ''}</div>}
+        {/* El crèdit: qui ho diu i d'on és. Si la frase està gravada i no en sabem el poble, es
+            diu —«no sabem d'on és»— en comptes de deixar el lloc buit o, com abans, d'omplir-lo
+            amb «gravació», que ocupava el lloc de la procedència sense dir-ne res. Una varietat
+            desconeguda és feina pendent, no un lloc. */}
+        {(e.recorded || e.origin || e.region) && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>{e.recorded ? `veu de ${e.author || 'parlant'}` : 'veu sintètica'}{e.origin || e.region ? ` · ${e.origin || e.region}` : (e.recorded ? ' · no sabem d’on és' : '')}</div>}
         {((e.gloss && e.gloss.length > 0) || e.why) && (
           <div style={{ display: 'flex', gap: '10px', marginTop: 4, flexWrap: 'wrap' }}>
             {e.gloss && e.gloss.length > 0 && (
