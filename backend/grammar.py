@@ -1399,6 +1399,11 @@ def _current(row, unit_ids: Optional[set], deep: bool = False) -> Optional[dict]
 _writing: set = set()
 _write_lock = threading.Lock()
 
+#: Per què NO s'ha pogut escriure una lliçó, per unitat i nivell. Una escriptura que falla ho ha
+#: de dir: la pàgina deia «s'està escrivint ara mateix» per sempre i no hi havia manera de saber,
+#: des de fora, que el redactor estava sense crèdit.
+_failures: dict = {}
+
 
 def writing() -> List[str]:
     """The units whose lesson is being written right now."""
@@ -1450,7 +1455,13 @@ def _write_in_background(session_factory, slug: str, grammar_md: str, examples: 
             _store_lesson(db, slug, lesson, deep=deep)
             print(f"[GRAMMAR] {'a fons' if deep else 'lesson'} {slug}: written ({len(lesson.get('steps') or [])} steps)")
         except Exception as e:
+            # I que es vegi. Una escriptura que falla deixava la pàgina dient «s'està escrivint
+            # ara mateix» per sempre: amb Gemini sense crèdit, els 22 nivells «a fons» que
+            # falten ho han dit tota la nit sense que res digués per què.
+            _failures[key] = {"when": time.time(), "why": str(e)[:200]}
             print(f"[GRAMMAR] {'a fons' if deep else 'lesson'} {slug}: {e}")
+        else:
+            _failures.pop(key, None)
         finally:
             try:
                 db.close()
@@ -1463,8 +1474,16 @@ def _write_in_background(session_factory, slug: str, grammar_md: str, examples: 
     return True
 
 
-def _placeholder(slug: str, examples: List[dict]) -> dict:
+def _placeholder(slug: str, examples: List[dict], deep: bool = False) -> dict:
     unit = next((u for u in UNITS if u["slug"] == slug), None)
+    failed = _failures.get(_row_id(slug, deep))
+    if failed:
+        return {"intro": "", "writing": False, "failed": failed["why"], "steps": [
+            {"type": "explain", "title": (unit or {}).get("title") or "Unitat",
+             "text": ("Aquesta lliçó no s'ha pogut escriure: " + failed["why"] + "\n\nMentrestant "
+                      "pots escoltar i llegir les frases de la unitat, que són les de sempre."),
+             "examples": examples[:4]},
+            {"type": "end"}]}
     return {"intro": "", "writing": True, "steps": [
         {"type": "explain", "title": (unit or {}).get("title") or "Unitat",
          "text": "S’està escrivint aquesta lliçó ara mateix. Mentrestant pots escoltar i llegir les frases de la "
@@ -1547,7 +1566,7 @@ def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool
     if session_factory is not None:
         _write_in_background(session_factory, slug, grammar_md, examples, unit_ids, tables, deep=deep)
         kept = _stored(row)
-        return dressed({**kept, "stale": True, "writing": True}) if kept else dressed(_placeholder(slug, examples))
+        return dressed({**kept, "stale": True, "writing": True}) if kept else dressed(_placeholder(slug, examples, deep))
     with _explain_lock:  # a script that asked for the lesson itself waits for it
         row = db.query(GrammarLesson).filter(GrammarLesson.id == _row_id(slug, deep)).first()
         lesson = None if force else _current(row, unit_ids, deep=deep)

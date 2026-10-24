@@ -271,7 +271,11 @@ export interface MethodContent {
     id: string; title: string; text?: string;
     examples?: MethodExample[];
     table?: { title: string; rows: { p: string; v: string; v_tif?: string | null }[] };
-    columns?: { title: string; rows: { shi: string; ca: string; tif?: string | null }[] }[];
+    /** Les parelles mínimes. `audio_url` i companyia els enganxa el servidor quan la biblioteca
+     *  té una frase que diu exactament això: una parella que no es pot escoltar no ensenya res. */
+    columns?: { title: string; rows: { shi: string; ca: string; tif?: string | null;
+                                       audio_url?: string | null; speaker?: string | null;
+                                       region?: string | null; from_drill_id?: number }[] }[];
     /** `note`: per què aquesta fila no és com les altres — «ens falta sentir-ho» quan el buit hi
      *  és a posta, «forma derivada» quan la forma l'hem construïda nosaltres i no l'ha dita ningú. */
     numbers?: { n: number; m: string; f?: string; note?: string; m_tif?: string | null; f_tif?: string | null }[];

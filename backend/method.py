@@ -290,7 +290,8 @@ def content_of(db, slug: str) -> Optional[Dict]:
 #: Qui administra corregeix una línia i el navegador torna el capítol sencer tal com el tenia a
 #: la pantalla: amb la tifinagh de cada línia i amb les frases nostres repartides per dins. Això
 #: no és el capítol, és el que n'hem calculat; desar-ho el congelaria amb les frases d'aquell dia.
-COMPUTED = {"ours_drills", "ours_total", "audio_url", "image_url", "speaker", "from_drill_id"}
+COMPUTED = {"ours_drills", "ours_total", "audio_url", "image_url", "speaker", "region",
+            "from_drill_id"}
 
 
 def strip_computed(body: Dict) -> Dict:
@@ -698,26 +699,115 @@ def attach_library(db, body: Optional[Dict], rows: List) -> Optional[Dict]:
             if d is not None:
                 from_drill(line, d)
 
-    # les paraules del capítol: la frase de la biblioteca que diu exactament això
-    said = {}
+    # Cada línia del capítol: la frase de la biblioteca que diu exactament això.
+    #
+    # Abans només s'hi buscaven les paraules del vocabulari, i només entre les frases del
+    # capítol. El capítol 1 —el DELS SONS— no té cap frase assignada, de manera que no hi havia
+    # on buscar i les sis seccions sortien mudes: un capítol que diu «no passis d'aquí fins que
+    # distingeixis `imi` de `immi`» i no deixa sentir cap de les dues no es pot fer servir.
+    # Ara s'hi busca per a TOTES les línies i, quan el capítol no en té prou, a tota la
+    # biblioteca. Segueix sense inventar res: o la frase diu exactament això, o la línia es
+    # queda com era.
+    lines = [l for l in _voiceable_lines(body) if not l.get("audio_url")]
+    said = _by_what_it_says(rows)
+    missing_keys = {k for k in (_said_key(l.get("shi")) for l in lines) if k and k not in said}
+    if missing_keys:
+        said = {**_by_what_it_says(_short_drills(db, missing_keys)), **said}
+    for line in lines:
+        k = _said_key(line.get("shi"))
+        d = said.get(k) if k else None
+        if d is not None:
+            from_drill(line, d)
+            line["from_drill_id"] = d.id
+    return body
+
+
+def _voiceable_lines(body: Dict) -> List[Dict]:
+    """Tot el que, dins d'un capítol, és una frase o una paraula amaziga que es podria escoltar:
+    els exemples, els torns del diàleg, el vocabulari i les files de les columnes —que són
+    justament les parelles mínimes del capítol dels sons (`imi`/`immi`, `mdi`/`mḍi`)."""
+    out = [l for kind in LINE_KINDS for l in _lines_of(body, kind)]
+    for s in (body.get("sections") or []):
+        for col in (s.get("columns") or []):
+            out.extend(r for r in (col.get("rows") or []) if isinstance(r, dict))
+    return [l for l in out if isinstance(l, dict) and (l.get("shi") or "").strip()]
+
+
+def _said_key(text: Optional[str]) -> str:
+    """El que diu una frase, sense dependre de com s'escriu: «3afaš» i «ɛafaš» són la mateixa."""
+    import practice
+    return " ".join(practice.sound_key(w) for w in practice.words_of(text or ""))
+
+
+def _by_what_it_says(rows: List) -> Dict[str, object]:
+    said: Dict[str, object] = {}
+    # la que es pugui mirar i escoltar primer; si no, la que tingui veu
+    rank = lambda x: (0 if (x.image_url and x.audio_url) else 1 if x.audio_url else 2 if x.image_url else 3)
     for d in rows:
-        k = " ".join(practice.sound_key(w) for w in practice.words_of(d.text_tachelhit or ""))
+        k = _said_key(getattr(d, "text_tachelhit", None))
         if not k:
             continue
         have = said.get(k)
-        # la que es pugui mirar i escoltar primer; si no, la que tingui veu
-        rank = lambda x: (0 if (x.image_url and x.audio_url) else 1 if x.audio_url else 2 if x.image_url else 3)
         if have is None or rank(d) < rank(have):
             said[k] = d
-    for word in (body.get("vocabulary") or []):
-        if word.get("drill_id"):
-            continue
-        k = " ".join(practice.sound_key(w) for w in practice.words_of(word.get("shi") or ""))
-        d = said.get(k)
-        if d is not None:
-            from_drill(word, d)
-            word["from_drill_id"] = d.id
-    return body
+    return said
+
+
+#: Una línia d'un capítol és una paraula o una frase curta. Buscar-la entre les frases llargues
+#: de la biblioteca no serviria de res i costaria la consulta sencera.
+SHORT_LINE = 60
+
+
+class _Said:
+    """El poc que una línia del capítol necessita d'una frase: qui la diu i on sona."""
+    __slots__ = ("id", "text_tachelhit", "audio_url", "image_url", "speaker", "author",
+                 "region", "variety")
+
+    def __init__(self, row):
+        (self.id, self.text_tachelhit, self.audio_url, self.image_url,
+         self.speaker, self.author, self.region, self.variety) = row
+
+
+#: L'índex de «què diu cada frase curta gravada» es guarda entre peticions, perquè refer-lo vol
+#: dir llegir unes quantes milers de files i passar-les pel normalitzador a cada capítol que
+#: algú obre. El que decideix si encara val és un segell barat —quantes n'hi ha i quan es va
+#: tocar la darrera— de manera que una frase acabada de gravar hi entra de seguida.
+_short_index: Dict[str, object] = {"stamp": None, "by_key": {}}
+
+
+def _short_stamp(db) -> tuple:
+    from sqlalchemy import func
+    from models import Drill as DrillModel
+    return tuple(db.query(func.count(DrillModel.id), func.max(DrillModel.updated_at))
+                 .filter(DrillModel.audio_url.isnot(None)).one())
+
+
+def _short_drills(db, keys: set) -> List:
+    """Les frases curtes i gravades de la biblioteca que poden dir el que diu una línia del
+    capítol. Vuit columnes i prou, i només les que es poden escoltar."""
+    from sqlalchemy import func
+    from models import Drill as DrillModel
+    try:
+        stamp = _short_stamp(db)
+        if _short_index["stamp"] != stamp:
+            rows = (db.query(DrillModel.id, DrillModel.text_tachelhit, DrillModel.audio_url,
+                             DrillModel.image_url, DrillModel.speaker, DrillModel.author,
+                             DrillModel.region, DrillModel.variety)
+                    .filter(DrillModel.text_tachelhit.isnot(None))
+                    .filter(DrillModel.audio_url.isnot(None))
+                    .filter(func.length(DrillModel.text_tachelhit) <= SHORT_LINE)
+                    .all())
+            by_key: Dict[str, object] = {}
+            for r in rows:
+                k = _said_key(r[1])
+                if k and k not in by_key:
+                    by_key[k] = _Said(r)
+            _short_index["by_key"], _short_index["stamp"] = by_key, stamp
+    except Exception as e:   # una base de dades que no respon no deixa el capítol sense servir
+        print(f"[METHOD] no s'ha pogut buscar veus a la biblioteca: {str(e)[:120]}")
+        return []
+    by_key = _short_index["by_key"]
+    return [d for k, d in by_key.items() if k in keys]
 
 
 def _lines_of(body: Dict, kind: str) -> List[Dict]:

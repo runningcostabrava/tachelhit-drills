@@ -468,6 +468,11 @@ export default function MethodLesson({
   (body.vocabulary || []).forEach((v, k) => push(`vocabulary:${k}`, v.audio_url));
   (body.sections || []).forEach((sec) => {
     (sec.examples || []).forEach((e, k) => push(`example:${sec.id}:${k}`, e.audio_url));
+    // Les files de les columnes són les PARELLES MÍNIMES del capítol dels sons —imi/immi,
+    // mdi/mḍi—, que és justament el que s'hi ha d'escoltar: el capítol diu «no passis d'aquí
+    // fins que les distingeixis» i no en deixava sentir cap.
+    (sec.columns || []).forEach((col, c) =>
+      (col.rows || []).forEach((r, k) => push(`column:${sec.id}:${c}:${k}`, r.audio_url)));
   });
   // Les frases de la biblioteca NO entren al play del capítol, encara que siguin les que tenen
   // més veu. Un auditor pedagògic ho va comptar: de 24 talls que sonaven, 20 eren frases d'una
@@ -735,18 +740,30 @@ export default function MethodLesson({
 
           {s.columns && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12, marginTop: 8 }}>
-              {s.columns.map((col) => (
+              {s.columns.map((col, ci) => (
                 <div key={col.title} style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
                   <div style={{ padding: '6px 12px', background: 'var(--surface-2)', fontSize: 12, fontWeight: 800, color: 'var(--text-muted)' }}>{col.title}</div>
-                  {col.rows.map((r, k) => (
-                    <div key={k} style={{ display: 'flex', gap: 10, padding: '5px 12px', borderTop: '1px solid var(--border)', fontSize: 13.5 }}>
+                  {col.rows.map((r, k) => {
+                    const key = `column:${s.id}:${ci}:${k}`;
+                    const here = sounding === key;
+                    return (
+                    <div key={k} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '5px 12px', borderTop: '1px solid var(--border)', fontSize: 13.5,
+                                          background: here ? 'var(--brand-gradient-soft)' : undefined }}>
                       <span style={{ flex: 1 }}>
                         <span lang="shi" style={{ fontWeight: 700, color: 'var(--brand-1)' }}>{r.shi}</span>
                         <Tif t={r.tif} size={11.5} />
                       </span>
                       <span style={{ color: 'var(--text-soft)' }}>{r.ca}</span>
+                      {r.audio_url && (
+                        <button onClick={() => playOne(key)} title={`Escolta «${r.shi}»`}
+                                aria-label={`Escolta «${r.shi}»`}
+                                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, flex: '0 0 auto', borderRadius: '50%', border: '1px solid var(--border)', background: here ? 'var(--brand-1)' : 'var(--surface)', color: here ? '#fff' : 'var(--brand-1)', cursor: 'pointer', padding: 0 }}>
+                          {here ? <FaStop size={9} /> : <FaPlay size={9} />}
+                        </button>
+                      )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ))}
             </div>
@@ -792,7 +809,7 @@ export default function MethodLesson({
                   <BookLine key={k} slug={slug} where={where} look="row"
                             shi={e.shi} ca={e.ca} note={e.note} tif={e.tif} gloss={e.gloss}
                             drillId={e.drill_id} canEdit={canEdit}
-                            audio={e.audio_url} speaker={e.speaker} region={e.region}
+                            audio={e.audio_url} image={e.image_url} speaker={e.speaker} region={e.region}
                             failed={!!broken[`example:${s.id}:${k}`]}
                             playing={sounding === key} onPlay={() => playOne(key)}
                             onSave={(shi, ca) => saveLine(where, shi, ca)}
