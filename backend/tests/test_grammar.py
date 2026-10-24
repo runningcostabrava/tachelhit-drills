@@ -809,3 +809,20 @@ def test_una_frase_gravada_sense_poble_no_sinventa_una_procedencia():
     assert grammar_course.origin(d) == grammar_course.AIT_MRAW
     d.region, d.tag = None, "benimellal-anki"
     assert grammar_course.origin(d) == "Beni Mellal"
+
+
+def test_el_pas_dun_so_obre_amb_la_frase_que_lescriu_amb_la_seva_lletra():
+    """El pas que ensenya que la š s'escriu «š» obria amb «Shore», «Shora», «tshua»: totes
+    porten el so, cap no l'escriu com la lliçó diu. No se'n treu cap —el text és de qui el va
+    escriure— però la primera que es llegeix és la que ensenya la lletra."""
+    import grammar as grammar_course
+    def ex(shi):
+        return {"id": abs(hash(shi)) % 9999, "shi": shi, "ca": "x", "audio_url": None}
+    lesson = {"intro": "", "steps": [
+        {"type": "explain", "title": "El so 'sh' o 'š'", "text": "t",
+         "examples": [ex("Shore"), ex("tshua"), ex("3afaš"), ex("Sharjm")]},
+        {"type": "end"}]}
+    grammar_course.with_the_sound_it_teaches(lesson, grammar_course.SOUNDS_UNIT)
+    shown = [e["shi"] for e in lesson["steps"][0]["examples"]]
+    assert shown[0] == "3afaš", f"primer la que porta la š de debò, i surt {shown}"
+    assert set(shown) == {"Shore", "tshua", "3afaš", "Sharjm"}, "i no se'n perd cap"
