@@ -790,3 +790,22 @@ def test_la_llico_tria_primer_les_frases_que_es_poden_escoltar():
     totes = grammar_course._spread(cands, 18)
     assert sum(1 for e in totes if not e["audio_url"]) == 6, "les mudes hi entren quan no queda res més"
     assert all(e["audio_url"] for e in totes[:12]), "i sempre al final"
+
+
+def test_una_frase_gravada_sense_poble_no_sinventa_una_procedencia():
+    """La targeta d'un exemple deia «veu de parlant · gravació»: «gravació» ocupava el lloc de la
+    procedència sense dir-ne res. Una varietat que no sabem és feina pendent, no un lloc."""
+    import grammar as grammar_course
+
+    class R:  # noqa
+        def __init__(self):
+            self.id, self.text_tachelhit, self.text_catalan = 1, "ur ssinɣ", "no ho sé"
+            self.image_url = self.author = self.region = self.tag = None
+            self.audio_url = "https://exemple/so.webm"
+
+    d = R()
+    assert grammar_course.origin(d) == "", "sense poble, cap procedència inventada"
+    d.region = "Aït Mraw (Azilal)"
+    assert grammar_course.origin(d) == grammar_course.AIT_MRAW
+    d.region, d.tag = None, "benimellal-anki"
+    assert grammar_course.origin(d) == "Beni Mellal"
