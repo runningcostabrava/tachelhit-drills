@@ -1602,7 +1602,20 @@ def with_the_sound_it_teaches(lesson, slug: str):
                 if any(has_sound(e.get("shi") or "", so) for so in sounds)]
         if keep and len(keep) < len(s["examples"]):
             s["examples"] = keep
+        # I al davant, les que escriuen el so amb la seva lletra. El pas que ensenya que la ɛ
+        # s'escriu «ɛ» obria amb «shba3», «i3rQ», «A3wni»: totes porten el so, però cap no
+        # l'escriu com la lliçó diu que s'escriu. No se'n treu cap —el text és de qui el va
+        # escriure— però la primera que es llegeix és la que ensenya la lletra.
+        s["examples"] = sorted(s["examples"],
+                               key=lambda e: not written_with_the_letter(e.get("shi") or "", sounds))
     return lesson
+
+
+def written_with_the_letter(shi: str, sounds) -> bool:
+    """Si la frase escriu aquests sons amb la seva lletra (ɛ, ɣ, š) i no de la manera ràpida
+    (3, gh, sh). Vegeu #302: només el 8% de la biblioteca fa servir l'alfabet que el curs ensenya."""
+    low = unicodedata.normalize("NFC", shi or "").lower()
+    return any(so in low for so in sounds)
 
 
 def _with_glosses(lesson, examples: List[dict]):
