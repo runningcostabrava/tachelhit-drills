@@ -40,6 +40,14 @@ def test_classification_fills_grammar_and_unit_page_shows_lesson_and_examples(mo
     # the unit page: the lesson is steps with the library's examples attached, written once (kept in the DB)
     monkeypatch.setattr(main, "gemini_available", lambda: True)
     monkeypatch.setattr(main, "_load_grammar", lambda: "## 7. Sintaxi\n7.2.1. La partícula negativa\nLa negació es fa amb ur.\n7.2.2. La negació discontínua\n...\n7.3. L'oració interrogativa\n")
+    # Background writers outlive the test that started them. Drain earlier writers before
+    # replacing gemini_generate with this test's recorder, so their calls cannot inflate it.
+    import time
+    deadline = time.monotonic() + 20.0
+    while grammar.writing() and time.monotonic() < deadline:
+        time.sleep(0.1)
+    assert not grammar.writing(), "previous grammar lesson writer is still running"
+
     calls = []
     answer = __import__("json").dumps({"intro": "Sabràs dir que no.", "steps": [
         {"type": "explain", "title": "La paraula ur", "text": "Per dir que no, poses **ur** davant del verb.", "example_ids": [a["id"], 999999], "focus": {str(a["id"]): "ur rad", "999999": "x"}},
