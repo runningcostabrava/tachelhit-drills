@@ -1595,11 +1595,16 @@ def with_the_sound_it_teaches(lesson, slug: str):
 
 
 def _with_glosses(lesson, examples: List[dict]):
-    """Put the library's CURRENT word-by-word readings into a kept lesson, matched by drill id, so
-    a gloss that improves reaches the course without the lesson being written again."""
+    """Put the library's CURRENT word-by-word readings AND Tifinagh into a kept lesson, matched by
+    drill id, so una lectura que millora arriba al curs sense reescriure la lliçó.
+
+    La tifinag va amb les glosses i per la mateixa raó. Quan es va arreglar el transliterador
+    (#304) les lliçons ja escrites seguien servint la tifinag del dia que es van escriure: la
+    unitat dels sons continuava ensenyant `sġix → ⵙⴳⵉⵅ`, amb una ⴳ, el dia després d'arreglar-ho.
+    Una conversió que millora no ha d'esperar que algú reescrigui la lliçó."""
     if not isinstance(lesson, dict):
         return lesson
-    have = {e["id"]: e["gloss"] for e in examples if e.get("gloss") and e.get("id")}
+    have = {e["id"]: e for e in examples if e.get("id")}
     if not have:
         return lesson
     for s in lesson.get("steps") or []:
@@ -1609,9 +1614,13 @@ def _with_glosses(lesson, examples: List[dict]):
         if isinstance(s.get("example"), dict):
             shown.append(s["example"])
         for e in shown:
-            g = have.get(e.get("id"))
-            if g:
-                e["gloss"] = g
+            fresh = have.get(e.get("id"))
+            if not fresh:
+                continue
+            if fresh.get("gloss"):
+                e["gloss"] = fresh["gloss"]
+            if fresh.get("tif"):
+                e["tif"] = fresh["tif"]
     return lesson
 
 

@@ -747,3 +747,17 @@ def test_lapostrof_del_catala_no_es_una_cometa():
     # i un so citat de debò segueix rebent la seva tifinag
     assert grammar_course.with_letters("El so 'ɛ' es fa a la gola.") == "El so 'ɛ ⵄ' es fa a la gola."
     assert grammar_course.with_letters("El so «gh».") == "El so «gh ⵖ»."
+
+
+def test_una_llico_ja_escrita_serveix_la_tifinag_daram_no_la_del_dia_que_es_va_escriure():
+    """Quan es va arreglar el transliterador (#304), les lliçons ja escrites seguien servint la
+    tifinag vella: la unitat dels sons ensenyava «sġix → ⵙⴳⵉⵅ», amb una ⴳ, el dia després
+    d'arreglar-ho. La tifinag es refresca com les glosses, en servir la lliçó."""
+    import grammar as grammar_course
+    guardada = {"intro": "", "steps": [
+        {"type": "explain", "title": "t", "text": "x",
+         "examples": [{"id": 7, "shi": "sġix", "ca": "jo compro", "tif": "ⵙⴳⵉⵅ"}]},
+        {"type": "end"}]}
+    daram = [{"id": 7, "shi": "sġix", "ca": "jo compro", "tif": "ⵙⵖⵉⵅ", "gloss": None}]
+    servida = grammar_course._with_glosses(guardada, daram)
+    assert servida["steps"][0]["examples"][0]["tif"] == "ⵙⵖⵉⵅ"
