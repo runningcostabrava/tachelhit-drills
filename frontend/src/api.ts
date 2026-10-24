@@ -205,7 +205,9 @@ export interface MethodContent {
     examples?: MethodExample[];
     table?: { title: string; rows: { p: string; v: string; v_tif?: string | null }[] };
     columns?: { title: string; rows: { shi: string; ca: string; tif?: string | null }[] }[];
-    numbers?: { n: number; m: string; f?: string; m_tif?: string | null; f_tif?: string | null }[];
+    /** `note`: per què aquesta fila no és com les altres — «ens falta sentir-ho» quan el buit hi
+     *  és a posta, «forma derivada» quan la forma l'hem construïda nosaltres i no l'ha dita ningú. */
+    numbers?: { n: number; m: string; f?: string; note?: string; m_tif?: string | null; f_tif?: string | null }[];
     /** Més a fons: el que el manual dóna per sabut i aquí s'explica. S'obre qui vol. */
     deep?: string;
     /** De quina zona del capítol és: el que cal per fer la compra, o el que l'escena deixa veure. */

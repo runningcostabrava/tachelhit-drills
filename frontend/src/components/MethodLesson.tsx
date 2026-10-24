@@ -754,11 +754,16 @@ export default function MethodLesson({
 
           {s.numbers && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(165px, 1fr))', gap: 6, marginTop: 8 }}>
-              {s.numbers.map((n) => (
-                <div key={n.n} style={{ padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--surface-2)', fontSize: 13 }}>
+              {s.numbers.map((n) => {
+                // Un número que no sabem no s'esborra de la taula: es queda amb el buit a la
+                // vista i amb el que li falta escrit. Esborrar la fila faria creure que entre el
+                // 20 i el 100 no hi ha res; deixar-hi una forma versemblant seria pitjor encara.
+                const empty = n.m === '—' || n.m === '-';
+                return (
+                <div key={n.n} style={{ padding: '6px 10px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: empty ? 'transparent' : 'var(--surface-2)', borderStyle: empty ? 'dashed' : 'solid', fontSize: 13 }}>
                   <div style={{ color: 'var(--text-muted)', fontWeight: 800, fontSize: 11.5 }}>{n.n}</div>
-                  <div lang="shi" style={{ fontWeight: 700, color: 'var(--brand-1)' }}>{n.m}</div>
-                  <Tif t={n.m_tif} size={11.5} />
+                  <div lang={empty ? undefined : 'shi'} style={{ fontWeight: 700, color: empty ? 'var(--text-muted)' : 'var(--brand-1)' }}>{n.m}</div>
+                  {!empty && <Tif t={n.m_tif} size={11.5} />}
                   {n.f && n.f !== n.m && (
                     <>
                       <div lang="shi" style={{ color: 'var(--text-soft)' }}>
@@ -767,8 +772,14 @@ export default function MethodLesson({
                       <Tif t={n.f_tif} size={11.5} />
                     </>
                   )}
+                  {n.note && (
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.35 }}>
+                      {n.note}
+                    </div>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -791,8 +802,11 @@ export default function MethodLesson({
             </div>
           )}
 
+          {/* `pre-line`: aquesta nota té paràgrafs i es llegien tots seguits. Divuit línies sense
+              cap respirador amaguen justament el que han de deixar clar —què hi falta i per què—,
+              que és on la pàgina diu el que no sap. */}
           {s.ours && (
-            <p style={{ marginTop: 10, padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--brand-gradient-soft)', fontSize: 13.5, lineHeight: 1.6 }}>
+            <p style={{ marginTop: 10, padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--brand-gradient-soft)', fontSize: 13.5, lineHeight: 1.6, whiteSpace: 'pre-line' }}>
               <strong>A l’Atles central:</strong> {s.ours}
             </p>
           )}
