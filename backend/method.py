@@ -654,10 +654,23 @@ def content_with_ours(db, slug: str, rows: List, card) -> Optional[Dict]:
     return with_letters_everywhere(with_tifinagh(attach_heard(db, attach_library(db, body, rows), rows)))
 
 
+#: El que hi ha escrit on hauria d'haver-hi la frase, a 170 drills (115 amb veu, #320). No són
+#: paraules amazigues: són el text que s'hi va desar quan la transcripció es va perdre.
+PLACEHOLDERS = {"text", "n", "-", "?", "..."}
+
+
 def _readable(text: Optional[str]) -> bool:
-    """Una frase que es pot ensenyar: sense restes de transcripció i prou curta per llegir-la."""
+    """Una frase que es pot ensenyar: sense restes de transcripció i prou curta per llegir-la.
+
+    I que sigui una frase. Buscant la frase més curta que porti una `t`, la guanyadora era la
+    paraula `text` —un drill que va perdre el text amazic i es va desar amb la paraula anglesa
+    a dins—, i per a la `n`, la lletra `n`. Ensenyar-les com a exemple de res seria fer passar
+    una errada nostra per llengua.
+    """
     t = (text or "").strip()
-    return bool(t) and "[" not in t and len(t) <= 70
+    if not t or t.lower() in PLACEHOLDERS:
+        return False
+    return "[" not in t and len(t) <= 70
 
 
 def heard_in(sound: str, voiced: List, used: set):
@@ -677,7 +690,8 @@ def heard_in(sound: str, voiced: List, used: set):
     best = None
     for d in voiced:
         t = ud.normalize("NFC", d.text_tachelhit or "")
-        if s not in t or not _readable(t):
+        # i que es pugui entendre: una frase sense traducció no ensenya el so de res
+        if s not in t or not _readable(t) or not (d.text_catalan or "").strip():
             continue
         # la més curta mana (un so se sent millor en quatre paraules que en catorze), i una que
         # ja s'ha fet servir en una altra lletra passa al darrere: un capítol que ensenya trenta
