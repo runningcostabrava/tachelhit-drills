@@ -27,6 +27,7 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 
 import re
+import unicodedata as ud
 
 import grammar
 import transliteration
@@ -297,7 +298,7 @@ def content_of(db, slug: str) -> Optional[Dict]:
 #: la pantalla: amb la tifinagh de cada línia i amb les frases nostres repartides per dins. Això
 #: no és el capítol, és el que n'hem calculat; desar-ho el congelaria amb les frases d'aquell dia.
 COMPUTED = {"ours_drills", "ours_total", "audio_url", "image_url", "speaker", "region",
-            "from_drill_id"}
+            "from_drill_id", "heard"}
 
 
 def strip_computed(body: Dict) -> Dict:
@@ -650,7 +651,86 @@ def content_with_ours(db, slug: str, rows: List, card) -> Optional[Dict]:
              "why": why_here(said[d.id], keys_of[s["id"]], unit, d)}
             for d in picked]
         s["ours_total"] = len(scored)
-    return with_letters_everywhere(with_tifinagh(attach_library(db, body, rows)))
+    return with_letters_everywhere(with_tifinagh(attach_heard(db, attach_library(db, body, rows), rows)))
+
+
+def _readable(text: Optional[str]) -> bool:
+    """Una frase que es pot ensenyar: sense restes de transcripció i prou curta per llegir-la."""
+    t = (text or "").strip()
+    return bool(t) and "[" not in t and len(t) <= 70
+
+
+def heard_in(sound: str, voiced: List, used: set):
+    """La frase nostra que millor deixa sentir aquest so.
+
+    Es busca la LLETRA tal com s'escriu, no la clau de so de `practice`: aquí la gràcia és que
+    qui llegeix vegi la lletra que acaba d'aprendre dins d'una frase de debò i la senti. Una
+    clau de so faria el contrari —`ɣur`, `ghor` i `xor` són la mateixa clau— i la frase podria
+    sortir sense la lletra escrita enlloc.
+
+    Es normalitza a NFC perquè 283 drills guarden les lletres descompostes (š = s + U+030C):
+    sense normalitzar, la š de la llista no és la š del drill i la lletra sembla que no hi sigui.
+    """
+    s = ud.normalize("NFC", sound or "")
+    if not s:
+        return None
+    best = None
+    for d in voiced:
+        t = ud.normalize("NFC", d.text_tachelhit or "")
+        if s not in t or not _readable(t):
+            continue
+        # la més curta mana (un so se sent millor en quatre paraules que en catorze), i una que
+        # ja s'ha fet servir en una altra lletra passa al darrere: un capítol que ensenya trenta
+        # sons no els ha de fer sentir tots amb la mateixa frase
+        rank = (1 if d.id in used else 0, len(t.split()), d.id)
+        if best is None or rank < best[0]:
+            best = (rank, d)
+    return best[1] if best else None
+
+
+def attach_heard(db, body: Optional[Dict], rows: List) -> Optional[Dict]:
+    """Cada línia que ensenya un SO, amb una frase nostra on es pot escoltar.
+
+    El capítol dels sons ensenyava trenta-una lletres i no en deixava sentir cap, i ho deia:
+    «aquestes paraules, de moment, no les pots escoltar». Era veritat mirant PARAULES SOLES
+    gravades —no n'hi ha cap amb ḍ ḥ ɛ ṛ ɣ ṣ ṭ ẓ (#302)—, però un so no s'ha de sentir tot sol
+    per sentir-se: dins d'una frase també hi és. Comptades les 3.430 frases, quinze dels setze
+    sons difícils tenen com a mínim una frase nostra que els porta i que sona; només la kʷ no en
+    té cap, i això el capítol ho ha de dir.
+
+    La frase no SUBSTITUEIX la paraula de la fila: hi va al costat, amb qui la diu i d'on és. La
+    paraula del manual segueix sent la paraula del manual, i el botó de sentir diu clarament que
+    el que sonarà és una altra cosa —una frase nostra— i no pas ella.
+    """
+    if not body:
+        return body
+    lines = []
+    for s in body.get("sections") or []:
+        for e in s.get("examples") or []:
+            # una línia que ja es pot escoltar no necessita cap frase de recanvi
+            if e.get("sound") and not e.get("audio_url"):
+                lines.append(e)
+        for r in ((s.get("table") or {}).get("rows") or []):
+            if r.get("sound"):
+                lines.append(r)
+    if not lines:
+        return body
+
+    from models import Drill as DrillModel
+    voiced = db.query(DrillModel).filter(DrillModel.audio_url.isnot(None)).all()
+    used: set = set()
+    for line in lines:
+        d = heard_in(line["sound"], voiced, used)
+        if d is None:
+            continue
+        used.add(d.id)
+        line["heard"] = {
+            "drill_id": d.id, "shi": d.text_tachelhit, "ca": d.text_catalan,
+            "audio_url": d.audio_url, "speaker": d.speaker or d.author,
+            "region": d.region or d.variety,
+            "tif": (transliteration.to_forms(d.text_tachelhit or "")["tifinagh"] or "").strip() or None,
+        }
+    return body
 
 
 def attach_library(db, body: Optional[Dict], rows: List) -> Optional[Dict]:

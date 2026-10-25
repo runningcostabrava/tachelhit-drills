@@ -886,3 +886,51 @@ def test_una_frase_citada_porta_la_tifinag_una_vegada_al_final():
 
     # servir-ho dues vegades dona el mateix
     assert method.amazigh_words_in(frase) == frase
+
+
+def test_una_lletra_que_cap_paraula_nostra_no_diu_se_sent_dins_duna_frase():
+    """El capítol dels sons ensenyava trenta-una lletres i no en deixava sentir cap.
+
+    No era un descuit: de les 3.430 frases, cap paraula sola gravada no porta ɛ ḥ ṛ ɣ ṣ ṭ ẓ ḍ
+    (#302), i la fila de la ɛ no tenia veu possible. Però el so hi és igualment DINS de frases
+    que sí que estan gravades. Ara una línia que ensenya un so en demana una, i la frase va al
+    costat de la paraula —mai al seu lloc— amb qui la diu i d'on és.
+
+    Això es calcula en servir: `heard` no s'ha de desar mai dins del text del capítol, com la
+    resta del que el servidor hi afegeix."""
+    import main, method
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("qui_vol_sentir_la_lletra")}
+    db = main.SessionLocal()
+    try:
+        me = client.get("/users/me", headers=hdr).json()
+        db.query(main.UserModel).filter(main.UserModel.id == me["id"]).first().is_admin = True
+        db.commit()
+    finally:
+        db.close()
+
+    client.post("/drills/", headers=hdr, json={
+        "text_catalan": "Adeu!", "text_tachelhit": "Ac yɛawn buytran!", "author": "Prova-so",
+        "region": "Aït Mraw (Azilal)",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/adeu.mp3"})
+
+    client.put("/method/sons/content", headers=hdr, json={
+        "sections": [{"id": "alfabet", "title": "L'alfabet del manual",
+                      "examples": [{"shi": "ɛmmi", "ca": "oncle patern", "sound": "ɛ"},
+                                   {"shi": "kʷti", "ca": "recordar-se", "sound": "kʷ"}],
+                      "table": {"title": "Com es diuen",
+                                "rows": [{"p": "ɛ", "v": "com la ḥ però fent vibrar la gola",
+                                          "sound": "ɛ"}]}}]})
+
+    body = client.get("/method/sons").json()["content"]
+    sec = body["sections"][0]
+    heard = sec["examples"][0]["heard"]
+    assert "ɛ" in heard["shi"], "la frase porta la lletra escrita, no només el so"
+    assert heard["audio_url"] and heard["speaker"] == "Prova-so"
+    assert heard["region"] == "Aït Mraw (Azilal)", "el crèdit porta el poble"
+    assert not sec["examples"][1].get("heard"), "la kʷ no la diu cap frase nostra: no se n'inventa cap"
+    assert sec["table"]["rows"][0].get("heard"), "la fila de la taula també se sent"
+
+    assert "heard" not in method.strip_computed(body)["sections"][0]["examples"][0], \
+        "el que el servidor calcula no es desa dins del text del capítol"
