@@ -930,7 +930,28 @@ def test_una_lletra_que_cap_paraula_nostra_no_diu_se_sent_dins_duna_frase():
     assert heard["audio_url"] and heard["speaker"] == "Prova-so"
     assert heard["region"] == "Aït Mraw (Azilal)", "el crèdit porta el poble"
     assert not sec["examples"][1].get("heard"), "la kʷ no la diu cap frase nostra: no se n'inventa cap"
+    assert heard["shi"] != "text", "un drill que va perdre la transcripció no és un exemple de res"
     assert sec["table"]["rows"][0].get("heard"), "la fila de la taula també se sent"
 
     assert "heard" not in method.strip_computed(body)["sections"][0]["examples"][0], \
         "el que el servidor calcula no es desa dins del text del capítol"
+
+
+def test_el_text_perdut_dun_drill_no_pot_fer_dexemple_dun_so():
+    """170 drills van perdre el text amazic i s'hi va desar la paraula `text` o la lletra `n`
+    (115 amb veu, #320). Buscant la frase més curta amb una `t`, la guanyadora era `text`, i
+    amb una `n`, `n`: una errada nostra ensenyada com si fos la llengua."""
+    import method
+
+    class D:
+        def __init__(self, i, shi, ca):
+            self.id, self.text_tachelhit, self.text_catalan = i, shi, ca
+            self.audio_url, self.speaker, self.author = "x.mp3", "Prova", None
+            self.region = self.variety = None
+
+    pot = [D(1, "text", "t'han tornat els diners"), D(2, "n", "Em dic Joan"),
+           D(6, "tex", "Quan era petit…"),          # el mateix rastre, escurçat
+           D(3, "ttu", "oblidar"), D(4, "nkki", "jo")]
+    assert method.heard_in("t", pot, set()).text_tachelhit == "ttu"
+    assert method.heard_in("n", pot, set()).text_tachelhit == "nkki"
+    assert method.heard_in("t", [D(5, "tazerbit", "")], set()) is None,         "sense traducció no ensenya el so de res"
