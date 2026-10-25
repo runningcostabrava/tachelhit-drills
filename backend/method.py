@@ -738,9 +738,15 @@ def attach_heard(db, body: Optional[Dict], rows: List) -> Optional[Dict]:
         if d is None:
             continue
         used.add(d.id)
+        qui = d.speaker or d.author
+        # «Auto Capture» no és ningú: és el nom del procés que va retallar la frase d'un vídeo.
+        # Dir «ho diu Auto Capture» fa passar una màquina per una persona, i a sobre amaga el
+        # que de debò passa —que hi ha una veu humana i no sabem de qui és.
+        captura = (qui or "").strip().lower() == "auto capture"
         line["heard"] = {
             "drill_id": d.id, "shi": d.text_tachelhit, "ca": d.text_catalan,
-            "audio_url": d.audio_url, "speaker": d.speaker or d.author,
+            "audio_url": d.audio_url, "speaker": None if captura else qui,
+            "captured": captura,
             # NOMÉS el poble. La varietat és un codi —«tzm»— i no és un lloc: a la fila de la ɛ
             # hi sortia «ho diu tzm», que no diu d'on és ningú. Sense poble, el crèdit es queda
             # amb la persona i prou.

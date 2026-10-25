@@ -257,6 +257,8 @@ export interface MethodGloss { shi: string; ca?: string | null; tif?: string | n
 export interface MethodHeard {
   drill_id: number; shi: string; ca?: string | null; tif?: string | null;
   audio_url?: string | null; speaker?: string | null; region?: string | null;
+  /** La frase es va retallar d'un vídeo: hi ha una veu humana i no sabem de qui és. */
+  captured?: boolean;
 }
 export interface MethodExample {
   shi: string; ca: string; note?: string; drill_id?: number;

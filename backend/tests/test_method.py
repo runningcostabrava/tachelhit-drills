@@ -955,3 +955,32 @@ def test_el_text_perdut_dun_drill_no_pot_fer_dexemple_dun_so():
     assert method.heard_in("t", pot, set()).text_tachelhit == "ttu"
     assert method.heard_in("n", pot, set()).text_tachelhit == "nkki"
     assert method.heard_in("t", [D(5, "tazerbit", "")], set()) is None,         "sense traducció no ensenya el so de res"
+
+
+def test_el_proces_que_retalla_una_frase_no_es_qui_la_diu():
+    """43 gravacions porten «Auto Capture» com a parlant: és el nom del procés que les va
+    retallar d'un vídeo, no una persona. El capítol deia «ho diu Auto Capture» a la fila de la
+    ḍ. Hi ha una veu humana, i el que passa és que no sabem de qui és: això s'ha de dir."""
+    import method
+
+    class D:
+        def __init__(self, i, shi, ca, qui):
+            self.id, self.text_tachelhit, self.text_catalan = i, shi, ca
+            self.audio_url, self.speaker, self.author = "x.mp3", qui, None
+            self.region = self.variety = None
+
+    body = {"sections": [{"id": "x", "examples": [{"shi": "aḍar", "sound": "ḍ"}]}]}
+
+    class DB:
+        def query(self, *a):
+            return self
+
+        def filter(self, *a):
+            return self
+
+        def all(self):
+            return [D(1, "a-bḍu d umazir", "deixa la meva llar", "Auto Capture")]
+
+    out = method.attach_heard(DB(), body, [])
+    h = out["sections"][0]["examples"][0]["heard"]
+    assert h["speaker"] is None and h["captured"] is True
