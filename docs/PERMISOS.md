@@ -7,6 +7,7 @@ permisos i el text per demanar-los.
 | font | què volem | estat | des de |
 |---|---|---|---|
 | Abdallah El Mountassir, *Méthode de Tachelhit* | adaptar el manual capítol per capítol | **sí** | 23-10-2026 |
+| Abdallah El Mountassir — **el CD del manual** | fer escoltar la seva veu dins dels capítols | **en camí** — l'amo ho parla amb l'autor | 25-10-2026 |
 | Brahim Mansoub — «Apprends le Tamaziɣt berbère, leçon N°1» | el vocabulari il·lustrat (una paraula per lletra) | **per demanar** | — |
 | canal *Atlas* — «ⵉⵙⴽⴽⵉⵍⵏ ⵏⵜⵎⴰⵣⵉⵖⵜ» | els 33 talls de veu de les lletres | **per demanar** | — |
 
@@ -54,6 +55,40 @@ que ja tenim, o una veu nostra.
 > Est-ce que vous nous le permettez ?
 >
 > Merci,
+
+## Per a Abdallah El Mountassir (el CD del manual)
+
+El 23-10-2026 ens va dir que sí a **adaptar el manual**. El CD és una altra cosa —la seva veu
+gravada— i per això es demana a part. És una frase més a algú que ja ens ha dit que sí.
+
+Què en tenim, a hores d'ara: les cinc pistes del CD (capítols 1 a 6, 39 minuts) tallades en
+**646 intervencions**, cadascuna amb el seu segon exacte, i un índex que diu quina línia de cada
+capítol diu cada tall. **Res d'això no és a l'app ni al repositori**: viu fora, i hi viurà fins
+que contesti.
+
+> Bonjour Monsieur El Mountassir,
+>
+> Merci encore de nous avoir permis d'adapter votre *Méthode de tachelhit* chapitre par
+> chapitre. Les six premiers chapitres sont déjà en ligne, en catalan, et votre nom et le livre
+> sont cités sur chaque page.
+>
+> Je vous écris pour une deuxième chose, que nous ne ferons pas sans votre accord : **le CD du
+> manuel**. Dans notre application, les phrases de chaque chapitre peuvent s'écouter, et pour
+> l'instant presque aucune n'a de voix — nos enregistrements viennent de locuteurs de l'Atlas
+> central et ne couvrent pas ce que le livre enseigne.
+>
+> Nous aimerions pouvoir faire écouter votre voix, phrase par phrase, à côté de la ligne du
+> chapitre qui lui correspond, avec votre nom et le titre du livre affichés chaque fois.
+> L'application est gratuite, sans publicité et sans aucun but commercial.
+>
+> Si vous préférez que ce soit limité d'une manière ou d'une autre —un seul chapitre, une
+> formulation précise du crédit, un lien vers l'éditeur— dites-le nous et nous le ferons comme
+> vous voulez. Et si la réponse est non, ce sera non : nous enregistrerons ces phrases avec nos
+> propres voix.
+>
+> Merci pour votre travail,
+
+---
 
 ---
 
