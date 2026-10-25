@@ -656,7 +656,7 @@ def content_with_ours(db, slug: str, rows: List, card) -> Optional[Dict]:
 
 #: El que hi ha escrit on hauria d'haver-hi la frase, a 170 drills (115 amb veu, #320). No són
 #: paraules amazigues: són el text que s'hi va desar quan la transcripció es va perdre.
-PLACEHOLDERS = {"text", "n", "-", "?", "..."}
+PLACEHOLDERS = {"text", "tex", "n", "-", "?", "..."}
 
 
 def _readable(text: Optional[str]) -> bool:

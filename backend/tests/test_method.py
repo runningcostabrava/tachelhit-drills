@@ -950,6 +950,7 @@ def test_el_text_perdut_dun_drill_no_pot_fer_dexemple_dun_so():
             self.region = self.variety = None
 
     pot = [D(1, "text", "t'han tornat els diners"), D(2, "n", "Em dic Joan"),
+           D(6, "tex", "Quan era petit…"),          # el mateix rastre, escurçat
            D(3, "ttu", "oblidar"), D(4, "nkki", "jo")]
     assert method.heard_in("t", pot, set()).text_tachelhit == "ttu"
     assert method.heard_in("n", pot, set()).text_tachelhit == "nkki"
