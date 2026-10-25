@@ -252,8 +252,17 @@ export interface HomeData {
 /** `drill_id` apareix quan algú ha volgut dir aquesta línia: llavors és una frase de la nostra
  *  biblioteca, amb la seva veu i el seu poble. */
 export interface MethodGloss { shi: string; ca?: string | null; tif?: string | null }
+/** Una frase NOSTRA que deixa sentir un so que la línia ensenya però que ella no pot dir.
+ *  La posa el servidor en servir el capítol; no s'escriu a mà ni es desa amb el text. */
+export interface MethodHeard {
+  drill_id: number; shi: string; ca?: string | null; tif?: string | null;
+  audio_url?: string | null; speaker?: string | null; region?: string | null;
+}
 export interface MethodExample {
   shi: string; ca: string; note?: string; drill_id?: number;
+  /** La lletra que aquesta línia ensenya a dir: amb això el servidor hi busca la frase. */
+  sound?: string;
+  heard?: MethodHeard | null;
   /** La mateixa línia en tifinagh. La posa el servidor en servir-la; no s'escriu a mà. */
   tif?: string | null;
   /** Paraula per paraula, escrita amb el capítol: és el que converteix una frase en una lliçó. */
@@ -270,7 +279,8 @@ export interface MethodContent {
   sections?: {
     id: string; title: string; text?: string;
     examples?: MethodExample[];
-    table?: { title: string; rows: { p: string; v: string; v_tif?: string | null }[] };
+    table?: { title: string; rows: { p: string; v: string; v_tif?: string | null;
+                                     sound?: string; heard?: MethodHeard | null }[] };
     /** Les parelles mínimes. `audio_url` i companyia els enganxa el servidor quan la biblioteca
      *  té una frase que diu exactament això: una parella que no es pot escoltar no ensenya res. */
     columns?: { title: string; rows: { shi: string; ca: string; tif?: string | null;

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { FaPlay, FaStop, FaCommentDots, FaMicrophone, FaPen, FaCheck, FaTags, FaBookOpen, FaHandPointer } from 'react-icons/fa';
-import { api, type MethodContent, type MethodExample, type MethodGloss } from '../api';
+import { api, type MethodContent, type MethodExample, type MethodGloss, type MethodHeard } from '../api';
 import type { Drill } from '../types';
 import { getMediaUrl, hasIdentity, thumb } from '../config';
 import { toast } from '../toast';
@@ -270,15 +270,52 @@ function CheckYourself({ questions }: { questions: { q: string; a: string }[] })
  *  errada és una errada visqui on visqui: no tenia sentit poder corregir un exemple i no poder
  *  corregir la rèplica que hi ha tres dits més avall.
  */
+/** El so d'una lletra, dins d'una frase nostra.
+ *
+ *  La paraula del manual que ensenya la ɛ no la diu ningú —de les 3.430 frases, cap paraula
+ *  sola no porta ɛ ḥ ṛ ɣ ṣ ṭ ẓ ḍ (#302)—, i el capítol es llegia sencer sense poder sentir cap
+ *  de les lletres que ensenya. Una frase sí que les porta. Això no fa passar la frase per la
+ *  paraula: ho diu obertament —«el so, dins d'una frase nostra»— i porta el crèdit de qui la diu
+ *  i d'on és, com qualsevol altra veu del capítol.
+ */
+function HeardHere({ h }: { h: MethodHeard }) {
+  const [playing, setPlaying] = useState(false);
+  const play = () => {
+    if (!h.audio_url) return;
+    const a = new Audio(getMediaUrl(h.audio_url));
+    setPlaying(true);
+    a.onended = () => setPlaying(false);
+    a.onerror = () => setPlaying(false);
+    a.play().catch(() => setPlaying(false));
+  };
+  const credit = h.speaker ? `${h.speaker}${h.region ? ` · ${h.region}` : ''}` : 'una de les nostres veus';
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexBasis: '100%',
+                   marginTop: 2, fontSize: 11.5, color: 'var(--text-muted)' }}>
+      <button onClick={play} aria-label={`Escolta el so dins de «${h.shi}»`} title={`Ho diu ${credit}`}
+              style={{ ...iconBtn, width: 20, height: 20, border: 'none', flexShrink: 0,
+                       background: playing ? 'var(--brand-1)' : 'var(--brand-gradient)', color: '#fff' }}>
+        <FaPlay size={7} />
+      </button>
+      <span>
+        el so, dins d’una frase nostra: <span lang="shi" style={{ fontWeight: 700, color: 'var(--brand-1)' }}>{h.shi}</span>
+        {h.ca ? ` «${h.ca}»` : ''} · ho diu {credit}
+      </span>
+    </span>
+  );
+}
+
 function BookLine({
   slug, where, look, who, shi, ca, note, tif, gloss, drillId, canEdit, extra, audio, image,
-  speaker, region, failed, playing, onPlay, onSave, onRecorded,
+  speaker, region, heard, failed, playing, onPlay, onSave, onRecorded,
 }: {
   slug: string; where: Where; look: 'row' | 'turn' | 'word';
   who?: string; shi: string; ca?: string; note?: string; tif?: string | null; gloss?: MethodGloss[];
   drillId?: number; canEdit: boolean; extra?: ReactNode;
   /** El que la biblioteca ja en té: la veu d'algú, la seva imatge, i qui la diu, i d'on és. */
   audio?: string | null; image?: string | null; speaker?: string | null; region?: string | null;
+  /** La línia no la diu ningú, però el SO que ensenya se sent en aquesta frase nostra. */
+  heard?: MethodHeard | null;
   /** El so hi és i no s'ha pogut carregar. No és el mateix que no tenir-ne. */
   failed?: boolean;
   playing?: boolean; onPlay?: () => void;
@@ -426,6 +463,7 @@ function BookLine({
       {note && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>· {note}</span>}
       <span style={{ fontSize: 11.5, color: failed ? 'var(--text-soft)' : 'var(--text-muted)' }}>· {voiceShort}</span>
       {tools}
+      {!audio && heard && <HeardHere h={heard} />}
       {words}
     </div>
   );
@@ -762,12 +800,13 @@ export default function MethodLesson({
             <div style={{ marginTop: 8, border: '1px solid var(--border)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
               <div style={{ padding: '6px 12px', background: 'var(--surface-2)', fontSize: 12, fontWeight: 800, color: 'var(--text-muted)' }}>{s.table.title}</div>
               {s.table.rows.map((r, k) => (
-                <div key={k} style={{ display: 'flex', gap: 12, padding: '6px 12px', borderTop: '1px solid var(--border)', fontSize: 14 }}>
+                <div key={k} style={{ display: 'flex', gap: 12, padding: '6px 12px', borderTop: '1px solid var(--border)', fontSize: 14, flexWrap: 'wrap' }}>
                   <span style={{ flex: 1, color: 'var(--text-soft)' }}>{r.p}</span>
                   <span style={{ textAlign: 'right' }}>
                     <span lang="shi" style={{ fontWeight: 800, color: 'var(--brand-1)' }}>{r.v}</span>
                     <Tif t={r.v_tif} size={11.5} />
                   </span>
+                  {r.heard && <HeardHere h={r.heard} />}
                 </div>
               ))}
             </div>
@@ -845,6 +884,7 @@ export default function MethodLesson({
                             shi={e.shi} ca={e.ca} note={e.note} tif={e.tif} gloss={e.gloss}
                             drillId={e.drill_id} canEdit={canEdit}
                             audio={e.audio_url} image={e.image_url} speaker={e.speaker} region={e.region}
+                            heard={e.heard}
                             failed={!!broken[`example:${s.id}:${k}`]}
                             playing={sounding === key} onPlay={() => playOne(key)}
                             onSave={(shi, ca) => saveLine(where, shi, ca)}
