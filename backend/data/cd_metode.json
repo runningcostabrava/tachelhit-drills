@@ -1,0 +1,18 @@
+{
+ "_llegeix-me": [
+  "On sona cada línia del Mètode dins del CD del manual d'Abdallah El Mountassir.",
+  "La clau de dins és la línia del capítol tal com la numera el servidor (per exemple",
+  "'vocals:example:0' o 'dialogue:3'); el valor diu a quina pista cau, en quin segon comença i",
+  "acaba, i on és el tall penjat.",
+  "Sense 'url' la línia no porta cap botó: el servidor no se l'inventa.",
+  "El crèdit no viu aquí: el posa el servidor, sempre, al costat de l'àudio."
+ ],
+ "_pistes": {
+  "e6nuUVOFB0U": "capítol 1 del llibre",
+  "mDMcR7vNA_A": "capítols 2 i 3",
+  "zkvUblbTdws": "capítol 4",
+  "YioipkEhqME": "capítol 5",
+  "JkXAk3CKIPA": "capítol 6"
+ },
+ "capitols": {}
+}

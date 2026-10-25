@@ -984,3 +984,44 @@ def test_el_proces_que_retalla_una_frase_no_es_qui_la_diu():
     out = method.attach_heard(DB(), body, [])
     h = out["sections"][0]["examples"][0]["heard"]
     assert h["speaker"] is None and h["captured"] is True
+
+
+def test_la_veu_del_manual_va_amb_el_seu_credit_i_no_es_desa():
+    """El Mètode adapta el manual d'El Mountassir, i el manual porta un CD on l'autor diu el que
+    el llibre ensenya —justament el que les nostres veus de l'Atles central no diuen.
+
+    Dues coses que han de ser certes sempre:
+
+    · el crèdit viatja DINS del mateix objecte que l'àudio, de manera que qui dibuixa el botó no
+      el pugui deixar fora: qui prem per sentir una frase ha de veure de qui és la veu;
+    · una línia sense `url` no en porta cap: el servidor no s'inventa cap veu, com a tot arreu.
+
+    I `cd` és calculat: no s'ha de desar mai dins del text del capítol."""
+    import json
+    import method
+    from pathlib import Path
+
+    index = {"capitols": {"sons": {
+        "vocals:example:0": {"pista": "p1", "start": 46.63, "end": 47.2,
+                             "url": "/method/cd/p1/46.63/47.2"},
+        "vocals:example:1": {"pista": "p1", "start": 50.0, "end": 50.6},
+    }}}
+    fitxer = Path(method.__file__).parent / "data" / "_prova_cd.json"
+    fitxer.write_text(json.dumps(index, ensure_ascii=False), encoding="utf-8")
+    abans = method.CD_FITXER
+    try:
+        method.CD_FITXER = fitxer
+        body = {"sections": [{"id": "vocals", "examples": [
+            {"shi": "aɣaras", "ca": "camí"}, {"shi": "argaz", "ca": "home"}]}]}
+        out = method.attach_cd(body, "sons")
+        cd = out["sections"][0]["examples"][0]["cd"]
+        assert cd["qui"] == "Abdallah El Mountassir"
+        assert cd["obra"].startswith("Méthode de Tachelhit")
+        assert cd["start"] == 46.63 and cd["url"].endswith("46.63/47.2")
+        assert "cd" not in out["sections"][0]["examples"][1], \
+            "sense fitxer penjat no hi ha botó"
+        assert out is method.attach_cd(out, "un-capitol-que-no-hi-es")
+        assert "cd" not in method.strip_computed(out)["sections"][0]["examples"][0]
+    finally:
+        method.CD_FITXER = abans
+        fitxer.unlink(missing_ok=True)

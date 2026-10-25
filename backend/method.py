@@ -26,8 +26,10 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
+import json
 import re
 import unicodedata as ud
+from pathlib import Path
 
 import grammar
 import transliteration
@@ -298,7 +300,7 @@ def content_of(db, slug: str) -> Optional[Dict]:
 #: la pantalla: amb la tifinagh de cada línia i amb les frases nostres repartides per dins. Això
 #: no és el capítol, és el que n'hem calculat; desar-ho el congelaria amb les frases d'aquell dia.
 COMPUTED = {"ours_drills", "ours_total", "audio_url", "image_url", "speaker", "region",
-            "from_drill_id", "heard"}
+            "from_drill_id", "heard", "cd"}
 
 
 def strip_computed(body: Dict) -> Dict:
@@ -651,7 +653,8 @@ def content_with_ours(db, slug: str, rows: List, card) -> Optional[Dict]:
              "why": why_here(said[d.id], keys_of[s["id"]], unit, d)}
             for d in picked]
         s["ours_total"] = len(scored)
-    return with_letters_everywhere(with_tifinagh(attach_heard(db, attach_library(db, body, rows), rows)))
+    return with_letters_everywhere(with_tifinagh(attach_cd(
+        attach_heard(db, attach_library(db, body, rows), rows), slug)))
 
 
 #: El que hi ha escrit on hauria d'haver-hi la frase, a 170 drills (115 amb veu, #320). No són
@@ -700,6 +703,66 @@ def heard_in(sound: str, voiced: List, used: set):
         if best is None or rank < best[0]:
             best = (rank, d)
     return best[1] if best else None
+
+
+#: El CD del manual: on sona cada línia i de qui és la veu.
+#:
+#: El fitxer diu on cau cada línia; el crèdit NO hi és, i és a posta. El crèdit viu aquí dins,
+#: al costat de l'àudio, de manera que qui dibuixi el botó no el pugui deixar fora: qui prem per
+#: sentir una frase ha de veure de qui és la veu que sentirà.
+CD_FITXER = Path(__file__).parent / "data" / "cd_metode.json"
+CD_CREDIT = {
+    "qui": "Abdallah El Mountassir",
+    "obra": "Méthode de Tachelhit (CD)",
+    "nota": "la veu del manual",
+}
+
+
+def _cd_index() -> Dict:
+    try:
+        return json.loads(CD_FITXER.read_text(encoding="utf-8")).get("capitols") or {}
+    except Exception:
+        return {}
+
+
+def attach_cd(body: Optional[Dict], slug: str) -> Optional[Dict]:
+    """La veu del CD del manual, enganxada a la línia que diu.
+
+    El Mètode adapta el manual d'El Mountassir capítol per capítol, i el manual porta un CD on
+    l'autor diu el que el llibre ensenya. Les nostres veus són de l'Atles central i no cobreixen
+    el que el llibre ensenya, de manera que fins ara la major part del Mètode no es podia
+    escoltar de cap manera.
+
+    Això hi enganxa la pista, el segon on comença i el segon on acaba —no un fitxer per frase:
+    el tall és un tros del CD— i el crèdit, que va sempre amb l'àudio.
+
+    Una línia sense `url` no en porta: el servidor no s'inventa cap veu, igual que a la resta
+    del capítol.
+    """
+    if not body:
+        return body
+    per_linia = _cd_index().get(slug) or {}
+    if not per_linia:
+        return body
+
+    def posa(line, on):
+        d = per_linia.get(on)
+        if d and d.get("url"):
+            line["cd"] = {"url": d["url"], "start": d.get("start"), "end": d.get("end"),
+                          "pista": d.get("pista"), **CD_CREDIT}
+
+    d = body.get("dialogue") or {}
+    for i, t in enumerate(d.get("turns") or []):
+        posa(t, f"dialogue:{i}")
+    for s in body.get("sections") or []:
+        for i, e in enumerate(s.get("examples") or []):
+            posa(e, f"{s['id']}:example:{i}")
+        for ci, col in enumerate(s.get("columns") or []):
+            for i, r in enumerate(col.get("rows") or []):
+                posa(r, f"{s['id']}:col{ci}:{i}")
+    for i, v in enumerate(body.get("vocabulary") or []):
+        posa(v, f"vocabulary:{i}")
+    return body
 
 
 def attach_heard(db, body: Optional[Dict], rows: List) -> Optional[Dict]:
