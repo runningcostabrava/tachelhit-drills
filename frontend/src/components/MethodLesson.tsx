@@ -288,7 +288,12 @@ function HeardHere({ h }: { h: MethodHeard }) {
     a.onerror = () => setPlaying(false);
     a.play().catch(() => setPlaying(false));
   };
-  const credit = h.speaker ? `${h.speaker}${h.region ? ` · ${h.region}` : ''}` : 'una de les nostres veus';
+  // Tres crèdits possibles, i cap no es pot confondre amb un altre: una persona amb el seu
+  // poble, una veu retallada d'un vídeo (humana, però no sabem de qui), i una de les nostres
+  // sense nom. «Auto Capture» era el nom del procés, i sortia com si fos algú.
+  const credit = h.speaker
+    ? `${h.speaker}${h.region ? ` · ${h.region}` : ''}`
+    : h.captured ? 'una veu retallada d’un vídeo, no sabem de qui' : 'una de les nostres veus';
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexBasis: '100%',
                    marginTop: 2, fontSize: 11.5, color: 'var(--text-muted)' }}>
