@@ -741,7 +741,10 @@ def attach_heard(db, body: Optional[Dict], rows: List) -> Optional[Dict]:
         line["heard"] = {
             "drill_id": d.id, "shi": d.text_tachelhit, "ca": d.text_catalan,
             "audio_url": d.audio_url, "speaker": d.speaker or d.author,
-            "region": d.region or d.variety,
+            # NOMÉS el poble. La varietat és un codi —«tzm»— i no és un lloc: a la fila de la ɛ
+            # hi sortia «ho diu tzm», que no diu d'on és ningú. Sense poble, el crèdit es queda
+            # amb la persona i prou.
+            "region": d.region,
             "tif": (transliteration.to_forms(d.text_tachelhit or "")["tifinagh"] or "").strip() or None,
         }
     return body
