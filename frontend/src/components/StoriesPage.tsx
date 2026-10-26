@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FaChevronLeft, FaExternalLinkAlt, FaPause, FaPlay } from 'react-icons/fa';
 import { api, type Story, type StoryPage } from '../api';
@@ -25,6 +25,7 @@ export default function StoriesPage() {
 function StoryList() {
   const navigate = useNavigate();
   const [stories, setStories] = useState<Story[] | null>(null);
+  const parts = useMemo(() => seccions(stories || []), [stories]);
 
   useEffect(() => {
     document.title = 'Històries i cançons · Tamazight';
@@ -48,27 +49,74 @@ function StoryList() {
         </p>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 14 }}>
-        {(stories || []).map((s) => (
-          <button key={s.slug} onClick={() => navigate(`/stories/${s.slug}`)} style={card}>
-            {s.cover && (
-              <img src={getMediaUrl(s.cover)} alt="" style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 'var(--r-md)', marginBottom: 8 }}
-                   onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
-            )}
-            <div style={{ fontWeight: 800, fontSize: 15, lineHeight: 1.3 }}>{s.title}</div>
-            <div style={{ fontSize: 12.5, color: 'var(--text-soft)', marginTop: 3 }}>
-              {s.lines} línies{s.speaker ? ` · ${s.speaker}` : ''}
-            </div>
-            {s.missing_words > 0 && (
-              <div style={{ fontSize: 12, color: 'var(--saffron-dark, #7A4A12)', fontWeight: 700, marginTop: 4 }}>
-                {s.missing_words} {s.missing_words === 1 ? 'línia encara sense paraules escrites' : 'línies encara sense paraules escrites'}
-              </div>
-            )}
-          </button>
-        ))}
-      </div>
+      {parts.map(({ serie, quines }) => (
+        <section key={serie || '—'} style={{ marginBottom: 26 }}>
+          {serie && (
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 17, margin: '0 0 2px', lineHeight: 1.3 }}>
+              {serie}
+            </h2>
+          )}
+          {serie && (
+            <p style={{ fontSize: 12.5, color: 'var(--text-soft)', margin: '0 0 10px' }}>
+              {quines.length} capítols, del primer a l’últim
+            </p>
+          )}
+          {!serie && parts.length > 1 && (
+            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 17, margin: '0 0 10px' }}>
+              Contes i cançons solts
+            </h2>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 14 }}>
+            {quines.map((s) => (
+              <button key={s.slug} onClick={() => navigate(`/stories/${s.slug}`)} style={card}>
+                {s.cover && (
+                  <img src={getMediaUrl(s.cover)} alt="" loading="lazy"
+                       style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 'var(--r-md)', marginBottom: 8, background: 'var(--surface-2)' }}
+                       onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                )}
+                {/* Dins d'una sèrie la targeta no repeteix el nom set vegades: diu quin capítol és,
+                    que és l'única cosa que la distingeix de les del costat. */}
+                <div style={{ fontWeight: 800, fontSize: 15, lineHeight: 1.3 }}>
+                  {s.chapter != null && s.series ? `Capítol ${s.chapter}` : s.title}
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--text-soft)', marginTop: 3 }}>
+                  {s.lines} línies{s.speaker ? ` · ${s.speaker}` : ''}
+                </div>
+                {/* El que es pot llegir es diu en positiu; el que encara no, una vegada i curt.
+                    Abans cada targeta cridava «33 línies encara sense paraules escrites» i, com
+                    que ho deien totes, deixava de voler dir res. */}
+                <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4,
+                              color: s.written ? 'var(--brand-1)' : 'var(--text-muted)' }}>
+                  {s.written
+                    ? `${s.written} de ${s.lines} línies escrites en amazic`
+                    : 'encara no es pot llegir, només escoltar'}
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
+}
+
+/**
+ * Les històries repartides en seccions: una per sèrie, i una per als contes sols.
+ *
+ * L'ordre el dona el servidor (#346) —cada sèrie seguida, els capítols del primer a l'últim, i al
+ * davant el que es pot llegir—, de manera que aquí només s'agrupa el que ja ve en ordre. Abans la
+ * graella anava per nombre de línies i *The Traveller* 1 a 7 quedava escampat pertot: ningú no
+ * podia començar un conte pel principi.
+ */
+function seccions(stories: Story[]): { serie: string | null; quines: Story[] }[] {
+  const fora: { serie: string | null; quines: Story[] }[] = [];
+  for (const s of stories) {
+    const serie = s.series || null;
+    const ultima = fora[fora.length - 1];
+    if (ultima && ultima.serie === serie) ultima.quines.push(s);
+    else fora.push({ serie, quines: [s] });
+  }
+  return fora;
 }
 
 function OneStory({ slug }: { slug: string }) {
