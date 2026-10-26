@@ -92,6 +92,15 @@ export default function PracticePage() {
         <span style={{ fontSize: '13px', opacity: 0.9 }}>10 frases · uns 6 minuts · <FaPlay size={11} /> cal el micròfon</span>
       </button>
 
+      {/* Entendre quan algú ho diu és una altra cosa que llegir-ho, i fins ara no s'entrenava
+          enlloc (#333). A més, és l'únic exercici que funciona amb les gravacions que tenen veu
+          i cap paraula escrita, que són 644. */}
+      <button onClick={() => navigate('/listen')} style={{ ...cardStyle, width: '100%', marginBottom: 20, gap: 6, textAlign: 'left' }}>
+        <span style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--brand-1)' }}>Escoltar</span>
+        <span style={{ fontSize: '17px', fontWeight: 800 }}>Escolta i tria què vol dir</span>
+        <span style={{ fontSize: '13px', color: 'var(--text-soft)' }}>Sona una frase, no es veu el text, i tries entre quatre significats. Sense micròfon.</span>
+      </button>
+
       {/* What you made yourself comes first: the automatic slices of the library are below. */}
       {col && (
         <section style={{ marginBottom: 22 }}>

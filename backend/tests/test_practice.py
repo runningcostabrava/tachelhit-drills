@@ -503,3 +503,63 @@ def test_esborrar_una_practica_s_endu_els_seus_passos():
         assert nova["step_count"] == 0, "una pràctica nova no hereta els passos de cap altra"
     finally:
         client.delete(f"/tests/{nova['id']}", headers=hdr)
+
+
+# ---- Escoltar i tria: un exercici d'entendre, no de llegir (#333) ----
+
+class _Fals:
+    def __init__(self, i, ca, temes="", shi="", audio="a.mp3"):
+        self.id = i; self.text_catalan = ca; self.topics = temes
+        self.text_tachelhit = shi; self.audio_url = audio
+
+
+def test_an_option_that_could_also_be_true_is_not_offered():
+    """Si la frase diu «vine aquí» i una opció diu «acosta't aquí», totes dues són certes i
+    l'exercici és injust: no es pot encertar entenent, només endevinant."""
+    import escoltar
+    bona = _Fals(1, "vine aquí de seguida")
+    altres = [_Fals(2, "vine aquí ara mateix"),          # diu el mateix: fora
+              _Fals(3, "el gat dorm sota la taula"),
+              _Fals(4, "demà anirem al mercat"),
+              _Fals(5, "la porta està oberta")]
+    opcions = escoltar.opcions_dolentes(bona, [bona] + altres)
+    assert all(o["drill_id"] != 2 for o in opcions)
+    assert len(opcions) == 3
+
+
+def test_the_wrong_options_are_about_as_long_as_the_right_one():
+    """Tres opcions curtes al costat d'una de llarga s'encerten pel descart, sense entendre res."""
+    import escoltar
+    bona = _Fals(1, "el meu germà petit ha anat a comprar pa al poble")
+    curtes = [_Fals(i, "sí") for i in range(2, 9)]
+    llargues = [_Fals(i, f"la meva germana gran ha tornat del mercat amb {i} peixos")
+                for i in range(9, 13)]
+    opcions = escoltar.opcions_dolentes(bona, [bona] + curtes + llargues)
+    assert all(o["paraules"] >= 6 for o in opcions), opcions
+
+
+def test_every_wrong_option_says_why_it_was_chosen():
+    """La tria s'ha de poder revisar, com tot a la casa."""
+    import escoltar
+    bona = _Fals(1, "el gat dorm sota la taula", temes="casa-i-objectes")
+    altres = [_Fals(2, "el gos corre pel carrer gran", temes="casa-i-objectes"),
+              _Fals(3, "demà anirem tots al mercat", temes="viatge"),
+              _Fals(4, "la porta de casa està oberta", temes="casa-i-objectes")]
+    opcions = escoltar.opcions_dolentes(bona, [bona] + altres)
+    assert all(o["perque"] and "s_assembla" in o for o in opcions)
+    assert opcions[0]["perque"] == "mateix tema i llargada"
+
+
+def test_a_line_with_no_amazigh_written_still_works_here():
+    """És el sentit de l'exercici: aquestes línies no serveixen per llegir i sí per escoltar."""
+    import escoltar
+    assert escoltar.es_bona_per_escoltar(_Fals(1, "no ho sé pas", shi=""))
+    assert not escoltar.es_bona_per_escoltar(_Fals(2, "no ho sé pas", shi="ur ssinɣ", audio=""))
+    assert not escoltar.es_bona_per_escoltar(_Fals(3, "", shi="ur ssinɣ"))
+
+
+def test_fewer_options_is_better_than_a_useless_one():
+    """Si no hi ha prou material, l'exercici es queda curt en comptes d'omplir-se d'escombraries."""
+    import escoltar
+    bona = _Fals(1, "el gat dorm sota la taula")
+    assert escoltar.opcions_dolentes(bona, [bona]) == []
