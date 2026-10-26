@@ -748,7 +748,17 @@ export interface Story {
   cover: string | null; video_url: string | null; source_url: string | null;
   channel: string | null; speaker: string | null;
 }
-export interface StoryPage extends Story { drills: Drill[] }
+/** Quan es diu una paraula dins la gravació de la seva línia, en segons. */
+export interface WordTime { w: string; start: number; end: number }
+export interface StoryPage extends Story {
+  drills: Drill[];
+  /**
+   * Els temps de cada paraula, per id de línia — i **només de les línies que en tenen** (#340).
+   * Una línia que no hi surt no s'encén paraula per paraula: s'encén sencera. Repartir-la pel
+   * rellotge encendria paraules al moment equivocat, que és pitjor que no encendre'n cap.
+   */
+  word_times?: Record<string, WordTime[]>;
+}
 export interface PracticeTip { sound: string; label: string; found: string; tip: string }
 export interface PracticeCard { speaker: string; origin: string; day: string | null; tips: PracticeTip[]; highlights: string[] }
 export interface PronunciationWord { word: string; ok: boolean; heard: string | null }

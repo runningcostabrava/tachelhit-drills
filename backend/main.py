@@ -6551,7 +6551,37 @@ def read_story(slug: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Aquesta hist\u00f2ria no existeix")
     ids = story.pop("drill_ids")
     rows = {d.id: d for d in db.query(DrillModel).filter(DrillModel.id.in_(ids)).all()}
-    return {**story, "drills": [Drill.model_validate(rows[i], from_attributes=True) for i in ids if i in rows]}
+    return {**story,
+            "drills": [Drill.model_validate(rows[i], from_attributes=True) for i in ids if i in rows],
+            "word_times": _story_word_times(db, ids)}
+
+
+def _story_word_times(db: Session, ids: List[int]) -> Dict[str, List[dict]]:
+    """Quan es diu cada paraula de cada l\u00ednia, en segons.
+
+    Perqu\u00e8 la pantalla pugui seguir la veu i encendre la paraula en el moment que sona (#340), no
+    n'hi ha prou de saber quan comen\u00e7a la l\u00ednia: cal saber quan comen\u00e7a i acaba cada paraula
+    dins seu. Aix\u00f2 ja ho tenim, i no de calcular-ho ara: l'alineament for\u00e7at ho va desar
+    (`word_audio`), que \u00e9s el mateix que deixa sentir una paraula sola al paraula per paraula.
+
+    Es tornen **nom\u00e9s les l\u00ednies que en tenen de deb\u00f2**. Una l\u00ednia sense alineament no hi surt, i
+    la pantalla l'encendr\u00e0 sencera. El que no es fa mai \u00e9s repartir la l\u00ednia pel rellotge, com
+    si les paraules duressin totes igual: es va provar al #330 i reparteix malament, i una
+    paraula encesa al moment equivocat ensenya a sentir el que no \u00e9s.
+    """
+    if not ids:
+        return {}
+    from models import WordAudio
+    # Sense filtrar per `source`: una fila lligada a aquest `drill_id` ja vol dir «dins la
+    # gravació d'aquesta línia», vingui del pas d'alineament de casa o del corpus obert.
+    files = (db.query(WordAudio)
+             .filter(WordAudio.drill_id.in_(ids))
+             .order_by(WordAudio.drill_id, WordAudio.start_ms).all())
+    fora: Dict[str, List[dict]] = {}
+    for w in files:
+        fora.setdefault(str(w.drill_id), []).append(
+            {"w": w.word, "start": round(w.start_ms / 1000, 3), "end": round(w.end_ms / 1000, 3)})
+    return fora
 
 
 # ===================== UNA PARAULA, DITA ====================
