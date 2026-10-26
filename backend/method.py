@@ -1184,6 +1184,123 @@ def line_at(body: Dict, kind: str, section: Optional[str], index: int) -> Option
     return None
 
 
+#: D'on surt una línia del Mètode, dit a cada frase que en neix.
+#:
+#: La regla del projecte: una frase que entra a la biblioteca diu SEMPRE d'on ve, quina varietat
+#: és i, si es pot, de quin poble. Fins ara una línia del manual entrava amb l'etiqueta i prou, i
+#: la varietat del llibre —el taixelhit del Souss— es perdia pel camí, de manera que una frase
+#: del sud es podia confondre amb una de l'Atles un cop desada.
+#:
+#: `variety` i `region` són les del TEXT, que és del llibre. Qui el gravi hi posarà les seves, que
+#: viuen a la gravació i no aquí: un text del Souss dit per algú de Beni Mellal segueix sent les
+#: dues coses alhora, i cap de les dues no s'ha d'amagar.
+#: El que hi va és el CRÈDIT —qui ho va escriure i a quina obra—, no l'estat del permís. En
+#: quina situació estigui cada permís és cosa de `docs/PERMISOS.md` i de qui el demana; l'app
+#: no ho ha de dir mai, ni per afirmar-lo ni per insinuar-lo. Per això `license` es queda buit:
+#: no en tenim cap de pública, i escriure-hi una frase sobre el permís seria fer-ne bandera.
+FONT_METODE = {
+    "variety": "shi",
+    "region": "Souss",
+    "source_title": "Méthode de Tachelhit. Langue amazighe (berbère) du sud du Maroc",
+    "source_channel": "Abdallah El Mountassir",
+}
+
+
+def _nova_frase(db, slug: str, line: Dict, user) -> object:
+    """Crear la frase de la biblioteca que hi ha darrere una línia del capítol."""
+    from models import Drill as DrillModel
+    shi = (line.get("shi") or "").strip()
+    ca = (line.get("ca") or "").strip()
+    c = BY_SLUG.get(slug) or {}
+    d = DrillModel(
+        text_tachelhit=shi, text_catalan=ca or None,
+        # D'on surt, dit a la cara: ve del manual, que és del Souss, i encara no l'ha dit ningú.
+        tag=f"metode-{slug}, del llibre",
+        author=None,
+        source_playlist=f"Mètode, capítol {c.get('n') or '?'} — {c.get('title') or slug}",
+        **FONT_METODE,
+        # Ni gramàtica ni tema. Això ho va trobar un auditor dialectòleg: una línia del llibre
+        # es desava amb LES QUATRE unitats del capítol i `grammar_source="owner"`, el segell de
+        # màxima confiança. «is trit aman?» quedava desada com a exemple de `clitics-objecte` i
+        # de `numerals`, que és fals; entrava a les lliçons d'aquelles unitats; i, com que
+        # «seccions a punt» es compta per unitat declarada, cada línia gravada comptava a les
+        # quatre alhora — el capítol es certificava a si mateix.
+        #
+        # D'on surt ja ho diu l'etiqueta. Què ensenya ho dirà qui ho sàpiga, o el classificador.
+        grammar=None, topics=None,
+        voice_wanted=True,
+        voice_wanted_by=(getattr(user, "display_name", None) or getattr(user, "username", None)),
+        created_by_user_id=getattr(user, "id", None),
+    )
+    db.add(d)
+    db.commit()
+    db.refresh(d)
+    return d
+
+
+def _el_que_ja_diem(db) -> Dict[str, int]:
+    """Què diu cada frase CURTA de la biblioteca → el seu número, tingui veu o no.
+
+    `_short_drills` només mira les gravades, perquè busca una veu. Aquí es busca una altra cosa:
+    si la frase ja existeix, encara que sigui muda, la línia s'hi ha de lligar en comptes de
+    crear-ne una bessona. Dues files que diuen el mateix són dues peticions de veu, dos llocs on
+    corregir el català i dos resultats a la cerca.
+    """
+    from sqlalchemy import func
+    from models import Drill as DrillModel
+    rows = (db.query(DrillModel.id, DrillModel.text_tachelhit)
+            .filter(DrillModel.text_tachelhit.isnot(None))
+            .filter(func.length(DrillModel.text_tachelhit) <= SHORT_LINE)
+            .order_by(DrillModel.id)
+            .all())
+    fora: Dict[str, int] = {}
+    for i, text in rows:
+        k = _said_key(text)
+        if k and k not in fora:
+            fora[k] = i
+    return fora
+
+
+def drills_for_chapter(db, slug: str, user) -> Dict:
+    """Totes les línies d'un capítol convertides en frases de la biblioteca, d'una passada.
+
+    `drill_for_line` fa una línia quan algú la vol gravar. Això serveix per a l'altra meitat de
+    la feina: tenir-les totes abans que ningú gravi res, perquè el que falta es pugui comptar i
+    demanar. Una línia que la biblioteca ja diu NO en crea cap de nova: s'hi lliga.
+    """
+    import json
+    from models import MethodChapter
+    row = db.query(MethodChapter).filter(MethodChapter.slug == slug).first()
+    if not row:
+        raise ValueError("aquest capítol encara no té text")
+    body = json.loads(row.body)
+    diem = _el_que_ja_diem(db)
+    fora = {"capitol": slug, "linies": 0, "creades": 0, "lligades": 0, "ja_hi_eren": 0}
+    for kind in LINE_KINDS:
+        for line in _lines_of(body, kind):
+            shi = (line.get("shi") or "").strip()
+            if not shi:
+                continue
+            fora["linies"] += 1
+            if line.get("drill_id"):
+                fora["ja_hi_eren"] += 1
+                continue
+            k = _said_key(shi)
+            ja = diem.get(k) if k else None
+            if ja:
+                line["drill_id"] = ja
+                fora["lligades"] += 1
+                continue
+            d = _nova_frase(db, slug, line, user)
+            if k:
+                diem[k] = d.id      # dues línies que diuen el mateix no fan dues frases
+            line["drill_id"] = d.id
+            fora["creades"] += 1
+    row.body = json.dumps(body, ensure_ascii=False)
+    db.commit()
+    return fora
+
+
 def drill_for_line(db, slug: str, kind: str, section: Optional[str], index: int, user) -> Dict:
     """La frase nostra que hi ha darrere una línia del capítol, creant-la el primer cop.
 
@@ -1217,28 +1334,7 @@ def drill_for_line(db, slug: str, kind: str, section: Optional[str], index: int,
     if not shi:
         raise ValueError("aquesta línia no té text amazic per dir")
 
-    c = BY_SLUG.get(slug) or {}
-    d = DrillModel(
-        text_tachelhit=shi, text_catalan=ca or None,
-        # D'on surt, dit a la cara: ve del manual, que és del Souss, i encara no l'ha dit ningú.
-        tag=f"metode-{slug}, del llibre",
-        author=None, variety=None,
-        # Ni gramàtica ni tema. Això ho va trobar un auditor dialectòleg: una línia del llibre
-        # es desava amb LES QUATRE unitats del capítol i `grammar_source="owner"`, el segell de
-        # màxima confiança. «is trit aman?» quedava desada com a exemple de `clitics-objecte` i
-        # de `numerals`, que és fals; entrava a les lliçons d'aquelles unitats; i, com que
-        # «seccions a punt» es compta per unitat declarada, cada línia gravada comptava a les
-        # quatre alhora — el capítol es certificava a si mateix.
-        #
-        # D'on surt ja ho diu l'etiqueta. Què ensenya ho dirà qui ho sàpiga, o el classificador.
-        grammar=None, topics=None,
-        voice_wanted=True,
-        voice_wanted_by=(getattr(user, "display_name", None) or getattr(user, "username", None)),
-        created_by_user_id=getattr(user, "id", None),
-    )
-    db.add(d)
-    db.commit()
-    db.refresh(d)
+    d = _nova_frase(db, slug, line, user)
 
     line["drill_id"] = d.id
     row.body = json.dumps(body, ensure_ascii=False)
