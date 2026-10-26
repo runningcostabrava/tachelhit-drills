@@ -1062,7 +1062,7 @@ def test_totes_les_linies_dun_capitol_es_tornen_frases_duna_passada():
         assert d["variety"] == "shi" and d["region"] == "Souss", "la varietat del llibre"
         assert "El Mountassir" in (d.get("source_channel") or ""), "qui n'és l'autor"
         assert "Méthode de Tachelhit" in (d.get("source_title") or "")
-        assert d.get("license"), "amb quin permís hi és"
+        assert not d.get("license"),             "el crèdit sí, l'estat del permís no: això viu a docs/PERMISOS.md"
         assert d.get("voice_wanted") is True, "neix demanant una veu"
         assert "metode-els-convidats" in (d.get("tag") or "")
         assert not d.get("grammar") and not d.get("topics"), \

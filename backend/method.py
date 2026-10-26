@@ -1131,12 +1131,15 @@ def line_at(body: Dict, kind: str, section: Optional[str], index: int) -> Option
 #: `variety` i `region` són les del TEXT, que és del llibre. Qui el gravi hi posarà les seves, que
 #: viuen a la gravació i no aquí: un text del Souss dit per algú de Beni Mellal segueix sent les
 #: dues coses alhora, i cap de les dues no s'ha d'amagar.
+#: El que hi va és el CRÈDIT —qui ho va escriure i a quina obra—, no l'estat del permís. En
+#: quina situació estigui cada permís és cosa de `docs/PERMISOS.md` i de qui el demana; l'app
+#: no ho ha de dir mai, ni per afirmar-lo ni per insinuar-lo. Per això `license` es queda buit:
+#: no en tenim cap de pública, i escriure-hi una frase sobre el permís seria fer-ne bandera.
 FONT_METODE = {
     "variety": "shi",
     "region": "Souss",
     "source_title": "Méthode de Tachelhit. Langue amazighe (berbère) du sud du Maroc",
     "source_channel": "Abdallah El Mountassir",
-    "license": "Adaptació autoritzada per l'autor (2026-10-23)",
 }
 
 
