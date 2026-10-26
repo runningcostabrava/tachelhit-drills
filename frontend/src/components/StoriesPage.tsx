@@ -5,6 +5,7 @@ import { api, type Story, type StoryPage } from '../api';
 import { getMediaUrl } from '../config';
 import type { Drill } from '../types';
 import WordGloss from './WordGloss';
+import { gap, keepAwake, nowPlaying, say, stop } from '../utils/veu';
 
 // Whole stories and songs, instead of loose sentences (#189).
 //
@@ -78,28 +79,17 @@ function OneStory({ slug }: { slug: string }) {
   // Sentir-la de cap a cap es pot fer de dues maneres, i no competeixen: una és escoltar el
   // conte, l'altra és estudiar-lo. `null` = aturada.
   const [reading, setReading] = useState<null | 'sol' | 'amb-catala'>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const readingRef = useRef(false);
 
   useEffect(() => {
     api.story(slug).then((r) => { setPage(r); document.title = `${r.title} · Tamazight`; })
       .catch(() => setMissing(true));
-    return () => { readingRef.current = false; audioRef.current?.pause(); };
+    return () => { readingRef.current = false; stop(); keepAwake(false); nowPlaying(null); };
   }, [slug]);
 
-  // Un so, i s'espera que s'acabi. Un error no atura la fila: val més seguir que quedar-se penjat.
-  const sona = useCallback((url: string) => new Promise<void>((resolve) => {
-    if (!url.trim()) { resolve(); return; }
-    audioRef.current?.pause();
-    const a = new Audio(getMediaUrl(url));
-    audioRef.current = a;
-    a.onended = () => resolve();
-    a.onerror = () => resolve();
-    // Aturar-ho també ha de deixar passar: sense això, prémer «Atura» deixava l'espera penjada
-    // per sempre, perquè una reproducció aturada no acaba mai.
-    a.onpause = () => resolve();
-    a.play().catch(() => resolve());
-  }), []);
+  // Un so, i s'espera que s'acabi. El reproductor és el de tota l'app: un sol element, dins el
+  // document i declarat al sistema, perquè la veu no calli quan s'apaga la pantalla (#342).
+  const sona = useCallback((url: string) => say(url.trim() ? getMediaUrl(url) : ''), []);
 
   const amazic = (d: Drill) => (d.audio_url || d.audio_tts_shi_url || '').trim();
 
@@ -115,11 +105,11 @@ function OneStory({ slug }: { slug: string }) {
     setAt(i);
     if (ca) {
       await sona(ca);
-      await new Promise((r) => setTimeout(r, 250));
+      await gap(250);
     }
     if (!veu) return;
     await sona(veu);
-    await new Promise((r) => setTimeout(r, 300));
+    await gap(300);
     await sona(veu);
   }, [sona]);
 
@@ -136,21 +126,32 @@ function OneStory({ slug }: { slug: string }) {
     if (!page) return;
     const sonava = reading;
     readingRef.current = false;
-    audioRef.current?.pause();
-    if (sonava === manera) { setReading(null); setAt(null); return; }
-    await new Promise((r) => setTimeout(r, 60));   // deixa acabar la fila anterior
+    stop();
+    if (sonava === manera) { setReading(null); setAt(null); keepAwake(false); nowPlaying(null); return; }
+    await gap(60);                                 // deixa acabar la fila anterior
     readingRef.current = true; setReading(manera);
+    keepAwake(true);
     for (let i = 0; i < page.drills.length; i++) {
       if (!readingRef.current) break;
+      // Dir al sistema què sona ara: així surt a la pantalla de bloqueig amb el títol de la
+      // història, i el botó de pausa de l'auricular atura de debò en comptes de no fer res.
+      nowPlaying({
+        title: (page.drills[i].text_tachelhit || '').trim() || page.drills[i].text_catalan || page.title,
+        artist: page.speaker && page.speaker !== 'Auto Capture' ? page.speaker : (page.channel || ''),
+        album: page.title,
+        onPause: () => { readingRef.current = false; stop(); setReading(null); setAt(null); keepAwake(false); },
+      });
       if (manera === 'amb-catala') {
         await playLine(page.drills[i], i);
       } else {
         setAt(i);
         await sona(amazic(page.drills[i]));
       }
-      await new Promise((r) => setTimeout(r, 350));
+      await gap(350);
     }
     if (readingRef.current) { readingRef.current = false; setReading(null); setAt(null); }
+    keepAwake(false);
+    nowPlaying(null);
   };
 
   if (missing) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Aquesta història no existeix.</div>;
