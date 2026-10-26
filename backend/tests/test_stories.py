@@ -86,6 +86,80 @@ def test_the_same_lines_with_their_own_times_are_a_story_again():
     for i, at in enumerate([0.0, 3.2, 5.1, 7.18, 9.21, 15.99, 20.0, 24.5]):
         _line(hdr, title, at, f"awal {i}", f"línia {i}")
     assert any(s["title"] == title for s in client.get("/stories").json()["stories"])
+
+
+def test_the_title_says_which_series_and_which_chapter():
+    """El títol del canal porta la sèrie, el capítol i el nom en dos alfabets tot junt (#346)."""
+    import stories as st
+    assert st.series_of("The Traveller -2- ⴰⵏⵎⴰⴷⴷⵓ - Anmaddu") == ("The Traveller", 2)
+    assert st.series_of("The Rivals - 1 - ⵉⵏⴳⴳⵯⴰ - inggʷa") == ("The Rivals", 1)
+    assert st.series_of("The Last Warrior- 4 -ⴰⵎⵏⵏⴰⵖ ⴰⵎⴳⴳⴰⵔⵓ") == ("The Last Warrior", 4)
+    # Un conte sol no té capítol, i dir que en té seria inventar-se una sèrie.
+    assert st.series_of("The Wolf and The Lamb - ⵓⵛⵛⵏ ⴷ ⵉⴽⵔⵓ") == (None, None)
+
+
+def test_the_chapters_come_back_together_and_in_order():
+    """Perquè algú pugui començar un conte pel principi, que és el que la pàgina ha de fer fàcil.
+
+    Abans la llista anava per nombre de línies i els set capítols quedaven escampats per la
+    graella, barrejats amb les altres sèries.
+    """
+    hdr = {"X-User-Token": register("story_series")}
+    # A posta en desordre, i amb el capítol 2 més llarg que els altres: si l'ordre fos per
+    # llargada, sortiria primer.
+    for cap, quantes in ((3, 6), (1, 7), (2, 12)):
+        for i in range(quantes):
+            _line(hdr, f"La prova -{cap}- ⴰⵡⴰⵍ", float(i * 3), f"awal {i}", f"línia {i}")
+
+    meves = [s for s in client.get("/stories").json()["stories"] if s["series"] == "La prova"]
+    assert [s["chapter"] for s in meves] == [1, 2, 3]
+    # I vénen de seguit, sense res pel mig: la pàgina els agrupa confiant en aquest ordre.
+    totes = [s["series"] for s in client.get("/stories").json()["stories"]]
+    primer = totes.index("La prova")
+    assert totes[primer:primer + 3] == ["La prova"] * 3
+
+
+def test_one_chapter_alone_is_not_a_series():
+    hdr = {"X-User-Token": register("story_one_chapter")}
+    for i in range(7):
+        _line(hdr, "Tota sola -1- ⴰⵡⴰⵍ", float(i * 3), f"awal {i}", f"línia {i}")
+    sola = next(s for s in client.get("/stories").json()["stories"] if "Tota sola" in s["title"])
+    assert sola["series"] is None and sola["chapter"] is None
+
+
+def test_the_cover_is_the_video_s_own_cover_not_a_drill_illustration():
+    """La portada d'un conte que ve d'un vídeo és la portada d'aquell vídeo (#346).
+
+    Les il·lustracions dels drills es van demanar per a una frase, no per al conte: una d'elles
+    era una carta d'ajust de televisió i feia de portada d'una faula.
+    """
+    hdr = {"X-User-Token": register("story_cover")}
+    title = "Amb portada (prova)"
+    for i in range(6):
+        client.post("/drills/", headers=hdr, json={
+            "text_catalan": f"línia {i}", "text_tachelhit": f"awal {i}",
+            "audio_url": f"https://res.cloudinary.com/x/video/upload/v1/{i}.mp3",
+            "image_url": "https://exemple.test/carta-d-ajust.jpg" if i == 0 else None,
+            "source_title": title, "video_start_time": float(i * 3),
+            "source_url": "https://www.youtube.com/watch?v=p7qlqkDVyNU",
+        })
+    mine = next(s for s in client.get("/stories").json()["stories"] if s["title"] == title)
+    assert mine["cover"] == "https://i.ytimg.com/vi/p7qlqkDVyNU/hqdefault.jpg"
+
+
+def test_a_story_with_no_video_keeps_its_own_illustration():
+    """Sense vídeo, la il·lustració d'una de les seves línies és millor que res."""
+    hdr = {"X-User-Token": register("story_cover_none")}
+    title = "Sense vídeo (prova)"
+    for i in range(6):
+        client.post("/drills/", headers=hdr, json={
+            "text_catalan": f"línia {i}", "text_tachelhit": f"awal {i}",
+            "audio_url": f"https://res.cloudinary.com/x/video/upload/v1/n{i}.mp3",
+            "image_url": "https://exemple.test/dibuix.jpg" if i == 1 else None,
+            "source_title": title, "video_start_time": float(i * 3),
+        })
+    mine = next(s for s in client.get("/stories").json()["stories"] if s["title"] == title)
+    assert mine["cover"] == "https://exemple.test/dibuix.jpg"
 def test_the_page_carries_the_times_of_each_word_when_we_have_them():
     """Perquè la pantalla pugui seguir la veu i encendre la paraula que sona (#340).
 

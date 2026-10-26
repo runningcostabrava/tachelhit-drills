@@ -747,6 +747,8 @@ export interface Story {
   slug: string; title: string; lines: number; written: number; missing_words: number; voiced: number;
   cover: string | null; video_url: string | null; source_url: string | null;
   channel: string | null; speaker: string | null;
+  /** De quina sèrie és i quin capítol, quan el títol ho diu. `null` si és un conte sol (#346). */
+  series?: string | null; chapter?: number | null;
 }
 /** Quan es diu una paraula dins la gravació de la seva línia, en segons. */
 export interface WordTime { w: string; start: number; end: number }
