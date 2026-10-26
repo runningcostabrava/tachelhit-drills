@@ -7,14 +7,28 @@ permisos i el text per demanar-los.
 | font | què volem | estat | des de |
 |---|---|---|---|
 | Abdallah El Mountassir, *Méthode de Tachelhit* | adaptar el manual capítol per capítol | **sí** | 23-10-2026 |
-| Abdallah El Mountassir — **el CD del manual** | fer escoltar la seva veu dins dels capítols | **en camí** — l'amo ho parla amb l'autor | 25-10-2026 |
+| Abdallah El Mountassir — **el CD del manual** | fer escoltar la seva veu dins dels capítols | **sí** | 26-10-2026 |
+| *Tamazight For All* | els contes i les cançons, amb la seva veu i el text que n'ha escrit l'autor | **sí** | 26-10-2026 |
+| *Ait ouarab / LhouMassinisa* | les taules de gramàtica i de lèxic, i la seva veu | **sí** | 26-10-2026 |
+| *MAFAWAL* | els contes del Souss, el vocabulari i els quizos | **sí** | 26-10-2026 |
+| *inaghizen* | el seu material | **sí** | 26-10-2026 |
 | Brahim Mansoub — «Apprends le Tamaziɣt berbère, leçon N°1» | el vocabulari il·lustrat (una paraula per lletra) | **per demanar** | — |
 | canal *Atlas* — «ⵉⵙⴽⴽⵉⵍⵏ ⵏⵜⵎⴰⵣⵉⵖⵜ» | els 33 talls de veu de les lletres | **per demanar** | — |
 
-Mentre no contestin: **les paraules sí, la seva veu i les seves imatges no.** Una paraula i el
-seu significat són de la llengua, no d'un vídeo; una gravació i un dibuix són de qui els ha fet.
-I abans que una paraula entri al Mètode, una segona font l'ha de confirmar — el diccionari DGLAi
-que ja tenim, o una veu nostra.
+**Els sís del 26-10-2026 els dona el propietari**, que ho ha parlat amb cada un per WhatsApp: li
+han dit que volen veure el sistema desenvolupat. Afegeix que el web encara no surt als cercadors
+i que, de fet, hi ha ell sol. Això és el que hi ha, i és la seva decisió; queda escrit aquí amb
+la data perquè, el dia que el web s'obri de debò, se sàpiga sobre quina conversa es va construir
+i es pugui tornar a parlar amb qui calgui.
+
+El que **no** canvia amb un sí: el crèdit. Cada frase diu qui la va dir i de quina obra surt
+(`source_title`, `source_channel`, `source_url`, `variety`, `region`). Això no és per demanar
+permís, és per reconèixer la feina, i es fa igual tant si el permís hi és com si no.
+
+Mentre les dues que falten no contestin: **les paraules sí, la seva veu i les seves imatges no.**
+Una paraula i el seu significat són de la llengua, no d'un vídeo; una gravació i un dibuix són de
+qui els ha fet. I abans que una paraula entri al Mètode, una segona font l'ha de confirmar — el
+diccionari DGLAi que ja tenim, o una veu nostra.
 
 ---
 
