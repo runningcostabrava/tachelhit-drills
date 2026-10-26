@@ -614,6 +614,8 @@ export const api = {
   runWordAlign: (limit = 200, redo = false) =>
     request<{ started: boolean }>(`/words/align/run?limit=${limit}&redo=${redo}`, { method: 'POST' }),
   stories: () => request<{ stories: Story[] }>('/stories'),
+  listenSession: (limit = 10) => request<{ items: ListenItem[] }>(`/listen/session?limit=${limit}`),
+  listenCounts: () => request<{ amb_veu: number; serveixen: number; sense_text_amazic: number }>('/listen/counts'),
   story: (slug: string) => request<StoryPage>(`/stories/${encodeURIComponent(slug)}`),
   // What the project owes to other people, read from the repository's own docs/CREDITS.md
   credits: () => request<{ markdown: string; source: string }>('/credits'),
@@ -766,6 +768,17 @@ export interface StoryPage extends Story {
    * rellotge encendria paraules al moment equivocat, que és pitjor que no encendre'n cap.
    */
   word_times?: Record<string, WordTime[]>;
+}
+/** Un tall per escoltar, amb les seves quatre opcions (#333). */
+export interface ListenOption { text: string; drill_id: number; bona: boolean; perque?: string; s_assembla?: number; paraules?: number }
+export interface ListenItem {
+  drill_id: number; audio_url: string; opcions: ListenOption[];
+  /** El que es veu NOMÉS després de triar: si es veiés abans, l'exercici tornaria a ser de llegir. */
+  despres: {
+    text_tachelhit: string | null; speaker: string | null; variety: string | null;
+    region: string | null; source_title: string | null; source_url: string | null;
+    source_channel: string | null; glosses: string | null;
+  };
 }
 export interface PracticeTip { sound: string; label: string; found: string; tip: string }
 export interface PracticeCard { speaker: string; origin: string; day: string | null; tips: PracticeTip[]; highlights: string[] }

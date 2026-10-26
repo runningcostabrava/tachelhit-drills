@@ -33,6 +33,7 @@ import method as method_mod
 import practice as practice_mod
 import stories as stories_mod
 import analisi
+import escoltar
 import night_asr
 import word_audio
 import transliteration
@@ -6618,6 +6619,22 @@ def write_story_analysis(slug: str, limit: int = 40, redo: bool = False,
     quines = analisi.escriu(frases)
     return {"demanades": len(frases), "desades": analisi.desa(db, quines),
             "llencades": len(frases) - len(quines)}
+
+
+@app.get("/listen/session")
+def listen_session(limit: int = 10, seed: Optional[int] = None, db: Session = Depends(get_db)):
+    """Sona un tall i tria què vol dir, entre quatre (#333).
+
+    Funciona **sense transcripció**: només calen veu i significat. Les 644 línies que tenen veu i
+    cap paraula amaziga escrita (#320) no serveixen per llegir i serveixen exactament per a això.
+    """
+    return {"items": escoltar.sessio(db, limit=limit, llavor=seed)}
+
+
+@app.get("/listen/counts")
+def listen_counts(db: Session = Depends(get_db)):
+    """Quant material hi ha per a l'exercici d'escoltar."""
+    return escoltar.comptes(db)
 
 
 @app.get("/words/align/status")
