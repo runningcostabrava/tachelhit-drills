@@ -22,6 +22,8 @@
 // habitual: la pantalla que s'apaga sola mentre escoltes.
 
 let el: HTMLAudioElement | null = null;
+/** La crida a `say()` que encara espera el final, perquè `stop()` la pugui deixar passar. */
+let pendent: (() => void) | null = null;
 
 /** L'element, creat una sola vegada i deixat al document. */
 function element(): HTMLAudioElement {
@@ -40,34 +42,45 @@ function element(): HTMLAudioElement {
  *
  * Resol tant si acaba com si falla com si algú l'atura: una fila que espera una reproducció
  * aturada es penjaria per sempre, i aturar ha de voler dir seguir endavant, no quedar-se clavat.
+ *
+ * **Per què l'aturada no s'escolta com un esdeveniment.** El primer intent resolia també amb
+ * `pause`, que semblava el més natural. Però un `<audio>` dispara `pause` **en una tasca a
+ * part**, no de seguida: amb un element per tall allò era inofensiu —l'element vell moria amb la
+ * seva promesa—, i amb UN SOL element reutilitzat la pausa que ha provocat la crida nova arriba
+ * quan els escoltadors de la crida nova ja hi són, i la resol a l'instant sense haver sonat. A
+ * la pantalla això es veia així: prémer el botó d'una línia **mentre s'està llegint la
+ * història** saltava el català i desbaratava la seqüència. Per això qui espera el guarda el
+ * mòdul (`pendent`) i la deixa passar qui atura, no un esdeveniment.
  */
 export function say(url: string): Promise<void> {
   const net = (url || '').trim();
   if (!net) return Promise.resolve();
   const a = element();
-  a.pause();
+  if (pendent) { const p = pendent; pendent = null; p(); }   // la crida anterior deixa pas
   return new Promise<void>((resolve) => {
     let fet = false;
     const prou = () => {
       if (fet) return;
       fet = true;
+      if (pendent === prou) pendent = null;
       a.removeEventListener('ended', prou);
       a.removeEventListener('error', prou);
-      a.removeEventListener('pause', prou);
       resolve();
     };
+    pendent = prou;
     a.addEventListener('ended', prou);
     a.addEventListener('error', prou);
-    a.addEventListener('pause', prou);
-    a.src = net;
-    a.currentTime = 0;
+    a.src = net;                           // posar el `src` ja atura el que sonava i torna a zero
     a.play().catch(prou);
   });
 }
 
-/** Atura el que soni. La promesa de `say()` es resol tota sola. */
+/** Atura el que soni, i deixa passar qui n'esperava el final. */
 export function stop() {
+  const p = pendent;
+  pendent = null;
   if (el) el.pause();
+  if (p) p();
 }
 
 /**
