@@ -6843,6 +6843,29 @@ def method_line_drill(slug: str,
     return {**out, "drill": Drill.model_validate(d, from_attributes=True)}
 
 
+@app.post("/method/{slug}/drills")
+def method_chapter_drills(slug: str,
+                          db: Session = Depends(get_db),
+                          user: UserModel = Depends(require_admin)):
+    """Totes les línies d'un capítol convertides en frases de la biblioteca, d'una passada.
+
+    Fins ara una línia del manual només es tornava frase quan algú la volia gravar, de manera
+    que el que encara no havia demanat ningú no existia enlloc i no es podia ni comptar ni
+    demanar. Això fa l'altra meitat: deixa-les totes creades i amb `voice_wanted`, perquè el que
+    falta es vegi i es pugui gravar.
+
+    No duplica res: si la biblioteca ja diu exactament el mateix —tingui veu o no—, la línia
+    s'hi lliga. I cada frase nova neix dient d'on ve: el manual d'El Mountassir, taixelhit del
+    Souss, amb el permís d'adaptació de l'autor.
+    """
+    if not method_mod.chapter(slug):
+        raise HTTPException(status_code=404, detail="Aquest capítol no existeix")
+    try:
+        return method_mod.drills_for_chapter(db, slug, user)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.put("/method/{slug}/content")
 def put_method_content(slug: str, body: dict = Body(...),
                        db: Session = Depends(get_db),

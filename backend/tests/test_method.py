@@ -984,3 +984,99 @@ def test_el_proces_que_retalla_una_frase_no_es_qui_la_diu():
     out = method.attach_heard(DB(), body, [])
     h = out["sections"][0]["examples"][0]["heard"]
     assert h["speaker"] is None and h["captured"] is True
+
+
+def test_totes_les_linies_dun_capitol_es_tornen_frases_duna_passada():
+    """El Mètode no es pot gravar si les seves línies no existeixen com a frases.
+
+    Fins ara una línia només es tornava frase quan algú la volia gravar, de manera que el que
+    ningú no havia demanat no existia: no es podia comptar, no sortia a «falta veu» i no es
+    podia demanar a un parlant. Això fa la passada sencera.
+
+    Dues coses que ha de respectar, i per això són aquí:
+
+    1. **No duplicar.** Si la biblioteca ja diu exactament això —amb veu o sense— la línia s'hi
+       lliga. Dues files que diuen el mateix són dues peticions de veu i dos llocs on corregir
+       el català.
+    2. **Dir d'on ve.** Cada frase nova neix amb la font, la varietat i el lloc: el manual d'El
+       Mountassir, taixelhit, Souss. Una frase del sud desada sense varietat es confon amb una
+       de l'Atles l'endemà.
+    """
+    import main
+    from test_api import client, register
+
+    db = main.SessionLocal()
+    try:
+        from models import MethodChapter
+        db.query(MethodChapter).filter(MethodChapter.slug == "els-convidats").delete()
+        db.commit()
+    finally:
+        db.close()
+
+    plain = {"X-User-Token": register("convidats_admin")}
+    db = main.SessionLocal()
+    try:
+        me = client.get("/users/me", headers=plain).json()
+        row = db.query(main.UserModel).filter(main.UserModel.id == me["id"]).first()
+        row.is_admin = True
+        db.commit()
+    finally:
+        db.close()
+    boss = plain
+
+    try:
+        # una frase que la biblioteca JA diu: la línia s'hi ha de lligar, no fer-ne una bessona
+        ja = client.post("/drills/", headers=boss, json={
+            "text_catalan": "Benvingut", "text_tachelhit": "ansuf"}).json()
+
+        body = {
+            "intro": "Rebre algú a casa.",
+            "sections": [{"id": "rebre", "title": "Rebre",
+                          "examples": [{"shi": "ansuf", "ca": "benvingut"},
+                                       {"shi": "kcm s uxam", "ca": "entra a casa"}]}],
+            "vocabulary": [{"shi": "anbgi", "ca": "convidat"}],
+        }
+        assert client.put("/method/els-convidats/content",
+                          headers=boss, json=body).status_code == 200
+
+        # no és de qualsevol
+        altre = {"X-User-Token": register("convidats_ningu")}
+        assert client.post("/method/els-convidats/drills", headers=altre).status_code == 403
+
+        out = client.post("/method/els-convidats/drills", headers=boss)
+        assert out.status_code == 200, out.text
+        fet = out.json()
+        assert fet["linies"] == 3
+        assert fet["lligades"] == 1, "la que la biblioteca ja deia"
+        assert fet["creades"] == 2
+        assert fet["ja_hi_eren"] == 0
+
+        back = client.get("/method/els-convidats").json()["content"]
+        sec = back["sections"][0]
+        assert sec["examples"][0]["drill_id"] == ja["id"], "s'hi lliga, no en crea una altra"
+        nou = sec["examples"][1]["drill_id"]
+        assert nou and nou != ja["id"]
+
+        d = client.get(f"/drills/{nou}", headers=boss).json()
+        assert d["text_tachelhit"] == "kcm s uxam"
+        assert d["variety"] == "shi" and d["region"] == "Souss", "la varietat del llibre"
+        assert "El Mountassir" in (d.get("source_channel") or ""), "qui n'és l'autor"
+        assert "Méthode de Tachelhit" in (d.get("source_title") or "")
+        assert d.get("license"), "amb quin permís hi és"
+        assert d.get("voice_wanted") is True, "neix demanant una veu"
+        assert "metode-els-convidats" in (d.get("tag") or "")
+        assert not d.get("grammar") and not d.get("topics"), \
+            "una línia del llibre no és un exemple de les unitats del capítol"
+
+        # segona passada: no en fa cap més
+        altra = client.post("/method/els-convidats/drills", headers=boss).json()
+        assert altra["creades"] == 0 and altra["lligades"] == 0
+        assert altra["ja_hi_eren"] == 3
+    finally:
+        db = main.SessionLocal()
+        try:
+            from models import MethodChapter
+            db.query(MethodChapter).filter(MethodChapter.slug == "els-convidats").delete()
+            db.commit()
+        finally:
+            db.close()
