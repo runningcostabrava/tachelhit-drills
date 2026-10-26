@@ -75,6 +75,17 @@ export function say(url: string): Promise<void> {
   });
 }
 
+/**
+ * Per on va el que sona, en segons.
+ *
+ * És el rellotge de l'àudio, no un de nostre: és l'únic que no se'n va quan el navegador
+ * estrangola els temporitzadors o quan la gravació triga a carregar-se. Qui encén la paraula que
+ * sona (#340) l'ha de llegir cada fotograma, no comptar pel seu compte.
+ */
+export function ara(): number {
+  return el ? el.currentTime : 0;
+}
+
 /** Atura el que soni, i deixa passar qui n'esperava el final. */
 export function stop() {
   const p = pendent;
