@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FaChevronLeft, FaExternalLinkAlt, FaPause, FaPlay } from 'react-icons/fa';
-import { api, type Story, type StoryPage } from '../api';
+import { api, type Story, type StoryPage, type WordTime } from '../api';
 import { getMediaUrl } from '../config';
 import type { Drill } from '../types';
-import WordGloss from './WordGloss';
-import { gap, keepAwake, nowPlaying, say, stop } from '../utils/veu';
+import WordGloss, { parseGlosses } from './WordGloss';
+import { ara, gap, keepAwake, nowPlaying, say, stop } from '../utils/veu';
 
 // Whole stories and songs, instead of loose sentences (#189).
 //
@@ -100,6 +100,79 @@ function StoryList() {
   );
 }
 
+/** Partir una frase en paraules i en el que les separa, per poder encendre'n una de sola. */
+const TROSSOS = /([^\s.,;:!?¡¿«»"'()،؛؟]+)/u;
+
+function trossos(text: string): string[] {
+  return (text || '').split(TROSSOS).filter((x) => x !== '');
+}
+
+/** Cada tros amb el número de paraula que li toca; −1 per als espais i els signes. */
+function numerades(text: string): { p: string; n: number }[] {
+  const fora: { p: string; n: number }[] = [];
+  let n = -1;
+  for (const p of trossos(text)) {
+    if (p.trim()) n += 1;
+    fora.push({ p, n: p.trim() ? n : -1 });
+  }
+  return fora;
+}
+
+/**
+ * La frase amaziga amb la paraula que sona encesa (#340).
+ *
+ * Els temps vénen de l'alineament, que es va fer sobre aquest mateix text, de manera que la
+ * paraula número *i* del rellotge és la número *i* de la frase. Quan els comptes no quadren
+ * —perquè l'alineament en va ajuntar dues, o perquè algú ha reescrit la frase després— no
+ * s'endevina: s'encén la paraula que **diu el mateix** que la que sona, i si no n'hi ha cap, cap.
+ */
+function FraseEncesa({ text, mots, i, estil }: {
+  text: string; mots?: WordTime[]; i: number | null; estil: React.CSSProperties;
+}) {
+  const parts = numerades(text);
+  const quants = parts.filter((x) => x.n >= 0).length;
+  const quadren = !!mots && mots.length === quants;
+  const diu = i != null && mots && mots[i] ? mots[i].w.toLowerCase() : null;
+  return (
+    <div style={estil}>
+      {parts.map(({ p, n: q }, k) => {
+        const encesa = i != null && q >= 0 && (quadren ? q === i : p.toLowerCase() === diu);
+        return encesa ? <mark key={k} style={llum}>{p}</mark> : <span key={k}>{p}</span>;
+      })}
+    </div>
+  );
+}
+
+/**
+ * El català amb la paraula que respon a la que sona, encesa.
+ *
+ * Aquí la posició no serveix de res: la paraula amaziga i la catalana no ocupen el mateix lloc de
+ * la frase, i de vegades no n'hi ha ni el mateix nombre. Qui les casa és la **glossa** —el
+ * paraula per paraula que ja porta cada línia, `{shi, tif, ca}`—, de manera que s'encén el que la
+ * glossa diu, allà on sigui. Quan la glossa posa «—» és que el català ho diu d'una altra manera,
+ * i aleshores no s'encén res: val més no encendre que encendre malament.
+ */
+function CatalaEncès({ text, ca, estil }: { text: string; ca: string | null; estil: React.CSSProperties }) {
+  const busca = (ca || '').trim();
+  const bones = busca && busca !== '—'
+    ? new Set(trossos(busca).filter((x) => x.trim()).map((x) => x.toLowerCase()))
+    : null;
+  return (
+    <div style={estil}>
+      {trossos(text).map((p, k) => (
+        bones && p.trim() && bones.has(p.toLowerCase())
+          ? <mark key={k} style={llum}>{p}</mark>
+          : <span key={k}>{p}</span>
+      ))}
+    </div>
+  );
+}
+
+const llum: React.CSSProperties = {
+  background: 'var(--brand-1)', color: '#fff', borderRadius: 4,
+  padding: '0 2px', margin: '0 -2px',
+};
+
 /**
  * Les històries repartides en seccions: una per sèrie, i una per als contes sols.
  *
@@ -128,6 +201,13 @@ function OneStory({ slug }: { slug: string }) {
   // conte, l'altra és estudiar-lo. `null` = aturada.
   const [reading, setReading] = useState<null | 'sol' | 'amb-catala'>(null);
   const readingRef = useRef(false);
+  // Quina paraula sona ara: la línia i la seva posició dins la línia (#340).
+  const [mot, setMot] = useState<{ drill: number; i: number } | null>(null);
+  // La pantalla segueix la veu, però qui llegeix mana: si mou la pàgina a mà, deixa de
+  // seguir-la fins que torni a prémer play. Una pantalla que t'estira cap on ella vol és
+  // pitjor que una de quieta.
+  const seguint = useRef(true);
+  const linies = useRef<Record<number, HTMLDivElement | null>>({});
 
   useEffect(() => {
     api.story(slug).then((r) => { setPage(r); document.title = `${r.title} · Tamazight`; })
@@ -135,9 +215,51 @@ function OneStory({ slug }: { slug: string }) {
     return () => { readingRef.current = false; stop(); keepAwake(false); nowPlaying(null); };
   }, [slug]);
 
+  // La pantalla s'acosta a la línia que sona. A «The Traveller», que en té 219, la veu se
+  // n'anava avall i qui escoltava es quedava mirant una altra part del conte.
+  useEffect(() => {
+    if (at == null || !seguint.current) return;
+    linies.current[at]?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [at]);
+
+  // Qui llegeix mana sobre la pantalla: tocar-la atura el seguiment fins al pròxim play.
+  useEffect(() => {
+    const seu = () => { seguint.current = false; };
+    window.addEventListener('wheel', seu, { passive: true });
+    window.addEventListener('touchmove', seu, { passive: true });
+    return () => { window.removeEventListener('wheel', seu); window.removeEventListener('touchmove', seu); };
+  }, []);
+
   // Un so, i s'espera que s'acabi. El reproductor és el de tota l'app: un sol element, dins el
   // document i declarat al sistema, perquè la veu no calli quan s'apaga la pantalla (#342).
   const sona = useCallback((url: string) => say(url.trim() ? getMediaUrl(url) : ''), []);
+
+  /**
+   * La veu amaziga d'una línia, amb la paraula encesa a mesura que es diu (#340).
+   *
+   * Els temps no se'ls inventa ningú: els va desar l'alineament forçat i els serveix la pàgina
+   * (`word_times`). El rellotge que mana és el de l'àudio —es llegeix cada fotograma—, no un
+   * comptador nostre, que se n'aniria en quant el navegador estrangolés els temporitzadors o la
+   * gravació triguéssim a carregar-se.
+   *
+   * Una línia sense alineament sona igual i s'encén **sencera**: repartir-la pel rellotge, com
+   * si les paraules duressin totes el mateix, encendria la paraula equivocada, i això ensenya a
+   * sentir el que no és.
+   */
+  const sonaEncenent = useCallback(async (drill: Drill, url: string) => {
+    const mots: WordTime[] | undefined = page?.word_times?.[String(drill.id)];
+    if (!mots || !mots.length) return sona(url);
+    let viu = true;
+    const mira = () => {
+      if (!viu) return;
+      const t = ara();
+      const i = mots.findIndex((m) => t >= m.start && t < m.end);
+      setMot(i >= 0 ? { drill: drill.id, i } : null);
+      requestAnimationFrame(mira);
+    };
+    requestAnimationFrame(mira);
+    try { return await sona(url); } finally { viu = false; setMot(null); }
+  }, [sona, page]);
 
   const amazic = (d: Drill) => (d.audio_url || d.audio_tts_shi_url || '').trim();
 
@@ -156,10 +278,10 @@ function OneStory({ slug }: { slug: string }) {
       await gap(250);
     }
     if (!veu) return;
-    await sona(veu);
+    await sonaEncenent(drill, veu);
     await gap(300);
-    await sona(veu);
-  }, [sona]);
+    await sonaEncenent(drill, veu);
+  }, [sona, sonaEncenent]);
 
   // Sentir-la de cap a cap, de dues maneres que no fan la mateixa feina:
   //
@@ -177,6 +299,7 @@ function OneStory({ slug }: { slug: string }) {
     stop();
     if (sonava === manera) { setReading(null); setAt(null); keepAwake(false); nowPlaying(null); return; }
     await gap(60);                                 // deixa acabar la fila anterior
+    seguint.current = true;                        // tornar a prémer play torna a seguir la veu
     readingRef.current = true; setReading(manera);
     keepAwake(true);
     for (let i = 0; i < page.drills.length; i++) {
@@ -193,7 +316,7 @@ function OneStory({ slug }: { slug: string }) {
         await playLine(page.drills[i], i);
       } else {
         setAt(i);
-        await sona(amazic(page.drills[i]));
+        await sonaEncenent(page.drills[i], amazic(page.drills[i]));
       }
       await gap(350);
     }
@@ -280,8 +403,14 @@ function OneStory({ slug }: { slug: string }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {page.drills.map((d, i) => {
           const written = (d.text_tachelhit || '').trim();
+          const mots = page.word_times?.[String(d.id)];
+          const dins = mot && mot.drill === d.id ? mot.i : null;
+          // Quina paraula catalana respon a la que sona: ho diu la glossa, no la posició.
+          const gl = dins != null ? parseGlosses(d)[dins] : undefined;
           return (
-            <div key={d.id} style={{
+            <div key={d.id}
+                 ref={(n) => { linies.current[i] = n; }}
+                 style={{
               display: 'flex', gap: 10, padding: '10px 12px', borderRadius: 'var(--r-lg)',
               border: '1px solid var(--border)',
               background: at === i ? 'var(--brand-gradient-soft)' : 'var(--surface)',
@@ -292,7 +421,8 @@ function OneStory({ slug }: { slug: string }) {
               </button>
               <div style={{ flex: 1, minWidth: 0 }}>
                 {written ? (
-                  <div style={{ fontSize: 16.5, fontWeight: 800, lineHeight: 1.35 }}>{written}</div>
+                  <FraseEncesa text={written} mots={mots} i={dins}
+                               estil={{ fontSize: 16.5, fontWeight: 800, lineHeight: 1.35 }} />
                 ) : (
                   // La lectura de màquina es veu, però mai com si fos el text del parlant: va
                   // en gris, amb el seu avís, i no es pot confondre amb una frase escrita per
@@ -312,7 +442,8 @@ function OneStory({ slug }: { slug: string }) {
                     )}
                   </>
                 )}
-                <div style={{ fontSize: 14, color: 'var(--text-soft)', lineHeight: 1.45 }}>{d.text_catalan}</div>
+                <CatalaEncès text={d.text_catalan || ''} ca={gl?.ca ?? null}
+                             estil={{ fontSize: 14, color: 'var(--text-soft)', lineHeight: 1.45 }} />
                 <WordGloss drill={d} size="sm" />
               </div>
             </div>
