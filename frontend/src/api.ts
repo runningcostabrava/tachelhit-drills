@@ -610,6 +610,9 @@ export const api = {
   // sound files -- the player seeks there and stops at the end of the word.
   wordAudio: (word: string, limit = 6) =>
     request<{ word: string; count: number; clips: WordClip[] }>(`/words/audio?word=${encodeURIComponent(word)}&limit=${limit}`),
+  /** Quines d'aquestes paraules es poden sentir, en un sol viatge (#271). */
+  wordsHaveAudio: (words: string[]) =>
+    request<{ words: Record<string, boolean> }>(`/words/have-audio?words=${encodeURIComponent(words.join(','))}`),
   wordAlignStatus: () => request<{ running: boolean; done: number; words: number; failed: number; stored: number; recordings: number }>('/words/align/status'),
   runWordAlign: (limit = 200, redo = false) =>
     request<{ started: boolean }>(`/words/align/run?limit=${limit}&redo=${redo}`, { method: 'POST' }),
