@@ -160,3 +160,45 @@ def test_a_story_with_no_video_keeps_its_own_illustration():
         })
     mine = next(s for s in client.get("/stories").json()["stories"] if s["title"] == title)
     assert mine["cover"] == "https://exemple.test/dibuix.jpg"
+def test_the_page_carries_the_times_of_each_word_when_we_have_them():
+    """Perquè la pantalla pugui seguir la veu i encendre la paraula que sona (#340).
+
+    L'alineament forçat ja va desar quan es diu cada paraula dins cada gravació. La pàgina de la
+    història només l'ha d'ensenyar, i ha de distingir les línies que en tenen de les que no: una
+    línia sense alineament no hi surt, perquè repartir-la pel rellotge encendria paraules al
+    moment equivocat.
+    """
+    from main import SessionLocal
+    from models import WordAudio
+    hdr = {"X-User-Token": register("story_times")}
+    title = "Amb els temps (prova)"
+    fets = [_line(hdr, title, float(i * 3), f"awal {i}", f"línia {i}") for i in range(6)]
+
+    db = SessionLocal()
+    try:
+        # Dues línies alineades, quatre sense: és el cas de debò, no una història perfecta.
+        for d, mots in ((fets[0], [("awal", 120, 540), ("0", 540, 900)]),
+                        (fets[3], [("awal", 0, 300), ("3", 300, 610)])):
+            for w, a, b in mots:
+                db.add(WordAudio(key=w, word=w, drill_id=d["id"], start_ms=a, end_ms=b,
+                                 source="library"))
+        db.commit()
+    finally:
+        db.close()
+
+    slug = next(s for s in client.get("/stories").json()["stories"] if s["title"] == title)["slug"]
+    temps = client.get(f"/stories/{slug}").json()["word_times"]
+
+    assert set(temps) == {str(fets[0]["id"]), str(fets[3]["id"])}, "només les que en tenen"
+    assert temps[str(fets[0]["id"])] == [{"w": "awal", "start": 0.12, "end": 0.54},
+                                         {"w": "0", "start": 0.54, "end": 0.9}]
+
+
+def test_a_story_without_any_alignment_says_so_with_an_empty_map():
+    """Cap temps no és una resposta vàlida; no és un error ni un camp que falti."""
+    hdr = {"X-User-Token": register("story_no_times")}
+    title = "Sense temps (prova)"
+    for i in range(6):
+        _line(hdr, title, float(i * 3), f"inna {i}", f"diu {i}")
+    slug = next(s for s in client.get("/stories").json()["stories"] if s["title"] == title)["slug"]
+    assert client.get(f"/stories/{slug}").json()["word_times"] == {}
