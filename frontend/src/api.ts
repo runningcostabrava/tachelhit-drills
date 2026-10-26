@@ -755,6 +755,12 @@ export interface WordTime { w: string; start: number; end: number }
 export interface StoryPage extends Story {
   drills: Drill[];
   /**
+   * L'oració desmuntada: què hi passa i quines unitats del curs l'expliquen (#341). Per id de
+   * línia, i **només de les que algú ha escrit**: una línia que ningú no ha transcrit no es pot
+   * analitzar, i demanar-ho faria que la màquina se la inventés primer.
+   */
+  analisi?: Record<string, { analisi: string; unitats: string[]; titols: string[] }>;
+  /**
    * Els temps de cada paraula, per id de línia — i **només de les línies que en tenen** (#340).
    * Una línia que no hi surt no s'encén paraula per paraula: s'encén sencera. Repartir-la pel
    * rellotge encendria paraules al moment equivocat, que és pitjor que no encendre'n cap.

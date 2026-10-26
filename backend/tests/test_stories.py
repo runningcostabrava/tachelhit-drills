@@ -202,3 +202,56 @@ def test_a_story_without_any_alignment_says_so_with_an_empty_map():
         _line(hdr, title, float(i * 3), f"inna {i}", f"diu {i}")
     slug = next(s for s in client.get("/stories").json()["stories"] if s["title"] == title)["slug"]
     assert client.get(f"/stories/{slug}").json()["word_times"] == {}
+
+
+def test_an_analysis_is_only_written_for_lines_somebody_has_written(monkeypatch):
+    """Desmuntar una oració només té sentit si la frase existeix de debò (#341).
+
+    Una línia que ningú no ha transcrit no es pot analitzar. Demanar-ho igualment faria que la
+    màquina se l'inventés primer i l'analitzés després, que és la pitjor de les dues coses que
+    podríem fer: una anàlisi convincent d'una frase que no ha dit ningú.
+    """
+    import analisi
+    hdr = {"X-User-Token": register("story_analysis")}
+    title = "Per desmuntar (prova)"
+    for i in range(6):
+        _line(hdr, title, float(i * 3), "" if i in (1, 4) else f"ur ssinɣ {i}", f"no ho sé {i}")
+    page_slug = next(s for s in client.get("/stories").json()["stories"] if s["title"] == title)["slug"]
+
+    from main import SessionLocal
+    import stories as stories_mod
+    with SessionLocal() as db:
+        ids = stories_mod.one(db, page_slug)["drill_ids"]
+        frases = analisi.frases_de(db, ids)
+    assert len(frases) == 4, "les dues línies sense paraules escrites no hi entren"
+    assert all(f["shi"] for f in frases)
+
+
+def test_an_analysis_that_quotes_words_the_sentence_does_not_have_is_thrown_away():
+    """Una anàlisi que cita un tros que no és a la frase parla d'una altra frase."""
+    import analisi
+    frases = [{"id": 1, "shi": "ur ssinɣ mani ɣ illa", "ca": "no sé on és"},
+              {"id": 2, "shi": "is tssnt?", "ca": "ho saps?"}]
+    bo = analisi.neteja({
+        "1": {"analisi": "Frase negativa: «ur» davant del verb «ssinɣ» el nega.", "unitats": ["negacio"]},
+        "2": {"analisi": "La pregunta la obre «mani», que no hi és.", "unitats": ["preguntes"]},
+    }, frases)
+    assert set(bo) == {1}, "la que cita «mani», que no és a la seva frase, se'n va"
+    assert bo[1]["unitats"] == ["negacio"]
+
+
+def test_an_analysis_full_of_grammarian_words_is_thrown_away():
+    """Val més una frase sense anàlisi que una anàlisi que ningú no entén: és la regla del curs."""
+    import analisi
+    frases = [{"id": 1, "shi": "ur ssinɣ", "ca": "no ho sé"}]
+    assert analisi.neteja(
+        {"1": {"analisi": "El morfema «ur» és un clític preverbal.", "unitats": []}}, frases) == {}
+
+
+def test_invented_units_are_dropped_not_shown():
+    import analisi
+    frases = [{"id": 1, "shi": "ur ssinɣ", "ca": "no ho sé"}]
+    bo = analisi.neteja(
+        {"1": {"analisi": "Frase negativa: «ur» nega el verb.",
+               "unitats": ["negacio", "la-unitat-que-no-existeix"]}}, frases)
+    assert bo[1]["unitats"] == ["negacio"]

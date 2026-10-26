@@ -276,6 +276,24 @@ class WordAudio(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
 
 
+class SentenceAnalysis(Base):
+    """Què passa dins UNA oració, i quines unitats del curs l'expliquen (#341).
+
+    No és la nota de la Gramàtica. Aquella respon «què mostra aquesta frase d'aquesta unitat» i
+    penja d'una parella (frase, unitat); una línia d'un conte no pertany a cap unitat, de manera
+    que la pregunta es gira: què passa aquí, i què ho explica. Per això penja de la frase sola.
+
+    L'escriu una màquina i es diu. Només per a frases que algú ha escrit de debò: analitzar una
+    línia que ningú no ha transcrit seria analitzar una frase que la màquina s'ha inventat.
+    """
+    __tablename__ = "sentence_analysis"
+
+    drill_id = Column(Integer, primary_key=True, index=True)
+    body = Column(Text, nullable=False)                  # 30-55 paraules de català planer
+    units = Column(String, nullable=True)                # slugs del curs, separats per comes
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
+
+
 class GrammarNote(Base):
     """Why ONE sentence sits in ONE grammar unit: what that sentence shows of that unit's point.
     A sentence belongs to up to three units and shows something different in each, so the note is
