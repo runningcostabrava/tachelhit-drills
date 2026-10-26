@@ -1,0 +1,41 @@
+{
+ "_llegeix-me": [
+  "On sona cada línia del Mètode dins del CD del manual d'Abdallah El Mountassir.",
+  "La clau de dins és la línia del capítol tal com la numera el servidor (per exemple",
+  "'vocals:example:0' o 'dialogue:3'); el valor diu a quina pista cau, en quin segon comença i",
+  "acaba, i on és el tall penjat.",
+  "Sense 'url' la línia no porta cap botó: el servidor no se l'inventa.",
+  "El crèdit no viu aquí: el posa el servidor, sempre, al costat de l'àudio.",
+  "'com' diu COM sabem que aquesta línia és aquell tros, perquè no totes les línies ho saben de",
+  "la mateixa manera i això no s'ha d'amagar."
+ ],
+ "_pistes": {
+  "e6nuUVOFB0U": "capítol 1 del llibre",
+  "mDMcR7vNA_A": "capítols 2 i 3",
+  "zkvUblbTdws": "capítol 4",
+  "YioipkEhqME": "capítol 5",
+  "JkXAk3CKIPA": "capítol 6"
+ },
+ "capitols": {
+  "sons": {
+   "vocals:example:0": {"pista": "e6nuUVOFB0U", "start": 46.63, "end": 47.11,
+                        "url": "/method/cd/e6nuUVOFB0U/46.63/47.11", "com": "sentit"},
+   "vocals:example:1": {"pista": "e6nuUVOFB0U", "start": 49.87, "end": 50.41,
+                        "url": "/method/cd/e6nuUVOFB0U/49.87/50.41", "com": "sentit"},
+   "vocals:example:2": {"pista": "e6nuUVOFB0U", "start": 52.73, "end": 53.39,
+                        "url": "/method/cd/e6nuUVOFB0U/52.73/53.39", "com": "sentit"},
+   "vocals:example:3": {"pista": "e6nuUVOFB0U", "start": 56.67, "end": 57.14,
+                        "url": "/method/cd/e6nuUVOFB0U/56.67/57.14", "com": "sentit"},
+   "vocals:example:4": {"pista": "e6nuUVOFB0U", "start": 59.53, "end": 60.11,
+                        "url": "/method/cd/e6nuUVOFB0U/59.53/60.11", "com": "sentit"},
+   "vocals:example:5": {"pista": "e6nuUVOFB0U", "start": 62.29, "end": 62.64,
+                        "url": "/method/cd/e6nuUVOFB0U/62.29/62.64", "com": "sentit"},
+   "vocals:example:6": {"pista": "e6nuUVOFB0U", "start": 70.09, "end": 70.68,
+                        "url": "/method/cd/e6nuUVOFB0U/70.09/70.68", "com": "per veïnatge"},
+   "vocals:example:7": {"pista": "e6nuUVOFB0U", "start": 74.21, "end": 74.78,
+                        "url": "/method/cd/e6nuUVOFB0U/74.21/74.78", "com": "sentit"},
+   "vocals:example:8": {"pista": "e6nuUVOFB0U", "start": 77.68, "end": 78.14,
+                        "url": "/method/cd/e6nuUVOFB0U/77.68/78.14", "com": "per veïnatge"}
+  }
+ }
+}
