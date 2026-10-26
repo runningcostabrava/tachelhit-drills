@@ -85,26 +85,52 @@ function OneStory({ slug }: { slug: string }) {
     return () => { readingRef.current = false; audioRef.current?.pause(); };
   }, [slug]);
 
-  const playLine = useCallback((drill: Drill, i: number) => new Promise<void>((resolve) => {
-    const url = (drill.audio_url || drill.audio_tts_shi_url || '').trim();
-    if (!url) { resolve(); return; }
+  // Un so, i s'espera que s'acabi. Un error no atura la fila: val més seguir que quedar-se penjat.
+  const sona = useCallback((url: string) => new Promise<void>((resolve) => {
+    if (!url.trim()) { resolve(); return; }
     audioRef.current?.pause();
     const a = new Audio(getMediaUrl(url));
     audioRef.current = a;
-    setAt(i);
     a.onended = () => resolve();
     a.onerror = () => resolve();
+    // Aturar-ho també ha de deixar passar: sense això, prémer «Atura» deixava l'espera penjada
+    // per sempre, perquè una reproducció aturada no acaba mai.
+    a.onpause = () => resolve();
     a.play().catch(() => resolve());
   }), []);
 
-  // Read it through: the point of a story is hearing it as one thing.
+  const amazic = (d: Drill) => (d.audio_url || d.audio_tts_shi_url || '').trim();
+
+  // Estudiar una línia: primer saps QUÈ sentiràs, i després ho sents dues vegades.
+  //
+  // L'ordre no és capritxós. Sentir amazic sense saber què vol dir és soroll; sentir-lo una sola
+  // vegada no deixa temps de tornar-hi. Amb el català al davant, l'orella ja busca alguna cosa, i
+  // la segona passada és on es comença a distingir on acaba una paraula i on comença l'altra.
+  const playLine = useCallback(async (drill: Drill, i: number) => {
+    const veu = amazic(drill);
+    const ca = (drill.audio_tts_url || '').trim();
+    if (!veu && !ca) return;
+    setAt(i);
+    if (ca) {
+      await sona(ca);
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    if (!veu) return;
+    await sona(veu);
+    await new Promise((r) => setTimeout(r, 300));
+    await sona(veu);
+  }, [sona]);
+
+  // Escoltar-la sencera: aquí NO hi va el català ni la repetició. El que es vol és el conte
+  // seguit, tal com el va dir qui el va dir; la seqüència d'estudi és la del botó de cada línia.
   const readThrough = async () => {
     if (!page) return;
     if (readingRef.current) { readingRef.current = false; setReading(false); audioRef.current?.pause(); setAt(null); return; }
     readingRef.current = true; setReading(true);
     for (let i = 0; i < page.drills.length; i++) {
       if (!readingRef.current) break;
-      await playLine(page.drills[i], i);
+      setAt(i);
+      await sona(amazic(page.drills[i]));
       await new Promise((r) => setTimeout(r, 350));
     }
     readingRef.current = false; setReading(false); setAt(null);
@@ -118,13 +144,34 @@ function OneStory({ slug }: { slug: string }) {
       <button onClick={() => navigate('/stories')} style={back}><FaChevronLeft /> Històries</button>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 25, margin: '6px 0 4px', lineHeight: 1.25 }}>{page.title}</h1>
       <p style={{ color: 'var(--text-soft)', fontSize: 13.5, margin: '0 0 14px' }}>
-        {page.lines} línies{page.speaker ? ` · ho diu ${page.speaker}` : ''}{page.channel ? ` · ${page.channel}` : ''}
-        {page.source_url && (
-          <> · <a href={page.source_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-1)', fontWeight: 700 }}>
-            vídeo original <FaExternalLinkAlt size={9} />
-          </a></>
-        )}
+        {page.lines} línies · {page.voiced} amb veu
       </p>
+
+      {/* El crèdit no és lletra petita.
+          Qui ens deixa escoltar una història seva es mereix que la gent hi vagi, i qui l'escolta
+          ha de saber de qui és la veu abans de sentir-la. Per això va en un bloc que es veu, amb
+          el nom del canal i la porta oberta cap al vídeo.
+          «Auto Capture» no és ningú: és el procés que va retallar la frase (#324), de manera que
+          no es diu mai com si fos una persona. */}
+      <section style={credit}>
+        <div style={{ fontWeight: 800, fontSize: 13.5, marginBottom: 4 }}>D'on surt aquesta història</div>
+        <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55 }}>
+          {page.channel
+            ? <>La veu i les paraules són del canal <strong>{page.channel}</strong>.</>
+            : <>La veu i les paraules són del vídeo original.</>}
+          {page.speaker && page.speaker !== 'Auto Capture' && <> Ho diu <strong>{page.speaker}</strong>.</>}
+          {' '}La traducció al català és nostra.
+        </p>
+        {page.source_url && (
+          <p style={{ margin: '8px 0 0', fontSize: 13.5 }}>
+            Si t'agrada, ves-hi:{' '}
+            <a href={page.source_url} target="_blank" rel="noopener noreferrer" style={enllac}>
+              mira el vídeo original <FaExternalLinkAlt size={9} />
+            </a>
+            {page.channel && <> i visita el canal.</>}
+          </p>
+        )}
+      </section>
 
       <button onClick={readThrough} style={{ ...primary, marginBottom: 18 }}>
         {reading ? <><FaPause size={12} /> Atura</> : <><FaPlay size={12} /> Escolta-la sencera</>}
@@ -155,9 +202,23 @@ function OneStory({ slug }: { slug: string }) {
                 {written ? (
                   <div style={{ fontSize: 16.5, fontWeight: 800, lineHeight: 1.35 }}>{written}</div>
                 ) : (
-                  <div style={{ fontSize: 14, color: 'var(--saffron-dark, #7A4A12)', fontWeight: 700 }}>
-                    (aquesta línia encara no té les paraules escrites)
-                  </div>
+                  // La lectura de màquina es veu, però mai com si fos el text del parlant: va
+                  // en gris, amb el seu avís, i no es pot confondre amb una frase escrita per
+                  // ningú. Amagar-la no ajudava —la línia quedava muda a la pantalla tot i que
+                  // en teníem una proposta— i donar-la per bona seria inventar-li les paraules.
+                  <>
+                    <div style={{ fontSize: 14, color: 'var(--saffron-dark, #7A4A12)', fontWeight: 700 }}>
+                      (aquesta línia encara no té les paraules escrites)
+                    </div>
+                    {(d.text_tachelhit_suggested || '').trim() && (
+                      <div style={{ fontSize: 15, color: 'var(--text-soft)', lineHeight: 1.35, marginTop: 2 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', marginRight: 6 }}>
+                          lectura de màquina
+                        </span>
+                        {d.text_tachelhit_suggested}
+                      </div>
+                    )}
+                  </>
                 )}
                 <div style={{ fontSize: 14, color: 'var(--text-soft)', lineHeight: 1.45 }}>{d.text_catalan}</div>
                 <WordGloss drill={d} size="sm" />
@@ -170,6 +231,11 @@ function OneStory({ slug }: { slug: string }) {
   );
 }
 
-const card: React.CSSProperties = { textAlign: 'left', padding: 12, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', color: 'var(--text)', fontFamily: 'inherit' };
+const credit: React.CSSProperties = {
+  padding: '12px 14px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)',
+  background: 'var(--surface-2)', margin: '0 0 16px',
+};
+const enllac: React.CSSProperties = { color: 'var(--brand-1)', fontWeight: 700 };
+const card: React.CSSProperties ={ textAlign: 'left', padding: 12, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', color: 'var(--text)', fontFamily: 'inherit' };
 const primary: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' };
 const back: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: 0, border: 'none', background: 'none', color: 'var(--brand-1)', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' };
