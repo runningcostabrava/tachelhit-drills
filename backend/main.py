@@ -32,6 +32,7 @@ import practice_steps
 import method as method_mod
 import practice as practice_mod
 import stories as stories_mod
+import analisi
 import night_asr
 import word_audio
 import transliteration
@@ -6553,7 +6554,8 @@ def read_story(slug: str, db: Session = Depends(get_db)):
     rows = {d.id: d for d in db.query(DrillModel).filter(DrillModel.id.in_(ids)).all()}
     return {**story,
             "drills": [Drill.model_validate(rows[i], from_attributes=True) for i in ids if i in rows],
-            "word_times": _story_word_times(db, ids)}
+            "word_times": _story_word_times(db, ids),
+            "analisi": analisi.per_a(db, ids)}
 
 
 def _story_word_times(db: Session, ids: List[int]) -> Dict[str, List[dict]]:
@@ -6595,6 +6597,27 @@ def word_audio_clips(word: str, limit: int = 6, db: Session = Depends(get_db)):
     """
     clips = word_audio.clips_for(db, word, limit=max(1, min(limit, 20)))
     return {"word": word, "count": len(clips), "clips": clips}
+
+
+@app.post("/stories/{slug}/analisi")
+def write_story_analysis(slug: str, limit: int = 40, redo: bool = False,
+                         _admin: UserModel = Depends(require_admin),
+                         db: Session = Depends(get_db)):
+    """Desmuntar les oracions d'una història: què hi passa i quina unitat ho explica (#341).
+
+    Només sobre les línies que algú ha escrit de debò. Una línia sense text amazic no es pot
+    analitzar —no hi ha res a desmuntar— i demanar-ho igualment faría que la màquina se la
+    inventés primer i l'analitzés després, que és la pitjor de les dues coses que podríem fer.
+    """
+    story = stories_mod.one(db, slug)
+    if not story:
+        raise HTTPException(status_code=404, detail="Aquesta història no existeix")
+    frases = analisi.frases_de(db, story["drill_ids"], refer=redo)[:max(1, min(limit, 60))]
+    if not frases:
+        return {"demanades": 0, "desades": 0, "missatge": "no queda cap línia escrita per analitzar"}
+    quines = analisi.escriu(frases)
+    return {"demanades": len(frases), "desades": analisi.desa(db, quines),
+            "llencades": len(frases) - len(quines)}
 
 
 @app.get("/words/align/status")

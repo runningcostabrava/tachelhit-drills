@@ -110,6 +110,51 @@ function trossos(text: string): string[] {
 }
 
 /**
+ * L'oració desmuntada: què hi passa i quines unitats del curs l'expliquen (#341).
+ *
+ * El propietari ho va demanar per a les històries: «un anàlisi gramàtic semblant al que fem en
+ * gramàtica, per cada oració». La diferència amb la nota del curs no és d'estil sinó d'ancoratge:
+ * allà la nota penja d'una parella (frase, unitat), i una línia d'un conte no pertany a cap
+ * unitat. Aquí la pregunta va del revés —què passa aquí, i què ho explica— i les unitats que en
+ * surten són portes cap al curs: sents un conte, et quedes encallat en una frase, i la frase et
+ * porta a la unitat que l'explica.
+ *
+ * Va tancada. Qui ve a escoltar una història no ve a una classe de gramàtica; qui s'hi encalla,
+ * sí. I diu que l'ha escrita una màquina, com les notes del curs i pel mateix motiu.
+ */
+function Desmuntada({ que }: { que?: { analisi: string; unitats: string[]; titols: string[] } }) {
+  const [obert, setObert] = useState(false);
+  if (!que?.analisi) return null;
+  return (
+    <div style={{ marginTop: 6 }}>
+      <button onClick={() => setObert((o) => !o)}
+              style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer',
+                       color: 'var(--brand-1)', fontWeight: 700, fontSize: 12.5, fontFamily: 'inherit' }}>
+        {obert ? '− com està feta' : '+ com està feta'}
+      </button>
+      {obert && (
+        <div style={{ marginTop: 4, fontSize: 13, lineHeight: 1.55, color: 'var(--text)' }}>
+          {que.analisi}
+          {que.titols.length > 0 && (
+            <div style={{ marginTop: 5, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {que.unitats.map((u, i) => (
+                <a key={u} href={`/grammar/${u}`} style={{ fontSize: 12, fontWeight: 700, color: 'var(--brand-1)',
+                     border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', padding: '2px 9px', textDecoration: 'none' }}>
+                  {que.titols[i] || u}
+                </a>
+              ))}
+            </div>
+          )}
+          <div style={{ marginTop: 5, fontSize: 11.5, color: 'var(--text-muted)' }}>
+            Això ho ha escrit una màquina. Si saps que hi ha res que no és, digues-ho.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
  * El català amb la paraula que respon a la que sona, encesa.
  *
  * Aquí la posició no serveix de res: la paraula amaziga i la catalana no ocupen el mateix lloc de
@@ -405,6 +450,7 @@ function OneStory({ slug }: { slug: string }) {
                 <CatalaEncès text={d.text_catalan || ''} ca={gl?.ca ?? null}
                              estil={{ fontSize: 14, color: 'var(--text-soft)', lineHeight: 1.45 }} />
                 <WordGloss drill={d} size="sm" />
+                <Desmuntada que={page.analisi?.[String(d.id)]} />
               </div>
             </div>
           );
