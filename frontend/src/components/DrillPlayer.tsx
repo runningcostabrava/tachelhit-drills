@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { duesCares } from '../utils/tifinag';
 import { answerSafeFilter } from '../utils/media';
 import SourceCredit from './SourceCredit';
 import { API_BASE, getMediaUrl } from '../config';
@@ -923,7 +924,10 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
             {hideAnswer ? (
               <span style={{ letterSpacing: '8px', opacity: 0.35 }}>· · ·</span>
             ) : currentDrill?.text_tachelhit ? (
-              <KaraokeLine text={currentDrill.text_tachelhit} frac={isPlaying && audioDuration > 0 ? Math.min(1, audioProgress / audioDuration) : -1} />
+              // La frase EN TIFINAG (#339). Fins ara aquí hi anava el text tal com el va escriure
+              // el parlant, pintat amb la lletra tifinag: qui havia escrit en llatí es veia en
+              // llatí amb tipografia tifinag, i de tifinag no n'hi havia enlloc.
+              <KaraokeLine text={duesCares(currentDrill.text_tachelhit, currentDrill.text_tachelhit_latin).tif} frac={isPlaying && audioDuration > 0 ? Math.min(1, audioProgress / audioDuration) : -1} />
             ) : draftText(currentDrill) ? (
               // Captured from subtitles / drafted by a machine and not yet confirmed by a speaker:
               // still worth seeing while learning, but visibly not gold
@@ -936,8 +940,10 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
             )}
           </div>
 
-          {/* Latin romanization (shown with the answer) */}
-          {!hideAnswer && currentDrill?.text_tachelhit_latin && (
+          {/* I el llatí a sota. Abans només sortia per als 90 drills que tenien la forma llatina
+              DESADA; ara surt sempre, perquè es calcula, i una frase amaziga ha de portar sempre
+              els dos alfabets (#339). */}
+          {!hideAnswer && currentDrill?.text_tachelhit && (
             <div style={{
               padding: '0 24px 14px',
               textAlign: 'center',
@@ -945,7 +951,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               fontStyle: 'italic',
               color: 'var(--text-soft)'
             }}>
-              <KaraokeLine text={currentDrill.text_tachelhit_latin} frac={isPlaying && audioDuration > 0 ? Math.min(1, audioProgress / audioDuration) : -1} muted />
+              <KaraokeLine text={duesCares(currentDrill.text_tachelhit, currentDrill.text_tachelhit_latin).lat} frac={isPlaying && audioDuration > 0 ? Math.min(1, audioProgress / audioDuration) : -1} muted />
             </div>
           )}
 
