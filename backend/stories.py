@@ -61,12 +61,26 @@ def groups(db) -> Dict[str, List]:
 
 
 def is_story(drills: List) -> bool:
-    """Enough lines, in an order we can recover, with voices to hear."""
+    """Enough lines, in an order we can recover, with voices to hear — and no two at once.
+
+    The last condition came from a false story. Ten loose Aït Mraw sentences cut from one of the
+    owner's own videos turned up on the Stories page as «October 2, 2023» — which is not a title
+    but what YouTube puts when a video has none, so all ten shared a `source_title`. They all
+    carried a time, so they passed. But three of them started at second 0.0: they were not a
+    sequence, they were separate captures from the same video.
+
+    **Two lines of one story never start at the same second**, so a repeated start time is the
+    cheapest way to tell a text from a pile. Measured against the library before trusting it: of
+    the 25 groups the page was showing, the 24 real stories had every start time distinct —
+    776 lines, not one collision — and only the false one repeated.
+    """
     if len(drills) < MIN_LINES:
         return False
-    timed = sum(1 for d in drills if _timed(d))
+    starts = [d.video_start_time for d in drills if _timed(d)]
+    if len(set(starts)) != len(starts):
+        return False
     voiced = sum(1 for d in drills if _voiced(d))
-    return timed >= MIN_LINES and timed >= len(drills) * 0.6 and voiced >= len(drills) * 0.6
+    return len(starts) >= MIN_LINES and len(starts) >= len(drills) * 0.6 and voiced >= len(drills) * 0.6
 
 
 def in_order(drills: List) -> List:

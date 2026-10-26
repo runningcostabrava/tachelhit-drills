@@ -61,6 +61,31 @@ def test_an_unknown_story_is_a_404_not_an_empty_page():
     assert client.get("/stories/aixo-no-existeix").status_code == 404
 
 
+def test_lines_that_start_at_the_same_second_are_a_pile_not_a_story():
+    """Deu frases tallades d'un mateix vídeo no són un conte (#335).
+
+    Va passar de debò: deu frases soltes d'un vídeo del propietari van sortir a la pàgina com a
+    «October 2, 2023», que no és cap títol sinó el que YouTube hi posa quan el vídeo no en té.
+    Totes portaven temps, de manera que passaven la prova — però tres començaven al segon 0.0.
+
+    Dues línies d'un conte no comencen mai al mateix segon. Comprovat contra la biblioteca abans
+    de posar-ho: de les 25 històries que la pàgina ensenyava, les 24 de debò tenien tots els
+    temps diferents (776 línies, cap repetida) i només la falsa en repetia.
+    """
+    hdr = {"X-User-Token": register("story_pile")}
+    title = "October 2, 2023 (prova)"
+    for i, at in enumerate([0.0, 0.0, 0.0, 7.18, 9.21, 15.99, 20.0, 24.5]):
+        _line(hdr, title, at, f"awal {i}", f"frase solta {i}")
+    assert not any(s["title"] == title for s in client.get("/stories").json()["stories"])
+
+
+def test_the_same_lines_with_their_own_times_are_a_story_again():
+    """Que el que ho treu sigui la col·lisió i no una altra cosa: mateixes línies, temps propis."""
+    hdr = {"X-User-Token": register("story_pile_ok")}
+    title = "Amb temps propis (prova)"
+    for i, at in enumerate([0.0, 3.2, 5.1, 7.18, 9.21, 15.99, 20.0, 24.5]):
+        _line(hdr, title, at, f"awal {i}", f"línia {i}")
+    assert any(s["title"] == title for s in client.get("/stories").json()["stories"])
 def test_the_page_carries_the_times_of_each_word_when_we_have_them():
     """Perquè la pantalla pugui seguir la veu i encendre la paraula que sona (#340).
 
