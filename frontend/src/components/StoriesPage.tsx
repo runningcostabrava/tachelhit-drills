@@ -75,7 +75,9 @@ function OneStory({ slug }: { slug: string }) {
   const [page, setPage] = useState<StoryPage | null>(null);
   const [missing, setMissing] = useState(false);
   const [at, setAt] = useState<number | null>(null);     // which line is sounding
-  const [reading, setReading] = useState(false);          // reading it through, line after line
+  // Sentir-la de cap a cap es pot fer de dues maneres, i no competeixen: una és escoltar el
+  // conte, l'altra és estudiar-lo. `null` = aturada.
+  const [reading, setReading] = useState<null | 'sol' | 'amb-catala'>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const readingRef = useRef(false);
 
@@ -121,19 +123,34 @@ function OneStory({ slug }: { slug: string }) {
     await sona(veu);
   }, [sona]);
 
-  // Escoltar-la sencera: aquí NO hi va el català ni la repetició. El que es vol és el conte
-  // seguit, tal com el va dir qui el va dir; la seqüència d'estudi és la del botó de cada línia.
-  const readThrough = async () => {
+  // Sentir-la de cap a cap, de dues maneres que no fan la mateixa feina:
+  //
+  //   `sol`         el conte seguit, només en amazic, tal com el va dir qui el va dir. És el que
+  //                 vols quan ja l'has treballat, o quan només el vols sentir.
+  //   `amb-catala`  cada línia en català i després l'amazic dues vegades, sense haver de prémer
+  //                 res. És la mateixa seqüència del botó de cada línia, però de cap a cap: per
+  //                 a qui encara no entén la història i la vol anar seguint.
+  //
+  // Prémer el botó que ja sona l'atura; prémer l'altre canvia de manera sense parar-se.
+  const readThrough = async (manera: 'sol' | 'amb-catala') => {
     if (!page) return;
-    if (readingRef.current) { readingRef.current = false; setReading(false); audioRef.current?.pause(); setAt(null); return; }
-    readingRef.current = true; setReading(true);
+    const sonava = reading;
+    readingRef.current = false;
+    audioRef.current?.pause();
+    if (sonava === manera) { setReading(null); setAt(null); return; }
+    await new Promise((r) => setTimeout(r, 60));   // deixa acabar la fila anterior
+    readingRef.current = true; setReading(manera);
     for (let i = 0; i < page.drills.length; i++) {
       if (!readingRef.current) break;
-      setAt(i);
-      await sona(amazic(page.drills[i]));
+      if (manera === 'amb-catala') {
+        await playLine(page.drills[i], i);
+      } else {
+        setAt(i);
+        await sona(amazic(page.drills[i]));
+      }
       await new Promise((r) => setTimeout(r, 350));
     }
-    readingRef.current = false; setReading(false); setAt(null);
+    if (readingRef.current) { readingRef.current = false; setReading(null); setAt(null); }
   };
 
   if (missing) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Aquesta història no existeix.</div>;
@@ -173,9 +190,18 @@ function OneStory({ slug }: { slug: string }) {
         )}
       </section>
 
-      <button onClick={readThrough} style={{ ...primary, marginBottom: 18 }}>
-        {reading ? <><FaPause size={12} /> Atura</> : <><FaPlay size={12} /> Escolta-la sencera</>}
-      </button>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', marginBottom: 6 }}>
+        <button onClick={() => readThrough('sol')} style={primary}>
+          {reading === 'sol' ? <><FaPause size={12} /> Atura</> : <><FaPlay size={12} /> Escolta-la sencera</>}
+        </button>
+        <button onClick={() => readThrough('amb-catala')} style={secundari}>
+          {reading === 'amb-catala' ? <><FaPause size={12} /> Atura</> : <><FaPlay size={12} /> Escolta-la amb el català</>}
+        </button>
+      </div>
+      <p style={{ color: 'var(--text-soft)', fontSize: 12.5, margin: '0 0 18px', lineHeight: 1.5 }}>
+        Sencera, només en amazic · amb el català, cada línia et diu primer què vol dir i després
+        la sents dues vegades.
+      </p>
 
       {page.missing_words > 0 && (
         <div style={{ padding: '10px 14px', borderRadius: 'var(--r-lg)', background: 'var(--brand-gradient-soft)', marginBottom: 16, fontSize: 13.5, lineHeight: 1.55 }}>
@@ -236,6 +262,11 @@ const credit: React.CSSProperties = {
   background: 'var(--surface-2)', margin: '0 0 16px',
 };
 const enllac: React.CSSProperties = { color: 'var(--brand-1)', fontWeight: 700 };
+const secundari: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px',
+  borderRadius: 'var(--r-pill)', border: '1.5px solid var(--brand-1)', background: 'transparent',
+  color: 'var(--brand-1)', fontWeight: 800, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit',
+};
 const card: React.CSSProperties ={ textAlign: 'left', padding: 12, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', color: 'var(--text)', fontFamily: 'inherit' };
 const primary: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' };
 const back: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: 0, border: 'none', background: 'none', color: 'var(--brand-1)', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' };
