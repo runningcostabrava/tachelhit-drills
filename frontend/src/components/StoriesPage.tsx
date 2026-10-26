@@ -177,7 +177,7 @@ function OneStory({ slug }: { slug: string }) {
             ? <>La veu i les paraules són del canal <strong>{page.channel}</strong>.</>
             : <>La veu i les paraules són del vídeo original.</>}
           {page.speaker && page.speaker !== 'Auto Capture' && <> Ho diu <strong>{page.speaker}</strong>.</>}
-          {' '}La traducció al català és nostra.
+          {' '}La traducció al català és nostra{page.speaker === 'Auto Capture' ? ', i encara sense comprovar' : ''}.
         </p>
         {page.source_url && (
           <p style={{ margin: '8px 0 0', fontSize: 13.5 }}>
@@ -203,11 +203,28 @@ function OneStory({ slug }: { slug: string }) {
         la sents dues vegades.
       </p>
 
-      {page.missing_words > 0 && (
-        <div style={{ padding: '10px 14px', borderRadius: 'var(--r-lg)', background: 'var(--brand-gradient-soft)', marginBottom: 16, fontSize: 13.5, lineHeight: 1.55 }}>
-          Hi ha {page.missing_words} {page.missing_words === 1 ? 'línia' : 'línies'} que encara no tenen les
-          paraules escrites: se senten, però no es poden llegir. Són a la cua de verificació, amb una
-          lectura de màquina esperant que algú la miri.
+      {/* Dir-ho tot, i dir-ho abans que ningú estudiï res d'aquí.
+          Una història capturada per la màquina no porta només el text amazic a mitges: el
+          SIGNIFICAT també el va escriure ella, escoltant, i no l'ha mirat ningú. Vam mesurar-ho
+          (#335): escoltant, la màquina resumeix la faula sencera i correcta; transcrivint-la,
+          dinou de trenta línies no volien dir res. Ensenyar el significat sense dir d'on surt és
+          fer-lo passar per una traducció feta per algú.
+          I qui ho pot arreglar no som nosaltres: és qui parla la llengua i és aquí. */}
+      {(page.missing_words > 0 || page.speaker === 'Auto Capture') && (
+        <div style={{ padding: '12px 14px', borderRadius: 'var(--r-lg)', background: 'var(--brand-gradient-soft)', marginBottom: 16, fontSize: 13.5, lineHeight: 1.6 }}>
+          {page.missing_words > 0 && (
+            <>Hi ha <strong>{page.missing_words} {page.missing_words === 1 ? 'línia' : 'línies'}</strong> que encara
+            no tenen les paraules escrites: se senten, però no es poden llegir.{' '}</>
+          )}
+          {page.speaker === 'Auto Capture' && (
+            <><strong>I el significat en català el va escriure una màquina escoltant la gravació:
+            encara no l'ha comprovat ningú.</strong> Pren-lo com una ajuda, no com una traducció
+            segura.{' '}</>
+          )}
+          <br />
+          <strong>Si parles amazic, aquí ens pots ajudar de debò</strong>: digues què diu una línia,
+          o grava-la amb la teva veu. Amb una sola línia teva, aquesta història millora per a
+          tothom qui la vingui a escoltar després.
         </div>
       )}
 
