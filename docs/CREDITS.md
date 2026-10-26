@@ -57,6 +57,23 @@ El Mètode el **segueix tan a prop com calgui**: explicacions, estructura, diàl
 que es canvia és el que la nostra varietat (Atles central) diu d'una altra manera; la resta es
 queda com és. L'autor n'està assabentat i hi està d'acord (23-10-2026).
 
+### El CD del manual
+
+El manual porta un CD, i el 25-10-2026 el vam trobar sencer en una llista de YouTube: cinc
+pistes, capítols 1 a 6, 39 minuts. És **la veu de l'autor dient el que el llibre ensenya**, que
+és justament el que al Mètode li falta.
+
+> Enregistraments del CD de *Méthode de Tachelhit*, d'**Abdallah El Mountassir**
+> (L'Asiathèque, París, 2009). Reproduïts amb el seu permís.
+
+El propietari del projecte ho està parlant amb l'autor i dóna per fet que el tindrem
+(25-10-2026). **Fins que ho confirmi, el so no entra ni a l'app ni al repositori:** les pistes i
+els seus 646 talls viuen fora, i el que tenim a dins és un índex que diu en quin segon del CD
+cau cada línia dels nostres capítols. El dia que hi hagi el sí, només cal engegar-ho.
+
+I quan hi sigui, el crèdit va **al costat del botó d'escoltar**, no amagat al peu: qui prem per
+sentir una frase ha de veure de qui és la veu.
+
 **El que segueix sent nostre i no ve d'enlloc més:** les veus. Cap frase del Mètode sona si no la
 diu una persona de debò que el projecte conegui, i cap veu sintètica es fa passar per amazic. El
 llibre pot donar el text; qui el diu el posem nosaltres.
