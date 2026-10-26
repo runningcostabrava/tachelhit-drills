@@ -8,6 +8,7 @@ import subprocess
 import json
 import traceback
 import tempfile
+from pathlib import Path
 import shutil
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -40,6 +41,7 @@ import ai_budget
 import dialect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, false as sa_false, func as sa_func
 from sqlalchemy.orm import sessionmaker, Session
@@ -6736,6 +6738,47 @@ def _library_mark(db, slug: str) -> tuple:
     pn, plast = db.query(func.count(TestModel.id), func.max(TestModel.updated_at)).one()
     return (n, str(last), str(row[0]) if row else None, str(art[0]) if art else None,
             pn, str(plast))
+
+
+@app.get("/method/cd/{pista}/{inici}/{fi}")
+def method_cd_tall(pista: str, inici: str, fi: str):
+    """Un tros del CD del manual, servit des del disc d'aquesta màquina.
+
+    El CD d'El Mountassir no és nostre i no viu al repositori ni a cap CDN: viu en una carpeta
+    d'aquesta màquina que `CD_METODE_DIR` assenyala. Si la variable no hi és —a producció no hi
+    és— aquesta ruta no serveix res, i el capítol es veu exactament com abans.
+
+    Només talla el que l'índex diu. Els segons venen de la URL, i si no es troben tal qual dins
+    de `data/cd_metode.json` no es talla res: així això no es pot fer servir per llegir cap
+    altre fitxer de la màquina ni per trossejar el CD a plaer.
+    """
+    carpeta = os.getenv("CD_METODE_DIR")
+    if not carpeta:
+        raise HTTPException(status_code=404, detail="Aquest servidor no té el CD")
+    try:
+        a, b = float(inici), float(fi)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Segons que no ho són")
+    index = method_mod._cd_index()
+    vol = any(d.get("pista") == pista
+              and abs(float(d.get("start", -1)) - a) < 0.01
+              and abs(float(d.get("end", -1)) - b) < 0.01
+              for cap in index.values() for d in cap.values())
+    if not vol:
+        raise HTTPException(status_code=404, detail="Aquest tros no és a l'índex")
+    font = Path(carpeta) / f"{pista}.wav"
+    if not font.exists():
+        raise HTTPException(status_code=404, detail="La pista no és en aquesta màquina")
+    fora = Path(tempfile.gettempdir()) / "cd_metode"
+    fora.mkdir(exist_ok=True)
+    tall = fora / f"{pista}_{a:.2f}_{b:.2f}.mp3"
+    if not tall.exists():
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{a:.3f}",
+                        "-to", f"{b:.3f}", "-i", str(font), "-codec:a", "libmp3lame",
+                        "-b:a", "96k", str(tall)], capture_output=True)
+    if not tall.exists():
+        raise HTTPException(status_code=500, detail="No s'ha pogut tallar")
+    return FileResponse(tall, media_type="audio/mpeg")
 
 
 @app.get("/method/{slug}")

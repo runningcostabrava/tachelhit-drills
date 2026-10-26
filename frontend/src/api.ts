@@ -260,11 +260,18 @@ export interface MethodHeard {
   /** La frase es va retallar d'un vídeo: hi ha una veu humana i no sabem de qui és. */
   captured?: boolean;
 }
+/** La veu del CD del manual dient aquesta línia. El crèdit hi va a dins, no a part: qui dibuixa
+ *  el botó no el pot deixar fora. */
+export interface MethodCd {
+  url: string; start?: number | null; end?: number | null; pista?: string | null;
+  qui: string; obra: string; nota: string;
+}
 export interface MethodExample {
   shi: string; ca: string; note?: string; drill_id?: number;
   /** La lletra que aquesta línia ensenya a dir: amb això el servidor hi busca la frase. */
   sound?: string;
   heard?: MethodHeard | null;
+  cd?: MethodCd | null;
   /** La mateixa línia en tifinagh. La posa el servidor en servir-la; no s'escriu a mà. */
   tif?: string | null;
   /** Paraula per paraula, escrita amb el capítol: és el que converteix una frase en una lliçó. */
@@ -283,11 +290,13 @@ export interface MethodContent {
     examples?: MethodExample[];
     table?: { title: string; rows: { p: string; v: string; v_tif?: string | null;
                                      sound?: string; heard?: MethodHeard | null }[] };
+    /** `cd`: la veu del manual, quan aquesta màquina té el CD. */
     /** Les parelles mínimes. `audio_url` i companyia els enganxa el servidor quan la biblioteca
      *  té una frase que diu exactament això: una parella que no es pot escoltar no ensenya res. */
     columns?: { title: string; rows: { shi: string; ca: string; tif?: string | null;
                                        audio_url?: string | null; speaker?: string | null;
-                                       region?: string | null; from_drill_id?: number }[] }[];
+                                       region?: string | null; from_drill_id?: number;
+                                       cd?: MethodCd | null }[] }[];
     /** `note`: per què aquesta fila no és com les altres — «ens falta sentir-ho» quan el buit hi
      *  és a posta, «forma derivada» quan la forma l'hem construïda nosaltres i no l'ha dita ningú. */
     numbers?: { n: number; m: string; f?: string; note?: string; m_tif?: string | null; f_tif?: string | null }[];
@@ -309,7 +318,7 @@ export interface MethodContent {
     ours_drills?: MethodSentence[];
     ours_total?: number;
   }[];
-  dialogue?: { title: string; scene?: string; turns: { who: string; shi: string; ca: string; drill_id?: number; tif?: string | null; gloss?: MethodGloss[]; audio_url?: string | null; image_url?: string | null; speaker?: string | null; region?: string | null }[] };
+  dialogue?: { title: string; scene?: string; turns: { who: string; shi: string; ca: string; drill_id?: number; tif?: string | null; gloss?: MethodGloss[]; audio_url?: string | null; image_url?: string | null; speaker?: string | null; region?: string | null; cd?: MethodCd | null }[] };
   practice?: {
     title: string; scene?: string;
     pattern: { who: string; shi: string; ca: string; tif?: string | null }[];

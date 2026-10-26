@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { FaPlay, FaStop, FaCommentDots, FaMicrophone, FaPen, FaCheck, FaTags, FaBookOpen, FaHandPointer } from 'react-icons/fa';
-import { api, type MethodContent, type MethodExample, type MethodGloss, type MethodHeard } from '../api';
+import { api, type MethodCd, type MethodContent, type MethodExample, type MethodGloss, type MethodHeard } from '../api';
 import type { Drill } from '../types';
 import { getMediaUrl, hasIdentity, thumb } from '../config';
 import { toast } from '../toast';
@@ -310,9 +310,41 @@ function HeardHere({ h }: { h: MethodHeard }) {
   );
 }
 
+/** La veu del manual dient aquesta línia.
+ *
+ *  El Mètode adapta el manual d'El Mountassir i el manual porta un CD on l'autor diu el que el
+ *  llibre ensenya. Les nostres veus són de l'Atles central i no diuen el que el llibre ensenya,
+ *  de manera que fins ara la major part del Mètode no es podia escoltar de cap manera.
+ *
+ *  El crèdit NO és opcional: ve dins del mateix objecte que l'àudio i es dibuixa sempre al
+ *  costat del botó. Qui prem per sentir una frase veu de qui és la veu que sentirà.
+ */
+function CdVeu({ cd }: { cd: MethodCd }) {
+  const [sonant, setSonant] = useState(false);
+  const play = () => {
+    const a = new Audio(getMediaUrl(cd.url));
+    setSonant(true);
+    a.onended = () => setSonant(false);
+    a.onerror = () => setSonant(false);
+    a.play().catch(() => setSonant(false));
+  };
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexBasis: '100%',
+                   marginTop: 2, fontSize: 11.5, color: 'var(--text-muted)' }}>
+      <button onClick={play} aria-label={`Escolta «${cd.nota}»`} title={`${cd.qui} — ${cd.obra}`}
+              style={{ ...iconBtn, width: 20, height: 20, border: 'none', flexShrink: 0,
+                       background: sonant ? 'var(--brand-1)' : 'var(--surface-2)',
+                       color: sonant ? '#fff' : 'var(--text-soft)' }}>
+        <FaPlay size={7} />
+      </button>
+      <span>{cd.nota} · <strong>{cd.qui}</strong>, {cd.obra}</span>
+    </span>
+  );
+}
+
 function BookLine({
   slug, where, look, who, shi, ca, note, tif, gloss, drillId, canEdit, extra, audio, image,
-  speaker, region, heard, failed, playing, onPlay, onSave, onRecorded,
+  speaker, region, heard, cd, failed, playing, onPlay, onSave, onRecorded,
 }: {
   slug: string; where: Where; look: 'row' | 'turn' | 'word';
   who?: string; shi: string; ca?: string; note?: string; tif?: string | null; gloss?: MethodGloss[];
@@ -321,6 +353,8 @@ function BookLine({
   audio?: string | null; image?: string | null; speaker?: string | null; region?: string | null;
   /** La línia no la diu ningú, però el SO que ensenya se sent en aquesta frase nostra. */
   heard?: MethodHeard | null;
+  /** La veu del manual dient aquesta mateixa línia, quan el servidor té el CD. */
+  cd?: MethodCd | null;
   /** El so hi és i no s'ha pogut carregar. No és el mateix que no tenir-ne. */
   failed?: boolean;
   playing?: boolean; onPlay?: () => void;
@@ -427,6 +461,7 @@ function BookLine({
             <Tif t={tif} size={13} />
             <div style={{ fontSize: 14, color: 'var(--text-soft)' }}>{ca}</div>
             <div style={{ marginTop: 2 }}>{voice}</div>
+            {cd && <CdVeu cd={cd} />}
           </div>
           {tools}
           {words}
@@ -450,6 +485,7 @@ function BookLine({
             <Tif t={tif} size={11.5} />
             <span style={{ display: 'block', color: 'var(--text-soft)' }}>{ca}</span>
             <span style={{ display: 'block', marginTop: 1 }}>{voice}</span>
+            {cd && <CdVeu cd={cd} />}
           </span>
           {extra}
           {tools}
@@ -468,6 +504,7 @@ function BookLine({
       {note && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>· {note}</span>}
       <span style={{ fontSize: 11.5, color: failed ? 'var(--text-soft)' : 'var(--text-muted)' }}>· {voiceShort}</span>
       {tools}
+      {cd && <CdVeu cd={cd} />}
       {!audio && heard && <HeardHere h={heard} />}
       {words}
     </div>
@@ -889,7 +926,7 @@ export default function MethodLesson({
                             shi={e.shi} ca={e.ca} note={e.note} tif={e.tif} gloss={e.gloss}
                             drillId={e.drill_id} canEdit={canEdit}
                             audio={e.audio_url} image={e.image_url} speaker={e.speaker} region={e.region}
-                            heard={e.heard}
+                            heard={e.heard} cd={e.cd}
                             failed={!!broken[`example:${s.id}:${k}`]}
                             playing={sounding === key} onPlay={() => playOne(key)}
                             onSave={(shi, ca) => saveLine(where, shi, ca)}
