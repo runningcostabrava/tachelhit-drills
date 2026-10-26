@@ -5,6 +5,8 @@ import { api, type Story, type StoryPage, type WordTime } from '../api';
 import { getMediaUrl } from '../config';
 import type { Drill } from '../types';
 import WordGloss, { parseGlosses } from './WordGloss';
+import Frase from './Frase';
+import { llum } from '../utils/llum';
 import { ara, gap, keepAwake, nowPlaying, say, stop } from '../utils/veu';
 
 // Whole stories and songs, instead of loose sentences (#189).
@@ -107,42 +109,6 @@ function trossos(text: string): string[] {
   return (text || '').split(TROSSOS).filter((x) => x !== '');
 }
 
-/** Cada tros amb el número de paraula que li toca; −1 per als espais i els signes. */
-function numerades(text: string): { p: string; n: number }[] {
-  const fora: { p: string; n: number }[] = [];
-  let n = -1;
-  for (const p of trossos(text)) {
-    if (p.trim()) n += 1;
-    fora.push({ p, n: p.trim() ? n : -1 });
-  }
-  return fora;
-}
-
-/**
- * La frase amaziga amb la paraula que sona encesa (#340).
- *
- * Els temps vénen de l'alineament, que es va fer sobre aquest mateix text, de manera que la
- * paraula número *i* del rellotge és la número *i* de la frase. Quan els comptes no quadren
- * —perquè l'alineament en va ajuntar dues, o perquè algú ha reescrit la frase després— no
- * s'endevina: s'encén la paraula que **diu el mateix** que la que sona, i si no n'hi ha cap, cap.
- */
-function FraseEncesa({ text, mots, i, estil }: {
-  text: string; mots?: WordTime[]; i: number | null; estil: React.CSSProperties;
-}) {
-  const parts = numerades(text);
-  const quants = parts.filter((x) => x.n >= 0).length;
-  const quadren = !!mots && mots.length === quants;
-  const diu = i != null && mots && mots[i] ? mots[i].w.toLowerCase() : null;
-  return (
-    <div style={estil}>
-      {parts.map(({ p, n: q }, k) => {
-        const encesa = i != null && q >= 0 && (quadren ? q === i : p.toLowerCase() === diu);
-        return encesa ? <mark key={k} style={llum}>{p}</mark> : <span key={k}>{p}</span>;
-      })}
-    </div>
-  );
-}
-
 /**
  * El català amb la paraula que respon a la que sona, encesa.
  *
@@ -167,11 +133,6 @@ function CatalaEncès({ text, ca, estil }: { text: string; ca: string | null; es
     </div>
   );
 }
-
-const llum: React.CSSProperties = {
-  background: 'var(--brand-1)', color: '#fff', borderRadius: 4,
-  padding: '0 2px', margin: '0 -2px',
-};
 
 /**
  * Les històries repartides en seccions: una per sèrie, i una per als contes sols.
@@ -421,8 +382,7 @@ function OneStory({ slug }: { slug: string }) {
               </button>
               <div style={{ flex: 1, minWidth: 0 }}>
                 {written ? (
-                  <FraseEncesa text={written} mots={mots} i={dins}
-                               estil={{ fontSize: 16.5, fontWeight: 800, lineHeight: 1.35 }} />
+                  <Frase text={written} latin={d.text_tachelhit_latin} mots={mots} encesa={dins} size="md" />
                 ) : (
                   // La lectura de màquina es veu, però mai com si fos el text del parlant: va
                   // en gris, amb el seu avís, i no es pot confondre amb una frase escrita per
@@ -433,11 +393,11 @@ function OneStory({ slug }: { slug: string }) {
                       (aquesta línia encara no té les paraules escrites)
                     </div>
                     {(d.text_tachelhit_suggested || '').trim() && (
-                      <div style={{ fontSize: 15, color: 'var(--text-soft)', lineHeight: 1.35, marginTop: 2 }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase', marginRight: 6 }}>
+                      <div style={{ color: 'var(--text-soft)', marginTop: 2, opacity: 0.85 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>
                           lectura de màquina
                         </span>
-                        {d.text_tachelhit_suggested}
+                        <Frase text={d.text_tachelhit_suggested || ''} size="sm" />
                       </div>
                     )}
                   </>
