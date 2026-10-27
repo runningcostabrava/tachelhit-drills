@@ -284,7 +284,9 @@ export interface MethodExample {
   region?: string | null;
 }
 /** Una frase d'exercici: la que es demana i, quan el llibre la dona, la que respon. */
-export interface MethodExerciseLine { shi: string; ca?: string | null; tif?: string | null }
+/** `llibre` és com ho escrivia *Initiation au tachelhit* (1999) —`gh`, `ch`, `e`— quan la frase
+ *  s'ha passat a l'escriptura del curs. Només hi és quan les dues formes difereixen. */
+export interface MethodExerciseLine { shi: string; ca?: string | null; tif?: string | null; llibre?: string | null }
 
 export interface MethodExerciseItem {
   pregunta: MethodExerciseLine;
@@ -343,6 +345,8 @@ export interface MethodContent {
   dialogue?: { title: string; scene?: string; turns: { who: string; shi: string; ca: string; drill_id?: number; tif?: string | null; gloss?: MethodGloss[]; audio_url?: string | null; image_url?: string | null; speaker?: string | null; region?: string | null; cd?: MethodCd | null }[] };
   practice?: {
     title: string; scene?: string;
+    /** La frase que tanca el quadre. Pot portar `{producte}` i `{quantitat}`, com el patró. */
+    hint?: string;
     pattern: { who: string; shi: string; ca: string; tif?: string | null }[];
     fills: { shi: string; ca: string; qty_shi: string; qty_ca: string; tif?: string | null; qty_tif?: string | null }[];
   };

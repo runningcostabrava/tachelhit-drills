@@ -45,7 +45,24 @@ const MENES: Record<string, string> = {
   respon: 'Respon',
   pronom: 'Canvia-ho per un pronom',
   analitza: 'Mira el verb',
+  transforma: 'Refes la frase',
+  nega: 'Digues que no',
 };
+
+/** Com ho escrivia el llibre del 1999, quan no és com ho escriu el curs.
+ *
+ *  La frase es llegeix amb l'escriptura del curs —si no, la tifinag surt amb lletres que no hi
+ *  van— però qui té el llibre a la mà ha de poder trobar-hi la frase. Per això hi són totes dues,
+ *  i la del llibre va dita com el que és.
+ */
+function Llibre({ children }: { children?: string | null }) {
+  if (!children) return null;
+  return (
+    <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>
+      al llibre: <span lang="shi">{children}</span>
+    </div>
+  );
+}
 
 function Tif({ children }: { children?: string | null }) {
   if (!children) return null;
@@ -164,6 +181,7 @@ function Solucio({ item, obert, obre }: { item: MethodExerciseItem; obert: boole
       <Tif>{item.resposta.tif}</Tif>
       <div lang="shi" style={{ fontSize: 15, fontWeight: 700, color: 'var(--brand-1)' }}>{item.resposta.shi}</div>
       {item.resposta.ca && <div style={{ fontSize: 13.5, color: 'var(--text-soft)' }}>{item.resposta.ca}</div>}
+      <Llibre>{item.resposta.llibre}</Llibre>
     </div>
   );
 }
@@ -186,6 +204,7 @@ function Item({ item, kind }: { item: MethodExerciseItem; kind: string }) {
         <>
           <Tif>{item.pregunta.tif}</Tif>
           <div lang="shi" style={{ fontSize: 16, fontWeight: 600, color: 'var(--brand-1)' }}>{item.pregunta.shi}</div>
+          <Llibre>{item.pregunta.llibre}</Llibre>
           <Solucio item={item} obert={mirat} obre={() => setMirat(true)} />
         </>
       )}
