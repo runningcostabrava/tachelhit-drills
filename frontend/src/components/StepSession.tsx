@@ -8,6 +8,7 @@ import type { Drill } from '../types';
 import { preferredRecorderMime } from '../utils/media';
 import { parseGlosses } from './WordGloss';
 import Frase from './Frase';
+import SentenceVariants, { type Variant } from './SentenceVariants';
 
 // Playing a practice as it was WRITTEN (#199, ADR 0002).
 //
@@ -40,6 +41,9 @@ export default function StepSession({ testId, title, onExit }: Props) {
   const navigate = useNavigate();
   const [steps, setSteps] = useState<PracticeStep[] | null>(null);
   const [drills, setDrills] = useState<Record<number, Drill>>({});
+  // Les altres maneres de dir cada frase (#239), demanades d'un sol cop: una pràctica ensenya
+  // una versió i fins ara no deia que n'hi hagués cap més.
+  const [altres, setAltres] = useState<Record<string, Variant[]>>({});
   const [i, setI] = useState(0);
   const [answer, setAnswer] = useState('');
   const [shown, setShown] = useState(false);      // the answer is on the table
@@ -58,6 +62,7 @@ export default function StepSession({ testId, title, onExit }: Props) {
       if (ids.length) {
         const got = await api.drillsByIds(ids).catch(() => [] as Drill[]);
         setDrills(Object.fromEntries(got.map((d) => [d.id, d])));
+        api.otherWays(ids).then(setAltres).catch(() => {});
       }
     }).catch(() => toast.error('No s’han pogut llegir els passos'));
   }, [testId]);
@@ -519,6 +524,12 @@ export default function StepSession({ testId, title, onExit }: Props) {
                 </>
               )}
             </>
+          )}
+
+          {/* Les altres maneres de dir-la. Només quan el text ja és a la taula: a «escolta i
+              tria» ensenyar-les abans seria dir la resposta (#239). */}
+          {(shown || selfMarked) && drill && (altres[String(drill.id)] || []).length > 0 && (
+            <SentenceVariants variants={altres[String(drill.id)]} size="sm" />
           )}
 
           {shown && right !== null && (tool === 'listen_pick' || tool === 'write_heard' || tool === 'fill_gap' || tool === 'pick_spelling' || tool === 'pick_written') && (

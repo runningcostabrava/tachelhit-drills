@@ -4,6 +4,7 @@
 // sites migrate incrementally.
 import { API_BASE } from './config';
 import type { Drill } from './types';
+import type { Variant } from './components/SentenceVariants';
 import { markFresh, markStale, markWaking } from './utils/dataState';
 import { dropCached, fingerprint, readCached, resourceOf, writeCached } from './utils/readCache';
 
@@ -352,7 +353,9 @@ export interface MethodContent {
     ours_drills?: MethodSentence[];
     ours_total?: number;
   }[];
-  dialogue?: { title: string; scene?: string; turns: { who: string; shi: string; ca: string; drill_id?: number; tif?: string | null; gloss?: MethodGloss[]; audio_url?: string | null; image_url?: string | null; speaker?: string | null; region?: string | null; cd?: MethodCd | null }[] };
+  dialogue?: { title: string; scene?: string; turns: { who: string; shi: string; ca: string; drill_id?: number; tif?: string | null; gloss?: MethodGloss[]; audio_url?: string | null; image_url?: string | null; speaker?: string | null; region?: string | null; cd?: MethodCd | null;
+    /** Com ho diu qui ho diu d'una altra manera (#239): el text del diàleg ve del manual. */
+    variants?: Variant[] | null }[] };
   practice?: {
     title: string; scene?: string;
     /** La frase que tanca el quadre. Pot portar `{producte}` i `{quantitat}`, com el patró. */
@@ -563,6 +566,8 @@ export const api = {
   practice: (id: number) => request<PracticeList>(`/tests/${id}`),
   /** The sentences a practice's steps point at, in one request. */
   drillsByIds: (ids: number[]) => request<Drill[]>(`/drills/?ids=${ids.join(',')}`),
+  /** Les altres maneres de dir aquestes frases, en un sol viatge (#239). */
+  otherWays: (ids: number[]) => request<Record<string, Variant[]>>(`/other-ways?ids=${ids.join(',')}`),
   updatePractice: (id: number, patch: { title?: string; description?: string }) =>
     request<PracticeList>(`/tests/${id}`, { method: 'PUT', body: JSON.stringify(patch) }),
   createPractice: (title: string) => request<PracticeList>('/tests/', { method: 'POST', body: JSON.stringify({ title, description: '', question_type: 'audio', hint_level: 'none', hint_percentage: 30, hint_tries_before_reveal: 3, passing_score: 70, drill_ids: '' }) }),
@@ -896,7 +901,12 @@ export interface ListenItem {
   };
 }
 export interface PracticeTip { sound: string; label: string; found: string; tip: string }
-export interface PracticeCard { speaker: string; origin: string; day: string | null; tips: PracticeTip[]; highlights: string[] }
+export interface PracticeCard {
+  speaker: string; origin: string; day: string | null; tips: PracticeTip[]; highlights: string[];
+  /** Les altres maneres de dir aquesta frase, de les preses que porten el text de qui les diu
+   *  (#239): es veien només on es graven, i en una pràctica és on importen. */
+  variants?: Variant[];
+}
 export interface PronunciationWord { word: string; ok: boolean; heard: string | null }
 // «parla» (record and be scored) was dropped on 2026-10-22: see PracticeSession.tsx.
 export type PracticeMode = 'escolta' | 'auto';
