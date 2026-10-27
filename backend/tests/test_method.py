@@ -1151,3 +1151,58 @@ def test_lindex_del_cd_nomes_fa_sonar_el_que_ha_sentit_una_persona():
             assert "url" not in d, \
                 "%s/%s està per comprovar i porta adreça de tall: sonaria" % (slug, on)
             assert d.get("per_que_fora"), "%s/%s no diu per què no sona" % (slug, on)
+
+
+def test_una_seccio_pot_dir_que_el_que_ensenya_es_diu_sencer():
+    """«Decompon el que es recombina, i no decomponguis el que no» (#289).
+
+    La marca va per secció i no global: a les fórmules desmuntar convida a fer-ne de noves, i a
+    la secció del «com estàs?» i als pronoms desmuntar és justament el que cal. Es desa amb el
+    capítol i sobreviu a una correcció, com la resta del que s'escriu."""
+    import main
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("formula_sencera")}
+    db = main.SessionLocal()
+    try:
+        me = client.get("/users/me", headers=hdr).json()
+        db.query(main.UserModel).filter(main.UserModel.id == me["id"]).first().is_admin = True
+        from models import MethodChapter
+        db.query(MethodChapter).filter(MethodChapter.slug == "els-convidats").delete()
+        db.commit()
+    finally:
+        db.close()
+
+    try:
+        client.put("/method/els-convidats/content", headers=hdr, json={
+            "intro": "Rebre algú a casa.",
+            "sections": [
+                {"id": "acomiadar", "title": "Acomiadar-se", "formula": True,
+                 "examples": [{"shi": "add yawi ṛbbi sslamt", "ca": "Que Déu t'acompanyi"}]},
+                {"id": "com-estas", "title": "Com estàs?",
+                 "examples": [{"shi": "manza k-inn?", "ca": "Com estàs?"}]},
+            ]})
+
+        seccions = {s["id"]: s for s in client.get("/method/els-convidats").json()["content"]["sections"]}
+        assert seccions["acomiadar"]["formula"] is True, "la fórmula es diu sencera"
+        assert "formula" not in seccions["com-estas"], "i la secció on desmuntar cal, no ho diu"
+
+        # i una correcció del text no s'endú la marca
+        client.put("/method/els-convidats/content", headers=hdr, json={
+            "intro": "Rebre algú a casa, i acomiadar-lo.",
+            "sections": [dict(seccions["acomiadar"], text="El que es diu en marxar."),
+                         seccions["com-estas"]]})
+        tornada = {s["id"]: s for s in client.get("/method/els-convidats").json()["content"]["sections"]}
+        assert tornada["acomiadar"]["formula"] is True
+    finally:
+        # La base de proves no es llença entre execucions, i hi ha una prova que diu
+        # «index["els-convidats"]["written"] is False»: el capítol que s'escriu aquí s'ha de
+        # treure, passi el que passi. En local no es veia —el fitxer ja venia escrit d'abans—;
+        # a la CI, amb la base buida, queia la prova de l'altre.
+        db = main.SessionLocal()
+        try:
+            from models import MethodChapter
+            db.query(MethodChapter).filter(MethodChapter.slug == "els-convidats").delete()
+            db.commit()
+        finally:
+            db.close()
