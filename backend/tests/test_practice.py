@@ -570,6 +570,28 @@ def test_fewer_options_is_better_than_a_useless_one():
     assert escoltar.opcions_dolentes(bona, [bona]) == []
 
 
+def test_escoltar_i_triar_la_frase_escrita_es_una_eina_de_la_practica():
+    """«Escolta i tria la frase» (#387) no és l'«escolta i tria» de sempre: aquell dona quatre
+    significats en català i entrena a entendre; aquest dona quatre frases en amazic i entrena a
+    lligar el que se sent amb el que està escrit. Per tant demana una frase, com les altres."""
+    import practice_steps
+
+    assert "pick_written" in practice_steps.KINDS
+    needs_drill, que_demana = practice_steps.KINDS["pick_written"]
+    assert needs_drill, "sense frase no hi ha res a sentir ni a triar"
+    assert "escrites" in que_demana, que_demana
+
+    net = practice_steps.validate({"kind": "pick_written", "drill_id": 7})
+    assert net["kind"] == "pick_written" and net["drill_id"] == 7
+
+    try:
+        practice_steps.validate({"kind": "pick_written"})
+    except practice_steps.StepError as e:
+        assert "frase" in str(e)
+    else:
+        raise AssertionError("un pas sense frase s'ha d'explicar, no acceptar")
+
+
 def test_un_pas_per_imitar_no_pot_apuntar_a_una_veu_que_no_es_de_ningu():
     """Regla del pedagog (#273): per escoltar, totes les veus; per imitar, només una veu amb nom.
 

@@ -160,7 +160,7 @@ export interface VerifyQueue {
 export interface PracticeStep {
   id?: number;
   position?: number;
-  kind: 'listen_pick' | 'write_heard' | 'say_it' | 'look_say' | 'fill_gap' | 'word_by_word' | 'script_swap' | 'pick_spelling' | 'note';
+  kind: 'listen_pick' | 'write_heard' | 'say_it' | 'look_say' | 'fill_gap' | 'word_by_word' | 'script_swap' | 'pick_spelling' | 'pick_written' | 'note';
   drill_id?: number | null;
   // a «note» is the document part of a practice: a heading, a paragraph, a picture
   payload?: { text?: string; heading?: string; image_url?: string } | null;

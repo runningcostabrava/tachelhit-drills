@@ -7,6 +7,7 @@ import { toast } from '../toast';
 import type { Drill } from '../types';
 import { preferredRecorderMime } from '../utils/media';
 import { parseGlosses } from './WordGloss';
+import Frase from './Frase';
 
 // Playing a practice as it was WRITTEN (#199, ADR 0002).
 //
@@ -89,7 +90,7 @@ export default function StepSession({ testId, title, onExit }: Props) {
   useEffect(() => {
     if (!step) return;
     setAnswer(''); setShown(false); setRight(null); setMyTake(null);
-    if (drill && (step.kind === 'listen_pick' || step.kind === 'write_heard')) play(1);
+    if (drill && (step.kind === 'listen_pick' || step.kind === 'write_heard' || step.kind === 'pick_written')) play(1);
   }, [i, step?.kind, drill?.id]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Meanings to choose between, when the practice alone cannot give enough.
@@ -134,6 +135,33 @@ export default function StepSession({ testId, title, onExit }: Props) {
     const picked = [...here, ...wide].slice(0, 2);
     return [truth, ...picked].sort(() => Math.random() - 0.5);
   }, [steps, drills, pool, drill?.id, step?.kind]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Quatre frases ESCRITES per triar, per a «escolta i tria la frase» (#387).
+  //
+  // L'«escolta i tria» de sempre dona quatre significats en català i entrena a entendre; això
+  // dona quatre frases en amazic i entrena a lligar el que se sent amb el que està escrit.
+  //
+  // Les falses surten de la mateixa pràctica —que és el material que s'està aprenent— i es
+  // trien per llargada semblant: si una és molt més curta que les altres, es veu quina és sense
+  // escoltar. I la bona ha de ser text escrit per algú: la lectura de màquina viu a
+  // `text_tachelhit_suggested` i no entra mai com a resposta.
+  const escrites = useMemo(() => {
+    if (!steps || !drill || step?.kind !== 'pick_written') return [];
+    const truth = (drill.text_tachelhit || '').trim();
+    if (!truth) return [];
+    const altres = steps
+      .map((x) => (x.drill_id ? drills[x.drill_id] : undefined))
+      .filter((d): d is Drill => !!d && d.id !== drill.id && !!(d.text_tachelhit || '').trim())
+      .map((d) => (d.text_tachelhit as string).trim())
+      .filter((t) => t !== truth);
+    const semblants = Array.from(new Set(altres))
+      .sort((a, b) => Math.abs(a.length - truth.length) - Math.abs(b.length - truth.length))
+      .slice(0, 6)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3);
+    if (!semblants.length) return [];
+    return [truth, ...semblants].sort(() => Math.random() - 0.5);
+  }, [steps, drills, drill?.id, step?.kind]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // The gap: one real word taken out of the sentence, BY POSITION.
   //
@@ -295,15 +323,16 @@ export default function StepSession({ testId, title, onExit }: Props) {
             {tool === 'word_by_word' && 'Paraula per paraula'}
             {tool === 'script_swap' && 'L’altra escriptura'}
             {tool === 'pick_spelling' && 'Quina és la bona'}
+            {tool === 'pick_written' && 'Escolta i tria la frase'}
           </div>
 
           {/* the picture: hidden when seeing it would give the answer away */}
-          {drill.image_url && tool !== 'listen_pick' && tool !== 'write_heard' && (
+          {drill.image_url && tool !== 'listen_pick' && tool !== 'write_heard' && tool !== 'pick_written' && (
             <img src={getMediaUrl(drill.image_url)} alt="" style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 'var(--r-md)', marginBottom: 10 }}
                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
           )}
 
-          {(tool === 'listen_pick' || tool === 'write_heard') && (
+          {(tool === 'listen_pick' || tool === 'write_heard' || tool === 'pick_written') && (
             <div style={{ marginBottom: 12 }}>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => play(1)} style={{ ...btn('primary'), flex: 1, height: 44, fontSize: 14 }}><FaPlay size={12} /> Torna-ho a sentir</button>
@@ -335,6 +364,33 @@ export default function StepSession({ testId, title, onExit }: Props) {
                 );
               })}
             </div>
+          )}
+
+          {tool === 'pick_written' && (
+            escrites.length ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {escrites.map((o) => {
+                  const isRight = o === written.trim();
+                  const chosen = answer === o;
+                  return (
+                    <button key={o} disabled={shown} onClick={() => { setAnswer(o); check(o, written, true); }}
+                            style={{ ...btn('ghost'), justifyContent: 'flex-start', height: 'auto', padding: '12px 16px', textAlign: 'left',
+                                     borderColor: shown && isRight ? 'var(--emerald)' : chosen && !isRight ? 'var(--rose)' : 'var(--brand-1)' }}>
+                      <Frase text={o} size="md" />
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              // Sense tres frases més amb les paraules escrites no hi ha res a triar: val més
+              // dir-ho que fer una pregunta d'una sola resposta.
+              <>
+                <p style={{ margin: '0 0 6px', fontSize: 13, color: 'var(--text-muted)' }}>
+                  Aquesta pràctica no té prou frases escrites per triar-ne quatre.
+                </p>
+                <Frase text={written} size="lg" />
+              </>
+            )
           )}
 
           {(tool === 'write_heard' || tool === 'fill_gap') && (
@@ -465,13 +521,13 @@ export default function StepSession({ testId, title, onExit }: Props) {
             </>
           )}
 
-          {shown && right !== null && (tool === 'listen_pick' || tool === 'write_heard' || tool === 'fill_gap' || tool === 'pick_spelling') && (
+          {shown && right !== null && (tool === 'listen_pick' || tool === 'write_heard' || tool === 'fill_gap' || tool === 'pick_spelling' || tool === 'pick_written') && (
             <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 'var(--r-lg)', background: right ? 'var(--emerald-soft, #E5F2EA)' : 'var(--brand-gradient-soft)' }}>
               <div style={{ fontWeight: 800, fontSize: 15, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 {right ? <><FaCheck /> Sí</> : 'Era:'}
               </div>
               {!right && <div style={{ fontSize: 18, fontWeight: 800, marginTop: 4 }}>{tool === 'fill_gap' ? gap?.hidden : written}</div>}
-              {!right && tool !== 'fill_gap' && tool !== 'pick_spelling' && <div style={{ fontSize: 14, color: 'var(--text-soft)' }}>{meaning}</div>}
+                  {!right && tool !== 'fill_gap' && tool !== 'pick_spelling' && <div style={{ fontSize: 14, color: 'var(--text-soft)' }}>{meaning}</div>}
             </div>
           )}
         </section>
