@@ -43,6 +43,15 @@ function useTall() {
 
 const ON = { inici: 'al començament', mig: 'al mig', final: 'al final' } as const;
 
+/** Qui diu aquesta paraula, dit sense fer passar una veu per una altra (#288). */
+function quiHoDiu(m: MotDeLletra): string {
+  const mena = m.veu?.mena;
+  if (mena === 'canal') return `veu d’un canal${m.veu?.qui ? `: ${m.veu.qui}` : ''}`;
+  if (mena === 'captura') return 'tall d’un vídeo, no sabem de qui';
+  if (m.veu?.qui) return m.veu.qui;
+  return m.source === 'library' ? 'veu nostra' : 'corpus obert';
+}
+
 const MENA: Record<string, string> = {
   vocal: 'vocal',
   emfatica: 'emfàtica',
@@ -81,8 +90,18 @@ export default function AlfabetPage() {
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, margin: '0 0 6px', lineHeight: 1.2 }}>
         Els sons i l’escriptura
       </h1>
-      <p style={{ color: 'var(--text-soft)', fontSize: 13.5, margin: '0 0 18px' }}>
-        {abc.total} lletres · {abc.amb_so} ja sonen · {abc.mudes.length} encara no
+      <p style={{ color: 'var(--text-soft)', fontSize: 13.5, margin: '0 0 18px', lineHeight: 1.55 }}>
+        {abc.total} lletres · {abc.amb_so} ja sonen
+        {typeof abc.de_casa === 'number' && <> · <strong>{abc.de_casa} les diu algú que coneixem</strong></>}
+        {abc.mudes.length > 0 && <> · {abc.mudes.length} encara no sonen</>}
+        {abc.nomes_de_fora && abc.nomes_de_fora.length > 0 && (
+          <>
+            <br />
+            Hi ha {abc.nomes_de_fora.length} {abc.nomes_de_fora.length === 1 ? 'lletra' : 'lletres'} que
+            només sonen en una veu de fora —un canal, un tall d’un vídeo—: {abc.nomes_de_fora.join(' ')}.
+            Per escoltar-les serveixen; per imitar-les, el que falta és algú de casa que les digui.
+          </>
+        )}
       </p>
 
       <section style={{ padding: '14px 16px', borderRadius: 'var(--r-xl)', border: '1px solid var(--border)', background: 'var(--surface)', marginBottom: 20 }}>
@@ -110,8 +129,11 @@ export default function AlfabetPage() {
                     }}>
               <span lang="zgh" style={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>{l.tif}</span>
               <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-soft)' }}>{l.lat}</span>
-              <span style={{ fontSize: 10, color: l.sona ? 'var(--emerald)' : 'var(--text-muted)' }}>
-                {l.sona ? `${l.quantes ?? plena[l.tif]?.exemples.length ?? ''} ♪` : 'muda'}
+              {/* El número que importa no és quantes vegades sona, sinó quantes la diu algú que
+                  coneixem (#302): una lletra que només sona en una veu d'un canal és una petició
+                  pendent, no una lletra resolta. */}
+              <span style={{ fontSize: 10, color: !l.sona ? 'var(--text-muted)' : l.de_casa ? 'var(--emerald)' : 'var(--amber-strong, #8a6100)' }}>
+                {!l.sona ? 'muda' : l.de_casa ? `${l.de_casa} ♪` : 'de fora'}
               </span>
             </button>
           );
@@ -149,11 +171,11 @@ export default function AlfabetPage() {
                     <Frase text={m.word} size="md" />
                     {m.meaning && <span style={{ fontSize: 13, color: 'var(--text-soft)' }}>{m.meaning}</span>}
                   </span>
-                  <span style={{ textAlign: 'right', fontSize: 11.5, color: 'var(--text-muted)', flexShrink: 0 }}>
+                  <span style={{ textAlign: 'right', fontSize: 11.5, color: 'var(--text-muted)', flexShrink: 0, maxWidth: 160 }}>
                     {m.posicio && <div>{ON[m.posicio]}</div>}
-                    {/* Qui ho diu, sempre. Una veu del corpus obert no es fa passar per una de
-                        nostra (#288). */}
-                    <div>{m.source === 'library' ? (m.speaker || 'veu nostra') : 'corpus obert'}</div>
+                    {/* Qui ho diu, sempre, i sense fer passar una veu d'un canal per una de
+                        casa (#288). */}
+                    <div style={{ color: m.de_casa === false ? 'var(--amber-strong, #8a6100)' : undefined }}>{quiHoDiu(m)}</div>
                     {m.region && <div>{m.region}</div>}
                   </span>
                 </div>
