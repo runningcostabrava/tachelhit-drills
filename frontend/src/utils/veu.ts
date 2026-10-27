@@ -24,6 +24,18 @@
 let el: HTMLAudioElement | null = null;
 /** La crida a `say()` que encara espera el final, perquè `stop()` la pugui deixar passar. */
 let pendent: (() => void) | null = null;
+/**
+ * Aturat **sense** deixar passar qui espera: la diferència entre una pausa i un stop.
+ *
+ * `stop()` allibera qui esperava el final, que és el que ha de fer quan algú tanca o canvia de
+ * línia: la fila ha de seguir endavant. Una pausa no: la fila s'ha de quedar esperant on era, o
+ * prémer «pausa» faria avançar la història a la línia següent. Per això la pausa és un estat del
+ * mòdul i no un esdeveniment, i `say()` l'ha de mirar: si entre dues línies algú ha aturat, la
+ * línia nova es carrega però no sona fins que es reprèn.
+ */
+let aturat = false;
+/** A quina velocitat es diu. Es torna a posar a cada línia: canviar el `src` la pot perdre. */
+let velocitat = 1;
 
 /** L'element, creat una sola vegada i deixat al document. */
 function element(): HTMLAudioElement {
@@ -71,8 +83,45 @@ export function say(url: string): Promise<void> {
     a.addEventListener('ended', prou);
     a.addEventListener('error', prou);
     a.src = net;                           // posar el `src` ja atura el que sonava i torna a zero
-    a.play().catch(prou);
+    a.playbackRate = velocitat;
+    if (!aturat) a.play().catch(prou);     // en pausa, la línia es carrega i espera
   });
+}
+
+/**
+ * Pausa de debò: calla, i qui esperava el final continua esperant.
+ *
+ * Reprendre és `continua()`. Mentre dura, una línia nova es prepara però no sona, de manera que
+ * la fila no se'n va avall amb la pantalla aturada.
+ */
+export function pausa() {
+  aturat = true;
+  if (el) el.pause();
+}
+
+export function continua() {
+  aturat = false;
+  if (el && el.src) el.play().catch(() => {});
+}
+
+export function esPausat(): boolean {
+  return aturat;
+}
+
+/**
+ * A quina velocitat es diu, d'1 a la baixa.
+ *
+ * El rellotge que encén la paraula que sona llegeix `currentTime`, que és temps del so i no de
+ * la paret: a mitja velocitat les marques de temps segueixen essent les bones i s'encén la
+ * paraula que toca.
+ */
+export function ritme(v: number) {
+  velocitat = v;
+  if (el) el.playbackRate = v;
+}
+
+export function ritmeAra(): number {
+  return velocitat;
 }
 
 /**
@@ -90,6 +139,7 @@ export function ara(): number {
 export function stop() {
   const p = pendent;
   pendent = null;
+  aturat = false;            // aturar no deixa l'app muda: el que vingui després ha de sonar
   if (el) el.pause();
   if (p) p();
 }
