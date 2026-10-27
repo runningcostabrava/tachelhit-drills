@@ -405,6 +405,12 @@ class Recording(Base):
     is_native = Column(Boolean, nullable=True)              # a native speaker's take, or a learner's
     license = Column(String, nullable=True, default="CC-BY-SA")
     text = Column(Text, nullable=True)       # the sentence as THIS speaker says it, when their dialect's words differ
+    # «Les mateixes paraules, però no sona igual» (#332). Una persona pot gravar sense tocar la
+    # transcripció i tot i així estar dient sons que la transcripció no recull: no són altres
+    # paraules, és la mateixa paraula dita d'una altra manera. Marcar-ho fa que algú ho miri, en
+    # comptes que la fitxa digui que es diu d'una manera i la veu en digui una altra sense que
+    # consti enlloc.
+    sounds_differ = Column(Boolean, nullable=True)
     date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 class ReviewLog(Base):

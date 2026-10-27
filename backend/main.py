@@ -5990,6 +5990,8 @@ async def add_recording(
     region: Optional[str] = Form(None),
     text: Optional[str] = Form(None),
     is_native: Optional[bool] = Form(None),
+    substitueix: Optional[bool] = Form(None),
+    sons_diferents: Optional[bool] = Form(None),
     db: Session = Depends(get_db),
     user: Optional[UserModel] = Depends(get_current_user),
 ):
@@ -5997,7 +5999,18 @@ async def add_recording(
     variety/region (defaulting to their declared profile), so the same drill can
     hold recordings from different people/varieties. `text` is the sentence as this
     speaker says it: kept only when it differs from the drill's own words, so the drill
-    shows the sentence in every dialect that recorded it."""
+    shows the sentence in every dialect that recorded it.
+
+    Dues coses més, del #332:
+
+    · `substitueix` — **«sóc jo altra vegada»**. Si la mateixa persona torna a gravar la mateixa
+      frase (la primera va sortir malament, o ara té un micròfon millor), la seva presa es canvia
+      en comptes d'acumular-ne dues de la mateixa veu que ningú no sap quina val. Només la seva:
+      la d'un altre no es toca mai, i sense `substitueix` es fa com sempre.
+    · `sons_diferents` — **les mateixes paraules, però no sona igual**. Es marca la presa perquè
+      algú ho miri, en comptes que la fitxa digui que es diu d'una manera i la veu en digui una
+      altra sense que consti enlloc.
+    """
     drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found")
@@ -6013,6 +6026,33 @@ async def add_recording(
         public_id=f"rec_{drill_id}_{int(datetime.utcnow().timestamp())}",
     )
     url = normalize_media_url(up["secure_url"])
+    # Les preses que aquesta persona ja té d'aquesta frase. Serveixen per a dues coses: per
+    # substituir-ne una (si ho demana) i per dir-li quantes en té.
+    meves = (db.query(RecordingModel)
+             .filter(RecordingModel.drill_id == drill_id, RecordingModel.user_id == user.id)
+             .order_by(RecordingModel.id.desc()).all()) if user else []
+    if substitueix and meves:
+        rec = meves[0]
+        vella = rec.audio_url
+        rec.audio_url = url
+        rec.variety = (variety or (user.variety if user else None) or rec.variety)
+        rec.region = ((region or "").strip() or (user.region if user else None) or rec.region)
+        rec.speaker = ((user.display_name or user.username) if user else rec.speaker)
+        rec.is_native = (is_native if is_native is not None else (user.is_native if user else rec.is_native))
+        rec.text = own_words or None
+        rec.sounds_differ = bool(sons_diferents) or None
+        rec.date_created = datetime.utcnow()
+        # Si la veu principal de la frase era justament aquella presa, ha d'apuntar a la nova:
+        # si no, el Mètode i la pràctica seguirien sonant amb la que s'acaba de substituir.
+        if (drill.audio_url or "").strip() == (vella or "").strip():
+            drill.audio_url = url
+        db.commit()
+        db.refresh(rec)
+        return {"id": rec.id, "audio_url": rec.audio_url, "variety": rec.variety,
+                "region": rec.region, "speaker": rec.speaker, "text": rec.text,
+                "sounds_differ": rec.sounds_differ,
+                "date_created": rec.date_created.isoformat(),
+                "variant_id": None, "substituida": True, "meves": len(meves)}
     rec = RecordingModel(
         drill_id=drill_id,
         user_id=user.id if user else None,
@@ -6023,6 +6063,7 @@ async def add_recording(
         # whose voice this is matters: a learner's take must never pass for a model pronunciation
         is_native=(is_native if is_native is not None else (user.is_native if user else None)),
         text=own_words or None,
+        sounds_differ=bool(sons_diferents) or None,
     )
     db.add(rec)
     # La primera veu d'una frase muda passa a ser la seva veu principal — amb UNA condició que
@@ -6070,8 +6111,10 @@ async def add_recording(
         db.refresh(variant)
     return {"id": rec.id, "audio_url": rec.audio_url, "variety": rec.variety,
             "region": rec.region, "speaker": rec.speaker, "text": rec.text,
+            "sounds_differ": rec.sounds_differ,
             "date_created": rec.date_created.isoformat(),
-            "variant_id": variant.id if variant is not None else None}
+            "variant_id": variant.id if variant is not None else None,
+            "substituida": False, "meves": len(meves) + 1}
 
 
 @app.post("/drills/{drill_id}/variant", response_model=Drill)
@@ -6119,6 +6162,9 @@ def list_recordings(drill_id: int, db: Session = Depends(get_db),
     return [{"id": r.id, "audio_url": normalize_media_url(r.audio_url),
              "variety": r.variety, "region": r.region, "speaker": r.speaker, "text": r.text,
              "is_native": r.is_native,   # a native speaker's voice, a learner's, or not said
+             # Les mateixes paraules dites d'una altra manera: ho va dir qui va gravar, i queda
+             # perquè algú ho miri (#332).
+             "sounds_differ": r.sounds_differ,
              "mine": bool(user and r.user_id and user.id == r.user_id),
              "license": r.license, "date_created": r.date_created.isoformat()} for r in recs]
 
@@ -6145,6 +6191,43 @@ def update_recording(recording_id: int, text: Optional[str] = Body(None, embed=T
         r.region = region.strip() or None
     db.commit()
     return {"id": r.id, "text": r.text, "variety": r.variety, "region": r.region}
+
+
+@app.post("/recordings/{recording_id}/principal")
+def make_recording_primary(recording_id: int, db: Session = Depends(get_db),
+                           user: Optional[UserModel] = Depends(get_current_user)):
+    """Quina de les preses és la veu de la targeta (#332).
+
+    `drill.audio_url` no és una presa més: és el que sona al Mètode, a la pràctica i el que la
+    puntuació de pronunciació fa servir de REFERÈNCIA. Fins ara era «la primera que va entrar» i
+    prou, de manera que amb tres preses no hi havia cap manera de dir quina mana.
+
+    Dues regles, i la segona no és negociable:
+
+    · la pot posar **qui la va gravar**, o qui administra: és la seva veu;
+    · **una presa d'algú que aprèn no passa davant d'una de nadiu.** No és un judici sobre ningú:
+      és que aquella veu es converteix en l'objectiu que els altres han d'encertar (#288).
+    """
+    r = db.query(RecordingModel).filter(RecordingModel.id == recording_id).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="Aquesta gravació no existeix")
+    if r.user_id and not (user and (user.id == r.user_id or user.is_admin)):
+        raise HTTPException(status_code=403,
+                            detail="Només qui va gravar la veu (o un administrador) pot dir que sigui la principal")
+    drill = db.query(DrillModel).filter(DrillModel.id == r.drill_id).first()
+    if not drill:
+        raise HTTPException(status_code=404, detail="Drill not found")
+    if r.is_native is False:
+        hi_ha_nadiu = db.query(RecordingModel).filter(
+            RecordingModel.drill_id == r.drill_id, RecordingModel.is_native.is_(True)).first()
+        if hi_ha_nadiu is not None:
+            raise HTTPException(
+                status_code=409,
+                detail="Aquesta frase ja la diu algú que la parla de tota la vida: la seva veu és "
+                       "la que mana. La teva gravació hi és igual i s'escolta igual.")
+    drill.audio_url = r.audio_url
+    db.commit()
+    return {"drill_id": drill.id, "audio_url": drill.audio_url, "recording_id": r.id}
 
 
 @app.delete("/recordings/{recording_id}")
