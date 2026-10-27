@@ -716,7 +716,8 @@ const back: React.CSSProperties = { display: 'inline-flex', alignItems: 'center'
  *  escoltava es quedava sense poder aturar ni repetir; ara aquell avís és una fitxa petita a
  *  dalt a la dreta i aquí no hi ha res més amb qui barallar-se (#393, #400). */
 const barra: React.CSSProperties = {
-  position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 900,
+  // A sobre del menú del mòbil, que ara és a baix de tot (#372).
+  position: 'fixed', left: 0, right: 0, bottom: 'var(--menu-mobil-h, 0px)', zIndex: 900,
   display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
   padding: '10px 14px calc(10px + env(safe-area-inset-bottom, 0px))',
   background: 'var(--surface)', borderTop: '1px solid var(--border)',
