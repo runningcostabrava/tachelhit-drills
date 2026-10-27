@@ -243,6 +243,9 @@ export interface HomeData {
   covers: { method: string | null; grammar: string | null; practice: string | null; library: string | null; stories: string | null; capture: string | null };
   method: { chapters: number; written: number };
   grammar: { units: number; with_lesson: number };
+  /** Quantes lletres de l'abecedari ja sonen (#368). Opcional: un servidor que encara no el
+   *  serveix no ha de deixar la portada en blanc. */
+  sounds?: { total: number; amb_so: number; mudes: string[] };
   practice: { all: number; mine: number };
   you: { signed_in: boolean; name: string | null; is_admin: boolean; recordings: number };
 }

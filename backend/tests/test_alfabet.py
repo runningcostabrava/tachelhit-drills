@@ -36,22 +36,25 @@ def _refresca():
 
 def test_una_paraula_es_casa_amb_la_lletra_pel_so_i_no_per_la_grafia():
     """«agh» i «aɣ» són la mateixa paraula escrita per dues mans (#364). Si l'abecedari comparés
-    lletres, la ⵖ no sonaria enlloc tot i tenir gravacions."""
+    lletres, la ⵖ no sonaria enlloc tot i tenir gravacions.
+
+    Les paraules de la prova s'escriuen amb «gh» i amb «3» a posta, i es demanen amb un límit
+    alt: el que es prova és que la lletra les TROBI, no en quin lloc de la llista surten."""
     hdr = {"X-User-Token": register("alfabet_sons")}
-    _mot(hdr, "aghrum", "pa", 1)          # escrit amb «gh»
-    _mot(hdr, "3afak", "si us plau", 2)   # escrit amb «3», que és la ⵄ
+    _mot(hdr, "aghyul", "l'ase", 1)        # escrit amb «gh», que és la ⵖ
+    _mot(hdr, "3assas", "el guarda", 2)    # escrit amb «3», que és la ⵄ
     _refresca()
 
-    r = client.get("/alfabet/ⵖ").json()
+    r = client.get("/alfabet/ⵖ?limit=40").json()
     assert r["lat"] == "ɣ" and r["sona"] is True
-    assert any(e["word"] == "aghrum" for e in r["exemples"]), r["exemples"]
+    assert any(e["word"] == "aghyul" for e in r["exemples"]), r["exemples"]
 
     # i s'hi arriba igual pel llatí i per com l'escriu la gent
     assert client.get("/alfabet/ɣ").json()["tif"] == "ⵖ"
     assert client.get("/alfabet/gh").json()["tif"] == "ⵖ"
 
-    ayn = client.get("/alfabet/ⵄ").json()
-    assert ayn["sona"] is True and any(e["word"] == "3afak" for e in ayn["exemples"])
+    ayn = client.get("/alfabet/ⵄ?limit=40").json()
+    assert ayn["sona"] is True and any(e["word"] == "3assas" for e in ayn["exemples"])
 
     assert client.get("/alfabet/ⵠ").status_code == 404, "una lletra que no és de l'abecedari ho diu"
 
@@ -80,16 +83,16 @@ def test_les_parelles_surten_de_la_biblioteca_i_no_de_la_imaginacio():
     dos sons que s'assemblen. Inventada, ensenyaria a sentir una diferència entre dues paraules
     que ningú no ha dit mai."""
     hdr = {"X-User-Token": register("alfabet_parelles")}
-    _mot(hdr, "tamurt", "el país", 11)
-    _mot(hdr, "ṭamurt", "el país (emfàtica, de prova)", 12)
+    _mot(hdr, "tazdayt", "la palmera", 11)
+    _mot(hdr, "ṭazdayt", "la palmera (emfàtica, de prova)", 12)
     _refresca()
 
     grups = {g["so_a"] + g["so_b"]: g for g in client.get("/alfabet/parelles").json()["parelles"]}
     tt = grups["tṭ"]
     assert tt["tif_a"] == "ⵜ" and tt["tif_b"] == "ⵟ"
     trobada = next((p for p in tt["parelles"]
-                    if {p["a"]["word"], p["b"]["word"]} == {"tamurt", "ṭamurt"}), None)
+                    if {p["a"]["word"], p["b"]["word"]} == {"tazdayt", "ṭazdayt"}), None)
     assert trobada, tt["parelles"]
-    assert trobada["a"]["word"] == "tamurt", "la del primer so va primer"
+    assert trobada["a"]["word"] == "tazdayt", "la del primer so va primer"
     assert trobada["posicio"] == 0, "i es diu en quina posició es diferencien"
     assert trobada["a"]["audio_url"] and trobada["b"]["audio_url"], "totes dues se senten"

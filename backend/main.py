@@ -8353,6 +8353,9 @@ def home(db: Session = Depends(get_db),
         "method": {"chapters": len(method_mod.CHAPTERS),
                    "written": db.query(func.count(MethodChapter.slug)).scalar() or 0},
         "grammar": {"units": len(grammar_course.UNITS), "with_lesson": lessons},
+        # Els sons: quantes lletres de l'abecedari ja es poden sentir amb una paraula nostra
+        # (#368). Només el compte: la porta de la portada no es porta tot l'abecedari.
+        "sounds": alfabet.comptes(db),
         "practice": {"all": tests,
                      "mine": (db.query(func.count(TestModel.id)).filter(
                          TestModel.created_by_user_id == user.id).scalar() or 0) if user else 0},

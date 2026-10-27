@@ -213,6 +213,18 @@ def abecedari(db, exemples_per_lletra: int = 2) -> Dict:
             "total": len(fora)}
 
 
+def comptes(db) -> Dict:
+    """Només els números: quantes lletres hi ha i quantes sonen ja.
+
+    La portada n'ha de poder dir «18 de 33 lletres ja sonen» sense portar-se tot l'abecedari:
+    obrir l'app no ha de baixar la biblioteca.
+    """
+    mots = _mots(db)
+    tenen = {so for m in mots for so in m["fonemes"]}
+    mudes = [l["lat"] for l in LLETRES if so_de(l) not in tenen]
+    return {"total": len(LLETRES), "amb_so": len(LLETRES) - len(mudes), "mudes": mudes}
+
+
 def parelles(db, per_so: int = 4) -> List[Dict]:
     """Parelles de paraules que es distingeixen per una sola lletra, totes dues amb veu.
 
