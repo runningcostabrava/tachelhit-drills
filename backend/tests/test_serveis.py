@@ -30,6 +30,28 @@ def test_una_feina_sense_ningu_que_la_pugui_fer_ho_diu():
     assert quines["escriure-amazic"]["qui"][0]["diu"] == "ho fa una persona"
 
 
+def test_no_shan_mirat_no_es_el_mateix_que_no_contesten():
+    """Amb `prova=0` no es truca a cap Space. Dir-ne «no contesta» seria inventar-se una mesura
+    que no s'ha fet, i aquesta app no fa això enlloc."""
+    sense_mirar = serveis.quina_feina_fa_qui(spaces=None, gemini_ok=True, gemini_clau=True, deepseek_clau=True)
+    transcriure = {f["id"]: f for f in sense_mirar["feines"]}["transcriure"]
+    assert transcriure["qui"][0]["diu"] == "no s'ha mirat"
+
+    mirat = serveis.quina_feina_fa_qui(spaces={"asr": {"state": "down"}}, gemini_ok=True,
+                                       gemini_clau=True, deepseek_clau=True)
+    assert {f["id"]: f for f in mirat["feines"]}["transcriure"]["qui"][0]["diu"] == "no contesta"
+
+
+def test_dun_servei_de_pagament_no_es_diu_que_contesta():
+    """El 24-10-2026 Gemini tenia clau, tenia pressupost i contestava «402 prepayment credits are
+    depleted». De la nostra banda només se sap que hi ha clau i que queda pressupost nostre."""
+    r = serveis.quina_feina_fa_qui(spaces={}, gemini_ok=True, gemini_clau=True, deepseek_clau=True)
+    escriure = {f["id"]: f for f in r["feines"]}["escriure"]
+    assert [q["diu"] for q in escriure["qui"]] == [
+        "hi ha clau i pressupost (si contesta, no se sap fins que se li truca)"] * 2
+    assert escriure["funciona"] is True, "amb clau i pressupost, la feina es pot fer"
+
+
 def test_distingeix_no_tenir_clau_de_haver_gastat_el_pressupost():
     """Dues coses que no es poden confondre: no tenir el servei configurat, i tenir-lo i haver
     arribat al pressupost del mes. La primera és feina de muntatge; la segona, una decisió."""
