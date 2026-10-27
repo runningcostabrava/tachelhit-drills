@@ -630,9 +630,17 @@ def content_with_ours(db, slug: str, rows: List, card) -> Optional[Dict]:
         scored.sort(key=lambda t: (-t[0],
                                    0 if (t[1].audio_url and t[1].image_url) else 1 if t[1].audio_url else 2,
                                    0 if grammar.our_speaker(t[1]) else 1, t[1].id))
+        # Sota «Dit per les nostres veus» només hi van frases que es poden ESCOLTAR (#288).
+        #
+        # Hi sortia «Tifawin!» —sense àudio i d'un canal— sota un títol que promet veus, en una
+        # secció que precisament no en té cap: una contradicció en tres paraules. Si la secció no
+        # té cap frase gravada, el bloc no es pinta i el buit es veu, igual que ja fem amb les
+        # files dels números. El total segueix sent el de debò i la línia «i N més a la
+        # biblioteca» hi porta, de manera que no desapareix cap frase.
+        sonen = [t for t in scored if (t[1].audio_url or "").strip()]
         # i que no siguin quatre vegades la mateixa paraula: una secció ensenya, no repeteix
         picked, seen_keys = [], set()
-        for _, d in scored:
+        for _, d in sonen:
             hits = said[d.id]["shi"] & keys_of[s["id"]]["shi"]
             if hits and hits <= seen_keys and len(picked) >= 2:
                 continue

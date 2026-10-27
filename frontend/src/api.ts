@@ -215,6 +215,9 @@ export interface MethodSentence {
   /** D'on surt: una línia del manual que algú ha gravat no és una atestació de l'Atles. */
   tag?: string | null;
   from_book?: boolean;
+  /** Qui ho diu i si aquesta veu es pot posar com a model a imitar (#273, #288). Per escoltar,
+   *  totes les veus; per imitar, només una veu amb nom. */
+  veu?: { qui: string | null; mena: 'nostra' | 'persona' | 'canal' | 'captura' | 'cap'; per_imitar: boolean };
   /** Per què aquesta frase és en aquesta secció. El tria la secció, no l'atzar. */
   why?: string | null;
   /** Les altres maneres de dir-la: la gravació de qui la diu diferent, amb el seu nom i el seu
