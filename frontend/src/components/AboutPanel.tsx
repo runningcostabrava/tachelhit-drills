@@ -63,10 +63,18 @@ export default function AboutPanel({ onClose }: { onClose: () => void }) {
         {/* Qui ho diu. Ho signa amb el seu nom i prou. */}
         <p style={{ fontSize: 14.5, lineHeight: 1.65, color: 'var(--text)', margin: '0 0 12px', fontWeight: 700 }}>Pablo</p>
 
-        <button onClick={() => { onClose(); navigate('/credits'); }}
-                style={{ marginTop: 2, padding: '9px 16px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit' }}>
-          Els crèdits i les fonts
-        </button>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 2 }}>
+          <button onClick={() => { onClose(); navigate('/credits'); }}
+                  style={{ padding: '9px 16px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Els crèdits i les fonts
+          </button>
+          {/* I quines màquines ajuden, què fa cadascuna i què passa quan una no contesta (#295):
+              qui fa servir l'app ha de poder saber-ho sense haver-ho de descobrir fallant. */}
+          <button onClick={() => { onClose(); navigate('/serveis'); }}
+                  style={{ padding: '9px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Qui fa cada feina
+          </button>
+        </div>
 
         <div lang="shi" style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
           {SHI.map((p) => (

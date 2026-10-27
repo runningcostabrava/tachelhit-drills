@@ -349,7 +349,7 @@ function CdVeu({ cd }: { cd: MethodCd }) {
 
 function BookLine({
   slug, where, look, who, shi, ca, note, gloss, drillId, canEdit, extra, audio, image,
-  speaker, region, heard, cd, failed, playing, onPlay, onSave, onRecorded,
+  speaker, region, heard, cd, failed, playing, onPlay, onSave, onRecorded, formula,
 }: {
   slug: string; where: Where; look: 'row' | 'turn' | 'word';
   who?: string; shi: string; ca?: string; note?: string; tif?: string | null; gloss?: MethodGloss[];
@@ -365,6 +365,8 @@ function BookLine({
   playing?: boolean; onPlay?: () => void;
   onSave: (shi: string, ca: string) => Promise<void>;
   onRecorded: (drillId: number) => void;
+  /** És una secció de fórmules: el que s'hi diu es diu sencer (#289). */
+  formula?: boolean;
 }) {
   const [edit, setEdit] = useState<{ shi: string; ca: string } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -445,12 +447,26 @@ function BookLine({
                  onRecorded={onRecorded} onEdit={() => setEdit({ shi, ca: ca || '' })} />
     </span>
   );
+  // «Decompon el que es recombina, i no decomponguis el que no» (el pedagog, #289).
+  //
+  // A les fórmules —les salutacions, els comiats, el «que Déu t'acompanyi»— desmuntar la frase
+  // no ajuda a dir-la i convida a fer-ne de noves, que és com es produeixen frases que no
+  // existeixen. Però tampoc no es pot treure: l'explicació del capítol justifica el `ṛbbi` de
+  // les fórmules dient que és com el nostre «adéu», i això només s'aguanta si es pot veure que
+  // hi és a dins. Per això aquí la tira es queda, tancada i amb un altre nom.
   const words = gloss && gloss.length > 0 ? (
     <div style={{ flexBasis: '100%' }}>
       <button onClick={() => setOpenGloss((v) => !v)} style={glossBtn}>
-        {openGloss ? 'Amaga el paraula per paraula' : 'Paraula per paraula'}
+        {openGloss
+          ? (formula ? 'Amaga què hi ha a dins' : 'Amaga el paraula per paraula')
+          : (formula ? 'Què hi ha a dins' : 'Paraula per paraula')}
       </button>
-      {openGloss && <GlossWords words={gloss} size="sm" />}
+      {openGloss && (
+        <>
+          {formula && <p style={aDins}>Una fórmula es diu sencera: això és per saber què hi porta, no per fer-ne de noves.</p>}
+          <GlossWords words={gloss} size="sm" />
+        </>
+      )}
     </div>
   ) : null;
 
@@ -788,7 +804,9 @@ export default function MethodLesson({
                           És aquí perquè {d.why}
                         </div>
                       )}
-                      {d.gloss && d.gloss.length > 0 && <GlossWords words={d.gloss} size="sm" />}
+                      {d.gloss && d.gloss.length > 0 && (
+                        s.formula ? <DinsDeLaFormula gloss={d.gloss} /> : <GlossWords words={d.gloss} size="sm" />
+                      )}
                       <SentenceVariants variants={d.variants} size="sm" />
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                         <span style={{ fontSize: 11.5, color: 'var(--text-muted)', flex: 1 }}>
@@ -934,7 +952,7 @@ export default function MethodLesson({
                 const where: Where = { kind: 'example', index: k, section: s.id };
                 const key = `example:${s.id}:${k}`;
                 return (
-                  <BookLine key={k} slug={slug} where={where} look="row"
+                  <BookLine key={k} slug={slug} where={where} look="row" formula={!!s.formula}
                             shi={e.shi} ca={e.ca} note={e.note} tif={e.tif} gloss={e.gloss}
                             drillId={e.drill_id} canEdit={canEdit}
                             audio={e.audio_url} image={e.image_url} speaker={e.speaker} region={e.region}
@@ -1089,6 +1107,27 @@ const pill: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 11px',
   borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)',
   color: 'var(--text-soft)', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+};
+/** El que hi ha a dins d'una fórmula: tancat, i amb la línia que diu per què està tancat (#289). */
+function DinsDeLaFormula({ gloss }: { gloss: MethodGloss[] }) {
+  const [obert, setObert] = useState(false);
+  return (
+    <div>
+      <button onClick={() => setObert((v) => !v)} style={glossBtn}>
+        {obert ? 'Amaga què hi ha a dins' : 'Què hi ha a dins'}
+      </button>
+      {obert && (
+        <>
+          <p style={aDins}>Una fórmula es diu sencera: això és per saber què hi porta, no per fer-ne de noves.</p>
+          <GlossWords words={gloss} size="sm" />
+        </>
+      )}
+    </div>
+  );
+}
+
+const aDins: React.CSSProperties = {
+  fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.5, margin: '2px 0 4px',
 };
 const glossBtn: React.CSSProperties = {
   background: 'transparent', border: 'none', padding: '2px 0', margin: 0, cursor: 'pointer',
