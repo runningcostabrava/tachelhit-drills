@@ -283,6 +283,28 @@ export interface MethodExample {
   /** D'on és qui la diu: el crèdit és d'una persona i d'un poble, i la varietat no s'amaga. */
   region?: string | null;
 }
+/** Una frase d'exercici: la que es demana i, quan el llibre la dona, la que respon. */
+export interface MethodExerciseLine { shi: string; ca?: string | null; tif?: string | null }
+
+export interface MethodExerciseItem {
+  pregunta: MethodExerciseLine;
+  resposta: MethodExerciseLine | null;
+  /** El llibre la deixa en blanc a posta, perquè la faci qui aprèn. No és un forat nostre. */
+  sense_solucio?: boolean;
+}
+
+export interface MethodExercise {
+  id: string;
+  /** Decideix com es pot fer a la pantalla: ordena, completa, tria, respon, pregunta, pronom, analitza. */
+  kind: string;
+  consigna: string;
+  consigna_fr: string;
+  model?: { pregunta: MethodExerciseLine; resposta: MethodExerciseLine } | null;
+  items: MethodExerciseItem[];
+  /** De quin llibre surt. No és el mateix que el de les explicacions del capítol. */
+  font?: { obra: string; autor: string; any: number; nota?: string };
+}
+
 export interface MethodContent {
   intro?: string;
   sections?: {
@@ -324,6 +346,8 @@ export interface MethodContent {
     pattern: { who: string; shi: string; ca: string; tif?: string | null }[];
     fills: { shi: string; ca: string; qty_shi: string; qty_ca: string; tif?: string | null; qty_tif?: string | null }[];
   };
+  /** Els exercicis del llibre, per fer-los de debò i no per mirar-los (#380). */
+  exercises?: MethodExercise[];
   vocabulary?: { shi: string; ca: string; audio_url?: string | null; drill_id?: number; tif?: string | null; image_url?: string | null; speaker?: string | null; region?: string | null; from_drill_id?: number }[];
   source_note?: string;
   source_pages?: string;

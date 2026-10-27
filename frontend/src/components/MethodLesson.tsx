@@ -9,6 +9,7 @@ import { whyItFailed } from '../utils/errors';
 import RecordAudioModal from './RecordAudioModal';
 import { GlossWords } from './WordGloss';
 import SentenceVariants from './SentenceVariants';
+import MethodExercises from './MethodExercises';
 
 // La lliçó d'un capítol: l'explicació, el diàleg i el vocabulari.
 //
@@ -958,6 +959,14 @@ export default function MethodLesson({
       {body.practice && (
         <div id="part-fes-ho-tu" style={{ scrollMarginTop: 'calc(var(--nav-h) + 10px)' }}>
           <Practice practice={body.practice} n={4} />
+        </div>
+      )}
+
+      {/* 5 · ELS EXERCICIS DEL LLIBRE. En paper són una llista amb la resposta impresa a sota;
+          aquí s'omplen, s'ordenen i es destapen quan qui els fa ho demana (#380). */}
+      {body.exercises && body.exercises.length > 0 && (
+        <div id="part-exercicis" style={{ scrollMarginTop: 'calc(var(--nav-h) + 10px)' }}>
+          <MethodExercises exercises={body.exercises} />
         </div>
       )}
     </>
