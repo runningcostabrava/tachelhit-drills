@@ -95,12 +95,26 @@
     "url": "/method/cd/e6nuUVOFB0U/110.759/111.301",
     "com": "sentit a cegues: la màquina hi sent «ⵜⵉⵙⵙⵉ», que s'assembla a «ⵜⵉⵙⵉ» en un 80%"
    },
+   "tensio:col1:1": {
+    "pista": "e6nuUVOFB0U",
+    "start": 136.156,
+    "end": 136.851,
+    "url": "/method/cd/e6nuUVOFB0U/136.156/136.851",
+    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⴷⵓⵏⵉⵎⵉ», que s'assembla a «ⵉⵎⵎⵉ» en un 75%"
+   },
    "tensio:col1:2": {
     "pista": "e6nuUVOFB0U",
     "start": 143.354,
     "end": 143.608,
     "url": "/method/cd/e6nuUVOFB0U/143.354/143.608",
     "com": "sentit a cegues: la màquina hi sent «ⵙⵍⵉ», que s'assembla a «ⵙⵙⵍⵉ» en un 75%"
+   },
+   "tensio:col1:4": {
+    "pista": "e6nuUVOFB0U",
+    "start": 152.997,
+    "end": 153.378,
+    "url": "/method/cd/e6nuUVOFB0U/152.997/153.378",
+    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵜⵉⵙⵉⵉⵙⵙⵉ», que s'assembla a «ⵜⵉⵙⵙⵉ» en un 80%"
    },
    "emfatiques:example:2": {
     "pista": "e6nuUVOFB0U",
@@ -116,6 +130,27 @@
     "url": "/method/cd/e6nuUVOFB0U/177.339/177.79",
     "com": "sentit a cegues: la màquina hi sent «ⵢⵥⵉ», que s'assembla a «ⵉⵥⵉ» en un 67%"
    },
+   "emfatiques:col0:0": {
+    "pista": "e6nuUVOFB0U",
+    "start": 198.67,
+    "end": 199.541,
+    "url": "/method/cd/e6nuUVOFB0U/198.67/199.541",
+    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵓⴷⵉⵏⴷⴰⵉⴰⵏⴰⵏⴷⵓ», que s'assembla a «ⵎⴷⵉ» en un 67%"
+   },
+   "emfatiques:col0:1": {
+    "pista": "e6nuUVOFB0U",
+    "start": 201.02,
+    "end": 201.681,
+    "url": "/method/cd/e6nuUVOFB0U/201.02/201.681",
+    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵓⴷⵉⵏⴷⴰⵉⴰⵏⴰⵏⴷⵓ», que s'assembla a «ⴰⴷⴰⵏ» en un 75%"
+   },
+   "emfatiques:col0:2": {
+    "pista": "e6nuUVOFB0U",
+    "start": 203.257,
+    "end": 203.87,
+    "url": "/method/cd/e6nuUVOFB0U/203.257/203.87",
+    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵓⴷⵉⵏⴷⴰⵉⴰⵏⴰⵏⴷⵓ», que s'assembla a «ⴱⴷⵓ» en un 67%"
+   },
    "emfatiques:col1:0": {
     "pista": "e6nuUVOFB0U",
     "start": 205.574,
@@ -130,6 +165,20 @@
     "url": "/method/cd/e6nuUVOFB0U/232.253/232.587",
     "com": "sentit a cegues: la màquina hi sent «ⴰⴳⵉ», que s'assembla a «ⴰⴳⵯⵉ» en un 75%"
    },
+   "labiovelars:example:2": {
+    "pista": "e6nuUVOFB0U",
+    "start": 236.056,
+    "end": 236.351,
+    "url": "/method/cd/e6nuUVOFB0U/236.056/236.351",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
+   "labiovelars:example:3": {
+    "pista": "e6nuUVOFB0U",
+    "start": 239.458,
+    "end": 239.869,
+    "url": "/method/cd/e6nuUVOFB0U/239.458/239.869",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
    "labiovelars:example:4": {
     "pista": "e6nuUVOFB0U",
     "start": 243.099,
@@ -137,12 +186,33 @@
     "url": "/method/cd/e6nuUVOFB0U/243.099/243.765",
     "com": "sentit a cegues: la màquina hi sent «ⴰⵇⵔⴰⵏ», que s'assembla a «ⴰⵇⵯⵔⴰⴱ» en un 67%"
    },
+   "labiovelars:col0:0": {
+    "pista": "e6nuUVOFB0U",
+    "start": 257.477,
+    "end": 257.777,
+    "url": "/method/cd/e6nuUVOFB0U/257.477/257.777",
+    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⴽⵉⵛⵛ», que s'assembla a «ⴽⵜⵉ» en un 67%"
+   },
    "labiovelars:col0:1": {
     "pista": "e6nuUVOFB0U",
     "start": 260.115,
     "end": 260.504,
     "url": "/method/cd/e6nuUVOFB0U/260.115/260.504",
     "com": "sentit a cegues: la màquina hi sent «ⵖⵉⵍ», que s'assembla a «ⵖⵉ» en un 67%"
+   },
+   "alfabet:example:10": {
+    "pista": "e6nuUVOFB0U",
+    "start": 268.229,
+    "end": 269.538,
+    "url": "/method/cd/e6nuUVOFB0U/268.229/269.538",
+    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵡⴰⵙⵙ ⵉⵍⵓ ⵜⴼ ⵓⴽⵚⵔⴽ», que s'assembla a «ⵅⵙⵉ» en un 67%"
+   },
+   "alfabet:example:24": {
+    "pista": "e6nuUVOFB0U",
+    "start": 272.828,
+    "end": 273.625,
+    "url": "/method/cd/e6nuUVOFB0U/272.828/273.625",
+    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵡⴰⵙⵙ ⵉⵍⵓ ⵜⴼ ⵓⴽⵚⵔⴽ», que s'assembla a «ⵜⵜⵓ» en un 67%"
    },
    "vocabulary:13": {
     "pista": "e6nuUVOFB0U",
@@ -251,6 +321,27 @@
     "url": "/method/cd/mDMcR7vNA_A/102.255/102.858",
     "com": "sentit a cegues: la màquina hi sent «ⵜⴽⵍⵉⵜ», que s'assembla a «ⵜⵉⴽⵍⵉⵜⵜ» en un 71%"
    },
+   "escolta-tensio:example:10": {
+    "pista": "mDMcR7vNA_A",
+    "start": 105.488,
+    "end": 106.636,
+    "url": "/method/cd/mDMcR7vNA_A/105.488/106.636",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
+   "escolta-tensio:example:11": {
+    "pista": "mDMcR7vNA_A",
+    "start": 108.833,
+    "end": 109.368,
+    "url": "/method/cd/mDMcR7vNA_A/108.833/109.368",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
+   "escolta-tensio:example:12": {
+    "pista": "mDMcR7vNA_A",
+    "start": 111.968,
+    "end": 112.625,
+    "url": "/method/cd/mDMcR7vNA_A/111.968/112.625",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
    "escolta-tensio:example:13": {
     "pista": "mDMcR7vNA_A",
     "start": 115.398,
@@ -281,12 +372,40 @@
     "url": "/method/cd/mDMcR7vNA_A/136.178/137.357",
     "com": "sentit a cegues: la màquina hi sent «ⴰⵎⵥ ⴰⵙⴰ ⴰⴼⴰⵙⵉ», que s'assembla a «ⴰⵎⵥ ⴰⵖⴰⵔⴰⵙ ⴰⴼⴰⵙⵉ» en un 71%"
    },
+   "dialogue:3": {
+    "pista": "mDMcR7vNA_A",
+    "start": 140.754,
+    "end": 142.602,
+    "url": "/method/cd/mDMcR7vNA_A/140.754/142.602",
+    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵎⴰⵏⵉⴳⴰⵏ ⵜⴰⵎⴰⵣⵉⵔⵜⵣⵉⴷⵀⵓ ⴰⴽⴰⴱⵉⵔ», que s'assembla a «ⵎⴰⵏⵉ ⵢⴳⴰⵏ ⵜⴰⵎⴰⵣⵉⵔⵜ ⵜⵉⵣⵏⵉⵜ» en un 77%"
+   },
+   "dialogue:4": {
+    "pista": "mDMcR7vNA_A",
+    "start": 143.579,
+    "end": 144.952,
+    "url": "/method/cd/mDMcR7vNA_A/143.579/144.952",
+    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵎⴰⵏⵉⴳⴰⵏ ⵜⴰⵎⴰⵣⵉⵔⵜⵣⵉⴷⵀⵓ ⴰⴽⴰⴱⵉⵔ», que s'assembla a «ⵓⵀⵓ ⴰⴳⴰⴷⵉⵔ» en un 67%"
+   },
    "dialogue:6": {
     "pista": "mDMcR7vNA_A",
     "start": 149.004,
     "end": 150.556,
     "url": "/method/cd/mDMcR7vNA_A/149.004/150.556",
     "com": "sentit a cegues: la màquina hi sent «ⵉⴼⵓⴽ ⵎⴰ ⵜⴽⵔ», que s'assembla a «ⵉⴼⵓⵍⴽⵉ ⵎⴰ ⵜⵙⴽⴰⵔ» en un 69%"
+   },
+   "dialogue:7": {
+    "pista": "mDMcR7vNA_A",
+    "start": 151.293,
+    "end": 152.278,
+    "url": "/method/cd/mDMcR7vNA_A/151.293/152.278",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
+   "mani:example:0": {
+    "pista": "mDMcR7vNA_A",
+    "start": 157.468,
+    "end": 158.946,
+    "url": "/method/cd/mDMcR7vNA_A/157.468/158.946",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
    },
    "mani:example:2": {
     "pista": "mDMcR7vNA_A",
@@ -337,6 +456,97 @@
     "url": "/method/cd/mDMcR7vNA_A/321.637/322.59",
     "com": "sentit a cegues: la màquina hi sent «ⵜⵔⵥ ⵏ ⵜⴳⵎⵎⵉ», que s'assembla a «ⵜⵔⵥⵎ ⵜⴳⵎⵎⵉ» en un 89%"
    },
+   "feina:example:0": {
+    "pista": "mDMcR7vNA_A",
+    "start": 325.962,
+    "end": 327.002,
+    "url": "/method/cd/mDMcR7vNA_A/325.962/327.002",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
+   "feina:example:1": {
+    "pista": "mDMcR7vNA_A",
+    "start": 330.209,
+    "end": 331.874,
+    "url": "/method/cd/mDMcR7vNA_A/330.209/331.874",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
+   "feina:example:2": {
+    "pista": "mDMcR7vNA_A",
+    "start": 335.001,
+    "end": 336.085,
+    "url": "/method/cd/mDMcR7vNA_A/335.001/336.085",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
+   "feina:example:3": {
+    "pista": "mDMcR7vNA_A",
+    "start": 341.346,
+    "end": 342.563,
+    "url": "/method/cd/mDMcR7vNA_A/341.346/342.563",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
+   "vocabulary:0": {
+    "pista": "mDMcR7vNA_A",
+    "start": 343.843,
+    "end": 345.844,
+    "url": "/method/cd/mDMcR7vNA_A/343.843/345.844",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
+   "vocabulary:1": {
+    "pista": "mDMcR7vNA_A",
+    "start": 348.24,
+    "end": 350.72,
+    "url": "/method/cd/mDMcR7vNA_A/348.24/350.72",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
+   "vocabulary:2": {
+    "pista": "mDMcR7vNA_A",
+    "start": 354.067,
+    "end": 355.882,
+    "url": "/method/cd/mDMcR7vNA_A/354.067/355.882",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
+   "vocabulary:3": {
+    "pista": "mDMcR7vNA_A",
+    "start": 358.109,
+    "end": 358.692,
+    "url": "/method/cd/mDMcR7vNA_A/358.109/358.692",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
+   "vocabulary:4": {
+    "pista": "mDMcR7vNA_A",
+    "start": 359.261,
+    "end": 360.215,
+    "url": "/method/cd/mDMcR7vNA_A/359.261/360.215",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
+   "vocabulary:5": {
+    "pista": "mDMcR7vNA_A",
+    "start": 362.225,
+    "end": 364.279,
+    "url": "/method/cd/mDMcR7vNA_A/362.225/364.279",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
+   "vocabulary:6": {
+    "pista": "mDMcR7vNA_A",
+    "start": 368.002,
+    "end": 368.841,
+    "url": "/method/cd/mDMcR7vNA_A/368.002/368.841",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
+   "vocabulary:7": {
+    "pista": "mDMcR7vNA_A",
+    "start": 369.416,
+    "end": 371.323,
+    "url": "/method/cd/mDMcR7vNA_A/369.416/371.323",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
+   "vocabulary:8": {
+    "pista": "mDMcR7vNA_A",
+    "start": 374.834,
+    "end": 375.941,
+    "url": "/method/cd/mDMcR7vNA_A/374.834/375.941",
+    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
+   },
    "vocabulary:9": {
     "pista": "mDMcR7vNA_A",
     "start": 388.136,
@@ -359,6 +569,34 @@
     "end": 17.567,
     "url": "/method/cd/zkvUblbTdws/16.001/17.567",
     "com": "sentit a cegues: la màquina hi sent «ⴽⵓⵥ ⵉⴹ ⵎⵢⴰ ⵉⵍⵉⵜⵔⵓ», que s'assembla a «ⴽⴽⵓⵥ ⵉⴷⴰⵎⵉⵢⵢⴰ ⵉⵍⵉⵜⵔⵓ» en un 72%"
+   },
+   "mesures:col0:0": {
+    "pista": "zkvUblbTdws",
+    "start": 165.95,
+    "end": 167.717,
+    "url": "/method/cd/zkvUblbTdws/165.95/167.717",
+    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⴰⵛⴽⵙⴽⴽⵔ ⵓⴽⴼⴼⴰⵢⵍⵉⵜⵔⵓⵎⴰⵛ ⴰⴷ ⵜⴽⴽⴽⵔ ⵜⴰⵎⵎ ⵏ ⵜⵉⴽⵉⵍⵓ», que s'assembla a «ⴽⵉⵍⵓ» en un 100%"
+   },
+   "mesures:col1:0": {
+    "pista": "zkvUblbTdws",
+    "start": 175.35,
+    "end": 177.512,
+    "url": "/method/cd/zkvUblbTdws/175.35/177.512",
+    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⴰⵛⴽⵙⴽⴽⵔ ⵓⴽⴼⴼⴰⵢⵍⵉⵜⵔⵓⵎⴰⵛ ⴰⴷ ⵜⴽⴽⴽⵔ ⵜⴰⵎⵎ ⵏ ⵜⵉⴽⵉⵍⵓ», que s'assembla a «ⵍⵉⵜⵔⵓ» en un 100%"
+   },
+   "imperatiu:example:3": {
+    "pista": "zkvUblbTdws",
+    "start": 257.599,
+    "end": 259.576,
+    "url": "/method/cd/zkvUblbTdws/257.599/259.576",
+    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵉⵙ ⵜⵓⴱⵔ ⵢⵔⵎⴰ ⵢⵇⵇⴰⵔ ⴷⵏ ⵉⵉ ⴱⵔⴰⵀⵉⵎ ⵣⵉⵏⵀ ⵜⵓⵜⵔⴰⵙⵏ ⵏ ⵢⵔⵏⴰ ⵢⵇⴰⵔⴱ», que s'assembla a «ⵔⵥⵎ» en un 67%"
+   },
+   "imperatiu:example:5": {
+    "pista": "zkvUblbTdws",
+    "start": 260.868,
+    "end": 263.138,
+    "url": "/method/cd/zkvUblbTdws/260.868/263.138",
+    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵉⵙ ⵜⵓⴱⵔ ⵢⵔⵎⴰ ⵢⵇⵇⴰⵔ ⴷⵏ ⵉⵉ ⴱⵔⴰⵀⵉⵎ ⵣⵉⵏⵀ ⵜⵓⵜⵔⴰⵙⵏ ⵏ ⵢⵔⵏⴰ ⵢⵇⴰⵔⴱ», que s'assembla a «ⵏⴽⵔ» en un 67%"
    },
    "datius:example:5": {
     "pista": "zkvUblbTdws",
