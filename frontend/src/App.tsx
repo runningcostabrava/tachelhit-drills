@@ -39,6 +39,7 @@ const ProfilePage = lazy(() => import('./components/ProfilePage'));
 const AuthPage = lazy(() => import('./components/AuthPage'));
 const CorpusPage = lazy(() => import('./components/CorpusPage'));
 const CreditsPage = lazy(() => import('./components/CreditsPage'));
+const ServeisPage = lazy(() => import('./components/ServeisPage'));
 const LessonEditor = lazy(() => import('./components/LessonEditor'));
 const StoriesPage = lazy(() => import('./components/StoriesPage'));
 const ListenPage = lazy(() => import('./components/ListenPage'));
@@ -269,6 +270,8 @@ function App() {
         <Route path="/signin" element={<AuthPage />} />
         <Route path="/corpus" element={<CorpusPage />} />
         <Route path="/credits" element={<CreditsPage />} />
+        {/* Quina màquina fa cada feina, i què passa quan una no contesta (#295). */}
+        <Route path="/serveis" element={<ServeisPage />} />
         <Route path="/listen" element={<ListenPage />} />
         <Route path="/stories" element={<StoriesPage />} />
         <Route path="/stories/:slug" element={<StoriesPage />} />

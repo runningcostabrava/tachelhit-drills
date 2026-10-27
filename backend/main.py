@@ -3184,6 +3184,24 @@ def health_spaces():
     return out
 
 
+@app.get("/serveis")
+def serveis(prova: bool = True):
+    """Quina màquina fa cada feina, i si ara mateix contesta (#295).
+
+    L'estratègia viu a `docs/SERVEIS_IA.md`; això la serveix perquè es pugui llegir des de
+    l'app. El 24-10-2026 tres proveïdors es van quedar sense servei el mateix dia, i qui feia
+    servir l'app només veia que «no anava»: una feina sense ningú que la pugui fer ho ha de dir.
+
+    `prova=0` no truca a cap Space: la taula igualment, i els Spaces com a desconeguts.
+    """
+    import serveis as serveis_mod
+    estat_spaces = health_spaces() if prova else {}
+    return serveis_mod.quina_feina_fa_qui(
+        spaces=estat_spaces,
+        gemini_ok=bool(gemini_available() and ai_meter.budget_ok()),
+        gemini_clau=bool(gemini_available()))
+
+
 @app.post("/health/spaces/wake")
 def wake_spaces(only: Optional[str] = None):
     """Fire-and-forget warm-up pings so sleeping Spaces start booting. Pass
