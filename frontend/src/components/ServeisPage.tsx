@@ -14,6 +14,8 @@ import { api, type Serveis } from '../api';
 const COLOR: Record<string, string> = {
   viu: 'var(--emerald)',
   persona: 'var(--brand-1)',
+  amb_clau: 'var(--emerald)',
+  no_ho_sabem: 'var(--text-muted)',
   despertant: 'var(--amber-strong, #8a6100)',
   aturat: 'var(--rose)',
   sense_clau: 'var(--text-muted)',
