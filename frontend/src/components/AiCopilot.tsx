@@ -4,6 +4,9 @@ import { getMediaUrl } from '../config';
 import { subscribeSelection, notifyDrillsChanged } from '../selection';
 import AiQuota from './AiQuota';
 import { FaComments, FaPlay, FaRedo, FaChevronRight, FaPaperPlane, FaCheck, FaSearch, FaExclamationTriangle } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import Frase from './Frase';
+import { thumb } from '../config';
 
 interface Action { name: string; args: any; result: any; }
 interface Msg { role: 'user' | 'model'; text: string; actions?: Action[]; }
@@ -11,6 +14,7 @@ interface Msg { role: 'user' | 'model'; text: string; actions?: Action[]; }
 // Collapsible right-hand copilot dock. Agentic: it can create/edit/search
 // drills and speak Tachelhit, aware of the currently-selected drills.
 export default function AiCopilot({ onClose }: { onClose: () => void }) {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -65,14 +69,61 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
     return (
       <div role="group" aria-label="Accions realitzades" style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
         {actions.map((a, i) => {
-          if (a.result?.error) return <span key={i} style={chip('var(--rose-soft)', 'var(--rose)')}><FaExclamationTriangle style={{ marginRight: '4px', verticalAlign: '-1px' }} />{a.name}: {a.result.error}</span>;
+          {/* El missatge, sense el nom de la funció: dir-lo és ensenyar les canonades (#374). */}
+          if (a.result?.error) return <span key={i} style={chip('var(--rose-soft)', 'var(--rose)')}><FaExclamationTriangle style={{ marginRight: '4px', verticalAlign: '-1px' }} />{a.result.error}</span>;
           if (a.name === 'create_drill') return <span key={i} style={chip('var(--emerald-soft)', 'var(--emerald)')}><FaCheck style={{ marginRight: '4px', verticalAlign: '-1px' }} />Drill #{a.result.created_drill_id} creat</span>;
           if (a.name === 'update_drill') return <span key={i} style={chip('var(--emerald-soft)', 'var(--emerald)')}><FaCheck style={{ marginRight: '4px', verticalAlign: '-1px' }} />Drill #{a.result.updated_drill_id} actualitzat</span>;
-          if (a.name === 'search_drills') return <span key={i} style={chip('var(--surface-2)', 'var(--text-soft)')}><FaSearch style={{ marginRight: '4px', verticalAlign: '-1px' }} />{a.result.count} resultats</span>;
+          // Les frases trobades surten com a TARGETES, amb la seva imatge, la seva veu i qui la
+          // diu: un «ID 4141» no ensenya a saludar, i tot el que l'app sap fer amb una frase
+          // quedava fora de la conversa (#374).
+          if (a.name === 'search_drills') {
+            const trobades: any[] = a.result?.drills || [];
+            if (!trobades.length) {
+              return <span key={i} style={chip('var(--surface-2)', 'var(--text-soft)')}><FaSearch style={{ marginRight: '4px', verticalAlign: '-1px' }} />la biblioteca no en té cap</span>;
+            }
+            return (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {trobades.slice(0, 6).map((d: any) => (
+                  <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)' }}>
+                    {d.image_url && (
+                      <img src={thumb(getMediaUrl(d.image_url), 120)} alt="" loading="lazy"
+                           style={{ width: 44, height: 44, borderRadius: 'var(--r-sm)', objectFit: 'cover', flexShrink: 0 }}
+                           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                    )}
+                    <button onClick={() => navigate(`/drills?id=${d.id}`)}
+                            style={{ flex: 1, minWidth: 0, textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', color: 'var(--text)' }}>
+                      <Frase text={d.tachelhit || ''} latin={d.latin} size="sm" />
+                      <span style={{ display: 'block', fontSize: 12.5, color: 'var(--text-soft)' }}>{d.catalan}</span>
+                      {(d.speaker || d.region) && (
+                        <span style={{ display: 'block', fontSize: 11, color: 'var(--text-muted)' }}>
+                          {d.speaker || 'sense nom'}{d.region ? ` · ${d.region}` : ''}
+                        </span>
+                      )}
+                    </button>
+                    {d.audio_url && (
+                      <button onClick={() => play(d.audio_url)} aria-label="Escolta-la" title="Escolta-la"
+                              style={{ width: 30, height: 30, flexShrink: 0, borderRadius: '50%', border: 'none', background: 'var(--brand-gradient)', color: '#fff', cursor: 'pointer' }}>
+                        <FaPlay size={10} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {trobades.length > 6 && (
+                  <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>i {trobades.length - 6} més</span>
+                )}
+              </div>
+            );
+          }
           if (a.name === 'speak_tachelhit' && a.result?.audio_url)
             return (
               <button key={i} onClick={() => play(a.result.audio_url)} style={{ ...chip('var(--sky-soft)', 'var(--sky)'), cursor: 'pointer', border: '1px solid var(--sky)' }}>
                 <FaPlay style={{ marginRight: '4px', verticalAlign: '-1px' }} />Escolta «{a.result.text}»
+                {/* Quina veu sona: la d'una persona o la de la màquina. Mai es confonen (#288). */}
+                {a.result.veu && (
+                  <span style={{ opacity: 0.75 }}>
+                    {' '}· veu {a.result.veu}{a.result.speaker ? ` (${a.result.speaker})` : ''}
+                  </span>
+                )}
               </button>
             );
           return null;

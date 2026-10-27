@@ -7904,11 +7904,20 @@ AGENT_TOOLS = [
     },
     {
         "name": "search_drills",
-        "description": "Cerca drills al corpus per text (qualsevol llengua) o etiqueta. Retorna coincidències.",
+        "description": (
+            "Mira què hi ha a la biblioteca. És el PRIMER lloc on s'ha de mirar quan algú pregunta "
+            "com es diu una cosa: el que no hi és, no ho tenim. Sense cap filtre torna les frases "
+            "més NOVES. Es pot filtrar per text (en qualsevol llengua), per etiqueta, per qui ho "
+            "diu, per varietat, i demanar només les que encara no tenen veu."),
         "parameters": {"type": "object", "properties": {
-            "query": {"type": "string"},
+            "query": {"type": "string", "description": "text lliure, en qualsevol de les llengües"},
+            "tag": {"type": "string"},
+            "author": {"type": "string", "description": "qui ho diu"},
+            "variety": {"type": "string"},
+            "without_voice": {"type": "boolean", "description": "només les que encara no les diu ningú"},
+            "newest": {"type": "boolean", "description": "les últimes que han entrat (és el que fa per defecte)"},
             "limit": {"type": "integer"},
-        }, "required": ["query"]},
+        }},
     },
     {
         "name": "what_can_a_practice_be_about",
@@ -7989,7 +7998,10 @@ AGENT_TOOLS = [
     },
     {
         "name": "speak_tachelhit",
-        "description": "Sintetitza veu en taixelhit d'un text perquè l'usuari el pugui escoltar. Retorna una URL d'àudio.",
+        "description": (
+            "Fa sonar un text amazic que JA ÉS a la biblioteca. Si algú l'ha gravat, torna la seva "
+            "veu; si no, la de màquina. Una paraula que no és a la biblioteca no es pot fer sonar "
+            "ni oferir: no la diu ningú."),
         "parameters": {"type": "object", "properties": {
             "text": {"type": "string"},
         }, "required": ["text"]},
@@ -8026,14 +8038,33 @@ def _agent_executor(db, user=None):
             from sqlalchemy import or_
             q = (args.get("query") or "").strip()
             lim = min(int(args.get("limit") or 10), 25)
-            like = f"%{q}%"
-            rows = (db.query(DrillModel).filter(or_(
-                DrillModel.text_tachelhit.ilike(like), DrillModel.text_tachelhit_latin.ilike(like),
-                DrillModel.text_catalan.ilike(like), DrillModel.text_arabic.ilike(like),
-                DrillModel.tag.ilike(like))).limit(lim).all())
-            return {"count": len(rows), "drills": [
+            rows = db.query(DrillModel)
+            if q:
+                like = f"%{q}%"
+                rows = rows.filter(or_(
+                    DrillModel.text_tachelhit.ilike(like), DrillModel.text_tachelhit_latin.ilike(like),
+                    DrillModel.text_catalan.ilike(like), DrillModel.text_arabic.ilike(like),
+                    DrillModel.tag.ilike(like)))
+            if (args.get("tag") or "").strip():
+                rows = rows.filter(DrillModel.tag.ilike("%%%s%%" % args["tag"].strip()))
+            if (args.get("author") or "").strip():
+                a = f"%{args['author'].strip()}%"
+                rows = rows.filter(or_(DrillModel.author.ilike(a), DrillModel.speaker.ilike(a)))
+            if (args.get("variety") or "").strip():
+                rows = rows.filter(DrillModel.variety == args["variety"].strip())
+            if args.get("without_voice"):
+                rows = rows.filter((DrillModel.audio_url.is_(None)) | (DrillModel.audio_url == ""))
+            # Les més noves primer: «ensenya'm els últims drills» és la pregunta que no es podia
+            # contestar, i l'API sempre ho ha sabut fer (#374).
+            found = rows.order_by(DrillModel.id.desc()).limit(lim).all()
+            return {"count": len(found), "drills": [
                 {"id": r.id, "catalan": r.text_catalan, "tachelhit": r.text_tachelhit,
-                 "latin": r.text_tachelhit_latin} for r in rows]}
+                 "latin": r.text_tachelhit_latin, "tif": grammar_course.tifinagh(r.text_tachelhit or ""),
+                 "image_url": r.image_url, "audio_url": r.audio_url,
+                 "speaker": r.speaker or r.author, "region": r.region, "variety": r.variety}
+                for r in found],
+                # Una resposta és una resposta: que no hi sigui, també.
+                "diu": ("la biblioteca no en té cap" if not found else None)}
         if name == "what_can_a_practice_be_about":
             c = practice_mod.collections(db)
             return {k: c.get(k, [])[:40] for k in ("units", "topics", "people", "tags", "days")}
@@ -8127,9 +8158,45 @@ def _agent_executor(db, user=None):
             text = (args.get("text") or "").strip()
             if not text:
                 return {"error": "text buit"}
+            # Res de fer sonar el que ningú no ha dit mai (#374, #288).
+            #
+            # El copilot s'havia inventat «iɣḍdn» per «enfadat» —una arrel que no surt enlloc del
+            # nostre corpus— i tot seguit s'oferia a sintetitzar-la. Una veu damunt d'una paraula
+            # inventada és el pitjor que pot fer aquesta app: sona com si algú ho digués.
+            from sqlalchemy import or_
+            esta = db.query(DrillModel).filter(or_(
+                DrillModel.text_tachelhit.ilike(text),
+                DrillModel.text_tachelhit_latin.ilike(text),
+                DrillModel.text_tachelhit.ilike("%%%s%%" % text))).first()
+            if esta is None:
+                # i, si no casa lletra a lletra, pel SO: «aghrum» i «aɣrum» són la mateixa
+                # paraula. Primer per la clau desada (`text_key`, que està indexada); les frases
+                # velles no en tenen, i per a aquelles es calcula, però llegint només dues
+                # columnes en comptes d'aixecar cinc mil objectes sencers.
+                clau = transliteration.phonemic_key(text)
+                if clau:
+                    esta = db.query(DrillModel).filter(DrillModel.text_key == clau).first()
+                if esta is None and clau:
+                    files = (db.query(DrillModel.id, DrillModel.text_tachelhit)
+                             .filter(DrillModel.text_tachelhit.isnot(None),
+                                     DrillModel.text_tachelhit != "",
+                                     DrillModel.text_key.is_(None)).limit(4000).all())
+                    for did, diu in files:
+                        if transliteration.phonemic_key(diu or "") == clau:
+                            esta = db.query(DrillModel).filter(DrillModel.id == did).first()
+                            break
+            if esta is None:
+                return {"error": "«%s» no és a la biblioteca. No ho diu ningú, i una veu de màquina "
+                                 "damunt d'una paraula que no tenim sonaria com si algú l'hagués "
+                                 "dita. Digues que no ho tenim." % text[:60]}
+            if (esta.audio_url or "").strip():
+                return {"audio_url": normalize_media_url(esta.audio_url),
+                        "text": esta.text_tachelhit, "drill_id": esta.id,
+                        "veu": "d'una persona", "speaker": esta.speaker or esta.author}
             try:
-                url = generate_tachelhit_tts_hf(text, 0)
-                return {"audio_url": normalize_media_url(url), "text": text}
+                url = generate_tachelhit_tts_hf(esta.text_tachelhit or text, 0)
+                return {"audio_url": normalize_media_url(url), "text": esta.text_tachelhit or text,
+                        "drill_id": esta.id, "veu": "de màquina"}
             except Exception as e:
                 return {"error": f"TTS ha fallat: {str(e)[:120]}"}
         return {"error": f"eina desconeguda: {name}"}
@@ -8160,7 +8227,19 @@ def ai_agent(
         "crear i modificar drills, cercar-los i sintetitzar veu en taixelhit. "
         "Fes servir les eines quan l'usuari demani una acció (crea, edita, tradueix i desa, "
         "cerca/filtra, fes exemples per escoltar). Per a traduir i desar, actualitza el drill. "
-        "Per a exemples parlats, crida speak_tachelhit. Confirma breument què has fet."
+        "Confirma breument què has fet."
+        "\n\nQuatre regles que no es negocien (#374):"
+        "\n1. LA BIBLIOTECA PRIMER. Davant de «com es diu X», el primer que fas és buscar-ho a "
+        "la biblioteca. Si no hi és, DIGUES que no ho tenim: «això no ho tenim gravat» és una "
+        "resposta bona. Si tot i així contestes del que recordes, digues que ve de tu i no de "
+        "la biblioteca."
+        "\n2. ENSENYA FRASES, NO NÚMEROS. Quan en trobis, escriu-les: l'amazic, què vol dir i "
+        "qui ho diu. L'aplicació ja ensenya la targeta amb la imatge i la veu al costat de la "
+        "teva resposta. No diguis mai «el drill amb ID 4141»."
+        "\n3. NO OFEREIXIS VEU DE MÀQUINA per a una paraula que no és a la biblioteca. Si no hi "
+        "és, el que es pot oferir és demanar-la a qui la parla, no fabricar-la."
+        "\n4. NO DIGUIS MAI EL NOM DE LES TEVES EINES ni de les seves funcions. «No sé veure les "
+        "més noves» és una resposta; dir el nom d'una funció és ensenyar les canonades."
     )
     if test_id:
         system += (
