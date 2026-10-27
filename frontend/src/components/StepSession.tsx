@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaCheck, FaLightbulb, FaMicrophone, FaPlay, FaTimes } from 'react-icons/fa';
 import { api, type PracticeStep } from '../api';
-import { getMediaUrl } from '../config';
+import { getMediaUrl, getUserName } from '../config';
 import { toast } from '../toast';
 import type { Drill } from '../types';
 import { preferredRecorderMime } from '../utils/media';
@@ -242,10 +242,40 @@ export default function StepSession({ testId, title, onExit }: Props) {
     if (drill) api.reviewGrade(drill.id, ok ? 3 : 1).catch(() => {});
   };
 
+  // Quan s'acaba, queda constància que s'ha jugat: fins ara una pràctica jugada amb passos no
+  // escrivia cap intent i les seves estadístiques sortien sempre a zero (#218). Si no es pot
+  // desar, no passa res de cara a qui estudia: la sessió ja és feta.
+  // L'hora d'inici es pren amb el primer pas que es veu, no en pintar: una crida impura al cos
+  // del component torna a córrer a cada render.
+  const començat = useRef<number | null>(null);
+  const desat = useRef(false);
+  const tornaHi = () => {
+    setI(0); setKnew(0); setDone(false);
+    desat.current = false;
+  };
+  // El rellotge de la sessió: comença quan la sessió comença i torna a començar amb «Torna-hi».
+  useEffect(() => { if (!done) començat.current = Date.now(); }, [done]);
+
+  const acaba = () => {
+    setDone(true);
+    if (desat.current || !steps) return;
+    desat.current = true;
+    const preguntes = steps.filter((s) => s.kind !== 'note').length;
+    if (!preguntes) return;
+    api.saveAttempt({
+      test_id: testId,
+      score: Math.round((knew / preguntes) * 100),
+      total_questions: preguntes,
+      correct_answers: knew,
+      time_taken_seconds: Math.max(1, Math.floor((Date.now() - (començat.current ?? Date.now())) / 1000)),
+      user_name: getUserName() || null,
+    }).catch(() => {});
+  };
+
   const next = () => {
     audioRef.current?.pause();
     if (!steps) return;
-    if (i + 1 >= steps.length) { setDone(true); return; }
+    if (i + 1 >= steps.length) { acaba(); return; }
     setI(i + 1);
   };
   const markAndNext = (ok: boolean) => {
@@ -286,7 +316,7 @@ export default function StepSession({ testId, title, onExit }: Props) {
           <p style={{ margin: 0, color: 'var(--text-soft)', fontSize: 14 }}>Feta. Les que t’han costat tornaran al repàs.</p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <button onClick={() => { setI(0); setKnew(0); setDone(false); }} style={btn('ghost')}>Torna-hi</button>
+          <button onClick={tornaHi} style={btn('ghost')}>Torna-hi</button>
           <button onClick={onExit} style={btn('primary')}>Fet</button>
         </div>
       </div>
