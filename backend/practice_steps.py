@@ -34,6 +34,11 @@ KINDS: Dict[str, tuple] = {
     "word_by_word": (True,  "lliga cada paraula amb el que vol dir"),
     "script_swap":  (True,  "llegeix-ho en l'altra escriptura"),
     "pick_spelling": (True, "tria quina de les dues maneres de dir-ho és la d'aquest parlant"),
+    # Escoltar i triar entre quatre frases ESCRITES en amazic, no entre quatre significats en
+    # català: entrena a lligar el que se sent amb el que està escrit, que és el pas que falta per
+    # poder llegir el que ja s'entén d'orella (#387). La resposta bona és sempre `text_tachelhit`
+    # —escrit per algú—: la lectura de màquina viu a `text_tachelhit_suggested` i no hi entra.
+    "pick_written": (True, "escolta i tria quina de les quatre frases escrites és"),
     "note":         (False, "llegeix: una explicació, un títol, una imatge"),
 }
 
