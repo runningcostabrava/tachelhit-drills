@@ -556,7 +556,10 @@ function OneStory({ slug }: { slug: string }) {
                 <img src={thumb(getMediaUrl(d.image_url), 760)} alt=""
                      loading="lazy" decoding="async"
                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                     style={{ width: '100%', maxHeight: 260, objectFit: 'cover', borderRadius: 'var(--r-md)', display: 'block' }} />
+                     // Sencer, i no retallat. Amb un topall d'alçada i `cover` es perdia mitja
+                     // escena: justament el llop que mira, o el xai que s'aparta. Un dibuix que
+                     // ha d'explicar què passa no es pot ensenyar a trossos.
+                     style={{ width: '100%', height: 'auto', aspectRatio: '4 / 3', objectFit: 'cover', borderRadius: 'var(--r-md)', display: 'block' }} />
               )}
               <div style={{ display: 'flex', gap: 10 }}>
               {/* Amb la història engegada, el ▶ d'una línia hi porta la lectura en comptes de
