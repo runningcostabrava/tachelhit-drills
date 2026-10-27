@@ -8040,13 +8040,21 @@ def _agent_executor(db, user=None):
                 DrillModel.text_tachelhit_latin.ilike(text),
                 DrillModel.text_tachelhit.ilike("%%%s%%" % text))).first()
             if esta is None:
-                # i, si no casa lletra a lletra, pel SO: «aghrum» i «aɣrum» són la mateixa paraula
+                # i, si no casa lletra a lletra, pel SO: «aghrum» i «aɣrum» són la mateixa
+                # paraula. Primer per la clau desada (`text_key`, que està indexada); les frases
+                # velles no en tenen, i per a aquelles es calcula, però llegint només dues
+                # columnes en comptes d'aixecar cinc mil objectes sencers.
                 clau = transliteration.phonemic_key(text)
                 if clau:
-                    for d in db.query(DrillModel).filter(
-                            DrillModel.text_tachelhit.isnot(None), DrillModel.text_tachelhit != "").limit(5000):
-                        if transliteration.phonemic_key(d.text_tachelhit or "") == clau:
-                            esta = d
+                    esta = db.query(DrillModel).filter(DrillModel.text_key == clau).first()
+                if esta is None and clau:
+                    files = (db.query(DrillModel.id, DrillModel.text_tachelhit)
+                             .filter(DrillModel.text_tachelhit.isnot(None),
+                                     DrillModel.text_tachelhit != "",
+                                     DrillModel.text_key.is_(None)).limit(4000).all())
+                    for did, diu in files:
+                        if transliteration.phonemic_key(diu or "") == clau:
+                            esta = db.query(DrillModel).filter(DrillModel.id == did).first()
                             break
             if esta is None:
                 return {"error": "«%s» no és a la biblioteca. No ho diu ningú, i una veu de màquina "
