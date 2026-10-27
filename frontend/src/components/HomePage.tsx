@@ -71,7 +71,14 @@ export default function HomePage() {
   }, []);
 
   const n = (x?: number) => (x === undefined ? '…' : x.toLocaleString('ca-ES'));
-  const pending = (due?.due || 0) + (due?.new || 0);
+  // El que toca AVUI és el que ja has vist i torna, i prou.
+  //
+  // Aquest número era `due + new`, i `new` és tota la biblioteca que encara no has vist: la
+  // portada deia «Repassa 4815» quan el que tocava eren quatre frases (#416). Era fals, era
+  // desanimador, i no es podia arribar a zero mai, perquè cada frase que entra a la biblioteca
+  // el feia pujar. Les que no has vist mai són una invitació, no un deute, i es diuen a part.
+  const toca = due?.due || 0;
+  const noVistes = due?.new || 0;
   const voiced = d && d.library.sentences ? Math.round((d.library.with_voice / d.library.sentences) * 100) : 0;
 
   return (
@@ -121,17 +128,19 @@ export default function HomePage() {
 
       {/* El que toca ara. Una sola cosa, grossa: si tens repàs pendent, el repàs. */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 26 }}>
-        <button onClick={() => navigate(pending ? '/player?mode=review' : '/player')}
-                style={{ flex: '1 1 260px', display: 'inline-flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderRadius: 'var(--r-lg)', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', color: '#fff', background: pending ? 'var(--saffron)' : 'var(--brand-gradient)', boxShadow: 'var(--shadow-brand)' }}>
-          {pending ? <FaRedo size={18} /> : <FaPlay size={16} />}
+        <button onClick={() => navigate(toca ? '/player?mode=review' : '/player')}
+                style={{ flex: '1 1 260px', display: 'inline-flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderRadius: 'var(--r-lg)', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', color: '#fff', background: toca ? 'var(--saffron)' : 'var(--brand-gradient)', boxShadow: 'var(--shadow-brand)' }}>
+          {toca ? <FaRedo size={18} /> : <FaPlay size={16} />}
           <span style={{ flex: 1 }}>
             <span style={{ display: 'block', fontWeight: 800, fontSize: 16 }}>
-              {pending ? `Repassa ${pending}` : 'Practica'}
+              {toca ? `Repassa ${n(toca)}` : 'Practica'}
             </span>
             <span style={{ display: 'block', fontSize: 12.5, opacity: 0.9 }}>
-              {pending
-                ? `${due?.due || 0} per repassar · ${due?.new || 0} de nou`
-                : 'Tot repassat: fes una volta per la biblioteca'}
+              {toca
+                ? `${toca === 1 ? 'Una frase et toca' : `${n(toca)} frases et toquen`} avui`
+                : noVistes
+                  ? 'Res per repassar avui: comença frases noves quan vulguis'
+                  : 'Tot repassat: fes una volta per la biblioteca'}
             </span>
           </span>
           {streak > 0 && (
@@ -157,6 +166,14 @@ export default function HomePage() {
           <FaChevronRight size={12} style={{ color: 'var(--text-muted)' }} />
         </button>
       </div>
+
+      {/* I les que no has vist mai, dites com el que són: una invitació i no un deute (#416). */}
+      {noVistes > 0 && (
+        <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: '-16px 0 26px', lineHeight: 1.55 }}>
+          Hi ha {n(noVistes)} {noVistes === 1 ? 'frase' : 'frases'} que encara no has vist.
+          No cal fer-les totes: comença quan vulguis i el repàs ja te les anirà tornant.
+        </p>
+      )}
 
       {/* Com funciona això, en quatre passos.
           L'amo: «pensa sempre en el fàcil que sigui per l'usuari entendre-ho tot i entendre el
