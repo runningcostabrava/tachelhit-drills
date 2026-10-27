@@ -59,6 +59,17 @@ class Drill(Base):
     # A variant: the same sentence as another speaker says it (their words, their voice, their town),
     # created from a take whose own words differ from the drill's; the original lists its variants
     variant_of = Column(Integer, ForeignKey("drills.id"), nullable=True, index=True)
+    # De quina MENA és la relació amb l'original (#332). Un sinònim no és una variant dialectal:
+    #   «so»      ho diem igual però ho escrivim o ho pronunciem diferent → la mateixa paraula;
+    #   «paraula» al meu poble, per dir això, en diem una altra → una altra manera de dir-ho.
+    # Per a qui aprèn no és el mateix: la primera li diu com sona la paraula que està estudiant,
+    # la segona li ensenya una paraula nova. `None` vol dir que ningú no ho ha dit, i no
+    # s'endevina.
+    variant_kind = Column(String, nullable=True)
+    # El que qui l'escriu vol dir d'aquesta versió seva («així ho deia la meva àvia»). Hi havia
+    # el camp a la crida i no a la taula: `POST /drills/{id}/variant` petava amb un TypeError
+    # abans d'escriure res, de manera que «digues-ho com ho dius tu» sense gravar no funcionava.
+    variant_note = Column(Text, nullable=True)
     # Word by word: JSON list of {"shi": word as written, "tif": its Tifinagh, "ca": the Catalan
     # word(s) it answers to or "—"}; written by the gloss pass, shown under the sentence
     glosses = Column(Text, nullable=True)
@@ -405,6 +416,15 @@ class Recording(Base):
     is_native = Column(Boolean, nullable=True)              # a native speaker's take, or a learner's
     license = Column(String, nullable=True, default="CC-BY-SA")
     text = Column(Text, nullable=True)       # the sentence as THIS speaker says it, when their dialect's words differ
+    # «Les mateixes paraules, però no sona igual» (#332). Una persona pot gravar sense tocar la
+    # transcripció i tot i així estar dient sons que la transcripció no recull: no són altres
+    # paraules, és la mateixa paraula dita d'una altra manera. Marcar-ho fa que algú ho miri, en
+    # comptes que la fitxa digui que es diu d'una manera i la veu en digui una altra sense que
+    # consti enlloc.
+    sounds_differ = Column(Boolean, nullable=True)
+    #: Si aquesta presa porta text propi, de quina mena és respecte del de la frase: «so» o
+    #: «paraula» (#332). `None` = no s'ha dit.
+    variant_kind = Column(String, nullable=True)
     date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 class ReviewLog(Base):
