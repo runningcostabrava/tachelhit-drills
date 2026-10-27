@@ -279,3 +279,41 @@ def test_the_sentence_itself_can_be_the_key():
     frases = [{"id": 99, "shi": "ur ssinɣ", "ca": "no ho sé"}]
     bo = analisi.neteja({"ur ssinɣ": {"analisi": "«ur» nega el verb.", "unitats": []}}, frases)
     assert set(bo) == {99}
+
+def test_a_cut_answer_keeps_the_entries_that_are_whole():
+    """Una resposta que s'acaba a mitja clau no pot costar la tanda sencera.
+
+    Això va passar de debò: 37 línies en una crida, 7.874 caràcters que s'acaben en «"id 7», i
+    cap JSON que es pogués llegir. Es van perdre les 37 —i hi havia una trentena d'anàlisis
+    senceres escrites a dins— i es van pagar igual (#357).
+    """
+    import analisi
+    frases = [{"id": 10, "shi": "ur ssinɣ", "ca": "no ho sé"},
+              {"id": 11, "shi": "is tssnt?", "ca": "ho saps?"},
+              {"id": 12, "shi": "mani?", "ca": "on?"}]
+    tallada = ('{"id 10": {"analisi": "Frase negativa: «ur» nega el verb «ssinɣ».", '
+               '"unitats": ["negacio"]}, '
+               '"id 11": {"analisi": "Pregunta amb «is» al davant.", "unitats": ["preguntes"]}, '
+               '"id 1')
+    bo = analisi.neteja(analisi.resposta_json(tallada), frases)
+    assert set(bo) == {10, 11}          # les senceres es desen
+    assert 12 not in bo                 # la que va quedar a mitges, no
+
+
+def test_the_sentences_are_asked_for_twelve_at_a_time(monkeypatch):
+    """Qui truca no pot saber quant ocupa una anàlisi: el mòdul reparteix la feina."""
+    import analisi, gemini_client, json as _json
+    frases = [{"id": 100 + i, "shi": "ur ssin%d" % i, "ca": "no ho se %d" % i} for i in range(25)]
+    tandes = []
+
+    def respon(sys_, contents, **k):
+        text = contents[0]["text"]
+        meves = [f for f in frases if ("«%s»" % f["shi"]) in text]
+        tandes.append(len(meves))
+        return _json.dumps({str(f["id"]): {"analisi": "Frase negativa: «ur» nega el verb.",
+                                           "unitats": ["negacio"]} for f in meves})
+
+    monkeypatch.setattr(gemini_client, "gemini_generate", respon)
+    bo = analisi.escriu(frases)
+    assert tandes == [12, 12, 1]                  # 25 frases, tres crides, cap de més de dotze
+    assert len(bo) == 25 and set(bo) == {f["id"] for f in frases}
