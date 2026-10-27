@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { howLongAgo, onData, type StaleWhy } from '../utils/dataState';
 
@@ -29,6 +29,37 @@ export default function DataNotice() {
     if (e.kind === 'fresh') setFresh(true);
   }), []);
 
+  /**
+   * Quant ocupa això a baix de tot, dit a la pàgina sencera.
+   *
+   * Aquest avís i la barra de comandaments d'una història viuen tots dos a `bottom: 0` i no se
+   * sabien l'un de l'altre: l'avís guanyava i qui escoltava es quedava sense poder aturar ni
+   * repetir (#393). Pujar el `zIndex` de la barra només hauria canviat qui tapa qui, i l'avís
+   * diu una cosa que s'ha de saber —que el que es veu no ve del servidor.
+   *
+   * Amb `--peu-encastat`, el que estigui encastat a baix s'enfila per sobre d'aquest avís en
+   * comptes de barallar-s'hi, i val per a qualsevol barra que vingui després.
+   */
+  const caixa = useRef<HTMLDivElement | null>(null);
+  const visible = waking || !!stale;
+  useEffect(() => {
+    const arrel = document.documentElement;
+    if (!visible) { arrel.style.removeProperty('--peu-encastat'); return; }
+    const mesura = () => {
+      const h = caixa.current?.getBoundingClientRect().height;
+      if (h) arrel.style.setProperty('--peu-encastat', `${Math.round(h)}px`);
+    };
+    mesura();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(mesura) : null;
+    if (ro && caixa.current) ro.observe(caixa.current);
+    window.addEventListener('resize', mesura);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', mesura);
+      arrel.style.removeProperty('--peu-encastat');
+    };
+  }, [visible, fresh]);
+
   if (!waking && !stale) return null;
 
   const bar: React.CSSProperties = {
@@ -42,14 +73,14 @@ export default function DataNotice() {
 
   if (waking) {
     return (
-      <div style={bar} role="status">
+      <div ref={caixa} style={bar} role="status">
         <span>Despertant el servidor… El servei gratuït s’adorm quan ningú no l’usa i triga una mica a tornar.</span>
       </div>
     );
   }
 
   return (
-    <div style={bar} role="status">
+    <div ref={caixa} style={bar} role="status">
       {fresh ? (
         <>
           <span>Això és del que tenies desat, {howLongAgo(stale!.at)}. Al servidor hi ha una altra cosa.</span>

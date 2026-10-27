@@ -656,9 +656,13 @@ const secundari: React.CSSProperties = {
 const card: React.CSSProperties ={ textAlign: 'left', padding: 12, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', color: 'var(--text)', fontFamily: 'inherit' };
 const primary: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' };
 const back: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: 0, border: 'none', background: 'none', color: 'var(--brand-1)', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' };
-/** Els comandaments es queden a baix de tot: amb 219 línies, el play de dalt no es torna a veure. */
+/** Els comandaments es queden a baix de tot: amb 219 línies, el play de dalt no es torna a veure.
+ *
+ *  `--peu-encastat` és el que ja ocupa l'avís de dalt de la pàgina («això és del que tenies
+ *  desat»): la barra s'hi enfila per sobre en comptes de barallar-s'hi pel mateix lloc, que és el
+ *  que deixava qui escoltava sense poder aturar ni repetir (#393). */
 const barra: React.CSSProperties = {
-  position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 900,
+  position: 'fixed', left: 0, right: 0, bottom: 'var(--peu-encastat, 0px)', zIndex: 900,
   display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
   padding: '10px 14px calc(10px + env(safe-area-inset-bottom, 0px))',
   background: 'var(--surface)', borderTop: '1px solid var(--border)',
