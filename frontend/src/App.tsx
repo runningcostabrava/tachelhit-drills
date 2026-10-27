@@ -5,7 +5,7 @@ import axios from 'axios';
 import { API_BASE } from './config';
 import { api } from './api';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaBookOpen, FaMicrophone, FaInfo, FaSearch, FaPlus, FaFeatherAlt } from 'react-icons/fa';
+import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaBookOpen, FaMicrophone, FaInfo, FaSearch, FaPlus, FaFeatherAlt, FaFont } from 'react-icons/fa';
 import { syncManager } from './services/OfflineSyncManager';
 import * as cuaDeVeus from './services/cuaDeVeus';
 import ToastHost from './components/ToastHost';
@@ -13,6 +13,7 @@ import StaleBuildBanner from './components/StaleBuildBanner';
 import DataNotice from './components/DataNotice';
 import AiCopilot from './components/AiCopilot';
 import AboutPanel from './components/AboutPanel';
+import MenuMobil from './components/MenuMobil';
 import './App.css';
 
 // Route-level code splitting: each page loads its chunk on first visit,
@@ -43,6 +44,7 @@ const LessonEditor = lazy(() => import('./components/LessonEditor'));
 const StoriesPage = lazy(() => import('./components/StoriesPage'));
 const ListenPage = lazy(() => import('./components/ListenPage'));
 const GrammarPage = lazy(() => import('./components/GrammarPage'));
+const AlfabetPage = lazy(() => import('./components/AlfabetPage'));
 const PracticeEditor = lazy(() => import('./components/PracticeEditor'));
 const VerifyQueue = lazy(() => import('./components/VerifyQueue'));
 
@@ -170,6 +172,9 @@ function App() {
     { to: '/stories', label: 'Històries', Icon: FaFeatherAlt },
     { to: '/metode', label: 'Mètode', Icon: FaBookOpen },
     { to: '/grammar', label: 'Gramàtica', Icon: FaBook },
+    // Els sons i l'escriptura són una secció pròpia, al mateix nivell que la Gramàtica i el
+    // Mètode (#368): l'abecedari que sona no és un apèndix d'una lliçó.
+    { to: '/alfabet', label: 'Sons', Icon: FaFont },
     { to: '/tests', label: 'Pràctica', Icon: FaGraduationCap },
     { to: '/veus', label: 'Posa-hi veu', Icon: FaMicrophone },   // the route keeps its old name: links point at it
     { to: '/video-creator', label: 'Captura', Icon: FaVideo },
@@ -199,33 +204,43 @@ function App() {
         }}>
           <button onClick={() => navigate('/')} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
             <span style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'var(--brand-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>ⵣ</span>
-            {!compactNav && <span style={{ fontWeight: 800, fontSize: '16px', color: 'var(--text)', letterSpacing: '-0.01em' }}>Tamazight</span>}
+            <span style={{ fontWeight: 800, fontSize: '16px', color: 'var(--text)', letterSpacing: '-0.01em' }}>Tamazight</span>
           </button>
-          <div style={{ display: 'flex', gap: compactNav ? '2px' : '4px', overflowX: 'auto', flex: 1, minWidth: 0, padding: '2px 0', scrollbarWidth: 'none' }}>
-            {navLinks.map(l => (
-              <button key={l.to} onClick={() => navigate(l.to)} title={l.label} aria-label={l.label}
-                style={navBtn(location.pathname === l.to || (l.to !== '/' && location.pathname.startsWith(l.to + '/')))}>
-                <l.Icon size={compactNav ? 16 : 14} />{!compactNav && l.label}
-              </button>
-            ))}
-          </div>
+          {/* Al mòbil les seccions són a baix, amb nom i al polze (#372): aquí dalt només hi
+              queda el que es fa servir des de qualsevol pantalla, amb objectius de 44 px. */}
+          {compactNav ? <div style={{ flex: 1, minWidth: 0 }} /> : (
+            <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', flex: 1, minWidth: 0, padding: '2px 0', scrollbarWidth: 'none' }}>
+              {navLinks.map(l => (
+                <button key={l.to} onClick={() => navigate(l.to)} title={l.label} aria-label={l.label}
+                  style={navBtn(location.pathname === l.to || (l.to !== '/' && location.pathname.startsWith(l.to + '/')))}>
+                  <l.Icon size={14} />{l.label}
+                </button>
+              ))}
+            </div>
+          )}
           {/* Cercar una frase: a l'abast des de qualsevol pantalla. L'amo ho va dir: «una cosa
               primordial a l'aplicació hauria de ser buscar una frase o paraula». */}
-          {/* Afegir una frase: el + que l'amo trobava a faltar, al costat de la lupa. */}
-          <button onClick={() => navigate('/afegeix')} title="Afegeix una frase" aria-label="Afegeix una frase"
-                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: compactNav ? 33 : 35, height: compactNav ? 33 : 35, borderRadius: 'var(--r-pill)', cursor: 'pointer', border: '1px solid var(--brand-1)', background: 'var(--surface)', color: 'var(--brand-1)' }}>
-            <FaPlus size={14} />
-          </button>
+          {/* Fer una frase nova: amb nom, no només una icona. Al mòbil té el lloc del mig de la
+              barra de baix, i aquí a l'escriptori diu què és. */}
+          {!compactNav && (
+            <button onClick={() => navigate('/afegeix')} title="Fes una frase nova" aria-label="Fes una frase nova"
+                    style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 7, whiteSpace: 'nowrap', padding: '9px 14px', height: 35, boxSizing: 'border-box', borderRadius: 'var(--r-pill)', cursor: 'pointer', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 700, fontSize: '13px' }}>
+              <FaPlus size={13} /> Nova frase
+            </button>
+          )}
           <button onClick={() => navigate('/cerca')} title="Cerca una frase" aria-label="Cerca una frase"
-                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: compactNav ? 33 : 35, height: compactNav ? 33 : 35, borderRadius: 'var(--r-pill)', cursor: 'pointer', border: '1px solid var(--border)', background: location.pathname === '/cerca' ? 'var(--brand-gradient-soft)' : 'var(--surface)', color: location.pathname === '/cerca' ? 'var(--brand-1)' : 'var(--text-soft)' }}>
-            <FaSearch size={13} />
+                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: compactNav ? 44 : 35, height: compactNav ? 44 : 35, borderRadius: 'var(--r-pill)', cursor: 'pointer', border: '1px solid var(--border)', background: location.pathname === '/cerca' ? 'var(--brand-gradient-soft)' : 'var(--surface)', color: location.pathname === '/cerca' ? 'var(--brand-1)' : 'var(--text-soft)' }}>
+            <FaSearch size={compactNav ? 16 : 13} />
           </button>
           <ReviewNavButton compact={compactNav} />
-          {/* Per què existeix això: al menú, que és d'on es pot arribar des de qualsevol pantalla */}
-          <button onClick={() => setAboutOpen(true)} title="Per què existeix això" aria-label="Per què existeix això"
-                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: compactNav ? 33 : 35, height: compactNav ? 33 : 35, borderRadius: 'var(--r-pill)', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)' }}>
-            <FaInfo size={13} />
-          </button>
+          {/* Per què existeix això: al menú, que és d'on es pot arribar des de qualsevol pantalla.
+              Al mòbil és una fila amb nom dins de «Més», que no competeix amb les seccions. */}
+          {!compactNav && (
+            <button onClick={() => setAboutOpen(true)} title="Per què existeix això" aria-label="Per què existeix això"
+                    style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 35, height: 35, borderRadius: 'var(--r-pill)', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)' }}>
+              <FaInfo size={13} />
+            </button>
+          )}
           {/* Les veus que encara no han pujat.
               Una cua silenciosa és una cua que algú es pensa que ha perdut: si una presa espera
               el senyal, s'ha de veure que hi és i que puja sola (#370). */}
@@ -235,12 +250,14 @@ function App() {
               <FaMicrophone size={11} /> {veusPendents}
             </span>
           )}
-          <button onClick={() => setAiOpen(v => !v)} title="Copilot" aria-label="Copilot" style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: compactNav ? '9px 10px' : '9px 12px', borderRadius: 'var(--r-pill)', cursor: 'pointer', border: 'none', background: aiOpen ? 'var(--brand-1)' : 'var(--brand-gradient)', color: '#fff' }}><FaComments size={15} /></button>
-          <button onClick={() => navigate('/profile')} title="Perfil" aria-label="Perfil" style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: compactNav ? '9px 10px' : '9px 12px', borderRadius: 'var(--r-pill)', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)' }}><FaUser size={15} /></button>
+          {!compactNav && <button onClick={() => setAiOpen(v => !v)} title="Copilot" aria-label="Copilot" style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '9px 12px', borderRadius: 'var(--r-pill)', cursor: 'pointer', border: 'none', background: aiOpen ? 'var(--brand-1)' : 'var(--brand-gradient)', color: '#fff' }}><FaComments size={15} /></button>}
+          {!compactNav && <button onClick={() => navigate('/profile')} title="Perfil" aria-label="Perfil" style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '9px 12px', borderRadius: 'var(--r-pill)', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)' }}><FaUser size={15} /></button>}
         </nav>
       )}
 
-      <main style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      {showNav && compactNav && <MenuMobil onCopilot={() => setAiOpen(true)} onAbout={() => setAboutOpen(true)} />}
+
+      <main style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', paddingBottom: 'var(--menu-mobil-h, 0px)' }}>
       <Suspense fallback={<RouteLoader />}>
       <Routes>
         <Route path="/" element={<HomePage />} />
@@ -272,6 +289,7 @@ function App() {
         <Route path="/listen" element={<ListenPage />} />
         <Route path="/stories" element={<StoriesPage />} />
         <Route path="/stories/:slug" element={<StoriesPage />} />
+        <Route path="/alfabet" element={<AlfabetPage />} />
         <Route path="/grammar" element={<GrammarPage />} />
         <Route path="/grammar/:slug" element={<GrammarPage />} />
         <Route path="/grammar/:slug/editor" element={<LessonEditor />} />

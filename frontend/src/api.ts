@@ -243,6 +243,9 @@ export interface HomeData {
   covers: { method: string | null; grammar: string | null; practice: string | null; library: string | null; stories: string | null; capture: string | null };
   method: { chapters: number; written: number };
   grammar: { units: number; with_lesson: number };
+  /** Quantes lletres de l'abecedari ja sonen (#368). Opcional: un servidor que encara no el
+   *  serveix no ha de deixar la portada en blanc. */
+  sounds?: { total: number; amb_so: number; mudes: string[] };
   practice: { all: number; mine: number };
   you: { signed_in: boolean; name: string | null; is_admin: boolean; recordings: number };
 }
@@ -646,6 +649,11 @@ export const api = {
   /** Quines d'aquestes paraules es poden sentir, en un sol viatge (#271). */
   wordsHaveAudio: (words: string[]) =>
     request<{ words: Record<string, boolean> }>(`/words/have-audio?words=${encodeURIComponent(words.join(','))}`),
+  /** L'abecedari: cada lletra, com sona i on es pot sentir (#368). */
+  alfabet: () => request<Abecedari>('/alfabet'),
+  alfabetLletra: (lletra: string, limit = 8) =>
+    request<Lletra>(`/alfabet/${encodeURIComponent(lletra)}?limit=${limit}`),
+  alfabetParelles: (perSo = 4) => request<{ parelles: GrupParelles[] }>(`/alfabet/parelles?per_so=${perSo}`),
   wordAlignStatus: () => request<{ running: boolean; done: number; words: number; failed: number; stored: number; recordings: number }>('/words/align/status'),
   runWordAlign: (limit = 200, redo = false) =>
     request<{ started: boolean }>(`/words/align/run?limit=${limit}&redo=${redo}`, { method: 'POST' }),
@@ -789,6 +797,28 @@ export interface PracticeCollections {
 export interface WordClip {
   word: string; drill_id: number; audio_url: string; start: number; end: number;
   speaker: string | null; source: string; sentence: string | null; meaning: string | null;
+}
+/** Una paraula de la biblioteca que porta una lletra, amb el tall on se la sent. */
+export interface MotDeLletra extends WordClip {
+  key: string; tif: string; region: string | null;
+  /** On sona la lletra dins la paraula: al començament, al mig o al final. */
+  posicio: 'inici' | 'mig' | 'final' | null;
+}
+/** Una lletra de l'abecedari. `sona` és fals quan cap paraula nostra amb aquesta lletra no es
+ *  pot sentir encara, i llavors es diu (#302, #368). */
+export interface Lletra {
+  tif: string; lat: string; com: string; altres?: string[];
+  mena?: 'vocal' | 'emfatica' | 'labialitzada' | 'gola';
+  quantes?: number; sona: boolean; exemples: MotDeLletra[];
+}
+export interface Abecedari {
+  que_es: { titol: string; cos: string[] };
+  lletres: Lletra[]; mudes: string[]; paraules: number; amb_so: number; total: number;
+}
+/** Parelles de paraules que es distingeixen per un sol so, totes dues amb veu. */
+export interface GrupParelles {
+  so_a: string; so_b: string; tif_a: string; tif_b: string; quantes: number;
+  parelles: { so_a: string; so_b: string; posicio: number; a: MotDeLletra; b: MotDeLletra }[];
 }
 /** A whole story or song: a group of drills from one source, put back in the order they are
  *  spoken. `missing_words` = lines that can be heard but not read yet (#189). */

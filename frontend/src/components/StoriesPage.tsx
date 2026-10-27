@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FaChevronLeft, FaCrosshairs, FaExternalLinkAlt, FaHeadphones, FaPause, FaPlay, FaRedo, FaStepBackward, FaStepForward, FaStop } from 'react-icons/fa';
+import { FaChevronLeft, FaCrosshairs, FaInfinity, FaExternalLinkAlt, FaHeadphones, FaPause, FaPlay, FaRedo, FaStepBackward, FaStepForward, FaStop } from 'react-icons/fa';
 import { api, type Story, type StoryPage, type WordTime } from '../api';
 import { getMediaUrl, thumb } from '../config';
 import type { Drill } from '../types';
@@ -19,6 +19,10 @@ import { ara, continua, esPausat, gap, keepAwake, nowPlaying, pausa, ritme, say,
 //
 // A line whose Amazigh words nobody has written down keeps its place and says so. A story with
 // holes is still a story, and the hole is work somebody can do.
+
+/** Quant s'espera, sense que ningú toqui la pantalla, per tornar a enganxar-se a la veu.
+ *  Prou per mirar enrere una línia o dues, i prou poc per no haver de demanar-ho (#406). */
+const TORNA_A_SEGUIR_MS = 5000;
 
 export default function StoriesPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -258,6 +262,9 @@ function OneStory({ slug }: { slug: string }) {
    */
   const torn = useRef(0);
   const [pausat, setPausat] = useState(false);
+  /** Tornar a començar en acabar. La referència és la que llegeix la fila mentre corre. */
+  const [enBucle, setEnBucle] = useState(false);
+  const bucle = useRef(false);
   const [vel, setVel] = useState(1);
   // Estudiar-la d'orella: sona una línia i es tria quina de les quatre escrites és (#387).
   const [exercici, setExercici] = useState(false);
@@ -275,12 +282,38 @@ function OneStory({ slug }: { slug: string }) {
     linies.current[at]?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }, [at, segueix]);
 
-  // Qui llegeix mana sobre la pantalla: tocar-la atura el seguiment fins que el torni a demanar.
+  /**
+   * Qui llegeix mana sobre la pantalla —mentre mana (#406).
+   *
+   * Abans, el primer gest del dit apagava el seguiment i no es tornava a engegar fins al pròxim
+   * play. A l'escriptori gairebé no es nota: la pàgina ja hi és i no cal tocar-la. **Al mòbil
+   * era el cas normal i la història no seguia mai la veu**: cada línia ocupa mig pam de
+   * pantalla, per arribar al play has de desplaçar, i després de prémer desplaces per mirar —
+   * i el seguiment ja era mort per a la resta del conte.
+   *
+   * Ara es torna a enganxar sol quan fa una estona que no toques res, com fa qualsevol
+   * reproductor amb lletra: et deixa mirar enrere i torna a la veu quan pares. El botó de la
+   * barra segueix manant per sobre: si el poses en quiet a posta, es queda quiet.
+   */
+  const aposta = useRef(false);        // «quieta» demanat amb el botó: això no es desfà sol
+  const rellotgeSeguir = useRef<number | null>(null);
   useEffect(() => {
-    const seu = () => { if (seguint.current) posaSeguiment(false); };
+    const seu = () => {
+      if (aposta.current) return;
+      if (seguint.current) posaSeguiment(false);
+      if (rellotgeSeguir.current) window.clearTimeout(rellotgeSeguir.current);
+      rellotgeSeguir.current = window.setTimeout(() => {
+        rellotgeSeguir.current = null;
+        if (!aposta.current) posaSeguiment(true);
+      }, TORNA_A_SEGUIR_MS);
+    };
     window.addEventListener('wheel', seu, { passive: true });
     window.addEventListener('touchmove', seu, { passive: true });
-    return () => { window.removeEventListener('wheel', seu); window.removeEventListener('touchmove', seu); };
+    return () => {
+      window.removeEventListener('wheel', seu);
+      window.removeEventListener('touchmove', seu);
+      if (rellotgeSeguir.current) window.clearTimeout(rellotgeSeguir.current);
+    };
   }, []);
 
   // Un so, i s'espera que s'acabi. El reproductor és el de tota l'app: un sol element, dins el
@@ -372,6 +405,7 @@ function OneStory({ slug }: { slug: string }) {
   const vesA = (j: number) => {
     if (!page) return;
     const n = Math.max(0, Math.min(page.drills.length - 1, j));
+    aposta.current = false;        // prémer un play torna a demanar que segueixi
     posaSeguiment(true);
     setPausat(false);
     if (readingRef.current) {
@@ -417,6 +451,7 @@ function OneStory({ slug }: { slug: string }) {
     stop();
     if (sonava === manera) { setReading(null); setAt(null); setPausat(false); keepAwake(false); nowPlaying(null); return; }
     await gap(60);                                 // deixa acabar la fila anterior
+    aposta.current = false;
     posaSeguiment(true);                           // tornar a prémer play torna a seguir la veu
     setPausat(false);
     readingRef.current = true; setReading(manera);
@@ -452,6 +487,13 @@ function OneStory({ slug }: { slug: string }) {
       await gap(350);
       if (salt.current != null) { i = salt.current; salt.current = null; continue; }
       i++;
+      // En bucle: s'acaba el conte i torna a començar, sense tocar res. Un conte curt s'escolta
+      // tres i quatre vegades seguides mentre fas una altra cosa, i aturar-se al final per
+      // haver de prémer trenca justament això.
+      if (i >= page.drills.length && bucle.current) {
+        i = 0;
+        await gap(900);                 // una respiració entre una volta i l'altra
+      }
     }
     if (readingRef.current) { readingRef.current = false; setReading(null); setAt(null); setPausat(false); }
     keepAwake(false);
@@ -663,9 +705,18 @@ function OneStory({ slug }: { slug: string }) {
             ))}
           </div>
 
-          <button onClick={() => posaSeguiment(!segueix)}
+          {/* En bucle: el conte torna a començar tot sol en acabar. */}
+          <button onClick={() => { bucle.current = !enBucle; setEnBucle(!enBucle); }}
+                  style={{ ...xip, ...(enBucle ? xipTriat : null), display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                  title={enBucle ? 'En acabar, torna a començar' : 'En acabar, s’atura'}>
+            <FaInfinity size={11} /> {enBucle ? 'en bucle' : 'un cop'}
+          </button>
+
+          {/* Posar-ho en quiet amb el botó és una decisió, i no es desfà sola: el que es desfà
+              sol és l'aturada que ve de desplaçar amb el dit. */}
+          <button onClick={() => { aposta.current = segueix; posaSeguiment(!segueix); }}
                   style={{ ...xip, ...(segueix ? xipTriat : null), display: 'inline-flex', alignItems: 'center', gap: 5 }}
-                  title={segueix ? 'La pantalla va amb la veu' : 'La pantalla es queda on la deixis'}>
+                  title={segueix ? 'La pantalla va amb la veu' : 'La pantalla es queda on la deixis, fins que la tornis a engegar'}>
             <FaCrosshairs size={11} /> {segueix ? 'segueix la veu' : 'quieta'}
           </button>
 
@@ -695,7 +746,8 @@ const back: React.CSSProperties = { display: 'inline-flex', alignItems: 'center'
  *  escoltava es quedava sense poder aturar ni repetir; ara aquell avís és una fitxa petita a
  *  dalt a la dreta i aquí no hi ha res més amb qui barallar-se (#393, #400). */
 const barra: React.CSSProperties = {
-  position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 900,
+  // A sobre del menú del mòbil, que ara és a baix de tot (#372).
+  position: 'fixed', left: 0, right: 0, bottom: 'var(--menu-mobil-h, 0px)', zIndex: 900,
   display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
   padding: '10px 14px calc(10px + env(safe-area-inset-bottom, 0px))',
   background: 'var(--surface)', borderTop: '1px solid var(--border)',
