@@ -341,6 +341,10 @@ export interface MethodContent {
     ours?: string;
     /** La unitat de gramàtica de què va aquesta secció: d'aquí surten les nostres frases. */
     unit?: string;
+    /** Una secció de FÓRMULES: el que s'hi diu es diu sencer. El paraula per paraula hi va
+     *  tancat i amb un altre nom —«Què hi ha a dins»—, perquè desmuntar una fórmula no ajuda a
+     *  dir-la i convida a fer-ne de noves (#289). */
+    formula?: boolean;
     /** Les nostres, amb veu i imatge, dins de la secció que expliquen. */
     ours_drills?: MethodSentence[];
     ours_total?: number;
