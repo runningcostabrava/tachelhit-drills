@@ -829,6 +829,10 @@ export interface WordClip {
 /** Una paraula de la biblioteca que porta una lletra, amb el tall on se la sent. */
 export interface MotDeLletra extends WordClip {
   key: string; tif: string; region: string | null;
+  /** Qui ho diu de debò: la nostra veu, una persona amb nom, un canal, una captura (#288). */
+  veu?: { qui: string | null; mena: 'nostra' | 'persona' | 'canal' | 'captura' | 'cap'; per_imitar: boolean };
+  /** Si la diu algú que el projecte coneix. */
+  de_casa?: boolean;
   /** On sona la lletra dins la paraula: al començament, al mig o al final. */
   posicio: 'inici' | 'mig' | 'final' | null;
 }
@@ -838,10 +842,16 @@ export interface Lletra {
   tif: string; lat: string; com: string; altres?: string[];
   mena?: 'vocal' | 'emfatica' | 'labialitzada' | 'gola';
   quantes?: number; sona: boolean; exemples: MotDeLletra[];
+  /** Quantes d'aquelles paraules les diu algú que coneixem (#302): el número que converteix el
+   *  forat en una petició concreta. */
+  de_casa?: number;
 }
 export interface Abecedari {
   que_es: { titol: string; cos: string[] };
   lletres: Lletra[]; mudes: string[]; paraules: number; amb_so: number; total: number;
+  /** Les que sonen, però només en una veu que no és de casa. */
+  nomes_de_fora?: string[];
+  de_casa?: number;
 }
 /** Parelles de paraules que es distingeixen per un sol so, totes dues amb veu. */
 export interface GrupParelles {

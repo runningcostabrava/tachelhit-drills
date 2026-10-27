@@ -96,3 +96,43 @@ def test_les_parelles_surten_de_la_biblioteca_i_no_de_la_imaginacio():
     assert trobada["a"]["word"] == "tazdayt", "la del primer so va primer"
     assert trobada["posicio"] == 0, "i es diu en quina posició es diferencien"
     assert trobada["a"]["audio_url"] and trobada["b"]["audio_url"], "totes dues se senten"
+
+
+def test_primer_les_veus_de_casa_i_cap_tros_de_paraula(monkeypatch):
+    """Dues coses que es van veure servint l'abecedari de debò (#368, #288):
+
+    · l'alineament desa cada tram del text, i al recull hi ha trams solts —«a», «ig», «dg»— que
+      no són paraules i que sortien els primers justament perquè són els més curts;
+    · i el peu deia «ILoveLanguages (parlant nadiu)» com si fos algú que coneixem.
+    """
+    hdr = {"X-User-Token": register("alfabet_de_casa")}
+    # Un tros, una paraula d'un canal i una de la Halima, totes amb la mateixa lletra.
+    _mot(hdr, "ig", "tros", 31)
+    canal = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "el bosc", "text_tachelhit": "tagant", "author": "ILoveLanguages (parlant nadiu)",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/alfabet-canal.mp3"}).json()
+    from main import SessionLocal
+    from models import WordAudio
+    import word_audio
+    with SessionLocal() as db:
+        db.add(WordAudio(key=word_audio.key_of("tagant"), word="tagant", drill_id=canal["id"],
+                         start_ms=0, end_ms=600, speaker="ILoveLanguages (parlant nadiu)", source="library"))
+        db.commit()
+    _mot(hdr, "agadir", "el graner", 32)
+    _refresca()
+
+    r = client.get("/alfabet/ⴳ?limit=40").json()
+    paraules = [e["word"] for e in r["exemples"]]
+    assert "ig" not in paraules, f"un tros de dues lletres no és un exemple: {paraules}"
+    assert "agadir" in paraules and "tagant" in paraules
+    assert paraules.index("agadir") < paraules.index("tagant"),         f"primer la veu de casa, després la del canal: {paraules}"
+
+    de_casa = next(e for e in r["exemples"] if e["word"] == "agadir")
+    de_fora = next(e for e in r["exemples"] if e["word"] == "tagant")
+    assert de_casa["de_casa"] is True and de_casa["veu"]["mena"] == "nostra"
+    assert de_fora["de_casa"] is False and de_fora["veu"]["mena"] == "canal"
+
+    tot = client.get("/alfabet").json()
+    g = next(l for l in tot["lletres"] if l["lat"] == "g")
+    assert g["de_casa"] >= 1 and g["quantes"] > g["de_casa"]
+    assert "nomes_de_fora" in tot, "les lletres que només sonen en una veu de fora es diuen"

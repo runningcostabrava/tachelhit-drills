@@ -27,6 +27,7 @@ import time
 import threading
 from typing import Dict, List, Optional, Tuple
 
+import grammar
 import transliteration
 
 #: Què és aquesta escriptura, dit abans de les lletres. Del compendi d'amazic.cat (§ 1,
@@ -136,14 +137,22 @@ def _mots(db, refresca: bool = False) -> List[dict]:
         if w.key in vistos:
             continue
         fon = transliteration.phonemes(w.word)
-        if not fon:
+        # Un tros no és una paraula. L'alineament desa cada tram del text, i al recull de Beni
+        # Mellal n'hi ha de solts —«a», «p», «ig», «dg»— que no ensenyen cap lletra: eren els
+        # primers exemples de mitja taula perquè són els més curts. Dues lletres com a mínim.
+        if len(fon) < 3 or len((w.word or "").strip()) < 3:
             continue
+        # Qui ho diu, de debò: una veu d'un canal no és una persona que el projecte conegui, i
+        # sovint parla una altra varietat (#288). Aquí no es tria qui entra —totes les veus
+        # ensenyen com sona una lletra— sinó qui va primer i amb quin peu.
+        veu = grammar.qui_ho_diu(d)
         vistos[w.key] = {
             "word": w.word, "key": w.key, "tif": transliteration.to_forms(w.word)["tifinagh"],
             "fonemes": fon, "drill_id": w.drill_id, "audio_url": (d.audio_url or "").strip(),
             "start": w.start_ms / 1000.0, "end": w.end_ms / 1000.0,
             "speaker": (w.speaker or getattr(d, "author", None) or None),
             "region": getattr(d, "region", None), "source": w.source or "library",
+            "veu": veu, "de_casa": veu["mena"] in ("nostra", "persona"),
             "sentence": getattr(d, "text_tachelhit", None), "meaning": getattr(d, "text_catalan", None),
         }
     mots = list(vistos.values())
@@ -170,13 +179,19 @@ def _posicio(fon: List[str], so: str) -> Optional[str]:
     return "final" if i == len(fon) - 1 else "mig"
 
 
-def _ordena(mots: List[dict]) -> List[dict]:
-    """Primer les que diu algú amb nom, i de les seves, les paraules curtes.
+#: Qui va primer. Una paraula dita per la Halima, d'Aït Mraw, val més que la mateixa dita per un
+#: canal de vídeo que no sabem qui és; i la del corpus obert, l'última.
+_ORDRE_DE_VEU = {"nostra": 0, "persona": 1, "canal": 2, "captura": 3, "cap": 4}
 
-    Una paraula dita per Halima, d'Aït Mraw, val més que la mateixa dita per ningú en particular;
-    i una paraula curta ensenya la lletra millor que una de llarga, on es perd."""
-    return sorted(mots, key=lambda m: (m["source"] != "library", not (m.get("speaker") or "").strip(),
-                                       len(m["fonemes"])))
+
+def _ordena(mots: List[dict]) -> List[dict]:
+    """Primer les nostres veus, després les persones amb nom, i al final els canals.
+
+    I de cada grup, les paraules curtes: una paraula de tres sons ensenya la lletra millor que
+    una frase llarga, on es perd. Cap no es treu —totes ensenyen com sona— però l'ordre diu quina
+    val més, i el peu de cada exemple diu qui la diu (#288)."""
+    return sorted(mots, key=lambda m: (_ORDRE_DE_VEU.get((m.get("veu") or {}).get("mena"), 4),
+                                       m["source"] != "library", len(m["fonemes"])))
 
 
 def exemples(db, so: str, limit: int = 6) -> List[dict]:
@@ -200,16 +215,26 @@ def abecedari(db, exemples_per_lletra: int = 2) -> Dict:
         so = so_de(l)
         seves = [m for m in mots if so in m["fonemes"]]
         tria = _ordena(seves)[:max(0, exemples_per_lletra)]
+        de_casa = [m for m in seves if m.get("de_casa")]
         fora.append({
             **l,
             "quantes": len(seves),
+            # Quantes d'aquestes les diu algú que coneixem. És el número que el #302 va comptar i
+            # el que converteix el forat en una petició: no «ens falten gravacions» sinó «ens
+            # falta algú de casa que digui una paraula amb ṣ».
+            "de_casa": len(de_casa),
             "sona": bool(seves),
             "exemples": [{**{k: v for k, v in m.items() if k != "fonemes"},
                           "posicio": _posicio(m["fonemes"], so)} for m in tria],
         })
     muda = [l["lat"] for l in fora if not l["sona"]]
+    sense_casa = [l["lat"] for l in fora if l["sona"] and not l["de_casa"]]
     return {"que_es": QUE_ES, "lletres": fora, "mudes": muda,
+            # Les que només sonen en una veu que no és de casa: no són mudes, però tampoc no les
+            # diu ningú que coneguem.
+            "nomes_de_fora": sense_casa,
             "paraules": len(mots), "amb_so": sum(1 for l in fora if l["sona"]),
+            "de_casa": sum(1 for l in fora if l["de_casa"]),
             "total": len(fora)}
 
 
