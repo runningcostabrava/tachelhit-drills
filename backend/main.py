@@ -6601,7 +6601,7 @@ def word_audio_clips(word: str, limit: int = 6, db: Session = Depends(get_db)):
 
 
 @app.post("/stories/{slug}/analisi")
-def write_story_analysis(slug: str, limit: int = 40, redo: bool = False,
+def write_story_analysis(slug: str, limit: int = 12, redo: bool = False,
                          _admin: UserModel = Depends(require_admin),
                          db: Session = Depends(get_db)):
     """Desmuntar les oracions d'una història: què hi passa i quina unitat ho explica (#341).

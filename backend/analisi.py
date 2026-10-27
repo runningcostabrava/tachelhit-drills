@@ -34,6 +34,16 @@ UNITATS = {u["slug"]: u["title"] for u in grammar.UNITS}
 #: Un tros citat entre cometes dins l'anàlisi.
 _CITAT = re.compile(r"«([^»]{1,30})»")
 
+#: Frases per crida. Cada anàlisi fa de 30 a 55 paraules i a més porta les unitats que l'expliquen:
+#: trenta-set de cop no caben als tokens de sortida i la resposta arriba tallada a mitja clau. Quan
+#: això passava no es podia llegir el JSON i es perdia la tanda sencera —37 de 37—, inclosa la
+#: trentena d'anàlisis senceres que ja hi eren escrites (#357).
+PER_CRIDA = 12
+
+#: Tokens de sortida per crida. Dotze anàlisis hi caben de sobres; es deixa marge perquè una frase
+#: llarga no torni a tocar el sostre.
+MAX_TOKENS = 3000
+
 
 def _nomes_lletres(s: Optional[str]) -> str:
     return re.sub(r"[^\wⴰ-⵿]+", "", (s or "").lower())
@@ -142,13 +152,20 @@ def per_a(db, drill_ids: List[int]) -> Dict[str, dict]:
 
 
 def escriu(frases: List[dict]) -> Dict[int, dict]:
-    """Una crida: desmuntar aquesta tanda de frases."""
+    """Desmuntar aquestes frases, de dotze en dotze.
+
+    Es reparteix aquí i no a qui truca: qui truca no pot saber quant ocupa una anàlisi, i una
+    tanda que no cap no es queixa —arriba tallada i es llença sencera (#357)."""
     from gemini_client import gemini_generate
-    cru = gemini_generate(
-        "Ets un mestre d'amazic que desmunta una frase perquè qui aprèn vegi com està feta.",
-        [{"role": "user", "text": prompt(frases)}],
-        max_output_tokens=3000, temperature=0.2, timeout=240)
-    return neteja(resposta_json(cru), frases)
+    fora: Dict[int, dict] = {}
+    for i in range(0, len(frases), PER_CRIDA):
+        tanda = frases[i:i + PER_CRIDA]
+        cru = gemini_generate(
+            "Ets un mestre d'amazic que desmunta una frase perquè qui aprèn vegi com està feta.",
+            [{"role": "user", "text": prompt(tanda)}],
+            max_output_tokens=MAX_TOKENS, temperature=0.2, timeout=240)
+        fora.update(neteja(resposta_json(cru), tanda))
+    return fora
 
 
 def frases_de(db, drill_ids: List[int], refer: bool = False) -> List[dict]:
@@ -182,10 +199,34 @@ def resposta_json(cru: str) -> dict:
         d = json.loads(net)
     except Exception:
         m = re.search(r"\{.*\}", net, re.S)
-        if not m:
-            return {}
-        try:
-            d = json.loads(m.group(0))
-        except Exception:
-            return {}
+        if m:
+            try:
+                d = json.loads(m.group(0))
+                return d if isinstance(d, dict) else {}
+            except Exception:
+                pass
+        return _entrades_senceres(net)
     return d if isinstance(d, dict) else {}
+
+
+def _entrades_senceres(net: str) -> dict:
+    """D'un objecte que s'acaba a mitja clau, les entrades que SÍ que estan senceres.
+
+    Es retalla per l'última clau tancada i es torna a provar, enrere, fins que el que queda es
+    pot llegir. Les mitges es queden fora i les senceres passen pels filtres de sempre. Això no
+    hauria de servir gairebé mai —`PER_CRIDA` és qui ho evita— però la manera de descobrir que una
+    tanda no cabia no pot tornar a ser perdre-la tota (#357).
+    """
+    inici = net.find("{")
+    if inici < 0:
+        return {}
+    cos = net[inici:]
+    i = cos.rfind("}")
+    while i > 0:
+        try:
+            d = json.loads(cos[:i + 1] + "}")
+        except Exception:
+            i = cos.rfind("}", 0, i)
+            continue
+        return d if isinstance(d, dict) else {}
+    return {}
