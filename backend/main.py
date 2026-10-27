@@ -33,6 +33,7 @@ import method as method_mod
 import practice as practice_mod
 import stories as stories_mod
 import analisi
+import glossa
 import tram
 import escoltar
 import night_asr
@@ -6620,6 +6621,32 @@ def write_story_analysis(slug: str, limit: int = 12, redo: bool = False,
     quines = analisi.escriu(frases)
     return {"demanades": len(frases), "desades": analisi.desa(db, quines),
             "llencades": len(frases) - len(quines)}
+
+
+@app.post("/stories/{slug}/glosses")
+def write_story_glosses(slug: str, limit: int = 15, redo: bool = False,
+                        _admin: UserModel = Depends(require_admin),
+                        db: Session = Depends(get_db)):
+    """El paraula per paraula de les línies d'una història (#361).
+
+    Sense això la meitat catalana de la pantalla que segueix la veu es queda apagada: el so
+    encén l'amazic, i el català l'encén la glossa. De les 80 línies escrites de les històries
+    només 13 en tenien, i el pas que les escrivia vivia fora del repositori.
+
+    La paraula que es desa és la de la frase, no la que escriu el model: és la clau que fan
+    servir el so d'una paraula, el tros de la frase catalana i la cerca.
+    """
+    story = stories_mod.one(db, slug)
+    if not story:
+        raise HTTPException(status_code=404, detail="Aquesta història no existeix")
+    frases = glossa.frases_de(db, story["drill_ids"], refer=redo)[:max(1, min(limit, 45))]
+    if not frases:
+        return {"demanades": 0, "desades": 0, "missatge": "no queda cap línia per glossar"}
+    quines = glossa.escriu(frases)
+    mots = sum(len(g) for g in quines.values())
+    certs = sum(1 for g in quines.values() for x in g if x["ca"] != glossa.NO_HO_SABEM)
+    return {"demanades": len(frases), "desades": glossa.desa(db, quines),
+            "paraules": mots, "amb_significat": certs}
 
 
 @app.post("/stories/{slug}/trams")
