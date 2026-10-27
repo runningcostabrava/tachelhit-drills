@@ -1185,18 +1185,30 @@ def test_sota_les_nostres_veus_no_hi_va_cap_targeta_muda_ni_cap_veu_de_canal():
         "author": "ILoveLanguages (parlant nadiu)", "variety": "tzm",
         "audio_url": "https://res.cloudinary.com/x/video/upload/v1/canal-lmasina.mp3"}).json()
 
-    client.put("/method/el-viatge/content", headers=hdr, json={
-        "intro": "El viatge.",
-        "sections": [{"id": "el-tren", "title": "El tren", "text": "Per anar-hi.",
-                      "examples": [{"shi": "lmasina", "ca": "el tren"}]}]})
+    try:
+        client.put("/method/el-viatge/content", headers=hdr, json={
+            "intro": "El viatge.",
+            "sections": [{"id": "el-tren", "title": "El tren", "text": "Per anar-hi.",
+                          "examples": [{"shi": "lmasina", "ca": "el tren"}]}]})
 
-    sec = client.get("/method/el-viatge").json()["content"]["sections"][0]
-    ids = [d["id"] for d in sec["ours_drills"]]
-    assert muda["id"] not in ids, "una targeta muda no surt sota un títol que promet veus"
-    assert de_canal["id"] in ids, "i una que SÍ que sona hi surt, encara que sigui d'un canal"
-    assert sec["ours_total"] >= 2, "el total segueix sent el de debò: no desapareix cap frase"
+        sec = client.get("/method/el-viatge").json()["content"]["sections"][0]
+        ids = [d["id"] for d in sec["ours_drills"]]
+        assert muda["id"] not in ids, "una targeta muda no surt sota un títol que promet veus"
+        assert de_canal["id"] in ids, "i una que SÍ que sona hi surt, encara que sigui d'un canal"
+        assert sec["ours_total"] >= 2, "el total segueix sent el de debò: no desapareix cap frase"
 
-    veu = next(d["veu"] for d in sec["ours_drills"] if d["id"] == de_canal["id"])
-    assert veu["mena"] == "canal" and veu["per_imitar"] is False, veu
-    nostra_muda = next((d for d in sec["ours_drills"] if d["id"] == muda["id"]), None)
-    assert nostra_muda is None
+        veu = next(d["veu"] for d in sec["ours_drills"] if d["id"] == de_canal["id"])
+        assert veu["mena"] == "canal" and veu["per_imitar"] is False, veu
+        nostra_muda = next((d for d in sec["ours_drills"] if d["id"] == muda["id"]), None)
+        assert nostra_muda is None
+    finally:
+        # La base de proves no es llença entre execucions: un capítol escrit aquí és un capítol
+        # escrit per a les altres proves, i n'hi ha una que diu «un capítol sense escriure no en
+        # té». Es treu al final passi el que passi.
+        db = main.SessionLocal()
+        try:
+            from models import MethodChapter
+            db.query(MethodChapter).filter(MethodChapter.slug == "el-viatge").delete()
+            db.commit()
+        finally:
+            db.close()
