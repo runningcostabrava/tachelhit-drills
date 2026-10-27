@@ -4,7 +4,7 @@ import { FaChevronLeft, FaExternalLinkAlt, FaPause, FaPlay } from 'react-icons/f
 import { api, type Story, type StoryPage, type WordTime } from '../api';
 import { getMediaUrl } from '../config';
 import type { Drill } from '../types';
-import WordGloss, { parseGlosses } from './WordGloss';
+import WordGloss, { parseGlosses, type Gloss } from './WordGloss';
 import Frase from './Frase';
 import { llum } from '../utils/llum';
 import { ara, gap, keepAwake, nowPlaying, say, stop } from '../utils/veu';
@@ -155,16 +155,37 @@ function Desmuntada({ que }: { que?: { analisi: string; unitats: string[]; titol
 }
 
 /**
- * El català amb la paraula que respon a la que sona, encesa.
+ * El català amb el tros que respon a la paraula que sona, encès.
  *
  * Aquí la posició no serveix de res: la paraula amaziga i la catalana no ocupen el mateix lloc de
- * la frase, i de vegades no n'hi ha ni el mateix nombre. Qui les casa és la **glossa** —el
- * paraula per paraula que ja porta cada línia, `{shi, tif, ca}`—, de manera que s'encén el que la
- * glossa diu, allà on sigui. Quan la glossa posa «—» és que el català ho diu d'una altra manera,
- * i aleshores no s'encén res: val més no encendre que encendre malament.
+ * la frase, i de vegades no n'hi ha ni el mateix nombre. Qui les casa és la **glossa**.
+ *
+ * La glossa, però, té dos camps perquè fa dues feines (#356). `ca_tram` és el tros **exacte** de
+ * la frase, copiat lletra per lletra, i per això s'encén tal qual: és text d'aquesta frase.
+ * `ca` és què vol dir la paraula, i ho diu amb la forma de diccionari —«confien» allà on la
+ * frase diu «confiança»—, de manera que només encén quan les dues formes coincideixen: era el
+ * 41% de les paraules glossades. Es fa servir igualment per a les milers de línies que encara no
+ * tenen tros, perquè encendre'n el 41% és millor que no encendre'n res.
+ *
+ * El que no es fa mai és afluixar la comparació. «Confien» comparteix prefix amb «confirmar» i
+ * amb «confitura», i «interjecció» no s'ha d'encendre enlloc: una paraula encesa que no toca
+ * ensenya una correspondència falsa, i qui aprèn es creu el que la pantalla li encén.
  */
-function CatalaEncès({ text, ca, estil }: { text: string; ca: string | null; estil: React.CSSProperties }) {
-  const busca = (ca || '').trim();
+function CatalaEncès({ text, gl, estil }: { text: string; gl: Gloss | null | undefined; estil: React.CSSProperties }) {
+  const tros = (gl?.ca_tram || '').trim();
+  if (tros) {
+    const i = text.indexOf(tros);
+    if (i >= 0) {
+      return (
+        <div style={estil}>
+          <span>{text.slice(0, i)}</span>
+          <mark style={llum}>{text.slice(i, i + tros.length)}</mark>
+          <span>{text.slice(i + tros.length)}</span>
+        </div>
+      );
+    }
+  }
+  const busca = (gl?.ca || '').trim();
   const bones = busca && busca !== '—'
     ? new Set(trossos(busca).filter((x) => x.trim()).map((x) => x.toLowerCase()))
     : null;
@@ -447,7 +468,7 @@ function OneStory({ slug }: { slug: string }) {
                     )}
                   </>
                 )}
-                <CatalaEncès text={d.text_catalan || ''} ca={gl?.ca ?? null}
+                <CatalaEncès text={d.text_catalan || ''} gl={gl}
                              estil={{ fontSize: 14, color: 'var(--text-soft)', lineHeight: 1.45 }} />
                 <WordGloss drill={d} size="sm" />
                 <Desmuntada que={page.analisi?.[String(d.id)]} />

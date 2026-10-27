@@ -12,7 +12,9 @@ import type { Drill } from '../types';
 // knows when each word is spoken inside the recordings we already have, so this seeks into one of
 // them and stops at the end of the word. A word said by somebody with a name and a place comes
 // first; the open corpus only fills the gaps, and says so.
-export interface Gloss { shi: string; tif?: string | null; ca?: string | null }
+// `ca` és què vol dir la paraula (la forma de diccionari: «confien»), i `ca_tram` és el tros
+// exacte de la frase catalana que li respon («confiança»). Dues feines, dos camps (#356).
+export interface Gloss { shi: string; tif?: string | null; ca?: string | null; ca_tram?: string | null }
 
 export function parseGlosses(drill: Pick<Drill, 'glosses'> | null | undefined): Gloss[] {
   if (!drill?.glosses) return [];
