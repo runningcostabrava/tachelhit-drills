@@ -7943,7 +7943,8 @@ AGENT_TOOLS = [
                         "eina (kind) i, si l'eina demana una frase, el seu drill_id. Eines: listen_pick "
                         "(escolta i tria), write_heard (escolta i escriu), say_it (digues-ho i compara't), "
                         "look_say (mira la imatge i digues-ho), fill_gap (omple el buit), word_by_word, "
-                        "script_swap (tifinag o llatí), pick_spelling, i note (una explicació, sense "
+                        "script_swap (tifinag o llatí), pick_spelling, pick_written (escolta i tria "
+                        "quina de les quatre frases escrites és), i note (una explicació, sense "
                         "frase: posa-li heading i text). Comença amb una nota que digui què s'hi aprèn, "
                         "i no repeteixis sempre la mateixa eina."),
         "parameters": {"type": "object", "properties": {
