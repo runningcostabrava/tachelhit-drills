@@ -33,6 +33,7 @@ import method as method_mod
 import practice as practice_mod
 import stories as stories_mod
 import analisi
+import tram
 import escoltar
 import night_asr
 import word_audio
@@ -6619,6 +6620,30 @@ def write_story_analysis(slug: str, limit: int = 12, redo: bool = False,
     quines = analisi.escriu(frases)
     return {"demanades": len(frases), "desades": analisi.desa(db, quines),
             "llencades": len(frases) - len(quines)}
+
+
+@app.post("/stories/{slug}/trams")
+def write_story_spans(slug: str, limit: int = 10, redo: bool = False,
+                      _admin: UserModel = Depends(require_admin),
+                      db: Session = Depends(get_db)):
+    """El tros de la frase catalana que respon a cada paraula amaziga (#356).
+
+    La glossa diu què vol dir la paraula, i ho diu amb la forma de diccionari: «confien». La frase
+    diu «confiança». La pantalla que segueix la veu encenia el català casant la glossa amb les
+    paraules de la frase, i per això només n'encenia el 41%. Això escriu l'altre camp —el tros
+    exacte de la frase— i no toca mai el que la glossa ensenya.
+    """
+    story = stories_mod.one(db, slug)
+    if not story:
+        raise HTTPException(status_code=404, detail="Aquesta història no existeix")
+    frases = tram.frases_de(db, story["drill_ids"], refer=redo)[:max(1, min(limit, 40))]
+    if not frases:
+        return {"demanades": 0, "desades": 0, "missatge": "no queda cap línia amb paraula per paraula per marcar"}
+    quines = tram.escriu(frases)
+    mots = sum(len(f["glosses"]) for f in frases)
+    amb = sum(tram.compte(g)[1] for g in quines.values())
+    return {"demanades": len(frases), "desades": tram.desa(db, quines),
+            "paraules": mots, "amb_tros": amb}
 
 
 @app.get("/listen/session")
