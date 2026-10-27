@@ -7010,6 +7010,13 @@ def method_chapter(slug: str, db: Session = Depends(get_db),
                           for t in db.query(TestModel).filter(
                               TestModel.title.ilike(f"%Capítol {c['n']} ·%")).all()), None),
     }
+    # El capítol dels sons diu que la mateixa lletra s'escriu de dues maneres (#364). És el
+    # capítol on algú aprèn quina lletra fa quin so, i és on topa amb «rix» i «riɣ» per primera
+    # vegada. Ve del repositori i no del text del capítol: és un fet comptat, i ha de dir sempre
+    # el mateix encara que algú reescrigui el capítol.
+    if c["slug"] == "sons":
+        import ortografia
+        out["ortografia"] = ortografia.nota()
     _CHAPTER_CACHE[slug] = (mark, out)
     return out
 
@@ -7215,9 +7222,16 @@ def _grammar_unit_payload(db, slug: str, limit: int, force: bool, deep: bool = F
                 step["example"]["variants"] = [v for v in said.get(step["example"].get("id"), [])
                                                if _another_way(v["text"], step["example"].get("shi"))]
     total = len(rows)  # the rows are already every drill of the unit (the query's limit is far above any unit)
-    return {**{k: unit[k] for k in ("slug", "title", "level")}, "lesson": lesson, "total": total,
+    fora = {**{k: unit[k] for k in ("slug", "title", "level")}, "lesson": lesson, "total": total,
             "practice": [d.id for d in practice],
             "drills": [Drill.model_validate(d, from_attributes=True) for d in rows[:max(1, min(limit, 300))]]}
+    # La unitat dels sons diu que la mateixa lletra s'escriu de dues maneres (#364). Va aquí i no
+    # dins la lliçó perquè la lliçó l'escriu un model i això és un fet comptat: ha de dir sempre
+    # el mateix i no pot dependre que un dia el model se'n descuidi.
+    if slug == grammar_course.SOUNDS_UNIT:
+        import ortografia
+        fora["ortografia"] = ortografia.nota()
+    return fora
 
 
 def _lesson_quotes(db, slug: str) -> set:

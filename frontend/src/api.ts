@@ -370,6 +370,8 @@ export interface MethodChapterData {
   also: MethodSentence[];
   sentences: number; with_voice: number;
   sections_ready: number; sections_total: number;
+  /** Només al capítol dels sons: que la mateixa lletra s'escriu de dues maneres (#364). */
+  ortografia?: NotaOrtografia | null;
   /** La pràctica que comprova les funcions del capítol, si se n'ha fet cap. */
   practice_test?: { id: number; title: string; steps: number } | null;
   missing: {
@@ -740,6 +742,17 @@ export const api = {
 
 /** A drill that shares words with the one being explained: playable in place, with its picture for the card. */
 export interface RelatedDrill { id: number; text_catalan?: string; text?: string; words: string[]; audio_url?: string | null; audio_tts_shi_url?: string | null; image_url?: string | null; region?: string | null }
+/** «rix» i «riɣ» són la mateixa paraula: dues mans, dues convencions (#364). La serveixen la
+ *  unitat dels sons de la Gramàtica i el capítol dels sons del Mètode, amb els números comptats
+ *  a la biblioteca. */
+export interface NotaOrtografia {
+  titol: string;
+  cos: string[];
+  parelles: { x: string; x_n: number; g: string; g_n: number; ca: string }[];
+  quantes: number;
+  de_quantes: number;
+}
+
 export interface GrammarUnit { slug: string; title: string; level: number }
 /** A drill as a lesson quotes it: both texts plus its picture and a voice (the speaker's when recorded). */
 /** `gloss`: the library's word-by-word reading of the sentence, refreshed on every serve.
@@ -759,7 +772,7 @@ export type LessonStep =
  *  previous one meanwhile. */
 export interface GrammarLesson { intro: string; steps: LessonStep[]; study?: string; error?: string; writing?: boolean; stale?: boolean }
 /** `practice`: the ids the unit's test is made of (real sentences only: no single words, no conjugation lists). */
-export interface GrammarUnitPage extends GrammarUnit { lesson: GrammarLesson; total: number; practice: number[]; drills: Drill[] }
+export interface GrammarUnitPage extends GrammarUnit { lesson: GrammarLesson; total: number; practice: number[]; drills: Drill[]; ortografia?: NotaOrtografia | null }
 /** Pràctica: how the library is offered for practice, and what a session card needs beyond the drill. */
 export interface PracticeCollections {
   days: { day: string; speaker: string; count: number }[];
