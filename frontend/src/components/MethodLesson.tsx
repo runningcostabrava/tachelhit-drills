@@ -9,6 +9,7 @@ import { whyItFailed } from '../utils/errors';
 import RecordAudioModal from './RecordAudioModal';
 import { GlossWords } from './WordGloss';
 import SentenceVariants from './SentenceVariants';
+import MethodExercises from './MethodExercises';
 
 // La lliçó d'un capítol: l'explicació, el diàleg i el vocabulari.
 //
@@ -960,6 +961,14 @@ export default function MethodLesson({
           <Practice practice={body.practice} n={4} />
         </div>
       )}
+
+      {/* 5 · ELS EXERCICIS DEL LLIBRE. En paper són una llista amb la resposta impresa a sota;
+          aquí s'omplen, s'ordenen i es destapen quan qui els fa ho demana (#380). */}
+      {body.exercises && body.exercises.length > 0 && (
+        <div id="part-exercicis" style={{ scrollMarginTop: 'calc(var(--nav-h) + 10px)' }}>
+          <MethodExercises exercises={body.exercises} />
+        </div>
+      )}
     </>
   );
 }
@@ -1003,6 +1012,12 @@ function Practice({ practice, n }: { practice: NonNullable<MethodContent['practi
   const put = (t: string, shi: boolean) => (t || '')
     .replace(/\{producte\}/g, (shi ? f?.shi : f?.ca) || '…')
     .replace(/\{quantitat\}/g, (shi ? f?.qty_shi : f?.qty_ca) || '…');
+  // La frase que tanca el quadre estava escrita per a la botiga —«Ara compres X i en demanes Y»—
+  // i qualsevol altre capítol l'hauria dita igual: el 5 diria que compres te quan el que fas és
+  // prendre'n. Ara la porta el capítol, amb els mateixos buits que el patró, i cada buit es
+  // segueix veient en amazic i en català. Sense `hint`, es queda la de la botiga.
+  const peu = (practice.hint || 'Ara compres {producte} i en demanes {quantitat}. Tria’n un altre i torna-ho a dir.')
+    .split(/(\{producte\}|\{quantitat\})/g);
 
   return (
     <section style={{ marginBottom: 26 }}>
@@ -1029,8 +1044,14 @@ function Practice({ practice, n }: { practice: NonNullable<MethodContent['practi
         ))}
         {f && (
           <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
-            Ara compres <strong lang="shi">{f.shi}</strong> ({f.ca}) i en demanes{' '}
-            <strong lang="shi">{f.qty_shi}</strong> ({f.qty_ca}). Tria’n un altre i torna-ho a dir.
+            {peu.map((t, k) =>
+              t === '{producte}' ? (
+                <span key={k}><strong lang="shi">{f.shi}</strong> ({f.ca})</span>
+              ) : t === '{quantitat}' ? (
+                <span key={k}><strong lang="shi">{f.qty_shi}</strong> ({f.qty_ca})</span>
+              ) : (
+                <span key={k}>{t}</span>
+              ))}
           </p>
         )}
       </div>
