@@ -8,6 +8,7 @@ import { FaBullseye, FaCheck, FaChevronLeft, FaChevronRight, FaLightbulb, FaMapM
 import { api, type GrammarUnit, type GrammarUnitPage, type GrammarWishUnit, type LessonExample, type LessonProposal, type LessonStep } from '../api';
 import { API_BASE, getMediaUrl } from '../config';
 import RecordAudioModal from './RecordAudioModal';
+import NotaOrtografia from './NotaOrtografia';
 import AiAssistant from './AiAssistant';
 import { GlossWords } from './WordGloss';
 import SentenceVariants from './SentenceVariants';
@@ -295,6 +296,10 @@ function IntroCard({ page, cover }: { page: GrammarUnitPage; cover: string | nul
       <p style={{ fontSize: '16px', lineHeight: 1.55, margin: '0 0 12px', color: 'var(--text)' }}>{page.lesson.intro || 'Un punt de gramàtica explicat pas a pas amb frases reals de la biblioteca.'}</p>
       <div style={{ fontSize: '13px', color: 'var(--text-soft)' }}>{n} explicacions{q ? ` · ${q} preguntes ràpides` : ''} · {page.total} frases de la biblioteca</div>
       {page.lesson.error && <div style={{ marginTop: 10, fontSize: '12px', color: 'var(--rose)' }}>La lliçó no s’ha pogut escriure ara mateix; torna-ho a provar d’aquí a una estona.</div>}
+      {/* A la unitat dels sons: que la mateixa lletra s'escriu de dues maneres (#364). Va a
+          l'entrada, abans de cap explicació, perquè és el que fa que les frases d'aquesta unitat
+          s'entenguin i no és una excepció d'una d'elles. */}
+      <NotaOrtografia nota={page.ortografia} />
     </div>
   );
 }
