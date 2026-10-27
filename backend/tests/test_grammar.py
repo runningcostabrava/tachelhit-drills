@@ -896,3 +896,36 @@ def test_un_pas_de_vocals_sense_cap_exemple_bo_es_queda_com_esta():
         {"type": "end"}]}
     grammar_course.with_the_sound_it_teaches(lesson, grammar_course.SOUNDS_UNIT)
     assert [e["shi"] for e in lesson["steps"][0]["examples"]] == ["Zr"]
+
+
+def test_la_portada_duna_unitat_no_pot_ser_una_foto_trobada():
+    """La unitat dels possessius s'encapçalava amb una diapositiva d'un projecte de la Viquipèdia
+    en jukun: era la foto que havia heretat una frase, no una portada de res (#229). Una foto
+    trobada il·lustra com a molt una paraula —i de vegades ni això—, i no fa de portada."""
+    import main
+
+    class R:  # noqa — una frase, amb el que la portada mira
+        def __init__(self, id, image_url):
+            self.id, self.image_url = id, image_url
+
+    lesson = {"steps": [
+        {"type": "explain", "title": "Els possessius", "examples": [
+            {"id": 1, "shi": "ism inu", "image_url": "https://thumb.wikimedia.org/wikipedia/commons/x/Jukun.jpg"},
+            {"id": 2, "shi": "tarbat ino", "image_url": "https://res.cloudinary.com/du26ppvh0/image/upload/v1/tachelhit/illustrations/ill_2.webp"},
+        ]},
+        {"type": "end"}]}
+
+    db = main.SessionLocal()
+    try:
+        portada = main._grammar_cover(db, "possessius", lesson, [])
+        assert portada and "cloudinary" in portada, f"la nostra, i no la trobada: {portada}"
+
+        # Sense cap de nostra a la lliçó, es mira a les frases de la unitat; i si tampoc, CAP.
+        nomes_de_fora = {"steps": [{"type": "explain", "examples": [lesson["steps"][0]["examples"][0]]}]}
+        assert main._grammar_cover(db, "possessius", nomes_de_fora, [R(9, "https://upload.wikimedia.org/x.jpg")]) is None
+        amb_nostra = main._grammar_cover(db, "possessius", nomes_de_fora,
+                                         [R(9, "https://upload.wikimedia.org/x.jpg"),
+                                          R(10, "https://res.cloudinary.com/du26ppvh0/image/upload/v1/tachelhit/illustrations/ill_10.webp")])
+        assert amb_nostra and "ill_10" in amb_nostra
+    finally:
+        db.close()
