@@ -64,8 +64,8 @@ CHAPTERS: List[Dict] = [
         "about": "Sentir la diferència entre els sons que el català no té, i saber escriure'ls.",
         "functions": [
             "distingir les consonants tenses de les simples",
-            "sentir les emfàtiques (ḍ, ṭ, ṣ, ẓ) i dir-les",
-            "reconèixer ɣ, x, q, ḥ, ɛ i les labiovelars",
+            "sentir les emfàtiques (ḍ ⴹ, ṭ ⵟ, ṣ ⵚ, ẓ ⵥ) i dir-les",
+            "reconèixer ɣ ⵖ, x ⵅ, q ⵇ, ḥ ⵃ, ɛ ⵄ i les labiovelars (kʷ ⴽⵯ, gʷ ⴳⵯ)",
             "llegir i escriure en tifinag i en llatí",
         ],
         "grammar": ["sons-i-escriptura"],
