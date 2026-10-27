@@ -53,3 +53,21 @@ def test_cada_linia_te_la_seva_llavor():
     c = conte_art.LLOP_I_XAI
     assert c.llavor(1) != c.llavor(2)
     assert c.llavor(7) == conte_art.LLAVOR + 7
+
+
+def test_lestil_no_prohibeix_el_que_les_escenes_demanen():
+    """L'estil deia «cap bafarada enlloc» mentre divuit escenes en demanaven una.
+
+    Es va veure abans de dibuixar res, de pura sort. Això ho diu sense gastar-hi cap quota: si
+    una escena demana una cosa que l'estil prohibeix, el model obeirà l'un o l'altre i no sabrem
+    quin fins que ens arribin trenta-set dibuixos per llençar.
+    """
+    import conte_art
+    estil = conte_art.ESTIL.lower()
+    demanen = [n for n, (_, e) in conte_art.LLOP_I_XAI.escenes.items()
+               if "balloon" in e.lower() or "thought cloud" in e.lower()]
+    assert len(demanen) >= 15, "les línies de diàleg han de portar la seva bafarada"
+    assert "no speech bubbles" not in estil and "speech bubbles or" not in estil, \
+        "l'estil prohibeix la bafarada que les escenes demanen"
+    # El que sí que s'ha de prohibir sempre: lletres a dins del dibuix.
+    assert "no letters" in estil and "no captions" in estil

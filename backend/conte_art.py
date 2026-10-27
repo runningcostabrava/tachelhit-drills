@@ -37,6 +37,25 @@ llop sigui el mateix llop és el text que el descriu.
 dues ovelles i cap llop. «El llop és dalt a l'esquerra d'on ve l'aigua; a baix a la dreta hi ha
 el xai» ja ensenya qui és a dalt i qui a baix, que és tot el que la línia diu.
 
+## Què ha de dir un dibuix
+
+Petició del propietari (27-10-2026): «les imatges han de mostrar el que el llop o el xai estan
+dient, potser un núvol de pensament mostrant el que diu el llop… al final és un tema de
+mnemotècnia».
+
+Té raó, i canvia el criteri de totes les escenes. Un conte en una llengua que no saps no
+s'aguanta amb un dibuix **de la situació**: vint línies seguides al mateix riu amb els mateixos
+dos animals són vint dibuixos iguals, i llavors la imatge no ajuda a recordar res. El que recorda
+és **el que es diu**: el llop acusa el xai d'embrutar-li l'aigua, i el xai respon que l'any passat
+encara no havia nascut. Això es pot ensenyar, i és el que fa que la frase s'enganxi.
+
+Per això les línies de diàleg porten una **bafarada** —rodona per al que es diu, de núvol per al
+que es pensa— i **a dins hi ha un dibuix, no lletres**: aigua marró per «me l'has embrutat», un
+xai acabat de néixer per «encara no havia nascut», dos xais iguals per «doncs va ser el teu
+germà». Lletres no, i no perquè no agradin: el model no sap escriure amazic ni català, i el que
+hi posa són gargots que semblen paraules. Un gargot al costat d'una frase que s'està aprenent
+ensenya a llegir el que no és.
+
 ## El final d'un conte violent
 
 El llop se'l menja. El dibuix ho ha d'explicar **sense ensenyar-ho**: el salt, no la ferida. I,
@@ -53,7 +72,8 @@ LLAVOR = 20261027
 ESTIL = (
     "Flat vector storybook illustration, warm earthy palette (sand, terracotta, indigo, olive), "
     "clean simple shapes, soft rounded forms, gentle shadows. "
-    "Absolutely no text, letters, numbers, captions, labels, speech bubbles or signs anywhere."
+    "The only words anywhere are none: no letters, no numbers, no captions, no labels, no "
+    "signs. A speech balloon, when the scene asks for one, holds a small drawing instead."
 )
 
 
@@ -114,62 +134,114 @@ LLOP_I_XAI = Conte(
                        "searching the valley for something to eat."),
         7: (("llop", "xai"), "The wolf freezes mid-step on the left bank, head turned sharply, "
                              "amber eyes fixed on the small lamb far downstream on the right."),
-        8: (("llop", "xai"), "Close view of the wolf licking his chops and staring hungrily "
-                             "downstream; small in the distance behind him, the lamb drinks."),
-        9: (("llop", "xai"), "The wolf crouched low behind a big pale stone on the left bank, "
-                             "only his head showing, watching the lamb downstream."),
-        10: (("llop",), "The wolf sitting on his haunches on the left bank, head tilted, one "
-                        "front paw lifted, frowning as he thinks up a plan."),
+        8: (("llop", "xai"), "Close view of the wolf on the left bank licking his chops and staring downstream. A "
+                     "soft white thought cloud with three little bubbles rises above the wolf's head. Inside "
+                     "the cloud, drawn small and simple in the same flat style, there is a picture of the "
+                     "little lamb standing alone. The cloud holds only that little picture."),
+        9: (("llop", "xai"), "The wolf crouched low behind a big pale stone on the left bank, watching. A soft white "
+                     "thought cloud with three little bubbles rises above the wolf's head. Inside the cloud, "
+                     "drawn small and simple in the same flat style, there is a picture of the little lamb "
+                     "with the long shadow of a wolf falling across it. The cloud holds only that little "
+                     "picture."),
+        10: (("llop",), "The wolf sitting on his haunches on the left bank, head tilted, one front paw lifted "
+                     "as he thinks up a plan. A soft white thought cloud with three little bubbles rises "
+                     "above the wolf's head. Inside the cloud, drawn small and simple in the same flat "
+                     "style, there is a picture of a little lamb standing in thick brown muddy water. The "
+                     "cloud holds only that little picture."),
         11: (("xai",), "The small lamb drinking peacefully on the right bank, calm and innocent, "
                        "while a long dark animal shadow stretches across the water towards it "
                        "from off-picture."),
         12: (("llop", "xai"), "The wolf steps up onto a flat rock on the left bank, chest out, "
                               "mouth opening to speak across the stream towards the lamb."),
-        13: (("llop", "xai"), "The wolf barking across the water with his muzzle thrust forward "
-                              "and one paw pointing at the stream; on the right bank the lamb "
-                              "jerks its head up, startled."),
-        14: (("llop", "xai"), "The wolf leaning down from the higher left bank, teeth bared, "
-                              "hackles raised, looming over the small lamb on the right bank."),
+        13: (("llop", "xai"), "The wolf barks across the water at the lamb, muzzle thrust forward, one front paw "
+                     "pointing down at the stream. A big white rounded comic speech balloon with a smooth "
+                     "outline rises from the wolf's open mouth. Inside the balloon, drawn small and simple "
+                     "in the same flat style, there is a picture of the little lamb standing in the stream "
+                     "with thick brown muddy water swirling around its hooves. The balloon holds only that "
+                     "little picture."),
+        14: (("llop", "xai"), "The wolf leans down from the higher left bank, teeth bared, looming over the small "
+                     "lamb. A big white rounded comic speech balloon with a smooth outline rises from the "
+                     "wolf's open mouth. Inside the balloon, drawn small and simple in the same flat style, "
+                     "there is a picture of a wolf's wide open jaws above a tiny lamb. The balloon holds "
+                     "only that little picture."),
         15: (("xai",), "Close view of the lamb on the right bank, legs trembling, ears flattened "
                        "back, looking up with wide frightened eyes."),
-        16: (("xai",), "Close view of the lamb raising one front hoof, head bowed low, pleading "
-                       "gently towards the left."),
-        17: (("xai",), "The lamb turning its head to point its muzzle at the clear water flowing "
-                       "away downstream on its own side, explaining calmly."),
-        18: (("xai",), "Close view of the lamb with ears spread wide and head tilted, an "
-                       "innocent puzzled look, front hooves turned outwards."),
-        19: (("llop", "xai"), "The grey wolf stands high up on the left bank where the water "
-                              "comes from. Far below him on the right bank the small lamb stands "
-                              "at the water's edge. The stream runs steeply downhill from the "
-                              "wolf's side to the lamb's side."),
+        16: (("xai",), "The lamb raises one front hoof, head bowed low, pleading towards the left. A big white "
+                     "rounded comic speech balloon with a smooth outline rises from the lamb's open mouth. "
+                     "Inside the balloon, drawn small and simple in the same flat style, there is a picture "
+                     "of a small calm wolf with smooth flat fur and its mouth shut. The balloon holds only "
+                     "that little picture."),
+        17: (("xai",), "The lamb turns its head towards the water flowing away downstream on its own side. A "
+                     "big white rounded comic speech balloon with a smooth outline rises from the lamb's "
+                     "open mouth. Inside the balloon, drawn small and simple in the same flat style, there "
+                     "is a picture of clear blue water running clean over pale stones. The balloon holds "
+                     "only that little picture."),
+        18: (("xai",), "Close view of the lamb with ears spread wide and head tilted, an innocent puzzled "
+                     "look. A big white rounded comic speech balloon with a smooth outline rises from the "
+                     "lamb's open mouth. Inside the balloon, drawn small and simple in the same flat style, "
+                     "there is a picture of a tiny lamb with its two front hooves turned out wide. The "
+                     "balloon holds only that little picture."),
+        19: (("llop", "xai"), "The grey wolf stands high up on the left bank where the water comes from; far below "
+                     "him on the right bank the small lamb stands at the water's edge. A big white rounded "
+                     "comic speech balloon with a smooth outline rises from the lamb's open mouth. Inside "
+                     "the balloon, drawn small and simple in the same flat style, there is a picture of a "
+                     "side view of a stream running steeply downhill, with a tiny wolf up at the top end and "
+                     "a tiny lamb down at the bottom end. The balloon holds only that little picture."),
         20: (("llop",), "The wolf roaring with his mouth wide open, head thrown forward, fur "
                         "bristling, front paws planted on the left bank."),
-        21: (("llop",), "The wolf stamping a front paw down into the shallow water, brown mud "
-                        "clouding up around it, shouting downstream."),
-        22: (("llop", "xai"), "The wolf glaring with narrowed eyes, one front paw raised and "
-                              "pointed accusingly across the stream at the lamb."),
-        23: (("llop", "xai"), "The wolf leaning right out over the water, teeth bared, demanding "
-                              "an answer from the small lamb below him."),
+        21: (("llop",), "The wolf stamps a front paw down into the shallow water, shouting downstream. A big "
+                     "white rounded comic speech balloon with a smooth outline rises from the wolf's open "
+                     "mouth. Inside the balloon, drawn small and simple in the same flat style, there is a "
+                     "picture of thick brown muddy water swirling in a stream. The balloon holds only that "
+                     "little picture."),
+        22: (("llop", "xai"), "The wolf glares with narrowed eyes, one front paw raised and pointed across the "
+                     "stream. A big white rounded comic speech balloon with a smooth outline rises from the "
+                     "wolf's open mouth. Inside the balloon, drawn small and simple in the same flat style, "
+                     "there is a picture of a tiny lamb with its mouth open bleating at a tiny wolf. The "
+                     "balloon holds only that little picture."),
+        23: (("llop", "xai"), "The wolf leans right out over the water, teeth bared, demanding an answer. A big white "
+                     "rounded comic speech balloon with a smooth outline rises from the wolf's open mouth. "
+                     "Inside the balloon, drawn small and simple in the same flat style, there is a picture "
+                     "of a tiny lamb bleating while a tiny wolf turns its head away. The balloon holds only "
+                     "that little picture."),
         24: (("xai",), "The lamb standing very small on the right bank, head lowered, answering "
                        "quietly."),
-        25: (("xai",), "The lamb looking tiny and very young beside a patch of fresh spring "
-                       "flowers and new grass on the right bank."),
+        25: (("xai",), "The lamb looks tiny and very young beside a patch of fresh spring flowers. A big white "
+                     "rounded comic speech balloon with a smooth outline rises from the lamb's open mouth. "
+                     "Inside the balloon, drawn small and simple in the same flat style, there is a picture "
+                     "of a newborn lamb lying curled up in the grass. The balloon holds only that little "
+                     "picture."),
         26: (("llop",), "The wolf turning his head away dismissively on the left bank, "
                         "unconvinced, one ear flicked back."),
-        27: (("llop",), "The wolf pointing his muzzle far away downstream, blaming somebody out "
-                        "of sight."),
+        27: (("llop",), "The wolf points his muzzle far away downstream, blaming somebody out of sight. A big "
+                     "white rounded comic speech balloon with a smooth outline rises from the wolf's open "
+                     "mouth. Inside the balloon, drawn small and simple in the same flat style, there is a "
+                     "picture of two identical little lambs standing side by side. The balloon holds only "
+                     "that little picture."),
         28: (("xai",), "Close view of the lamb shaking its head slowly, ears swinging, "
                        "answering."),
-        29: (("xai",), "Wide view of the right bank: one single small lamb standing by itself on "
-                       "a long bare stretch of grass and stone, open empty ground all around."),
+        29: (("xai",), "Wide view of the right bank with one single small lamb standing by itself on open "
+                     "empty ground. A big white rounded comic speech balloon with a smooth outline rises "
+                     "from the lamb's open mouth. Inside the balloon, drawn small and simple in the same "
+                     "flat style, there is a picture of one single little lamb alone on an empty patch of "
+                     "grass. The balloon holds only that little picture."),
         30: (("llop", "xai"), "The wolf stepping down off the left bank with one front paw in "
                               "the shallow water, coming closer to the lamb."),
-        31: (("llop",), "The wolf sweeping a front paw towards the far ochre hills, where a tiny "
-                        "distant flock of sheep grazes on the skyline."),
-        32: (("xai",), "The lamb backing up against a big pale stone on the right bank, both "
-                       "front hooves raised, pleading towards the left."),
-        33: (("xai",), "Close view of the lamb turning its face away from a tuft of green grass "
-                       "at its feet, refusing it."),
+        31: (("llop",), "The wolf sweeps a front paw towards the far ochre hills. A big white rounded comic "
+                     "speech balloon with a smooth outline rises from the wolf's open mouth. Inside the "
+                     "balloon, drawn small and simple in the same flat style, there is a picture of a small "
+                     "flock of several sheep standing close together. The balloon holds only that little "
+                     "picture."),
+        32: (("xai",), "The lamb backs up against a big pale stone on the right bank, both front hooves "
+                     "raised, pleading. A big white rounded comic speech balloon with a smooth outline rises "
+                     "from the lamb's open mouth. Inside the balloon, drawn small and simple in the same "
+                     "flat style, there is a picture of a little lamb standing perfectly still with its four "
+                     "hooves together. The balloon holds only that little picture."),
+        33: (("xai",), "Close view of the lamb turning its face away from a tuft of green grass at its feet. A "
+                     "big white rounded comic speech balloon with a smooth outline rises from the lamb's "
+                     "open mouth. Inside the balloon, drawn small and simple in the same flat style, there "
+                     "is a picture of a tuft of green grass with a little lamb's head turned away from it. "
+                     "The balloon holds only that little picture."),
         34: (("llop", "xai"), "The wolf leaping across the shallow stream towards the lamb, "
                               "water splashing up under him, seen from behind, the lamb "
                               "springing aside with its ears flying."),
