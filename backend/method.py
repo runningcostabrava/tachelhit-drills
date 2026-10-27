@@ -711,10 +711,17 @@ def heard_in(sound: str, voiced: List, used: set):
 #: al costat de l'àudio, de manera que qui dibuixi el botó no el pugui deixar fora: qui prem per
 #: sentir una frase ha de veure de qui és la veu que sentirà.
 CD_FITXER = Path(__file__).parent / "data" / "cd_metode.json"
+# La veu d'aquests talls deia el llibre equivocat.
+#
+# Els vam prendre per la *Méthode de Tachelhit* (2009), que és el llibre que el Mètode segueix.
+# Són de la cassette d'*Initiation au tachelhit* (1999), del mateix autor i el mateix taixelhit
+# comú, però un altre text (#380): el 83% de les nostres línies hi són, i la veu hi llegeix a
+# més els exercicis i el vocabulari que la *Méthode* no porta. Dir-ne «Méthode» era atribuir a
+# una obra el que surt d'una altra.
 CD_CREDIT = {
     "qui": "Abdallah El Mountassir",
-    "obra": "Méthode de Tachelhit (CD)",
-    "nota": "la veu del manual",
+    "obra": "Initiation au tachelhit — Ra nsawal tachelhit (1999), enregistrament",
+    "nota": "la veu de l'autor llegint el llibre",
 }
 
 
