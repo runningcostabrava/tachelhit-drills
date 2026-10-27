@@ -424,6 +424,9 @@ export interface Recording {
   speaker?: string | null;
   /** the sentence as this speaker says it, when their dialect's words differ from the drill's */
   text?: string | null;
+  /** aquesta presa és de qui està mirant la pantalla. Serveix per no oferir-li la paperera
+   *  damunt de la veu d'un altre: esborrar-la és feina d'algú que ja no es pot refer. */
+  mine?: boolean;
   license?: string | null;
   date_created?: string;
 }

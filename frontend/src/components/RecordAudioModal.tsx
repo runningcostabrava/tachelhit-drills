@@ -29,7 +29,10 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
   const [ownTown, setOwnTown] = useState('');
   // the speaker's declared profile: a take without a place is not accepted (every voice carries its town)
   const [profile, setProfile] = useState<{ variety: string | null; region: string | null; is_native?: boolean | null } | null | undefined>(undefined);
-  useEffect(() => { api.me().then((m) => setProfile(m ? { variety: m.variety ?? null, region: m.region ?? null } : null)).catch(() => setProfile(null)); }, []);
+  // `is_native` ve del servidor i abans es llençava aquí. Com que `mustAsk` el mira, la pregunta
+  // «ets parlant de tota la vida?» sortia a cada gravació i bloquejava el botó de desar fins que
+  // la persona tornava a contestar el que ja havia contestat. Es demana una vegada, com estava dit.
+  useEffect(() => { api.me().then((m) => setProfile(m ? { variety: m.variety ?? null, region: m.region ?? null, is_native: m.is_native ?? null } : null)).catch(() => setProfile(null)); }, []);
   const recRef = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
 
@@ -150,7 +153,9 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
           {loading && <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Carregant…</div>}
           {showPrimary && takeRow('primary', 'Àudio principal', primary, drill.variety, drill.region)}
-          {recs.map((r) => takeRow(`r${r.id}`, r.speaker || 'Anònim', r.audio_url, r.variety, r.region, () => del(r.id), r.text))}
+          {/* La paperera només damunt de la teva presa: la veu d'un altre no l'has d'esborrar tu,
+              i oferir-ho era convidar a fer-ho. El servidor ho impedeix igualment. */}
+          {recs.map((r) => takeRow(`r${r.id}`, r.speaker || 'Anònim', r.audio_url, r.variety, r.region, r.mine ? () => del(r.id) : undefined, r.text))}
         </div>
 
         {/* record a new take */}
