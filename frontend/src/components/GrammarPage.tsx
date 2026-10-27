@@ -247,7 +247,7 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
             {card.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} onEdit={() => navigate(`/grammar/${slug}/editor`)} nextUnit={nextUnit} proposals={proposals} onDecided={loadProposals} deep={deep} />}
         {(card.type === 'explain' || card.type === 'tip' || card.type === 'dialect' || card.type === 'intro') && page.lesson.steps.length > 0 && <ProposeChange slug={slug} step={i - 1} current={card.type === 'intro' ? page.lesson.intro : card.text} signedIn={signedIn} onSent={loadProposals} />}
           </div>
-          <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, padding: '10px 16px calc(10px + env(safe-area-inset-bottom))', background: 'var(--bg)', borderTop: '1px solid var(--border)', zIndex: 5 }}>
+          <div style={{ position: 'fixed', left: 0, right: 0, bottom: 'var(--menu-mobil-h, 0px)', padding: '10px 16px calc(10px + env(safe-area-inset-bottom))', background: 'var(--bg)', borderTop: '1px solid var(--border)', zIndex: 5 }}>
             <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', gap: '10px' }}>
               <button onClick={prev} disabled={i === 0} style={{ flex: 1, padding: '12px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: i === 0 ? 'var(--text-muted)' : 'var(--text)', fontWeight: 700, cursor: i === 0 ? 'default' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><FaChevronLeft /> Enrere</button>
               <button onClick={next} disabled={!canGoNext} style={{ flex: 2, padding: '12px', borderRadius: 'var(--r-pill)', border: 'none', background: canGoNext ? 'var(--brand-gradient)' : 'var(--surface-2)', color: canGoNext ? '#fff' : 'var(--text-muted)', fontWeight: 700, cursor: canGoNext ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
@@ -287,6 +287,7 @@ function Progress({ n, i, answers, cards }: { n: number; i: number; answers: Rec
 }
 
 function IntroCard({ page, cover }: { page: GrammarUnitPage; cover: string | null }) {
+  const navigate = useNavigate();
   const n = page.lesson.steps.filter((s) => s.type === 'explain').length;
   const q = page.lesson.steps.filter((s) => s.type === 'quiz').length;
   return (
@@ -300,6 +301,16 @@ function IntroCard({ page, cover }: { page: GrammarUnitPage; cover: string | nul
           l'entrada, abans de cap explicació, perquè és el que fa que les frases d'aquesta unitat
           s'entenguin i no és una excepció d'una d'elles. */}
       <NotaOrtografia nota={page.ortografia} />
+      {/* Aquesta unitat és la lliçó dels sons; l'abecedari que sona, lletra per lletra, és una
+          secció pròpia (#368). La lliçó hi porta en comptes de repetir-la a mitges. */}
+      {page.ortografia && (
+        <button onClick={() => navigate('/alfabet')}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 12, padding: '10px 16px', minHeight: 44,
+                         borderRadius: 'var(--r-pill)', border: '1px solid var(--brand-1)', background: 'var(--surface)',
+                         color: 'var(--brand-1)', fontWeight: 700, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit' }}>
+          Les lletres una per una, amb el seu so →
+        </button>
+      )}
     </div>
   );
 }
