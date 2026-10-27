@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FaChevronLeft, FaCrosshairs, FaExternalLinkAlt, FaPause, FaPlay, FaRedo, FaStepBackward, FaStepForward, FaStop } from 'react-icons/fa';
+import { FaChevronLeft, FaCrosshairs, FaExternalLinkAlt, FaHeadphones, FaPause, FaPlay, FaRedo, FaStepBackward, FaStepForward, FaStop } from 'react-icons/fa';
 import { api, type Story, type StoryPage, type WordTime } from '../api';
 import { getMediaUrl, thumb } from '../config';
 import type { Drill } from '../types';
 import WordGloss, { parseGlosses, type Gloss } from './WordGloss';
 import Frase from './Frase';
+import EscoltaITria from './EscoltaITria';
 import { llum } from '../utils/llum';
 import { ara, continua, esPausat, gap, keepAwake, nowPlaying, pausa, ritme, say, stop } from '../utils/veu';
 
@@ -258,6 +259,8 @@ function OneStory({ slug }: { slug: string }) {
   const torn = useRef(0);
   const [pausat, setPausat] = useState(false);
   const [vel, setVel] = useState(1);
+  // Estudiar-la d'orella: sona una línia i es tria quina de les quatre escrites és (#387).
+  const [exercici, setExercici] = useState(false);
 
   useEffect(() => {
     api.story(slug).then((r) => { setPage(r); document.title = `${r.title} · Tamazight`; })
@@ -459,6 +462,8 @@ function OneStory({ slug }: { slug: string }) {
   if (!page) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Carregant…</div>;
 
   const sonant = reading != null || at != null;
+  const escrites = page.drills.filter((d) => (d.text_tachelhit || '').trim());
+  const potPracticar = escrites.length >= 4 && escrites.some((d) => (d.audio_url || '').trim());
 
   return (
     <div style={{ padding: sonant ? '20px 16px 120px' : '20px 16px 60px', maxWidth: 760, margin: '0 auto' }}>
@@ -502,10 +507,35 @@ function OneStory({ slug }: { slug: string }) {
           {reading === 'amb-catala' ? <><FaPause size={12} /> Atura</> : <><FaPlay size={12} /> Escolta-la amb el català</>}
         </button>
       </div>
-      <p style={{ color: 'var(--text-soft)', fontSize: 12.5, margin: '0 0 18px', lineHeight: 1.5 }}>
+      <p style={{ color: 'var(--text-soft)', fontSize: 12.5, margin: '0 0 14px', lineHeight: 1.5 }}>
         Sencera, només en amazic · amb el català, cada línia et diu primer què vol dir i després
         la sents dues vegades.
       </p>
+
+      {/* I una tercera manera, que no és escoltar sinó estudiar: sona una línia i es tria quina
+          de les quatre escrites és (#387). Només hi és quan la història ho permet —cal una veu
+          de persona i almenys quatre línies amb les paraules escrites— perquè un botó que porta
+          a un exercici que no es pot fer és pitjor que cap botó. */}
+      {potPracticar && (
+        <div style={{ marginBottom: 14 }}>
+          <button onClick={() => { atura(); setExercici((v) => !v); }} style={secundari}>
+            <FaHeadphones size={12} /> {exercici ? 'Tanca l’exercici' : 'Escolta i tria la frase'}
+          </button>
+        </div>
+      )}
+      {exercici && (
+        <EscoltaITria
+          drills={page.drills}
+          sona={(d) => {
+            const u = amazic(d);
+            if (!u) return;
+            torn.current++;      // el que s'estigués dient no acaba les seves passades
+            stop();
+            void sonaEncenent(d, u);
+          }}
+          atura={atura}
+          onTanca={() => setExercici(false)} />
+      )}
 
       {/* Dir-ho tot, i dir-ho abans que ningú estudiï res d'aquí.
           Una història capturada per la màquina no porta només el text amazic a mitges: el
