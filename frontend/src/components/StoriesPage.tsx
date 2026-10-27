@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FaChevronLeft, FaCrosshairs, FaExternalLinkAlt, FaPause, FaPlay, FaRedo, FaStepBackward, FaStepForward, FaStop } from 'react-icons/fa';
 import { api, type Story, type StoryPage, type WordTime } from '../api';
-import { getMediaUrl } from '../config';
+import { getMediaUrl, thumb } from '../config';
 import type { Drill } from '../types';
 import WordGloss, { parseGlosses, type Gloss } from './WordGloss';
 import Frase from './Frase';
@@ -543,10 +543,22 @@ function OneStory({ slug }: { slug: string }) {
             <div key={d.id}
                  ref={(n) => { linies.current[i] = n; }}
                  style={{
-              display: 'flex', gap: 10, padding: '10px 12px', borderRadius: 'var(--r-lg)',
-              border: '1px solid var(--border)',
+              display: 'flex', flexDirection: 'column', gap: 10, padding: '10px 12px',
+              borderRadius: 'var(--r-lg)', border: '1px solid var(--border)',
               background: at === i ? 'var(--brand-gradient-soft)' : 'var(--surface)',
             }}>
+              {/* El dibuix de la línia.
+                  Un conte es llegeix mirant: la imatge va a dalt i el text a sota, com en un
+                  llibre. Les trenta-set d'una història són el mateix conte —el mateix llop, el
+                  mateix riu, el mateix xai (#390)— i es demanen a la mida que es veuen, que no
+                  és la que pesen. */}
+              {(d.image_url || '').trim() && (
+                <img src={thumb(getMediaUrl(d.image_url), 760)} alt=""
+                     loading="lazy" decoding="async"
+                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                     style={{ width: '100%', maxHeight: 260, objectFit: 'cover', borderRadius: 'var(--r-md)', display: 'block' }} />
+              )}
+              <div style={{ display: 'flex', gap: 10 }}>
               {/* Amb la història engegada, el ▶ d'una línia hi porta la lectura en comptes de
                   sonar-hi a sobre; i torni d'on torni, la pantalla torna a seguir la veu. */}
               <button onClick={() => vesA(i)} aria-label={`Escolta la línia ${i + 1}`}
@@ -579,6 +591,7 @@ function OneStory({ slug }: { slug: string }) {
                              estil={{ fontSize: 14, color: 'var(--text-soft)', lineHeight: 1.45 }} />
                 <WordGloss drill={d} size="sm" />
                 <Desmuntada que={page.analisi?.[String(d.id)]} />
+              </div>
               </div>
             </div>
           );
