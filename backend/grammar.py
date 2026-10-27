@@ -1636,6 +1636,15 @@ def with_the_sound_it_teaches(lesson, slug: str):
     for s in lesson.get("steps") or []:
         if s.get("type") != "explain" or not s.get("examples"):
             continue
+        vocals = vocals_del_pas(s.get("title") or "")
+        if vocals:
+            # «Les vocals bàsiques: a, i, u» posava `Zr` i `trt` d'exemple, que no en porten cap
+            # (#365). «Fixa't com apareixen» damunt d'una paraula on no apareixen no ensenya res.
+            porten = [e for e in s["examples"]
+                      if any(porta_vocal(e.get("shi") or "", v) for v in vocals)]
+            if porten:
+                s["examples"] = _una_de_cada_vocal(porten, vocals)
+            continue
         sounds = step_sounds(s.get("title") or "")
         if not sounds:
             continue
@@ -1650,6 +1659,95 @@ def with_the_sound_it_teaches(lesson, slug: str):
         s["examples"] = sorted(s["examples"],
                                key=lambda e: not written_with_the_letter(e.get("shi") or "", sounds))
     return lesson
+
+
+#: Les lletres amazigues que no es poden confondre amb cap lletra del català: una «ṭ» soltada
+#: dins d'un títol és sempre la lletra, mentre que una «x» o una «q» podrien ser d'una paraula
+#: catalana i només s'anoten si van citades.
+_LLETRES_SOLES = ("ṭ", "ḍ", "ṣ", "ẓ", "ṛ", "ḥ", "ɣ", "ɛ", "š", "ž")
+
+#: Les vocals que la unitat dels sons ensenya.
+VOCALS = ("a", "i", "u")
+
+
+def _tifinag_de(lletra: str) -> str:
+    """La tifinag d'una lletra sola, o res si el transliterador no en treu cap."""
+    try:
+        import transliteration
+        return (transliteration.to_forms(lletra)["tifinagh"] or "").strip()
+    except Exception:
+        return ""
+
+
+def amb_lletres_als_titols(lesson):
+    """Un títol que anomena una lletra amaziga en llatí l'ha de dir també en tifinag.
+
+    «Consonants emfàtiques: ṭ, ḍ, ṣ, ẓ» citava quatre lletres i no en pintava cap (#366), i el
+    títol és el lloc on més es mira de tota la secció. El text de l'explicació ja passava per
+    `with_letters`; els títols no hi passaven, perquè es netegen amb `_clean_text`.
+
+    S'arregla en servir, com les glosses i la tifinag dels exemples: una lliçó ja escrita no ha
+    d'esperar que algú la reescrigui per dir les lletres que ensenya. Un títol que ja porta
+    tifinag no es toca.
+    """
+    if not isinstance(lesson, dict):
+        return lesson
+    for s in lesson.get("steps") or []:
+        if not isinstance(s, dict):
+            continue
+        t = s.get("title") or ""
+        if not t or re.search(r"[ⴰ-⵿]", t):
+            continue
+        nou = with_letters(t)              # el que va citat: «'sh'» → «'sh ⵛ'»
+        if nou == t:                       # i el que va en llista: «: ṭ, ḍ, ṣ, ẓ»
+            for lletra in _LLETRES_SOLES:
+                tif = _tifinag_de(lletra)
+                if not tif:
+                    continue
+                nou = re.sub(r"(?<![^\W\d_])" + re.escape(lletra) + r"(?![^\W\d_])",
+                             lletra + " " + tif, nou)
+        if nou == t and re.search(r"vocals?", t, re.I):
+            # Les vocals van sense cometes i amb lletres que el català també fa servir («i» hi
+            # és una conjunció), així que només s'anota una llista neta darrere dels dos punts.
+            cap, _, cua = t.rpartition(":")
+            if cap and re.fullmatch(r"\s*[aiu](\s*,\s*[aiu])+\s*", cua):
+                nou = cap + ":" + re.sub(r"[aiu]", lambda m: m.group(0) + " " + _tifinag_de(m.group(0)), cua)
+        if nou != t:
+            s["title"] = nou
+    return lesson
+
+
+def vocals_del_pas(title: str) -> tuple:
+    """Quines vocals ensenya aquest pas, si en ensenya.
+
+    Només es mira si el títol parla de vocals i les llista darrere dels dos punts: en un títol
+    qualsevol, la «a» és una preposició i la «i» una conjunció, i les trobaríem a tot arreu."""
+    t = re.sub(r"[ⴰ-⵿]+", " ", title or "")
+    if not re.search(r"vocals?", t, re.I):
+        return ()
+    cua = t.rpartition(":")[2] if ":" in t else t
+    return tuple(v for v in VOCALS
+                 if re.search(r"(?<![^\W\d_])" + v + r"(?![^\W\d_])", cua, re.I))
+
+
+def porta_vocal(shi: str, vocal: str) -> bool:
+    return vocal in unicodedata.normalize("NFC", shi or "").lower()
+
+
+def _una_de_cada_vocal(examples: List[dict], vocals) -> List[dict]:
+    """Al davant, una paraula per vocal i les curtes primer.
+
+    «Fixa't com apareixen en aquests exemples» demana que s'hi vegin: `imi` (boca) ho ensenya
+    millor que una frase de set paraules on la i es perd."""
+    tria, vistos = [], set()
+    for v in vocals:
+        quines = sorted((e for e in examples
+                         if id(e) not in vistos and porta_vocal(e.get("shi") or "", v)),
+                        key=lambda e: len(e.get("shi") or ""))
+        if quines:
+            tria.append(quines[0])
+            vistos.add(id(quines[0]))
+    return tria + [e for e in examples if id(e) not in vistos]
 
 
 def written_with_the_letter(shi: str, sounds) -> bool:
@@ -1713,7 +1811,8 @@ def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool
         notes = {}
 
     def dressed(lesson):
-        return with_the_sound_it_teaches(_with_notes(_with_glosses(lesson, examples), notes), slug)
+        return amb_lletres_als_titols(
+            with_the_sound_it_teaches(_with_notes(_with_glosses(lesson, examples), notes), slug))
 
     if deep:
         examples = deep_first(db, slug, examples)
