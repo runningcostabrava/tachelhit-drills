@@ -56,7 +56,12 @@ def test_a_practice_is_a_sequence_of_steps_and_belongs_to_whoever_made_it():
                                              "username": "the_maker"}).json()
     hdr = {"X-User-Token": mine["token"]}
     d1 = client.post("/drills/", json={"text_catalan": "aigua", "text_tachelhit": "aman"}, headers=hdr).json()
-    d2 = client.post("/drills/", json={"text_catalan": "pa", "text_tachelhit": "aɣrum"}, headers=hdr).json()
+    # La «pa» porta veu d'una persona amb nom perquè després se li demani un pas per IMITAR:
+    # «digues-ho i compara't» només és veritat si la veu és d'algú (#273).
+    d2 = client.post("/drills/", json={"text_catalan": "pa", "text_tachelhit": "aɣrum",
+                                       "author": "Halima", "region": "Aït Mraw (Azilal)",
+                                       "audio_url": "https://res.cloudinary.com/x/video/upload/v1/halima-agrum.mp3"},
+                     headers=hdr).json()
 
     made = client.post("/tests/", headers=hdr, json={
         "title": "La meva llista", "question_type": "audio", "hint_level": "none",

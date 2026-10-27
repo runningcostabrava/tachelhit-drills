@@ -1174,10 +1174,14 @@ def test_sota_les_nostres_veus_no_hi_va_cap_targeta_muda_ni_cap_veu_de_canal():
     finally:
         db.close()
 
+    # Amb la unitat del capítol dita a mà: una frase entra al capítol pel que ensenya, i aquí el
+    # que es prova és una altra cosa.
     muda = client.post("/drills/", headers=hdr, json={
-        "text_catalan": "el tren", "text_tachelhit": "lmasina"}).json()
+        "text_catalan": "el tren", "text_tachelhit": "lmasina",
+        "grammar": "preposicions", "grammar_source": "owner"}).json()
     de_canal = client.post("/drills/", headers=hdr, json={
         "text_catalan": "el tren arriba", "text_tachelhit": "lmasina tlkm",
+        "grammar": "preposicions", "grammar_source": "owner",
         "author": "ILoveLanguages (parlant nadiu)", "variety": "tzm",
         "audio_url": "https://res.cloudinary.com/x/video/upload/v1/canal-lmasina.mp3"}).json()
 
