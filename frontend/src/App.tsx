@@ -5,7 +5,7 @@ import axios from 'axios';
 import { API_BASE } from './config';
 import { api } from './api';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaBookOpen, FaMicrophone, FaInfo, FaSearch, FaPlus } from 'react-icons/fa';
+import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaBookOpen, FaMicrophone, FaInfo, FaSearch, FaPlus, FaFeatherAlt } from 'react-icons/fa';
 import { syncManager } from './services/OfflineSyncManager';
 import ToastHost from './components/ToastHost';
 import StaleBuildBanner from './components/StaleBuildBanner';
@@ -151,13 +151,20 @@ function App() {
   //
   // The logo goes home, and home is now a page of its own: the library's grid weighs six megabytes
   // and was no way to open the app.
+  // «Drills» no és una paraula de ningú: és com es diu l'exercici a dins, i al menú hi havia
+  // d'anar com se'n diu el que trobes en obrir-lo. El que hi ha són FRASES, dites per algú. La
+  // ruta es queda `/drills` perquè els enllaços que corren per fora continuïn funcionant.
+  //
+  // Les Històries hi entren: eren una porta de la portada i prou, de manera que qui no passava
+  // per la portada no sabia que existien.
   const navLinks = [
-    { to: '/drills', label: 'Drills', Icon: FaLayerGroup },
-    { to: '/video-creator', label: 'Captura', Icon: FaVideo },
+    { to: '/drills', label: 'Frases', Icon: FaLayerGroup },
+    { to: '/stories', label: 'Històries', Icon: FaFeatherAlt },
+    { to: '/metode', label: 'Mètode', Icon: FaBookOpen },
     { to: '/grammar', label: 'Gramàtica', Icon: FaBook },
     { to: '/tests', label: 'Pràctica', Icon: FaGraduationCap },
-    { to: '/metode', label: 'Mètode', Icon: FaBookOpen },
     { to: '/veus', label: 'Posa-hi veu', Icon: FaMicrophone },   // the route keeps its old name: links point at it
+    { to: '/video-creator', label: 'Captura', Icon: FaVideo },
   ];
   const navBtn = (active: boolean): React.CSSProperties => ({
     flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '6px',
