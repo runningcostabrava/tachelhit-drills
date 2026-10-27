@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import Frase from './Frase';
 import { FaPlay, FaStop, FaCommentDots, FaMicrophone, FaPen, FaCheck, FaTags, FaBookOpen, FaHandPointer } from 'react-icons/fa';
 import { api, type MethodCd, type MethodContent, type MethodExample, type MethodGloss, type MethodHeard } from '../api';
 import type { Drill } from '../types';
@@ -31,6 +32,9 @@ import SentenceVariants from './SentenceVariants';
 type Where = { kind: 'example' | 'turn' | 'vocabulary'; index: number; section?: string };
 
 /** La mateixa línia en tifinagh, a sota i petita: l'escriptura de la llengua va amb la llengua. */
+// El tifinag petit i gris de sota: el que el #339 ha vingut a treure. Es manté només allà on
+// encara no hi ha una frase sencera a ensenyar (taules de formes, llistes de variants), i les
+// frases de debò passen pel component compartit.
 function Tif({ t, size = 12.5 }: { t?: string | null; size?: number }) {
   if (!t) return null;
   return (
@@ -343,7 +347,7 @@ function CdVeu({ cd }: { cd: MethodCd }) {
 }
 
 function BookLine({
-  slug, where, look, who, shi, ca, note, tif, gloss, drillId, canEdit, extra, audio, image,
+  slug, where, look, who, shi, ca, note, gloss, drillId, canEdit, extra, audio, image,
   speaker, region, heard, cd, failed, playing, onPlay, onSave, onRecorded,
 }: {
   slug: string; where: Where; look: 'row' | 'turn' | 'word';
@@ -457,8 +461,7 @@ function BookLine({
         {who && <div style={{ fontSize: 11.5, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{who}</div>}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 180 }}>
-            <div lang="shi" style={{ fontSize: 16.5, fontWeight: 700, color: 'var(--brand-1)', lineHeight: 1.35, marginTop: 2 }}>{shi}</div>
-            <Tif t={tif} size={13} />
+            <div style={{ marginTop: 2 }}><Frase text={shi} size="md" /></div>
             <div style={{ fontSize: 14, color: 'var(--text-soft)' }}>{ca}</div>
             <div style={{ marginTop: 2 }}>{voice}</div>
             {cd && <CdVeu cd={cd} />}
@@ -481,8 +484,7 @@ function BookLine({
         )}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '7px 10px', fontSize: 13.5 }}>
           <span style={{ flex: 1, minWidth: 0 }}>
-            <span lang="shi" style={{ fontWeight: 800, color: 'var(--brand-1)' }}>{shi}</span>
-            <Tif t={tif} size={11.5} />
+            <Frase text={shi} size="sm" />
             <span style={{ display: 'block', color: 'var(--text-soft)' }}>{ca}</span>
             <span style={{ display: 'block', marginTop: 1 }}>{voice}</span>
             {cd && <CdVeu cd={cd} />}
@@ -497,8 +499,7 @@ function BookLine({
   return (
     <div style={{ display: 'flex', gap: 10, alignItems: 'baseline', flexWrap: 'wrap', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
       <span style={{ minWidth: 160 }}>
-        <span lang="shi" style={{ fontWeight: 700, fontSize: 15.5, color: 'var(--brand-1)' }}>{shi}</span>
-        <Tif t={tif} />
+        <Frase text={shi} size="sm" />
       </span>
       {ca && <span style={{ fontSize: 14, color: 'var(--text)' }}>{ca}</span>}
       {note && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>· {note}</span>}

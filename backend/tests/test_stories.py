@@ -255,3 +255,27 @@ def test_invented_units_are_dropped_not_shown():
         {"1": {"analisi": "Frase negativa: «ur» nega el verb.",
                "unitats": ["negacio", "la-unitat-que-no-existeix"]}}, frases)
     assert bo[1]["unitats"] == ["negacio"]
+
+
+def test_the_key_the_model_returns_is_not_trusted():
+    """El model torna «id 1» en comptes de «1», copiant el format de la llista que se li passa.
+
+    Buscar la clau literal no trobava res i es llençava tot: 268 anàlisis de 281 la primera
+    nit, i semblava que el model no en sabés. És el mateix parany de sempre: l'índex que torna
+    un model és una pista, no una clau.
+    """
+    import analisi
+    frases = [{"id": 7801, "shi": "ur ssinɣ", "ca": "no ho sé"},
+              {"id": 7802, "shi": "is tssnt?", "ca": "ho saps?"}]
+    bo = analisi.neteja({
+        "id 1": {"analisi": "Frase negativa: «ur» nega el verb «ssinɣ».", "unitats": ["negacio"]},
+        "id 2": {"analisi": "Pregunta oberta amb «is» al davant.", "unitats": ["preguntes"]},
+    }, frases)
+    assert set(bo) == {7801, 7802}
+
+
+def test_the_sentence_itself_can_be_the_key():
+    import analisi
+    frases = [{"id": 99, "shi": "ur ssinɣ", "ca": "no ho sé"}]
+    bo = analisi.neteja({"ur ssinɣ": {"analisi": "«ur» nega el verb.", "unitats": []}}, frases)
+    assert set(bo) == {99}
