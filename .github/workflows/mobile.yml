@@ -48,8 +48,8 @@ jobs:
             echo "::warning::Sense ANDROID_DEBUG_KEYSTORE_B64 aquest APK va signat amb una clau nova i no pot actualitzar cap instal·lacio anterior (#338)."
             exit 0
           fi
-          printf '%s' "$KS" | base64 -d > frontend/android/app/debug.keystore
-          ls -l frontend/android/app/debug.keystore
+          printf '%s' "$KS" | base64 -d > android/app/debug.keystore
+          ls -l android/app/debug.keystore
       - run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
         working-directory: frontend/android
       # Que cada build digui amb quina clau va signat. L'empremta no és cap secret, i és l'única
@@ -57,7 +57,7 @@ jobs:
       - name: Say which key signed it
         run: |
           APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | tail -1)
-          "$APKSIGNER" verify --print-certs frontend/android/app/build/outputs/apk/debug/app-debug.apk \
+          "$APKSIGNER" verify --print-certs android/app/build/outputs/apk/debug/app-debug.apk \
             | grep -iE "certificate DN|SHA-256 digest"
       - uses: actions/upload-artifact@v4
         with:
