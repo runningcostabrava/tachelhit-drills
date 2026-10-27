@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import NotaOrtografia from './NotaOrtografia';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FaBookOpen, FaMicrophone, FaPlay, FaTag } from 'react-icons/fa';
 import { api, type LessonProposal, type MethodChapterData, type MethodSentence } from '../api';
@@ -130,6 +131,9 @@ export default function MethodChapter() {
       {c.name && <h1 lang="shi" style={{ fontFamily: 'var(--font-display)', fontSize: 27, margin: '2px 0 0' }}>{c.name}</h1>}
       <h2 style={{ fontFamily: 'var(--font-display)', fontSize: c.name ? 19 : 26, fontWeight: c.name ? 600 : 800, color: c.name ? 'var(--text-soft)' : 'var(--text)', margin: '0 0 8px' }}>{c.title}</h2>
       <p style={{ color: 'var(--text-soft)', fontSize: 14.5, margin: '0 0 6px', lineHeight: 1.55 }}>{c.about}</p>
+      {/* Al capítol dels sons: que la mateixa lletra s'escriu de dues maneres (#364). És el
+          capítol on s'aprèn quina lletra fa quin so, i és on es topa amb «rix» i «riɣ». */}
+      <NotaOrtografia nota={c.ortografia} />
       {/* Què hi ha EN AQUEST CAPÍTOL, i res més.
 
           Abans deia «3.412 frases · 1.180 amb veu · 4 de 4 seccions a punt». Cap dels tres

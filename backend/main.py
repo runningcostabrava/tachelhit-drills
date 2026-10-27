@@ -6262,7 +6262,7 @@ AI_SYSTEM_ROLE = """Ets l'assistent lingüístic de "Tamazight Drills", una apli
 
 El teu paper:
 - Ajudes qui aprèn a entendre la gramàtica, la pronunciació i l'ús del taixelhit i l'amazic en general.
-- Et bases SEMPRE en el "Compendi de Gramàtica Amaziga" que tens a continuació com a font principal. Cita la secció (p. ex. "§5. Morfosintaxi verbal") quan sigui rellevant.
+- Et bases SEMPRE en el "Compendi de Gramàtica Amaziga" com a font principal. A continuació en tens EL TROS que parla del que s'ha preguntat, no el llibre sencer: cita la secció (p. ex. "§5. Morfosintaxi verbal") quan sigui rellevant. Si el tros que tens no cobreix la pregunta, digues que el compendi pot parlar-ne en una altra secció; no et pensis que el llibre no en parla perquè aquí no hi surti.
 - Si la pregunta va sobre un drill concret de l'usuari, fes servir el seu contingut (català, taixelhit en tifinag i llatí, àrab) per explicar-lo.
 - Si el compendi no cobreix una cosa, digues-ho clarament i aporta el teu millor coneixement lingüístic, marcant-ho com a complement.
 - Quan el context d'un drill porta línies marcades [Oulhaj] (diccionari anglès–taixelhit de Lahcen Oulhaj) o [IRCAM] (taules de conjugació de l'IRCAM), són dades de referència: per a una paraula amb la mateixa grafia tenen prioritat sobre el que recordis, i les cites amb aquesta marca. Les línies marcades «coincidència aproximada de grafia» només són pistes (el diccionari és del taixelhit del Sus; en Atles Central la mateixa grafia pot ser una altra paraula): descarta-les quan no quadrin amb el significat català.
@@ -6270,7 +6270,7 @@ El teu paper:
 
 PRINCIPI DE VARIETAT (molt important): qui aprèn documenta una varietat regional concreta (sovint tamazight de l'Atles central, zona Azilal–Kalaat Mgouna), que NO és idèntica al taixelhit del Sus ni al tamazight estàndard de l'IRCAM. Quan la forma ATTESTADA (recollida per l'usuari d'un parlant real) difereixi de l'estàndard o del compendi, la forma attestada és la correcta per a aquella varietat: explica la diferència, no la "corregeixis" cap a l'estàndard. Tracta les formes recollides per l'usuari com a dades de camp valuoses.
 
-=== COMPENDI DE GRAMÀTICA AMAZIGA (font: amazic.cat) ===
+=== COMPENDI DE GRAMÀTICA AMAZIGA (font: amazic.cat) — el tros que fa al cas ===
 """
 
 def _attested_forms_context(db, limit: int = 40) -> str:
@@ -6296,9 +6296,26 @@ def _attested_forms_context(db, limit: int = 40) -> str:
     return ("\n\n=== FORMES ATTESTADES RECOLLIDES PER L'USUARI (dades de camp, prioritàries) ===\n"
             + "\n".join(lines))
 
-def _build_system_instruction(db) -> str:
-    """Role + grammar compendium + the learner's attested corpus."""
-    return AI_SYSTEM_ROLE + _load_grammar() + _attested_forms_context(db)
+def _build_system_instruction(db, question: str = "") -> str:
+    """El paper, el tros de compendi que fa al cas, i les formes recollides.
+
+    Abans hi anava **el compendi sencer**: 549.650 caràcters, uns 137.000 tokens, a cada
+    pregunta i es preguntés el que es preguntés. Mesurat a `/ai/usage`, una pregunta al copilot
+    costava 0,065 € i 228.900 tokens d'entrada —seixanta vegades una crida del `pipeline`— i,
+    pitjor encara, portava dos-cents mil tokens de llibre i cap frase de la biblioteca: quan li
+    preguntaven una paraula, el que tenia a mà era el llibre, i contestava amb el llibre o se la
+    inventava (#374).
+
+    Ara es va a buscar el tros que parla del que s'ha preguntat (`compendi.per`). Sense pregunta
+    —una traducció, una revisió— va només l'índex dels capítols: val més dir de què parla el
+    llibre que endevinar quin tros calia.
+    """
+    import compendi
+    llibre = _load_grammar()
+    if not llibre:
+        return AI_SYSTEM_ROLE + _attested_forms_context(db)
+    tros = compendi.per(question, llibre)[0] if (question or "").strip() else compendi.index(llibre)
+    return AI_SYSTEM_ROLE + tros + _attested_forms_context(db)
 
 def _drill_context(drill) -> str:
     if not drill:
@@ -7010,6 +7027,13 @@ def method_chapter(slug: str, db: Session = Depends(get_db),
                           for t in db.query(TestModel).filter(
                               TestModel.title.ilike(f"%Capítol {c['n']} ·%")).all()), None),
     }
+    # El capítol dels sons diu que la mateixa lletra s'escriu de dues maneres (#364). És el
+    # capítol on algú aprèn quina lletra fa quin so, i és on topa amb «rix» i «riɣ» per primera
+    # vegada. Ve del repositori i no del text del capítol: és un fet comptat, i ha de dir sempre
+    # el mateix encara que algú reescrigui el capítol.
+    if c["slug"] == "sons":
+        import ortografia
+        out["ortografia"] = ortografia.nota()
     _CHAPTER_CACHE[slug] = (mark, out)
     return out
 
@@ -7215,9 +7239,16 @@ def _grammar_unit_payload(db, slug: str, limit: int, force: bool, deep: bool = F
                 step["example"]["variants"] = [v for v in said.get(step["example"].get("id"), [])
                                                if _another_way(v["text"], step["example"].get("shi"))]
     total = len(rows)  # the rows are already every drill of the unit (the query's limit is far above any unit)
-    return {**{k: unit[k] for k in ("slug", "title", "level")}, "lesson": lesson, "total": total,
+    fora = {**{k: unit[k] for k in ("slug", "title", "level")}, "lesson": lesson, "total": total,
             "practice": [d.id for d in practice],
             "drills": [Drill.model_validate(d, from_attributes=True) for d in rows[:max(1, min(limit, 300))]]}
+    # La unitat dels sons diu que la mateixa lletra s'escriu de dues maneres (#364). Va aquí i no
+    # dins la lliçó perquè la lliçó l'escriu un model i això és un fet comptat: ha de dir sempre
+    # el mateix i no pot dependre que un dia el model se'n descuidi.
+    if slug == grammar_course.SOUNDS_UNIT:
+        import ortografia
+        fora["ortografia"] = ortografia.nota()
+    return fora
 
 
 def _lesson_quotes(db, slug: str) -> set:
@@ -7472,7 +7503,7 @@ def ai_ask(
     if not (question or "").strip():
         raise HTTPException(status_code=400, detail="Empty question")
 
-    system_instruction = _build_system_instruction(db)
+    system_instruction = _build_system_instruction(db, question)
 
     contents = []
     for turn in (history or [])[-8:]:  # keep the last few turns for context
@@ -7931,7 +7962,7 @@ def ai_agent(
     if not (message or "").strip():
         raise HTTPException(status_code=400, detail="Empty message")
 
-    system = _build_system_instruction(db) + (
+    system = _build_system_instruction(db, message) + (
         "\n\nEts un COPILOT que pot ACTUAR a l'aplicació amb les eines disponibles: "
         "crear i modificar drills, cercar-los i sintetitzar veu en taixelhit. "
         "Fes servir les eines quan l'usuari demani una acció (crea, edita, tradueix i desa, "
