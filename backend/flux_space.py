@@ -31,15 +31,23 @@ def available() -> bool:
     return bool(token())
 
 
-def draw(prompt: str, width: int = 1024, height: int = 1024, steps: int = 4) -> bytes:
-    """Els bytes de la imatge. Aixeca RuntimeError si cap Space ha pogut dibuixar."""
+def draw(prompt: str, width: int = 1024, height: int = 1024, steps: int = 4,
+         seed: int | None = None) -> bytes:
+    """Els bytes de la imatge. Aixeca RuntimeError si cap Space ha pogut dibuixar.
+
+    `seed` fixa d'on surt el dibuix. Per a una targeta solta tant li fa i val més que sigui a
+    l'atzar. Per a un conte, no: trenta-set crides a l'atzar donen trenta-set llops diferents,
+    i llavors la imatge deixa d'ajudar a seguir la història (#390). Amb la mateixa llavor i el
+    mateix repartiment escrit, els dibuixos s'assemblen entre ells.
+    """
     from gradio_client import Client
 
     last = ""
     for space in SPACES:
         try:
             client = Client(space, token=token(), verbose=False)
-            got = client.predict(prompt=prompt, seed=0, randomize_seed=True,
+            got = client.predict(prompt=prompt, seed=0 if seed is None else int(seed),
+                                 randomize_seed=seed is None,
                                  width=width, height=height, num_inference_steps=steps,
                                  api_name="/infer")
             path = got[0] if isinstance(got, (list, tuple)) else got
