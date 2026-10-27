@@ -18,24 +18,355 @@
  },
  "capitols": {
   "sons": {
-   "vocals:example:0": {"pista": "e6nuUVOFB0U", "start": 46.63, "end": 47.11,
-                        "url": "/method/cd/e6nuUVOFB0U/46.63/47.11", "com": "sentit"},
-   "vocals:example:1": {"pista": "e6nuUVOFB0U", "start": 49.87, "end": 50.41,
-                        "url": "/method/cd/e6nuUVOFB0U/49.87/50.41", "com": "sentit"},
-   "vocals:example:2": {"pista": "e6nuUVOFB0U", "start": 52.73, "end": 53.39,
-                        "url": "/method/cd/e6nuUVOFB0U/52.73/53.39", "com": "sentit"},
-   "vocals:example:3": {"pista": "e6nuUVOFB0U", "start": 56.67, "end": 57.14,
-                        "url": "/method/cd/e6nuUVOFB0U/56.67/57.14", "com": "sentit"},
-   "vocals:example:4": {"pista": "e6nuUVOFB0U", "start": 59.53, "end": 60.11,
-                        "url": "/method/cd/e6nuUVOFB0U/59.53/60.11", "com": "sentit"},
-   "vocals:example:5": {"pista": "e6nuUVOFB0U", "start": 62.29, "end": 62.64,
-                        "url": "/method/cd/e6nuUVOFB0U/62.29/62.64", "com": "sentit"},
-   "vocals:example:6": {"pista": "e6nuUVOFB0U", "start": 70.09, "end": 70.68,
-                        "url": "/method/cd/e6nuUVOFB0U/70.09/70.68", "com": "per veïnatge"},
-   "vocals:example:7": {"pista": "e6nuUVOFB0U", "start": 74.21, "end": 74.78,
-                        "url": "/method/cd/e6nuUVOFB0U/74.21/74.78", "com": "sentit"},
-   "vocals:example:8": {"pista": "e6nuUVOFB0U", "start": 77.68, "end": 78.14,
-                        "url": "/method/cd/e6nuUVOFB0U/77.68/78.14", "com": "per veïnatge"}
+   "vocals:example:0": {
+    "pista": "e6nuUVOFB0U",
+    "start": 46.63,
+    "end": 47.11,
+    "url": "/method/cd/e6nuUVOFB0U/46.63/47.11",
+    "com": "sentit"
+   },
+   "vocals:example:1": {
+    "pista": "e6nuUVOFB0U",
+    "start": 49.87,
+    "end": 50.41,
+    "url": "/method/cd/e6nuUVOFB0U/49.87/50.41",
+    "com": "sentit"
+   },
+   "vocals:example:2": {
+    "pista": "e6nuUVOFB0U",
+    "start": 52.73,
+    "end": 53.39,
+    "url": "/method/cd/e6nuUVOFB0U/52.73/53.39",
+    "com": "sentit"
+   },
+   "vocals:example:3": {
+    "pista": "e6nuUVOFB0U",
+    "start": 56.67,
+    "end": 57.14,
+    "url": "/method/cd/e6nuUVOFB0U/56.67/57.14",
+    "com": "sentit"
+   },
+   "vocals:example:4": {
+    "pista": "e6nuUVOFB0U",
+    "start": 59.53,
+    "end": 60.11,
+    "url": "/method/cd/e6nuUVOFB0U/59.53/60.11",
+    "com": "sentit"
+   },
+   "vocals:example:5": {
+    "pista": "e6nuUVOFB0U",
+    "start": 62.29,
+    "end": 62.64,
+    "url": "/method/cd/e6nuUVOFB0U/62.29/62.64",
+    "com": "sentit"
+   },
+   "vocals:example:6": {
+    "pista": "e6nuUVOFB0U",
+    "start": 70.09,
+    "end": 70.68,
+    "url": "/method/cd/e6nuUVOFB0U/70.09/70.68",
+    "com": "per veïnatge"
+   },
+   "vocals:example:7": {
+    "pista": "e6nuUVOFB0U",
+    "start": 74.21,
+    "end": 74.78,
+    "url": "/method/cd/e6nuUVOFB0U/74.21/74.78",
+    "com": "sentit"
+   },
+   "vocals:example:8": {
+    "pista": "e6nuUVOFB0U",
+    "start": 77.68,
+    "end": 78.14,
+    "url": "/method/cd/e6nuUVOFB0U/77.68/78.14",
+    "com": "per veïnatge"
+   },
+   "tensio:col0:1": {
+    "pista": "e6nuUVOFB0U",
+    "start": 104.632,
+    "end": 105.184,
+    "url": "/method/cd/e6nuUVOFB0U/104.632/105.184",
+    "com": "sentit a cegues: la màquina hi sent «ⵉⵎⵉ», que s'assembla a «ⵉⵎⵉ» en un 100%"
+   },
+   "tensio:col0:4": {
+    "pista": "e6nuUVOFB0U",
+    "start": 110.759,
+    "end": 111.301,
+    "url": "/method/cd/e6nuUVOFB0U/110.759/111.301",
+    "com": "sentit a cegues: la màquina hi sent «ⵜⵉⵙⵙⵉ», que s'assembla a «ⵜⵉⵙⵉ» en un 80%"
+   },
+   "tensio:col1:2": {
+    "pista": "e6nuUVOFB0U",
+    "start": 143.354,
+    "end": 143.608,
+    "url": "/method/cd/e6nuUVOFB0U/143.354/143.608",
+    "com": "sentit a cegues: la màquina hi sent «ⵙⵍⵉ», que s'assembla a «ⵙⵙⵍⵉ» en un 75%"
+   },
+   "emfatiques:example:2": {
+    "pista": "e6nuUVOFB0U",
+    "start": 172.32,
+    "end": 172.743,
+    "url": "/method/cd/e6nuUVOFB0U/172.32/172.743",
+    "com": "sentit a cegues: la màquina hi sent «ⴰⵥⵓⵔ», que s'assembla a «ⴰⵥⵓⵔ» en un 100%"
+   },
+   "emfatiques:example:3": {
+    "pista": "e6nuUVOFB0U",
+    "start": 177.339,
+    "end": 177.79,
+    "url": "/method/cd/e6nuUVOFB0U/177.339/177.79",
+    "com": "sentit a cegues: la màquina hi sent «ⵢⵥⵉ», que s'assembla a «ⵉⵥⵉ» en un 67%"
+   },
+   "emfatiques:col1:0": {
+    "pista": "e6nuUVOFB0U",
+    "start": 205.574,
+    "end": 206.134,
+    "url": "/method/cd/e6nuUVOFB0U/205.574/206.134",
+    "com": "sentit a cegues: la màquina hi sent «ⵎⴹⵓ», que s'assembla a «ⵎⴹⵉ» en un 67%"
+   },
+   "labiovelars:example:1": {
+    "pista": "e6nuUVOFB0U",
+    "start": 232.253,
+    "end": 232.587,
+    "url": "/method/cd/e6nuUVOFB0U/232.253/232.587",
+    "com": "sentit a cegues: la màquina hi sent «ⴰⴳⵉ», que s'assembla a «ⴰⴳⵯⵉ» en un 75%"
+   },
+   "labiovelars:example:4": {
+    "pista": "e6nuUVOFB0U",
+    "start": 243.099,
+    "end": 243.765,
+    "url": "/method/cd/e6nuUVOFB0U/243.099/243.765",
+    "com": "sentit a cegues: la màquina hi sent «ⴰⵇⵔⴰⵏ», que s'assembla a «ⴰⵇⵯⵔⴰⴱ» en un 67%"
+   },
+   "labiovelars:col0:1": {
+    "pista": "e6nuUVOFB0U",
+    "start": 260.115,
+    "end": 260.504,
+    "url": "/method/cd/e6nuUVOFB0U/260.115/260.504",
+    "com": "sentit a cegues: la màquina hi sent «ⵖⵉⵍ», que s'assembla a «ⵖⵉ» en un 67%"
+   },
+   "vocabulary:13": {
+    "pista": "e6nuUVOFB0U",
+    "start": 279.983,
+    "end": 280.531,
+    "url": "/method/cd/e6nuUVOFB0U/279.983/280.531",
+    "com": "sentit a cegues: la màquina hi sent «ⴰⵖⵢⵓⵍ», que s'assembla a «ⴰⵖⵢⵓⵍ» en un 100%"
+   },
+   "vocabulary:14": {
+    "pista": "e6nuUVOFB0U",
+    "start": 283.117,
+    "end": 283.534,
+    "url": "/method/cd/e6nuUVOFB0U/283.117/283.534",
+    "com": "sentit a cegues: la màquina hi sent «ⴰⵡⵔⵖ», que s'assembla a «ⴰⵡⵔⴰⵖ» en un 80%"
+   }
+  },
+  "salutacions": {
+   "dialogue:1": {
+    "pista": "mDMcR7vNA_A",
+    "start": 8.627,
+    "end": 10.628,
+    "url": "/method/cd/mDMcR7vNA_A/8.627/10.628",
+    "com": "sentit a cegues: la màquina hi sent «ⵜⵉⵎⵙⵉ ⵡⵉⵏⵃⵎⴷ ⵎⴰⵏⵉⴽ ⴰⴷ ⵜ ⵢⵉⴷ ⵎ», que s'assembla a «ⵜⵉⵎⵉⵏⵙⵉⵡⵉⵏ ⴰ ⵃⵎⴰⴷ ⵎⴰⵏⵉⴽⴰ ⵜⴳⵉⵜ» en un 68%"
+   },
+   "dialogue:6": {
+    "pista": "mDMcR7vNA_A",
+    "start": 21.454,
+    "end": 22.527,
+    "url": "/method/cd/mDMcR7vNA_A/21.454/22.527",
+    "com": "sentit a cegues: la màquina hi sent «ⴰⴷ ⴷ ⵢⴰⵡⵉ ⵡⵉⵙⵍⴰⵎⵎⵜ», que s'assembla a «ⴰⴷⴷ ⵢⴰⵡⵉ ⵕⴱⴱⵉ ⵙⵙⵍⴰⵎⵜ» en un 71%"
+   },
+   "dialogue:7": {
+    "pista": "mDMcR7vNA_A",
+    "start": 23.778,
+    "end": 25.759,
+    "url": "/method/cd/mDMcR7vNA_A/23.778/25.759",
+    "com": "sentit a cegues: la màquina hi sent «ⴰⴽⴽ ⵉⴷ ⵏ ⵔⵕⴱⴱⵉ ⴰⵔ ⵜⴰⵡⴰ ⵟⴰⴱⵏ», que s'assembla a «ⴰⴽⴽ ⵉⵀⵏⵏⴰ ⵕⴱⴱⵉ ⴰⵔ ⵜⴰⵡⴰⵍⵜⵜ ⴰⴹⵏⵉⵏ» en un 65%"
+   },
+   "coneixer-se:col0:0": {
+    "pista": "mDMcR7vNA_A",
+    "start": 30.889,
+    "end": 33.075,
+    "url": "/method/cd/mDMcR7vNA_A/30.889/33.075",
+    "com": "sentit a cegues: la màquina hi sent «ⴰⵃ ⵍⵅⵉⵔ ⴰ ⵔⵕⵉⵎ ⵎⴰⵔⵣⴰⴳⵉⵏ», que s'assembla a «ⵚⴱⴰⵃ ⵍⵅⵉⵔ ⴰ ⴱⵔⴰⵀⵉⵎ ⵎⴰⵏⵣⴰⴽⵉⵏⵏ» en un 67%"
+   },
+   "coneixer-se:col0:1": {
+    "pista": "mDMcR7vNA_A",
+    "start": 33.842,
+    "end": 35.047,
+    "url": "/method/cd/mDMcR7vNA_A/33.842/35.047",
+    "com": "sentit a cegues: la màquina hi sent «ⵎⵉⵅⵉⵔ ⵉ ⵎⴰⵜⵎⵉ», que s'assembla a «ⴱⵉⵅⵉⵔ ⵉⵎⵎⴰ ⴽⵎⵎⵉ» en un 69%"
+   },
+   "coneixer-se:col1:2": {
+    "pista": "mDMcR7vNA_A",
+    "start": 46.997,
+    "end": 48.106,
+    "url": "/method/cd/mDMcR7vNA_A/46.997/48.106",
+    "com": "sentit a cegues: la màquina hi sent «ⴽⵔⴰ ⵏ ⵉⵎⵉ ⵢⵙⵙⵄⵜⴰⴷ», que s'assembla a «ⴽⵔⴰ ⵏⵉⵎⵉⴽⴽ ⵙⵙⵃⵜⴰⴷ» en un 80%"
+   },
+   "coneixer-se:col2:1": {
+    "pista": "mDMcR7vNA_A",
+    "start": 53.502,
+    "end": 55.718,
+    "url": "/method/cd/mDMcR7vNA_A/53.502/55.718",
+    "com": "sentit a cegues: la màquina hi sent «ⵜⵉⵎⵙⵉⵡⵉⵏ ⴰⵎⵎⴰⵔ ⵓⵍⵛⵉ ⴱⵉⵅⵉⵔ», que s'assembla a «ⵜⵉⵎⵉⵏⵙⵉⵡⵉⵏ ⴰ ⵎⴱⴰⵔⴽ ⴽⵓⵍⵛⵉ ⴱⵉⵅⵉⵔ» en un 81%"
+   },
+   "escolta-tensio:example:3": {
+    "pista": "mDMcR7vNA_A",
+    "start": 75.969,
+    "end": 76.597,
+    "url": "/method/cd/mDMcR7vNA_A/75.969/76.597",
+    "com": "sentit a cegues: la màquina hi sent «ⵏⵜⵜⴰⵜ», que s'assembla a «ⵏⵜⵜⴰⵜ» en un 100%"
+   },
+   "escolta-tensio:example:4": {
+    "pista": "mDMcR7vNA_A",
+    "start": 79.646,
+    "end": 80.174,
+    "url": "/method/cd/mDMcR7vNA_A/79.646/80.174",
+    "com": "sentit a cegues: la màquina hi sent «ⵕⴱⴱⵉ», que s'assembla a «ⵕⴱⴱⵉ» en un 100%"
+   },
+   "escolta-tensio:example:5": {
+    "pista": "mDMcR7vNA_A",
+    "start": 83.02,
+    "end": 84.298,
+    "url": "/method/cd/mDMcR7vNA_A/83.02/84.298",
+    "com": "sentit a cegues: la màquina hi sent «ⴰⴷ ⴷ ⵢⴰⵡⵉ ⵔⵕⴱⴱⵉ ⵙⵍⴰⵎⵜ», que s'assembla a «ⴰⴷⴷ ⵢⴰⵡⵉ ⵕⴱⴱⵉ ⵙⵙⵍⴰⵎⵜ» en un 88%"
+   },
+   "escolta-tensio:example:6": {
+    "pista": "mDMcR7vNA_A",
+    "start": 90.901,
+    "end": 91.924,
+    "url": "/method/cd/mDMcR7vNA_A/90.901/91.924",
+    "com": "sentit a cegues: la màquina hi sent «ⴰⴽⴽ ⵉⵀⵏⵏⴰ ⵔⵕⴱⴱⵉ», que s'assembla a «ⴰⴽⴽ ⵉⵀⵏⵏⴰ ⵕⴱⴱⵉ» en un 92%"
+   },
+   "escolta-tensio:example:8": {
+    "pista": "mDMcR7vNA_A",
+    "start": 98.213,
+    "end": 99.393,
+    "url": "/method/cd/mDMcR7vNA_A/98.213/99.393",
+    "com": "sentit a cegues: la màquina hi sent «ⴰⵔ ⴷ ⴰⵡⴰⵍ ⵜⴰⴹⵏ», que s'assembla a «ⴰⵔ ⵜⴰⵡⴰⵍⵜⵜ ⴰⴹⵏⵉⵏ» en un 71%"
+   },
+   "escolta-tensio:example:9": {
+    "pista": "mDMcR7vNA_A",
+    "start": 102.255,
+    "end": 102.858,
+    "url": "/method/cd/mDMcR7vNA_A/102.255/102.858",
+    "com": "sentit a cegues: la màquina hi sent «ⵜⴽⵍⵉⵜ», que s'assembla a «ⵜⵉⴽⵍⵉⵜⵜ» en un 71%"
+   },
+   "escolta-tensio:example:13": {
+    "pista": "mDMcR7vNA_A",
+    "start": 115.398,
+    "end": 116.004,
+    "url": "/method/cd/mDMcR7vNA_A/115.398/116.004",
+    "com": "sentit a cegues: la màquina hi sent «ⴱⵔⵔⴽ», que s'assembla a «ⴱⵔⵔⴽ» en un 100%"
+   },
+   "escolta-tensio:example:14": {
+    "pista": "mDMcR7vNA_A",
+    "start": 118.478,
+    "end": 119.234,
+    "url": "/method/cd/mDMcR7vNA_A/118.478/119.234",
+    "com": "sentit a cegues: la màquina hi sent «ⴱⵔⵔⴽ ⴷⵔⴹ», que s'assembla a «ⴱⵔⵔⴽ ⴷⴰⵔⵏⵖ» en un 67%"
+   }
+  },
+  "el-cami": {
+   "dialogue:0": {
+    "pista": "mDMcR7vNA_A",
+    "start": 133.098,
+    "end": 135.11,
+    "url": "/method/cd/mDMcR7vNA_A/133.098/135.11",
+    "com": "sentit a cegues: la màquina hi sent «ⵎⴰⵏ ⴷ ⵉⵍⵍⴰ ⵓⵡⴰⵔⴰⵙ ⵏ ⵜⴼⵔⴰⵜ ⵉ ⵕⴱⴱⵉ», que s'assembla a «ⵎⴰⵏⵉⵖ ⵉⵍⵍⴰ ⵓⵖⴰⵔⴰⵙ ⵏⵜⴼⵔⴰⵡⵜ ⵉⵕⴱⴱⵉ» en un 85%"
+   },
+   "dialogue:1": {
+    "pista": "mDMcR7vNA_A",
+    "start": 136.178,
+    "end": 137.357,
+    "url": "/method/cd/mDMcR7vNA_A/136.178/137.357",
+    "com": "sentit a cegues: la màquina hi sent «ⴰⵎⵥ ⴰⵙⴰ ⴰⴼⴰⵙⵉ», que s'assembla a «ⴰⵎⵥ ⴰⵖⴰⵔⴰⵙ ⴰⴼⴰⵙⵉ» en un 71%"
+   },
+   "dialogue:6": {
+    "pista": "mDMcR7vNA_A",
+    "start": 149.004,
+    "end": 150.556,
+    "url": "/method/cd/mDMcR7vNA_A/149.004/150.556",
+    "com": "sentit a cegues: la màquina hi sent «ⵉⴼⵓⴽ ⵎⴰ ⵜⴽⵔ», que s'assembla a «ⵉⴼⵓⵍⴽⵉ ⵎⴰ ⵜⵙⴽⴰⵔ» en un 69%"
+   },
+   "mani:example:2": {
+    "pista": "mDMcR7vNA_A",
+    "start": 182.996,
+    "end": 184.015,
+    "url": "/method/cd/mDMcR7vNA_A/182.996/184.015",
+    "com": "sentit a cegues: la màquina hi sent «ⵎ ⴰⴳⵉⵍⵍⴰ ⵓⴷⵡⴰⵔ», que s'assembla a «ⵎⴰⵏⵉⵖ ⵉⵍⵍⴰ ⵓⴹⵡⵡⴰⵔ» en un 67%"
+   },
+   "mani:example:3": {
+    "pista": "mDMcR7vNA_A",
+    "start": 191.594,
+    "end": 192.622,
+    "url": "/method/cd/mDMcR7vNA_A/191.594/192.622",
+    "com": "sentit a cegues: la màquina hi sent «ⵎⴰⵏⵉⵖ ⵜⵍⵍⴰ ⵜⵎⵖⵔⴰ», que s'assembla a «ⵎⴰⵏⵉⵖ ⵜⵍⵍⴰ ⵍⴱⵓⵙⵟⴰ» en un 67%"
+   },
+   "mani:example:5": {
+    "pista": "mDMcR7vNA_A",
+    "start": 214.207,
+    "end": 215.215,
+    "url": "/method/cd/mDMcR7vNA_A/214.207/215.215",
+    "com": "sentit a cegues: la màquina hi sent «ⵎⴰⵏⵉⵖ ⵜⵍⵍⴰⵣ ⵉⵏⵎ», que s'assembla a «ⵎⴰⵏⵉⵖ ⵜⵍⵍⴰ ⴼⴰⵟⵉⵎ» en un 71%"
+   },
+   "quan:example:3": {
+    "pista": "mDMcR7vNA_A",
+    "start": 277.279,
+    "end": 279.256,
+    "url": "/method/cd/mDMcR7vNA_A/277.279/279.256",
+    "com": "sentit a cegues: la màquina hi sent «ⵜⵍⵍⴰ ⴷ ⵎⵎⵖⴰⵔ ⴷ ⵖⵓⵍⵡⴰ», que s'assembla a «ⵜⵍⵍⴰ ⵜⵎⵖⴰⵔⵜ ⵖⵓⵏⵡⴰⵍ» en un 69%"
+   },
+   "persona:example:0": {
+    "pista": "mDMcR7vNA_A",
+    "start": 312.191,
+    "end": 313.859,
+    "url": "/method/cd/mDMcR7vNA_A/312.191/313.859",
+    "com": "sentit a cegues: la màquina hi sent «ⵉⵅⴷⵎ ⵓⵔⴳⴰⵣ ⵖ ⵍⴱⴰⵏⴽⴰ», que s'assembla a «ⵉⵅⴷⵎ ⵓⵔⴳⴰⵣ ⵖⵍⴱⴰⵏⴽⴰ» en un 100%"
+   },
+   "persona:example:3": {
+    "pista": "mDMcR7vNA_A",
+    "start": 317.163,
+    "end": 318.452,
+    "url": "/method/cd/mDMcR7vNA_A/317.163/318.452",
+    "com": "sentit a cegues: la màquina hi sent «ⵢⴽⵔⵔⵣ ⵓⴼⵍⵍⴰⵃ», que s'assembla a «ⵉⴽⵔⵣ ⵓⴼⵍⵍⴰⵃ» en un 82%"
+   },
+   "persona:example:4": {
+    "pista": "mDMcR7vNA_A",
+    "start": 321.637,
+    "end": 322.59,
+    "url": "/method/cd/mDMcR7vNA_A/321.637/322.59",
+    "com": "sentit a cegues: la màquina hi sent «ⵜⵔⵥ ⵏ ⵜⴳⵎⵎⵉ», que s'assembla a «ⵜⵔⵥⵎ ⵜⴳⵎⵎⵉ» en un 89%"
+   },
+   "vocabulary:9": {
+    "pista": "mDMcR7vNA_A",
+    "start": 388.136,
+    "end": 388.945,
+    "url": "/method/cd/mDMcR7vNA_A/388.136/388.945",
+    "com": "sentit a cegues: la màquina hi sent «ⵜⴰⵎⵣⵉⵔⵜ», que s'assembla a «ⵜⴰⵎⴰⵣⵉⵔⵜ» en un 88%"
+   }
+  },
+  "la-botiga": {
+   "dialogue:0": {
+    "pista": "zkvUblbTdws",
+    "start": 5.976,
+    "end": 6.88,
+    "url": "/method/cd/zkvUblbTdws/5.976/6.88",
+    "com": "sentit a cegues: la màquina hi sent «ⵉⵜⴷⴷⵔⴽ ⵜⵓⴷⵜ», que s'assembla a «ⵉⵙ ⴷⴰⵔⴽ ⵜⵓⴷⵉⵜ» en un 73%"
+   },
+   "dialogue:3": {
+    "pista": "zkvUblbTdws",
+    "start": 16.001,
+    "end": 17.567,
+    "url": "/method/cd/zkvUblbTdws/16.001/17.567",
+    "com": "sentit a cegues: la màquina hi sent «ⴽⵓⵥ ⵉⴹ ⵎⵢⴰ ⵉⵍⵉⵜⵔⵓ», que s'assembla a «ⴽⴽⵓⵥ ⵉⴷⴰⵎⵉⵢⵢⴰ ⵉⵍⵉⵜⵔⵓ» en un 72%"
+   },
+   "datius:example:5": {
+    "pista": "zkvUblbTdws",
+    "start": 280.333,
+    "end": 281.538,
+    "url": "/method/cd/zkvUblbTdws/280.333/281.538",
+    "com": "sentit a cegues: la màquina hi sent «ⵏⴼⴽⴰ ⴰⴰⵙ ⵜⴰⵙⴰⵔⵓⵜ», que s'assembla a «ⴼⴽⵉⵖⴰⵙ ⵜⴰⵙⴰⵔⵓⵜ» en un 79%"
+   }
   }
  }
 }
