@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FaChevronLeft, FaExternalLinkAlt, FaPause, FaPlay } from 'react-icons/fa';
+import { FaChevronLeft, FaCrosshairs, FaExternalLinkAlt, FaPause, FaPlay, FaRedo, FaStepBackward, FaStepForward, FaStop } from 'react-icons/fa';
 import { api, type Story, type StoryPage, type WordTime } from '../api';
 import { getMediaUrl } from '../config';
 import type { Drill } from '../types';
 import WordGloss, { parseGlosses, type Gloss } from './WordGloss';
 import Frase from './Frase';
 import { llum } from '../utils/llum';
-import { ara, gap, keepAwake, nowPlaying, say, stop } from '../utils/veu';
+import { ara, continua, esPausat, gap, keepAwake, nowPlaying, pausa, ritme, say, stop } from '../utils/veu';
 
 // Whole stories and songs, instead of loose sentences (#189).
 //
@@ -231,10 +231,33 @@ function OneStory({ slug }: { slug: string }) {
   // Quina paraula sona ara: la línia i la seva posició dins la línia (#340).
   const [mot, setMot] = useState<{ drill: number; i: number } | null>(null);
   // La pantalla segueix la veu, però qui llegeix mana: si mou la pàgina a mà, deixa de
-  // seguir-la fins que torni a prémer play. Una pantalla que t'estira cap on ella vol és
-  // pitjor que una de quieta.
+  // seguir-la. Una pantalla que t'estira cap on ella vol és pitjor que una de quieta.
+  //
+  // El que faltava és el camí de tornada: un cop desactivat, l'única manera de tornar-lo a
+  // engegar era aturar la història i tornar-la a començar des de dalt. Ara hi ha un botó, i
+  // qualsevol play el torna a engegar. Per això va a l'estat i no només a una referència: el
+  // botó ha de poder dir en quin dels dos estats és.
   const seguint = useRef(true);
+  const [segueix, setSegueix] = useState(true);
+  const posaSeguiment = (v: boolean) => { seguint.current = v; setSegueix(v); };
   const linies = useRef<Record<number, HTMLDivElement | null>>({});
+  // Per on va la lectura, i on ha de saltar quan s'acabi la línia d'ara. «Repeteix», «l'anterior»
+  // i «la següent» no poden moure un índex de dins d'un `for`: deixen dit on anar i tallen el so,
+  // i la fila ho recull en comptes de passar a la línia de sota.
+  const idx = useRef(0);
+  const salt = useRef<number | null>(null);
+  /**
+   * Quin torn de veu mana ara.
+   *
+   * Una línia no és un so: amb el català al davant en són tres, encadenats amb `await`. Tallar
+   * el so que sona només acaba l'espera —les passades que queden de la línia vella arrencaven
+   * igualment, i se sentia la frase d'abans per sobre de la nova, o la història continuava
+   * parlant després de prémer «atura». Cada vegada que algú mana (play, saltar, repetir, aturar)
+   * això puja, i el que estava a mig dir se'n va.
+   */
+  const torn = useRef(0);
+  const [pausat, setPausat] = useState(false);
+  const [vel, setVel] = useState(1);
 
   useEffect(() => {
     api.story(slug).then((r) => { setPage(r); document.title = `${r.title} · Tamazight`; })
@@ -245,13 +268,13 @@ function OneStory({ slug }: { slug: string }) {
   // La pantalla s'acosta a la línia que sona. A «The Traveller», que en té 219, la veu se
   // n'anava avall i qui escoltava es quedava mirant una altra part del conte.
   useEffect(() => {
-    if (at == null || !seguint.current) return;
+    if (at == null || !segueix) return;
     linies.current[at]?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }, [at]);
+  }, [at, segueix]);
 
-  // Qui llegeix mana sobre la pantalla: tocar-la atura el seguiment fins al pròxim play.
+  // Qui llegeix mana sobre la pantalla: tocar-la atura el seguiment fins que el torni a demanar.
   useEffect(() => {
-    const seu = () => { seguint.current = false; };
+    const seu = () => { if (seguint.current) posaSeguiment(false); };
     window.addEventListener('wheel', seu, { passive: true });
     window.addEventListener('touchmove', seu, { passive: true });
     return () => { window.removeEventListener('wheel', seu); window.removeEventListener('touchmove', seu); };
@@ -300,15 +323,61 @@ function OneStory({ slug }: { slug: string }) {
     const ca = (drill.audio_tts_url || '').trim();
     if (!veu && !ca) return;
     setAt(i);
+    idx.current = i;
+    // Si entremig algú ha manat una altra cosa, les passades que queden d'aquesta línia ja no
+    // s'han de sentir: continuar-les faria sonar la frase vella per sobre de la nova, o deixaria
+    // la història parlant després d'aturar-la.
+    const meu = ++torn.current;
     if (ca) {
       await sona(ca);
+      if (torn.current !== meu) return;
       await gap(250);
     }
-    if (!veu) return;
+    if (!veu || torn.current !== meu) return;
     await sonaEncenent(drill, veu);
+    if (torn.current !== meu) return;
     await gap(300);
+    if (torn.current !== meu) return;
     await sonaEncenent(drill, veu);
   }, [sona, sonaEncenent]);
+
+  /**
+   * Anar a una línia: la mateixa (repetir-la), la d'abans o la de sota.
+   *
+   * Amb la història engegada no es torna a arrencar la fila —això la faria començar de zero—:
+   * se li deixa dit on anar i se li talla el so d'ara, que és el que la desperta. Amb la història
+   * aturada, la línia sona sola.
+   */
+  const vesA = (j: number) => {
+    if (!page) return;
+    const n = Math.max(0, Math.min(page.drills.length - 1, j));
+    posaSeguiment(true);
+    setPausat(false);
+    if (readingRef.current) {
+      salt.current = n;
+      torn.current++;               // el que s'estigui dient a mitges, es queda aquí
+      stop();                       // deixa passar qui esperava el final, i treu la pausa
+    } else {
+      playLine(page.drills[n], n);
+    }
+  };
+
+  /** Callar sense perdre el lloc: la fila es queda esperant on era. */
+  const pausaOSegueix = () => {
+    if (esPausat()) { continua(); setPausat(false); }
+    else { pausa(); setPausat(true); }
+  };
+
+  const atura = () => {
+    readingRef.current = false;
+    salt.current = null;
+    torn.current++;                 // i la línia que s'estava dient no acaba les seves passades
+    stop();
+    setReading(null); setAt(null); setPausat(false);
+    keepAwake(false); nowPlaying(null);
+  };
+
+  const posaRitme = (v: number) => { ritme(v); setVel(v); };
 
   // Sentir-la de cap a cap, de dues maneres que no fan la mateixa feina:
   //
@@ -323,31 +392,47 @@ function OneStory({ slug }: { slug: string }) {
     if (!page) return;
     const sonava = reading;
     readingRef.current = false;
+    torn.current++;                                // calla el que s'estigui dient a mitges
     stop();
-    if (sonava === manera) { setReading(null); setAt(null); keepAwake(false); nowPlaying(null); return; }
+    if (sonava === manera) { setReading(null); setAt(null); setPausat(false); keepAwake(false); nowPlaying(null); return; }
     await gap(60);                                 // deixa acabar la fila anterior
-    seguint.current = true;                        // tornar a prémer play torna a seguir la veu
+    posaSeguiment(true);                           // tornar a prémer play torna a seguir la veu
+    setPausat(false);
     readingRef.current = true; setReading(manera);
     keepAwake(true);
-    for (let i = 0; i < page.drills.length; i++) {
-      if (!readingRef.current) break;
+    // Comença per on s'havia quedat si algú ha demanat una línia abans d'engegar.
+    let i = salt.current ?? 0;
+    salt.current = null;
+    while (readingRef.current && i >= 0 && i < page.drills.length) {
+      idx.current = i;
       // Dir al sistema què sona ara: així surt a la pantalla de bloqueig amb el títol de la
       // història, i el botó de pausa de l'auricular atura de debò en comptes de no fer res.
       nowPlaying({
         title: (page.drills[i].text_tachelhit || '').trim() || page.drills[i].text_catalan || page.title,
         artist: page.speaker && page.speaker !== 'Auto Capture' ? page.speaker : (page.channel || ''),
         album: page.title,
-        onPause: () => { readingRef.current = false; stop(); setReading(null); setAt(null); keepAwake(false); },
+        // Els botons de l'auricular fan el mateix que els de la pantalla: callar sense perdre el
+        // lloc, tornar-hi, i passar de línia.
+        onPlay: () => { continua(); setPausat(false); },
+        onPause: () => { pausa(); setPausat(true); },
+        onNext: () => vesA(idx.current + 1),
+        onPrev: () => vesA(idx.current - 1),
       });
       if (manera === 'amb-catala') {
         await playLine(page.drills[i], i);
       } else {
+        // Només en amazic, una línia és UN so: no hi ha cap passada posterior que es pugui
+        // quedar sonant, i per això aquí no cal mirar el torn. Les dues línies de sota recullen
+        // el que s'hagi manat mentre sonava.
         setAt(i);
         await sonaEncenent(page.drills[i], amazic(page.drills[i]));
       }
+      if (salt.current != null) { i = salt.current; salt.current = null; continue; }
       await gap(350);
+      if (salt.current != null) { i = salt.current; salt.current = null; continue; }
+      i++;
     }
-    if (readingRef.current) { readingRef.current = false; setReading(null); setAt(null); }
+    if (readingRef.current) { readingRef.current = false; setReading(null); setAt(null); setPausat(false); }
     keepAwake(false);
     nowPlaying(null);
   };
@@ -355,8 +440,10 @@ function OneStory({ slug }: { slug: string }) {
   if (missing) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Aquesta història no existeix.</div>;
   if (!page) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Carregant…</div>;
 
+  const sonant = reading != null || at != null;
+
   return (
-    <div style={{ padding: '20px 16px 60px', maxWidth: 760, margin: '0 auto' }}>
+    <div style={{ padding: sonant ? '20px 16px 120px' : '20px 16px 60px', maxWidth: 760, margin: '0 auto' }}>
       <button onClick={() => navigate('/stories')} style={back}><FaChevronLeft /> Històries</button>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 25, margin: '6px 0 4px', lineHeight: 1.25 }}>{page.title}</h1>
       <p style={{ color: 'var(--text-soft)', fontSize: 13.5, margin: '0 0 14px' }}>
@@ -442,7 +529,9 @@ function OneStory({ slug }: { slug: string }) {
               border: '1px solid var(--border)',
               background: at === i ? 'var(--brand-gradient-soft)' : 'var(--surface)',
             }}>
-              <button onClick={() => playLine(d, i)} aria-label={`Escolta la línia ${i + 1}`}
+              {/* Amb la història engegada, el ▶ d'una línia hi porta la lectura en comptes de
+                  sonar-hi a sobre; i torni d'on torni, la pantalla torna a seguir la veu. */}
+              <button onClick={() => vesA(i)} aria-label={`Escolta la línia ${i + 1}`}
                       style={{ flexShrink: 0, width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'var(--surface-2)', color: 'var(--brand-1)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                 <FaPlay size={11} />
               </button>
@@ -477,6 +566,48 @@ function OneStory({ slug }: { slug: string }) {
           );
         })}
       </div>
+
+      {/* Els comandaments, mentre soni alguna cosa.
+          Una història en una llengua que no saps no s'escolta de cap a cap i prou: t'atures,
+          tornes enrere, sents la mateixa frase quatre vegades i la poses lenta per saber on
+          s'acaba una paraula. Fins ara l'única cosa que es podia fer era deixar-la sonar o
+          parar-la del tot. */}
+      {sonant && (
+        <div style={barra}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button onClick={() => vesA(idx.current - 1)} style={rodo} aria-label="La línia d'abans"><FaStepBackward size={12} /></button>
+            <button onClick={pausaOSegueix} style={{ ...rodo, width: 42, height: 42, background: 'var(--brand-gradient)', color: '#fff', border: 'none' }}
+                    aria-label={pausat ? 'Continua' : 'Para un moment'}>
+              {pausat ? <FaPlay size={14} /> : <FaPause size={14} />}
+            </button>
+            <button onClick={() => vesA(idx.current)} style={rodo} aria-label="Torna a dir aquesta línia"><FaRedo size={12} /></button>
+            <button onClick={() => vesA(idx.current + 1)} style={rodo} aria-label="La línia de sota"><FaStepForward size={12} /></button>
+          </div>
+
+          <div style={{ fontSize: 12.5, color: 'var(--text-soft)', minWidth: 74 }}>
+            {at != null ? <>línia {at + 1} de {page.drills.length}</> : null}
+          </div>
+
+          {/* A mitja velocitat se senten les paraules per separat. La paraula encesa continua
+              essent la bona: el rellotge que la mana és el del so, no el de la paret. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {[0.6, 0.8, 1].map((v) => (
+              <button key={v} onClick={() => posaRitme(v)}
+                      style={{ ...xip, ...(vel === v ? xipTriat : null) }}>
+                {v === 1 ? 'normal' : `${v}×`}
+              </button>
+            ))}
+          </div>
+
+          <button onClick={() => posaSeguiment(!segueix)}
+                  style={{ ...xip, ...(segueix ? xipTriat : null), display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                  title={segueix ? 'La pantalla va amb la veu' : 'La pantalla es queda on la deixis'}>
+            <FaCrosshairs size={11} /> {segueix ? 'segueix la veu' : 'quieta'}
+          </button>
+
+          <button onClick={atura} style={{ ...xip, marginLeft: 'auto' }}><FaStop size={10} /> atura</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -494,3 +625,24 @@ const secundari: React.CSSProperties = {
 const card: React.CSSProperties ={ textAlign: 'left', padding: 12, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', color: 'var(--text)', fontFamily: 'inherit' };
 const primary: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' };
 const back: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: 0, border: 'none', background: 'none', color: 'var(--brand-1)', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' };
+/** Els comandaments es queden a baix de tot: amb 219 línies, el play de dalt no es torna a veure. */
+const barra: React.CSSProperties = {
+  position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 900,
+  display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+  padding: '10px 14px calc(10px + env(safe-area-inset-bottom, 0px))',
+  background: 'var(--surface)', borderTop: '1px solid var(--border)',
+  boxShadow: '0 -2px 10px rgba(15,23,42,0.06)',
+};
+const rodo: React.CSSProperties = {
+  width: 36, height: 36, borderRadius: '50%', border: '1px solid var(--border)',
+  background: 'var(--surface-2)', color: 'var(--brand-1)', cursor: 'pointer',
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+};
+const xip: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 5, padding: '7px 11px',
+  borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)',
+  color: 'var(--text-soft)', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+};
+const xipTriat: React.CSSProperties = {
+  borderColor: 'var(--brand-1)', background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)',
+};
