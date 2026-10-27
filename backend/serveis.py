@@ -107,6 +107,9 @@ ESTATS = {
     "privat": "és privat: des de fora no es pot mirar",
     "no_configurat": "no està configurat",
     "persona": "ho fa una persona",
+    # Dues coses que no són «contesta» i que abans es deien com si ho fossin:
+    "no_ho_sabem": "no s'ha mirat",
+    "amb_clau": "hi ha clau i pressupost (si contesta, no se sap fins que se li truca)",
 }
 
 #: Del que diu `/health/spaces` al que diem nosaltres.
@@ -123,14 +126,22 @@ def _estat_proveidor(p: Dict, spaces: Dict, gemini_ok: bool, gemini_clau: bool,
         clau = p.get("clau")
         if not clau:
             return {"estat": "no_configurat"}
-        diu = (spaces or {}).get(clau) or {}
+        diu = (spaces or {}).get(clau)
+        # No s'ha mirat no és el mateix que no contestar. Amb `prova=0` no es truca a cap Space, i
+        # dir-ne «no contesta» seria inventar-se una mesura que no s'ha fet.
+        if not diu:
+            return {"estat": "no_ho_sabem"}
         return {"estat": _DE_SPACE.get(diu.get("state"), "aturat")}
+    # D'un servei de pagament només sabem si tenim clau i si ens queda pressupost NOSTRE. Si a ell
+    # li queda crèdit, no se sap fins que se li truca: el 24-10-2026 Gemini tenia clau, tenia
+    # pressupost i contestava «402 prepayment credits are depleted». Per això aquí no hi diu
+    # «contesta».
     if mena == "gemini":
         if not gemini_clau:
             return {"estat": "sense_clau"}
-        return {"estat": "viu" if gemini_ok else "sense_pressupost"}
+        return {"estat": "amb_clau" if gemini_ok else "sense_pressupost"}
     if mena == "deepseek":
-        return {"estat": "viu" if deepseek_clau else "sense_clau"}
+        return {"estat": "amb_clau" if deepseek_clau else "sense_clau"}
     return {"estat": "no_configurat"}
 
 
@@ -152,7 +163,9 @@ def quina_feina_fa_qui(spaces: Optional[Dict] = None, gemini_ok: bool = False,
                         "diu": ESTATS.get(estat["estat"], estat["estat"])})
         # Una feina està aturada quan cap dels seus no contesta. Dir-ho és la regla 5: cap
         # servei no és l'únic, i si no en queda cap s'ha de veure, no callar.
-        viu = any(p["estat"] in ("viu", "persona") for p in qui)
+        # Una feina funciona si algú la pot fer: una veu viva, una persona, o un servei de
+        # pagament amb clau i pressupost. El que no s'ha mirat no compta ni a favor ni en contra.
+        viu = any(p["estat"] in ("viu", "persona", "amb_clau") for p in qui)
         feines.append({**{k: v for k, v in f.items() if k != "qui"}, "qui": qui, "funciona": viu})
     return {"feines": feines, "aturades": [f["id"] for f in feines if not f["funciona"]],
             # El que no es pot saber, es diu. D'un proveïdor de pagament sabem si tenim clau i si
