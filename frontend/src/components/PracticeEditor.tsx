@@ -34,6 +34,7 @@ const TOOLS: { kind: PracticeStep['kind']; label: string; needsDrill: boolean; n
   { kind: 'word_by_word', label: 'paraula per paraula', needsDrill: true, needsVoice: false },
   { kind: 'script_swap', label: 'tifinag o llatí', needsDrill: true, needsVoice: false },
   { kind: 'pick_spelling', label: 'quina és la bona', needsDrill: true, needsVoice: false },
+  { kind: 'pick_written', label: 'escolta i tria la frase', needsDrill: true, needsVoice: true },
   { kind: 'note', label: 'nota que ensenya', needsDrill: false, needsVoice: false },
 ];
 const toolOf = (k: PracticeStep['kind']) => TOOLS.find((t) => t.kind === k);

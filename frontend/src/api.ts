@@ -160,7 +160,7 @@ export interface VerifyQueue {
 export interface PracticeStep {
   id?: number;
   position?: number;
-  kind: 'listen_pick' | 'write_heard' | 'say_it' | 'look_say' | 'fill_gap' | 'word_by_word' | 'script_swap' | 'pick_spelling' | 'note';
+  kind: 'listen_pick' | 'write_heard' | 'say_it' | 'look_say' | 'fill_gap' | 'word_by_word' | 'script_swap' | 'pick_spelling' | 'pick_written' | 'note';
   drill_id?: number | null;
   // a «note» is the document part of a practice: a heading, a paragraph, a picture
   payload?: { text?: string; heading?: string; image_url?: string } | null;
@@ -464,6 +464,11 @@ export interface Recording {
   speaker?: string | null;
   /** the sentence as this speaker says it, when their dialect's words differ from the drill's */
   text?: string | null;
+  /** Les mateixes paraules, dites d'una altra manera: ho va dir qui va gravar, i queda marcat
+   *  perquè algú ho miri (#332). */
+  sounds_differ?: boolean | null;
+  /** Si porta text propi, de quina mena és: «so» o «paraula» (#332). */
+  variant_kind?: 'so' | 'paraula' | null;
   /** aquesta presa és de qui està mirant la pantalla. Serveix per no oferir-li la paperera
    *  damunt de la veu d'un altre: esborrar-la és feina d'algú que ja no es pot refer. */
   mine?: boolean;
@@ -680,6 +685,10 @@ export const api = {
   // --- multi-speaker recordings (many takes per drill) ---
   drillRecordings: (drillId: number) =>
     request<Recording[]>(`/drills/${drillId}/recordings`),
+  /** Quina de les preses és la veu de la targeta (#332): la pot posar qui la va gravar, i una
+   *  veu d'aprenent no passa mai davant d'una de nadiu. */
+  makeRecordingPrimary: (id: number) =>
+    request<{ drill_id: number; audio_url: string; recording_id: number }>(`/recordings/${id}/principal`, { method: 'POST' }),
   deleteRecording: (recordingId: number) =>
     request<{ deleted: number }>(`/recordings/${recordingId}`, { method: 'DELETE' }),
   updateRecording: (recordingId: number, body: { text?: string; variety?: string; region?: string }) =>
