@@ -47,7 +47,20 @@ def test_classification_fills_grammar_and_unit_page_shows_lesson_and_examples(mo
         {"type": "pattern", "title": "Formes", "rows": [["ur", "no", "ur rad dduɣ"]]},
         {"type": "tip", "text": "No oblidis ur."}, {"type": "dialect", "text": "A Beni Mellal s'hi afegeix ša."}]})
     sheet = "1. RULES: ur davant del verb."
-    monkeypatch.setattr(gemini_client, "gemini_generate", lambda sys_, contents, **k: calls.append(contents[0]["text"]) or (sheet if "STUDY SHEET in" in contents[0]["text"] else answer))
+    # Només les crides d'AQUESTA unitat. El canvi de gemini_generate és global, i l'escriptor de
+    # fons que una altra prova hagi engegat per a una altra unitat hi passa igualment: comptar-les
+    # totes feia que «len(calls) == 2» donés 7 segons l'ordre de les proves (#223). El full
+    # d'estudi i la lliçó porten tots dos el títol de la unitat al prompt, i els títols de les 23
+    # unitats són distints i cap no és tros d'un altre: el títol diu de qui és la crida.
+    titol = next(u["title"] for u in grammar.UNITS if u["slug"] == "negacio")
+
+    def demana(sys_, contents, **k):
+        text = contents[0]["text"]
+        if titol in text:
+            calls.append(text)
+        return sheet if "STUDY SHEET in" in text else answer
+
+    monkeypatch.setattr(gemini_client, "gemini_generate", demana)
     # What is being tested is the FIRST open of a unit, so the unit has to have no lesson yet:
     # another test may have written this one already, and then the page quite rightly serves it (#191).
     from models import GrammarLesson
