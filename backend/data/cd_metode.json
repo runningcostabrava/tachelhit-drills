@@ -1,610 +1,626 @@
 {
- "_llegeix-me": [
-  "On sona cada línia del Mètode dins del CD del manual d'Abdallah El Mountassir.",
-  "La clau de dins és la línia del capítol tal com la numera el servidor (per exemple",
-  "'vocals:example:0' o 'dialogue:3'); el valor diu a quina pista cau, en quin segon comença i",
-  "acaba, i on és el tall penjat.",
-  "Sense 'url' la línia no porta cap botó: el servidor no se l'inventa.",
-  "El crèdit no viu aquí: el posa el servidor, sempre, al costat de l'àudio.",
-  "'com' diu COM sabem que aquesta línia és aquell tros, perquè no totes les línies ho saben de",
-  "la mateixa manera i això no s'ha d'amagar."
- ],
- "_pistes": {
-  "e6nuUVOFB0U": "capítol 1 del llibre",
-  "mDMcR7vNA_A": "capítols 2 i 3",
-  "zkvUblbTdws": "capítol 4",
-  "YioipkEhqME": "capítol 5",
-  "JkXAk3CKIPA": "capítol 6"
- },
- "capitols": {
-  "sons": {
-   "vocals:example:0": {
-    "pista": "e6nuUVOFB0U",
-    "start": 46.63,
-    "end": 47.11,
-    "url": "/method/cd/e6nuUVOFB0U/46.63/47.11",
-    "com": "sentit"
-   },
-   "vocals:example:1": {
-    "pista": "e6nuUVOFB0U",
-    "start": 49.87,
-    "end": 50.41,
-    "url": "/method/cd/e6nuUVOFB0U/49.87/50.41",
-    "com": "sentit"
-   },
-   "vocals:example:2": {
-    "pista": "e6nuUVOFB0U",
-    "start": 52.73,
-    "end": 53.39,
-    "url": "/method/cd/e6nuUVOFB0U/52.73/53.39",
-    "com": "sentit"
-   },
-   "vocals:example:3": {
-    "pista": "e6nuUVOFB0U",
-    "start": 56.67,
-    "end": 57.14,
-    "url": "/method/cd/e6nuUVOFB0U/56.67/57.14",
-    "com": "sentit"
-   },
-   "vocals:example:4": {
-    "pista": "e6nuUVOFB0U",
-    "start": 59.53,
-    "end": 60.11,
-    "url": "/method/cd/e6nuUVOFB0U/59.53/60.11",
-    "com": "sentit"
-   },
-   "vocals:example:5": {
-    "pista": "e6nuUVOFB0U",
-    "start": 62.29,
-    "end": 62.64,
-    "url": "/method/cd/e6nuUVOFB0U/62.29/62.64",
-    "com": "sentit"
-   },
-   "vocals:example:6": {
-    "pista": "e6nuUVOFB0U",
-    "start": 70.09,
-    "end": 70.68,
-    "url": "/method/cd/e6nuUVOFB0U/70.09/70.68",
-    "com": "per veïnatge"
-   },
-   "vocals:example:7": {
-    "pista": "e6nuUVOFB0U",
-    "start": 74.21,
-    "end": 74.78,
-    "url": "/method/cd/e6nuUVOFB0U/74.21/74.78",
-    "com": "sentit"
-   },
-   "vocals:example:8": {
-    "pista": "e6nuUVOFB0U",
-    "start": 77.68,
-    "end": 78.14,
-    "url": "/method/cd/e6nuUVOFB0U/77.68/78.14",
-    "com": "per veïnatge"
-   },
-   "tensio:col0:1": {
-    "pista": "e6nuUVOFB0U",
-    "start": 104.632,
-    "end": 105.184,
-    "url": "/method/cd/e6nuUVOFB0U/104.632/105.184",
-    "com": "sentit a cegues: la màquina hi sent «ⵉⵎⵉ», que s'assembla a «ⵉⵎⵉ» en un 100%"
-   },
-   "tensio:col0:4": {
-    "pista": "e6nuUVOFB0U",
-    "start": 110.759,
-    "end": 111.301,
-    "url": "/method/cd/e6nuUVOFB0U/110.759/111.301",
-    "com": "sentit a cegues: la màquina hi sent «ⵜⵉⵙⵙⵉ», que s'assembla a «ⵜⵉⵙⵉ» en un 80%"
-   },
-   "tensio:col1:1": {
-    "pista": "e6nuUVOFB0U",
-    "start": 136.156,
-    "end": 136.851,
-    "url": "/method/cd/e6nuUVOFB0U/136.156/136.851",
-    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⴷⵓⵏⵉⵎⵉ», que s'assembla a «ⵉⵎⵎⵉ» en un 75%"
-   },
-   "tensio:col1:2": {
-    "pista": "e6nuUVOFB0U",
-    "start": 143.354,
-    "end": 143.608,
-    "url": "/method/cd/e6nuUVOFB0U/143.354/143.608",
-    "com": "sentit a cegues: la màquina hi sent «ⵙⵍⵉ», que s'assembla a «ⵙⵙⵍⵉ» en un 75%"
-   },
-   "tensio:col1:4": {
-    "pista": "e6nuUVOFB0U",
-    "start": 152.997,
-    "end": 153.378,
-    "url": "/method/cd/e6nuUVOFB0U/152.997/153.378",
-    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵜⵉⵙⵉⵉⵙⵙⵉ», que s'assembla a «ⵜⵉⵙⵙⵉ» en un 80%"
-   },
-   "emfatiques:example:2": {
-    "pista": "e6nuUVOFB0U",
-    "start": 172.32,
-    "end": 172.743,
-    "url": "/method/cd/e6nuUVOFB0U/172.32/172.743",
-    "com": "sentit a cegues: la màquina hi sent «ⴰⵥⵓⵔ», que s'assembla a «ⴰⵥⵓⵔ» en un 100%"
-   },
-   "emfatiques:example:3": {
-    "pista": "e6nuUVOFB0U",
-    "start": 177.339,
-    "end": 177.79,
-    "url": "/method/cd/e6nuUVOFB0U/177.339/177.79",
-    "com": "sentit a cegues: la màquina hi sent «ⵢⵥⵉ», que s'assembla a «ⵉⵥⵉ» en un 67%"
-   },
-   "emfatiques:col0:0": {
-    "pista": "e6nuUVOFB0U",
-    "start": 198.67,
-    "end": 199.541,
-    "url": "/method/cd/e6nuUVOFB0U/198.67/199.541",
-    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵓⴷⵉⵏⴷⴰⵉⴰⵏⴰⵏⴷⵓ», que s'assembla a «ⵎⴷⵉ» en un 67%"
-   },
-   "emfatiques:col0:1": {
-    "pista": "e6nuUVOFB0U",
-    "start": 201.02,
-    "end": 201.681,
-    "url": "/method/cd/e6nuUVOFB0U/201.02/201.681",
-    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵓⴷⵉⵏⴷⴰⵉⴰⵏⴰⵏⴷⵓ», que s'assembla a «ⴰⴷⴰⵏ» en un 75%"
-   },
-   "emfatiques:col0:2": {
-    "pista": "e6nuUVOFB0U",
-    "start": 203.257,
-    "end": 203.87,
-    "url": "/method/cd/e6nuUVOFB0U/203.257/203.87",
-    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵓⴷⵉⵏⴷⴰⵉⴰⵏⴰⵏⴷⵓ», que s'assembla a «ⴱⴷⵓ» en un 67%"
-   },
-   "emfatiques:col1:0": {
-    "pista": "e6nuUVOFB0U",
-    "start": 205.574,
-    "end": 206.134,
-    "url": "/method/cd/e6nuUVOFB0U/205.574/206.134",
-    "com": "sentit a cegues: la màquina hi sent «ⵎⴹⵓ», que s'assembla a «ⵎⴹⵉ» en un 67%"
-   },
-   "labiovelars:example:1": {
-    "pista": "e6nuUVOFB0U",
-    "start": 232.253,
-    "end": 232.587,
-    "url": "/method/cd/e6nuUVOFB0U/232.253/232.587",
-    "com": "sentit a cegues: la màquina hi sent «ⴰⴳⵉ», que s'assembla a «ⴰⴳⵯⵉ» en un 75%"
-   },
-   "labiovelars:example:2": {
-    "pista": "e6nuUVOFB0U",
-    "start": 236.056,
-    "end": 236.351,
-    "url": "/method/cd/e6nuUVOFB0U/236.056/236.351",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "labiovelars:example:3": {
-    "pista": "e6nuUVOFB0U",
-    "start": 239.458,
-    "end": 239.869,
-    "url": "/method/cd/e6nuUVOFB0U/239.458/239.869",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "labiovelars:example:4": {
-    "pista": "e6nuUVOFB0U",
-    "start": 243.099,
-    "end": 243.765,
-    "url": "/method/cd/e6nuUVOFB0U/243.099/243.765",
-    "com": "sentit a cegues: la màquina hi sent «ⴰⵇⵔⴰⵏ», que s'assembla a «ⴰⵇⵯⵔⴰⴱ» en un 67%"
-   },
-   "labiovelars:col0:0": {
-    "pista": "e6nuUVOFB0U",
-    "start": 257.477,
-    "end": 257.777,
-    "url": "/method/cd/e6nuUVOFB0U/257.477/257.777",
-    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⴽⵉⵛⵛ», que s'assembla a «ⴽⵜⵉ» en un 67%"
-   },
-   "labiovelars:col0:1": {
-    "pista": "e6nuUVOFB0U",
-    "start": 260.115,
-    "end": 260.504,
-    "url": "/method/cd/e6nuUVOFB0U/260.115/260.504",
-    "com": "sentit a cegues: la màquina hi sent «ⵖⵉⵍ», que s'assembla a «ⵖⵉ» en un 67%"
-   },
-   "alfabet:example:10": {
-    "pista": "e6nuUVOFB0U",
-    "start": 268.229,
-    "end": 269.538,
-    "url": "/method/cd/e6nuUVOFB0U/268.229/269.538",
-    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵡⴰⵙⵙ ⵉⵍⵓ ⵜⴼ ⵓⴽⵚⵔⴽ», que s'assembla a «ⵅⵙⵉ» en un 67%"
-   },
-   "alfabet:example:24": {
-    "pista": "e6nuUVOFB0U",
-    "start": 272.828,
-    "end": 273.625,
-    "url": "/method/cd/e6nuUVOFB0U/272.828/273.625",
-    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵡⴰⵙⵙ ⵉⵍⵓ ⵜⴼ ⵓⴽⵚⵔⴽ», que s'assembla a «ⵜⵜⵓ» en un 67%"
-   },
-   "vocabulary:13": {
-    "pista": "e6nuUVOFB0U",
-    "start": 279.983,
-    "end": 280.531,
-    "url": "/method/cd/e6nuUVOFB0U/279.983/280.531",
-    "com": "sentit a cegues: la màquina hi sent «ⴰⵖⵢⵓⵍ», que s'assembla a «ⴰⵖⵢⵓⵍ» en un 100%"
-   },
-   "vocabulary:14": {
-    "pista": "e6nuUVOFB0U",
-    "start": 283.117,
-    "end": 283.534,
-    "url": "/method/cd/e6nuUVOFB0U/283.117/283.534",
-    "com": "sentit a cegues: la màquina hi sent «ⴰⵡⵔⵖ», que s'assembla a «ⴰⵡⵔⴰⵖ» en un 80%"
-   }
+  "_llegeix-me": [
+    "On sona cada línia del Mètode dins del CD del manual d'Abdallah El Mountassir.",
+    "La clau de dins és la línia del capítol tal com la numera el servidor (per exemple",
+    "'vocals:example:0' o 'dialogue:3'); el valor diu a quina pista cau, en quin segon comença i",
+    "acaba, i on és el tall penjat.",
+    "Sense 'url' la línia no porta cap botó: el servidor no se l'inventa.",
+    "El crèdit no viu aquí: el posa el servidor, sempre, al costat de l'àudio.",
+    "'com' diu COM sabem que aquesta línia és aquell tros, perquè no totes les línies ho saben de",
+    "la mateixa manera i això no s'ha d'amagar.",
+    "",
+    "A 'capitols' només hi ha el que ha sentit una persona. Les 76 entrades que havia posat la",
+    "màquina sentint a cegues són a 'per_comprovar' i NO sonen.",
+    "El motiu: una d'elles deia 'aẓur' on el CD diu 'tiṭṭ', i venia amb un 100% de semblança. El",
+    "número no mesura si la línia és aquella; mesura si s'assembla al que la màquina creu haver",
+    "sentit, de manera que quan la màquina sent una altra cosa el 100% és el 100% d'un error, i",
+    "pujar el llistó només deixa passar les equivocacions més segures d'elles mateixes.",
+    "De les 76, disset apuntaven a una línia que ja no és al capítol i quatre fan servir paraules",
+    "que no són totes al llibre que aquesta veu llegeix (Initiation au tachelhit, 1999, #380).",
+    "Les altres 55 poden ser bones: no ho sabem, i això és justament el problema.",
+    "Per tornar-les a entrar fa falta una prova que no surti de la màquina sentint sola: alinear",
+    "el text del llibre, que la veu llegeix en ordre, contra l'àudio."
+  ],
+  "_pistes": {
+    "e6nuUVOFB0U": "capítol 1 del llibre",
+    "mDMcR7vNA_A": "capítols 2 i 3",
+    "zkvUblbTdws": "capítol 4",
+    "YioipkEhqME": "capítol 5",
+    "JkXAk3CKIPA": "capítol 6"
   },
-  "salutacions": {
-   "dialogue:1": {
-    "pista": "mDMcR7vNA_A",
-    "start": 8.627,
-    "end": 10.628,
-    "url": "/method/cd/mDMcR7vNA_A/8.627/10.628",
-    "com": "sentit a cegues: la màquina hi sent «ⵜⵉⵎⵙⵉ ⵡⵉⵏⵃⵎⴷ ⵎⴰⵏⵉⴽ ⴰⴷ ⵜ ⵢⵉⴷ ⵎ», que s'assembla a «ⵜⵉⵎⵉⵏⵙⵉⵡⵉⵏ ⴰ ⵃⵎⴰⴷ ⵎⴰⵏⵉⴽⴰ ⵜⴳⵉⵜ» en un 68%"
-   },
-   "dialogue:6": {
-    "pista": "mDMcR7vNA_A",
-    "start": 21.454,
-    "end": 22.527,
-    "url": "/method/cd/mDMcR7vNA_A/21.454/22.527",
-    "com": "sentit a cegues: la màquina hi sent «ⴰⴷ ⴷ ⵢⴰⵡⵉ ⵡⵉⵙⵍⴰⵎⵎⵜ», que s'assembla a «ⴰⴷⴷ ⵢⴰⵡⵉ ⵕⴱⴱⵉ ⵙⵙⵍⴰⵎⵜ» en un 71%"
-   },
-   "dialogue:7": {
-    "pista": "mDMcR7vNA_A",
-    "start": 23.778,
-    "end": 25.759,
-    "url": "/method/cd/mDMcR7vNA_A/23.778/25.759",
-    "com": "sentit a cegues: la màquina hi sent «ⴰⴽⴽ ⵉⴷ ⵏ ⵔⵕⴱⴱⵉ ⴰⵔ ⵜⴰⵡⴰ ⵟⴰⴱⵏ», que s'assembla a «ⴰⴽⴽ ⵉⵀⵏⵏⴰ ⵕⴱⴱⵉ ⴰⵔ ⵜⴰⵡⴰⵍⵜⵜ ⴰⴹⵏⵉⵏ» en un 65%"
-   },
-   "coneixer-se:col0:0": {
-    "pista": "mDMcR7vNA_A",
-    "start": 30.889,
-    "end": 33.075,
-    "url": "/method/cd/mDMcR7vNA_A/30.889/33.075",
-    "com": "sentit a cegues: la màquina hi sent «ⴰⵃ ⵍⵅⵉⵔ ⴰ ⵔⵕⵉⵎ ⵎⴰⵔⵣⴰⴳⵉⵏ», que s'assembla a «ⵚⴱⴰⵃ ⵍⵅⵉⵔ ⴰ ⴱⵔⴰⵀⵉⵎ ⵎⴰⵏⵣⴰⴽⵉⵏⵏ» en un 67%"
-   },
-   "coneixer-se:col0:1": {
-    "pista": "mDMcR7vNA_A",
-    "start": 33.842,
-    "end": 35.047,
-    "url": "/method/cd/mDMcR7vNA_A/33.842/35.047",
-    "com": "sentit a cegues: la màquina hi sent «ⵎⵉⵅⵉⵔ ⵉ ⵎⴰⵜⵎⵉ», que s'assembla a «ⴱⵉⵅⵉⵔ ⵉⵎⵎⴰ ⴽⵎⵎⵉ» en un 69%"
-   },
-   "coneixer-se:col1:2": {
-    "pista": "mDMcR7vNA_A",
-    "start": 46.997,
-    "end": 48.106,
-    "url": "/method/cd/mDMcR7vNA_A/46.997/48.106",
-    "com": "sentit a cegues: la màquina hi sent «ⴽⵔⴰ ⵏ ⵉⵎⵉ ⵢⵙⵙⵄⵜⴰⴷ», que s'assembla a «ⴽⵔⴰ ⵏⵉⵎⵉⴽⴽ ⵙⵙⵃⵜⴰⴷ» en un 80%"
-   },
-   "coneixer-se:col2:1": {
-    "pista": "mDMcR7vNA_A",
-    "start": 53.502,
-    "end": 55.718,
-    "url": "/method/cd/mDMcR7vNA_A/53.502/55.718",
-    "com": "sentit a cegues: la màquina hi sent «ⵜⵉⵎⵙⵉⵡⵉⵏ ⴰⵎⵎⴰⵔ ⵓⵍⵛⵉ ⴱⵉⵅⵉⵔ», que s'assembla a «ⵜⵉⵎⵉⵏⵙⵉⵡⵉⵏ ⴰ ⵎⴱⴰⵔⴽ ⴽⵓⵍⵛⵉ ⴱⵉⵅⵉⵔ» en un 81%"
-   },
-   "escolta-tensio:example:3": {
-    "pista": "mDMcR7vNA_A",
-    "start": 75.969,
-    "end": 76.597,
-    "url": "/method/cd/mDMcR7vNA_A/75.969/76.597",
-    "com": "sentit a cegues: la màquina hi sent «ⵏⵜⵜⴰⵜ», que s'assembla a «ⵏⵜⵜⴰⵜ» en un 100%"
-   },
-   "escolta-tensio:example:4": {
-    "pista": "mDMcR7vNA_A",
-    "start": 79.646,
-    "end": 80.174,
-    "url": "/method/cd/mDMcR7vNA_A/79.646/80.174",
-    "com": "sentit a cegues: la màquina hi sent «ⵕⴱⴱⵉ», que s'assembla a «ⵕⴱⴱⵉ» en un 100%"
-   },
-   "escolta-tensio:example:5": {
-    "pista": "mDMcR7vNA_A",
-    "start": 83.02,
-    "end": 84.298,
-    "url": "/method/cd/mDMcR7vNA_A/83.02/84.298",
-    "com": "sentit a cegues: la màquina hi sent «ⴰⴷ ⴷ ⵢⴰⵡⵉ ⵔⵕⴱⴱⵉ ⵙⵍⴰⵎⵜ», que s'assembla a «ⴰⴷⴷ ⵢⴰⵡⵉ ⵕⴱⴱⵉ ⵙⵙⵍⴰⵎⵜ» en un 88%"
-   },
-   "escolta-tensio:example:6": {
-    "pista": "mDMcR7vNA_A",
-    "start": 90.901,
-    "end": 91.924,
-    "url": "/method/cd/mDMcR7vNA_A/90.901/91.924",
-    "com": "sentit a cegues: la màquina hi sent «ⴰⴽⴽ ⵉⵀⵏⵏⴰ ⵔⵕⴱⴱⵉ», que s'assembla a «ⴰⴽⴽ ⵉⵀⵏⵏⴰ ⵕⴱⴱⵉ» en un 92%"
-   },
-   "escolta-tensio:example:8": {
-    "pista": "mDMcR7vNA_A",
-    "start": 98.213,
-    "end": 99.393,
-    "url": "/method/cd/mDMcR7vNA_A/98.213/99.393",
-    "com": "sentit a cegues: la màquina hi sent «ⴰⵔ ⴷ ⴰⵡⴰⵍ ⵜⴰⴹⵏ», que s'assembla a «ⴰⵔ ⵜⴰⵡⴰⵍⵜⵜ ⴰⴹⵏⵉⵏ» en un 71%"
-   },
-   "escolta-tensio:example:9": {
-    "pista": "mDMcR7vNA_A",
-    "start": 102.255,
-    "end": 102.858,
-    "url": "/method/cd/mDMcR7vNA_A/102.255/102.858",
-    "com": "sentit a cegues: la màquina hi sent «ⵜⴽⵍⵉⵜ», que s'assembla a «ⵜⵉⴽⵍⵉⵜⵜ» en un 71%"
-   },
-   "escolta-tensio:example:10": {
-    "pista": "mDMcR7vNA_A",
-    "start": 105.488,
-    "end": 106.636,
-    "url": "/method/cd/mDMcR7vNA_A/105.488/106.636",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "escolta-tensio:example:11": {
-    "pista": "mDMcR7vNA_A",
-    "start": 108.833,
-    "end": 109.368,
-    "url": "/method/cd/mDMcR7vNA_A/108.833/109.368",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "escolta-tensio:example:12": {
-    "pista": "mDMcR7vNA_A",
-    "start": 111.968,
-    "end": 112.625,
-    "url": "/method/cd/mDMcR7vNA_A/111.968/112.625",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "escolta-tensio:example:13": {
-    "pista": "mDMcR7vNA_A",
-    "start": 115.398,
-    "end": 116.004,
-    "url": "/method/cd/mDMcR7vNA_A/115.398/116.004",
-    "com": "sentit a cegues: la màquina hi sent «ⴱⵔⵔⴽ», que s'assembla a «ⴱⵔⵔⴽ» en un 100%"
-   },
-   "escolta-tensio:example:14": {
-    "pista": "mDMcR7vNA_A",
-    "start": 118.478,
-    "end": 119.234,
-    "url": "/method/cd/mDMcR7vNA_A/118.478/119.234",
-    "com": "sentit a cegues: la màquina hi sent «ⴱⵔⵔⴽ ⴷⵔⴹ», que s'assembla a «ⴱⵔⵔⴽ ⴷⴰⵔⵏⵖ» en un 67%"
-   }
+  "capitols": {
+    "sons": {
+      "vocals:example:0": {
+        "pista": "e6nuUVOFB0U",
+        "start": 46.63,
+        "end": 47.11,
+        "url": "/method/cd/e6nuUVOFB0U/46.63/47.11",
+        "com": "sentit"
+      },
+      "vocals:example:1": {
+        "pista": "e6nuUVOFB0U",
+        "start": 49.87,
+        "end": 50.41,
+        "url": "/method/cd/e6nuUVOFB0U/49.87/50.41",
+        "com": "sentit"
+      },
+      "vocals:example:2": {
+        "pista": "e6nuUVOFB0U",
+        "start": 52.73,
+        "end": 53.39,
+        "url": "/method/cd/e6nuUVOFB0U/52.73/53.39",
+        "com": "sentit"
+      },
+      "vocals:example:3": {
+        "pista": "e6nuUVOFB0U",
+        "start": 56.67,
+        "end": 57.14,
+        "url": "/method/cd/e6nuUVOFB0U/56.67/57.14",
+        "com": "sentit"
+      },
+      "vocals:example:4": {
+        "pista": "e6nuUVOFB0U",
+        "start": 59.53,
+        "end": 60.11,
+        "url": "/method/cd/e6nuUVOFB0U/59.53/60.11",
+        "com": "sentit"
+      },
+      "vocals:example:5": {
+        "pista": "e6nuUVOFB0U",
+        "start": 62.29,
+        "end": 62.64,
+        "url": "/method/cd/e6nuUVOFB0U/62.29/62.64",
+        "com": "sentit"
+      },
+      "vocals:example:7": {
+        "pista": "e6nuUVOFB0U",
+        "start": 74.21,
+        "end": 74.78,
+        "url": "/method/cd/e6nuUVOFB0U/74.21/74.78",
+        "com": "sentit"
+      }
+    }
   },
-  "el-cami": {
-   "dialogue:0": {
-    "pista": "mDMcR7vNA_A",
-    "start": 133.098,
-    "end": 135.11,
-    "url": "/method/cd/mDMcR7vNA_A/133.098/135.11",
-    "com": "sentit a cegues: la màquina hi sent «ⵎⴰⵏ ⴷ ⵉⵍⵍⴰ ⵓⵡⴰⵔⴰⵙ ⵏ ⵜⴼⵔⴰⵜ ⵉ ⵕⴱⴱⵉ», que s'assembla a «ⵎⴰⵏⵉⵖ ⵉⵍⵍⴰ ⵓⵖⴰⵔⴰⵙ ⵏⵜⴼⵔⴰⵡⵜ ⵉⵕⴱⴱⵉ» en un 85%"
-   },
-   "dialogue:1": {
-    "pista": "mDMcR7vNA_A",
-    "start": 136.178,
-    "end": 137.357,
-    "url": "/method/cd/mDMcR7vNA_A/136.178/137.357",
-    "com": "sentit a cegues: la màquina hi sent «ⴰⵎⵥ ⴰⵙⴰ ⴰⴼⴰⵙⵉ», que s'assembla a «ⴰⵎⵥ ⴰⵖⴰⵔⴰⵙ ⴰⴼⴰⵙⵉ» en un 71%"
-   },
-   "dialogue:3": {
-    "pista": "mDMcR7vNA_A",
-    "start": 140.754,
-    "end": 142.602,
-    "url": "/method/cd/mDMcR7vNA_A/140.754/142.602",
-    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵎⴰⵏⵉⴳⴰⵏ ⵜⴰⵎⴰⵣⵉⵔⵜⵣⵉⴷⵀⵓ ⴰⴽⴰⴱⵉⵔ», que s'assembla a «ⵎⴰⵏⵉ ⵢⴳⴰⵏ ⵜⴰⵎⴰⵣⵉⵔⵜ ⵜⵉⵣⵏⵉⵜ» en un 77%"
-   },
-   "dialogue:4": {
-    "pista": "mDMcR7vNA_A",
-    "start": 143.579,
-    "end": 144.952,
-    "url": "/method/cd/mDMcR7vNA_A/143.579/144.952",
-    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵎⴰⵏⵉⴳⴰⵏ ⵜⴰⵎⴰⵣⵉⵔⵜⵣⵉⴷⵀⵓ ⴰⴽⴰⴱⵉⵔ», que s'assembla a «ⵓⵀⵓ ⴰⴳⴰⴷⵉⵔ» en un 67%"
-   },
-   "dialogue:6": {
-    "pista": "mDMcR7vNA_A",
-    "start": 149.004,
-    "end": 150.556,
-    "url": "/method/cd/mDMcR7vNA_A/149.004/150.556",
-    "com": "sentit a cegues: la màquina hi sent «ⵉⴼⵓⴽ ⵎⴰ ⵜⴽⵔ», que s'assembla a «ⵉⴼⵓⵍⴽⵉ ⵎⴰ ⵜⵙⴽⴰⵔ» en un 69%"
-   },
-   "dialogue:7": {
-    "pista": "mDMcR7vNA_A",
-    "start": 151.293,
-    "end": 152.278,
-    "url": "/method/cd/mDMcR7vNA_A/151.293/152.278",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "mani:example:0": {
-    "pista": "mDMcR7vNA_A",
-    "start": 157.468,
-    "end": 158.946,
-    "url": "/method/cd/mDMcR7vNA_A/157.468/158.946",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "mani:example:2": {
-    "pista": "mDMcR7vNA_A",
-    "start": 182.996,
-    "end": 184.015,
-    "url": "/method/cd/mDMcR7vNA_A/182.996/184.015",
-    "com": "sentit a cegues: la màquina hi sent «ⵎ ⴰⴳⵉⵍⵍⴰ ⵓⴷⵡⴰⵔ», que s'assembla a «ⵎⴰⵏⵉⵖ ⵉⵍⵍⴰ ⵓⴹⵡⵡⴰⵔ» en un 67%"
-   },
-   "mani:example:3": {
-    "pista": "mDMcR7vNA_A",
-    "start": 191.594,
-    "end": 192.622,
-    "url": "/method/cd/mDMcR7vNA_A/191.594/192.622",
-    "com": "sentit a cegues: la màquina hi sent «ⵎⴰⵏⵉⵖ ⵜⵍⵍⴰ ⵜⵎⵖⵔⴰ», que s'assembla a «ⵎⴰⵏⵉⵖ ⵜⵍⵍⴰ ⵍⴱⵓⵙⵟⴰ» en un 67%"
-   },
-   "mani:example:5": {
-    "pista": "mDMcR7vNA_A",
-    "start": 214.207,
-    "end": 215.215,
-    "url": "/method/cd/mDMcR7vNA_A/214.207/215.215",
-    "com": "sentit a cegues: la màquina hi sent «ⵎⴰⵏⵉⵖ ⵜⵍⵍⴰⵣ ⵉⵏⵎ», que s'assembla a «ⵎⴰⵏⵉⵖ ⵜⵍⵍⴰ ⴼⴰⵟⵉⵎ» en un 71%"
-   },
-   "quan:example:3": {
-    "pista": "mDMcR7vNA_A",
-    "start": 277.279,
-    "end": 279.256,
-    "url": "/method/cd/mDMcR7vNA_A/277.279/279.256",
-    "com": "sentit a cegues: la màquina hi sent «ⵜⵍⵍⴰ ⴷ ⵎⵎⵖⴰⵔ ⴷ ⵖⵓⵍⵡⴰ», que s'assembla a «ⵜⵍⵍⴰ ⵜⵎⵖⴰⵔⵜ ⵖⵓⵏⵡⴰⵍ» en un 69%"
-   },
-   "persona:example:0": {
-    "pista": "mDMcR7vNA_A",
-    "start": 312.191,
-    "end": 313.859,
-    "url": "/method/cd/mDMcR7vNA_A/312.191/313.859",
-    "com": "sentit a cegues: la màquina hi sent «ⵉⵅⴷⵎ ⵓⵔⴳⴰⵣ ⵖ ⵍⴱⴰⵏⴽⴰ», que s'assembla a «ⵉⵅⴷⵎ ⵓⵔⴳⴰⵣ ⵖⵍⴱⴰⵏⴽⴰ» en un 100%"
-   },
-   "persona:example:3": {
-    "pista": "mDMcR7vNA_A",
-    "start": 317.163,
-    "end": 318.452,
-    "url": "/method/cd/mDMcR7vNA_A/317.163/318.452",
-    "com": "sentit a cegues: la màquina hi sent «ⵢⴽⵔⵔⵣ ⵓⴼⵍⵍⴰⵃ», que s'assembla a «ⵉⴽⵔⵣ ⵓⴼⵍⵍⴰⵃ» en un 82%"
-   },
-   "persona:example:4": {
-    "pista": "mDMcR7vNA_A",
-    "start": 321.637,
-    "end": 322.59,
-    "url": "/method/cd/mDMcR7vNA_A/321.637/322.59",
-    "com": "sentit a cegues: la màquina hi sent «ⵜⵔⵥ ⵏ ⵜⴳⵎⵎⵉ», que s'assembla a «ⵜⵔⵥⵎ ⵜⴳⵎⵎⵉ» en un 89%"
-   },
-   "feina:example:0": {
-    "pista": "mDMcR7vNA_A",
-    "start": 325.962,
-    "end": 327.002,
-    "url": "/method/cd/mDMcR7vNA_A/325.962/327.002",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "feina:example:1": {
-    "pista": "mDMcR7vNA_A",
-    "start": 330.209,
-    "end": 331.874,
-    "url": "/method/cd/mDMcR7vNA_A/330.209/331.874",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "feina:example:2": {
-    "pista": "mDMcR7vNA_A",
-    "start": 335.001,
-    "end": 336.085,
-    "url": "/method/cd/mDMcR7vNA_A/335.001/336.085",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "feina:example:3": {
-    "pista": "mDMcR7vNA_A",
-    "start": 341.346,
-    "end": 342.563,
-    "url": "/method/cd/mDMcR7vNA_A/341.346/342.563",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "vocabulary:0": {
-    "pista": "mDMcR7vNA_A",
-    "start": 343.843,
-    "end": 345.844,
-    "url": "/method/cd/mDMcR7vNA_A/343.843/345.844",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "vocabulary:1": {
-    "pista": "mDMcR7vNA_A",
-    "start": 348.24,
-    "end": 350.72,
-    "url": "/method/cd/mDMcR7vNA_A/348.24/350.72",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "vocabulary:2": {
-    "pista": "mDMcR7vNA_A",
-    "start": 354.067,
-    "end": 355.882,
-    "url": "/method/cd/mDMcR7vNA_A/354.067/355.882",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "vocabulary:3": {
-    "pista": "mDMcR7vNA_A",
-    "start": 358.109,
-    "end": 358.692,
-    "url": "/method/cd/mDMcR7vNA_A/358.109/358.692",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "vocabulary:4": {
-    "pista": "mDMcR7vNA_A",
-    "start": 359.261,
-    "end": 360.215,
-    "url": "/method/cd/mDMcR7vNA_A/359.261/360.215",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "vocabulary:5": {
-    "pista": "mDMcR7vNA_A",
-    "start": 362.225,
-    "end": 364.279,
-    "url": "/method/cd/mDMcR7vNA_A/362.225/364.279",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "vocabulary:6": {
-    "pista": "mDMcR7vNA_A",
-    "start": 368.002,
-    "end": 368.841,
-    "url": "/method/cd/mDMcR7vNA_A/368.002/368.841",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "vocabulary:7": {
-    "pista": "mDMcR7vNA_A",
-    "start": 369.416,
-    "end": 371.323,
-    "url": "/method/cd/mDMcR7vNA_A/369.416/371.323",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "vocabulary:8": {
-    "pista": "mDMcR7vNA_A",
-    "start": 374.834,
-    "end": 375.941,
-    "url": "/method/cd/mDMcR7vNA_A/374.834/375.941",
-    "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre"
-   },
-   "vocabulary:9": {
-    "pista": "mDMcR7vNA_A",
-    "start": 388.136,
-    "end": 388.945,
-    "url": "/method/cd/mDMcR7vNA_A/388.136/388.945",
-    "com": "sentit a cegues: la màquina hi sent «ⵜⴰⵎⵣⵉⵔⵜ», que s'assembla a «ⵜⴰⵎⴰⵣⵉⵔⵜ» en un 88%"
-   }
-  },
-  "la-botiga": {
-   "dialogue:0": {
-    "pista": "zkvUblbTdws",
-    "start": 5.976,
-    "end": 6.88,
-    "url": "/method/cd/zkvUblbTdws/5.976/6.88",
-    "com": "sentit a cegues: la màquina hi sent «ⵉⵜⴷⴷⵔⴽ ⵜⵓⴷⵜ», que s'assembla a «ⵉⵙ ⴷⴰⵔⴽ ⵜⵓⴷⵉⵜ» en un 73%"
-   },
-   "dialogue:3": {
-    "pista": "zkvUblbTdws",
-    "start": 16.001,
-    "end": 17.567,
-    "url": "/method/cd/zkvUblbTdws/16.001/17.567",
-    "com": "sentit a cegues: la màquina hi sent «ⴽⵓⵥ ⵉⴹ ⵎⵢⴰ ⵉⵍⵉⵜⵔⵓ», que s'assembla a «ⴽⴽⵓⵥ ⵉⴷⴰⵎⵉⵢⵢⴰ ⵉⵍⵉⵜⵔⵓ» en un 72%"
-   },
-   "mesures:col0:0": {
-    "pista": "zkvUblbTdws",
-    "start": 165.95,
-    "end": 167.717,
-    "url": "/method/cd/zkvUblbTdws/165.95/167.717",
-    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⴰⵛⴽⵙⴽⴽⵔ ⵓⴽⴼⴼⴰⵢⵍⵉⵜⵔⵓⵎⴰⵛ ⴰⴷ ⵜⴽⴽⴽⵔ ⵜⴰⵎⵎ ⵏ ⵜⵉⴽⵉⵍⵓ», que s'assembla a «ⴽⵉⵍⵓ» en un 100%"
-   },
-   "mesures:col1:0": {
-    "pista": "zkvUblbTdws",
-    "start": 175.35,
-    "end": 177.512,
-    "url": "/method/cd/zkvUblbTdws/175.35/177.512",
-    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⴰⵛⴽⵙⴽⴽⵔ ⵓⴽⴼⴼⴰⵢⵍⵉⵜⵔⵓⵎⴰⵛ ⴰⴷ ⵜⴽⴽⴽⵔ ⵜⴰⵎⵎ ⵏ ⵜⵉⴽⵉⵍⵓ», que s'assembla a «ⵍⵉⵜⵔⵓ» en un 100%"
-   },
-   "imperatiu:example:3": {
-    "pista": "zkvUblbTdws",
-    "start": 257.599,
-    "end": 259.576,
-    "url": "/method/cd/zkvUblbTdws/257.599/259.576",
-    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵉⵙ ⵜⵓⴱⵔ ⵢⵔⵎⴰ ⵢⵇⵇⴰⵔ ⴷⵏ ⵉⵉ ⴱⵔⴰⵀⵉⵎ ⵣⵉⵏⵀ ⵜⵓⵜⵔⴰⵙⵏ ⵏ ⵢⵔⵏⴰ ⵢⵇⴰⵔⴱ», que s'assembla a «ⵔⵥⵎ» en un 67%"
-   },
-   "imperatiu:example:5": {
-    "pista": "zkvUblbTdws",
-    "start": 260.868,
-    "end": 263.138,
-    "url": "/method/cd/zkvUblbTdws/260.868/263.138",
-    "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵉⵙ ⵜⵓⴱⵔ ⵢⵔⵎⴰ ⵢⵇⵇⴰⵔ ⴷⵏ ⵉⵉ ⴱⵔⴰⵀⵉⵎ ⵣⵉⵏⵀ ⵜⵓⵜⵔⴰⵙⵏ ⵏ ⵢⵔⵏⴰ ⵢⵇⴰⵔⴱ», que s'assembla a «ⵏⴽⵔ» en un 67%"
-   },
-   "datius:example:5": {
-    "pista": "zkvUblbTdws",
-    "start": 280.333,
-    "end": 281.538,
-    "url": "/method/cd/zkvUblbTdws/280.333/281.538",
-    "com": "sentit a cegues: la màquina hi sent «ⵏⴼⴽⴰ ⴰⴰⵙ ⵜⴰⵙⴰⵔⵓⵜ», que s'assembla a «ⴼⴽⵉⵖⴰⵙ ⵜⴰⵙⴰⵔⵓⵜ» en un 79%"
-   }
+  "per_comprovar": {
+    "sons": {
+      "alfabet:example:10": {
+        "pista": "e6nuUVOFB0U",
+        "start": 268.229,
+        "end": 269.538,
+        "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵡⴰⵙⵙ ⵉⵍⵓ ⵜⴼ ⵓⴽⵚⵔⴽ», que s'assembla a «ⵅⵙⵉ» en un 67%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "alfabet:example:24": {
+        "pista": "e6nuUVOFB0U",
+        "start": 272.828,
+        "end": 273.625,
+        "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵡⴰⵙⵙ ⵉⵍⵓ ⵜⴼ ⵓⴽⵚⵔⴽ», que s'assembla a «ⵜⵜⵓ» en un 67%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "emfatiques:col0:0": {
+        "pista": "e6nuUVOFB0U",
+        "start": 198.67,
+        "end": 199.541,
+        "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵓⴷⵉⵏⴷⴰⵉⴰⵏⴰⵏⴷⵓ», que s'assembla a «ⵎⴷⵉ» en un 67%",
+        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
+      },
+      "emfatiques:col0:1": {
+        "pista": "e6nuUVOFB0U",
+        "start": 201.02,
+        "end": 201.681,
+        "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵓⴷⵉⵏⴷⴰⵉⴰⵏⴰⵏⴷⵓ», que s'assembla a «ⴰⴷⴰⵏ» en un 75%",
+        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
+      },
+      "emfatiques:col0:2": {
+        "pista": "e6nuUVOFB0U",
+        "start": 203.257,
+        "end": 203.87,
+        "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵓⴷⵉⵏⴷⴰⵉⴰⵏⴰⵏⴷⵓ», que s'assembla a «ⴱⴷⵓ» en un 67%",
+        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
+      },
+      "emfatiques:col1:0": {
+        "pista": "e6nuUVOFB0U",
+        "start": 205.574,
+        "end": 206.134,
+        "com": "sentit a cegues: la màquina hi sent «ⵎⴹⵓ», que s'assembla a «ⵎⴹⵉ» en un 67%",
+        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
+      },
+      "emfatiques:example:2": {
+        "pista": "e6nuUVOFB0U",
+        "start": 172.32,
+        "end": 172.743,
+        "com": "sentit a cegues: la màquina hi sent «ⴰⵥⵓⵔ», que s'assembla a «ⴰⵥⵓⵔ» en un 100%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "emfatiques:example:3": {
+        "pista": "e6nuUVOFB0U",
+        "start": 177.339,
+        "end": 177.79,
+        "com": "sentit a cegues: la màquina hi sent «ⵢⵥⵉ», que s'assembla a «ⵉⵥⵉ» en un 67%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "labiovelars:col0:0": {
+        "pista": "e6nuUVOFB0U",
+        "start": 257.477,
+        "end": 257.777,
+        "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⴽⵉⵛⵛ», que s'assembla a «ⴽⵜⵉ» en un 67%",
+        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
+      },
+      "labiovelars:col0:1": {
+        "pista": "e6nuUVOFB0U",
+        "start": 260.115,
+        "end": 260.504,
+        "com": "sentit a cegues: la màquina hi sent «ⵖⵉⵍ», que s'assembla a «ⵖⵉ» en un 67%",
+        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
+      },
+      "labiovelars:example:1": {
+        "pista": "e6nuUVOFB0U",
+        "start": 232.253,
+        "end": 232.587,
+        "com": "sentit a cegues: la màquina hi sent «ⴰⴳⵉ», que s'assembla a «ⴰⴳⵯⵉ» en un 75%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "labiovelars:example:2": {
+        "pista": "e6nuUVOFB0U",
+        "start": 236.056,
+        "end": 236.351,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "labiovelars:example:3": {
+        "pista": "e6nuUVOFB0U",
+        "start": 239.458,
+        "end": 239.869,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "labiovelars:example:4": {
+        "pista": "e6nuUVOFB0U",
+        "start": 243.099,
+        "end": 243.765,
+        "com": "sentit a cegues: la màquina hi sent «ⴰⵇⵔⴰⵏ», que s'assembla a «ⴰⵇⵯⵔⴰⴱ» en un 67%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "tensio:col0:1": {
+        "pista": "e6nuUVOFB0U",
+        "start": 104.632,
+        "end": 105.184,
+        "com": "sentit a cegues: la màquina hi sent «ⵉⵎⵉ», que s'assembla a «ⵉⵎⵉ» en un 100%",
+        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
+      },
+      "tensio:col0:4": {
+        "pista": "e6nuUVOFB0U",
+        "start": 110.759,
+        "end": 111.301,
+        "com": "sentit a cegues: la màquina hi sent «ⵜⵉⵙⵙⵉ», que s'assembla a «ⵜⵉⵙⵉ» en un 80%",
+        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
+      },
+      "tensio:col1:1": {
+        "pista": "e6nuUVOFB0U",
+        "start": 136.156,
+        "end": 136.851,
+        "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⴷⵓⵏⵉⵎⵉ», que s'assembla a «ⵉⵎⵎⵉ» en un 75%",
+        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
+      },
+      "tensio:col1:2": {
+        "pista": "e6nuUVOFB0U",
+        "start": 143.354,
+        "end": 143.608,
+        "com": "sentit a cegues: la màquina hi sent «ⵙⵍⵉ», que s'assembla a «ⵙⵙⵍⵉ» en un 75%",
+        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
+      },
+      "tensio:col1:4": {
+        "pista": "e6nuUVOFB0U",
+        "start": 152.997,
+        "end": 153.378,
+        "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵜⵉⵙⵉⵉⵙⵙⵉ», que s'assembla a «ⵜⵉⵙⵙⵉ» en un 80%",
+        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
+      },
+      "vocabulary:13": {
+        "pista": "e6nuUVOFB0U",
+        "start": 279.983,
+        "end": 280.531,
+        "com": "sentit a cegues: la màquina hi sent «ⴰⵖⵢⵓⵍ», que s'assembla a «ⴰⵖⵢⵓⵍ» en un 100%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "vocabulary:14": {
+        "pista": "e6nuUVOFB0U",
+        "start": 283.117,
+        "end": 283.534,
+        "com": "sentit a cegues: la màquina hi sent «ⴰⵡⵔⵖ», que s'assembla a «ⴰⵡⵔⴰⵖ» en un 80%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "vocals:example:6": {
+        "pista": "e6nuUVOFB0U",
+        "start": 70.09,
+        "end": 70.68,
+        "com": "per veïnatge",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "vocals:example:8": {
+        "pista": "e6nuUVOFB0U",
+        "start": 77.68,
+        "end": 78.14,
+        "com": "per veïnatge",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      }
+    },
+    "salutacions": {
+      "coneixer-se:col0:0": {
+        "pista": "mDMcR7vNA_A",
+        "start": 30.889,
+        "end": 33.075,
+        "com": "sentit a cegues: la màquina hi sent «ⴰⵃ ⵍⵅⵉⵔ ⴰ ⵔⵕⵉⵎ ⵎⴰⵔⵣⴰⴳⵉⵏ», que s'assembla a «ⵚⴱⴰⵃ ⵍⵅⵉⵔ ⴰ ⴱⵔⴰⵀⵉⵎ ⵎⴰⵏⵣⴰⴽⵉⵏⵏ» en un 67%",
+        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
+      },
+      "coneixer-se:col0:1": {
+        "pista": "mDMcR7vNA_A",
+        "start": 33.842,
+        "end": 35.047,
+        "com": "sentit a cegues: la màquina hi sent «ⵎⵉⵅⵉⵔ ⵉ ⵎⴰⵜⵎⵉ», que s'assembla a «ⴱⵉⵅⵉⵔ ⵉⵎⵎⴰ ⴽⵎⵎⵉ» en un 69%",
+        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
+      },
+      "coneixer-se:col1:2": {
+        "pista": "mDMcR7vNA_A",
+        "start": 46.997,
+        "end": 48.106,
+        "com": "sentit a cegues: la màquina hi sent «ⴽⵔⴰ ⵏ ⵉⵎⵉ ⵢⵙⵙⵄⵜⴰⴷ», que s'assembla a «ⴽⵔⴰ ⵏⵉⵎⵉⴽⴽ ⵙⵙⵃⵜⴰⴷ» en un 80%",
+        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
+      },
+      "coneixer-se:col2:1": {
+        "pista": "mDMcR7vNA_A",
+        "start": 53.502,
+        "end": 55.718,
+        "com": "sentit a cegues: la màquina hi sent «ⵜⵉⵎⵙⵉⵡⵉⵏ ⴰⵎⵎⴰⵔ ⵓⵍⵛⵉ ⴱⵉⵅⵉⵔ», que s'assembla a «ⵜⵉⵎⵉⵏⵙⵉⵡⵉⵏ ⴰ ⵎⴱⴰⵔⴽ ⴽⵓⵍⵛⵉ ⴱⵉⵅⵉⵔ» en un 81%",
+        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
+      },
+      "dialogue:1": {
+        "pista": "mDMcR7vNA_A",
+        "start": 8.627,
+        "end": 10.628,
+        "com": "sentit a cegues: la màquina hi sent «ⵜⵉⵎⵙⵉ ⵡⵉⵏⵃⵎⴷ ⵎⴰⵏⵉⴽ ⴰⴷ ⵜ ⵢⵉⴷ ⵎ», que s'assembla a «ⵜⵉⵎⵉⵏⵙⵉⵡⵉⵏ ⴰ ⵃⵎⴰⴷ ⵎⴰⵏⵉⴽⴰ ⵜⴳⵉⵜ» en un 68%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "dialogue:6": {
+        "pista": "mDMcR7vNA_A",
+        "start": 21.454,
+        "end": 22.527,
+        "com": "sentit a cegues: la màquina hi sent «ⴰⴷ ⴷ ⵢⴰⵡⵉ ⵡⵉⵙⵍⴰⵎⵎⵜ», que s'assembla a «ⴰⴷⴷ ⵢⴰⵡⵉ ⵕⴱⴱⵉ ⵙⵙⵍⴰⵎⵜ» en un 71%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "dialogue:7": {
+        "pista": "mDMcR7vNA_A",
+        "start": 23.778,
+        "end": 25.759,
+        "com": "sentit a cegues: la màquina hi sent «ⴰⴽⴽ ⵉⴷ ⵏ ⵔⵕⴱⴱⵉ ⴰⵔ ⵜⴰⵡⴰ ⵟⴰⴱⵏ», que s'assembla a «ⴰⴽⴽ ⵉⵀⵏⵏⴰ ⵕⴱⴱⵉ ⴰⵔ ⵜⴰⵡⴰⵍⵜⵜ ⴰⴹⵏⵉⵏ» en un 65%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "escolta-tensio:example:10": {
+        "pista": "mDMcR7vNA_A",
+        "start": 105.488,
+        "end": 106.636,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "escolta-tensio:example:11": {
+        "pista": "mDMcR7vNA_A",
+        "start": 108.833,
+        "end": 109.368,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "escolta-tensio:example:12": {
+        "pista": "mDMcR7vNA_A",
+        "start": 111.968,
+        "end": 112.625,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "escolta-tensio:example:13": {
+        "pista": "mDMcR7vNA_A",
+        "start": 115.398,
+        "end": 116.004,
+        "com": "sentit a cegues: la màquina hi sent «ⴱⵔⵔⴽ», que s'assembla a «ⴱⵔⵔⴽ» en un 100%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "escolta-tensio:example:14": {
+        "pista": "mDMcR7vNA_A",
+        "start": 118.478,
+        "end": 119.234,
+        "com": "sentit a cegues: la màquina hi sent «ⴱⵔⵔⴽ ⴷⵔⴹ», que s'assembla a «ⴱⵔⵔⴽ ⴷⴰⵔⵏⵖ» en un 67%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "escolta-tensio:example:3": {
+        "pista": "mDMcR7vNA_A",
+        "start": 75.969,
+        "end": 76.597,
+        "com": "sentit a cegues: la màquina hi sent «ⵏⵜⵜⴰⵜ», que s'assembla a «ⵏⵜⵜⴰⵜ» en un 100%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "escolta-tensio:example:4": {
+        "pista": "mDMcR7vNA_A",
+        "start": 79.646,
+        "end": 80.174,
+        "com": "sentit a cegues: la màquina hi sent «ⵕⴱⴱⵉ», que s'assembla a «ⵕⴱⴱⵉ» en un 100%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "escolta-tensio:example:5": {
+        "pista": "mDMcR7vNA_A",
+        "start": 83.02,
+        "end": 84.298,
+        "com": "sentit a cegues: la màquina hi sent «ⴰⴷ ⴷ ⵢⴰⵡⵉ ⵔⵕⴱⴱⵉ ⵙⵍⴰⵎⵜ», que s'assembla a «ⴰⴷⴷ ⵢⴰⵡⵉ ⵕⴱⴱⵉ ⵙⵙⵍⴰⵎⵜ» en un 88%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "escolta-tensio:example:6": {
+        "pista": "mDMcR7vNA_A",
+        "start": 90.901,
+        "end": 91.924,
+        "com": "sentit a cegues: la màquina hi sent «ⴰⴽⴽ ⵉⵀⵏⵏⴰ ⵔⵕⴱⴱⵉ», que s'assembla a «ⴰⴽⴽ ⵉⵀⵏⵏⴰ ⵕⴱⴱⵉ» en un 92%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "escolta-tensio:example:8": {
+        "pista": "mDMcR7vNA_A",
+        "start": 98.213,
+        "end": 99.393,
+        "com": "sentit a cegues: la màquina hi sent «ⴰⵔ ⴷ ⴰⵡⴰⵍ ⵜⴰⴹⵏ», que s'assembla a «ⴰⵔ ⵜⴰⵡⴰⵍⵜⵜ ⴰⴹⵏⵉⵏ» en un 71%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "escolta-tensio:example:9": {
+        "pista": "mDMcR7vNA_A",
+        "start": 102.255,
+        "end": 102.858,
+        "com": "sentit a cegues: la màquina hi sent «ⵜⴽⵍⵉⵜ», que s'assembla a «ⵜⵉⴽⵍⵉⵜⵜ» en un 71%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      }
+    },
+    "el-cami": {
+      "dialogue:0": {
+        "pista": "mDMcR7vNA_A",
+        "start": 133.098,
+        "end": 135.11,
+        "com": "sentit a cegues: la màquina hi sent «ⵎⴰⵏ ⴷ ⵉⵍⵍⴰ ⵓⵡⴰⵔⴰⵙ ⵏ ⵜⴼⵔⴰⵜ ⵉ ⵕⴱⴱⵉ», que s'assembla a «ⵎⴰⵏⵉⵖ ⵉⵍⵍⴰ ⵓⵖⴰⵔⴰⵙ ⵏⵜⴼⵔⴰⵡⵜ ⵉⵕⴱⴱⵉ» en un 85%",
+        "per_que_fora": "part de les seves paraules no són al llibre que aquesta veu llegeix"
+      },
+      "dialogue:1": {
+        "pista": "mDMcR7vNA_A",
+        "start": 136.178,
+        "end": 137.357,
+        "com": "sentit a cegues: la màquina hi sent «ⴰⵎⵥ ⴰⵙⴰ ⴰⴼⴰⵙⵉ», que s'assembla a «ⴰⵎⵥ ⴰⵖⴰⵔⴰⵙ ⴰⴼⴰⵙⵉ» en un 71%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "dialogue:3": {
+        "pista": "mDMcR7vNA_A",
+        "start": 140.754,
+        "end": 142.602,
+        "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵎⴰⵏⵉⴳⴰⵏ ⵜⴰⵎⴰⵣⵉⵔⵜⵣⵉⴷⵀⵓ ⴰⴽⴰⴱⵉⵔ», que s'assembla a «ⵎⴰⵏⵉ ⵢⴳⴰⵏ ⵜⴰⵎⴰⵣⵉⵔⵜ ⵜⵉⵣⵏⵉⵜ» en un 77%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "dialogue:4": {
+        "pista": "mDMcR7vNA_A",
+        "start": 143.579,
+        "end": 144.952,
+        "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵎⴰⵏⵉⴳⴰⵏ ⵜⴰⵎⴰⵣⵉⵔⵜⵣⵉⴷⵀⵓ ⴰⴽⴰⴱⵉⵔ», que s'assembla a «ⵓⵀⵓ ⴰⴳⴰⴷⵉⵔ» en un 67%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "dialogue:6": {
+        "pista": "mDMcR7vNA_A",
+        "start": 149.004,
+        "end": 150.556,
+        "com": "sentit a cegues: la màquina hi sent «ⵉⴼⵓⴽ ⵎⴰ ⵜⴽⵔ», que s'assembla a «ⵉⴼⵓⵍⴽⵉ ⵎⴰ ⵜⵙⴽⴰⵔ» en un 69%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "dialogue:7": {
+        "pista": "mDMcR7vNA_A",
+        "start": 151.293,
+        "end": 152.278,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "feina:example:0": {
+        "pista": "mDMcR7vNA_A",
+        "start": 325.962,
+        "end": 327.002,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "feina:example:1": {
+        "pista": "mDMcR7vNA_A",
+        "start": 330.209,
+        "end": 331.874,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "feina:example:2": {
+        "pista": "mDMcR7vNA_A",
+        "start": 335.001,
+        "end": 336.085,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "feina:example:3": {
+        "pista": "mDMcR7vNA_A",
+        "start": 341.346,
+        "end": 342.563,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "part de les seves paraules no són al llibre que aquesta veu llegeix"
+      },
+      "mani:example:0": {
+        "pista": "mDMcR7vNA_A",
+        "start": 157.468,
+        "end": 158.946,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "part de les seves paraules no són al llibre que aquesta veu llegeix"
+      },
+      "mani:example:2": {
+        "pista": "mDMcR7vNA_A",
+        "start": 182.996,
+        "end": 184.015,
+        "com": "sentit a cegues: la màquina hi sent «ⵎ ⴰⴳⵉⵍⵍⴰ ⵓⴷⵡⴰⵔ», que s'assembla a «ⵎⴰⵏⵉⵖ ⵉⵍⵍⴰ ⵓⴹⵡⵡⴰⵔ» en un 67%",
+        "per_que_fora": "part de les seves paraules no són al llibre que aquesta veu llegeix"
+      },
+      "mani:example:3": {
+        "pista": "mDMcR7vNA_A",
+        "start": 191.594,
+        "end": 192.622,
+        "com": "sentit a cegues: la màquina hi sent «ⵎⴰⵏⵉⵖ ⵜⵍⵍⴰ ⵜⵎⵖⵔⴰ», que s'assembla a «ⵎⴰⵏⵉⵖ ⵜⵍⵍⴰ ⵍⴱⵓⵙⵟⴰ» en un 67%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "mani:example:5": {
+        "pista": "mDMcR7vNA_A",
+        "start": 214.207,
+        "end": 215.215,
+        "com": "sentit a cegues: la màquina hi sent «ⵎⴰⵏⵉⵖ ⵜⵍⵍⴰⵣ ⵉⵏⵎ», que s'assembla a «ⵎⴰⵏⵉⵖ ⵜⵍⵍⴰ ⴼⴰⵟⵉⵎ» en un 71%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "persona:example:0": {
+        "pista": "mDMcR7vNA_A",
+        "start": 312.191,
+        "end": 313.859,
+        "com": "sentit a cegues: la màquina hi sent «ⵉⵅⴷⵎ ⵓⵔⴳⴰⵣ ⵖ ⵍⴱⴰⵏⴽⴰ», que s'assembla a «ⵉⵅⴷⵎ ⵓⵔⴳⴰⵣ ⵖⵍⴱⴰⵏⴽⴰ» en un 100%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "persona:example:3": {
+        "pista": "mDMcR7vNA_A",
+        "start": 317.163,
+        "end": 318.452,
+        "com": "sentit a cegues: la màquina hi sent «ⵢⴽⵔⵔⵣ ⵓⴼⵍⵍⴰⵃ», que s'assembla a «ⵉⴽⵔⵣ ⵓⴼⵍⵍⴰⵃ» en un 82%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "persona:example:4": {
+        "pista": "mDMcR7vNA_A",
+        "start": 321.637,
+        "end": 322.59,
+        "com": "sentit a cegues: la màquina hi sent «ⵜⵔⵥ ⵏ ⵜⴳⵎⵎⵉ», que s'assembla a «ⵜⵔⵥⵎ ⵜⴳⵎⵎⵉ» en un 89%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "quan:example:3": {
+        "pista": "mDMcR7vNA_A",
+        "start": 277.279,
+        "end": 279.256,
+        "com": "sentit a cegues: la màquina hi sent «ⵜⵍⵍⴰ ⴷ ⵎⵎⵖⴰⵔ ⴷ ⵖⵓⵍⵡⴰ», que s'assembla a «ⵜⵍⵍⴰ ⵜⵎⵖⴰⵔⵜ ⵖⵓⵏⵡⴰⵍ» en un 69%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "vocabulary:0": {
+        "pista": "mDMcR7vNA_A",
+        "start": 343.843,
+        "end": 345.844,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "vocabulary:1": {
+        "pista": "mDMcR7vNA_A",
+        "start": 348.24,
+        "end": 350.72,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "vocabulary:2": {
+        "pista": "mDMcR7vNA_A",
+        "start": 354.067,
+        "end": 355.882,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "vocabulary:3": {
+        "pista": "mDMcR7vNA_A",
+        "start": 358.109,
+        "end": 358.692,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "vocabulary:4": {
+        "pista": "mDMcR7vNA_A",
+        "start": 359.261,
+        "end": 360.215,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "vocabulary:5": {
+        "pista": "mDMcR7vNA_A",
+        "start": 362.225,
+        "end": 364.279,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "vocabulary:6": {
+        "pista": "mDMcR7vNA_A",
+        "start": 368.002,
+        "end": 368.841,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "vocabulary:7": {
+        "pista": "mDMcR7vNA_A",
+        "start": 369.416,
+        "end": 371.323,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "vocabulary:8": {
+        "pista": "mDMcR7vNA_A",
+        "start": 374.834,
+        "end": 375.941,
+        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "vocabulary:9": {
+        "pista": "mDMcR7vNA_A",
+        "start": 388.136,
+        "end": 388.945,
+        "com": "sentit a cegues: la màquina hi sent «ⵜⴰⵎⵣⵉⵔⵜ», que s'assembla a «ⵜⴰⵎⴰⵣⵉⵔⵜ» en un 88%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      }
+    },
+    "la-botiga": {
+      "datius:example:5": {
+        "pista": "zkvUblbTdws",
+        "start": 280.333,
+        "end": 281.538,
+        "com": "sentit a cegues: la màquina hi sent «ⵏⴼⴽⴰ ⴰⴰⵙ ⵜⴰⵙⴰⵔⵓⵜ», que s'assembla a «ⴼⴽⵉⵖⴰⵙ ⵜⴰⵙⴰⵔⵓⵜ» en un 79%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "dialogue:0": {
+        "pista": "zkvUblbTdws",
+        "start": 5.976,
+        "end": 6.88,
+        "com": "sentit a cegues: la màquina hi sent «ⵉⵜⴷⴷⵔⴽ ⵜⵓⴷⵜ», que s'assembla a «ⵉⵙ ⴷⴰⵔⴽ ⵜⵓⴷⵉⵜ» en un 73%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "dialogue:3": {
+        "pista": "zkvUblbTdws",
+        "start": 16.001,
+        "end": 17.567,
+        "com": "sentit a cegues: la màquina hi sent «ⴽⵓⵥ ⵉⴹ ⵎⵢⴰ ⵉⵍⵉⵜⵔⵓ», que s'assembla a «ⴽⴽⵓⵥ ⵉⴷⴰⵎⵉⵢⵢⴰ ⵉⵍⵉⵜⵔⵓ» en un 72%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "imperatiu:example:3": {
+        "pista": "zkvUblbTdws",
+        "start": 257.599,
+        "end": 259.576,
+        "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵉⵙ ⵜⵓⴱⵔ ⵢⵔⵎⴰ ⵢⵇⵇⴰⵔ ⴷⵏ ⵉⵉ ⴱⵔⴰⵀⵉⵎ ⵣⵉⵏⵀ ⵜⵓⵜⵔⴰⵙⵏ ⵏ ⵢⵔⵏⴰ ⵢⵇⴰⵔⴱ», que s'assembla a «ⵔⵥⵎ» en un 67%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "imperatiu:example:5": {
+        "pista": "zkvUblbTdws",
+        "start": 260.868,
+        "end": 263.138,
+        "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵉⵙ ⵜⵓⴱⵔ ⵢⵔⵎⴰ ⵢⵇⵇⴰⵔ ⴷⵏ ⵉⵉ ⴱⵔⴰⵀⵉⵎ ⵣⵉⵏⵀ ⵜⵓⵜⵔⴰⵙⵏ ⵏ ⵢⵔⵏⴰ ⵢⵇⴰⵔⴱ», que s'assembla a «ⵏⴽⵔ» en un 67%",
+        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "mesures:col0:0": {
+        "pista": "zkvUblbTdws",
+        "start": 165.95,
+        "end": 167.717,
+        "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⴰⵛⴽⵙⴽⴽⵔ ⵓⴽⴼⴼⴰⵢⵍⵉⵜⵔⵓⵎⴰⵛ ⴰⴷ ⵜⴽⴽⴽⵔ ⵜⴰⵎⵎ ⵏ ⵜⵉⴽⵉⵍⵓ», que s'assembla a «ⴽⵉⵍⵓ» en un 100%",
+        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
+      },
+      "mesures:col1:0": {
+        "pista": "zkvUblbTdws",
+        "start": 175.35,
+        "end": 177.512,
+        "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⴰⵛⴽⵙⴽⴽⵔ ⵓⴽⴼⴼⴰⵢⵍⵉⵜⵔⵓⵎⴰⵛ ⴰⴷ ⵜⴽⴽⴽⵔ ⵜⴰⵎⵎ ⵏ ⵜⵉⴽⵉⵍⵓ», que s'assembla a «ⵍⵉⵜⵔⵓ» en un 100%",
+        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
+      }
+    }
   }
- }
 }
