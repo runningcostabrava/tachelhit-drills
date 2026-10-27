@@ -33,6 +33,9 @@ import {
     FaLightbulb
 } from 'react-icons/fa';
 import RecordAudioModal from './RecordAudioModal';
+import MicrofonMantingut, { type PerfilVeu } from './MicrofonMantingut';
+// `api` dins d'aquest fitxer ja és el de la graella d'AG Grid; el nostre entra amb un altre nom.
+import { api as servidor } from '../api';
 import WordGloss from './WordGloss';
 import { varietyShort, varietyLabel } from '../varieties';
 
@@ -145,6 +148,14 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
         requestAnimationFrame(() => { const v = document.querySelector('.ag-body-viewport') as HTMLElement | null; if (v && top) v.scrollTop = top; });
     };
     const [recordDrill, setRecordDrill] = useState<Drill | null>(null);
+    // Qui grava: la seva varietat i el seu poble. Es demana UNA vegada i val per a totes les
+    // targetes; sense això, cada frase tornaria a preguntar el que ja s'ha contestat (#370).
+    const [perfilVeu, setPerfilVeu] = useState<PerfilVeu | null | undefined>(undefined);
+    useEffect(() => {
+        servidor.me()
+            .then((m) => setPerfilVeu(m ? { variety: m.variety ?? null, region: m.region ?? null, is_native: m.is_native ?? null } : null))
+            .catch(() => setPerfilVeu(null));
+    }, []);
     const [showTestConfig, setShowTestConfig] = useState(false);
     const [mobileTestIds, setMobileTestIds] = useState<number[]>([]);
     const [pendingMedia, setPendingMedia] = useState<Record<number, { image?: string, audio?: Blob, audioUrl?: string, video?: Blob, videoUrl?: string }>>({});
@@ -896,10 +907,13 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                             El gest de mantenir premut arriba amb el #370; mentre no hi sigui, el
                             botó no el promet: un botó que diu una cosa i en fa una altra és
                             pitjor que un que diu poc. */}
-                        <button
-                            onClick={() => setRecordDrill(drill)}
-                            style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '15px', marginBottom: '8px', background: 'var(--rose-soft)', color: 'var(--rose)', border: '1.5px solid var(--rose)', borderRadius: 'var(--r-lg)', fontSize: '15px', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}
-                        ><FaMicrophone size={18} /> Grava la teva versió</button>
+                        <div style={{ marginBottom: '8px' }}>
+                            <MicrofonMantingut
+                                drill={drill}
+                                perfil={perfilVeu}
+                                onCalPerfil={() => setRecordDrill(drill)}
+                            />
+                        </div>
 
                         {/* Previews for pending media */}
                         {pendingMedia[drill.id] && (

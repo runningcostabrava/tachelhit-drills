@@ -556,7 +556,10 @@ function OneStory({ slug }: { slug: string }) {
                 <img src={thumb(getMediaUrl(d.image_url), 760)} alt=""
                      loading="lazy" decoding="async"
                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                     style={{ width: '100%', maxHeight: 260, objectFit: 'cover', borderRadius: 'var(--r-md)', display: 'block' }} />
+                     // Sencer, i no retallat. Amb un topall d'alçada i `cover` es perdia mitja
+                     // escena: justament el llop que mira, o el xai que s'aparta. Un dibuix que
+                     // ha d'explicar què passa no es pot ensenyar a trossos.
+                     style={{ width: '100%', height: 'auto', aspectRatio: '4 / 3', objectFit: 'cover', borderRadius: 'var(--r-md)', display: 'block' }} />
               )}
               <div style={{ display: 'flex', gap: 10 }}>
               {/* Amb la història engegada, el ▶ d'una línia hi porta la lectura en comptes de
@@ -658,11 +661,11 @@ const primary: React.CSSProperties = { display: 'inline-flex', alignItems: 'cent
 const back: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: 0, border: 'none', background: 'none', color: 'var(--brand-1)', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' };
 /** Els comandaments es queden a baix de tot: amb 219 línies, el play de dalt no es torna a veure.
  *
- *  `--peu-encastat` és el que ja ocupa l'avís de dalt de la pàgina («això és del que tenies
- *  desat»): la barra s'hi enfila per sobre en comptes de barallar-s'hi pel mateix lloc, que és el
- *  que deixava qui escoltava sense poder aturar ni repetir (#393). */
+ *  Baix de tot és d'ells. L'avís d'«això és del que tenies desat» se'ls hi posava a sobre i qui
+ *  escoltava es quedava sense poder aturar ni repetir; ara aquell avís és una fitxa petita a
+ *  dalt a la dreta i aquí no hi ha res més amb qui barallar-se (#393, #400). */
 const barra: React.CSSProperties = {
-  position: 'fixed', left: 0, right: 0, bottom: 'var(--peu-encastat, 0px)', zIndex: 900,
+  position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 900,
   display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
   padding: '10px 14px calc(10px + env(safe-area-inset-bottom, 0px))',
   background: 'var(--surface)', borderTop: '1px solid var(--border)',
