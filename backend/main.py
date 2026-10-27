@@ -7017,6 +7017,29 @@ def _another_way(said: Optional[str], written: Optional[str]) -> bool:
     return bool((said or "").strip()) and key(said) != key(written)
 
 
+# La ruta no penja de `/drills/` a posta: `/drills/{drill_id}` es declara abans i es menjaria
+# «other-ways» com si fos un número.
+@app.get("/other-ways")
+def drills_other_ways(ids: str = "", db: Session = Depends(get_db)):
+    """Les altres maneres de dir aquestes frases, en un sol viatge (#239).
+
+    Es veien només allà on es graven. Qualsevol pantalla que ensenyi una frase ha de poder dir
+    que n'hi ha una altra manera, amb qui la diu i de quin poble és: en una pràctica, en un
+    diàleg del Mètode o en un exemple de gramàtica. Una altra manera no és una correcció de la
+    primera; són dues maneres.
+    """
+    quins = [int(x) for x in (ids or "").split(",") if x.strip().isdigit()][:60]
+    if not quins:
+        return {}
+    said = other_ways(db)
+    fora: Dict[str, List[dict]] = {}
+    for d in db.query(DrillModel).filter(DrillModel.id.in_(quins)).all():
+        altres = [v for v in said.get(d.id, []) if _another_way(v["text"], d.text_tachelhit)]
+        if altres:
+            fora[str(d.id)] = altres
+    return fora
+
+
 def other_ways(db) -> Dict[int, List[dict]]:
     """Les altres maneres de dir una frase: les gravacions que porten el text de qui les diu.
 
@@ -7044,6 +7067,30 @@ def other_ways(db) -> Dict[int, List[dict]]:
             "is_native": r.is_native, "kind": r.variant_kind,
         })
     return out
+
+
+def _amb_les_altres_maneres(body, said, db):
+    """A cada línia del capítol que ja és una frase nostra, com la diuen els altres (#239).
+
+    És on això importa més: el text d'un diàleg ve del manual i és del Souss, i qui el llegeix
+    ha de poder veure que al seu poble es diu d'una altra manera —amb qui ho diu i d'on és— en
+    comptes de pensar que el llibre mana sobre la gent.
+    """
+    if not body:
+        return body
+    from models import Drill as DrillModel
+    quins = {l.get("drill_id") for kind in method_mod.LINE_KINDS
+             for l in method_mod._lines_of(body, kind) if isinstance(l.get("drill_id"), int)}
+    if not quins:
+        return body
+    textos = {d.id: d.text_tachelhit for d in db.query(DrillModel).filter(DrillModel.id.in_(quins)).all()}
+    for kind in method_mod.LINE_KINDS:
+        for line in method_mod._lines_of(body, kind):
+            did = line.get("drill_id")
+            altres = [v for v in said.get(did, []) if _another_way(v["text"], textos.get(did))]
+            if altres:
+                line["variants"] = altres
+    return body
 
 
 #: El capítol servit l'últim cop, i amb quina biblioteca es va fer.
@@ -7172,7 +7219,7 @@ def method_chapter(slug: str, db: Session = Depends(get_db),
         # No és el llibre traduït i, a part, un munt de frases nostres al final: cada secció
         # ensenya el que explica i tot seguit com ho diu la gent que coneixem, amb la seva veu i
         # la seva imatge. El llibre hi posa el recorregut; la biblioteca, les persones.
-        "content": method_mod.content_with_ours(db, c["slug"], rows, card),
+        "content": _amb_les_altres_maneres(method_mod.content_with_ours(db, c["slug"], rows, card), said, db),
         "topics": [{"slug": t, "label": labels.get(t, t)} for t in c["topics"]],
         "sections": sections,
         "also": [card(d) for d in rest[:12]],
@@ -7318,7 +7365,16 @@ def practice_session(day: Optional[str] = None, speaker: Optional[str] = None, t
     only = [int(x) for x in ids.split(",") if x.strip().isdigit()] if ids else None
     rows = practice_mod.session_rows(db, day=day, speaker=speaker, topic=topic, unit=unit, test_id=test_id, ids=only,
                                      video=video, person=person, tag=tag, with_voice=with_voice, limit=limit, offset=offset)
-    return {"drills": [Drill.model_validate(d, from_attributes=True) for d in rows], "cards": [practice_mod.card(d) for d in rows]}
+    # Les altres maneres de dir cada frase, aquí també (#239). Es veien on es graven i enlloc
+    # més, i en una pràctica és justament on importa: qui estudia sent una manera de dir-ho i no
+    # sap que n'hi ha una altra, dita per algú altre, d'un altre poble.
+    said = other_ways(db)
+    targetes = []
+    for d in rows:
+        t = practice_mod.card(d)
+        t["variants"] = [v for v in said.get(d.id, []) if _another_way(v["text"], d.text_tachelhit)]
+        targetes.append(t)
+    return {"drills": [Drill.model_validate(d, from_attributes=True) for d in rows], "cards": targetes}
 
 
 @app.get("/grammar")
