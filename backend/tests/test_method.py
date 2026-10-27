@@ -1206,3 +1206,64 @@ def test_una_seccio_pot_dir_que_el_que_ensenya_es_diu_sencer():
             db.commit()
         finally:
             db.close()
+
+
+def test_sota_les_nostres_veus_no_hi_va_cap_targeta_muda_ni_cap_veu_de_canal():
+    """Trobat auditant el capítol 2 i val per a tota l'app (#288).
+
+    Hi sortia «Tifawin!» —sense àudio i d'un canal— sota «Dit per les nostres veus», en una
+    secció que precisament no tenia cap veu: una contradicció en tres paraules. Ara el bloc
+    només ensenya frases que es poden ESCOLTAR, i la veu que no és d'una persona que coneguem ho
+    diu, perquè es vegi abans de prémer: per escoltar-la, benvinguda; per imitar-la, no."""
+    import main
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("veus_de_fora")}
+    db = main.SessionLocal()
+    try:
+        me = client.get("/users/me", headers=hdr).json()
+        db.query(main.UserModel).filter(main.UserModel.id == me["id"]).first().is_admin = True
+        from models import MethodChapter
+        db.query(MethodChapter).filter(MethodChapter.slug == "el-viatge").delete()
+        db.commit()
+    finally:
+        db.close()
+
+    # Amb la unitat del capítol dita a mà: una frase entra al capítol pel que ensenya, i aquí el
+    # que es prova és una altra cosa.
+    muda = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "el tren", "text_tachelhit": "lmasina",
+        "grammar": "preposicions", "grammar_source": "owner"}).json()
+    de_canal = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "el tren arriba", "text_tachelhit": "lmasina tlkm",
+        "grammar": "preposicions", "grammar_source": "owner",
+        "author": "ILoveLanguages (parlant nadiu)", "variety": "tzm",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/canal-lmasina.mp3"}).json()
+
+    try:
+        client.put("/method/el-viatge/content", headers=hdr, json={
+            "intro": "El viatge.",
+            "sections": [{"id": "el-tren", "title": "El tren", "text": "Per anar-hi.",
+                          "examples": [{"shi": "lmasina", "ca": "el tren"}]}]})
+
+        sec = client.get("/method/el-viatge").json()["content"]["sections"][0]
+        ids = [d["id"] for d in sec["ours_drills"]]
+        assert muda["id"] not in ids, "una targeta muda no surt sota un títol que promet veus"
+        assert de_canal["id"] in ids, "i una que SÍ que sona hi surt, encara que sigui d'un canal"
+        assert sec["ours_total"] >= 2, "el total segueix sent el de debò: no desapareix cap frase"
+
+        veu = next(d["veu"] for d in sec["ours_drills"] if d["id"] == de_canal["id"])
+        assert veu["mena"] == "canal" and veu["per_imitar"] is False, veu
+        nostra_muda = next((d for d in sec["ours_drills"] if d["id"] == muda["id"]), None)
+        assert nostra_muda is None
+    finally:
+        # La base de proves no es llença entre execucions: un capítol escrit aquí és un capítol
+        # escrit per a les altres proves, i n'hi ha una que diu «un capítol sense escriure no en
+        # té». Es treu al final passi el que passi.
+        db = main.SessionLocal()
+        try:
+            from models import MethodChapter
+            db.query(MethodChapter).filter(MethodChapter.slug == "el-viatge").delete()
+            db.commit()
+        finally:
+            db.close()

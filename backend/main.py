@@ -7142,6 +7142,9 @@ def method_chapter(slug: str, db: Session = Depends(get_db),
                 # «is trit aman?» sota «Dit per les nostres veus», sense parlant ni poble).
                 "tag": d.tag,
                 "from_book": "del llibre" in (d.tag or ""),
+                # Qui ho diu, i si aquesta veu es pot posar com a model: una veu d'un canal no
+                # pot passar per una de nostra (#288). Es diu ABANS de prémer.
+                "veu": grammar_course.qui_ho_diu(d),
                 # paraula per paraula, igual que al curs de gramàtica: una frase que s'ensenya
                 # i no es pot desmuntar és una frase que només es pot repetir
                 "gloss": grammar_course.gloss_of(d),
@@ -7268,6 +7271,32 @@ def put_method_content(slug: str, body: dict = Body(...),
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return {"slug": slug, "ok": True, "sections": len(saved.get("sections") or [])}
+
+
+@app.get("/practice/imitation-audit")
+def practice_imitation_audit(db: Session = Depends(get_db)):
+    """Quines pràctiques ja desades demanen imitar una veu que no és de ningú (#273).
+
+    La regla ara la fa complir el validador, però les pràctiques que ja existien es van muntar
+    abans que res ho impedís: això diu quines fallen i per què, en comptes de confiar que no n'hi
+    hagi cap. Només llegeix.
+    """
+    from models import PracticeStep
+    files = (db.query(PracticeStep, TestModel, DrillModel)
+             .join(TestModel, TestModel.id == PracticeStep.test_id)
+             .outerjoin(DrillModel, DrillModel.id == PracticeStep.drill_id)
+             .filter(PracticeStep.kind.in_(list(practice_steps.PER_IMITAR)))
+             .order_by(PracticeStep.test_id.asc(), PracticeStep.position.asc()).all())
+    fallen = []
+    for pas, test, drill in files:
+        veu = grammar_course.qui_ho_diu(drill) if drill is not None else {
+            "qui": None, "mena": "cap", "per_imitar": False}
+        if veu["per_imitar"]:
+            continue
+        fallen.append({"test_id": pas.test_id, "title": test.title, "position": pas.position,
+                       "kind": pas.kind, "drill_id": pas.drill_id,
+                       "veu": veu, "text_tachelhit": getattr(drill, "text_tachelhit", None)})
+    return {"passos_per_imitar": len(files), "fallen": len(fallen), "quins": fallen}
 
 
 @app.get("/practice/collections")
