@@ -1016,7 +1016,9 @@ def test_la_veu_del_manual_va_amb_el_seu_credit_i_no_es_desa():
         out = method.attach_cd(body, "sons")
         cd = out["sections"][0]["examples"][0]["cd"]
         assert cd["qui"] == "Abdallah El Mountassir"
-        assert cd["obra"].startswith("Méthode de Tachelhit")
+        # El llibre que la veu llegeix és «Initiation au tachelhit» (1999), no la «Méthode»
+        # (#380). Posar-hi l'altre títol atribuïa a una obra el que surt d'una altra.
+        assert cd["obra"].startswith("Initiation au tachelhit")
         assert cd["start"] == 46.63 and cd["url"].endswith("46.63/47.2")
         assert "cd" not in out["sections"][0]["examples"][1], \
             "sense fitxer penjat no hi ha botó"
@@ -1119,3 +1121,33 @@ def test_totes_les_linies_dun_capitol_es_tornen_frases_duna_passada():
             db.commit()
         finally:
             db.close()
+
+
+def test_lindex_del_cd_nomes_fa_sonar_el_que_ha_sentit_una_persona():
+    """Un botó que sona una altra cosa ensenya un so equivocat (#329, #380).
+
+    L'índex es va omplir fent sentir el CD a la màquina i buscant quina línia del capítol
+    s'assembla al que havia sentit. Una d'aquelles entrades deia `aẓur` on el CD diu `tiṭṭ`, i
+    venia amb un **100% de semblança**: el número no mesura si la línia és aquella, mesura si
+    s'assembla al que la màquina creu haver sentit, de manera que pujar el llistó només deixa
+    passar les equivocacions més segures d'elles mateixes.
+
+    Per això, mentre no hi hagi una prova que no surti de la màquina sentint sola, només sona el
+    que ha comprovat una persona. La feina de la màquina no es llença: es desa a `per_comprovar`,
+    i allà no porta adreça de tall, que és el que fa que no soni.
+    """
+    import json
+    from pathlib import Path
+    import method
+
+    dades = json.loads(Path(method.CD_FITXER).read_text(encoding="utf-8"))
+    for slug, linies in (dades.get("capitols") or {}).items():
+        for on, d in linies.items():
+            assert d.get("com") == "sentit", \
+                "%s/%s sona sense que l'hagi sentida ningú: «%s»" % (slug, on, d.get("com"))
+            assert d.get("url"), "%s/%s diu que sona i no porta tall" % (slug, on)
+    for slug, linies in (dades.get("per_comprovar") or {}).items():
+        for on, d in linies.items():
+            assert "url" not in d, \
+                "%s/%s està per comprovar i porta adreça de tall: sonaria" % (slug, on)
+            assert d.get("per_que_fora"), "%s/%s no diu per què no sona" % (slug, on)
