@@ -34,6 +34,7 @@ const TOOLS: { kind: PracticeStep['kind']; label: string; needsDrill: boolean; n
   { kind: 'word_by_word', label: 'paraula per paraula', needsDrill: true, needsVoice: false },
   { kind: 'script_swap', label: 'tifinag o llatí', needsDrill: true, needsVoice: false },
   { kind: 'pick_spelling', label: 'quina és la bona', needsDrill: true, needsVoice: false },
+  { kind: 'pick_written', label: 'escolta i tria la frase', needsDrill: true, needsVoice: true },
   { kind: 'note', label: 'nota que ensenya', needsDrill: false, needsVoice: false },
 ];
 const toolOf = (k: PracticeStep['kind']) => TOOLS.find((t) => t.kind === k);
@@ -57,6 +58,21 @@ const SOURCES: { kind: SourceKind; label: string }[] = [
 // A sentence is only usable if somebody has written what it says, in both languages.
 const usable = (d?: Drill) => !!d && !!(d.text_tachelhit || '').trim() && !!(d.text_catalan || '').trim();
 const hasVoice = (d?: Drill) => !!d && !!((d.audio_url || '').trim() || (d.audio_tts_shi_url || '').trim());
+
+/** Les eines que demanen repetir el que se sent: la gravació hi fa de model (#273). */
+const PER_IMITAR: PracticeStep['kind'][] = ['say_it', 'write_heard'];
+
+/** Si aquesta veu es pot posar com a model per repetir-la: ha de ser d'una persona que
+ *  coneguem. Per escoltar, totes les veus; per imitar, només una veu amb nom.
+ *
+ *  Qui manda és el servidor, que ho refusa en desar; això és per dir-ho ABANS, perquè qui munta
+ *  la pràctica ho entengui en comptes de trobar-se un error. */
+const veuPerImitar = (d?: Drill) => {
+  if (!d || !(d.audio_url || '').trim()) return false;        // la veu de màquina no és un model
+  const qui = ((d.speaker || d.author || '') as string).trim();
+  if (!qui || qui.toLowerCase().startsWith('auto capture')) return false;
+  return !qui.includes('(');                                   // «ILoveLanguages (…)»: un canal
+};
 // Half-made sentences are never OFFERED. One with no voice, or with no words written down, is
 // work waiting to happen (Veus, the editor) -- not something to put in front of a learner. The
 // ones already in a practice still show, with their warning: hiding those would hide the problem.
@@ -318,15 +334,16 @@ export default function PracticeEditor() {
 
   // ---- what is wrong with this practice ---------------------------------------------
   const problems = useMemo(() => {
-    const noText: number[] = [], noVoice: number[] = [], missing: number[] = [];
+    const noText: number[] = [], noVoice: number[] = [], missing: number[] = [], noModel: number[] = [];
     steps.forEach((s, i) => {
       if (!s.drill_id) return;
       const d = drills[s.drill_id];
       if (!d) { missing.push(i); return; }
       if (!usable(d)) noText.push(i);
       else if (toolOf(s.kind)?.needsVoice && !hasVoice(d)) noVoice.push(i);
+      else if (PER_IMITAR.includes(s.kind) && !veuPerImitar(d)) noModel.push(i);
     });
-    return { noText, noVoice, missing };
+    return { noText, noVoice, missing, noModel };
   }, [steps, drills]);
 
   if (!id) return null;
@@ -391,13 +408,23 @@ export default function PracticeEditor() {
         </div>
       )}
 
-      {(problems.noText.length > 0 || problems.noVoice.length > 0) && (
+      {(problems.noText.length > 0 || problems.noVoice.length > 0 || problems.noModel.length > 0) && (
         <div style={{ padding: '10px 14px', borderRadius: 'var(--r-lg)', background: 'var(--brand-gradient-soft)', marginBottom: 14, fontSize: 13.5, lineHeight: 1.5 }}>
           {problems.noText.length > 0 && (
             <div><strong>{problems.noText.length} {problems.noText.length === 1 ? 'frase no té text amazic' : 'frases no tenen text amazic'}</strong> (passos {problems.noText.map((i) => i + 1).join(', ')}). Qui aprengui no hi veurà res a llegir.</div>
           )}
           {problems.noVoice.length > 0 && (
             <div>{problems.noVoice.length} {problems.noVoice.length === 1 ? 'demana escoltar una frase sense veu' : 'demanen escoltar frases sense veu'} (passos {problems.noVoice.map((i) => i + 1).join(', ')}). Grava-la, o tria una altra eina.</div>
+          )}
+          {/* Per escoltar, totes les veus; per imitar, només una veu amb nom (#273). El servidor
+              ho refusa en desar: aquí es diu abans, i amb el motiu. */}
+          {problems.noModel.length > 0 && (
+            <div>
+              {problems.noModel.length === 1 ? 'Un pas demana' : `${problems.noModel.length} passos demanen`} repetir
+              una veu que no és d’una persona que coneguem (passos {problems.noModel.map((i) => i + 1).join(', ')}):
+              un canal, un tall d’un vídeo sense nom, o una veu de màquina. Per <strong>escoltar</strong> serveixen
+              totes; per <strong>imitar</strong>, cal una veu amb nom. No es desarà així.
+            </div>
           )}
         </div>
       )}
