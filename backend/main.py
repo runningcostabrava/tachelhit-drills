@@ -7099,6 +7099,11 @@ def put_method_content(slug: str, body: dict = Body(...),
 
     Viu a la base de dades i no al repositori (vegeu `models.MethodChapter`), i per això es
     corregeix des d'aquí: qui administra pot arreglar una frase sense desplegar res.
+
+    Una secció pot portar `formula: true`: vol dir que el que s'hi ensenya **es diu sencer** —les
+    salutacions, els comiats, les fórmules de cortesia—, i llavors el paraula per paraula hi va
+    tancat i amb un altre nom, «Què hi ha a dins» (#289). És una marca per secció i no global,
+    perquè a la secció del «com estàs?» i als pronoms desmuntar és justament el que cal.
     """
     try:
         saved = method_mod.store_content(db, slug, body, who=(user.display_name or user.username))
