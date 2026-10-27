@@ -7,6 +7,7 @@ import { api } from './api';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaBookOpen, FaMicrophone, FaInfo, FaSearch, FaPlus, FaFeatherAlt } from 'react-icons/fa';
 import { syncManager } from './services/OfflineSyncManager';
+import * as cuaDeVeus from './services/cuaDeVeus';
 import ToastHost from './components/ToastHost';
 import StaleBuildBanner from './components/StaleBuildBanner';
 import DataNotice from './components/DataNotice';
@@ -103,6 +104,8 @@ function App() {
   const location = useLocation();
   const [aiOpen, setAiOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [veusPendents, setVeusPendents] = useState(0);
+  useEffect(() => cuaDeVeus.escolta(setVeusPendents), []);
 
   // Offline sync bootstrap. All queue processing lives in OfflineSyncManager;
   // this effect just pushes pending actions and refreshes the local caches on
@@ -117,6 +120,11 @@ function App() {
 
       // Push queued offline actions first so the cache refresh sees the result
       await syncManager.sync();
+      // I les veus que esperin al dispositiu. Van per la seva banda (#370): una presa no cap a
+      // la cua de `Preferences` sense menjar-se el lloc de la biblioteca, i tampoc no ha
+      // d'esperar que acabi la còpia dels drills per pujar. `engega` també escolta el `online`
+      // del navegador, que al web és qui avisa que ha tornat el senyal.
+      cuaDeVeus.engega();
 
       try {
         const [drillsRes, testsRes] = await Promise.all([
@@ -218,6 +226,15 @@ function App() {
                   style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: compactNav ? 33 : 35, height: compactNav ? 33 : 35, borderRadius: 'var(--r-pill)', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)' }}>
             <FaInfo size={13} />
           </button>
+          {/* Les veus que encara no han pujat.
+              Una cua silenciosa és una cua que algú es pensa que ha perdut: si una presa espera
+              el senyal, s'ha de veure que hi és i que puja sola (#370). */}
+          {veusPendents > 0 && (
+            <span title={`${veusPendents} ${veusPendents === 1 ? 'veu gravada que encara no ha pujat' : 'veus gravades que encara no han pujat'}. Pugen soles quan hi hagi senyal.`}
+                  style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 'var(--r-pill)', background: 'var(--rose-soft)', color: 'var(--rose)', fontWeight: 800, fontSize: 12 }}>
+              <FaMicrophone size={11} /> {veusPendents}
+            </span>
+          )}
           <button onClick={() => setAiOpen(v => !v)} title="Copilot" aria-label="Copilot" style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: compactNav ? '9px 10px' : '9px 12px', borderRadius: 'var(--r-pill)', cursor: 'pointer', border: 'none', background: aiOpen ? 'var(--brand-1)' : 'var(--brand-gradient)', color: '#fff' }}><FaComments size={15} /></button>
           <button onClick={() => navigate('/profile')} title="Perfil" aria-label="Perfil" style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: compactNav ? '9px 10px' : '9px 12px', borderRadius: 'var(--r-pill)', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)' }}><FaUser size={15} /></button>
         </nav>
