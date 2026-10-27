@@ -550,6 +550,10 @@ export const api = {
     request<Drill>('/drills/', { method: 'POST', body: JSON.stringify(d) }),
   // --- Pràctiques: una seqüència de passos, no una llista de números (ADR 0002) ---
   /** The steps of a practice, in the order a learner meets them, plus the tools that exist. */
+  /** Deixar constància d'una pràctica jugada, perquè les estadístiques d'una pràctica no
+   *  siguin sempre zero quan es juga amb passos (#218). */
+  saveAttempt: (a: { test_id: number; score: number; total_questions: number; correct_answers: number; time_taken_seconds: number; user_name?: string | null }) =>
+    request<{ id: number }>('/test-attempts/', { method: 'POST', body: JSON.stringify(a) }),
   practiceSteps: (testId: number) => request<{ test_id: number; steps: PracticeStep[]; kinds: Record<string, { needs_drill: boolean; asks: string }> }>(`/tests/${testId}/steps`),
   /** Rewrite them in this order. Whoever made the practice, or an admin. */
   savePracticeSteps: (testId: number, steps: PracticeStep[]) =>
