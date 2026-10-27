@@ -6637,6 +6637,17 @@ def listen_counts(db: Session = Depends(get_db)):
     return escoltar.comptes(db)
 
 
+@app.get("/words/have-audio")
+def words_have_audio(words: str, db: Session = Depends(get_db)):
+    """Quines d'aquestes paraules es poden sentir, en un sol viatge (#271).
+
+    `words` és la llista separada per comes. Serveix perquè el paraula per paraula sàpiga, abans
+    que ningú premi res, quins altaveus tenen alguna cosa a dir.
+    """
+    llista = [w.strip() for w in (words or "").split(",") if w.strip()][:80]
+    return {"words": word_audio.which_have_audio(db, llista)}
+
+
 @app.get("/words/align/status")
 def word_align_status():
     """How the alignment pass is going."""
