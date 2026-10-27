@@ -99,8 +99,14 @@ def test_anonymous_daily_cap_then_429(monkeypatch):
         u = client.get("/ai/usage").json()
     assert u["today"] == {"used": 2, "limit": 2, "remaining": 0}
     with main.SessionLocal() as db:
-        feats = {r.feature for r in db.query(GeminiUsage).all()}
-    assert feats == {"ask"}  # the gate's tag reached the meter
+        rows = [(r.feature, r.model, r.ok) for r in db.query(GeminiUsage).all()]
+    # El que es comprova és que l'etiqueta de la porta arribi al comptador. La taula, però, es
+    # llegeix sencera, i això només s'aguanta si ningú més no hi escriu mentre la prova corre:
+    # va caure una vegada en una bateria sencera i no s'ha pogut repetir —ni amb la bateria
+    # sencera (286 passades) ni amb test_grammar al davant (43 passades). Mentre no se sàpiga qui
+    # hi escriu, la traça ha de portar les files: una prova que cau sense dir per què no es pot
+    # arreglar (#350).
+    assert {f for f, _m, _ok in rows} == {"ask"}, rows
 
 
 def test_signed_in_user_has_own_cap_and_admin_none(monkeypatch):
