@@ -6105,14 +6105,21 @@ def add_variant(drill_id: int, text_tachelhit: str = Body(..., embed=True),
 
 
 @app.get("/drills/{drill_id}/recordings")
-def list_recordings(drill_id: int, db: Session = Depends(get_db)):
-    """All takes of a drill, oldest first, each with its speaker/variety."""
+def list_recordings(drill_id: int, db: Session = Depends(get_db),
+                    user: Optional[UserModel] = Depends(get_current_user)):
+    """All takes of a drill, oldest first, each with its speaker/variety.
+
+    Cada presa diu també si és **teva** (`mine`), que és el que la pantalla necessita per no
+    oferir-te la paperera damunt de la veu d'un altre. Qui l'ha gravada no es diu mai: només si
+    ets tu. El nom que es veu és el que la persona va voler posar-hi (`speaker`).
+    """
     recs = (db.query(RecordingModel)
             .filter(RecordingModel.drill_id == drill_id)
             .order_by(RecordingModel.date_created.asc()).all())
     return [{"id": r.id, "audio_url": normalize_media_url(r.audio_url),
              "variety": r.variety, "region": r.region, "speaker": r.speaker, "text": r.text,
              "is_native": r.is_native,   # a native speaker's voice, a learner's, or not said
+             "mine": bool(user and r.user_id and user.id == r.user_id),
              "license": r.license, "date_created": r.date_created.isoformat()} for r in recs]
 
 
@@ -6143,9 +6150,27 @@ def update_recording(recording_id: int, text: Optional[str] = Body(None, embed=T
 @app.delete("/recordings/{recording_id}")
 def delete_recording(recording_id: int, db: Session = Depends(get_db),
                      user: Optional[UserModel] = Depends(get_current_user)):
+    """Esborrar una presa: només qui la va gravar, o un administrador.
+
+    Fins ara aquí no hi havia cap comprovació: amb el número d'una gravació, qualsevol —ni calia
+    estar registrat— podia esborrar la veu de qualsevol altre. El seu germà `PATCH`, que només
+    canvia el text i el poble, sí que la tenia: el gest que destrueix s'havia quedat sense el
+    guàrdia que tenia el gest inofensiu.
+
+    En aquesta biblioteca una gravació és la cosa que més costa d'aconseguir —algú ha hagut de
+    dir la frase— i no es torna a fer sola.
+
+    Una presa sense amo (les velles, d'abans que es desés qui gravava) només la pot esborrar un
+    administrador. Ningú no pot demostrar que és seva, de manera que ningú no se l'ha de poder
+    endur.
+    """
     r = db.query(RecordingModel).filter(RecordingModel.id == recording_id).first()
     if not r:
         raise HTTPException(status_code=404, detail="Recording not found")
+    seva = bool(user and r.user_id and user.id == r.user_id)
+    if not (seva or (user and user.is_admin)):
+        raise HTTPException(status_code=403,
+                            detail="Només qui va gravar la veu (o un administrador) la pot esborrar")
     db.delete(r)
     db.commit()
     return {"deleted": recording_id}
