@@ -90,7 +90,7 @@ def test_monthly_budget_stops_calls(monkeypatch):
 
 def test_anonymous_daily_cap_then_429(monkeypatch):
     monkeypatch.setattr(gemini_client.requests, "post", _fake_post())
-    monkeypatch.setattr(main, "_build_system_instruction", lambda db: "sys")
+    monkeypatch.setattr(main, "_build_system_instruction", lambda db, question="": "sys")
     from test_api import as_stranger
     # On era la taula abans de començar.
     #
@@ -118,7 +118,7 @@ def test_anonymous_daily_cap_then_429(monkeypatch):
 
 def test_signed_in_user_has_own_cap_and_admin_none(monkeypatch):
     monkeypatch.setattr(gemini_client.requests, "post", _fake_post())
-    monkeypatch.setattr(main, "_build_system_instruction", lambda db: "sys")
+    monkeypatch.setattr(main, "_build_system_instruction", lambda db, question="": "sys")
     tok = client.post("/users/register", json={"username": "ai_budget_user"}).json()["token"]
     h = {"X-User-Token": tok}
     for _ in range(3):
