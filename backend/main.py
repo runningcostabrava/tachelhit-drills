@@ -5982,6 +5982,12 @@ def update_me(
             "variety": user.variety, "region": user.region, "tz": user.tz or DEFAULT_TZ}
 
 
+#: De quina mena és una altra manera de dir la mateixa frase (#332). Un sinònim no és una
+#: variant dialectal, i per a qui aprèn no volen dir el mateix: la primera li diu com sona la
+#: paraula que està estudiant, la segona li ensenya una paraula nova.
+MENES_DE_VARIANT = ("so", "paraula")
+
+
 @app.post("/drills/{drill_id}/recordings")
 async def add_recording(
     drill_id: int,
@@ -5992,6 +5998,7 @@ async def add_recording(
     is_native: Optional[bool] = Form(None),
     substitueix: Optional[bool] = Form(None),
     sons_diferents: Optional[bool] = Form(None),
+    mena: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     user: Optional[UserModel] = Depends(get_current_user),
 ):
@@ -6017,6 +6024,9 @@ async def add_recording(
     own_words = (text or "").strip()
     if own_words and own_words == (drill.text_tachelhit or "").strip():
         own_words = ""
+    if mena and mena not in MENES_DE_VARIANT:
+        raise HTTPException(status_code=400, detail="«%s» no és cap mena de variant" % mena)
+    mena = mena if own_words else None
     if variety and variety not in _VARIETY_CODES:
         raise HTTPException(status_code=400, detail="Varietat desconeguda")
     content = await file.read()
@@ -6041,6 +6051,7 @@ async def add_recording(
         rec.is_native = (is_native if is_native is not None else (user.is_native if user else rec.is_native))
         rec.text = own_words or None
         rec.sounds_differ = bool(sons_diferents) or None
+        rec.variant_kind = mena
         rec.date_created = datetime.utcnow()
         # Si la veu principal de la frase era justament aquella presa, ha d'apuntar a la nova:
         # si no, el Mètode i la pràctica seguirien sonant amb la que s'acaba de substituir.
@@ -6064,6 +6075,7 @@ async def add_recording(
         is_native=(is_native if is_native is not None else (user.is_native if user else None)),
         text=own_words or None,
         sounds_differ=bool(sons_diferents) or None,
+        variant_kind=mena,
     )
     db.add(rec)
     # La primera veu d'una frase muda passa a ser la seva veu principal — amb UNA condició que
@@ -6099,6 +6111,7 @@ async def add_recording(
             variant = DrillModel(text_tachelhit=own_words, text_catalan=drill.text_catalan, text_arabic=drill.text_arabic,
                                  audio_url=url, image_url=drill.image_url, image_credit=drill.image_credit,
                                  tag=", ".join(x for x in [(drill.tag or "").strip(), "variant"] if x), variant_of=drill.id,
+                                 variant_kind=mena,
                                  variety=rec.variety, region=rec.region, speaker=rec.speaker, created_by_user_id=user.id if user else None,
                                  grammar=drill.grammar, grammar_source=drill.grammar_source, topics=drill.topics, topics_source=drill.topics_source,
                                  license=drill.license, verified=False)
@@ -6121,6 +6134,7 @@ async def add_recording(
 def add_variant(drill_id: int, text_tachelhit: str = Body(..., embed=True),
                 note: Optional[str] = Body(None, embed=True),
                 variety: Optional[str] = Body(None, embed=True), region: Optional[str] = Body(None, embed=True),
+                mena: Optional[str] = Body(None, embed=True),
                 user: UserModel = Depends(require_user), db: Session = Depends(get_db)):
     """Say it your way. The sentence is copied as a second version linked to the first: the Catalan
     meaning is the original's — that is what makes them the same sentence — and the Tamazight is
@@ -6134,14 +6148,16 @@ def add_variant(drill_id: int, text_tachelhit: str = Body(..., embed=True),
         raise HTTPException(status_code=400, detail="Escriu com ho dius tu")
     if said.lower() == (original.text_tachelhit or "").strip().lower():
         raise HTTPException(status_code=409, detail="Això és igual que el que ja hi ha")
+    if mena and mena not in MENES_DE_VARIANT:
+        raise HTTPException(status_code=400, detail="«%s» no és cap mena de variant" % mena)
     root = original.variant_of or original.id   # variants of a variant still hang on the first one
     variant = DrillModel(
         text_catalan=original.text_catalan, text_tachelhit=said, text_arabic=original.text_arabic,
         image_url=original.image_url, variant_of=root, created_by_user_id=user.id,
         variety=(variety or user.variety), region=((region or "").strip() or user.region),
-        author=(user.display_name or user.username), notes=(note or None),
+        author=(user.display_name or user.username), variant_note=(note or None),
         tag=", ".join(x for x in [(original.tag or "").strip(), "variant"] if x) or "variant",
-        grammar=original.grammar, topics=original.topics,
+        grammar=original.grammar, topics=original.topics, variant_kind=mena,
     )
     db.add(variant); db.commit(); db.refresh(variant)
     return variant
@@ -6164,7 +6180,7 @@ def list_recordings(drill_id: int, db: Session = Depends(get_db),
              "is_native": r.is_native,   # a native speaker's voice, a learner's, or not said
              # Les mateixes paraules dites d'una altra manera: ho va dir qui va gravar, i queda
              # perquè algú ho miri (#332).
-             "sounds_differ": r.sounds_differ,
+             "sounds_differ": r.sounds_differ, "variant_kind": r.variant_kind,
              "mine": bool(user and r.user_id and user.id == r.user_id),
              "license": r.license, "date_created": r.date_created.isoformat()} for r in recs]
 
@@ -6966,7 +6982,7 @@ def other_ways(db) -> Dict[int, List[dict]]:
             "tif": grammar_course.tifinagh((r.text or "").strip()),
             "audio_url": normalize_media_url(r.audio_url),
             "speaker": r.speaker, "variety": r.variety, "region": r.region,
-            "is_native": r.is_native,
+            "is_native": r.is_native, "kind": r.variant_kind,
         })
     return out
 

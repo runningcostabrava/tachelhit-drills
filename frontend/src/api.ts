@@ -457,6 +457,8 @@ export interface Recording {
   /** Les mateixes paraules, dites d'una altra manera: ho va dir qui va gravar, i queda marcat
    *  perquè algú ho miri (#332). */
   sounds_differ?: boolean | null;
+  /** Si porta text propi, de quina mena és: «so» o «paraula» (#332). */
+  variant_kind?: 'so' | 'paraula' | null;
   /** aquesta presa és de qui està mirant la pantalla. Serveix per no oferir-li la paperera
    *  damunt de la veu d'un altre: esborrar-la és feina d'algú que ja no es pot refer. */
   mine?: boolean;

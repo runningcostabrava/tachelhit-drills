@@ -33,6 +33,10 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
   // Les mateixes paraules, però no sona igual: no són altres paraules, és la mateixa paraula
   // dita d'una altra manera. Es marca perquè algú ho miri.
   const [sonsDiferents, setSonsDiferents] = useState(false);
+  // Si escrius una frase diferent de la de la targeta, de quina mena és (#332). Un sinònim no és
+  // una variant dialectal: la primera diu com sona la paraula que s'està estudiant, la segona
+  // ensenya una paraula nova. Si no ho dius, no s'endevina.
+  const [mena, setMena] = useState<'so' | 'paraula' | ''>('');
   // the speaker's declared profile: a take without a place is not accepted (every voice carries its town)
   const [profile, setProfile] = useState<{ variety: string | null; region: string | null; is_native?: boolean | null } | null | undefined>(undefined);
   // `is_native` ve del servidor i abans es llençava aquí. Com que `mustAsk` el mira, la pregunta
@@ -94,6 +98,7 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
       if (native !== undefined && native !== null) fd.append('is_native', String(native));
       if (tincPresa && substitueix) fd.append('substitueix', 'true');
       if (sonsDiferents) fd.append('sons_diferents', 'true');
+      if (mena && altresParaules) fd.append('mena', mena);
       const res = await fetch(`${API_BASE}/drills/${drill.id}/recordings`, { method: 'POST', body: fd });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'upload failed');
       const saved = await res.json().catch(() => null);
@@ -129,6 +134,7 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
   const showPrimary = !!primary && !inList.has(primary);
   const varieties = new Set(recs.map((r) => r.variety).filter(Boolean));
   const tincPresa = recs.some((r) => r.mine);
+  const altresParaules = !!ownText.trim() && ownText.trim() !== (drill.text_tachelhit || '').trim();
   const takeCount = recs.length + (showPrimary ? 1 : 0);
 
   const badge = (v?: string | null) => v ? (
@@ -215,6 +221,26 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
             </select>
             <input value={ownTown} onChange={(e) => setOwnTown(e.target.value)} placeholder="El teu poble (opcional)" aria-label="El teu poble" style={{ flex: '1 1 140px', minWidth: 0, padding: '8px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: '13px' }} />
           </div>
+          {/* I si el que has escrit no és el que diu la targeta: de quina mena és (#332). */}
+          {altresParaules && (
+            <div style={{ marginBottom: '10px', padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-soft)', marginBottom: 8, lineHeight: 1.45 }}>
+                El que has escrit no és el que diu la targeta. Què hi passa?
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {([['so', 'És la mateixa paraula, dita o escrita d’una altra manera'],
+                   ['paraula', 'Al meu poble en diem una altra']] as const).map(([k, etiqueta]) => (
+                  <button key={k} onClick={() => setMena(mena === k ? '' : k)}
+                          style={{ padding: '7px 12px', borderRadius: 'var(--r-pill)', fontSize: '12.5px', fontWeight: 700,
+                                   cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                                   border: `1px solid ${mena === k ? 'var(--brand-1)' : 'var(--border)'}`,
+                                   background: 'var(--surface)', color: mena === k ? 'var(--brand-1)' : 'var(--text)' }}>
+                    {etiqueta}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {/* Les mateixes paraules, però no sona igual (#332). Preguntat sempre, perquè és el
               cas que es perdia: la fitxa deia que es diu d'una manera i la veu en deia una altra
               sense que constés enlloc. */}

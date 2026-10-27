@@ -21,17 +21,42 @@ export interface Variant {
   variety: string | null;
   region: string | null;
   is_native?: boolean | null;
+  /** De quina mena és: «so» (la mateixa paraula dita o escrita d'una altra manera) o «paraula»
+   *  (al seu poble en diuen una altra). `null` quan qui ho va dir no ho va precisar (#332). */
+  kind?: 'so' | 'paraula' | null;
 }
+
+//: Com es diu cada mena. Per a qui aprèn no són el mateix: la primera li diu com sona la
+//: paraula que està estudiant, la segona li ensenya una paraula nova.
+const TITOL: Record<string, string> = {
+  so: 'La mateixa paraula, dita d’una altra manera',
+  paraula: 'Al seu poble en diuen una altra cosa',
+  '': 'També es diu',
+};
 
 export default function SentenceVariants({ variants, size = 'md' }: { variants?: Variant[] | null; size?: 'sm' | 'md' }) {
   if (!variants || variants.length === 0) return null;
   const fs = size === 'sm' ? 13 : 14.5;
+  // Un sinònim no és una variant dialectal, i van per separat (#332). El que ningú no ha
+  // precisat es queda com estava: «també es diu», sense inventar-se de quina mena és.
+  const menes = ['so', 'paraula', ''].filter((k) => variants.some((v) => (v.kind || '') === k));
   return (
     <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px dashed var(--border)' }}>
+      {menes.map((mena) => (
+        <Grup key={mena || 'cap'} titol={TITOL[mena]} fs={fs}
+              quines={variants.filter((v) => (v.kind || '') === mena)} />
+      ))}
+    </div>
+  );
+}
+
+function Grup({ titol, quines, fs }: { titol: string; quines: Variant[]; fs: number }) {
+  return (
+    <>
       <div style={{ fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 3 }}>
-        També es diu
+        {titol}
       </div>
-      {variants.map((v) => (
+      {quines.map((v) => (
         <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
           <span style={{ flex: 1, minWidth: 0 }}>
             <span lang="shi" style={{ fontWeight: 700, fontSize: fs, color: 'var(--brand-1)' }}>{v.text}</span>
@@ -54,6 +79,6 @@ export default function SentenceVariants({ variants, size = 'md' }: { variants?:
           </button>
         </div>
       ))}
-    </div>
+    </>
   );
 }

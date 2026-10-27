@@ -122,3 +122,45 @@ def test_una_veu_daprenent_no_passa_davant_duna_de_nadiu(monkeypatch):
     assert r.status_code == 409, r.text
     assert "de tota la vida" in r.json()["detail"]
     assert "nadiu" in client.get(f"/drills/{d['id']}").json()["audio_url"]
+
+
+def test_un_sinonim_no_es_una_variant_dialectal(monkeypatch):
+    """Les dues coses anaven al mateix calaix i per a qui aprèn no són el mateix: «ho diem igual
+    però ho escrivim diferent» li diu com sona la paraula que està estudiant, i «al meu poble en
+    diem una altra» li ensenya una paraula nova (#332)."""
+    d = client.post("/drills/", json={"text_catalan": "la noia", "text_tachelhit": "tafruxt"}).json()
+    un = _user("mena_un", variety="tdl", region="Aït Mraw (Azilal)")
+    altre = _user("mena_altre", variety="shi", region="Taroudant")
+
+    r1 = _grava(d["id"], un, monkeypatch, "mena_so.webm", text="tafruxt", mena="so")
+    assert r1["variant_id"] is None, "el mateix text no fa néixer cap variant"
+
+    r2 = _grava(d["id"], un, monkeypatch, "mena_so2.webm", text="tafroxt", mena="so")
+    assert r2["variant_id"], "una altra grafia sí"
+    r3 = _grava(d["id"], altre, monkeypatch, "mena_paraula.webm", text="tabrat", mena="paraula")
+
+    # Les altres maneres, cadascuna amb la seva mena, perquè la pantalla les pugui separar.
+    maneres = {m["text"]: m for m in client.get(f"/drills/{d['id']}/recordings", headers=un).json()}
+    assert maneres["tafroxt"]["variant_kind"] == "so"
+    assert maneres["tabrat"]["variant_kind"] == "paraula"
+
+    # i la frase variant que n'ha nascut s'ho queda
+    variants = client.get(f"/drills/{d['id']}/variants").json()["variants"]
+    per_text = {v["text_tachelhit"]: v for v in variants}
+    assert per_text["tafroxt"]["variant_kind"] == "so"
+    assert per_text["tabrat"]["variant_kind"] == "paraula", r3["variant_id"]
+
+    # Una mena que no existeix no s'accepta: val més no saber-ho que apuntar-ho malament.
+    dolenta = client.post(f"/drills/{d['id']}/recordings",
+                          files={"file": ("t.webm", io.BytesIO(b"abc"), "audio/webm")},
+                          data={"text": "tafruxtt", "mena": "dialecte"}, headers=un)
+    assert dolenta.status_code == 400 and "mena de variant" in dolenta.json()["detail"]
+
+
+def test_escriure_com_ho_dius_tu_sense_gravar_tambe_diu_de_quina_mena_es():
+    d = client.post("/drills/", json={"text_catalan": "el llibre", "text_tachelhit": "lktab"}).json()
+    jo = _user("mena_escrita", variety="tdl", region="Aït Mraw (Azilal)")
+    r = client.post(f"/drills/{d['id']}/variant", headers=jo,
+                    json={"text_tachelhit": "adlis", "mena": "paraula"})
+    assert r.status_code == 200, r.text
+    assert r.json()["variant_kind"] == "paraula"
