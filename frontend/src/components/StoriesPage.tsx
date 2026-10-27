@@ -341,12 +341,30 @@ function OneStory({ slug }: { slug: string }) {
     await sonaEncenent(drill, veu);
   }, [sona, sonaEncenent]);
 
+  /** Una línia sola: la veu amaziga i prou.
+   *
+   *  El botó de cada línia feia la seqüència d'estudi sencera —el català primer i després
+   *  l'amazic dues vegades—, que té sentit per a qui escolta el conte de cap a cap i encara no
+   *  l'entén, i per això existeix «Escolta-la amb el català». Però no és el que un botó al
+   *  costat d'una frase amaziga sembla que farà: qui el prem ja té la frase i la traducció a la
+   *  pantalla, i el que vol sentir és com sona.
+   */
+  const nomesAmazic = useCallback(async (drill: Drill, i: number) => {
+    const veu = amazic(drill);
+    if (!veu) return;
+    setAt(i);
+    idx.current = i;
+    torn.current++;
+    await sonaEncenent(drill, veu);
+  }, [sonaEncenent]);
+
   /**
    * Anar a una línia: la mateixa (repetir-la), la d'abans o la de sota.
    *
    * Amb la història engegada no es torna a arrencar la fila —això la faria començar de zero—:
-   * se li deixa dit on anar i se li talla el so d'ara, que és el que la desperta. Amb la història
-   * aturada, la línia sona sola.
+   * se li deixa dit on anar i se li talla el so d'ara, que és el que la desperta, i aquella
+   * lectura continua com estava (si l'havies demanada amb el català, segueix amb el català).
+   * Amb la història aturada, la línia sona sola i només en amazic.
    */
   const vesA = (j: number) => {
     if (!page) return;
@@ -358,7 +376,7 @@ function OneStory({ slug }: { slug: string }) {
       torn.current++;               // el que s'estigui dient a mitges, es queda aquí
       stop();                       // deixa passar qui esperava el final, i treu la pausa
     } else {
-      playLine(page.drills[n], n);
+      nomesAmazic(page.drills[n], n);
     }
   };
 
