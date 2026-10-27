@@ -91,7 +91,7 @@ export default function PracticeGroupPage() {
                 {whyEmpty.noText === 0 && whyEmpty.noMeaning === 0 && <li>El text que porten no és una frase (per exemple, hi diu literalment «text»).</li>}
               </ul>
               <p style={{ margin: '10px 0 0' }}>
-                Si tenen veu, la feina és escriure el que s’hi diu: obre’n una a <strong>Drills</strong> i escriu-hi les paraules.
+                Si tenen veu, la feina és escriure el que s’hi diu: obre’n una a <strong>Frases</strong> i escriu-hi les paraules.
               </p>
             </>
           )}

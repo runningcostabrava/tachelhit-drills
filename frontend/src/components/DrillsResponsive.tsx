@@ -338,7 +338,7 @@ export default function DrillsResponsive() {
         <div style={{ background: 'var(--surface)', padding: isMobile ? '12px 14px' : '14px 24px', borderBottom: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', gap: '12px', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
-              <h1 style={{ margin: 0, fontSize: isMobile ? '19px' : '22px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', fontFamily: 'var(--font-display)' }}>Drills</h1>
+              <h1 style={{ margin: 0, fontSize: isMobile ? '19px' : '22px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', fontFamily: 'var(--font-display)' }}>Frases</h1>
               <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 600 }}>{filteredDrills.length}</span>
               {playable(toPlay).length > 0 && (
                 <button
