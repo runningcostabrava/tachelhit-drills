@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { api, type VerifyItem, type VerifyQueue as VerifyQueueData } from '../api';
 import { getMediaUrl } from '../config';
 import { toast } from '../toast';
-import MobileDrillEditor from './MobileDrillEditor';
-import { FaCheck, FaPen, FaForward, FaRedo, FaUser } from 'react-icons/fa';
+import RecordAudioModal from './RecordAudioModal';
+import { FaCheck, FaPen, FaForward, FaRedo, FaUser, FaMicrophone } from 'react-icons/fa';
 
 /**
  * Speaker verification queue. The listening review left machine readings ("[heard]" /
  * "[? a | b]") next to doubtful recordings; here a speaker hears each clip and decides:
- * accept a reading, keep the stored text, edit, or skip. Phone-first, one drill at a time.
+ * accept a reading, keep the stored text, correct it in place (tap the text), record their own
+ * voice, or skip. Phone-first, one drill at a time.
  */
 export default function VerifyQueue() {
   const navigate = useNavigate();
@@ -19,7 +20,10 @@ export default function VerifyQueue() {
   const [reason, setReason] = useState<string>('');
   const [registered, setRegistered] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
+  // tapping the stored text turns it into a box to correct it in place
   const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [recording, setRecording] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement | null>(null);
 
@@ -39,6 +43,7 @@ export default function VerifyQueue() {
   useEffect(() => { api.me().then(m => setRegistered(!!m)).catch(() => setRegistered(false)); }, []);
 
   const current = items[idx];
+  useEffect(() => { setEditing(false); }, [current?.id]);
   const replay = useCallback(() => {
     const m = mediaRef.current;
     if (!m) return;
@@ -48,7 +53,7 @@ export default function VerifyQueue() {
 
   // Space replays the clip (desktop); the editor has its own keys
   useEffect(() => {
-    if (editing) return;
+    if (editing || recording) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.code === 'Space' && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
         e.preventDefault();
@@ -57,7 +62,7 @@ export default function VerifyQueue() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [editing, replay]);
+  }, [editing, recording, replay]);
 
   const dropCurrent = () => {
     if (!current) return;
@@ -79,6 +84,12 @@ export default function VerifyQueue() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const startEdit = () => {
+    if (registered === false || busy) return;
+    setDraft((current?.text_tachelhit || '').trim());
+    setEditing(true);
   };
 
   const skip = () => setIdx(i => (items.length ? (i + 1) % items.length : 0));
@@ -161,10 +172,38 @@ export default function VerifyQueue() {
               {current.text_arabic && <div dir="rtl" style={{ fontSize: '16px', color: 'var(--text-soft)', marginTop: '2px' }}>{current.text_arabic}</div>}
             </div>
 
-            <div style={{ marginTop: '12px', padding: '10px 12px', borderRadius: '12px', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+            <div style={{ marginTop: '12px' }}>
               <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-soft)' }}>Text actual</div>
-              <div style={{ fontSize: '18px', fontFamily: 'var(--font-tifinagh)', color: stored ? 'var(--text)' : 'var(--text-soft)', marginTop: '2px' }}>{stored || '— sense text —'}</div>
-              {latin && latin !== stored && <div style={{ fontSize: '14px', color: 'var(--text-soft)' }}>{latin}</div>}
+              {!editing ? (
+                <>
+                  <button onClick={startEdit} disabled={registered === false} aria-label="Toca per corregir el text"
+                          style={{ display: 'block', width: '100%', textAlign: 'left', marginTop: '4px', padding: '10px 12px', borderRadius: '12px', background: 'var(--surface-2)', border: '1px dashed var(--brand-1)', cursor: registered === false ? 'default' : 'text', fontFamily: 'inherit' }}>
+                    <span style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: 'block', fontSize: '18px', fontFamily: 'var(--font-tifinagh)', color: stored ? 'var(--text)' : 'var(--text-soft)' }}>{stored || '— sense text —'}</span>
+                        {latin && latin !== stored && <span style={{ display: 'block', fontSize: '14px', color: 'var(--text-soft)' }}>{latin}</span>}
+                      </span>
+                      <FaPen style={{ flexShrink: 0, marginTop: '5px', color: 'var(--brand-1)' }} />
+                    </span>
+                  </button>
+                  <div style={{ fontSize: '12px', color: 'var(--text-soft)', marginTop: '4px' }}>
+                    {stored ? 'No és ben bé el que se sent? Toca el text i corregeix-lo tu mateix.' : 'Toca aquí i escriu el que se sent.'}
+                  </div>
+                </>
+              ) : (
+                <div style={{ marginTop: '4px' }}>
+                  <textarea autoFocus value={draft} onChange={e => setDraft(e.target.value)} rows={2} aria-label="El text tal com se sent"
+                            onKeyDown={e => { if (e.key === 'Escape') setEditing(false); if (e.key === 'Enter' && !e.shiftKey && draft.trim()) { e.preventDefault(); resolve(draft.trim()); } }}
+                            style={{ display: 'block', width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: '12px', border: '2px solid var(--brand-1)', background: 'var(--surface)', color: 'var(--text)', fontSize: '18px', fontFamily: 'var(--font-tifinagh)', resize: 'vertical' }} />
+                  <div style={{ fontSize: '12px', color: 'var(--text-soft)', margin: '4px 0 8px' }}>
+                    Escriu-ho tal com ho sents a la gravació, en llatí o en tifinagh. En desar-lo, queda com a text verificat i signat amb el teu perfil.
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button disabled={busy || !draft.trim()} onClick={() => resolve(draft.trim())} style={{ ...bigBtn('accept'), justifyContent: 'center', opacity: busy || !draft.trim() ? 0.6 : 1 }}><FaCheck /> Desa aquest text</button>
+                    <button onClick={() => setEditing(false)} style={{ ...bigBtn('neutral'), justifyContent: 'center' }}>Cancel·la</button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {current.heard.length > 0 && (
@@ -181,13 +220,13 @@ export default function VerifyQueue() {
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-              {stored && (
+              {stored && !editing && (
                 <button disabled={busy || registered === false} onClick={() => resolve()} style={bigBtn('keep')}>
                   <FaCheck /> El text actual és correcte
                 </button>
               )}
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={() => setEditing(true)} style={{ ...bigBtn('neutral'), justifyContent: 'center' }}><FaPen /> Edita</button>
+                <button onClick={() => setRecording(true)} style={{ ...bigBtn('neutral'), justifyContent: 'center' }}><FaMicrophone /> Grava-ho tu</button>
                 <button onClick={skip} style={{ ...bigBtn('neutral'), justifyContent: 'center' }}><FaForward /> Salta</button>
               </div>
             </div>
@@ -195,13 +234,9 @@ export default function VerifyQueue() {
         )}
       </div>
 
-      {editing && current && (
-        <MobileDrillEditor
-          drill={current}
-          onClose={() => { setEditing(false); load(true); }}
-          onUpdate={() => load(true)}
-          onNavigate={dir => setIdx(i => (dir === 'next' ? (i + 1) % items.length : (i - 1 + items.length) % items.length))}
-        />
+      {recording && current && (
+        <RecordAudioModal drill={current} onClose={() => setRecording(false)}
+                          onSaved={() => { setRecording(false); toast.success('Gràcies: la teva veu queda al costat de la gravació original.'); }} />
       )}
     </div>
   );
