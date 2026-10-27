@@ -38,6 +38,7 @@ import tram
 import escoltar
 import night_asr
 import word_audio
+import alfabet
 import transliteration
 from gemini_client import gemini_generate, gemini_available, gemini_agent, BudgetExceeded
 import gemini_client
@@ -6742,6 +6743,46 @@ def words_have_audio(words: str, db: Session = Depends(get_db)):
     return {"words": word_audio.which_have_audio(db, llista)}
 
 
+@app.get("/alfabet")
+def alphabet(db: Session = Depends(get_db)):
+    """L'abecedari: què és el tifinag, i cada lletra amb com sona i on es pot sentir (#368).
+
+    Cada lletra porta les paraules de la biblioteca que la duen, amb el tall de la gravació on
+    es diu —cap fitxer de so nou: un drill i dos temps— i qui la diu. La lletra que no sona
+    enlloc hi surt igual, amb `sona: false`: de les 338 paraules soles gravades, cap no porta ḍ,
+    ḥ, ɛ, ṛ, ɣ, ṣ, ṭ ni ẓ (#302), i amagar-ho seria amagar la feina que falta.
+    """
+    return alfabet.abecedari(db)
+
+
+@app.get("/alfabet/parelles")
+def alphabet_pairs(per_so: int = 4, db: Session = Depends(get_db)):
+    """Parelles de paraules que es distingeixen per una sola lletra, totes dues amb veu.
+
+    Buscades a la biblioteca i no escrites a mà: una parella inventada ensenyaria a sentir una
+    diferència entre dues paraules que ningú no ha dit mai.
+    """
+    return {"parelles": alfabet.parelles(db, per_so=per_so)}
+
+
+@app.get("/alfabet/{lletra}")
+def alphabet_letter(lletra: str, limit: int = 8, db: Session = Depends(get_db)):
+    """Una lletra sola: com sona i totes les paraules nostres que la porten.
+
+    S'hi arriba tant pel tifinag (`ⵖ`) com pel llatí (`ɣ`, i també «gh», que és com l'escriu
+    mitja biblioteca): qui busca una lletra no ha d'endevinar quina de les dues escriptures
+    espera el servidor.
+    """
+    busca = (lletra or "").strip()
+    quina = next((l for l in alfabet.LLETRES
+                  if busca in (l["tif"], l["lat"]) or busca in (l.get("altres") or [])), None)
+    if quina is None:
+        raise HTTPException(status_code=404, detail="Aquesta lletra no és de l'abecedari")
+    so = alfabet.so_de(quina)
+    mostres = alfabet.exemples(db, so, limit=max(1, min(limit, 40)))
+    return {**quina, "sona": bool(mostres), "exemples": mostres}
+
+
 @app.get("/words/align/status")
 def word_align_status():
     """How the alignment pass is going."""
@@ -7099,6 +7140,11 @@ def put_method_content(slug: str, body: dict = Body(...),
 
     Viu a la base de dades i no al repositori (vegeu `models.MethodChapter`), i per això es
     corregeix des d'aquí: qui administra pot arreglar una frase sense desplegar res.
+
+    Una secció pot portar `formula: true`: vol dir que el que s'hi ensenya **es diu sencer** —les
+    salutacions, els comiats, les fórmules de cortesia—, i llavors el paraula per paraula hi va
+    tancat i amb un altre nom, «Què hi ha a dins» (#289). És una marca per secció i no global,
+    perquè a la secció del «com estàs?» i als pronoms desmuntar és justament el que cal.
     """
     try:
         saved = method_mod.store_content(db, slug, body, who=(user.display_name or user.username))
@@ -8312,6 +8358,9 @@ def home(db: Session = Depends(get_db),
         "method": {"chapters": len(method_mod.CHAPTERS),
                    "written": db.query(func.count(MethodChapter.slug)).scalar() or 0},
         "grammar": {"units": len(grammar_course.UNITS), "with_lesson": lessons},
+        # Els sons: quantes lletres de l'abecedari ja es poden sentir amb una paraula nostra
+        # (#368). Només el compte: la porta de la portada no es porta tot l'abecedari.
+        "sounds": alfabet.comptes(db),
         "practice": {"all": tests,
                      "mine": (db.query(func.count(TestModel.id)).filter(
                          TestModel.created_by_user_id == user.id).scalar() or 0) if user else 0},
