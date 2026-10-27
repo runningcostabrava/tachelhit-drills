@@ -212,6 +212,20 @@ hi ha la nota i les còpies de treball, fora del repositori.
 4. Si diuen que no, o no contesten: gravar les 33 lletres amb les nostres veus (Halima, Driss)
    i esborrar les còpies de treball.
 
+## 5c. IRCAM — Tamawalt i el corpus del portal TALAM (#381 — portal TALAM de l'IRCAM)
+
+L'Institut Royal de la Culture Amazighe publica les seves eines de llengua al portal
+[tal.ircam.ma/talam](https://tal.ircam.ma/talam/). Font donada pel propietari el 27-10-2026.
+
+| | |
+|---|---|
+| **Tamawalt n imeẓẓyann** — diccionari il·lustrat per a infants | IRCAM · [tal.ircam.ma/tamawalt](https://tal.ircam.ma/tamawalt/) |
+| Què n'hem tret | **487 paraules i els noms de les 33 lletres del tifinag, cadascuna amb la seva gravació.** Són drills amb l'etiqueta `ircam-tamawalt` / `ircam-tamawalt-alfabet`. El text és el tifinag tal com l'escriu l'IRCAM, amb una lectura en llatí i el significat en català (traduït del francès i l'anglès de l'IRCAM). Cada drill porta `source_url` a la seva fitxa, `speaker` «IRCAM (Tamawalt)» i `variety` `zgh`. |
+| La veu | **No sabem qui parla.** És amazic estàndard, no la varietat de cap veu nostra. Serveix per escoltar; no és una veu de referència per al «digues-ho tu» (#288, #273). |
+| Llicència | La web no en publica cap per a l'àudio. |
+| **Corpus textual en amazic** i **corpus anotat morfosintàcticament** | IRCAM · [corpus.php](https://tal.ircam.ma/talam/corpus.php) · Creative Commons, amb l'obligació de citar l'IRCAM |
+| Què n'hem tret | Res a l'app encara. Fem servir les freqüències del sud (taixelhit, 224.000 mots) per triar què gravar (#381). |
+
 ## 6. Eines i serveis
 
 **Google Gemini** escriu els esborranys de lliçó i dibuixa les il·lustracions de les targetes (cap
