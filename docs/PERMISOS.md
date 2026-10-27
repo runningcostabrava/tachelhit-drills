@@ -14,6 +14,8 @@ permisos i el text per demanar-los.
 | *inaghizen* | el seu material | **sí** | 26-10-2026 |
 | Brahim Mansoub — «Apprends le Tamaziɣt berbère, leçon N°1» | el vocabulari il·lustrat (una paraula per lletra) | **per demanar** | — |
 | canal *Atlas* — «ⵉⵙⴽⴽⵉⵍⵏ ⵏⵜⵎⴰⵣⵉⵖⵜ» | els 33 talls de veu de les lletres | **per demanar** | — |
+| IRCAM — *Tamawalt* (tal.ircam.ma) | les 520 gravacions (paraules i noms de les lletres) amb el seu text | **es dona per demanat** — font donada pel propietari, que les ha fet entrar | 27-10-2026 |
+| IRCAM — *Tinfusin Inu* | els contes amb veu | **per demanar** — encara no tenim el material | — |
 
 **Els sís del 26-10-2026 els dona el propietari**, que ho ha parlat amb cada un per WhatsApp: li
 han dit que volen veure el sistema desenvolupat. Afegeix que el web encara no surt als cercadors
