@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FaBook, FaBookOpen, FaChevronRight, FaFire, FaGraduationCap, FaLayerGroup, FaMicrophone,
-  FaPlay, FaPlus, FaRedo, FaSearch, FaVideo,
+  FaPlay, FaPlus, FaRedo, FaSearch, FaVideo, FaFont, FaChevronRight as FaCap,
 } from 'react-icons/fa';
 import { api, type HomeData } from '../api';
 import { getMediaUrl, thumb } from '../config';
@@ -158,6 +158,23 @@ export default function HomePage() {
         </button>
       </div>
 
+      {/* Com funciona això, en quatre passos.
+          L'amo: «pensa sempre en el fàcil que sigui per l'usuari entendre-ho tot i entendre el
+          sistema». Les portes diuen ON pots anar; això diu PER QUÈ hi ha aquestes portes i en
+          quin ordre es fan servir. Cada pas porta al seu lloc, i el primer diu per on començar
+          si no has començat mai. */}
+      <h2 style={sectionTitle}>Com funciona</h2>
+      <ol style={{ listStyle: 'none', margin: '0 0 28px', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <Pas n={1} title="Algú ho diu" to="/drills" onGo={navigate}
+             what="Una frase entra a la biblioteca amb la veu de qui la diu, el seu nom i el seu poble. Res no ve d’un traductor automàtic." />
+        <Pas n={2} title="Ho ordenem" to="/metode" onGo={navigate}
+             what="El Mètode (de saludar a fer la compra), la Gramàtica (les regles) i els Sons (les lletres) només ensenyen amb frases d’aquesta biblioteca." />
+        <Pas n={3} title="Ho practiques" to="/tests" onGo={navigate}
+             what="Escoltes, tries, ho dius. El que et costa torna sol uns dies més tard: això és el repàs." />
+        <Pas n={4} title="Hi pots ajudar" to="/veus" onGo={navigate}
+             what="Si parles amazic, grava una frase o digues què vol dir. Si no, pots treure frases noves d’un vídeo." />
+      </ol>
+
       {/* Les portes. Cadascuna amb el seu número: on ets i què falta, a la mateixa línia. */}
       <h2 style={sectionTitle}>Per on vols entrar</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 10, marginBottom: 28 }}>
@@ -173,6 +190,9 @@ export default function HomePage() {
         <Door to="/drills" Icon={FaLayerGroup} title="La biblioteca" cover={d?.covers.library || DOORS_KNOWN.library}
               what="Totes les frases, una a una: qui les diu, d’on són i com sonen."
               count={d && `${n(d.library.sentences)} frases · ${n(d.library.with_voice)} amb veu`} />
+        <Door to="/alfabet" Icon={FaFont} title="Els sons i l’escriptura"
+              what="Les 33 lletres, una per una: com sona cada una i amb quina paraula nostra."
+              count={d?.sounds && `${n(d.sounds.amb_so)} de ${n(d.sounds.total)} lletres ja sonen`} />
         <Door to="/stories" Icon={FaBookOpen} title="Històries i cançons" cover={d?.covers.stories || DOORS_KNOWN.stories}
               what="El que es llegeix de cap a cap: contes, cançons, converses senceres." />
         <Door to="/video-creator" Icon={FaVideo} title="Captura" cover={d?.covers.capture || DOORS_KNOWN.capture}
@@ -275,6 +295,29 @@ function Door({ to, Icon, title, what, count, cover }: {
         {count && <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>{count}</span>}
       </span>
     </button>
+  );
+}
+
+/** Un pas del «com funciona»: el número, què passa, i la porta on es fa. */
+function Pas({ n, title, what, to, onGo }: {
+  n: number; title: string; what: string; to: string; onGo: (to: string) => void;
+}) {
+  return (
+    <li>
+      <button onClick={() => onGo(to)}
+              style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', minHeight: 56,
+                       borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)',
+                       cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', color: 'var(--text)' }}>
+        <span aria-hidden style={{ flexShrink: 0, width: 26, height: 26, borderRadius: '50%', background: 'var(--brand-gradient-soft)',
+                                   color: 'var(--brand-1)', fontWeight: 800, fontSize: 13, display: 'inline-flex',
+                                   alignItems: 'center', justifyContent: 'center' }}>{n}</span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: 'block', fontWeight: 800, fontSize: 15 }}>{title}</span>
+          <span style={{ display: 'block', fontSize: 13, color: 'var(--text-soft)', lineHeight: 1.55 }}>{what}</span>
+        </span>
+        <FaCap size={11} style={{ color: 'var(--text-muted)', marginTop: 6, flexShrink: 0 }} />
+      </button>
+    </li>
   );
 }
 
