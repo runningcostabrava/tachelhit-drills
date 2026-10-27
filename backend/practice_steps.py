@@ -34,6 +34,11 @@ KINDS: Dict[str, tuple] = {
     "word_by_word": (True,  "lliga cada paraula amb el que vol dir"),
     "script_swap":  (True,  "llegeix-ho en l'altra escriptura"),
     "pick_spelling": (True, "tria quina de les dues maneres de dir-ho és la d'aquest parlant"),
+    # Escoltar i triar entre quatre frases ESCRITES en amazic, no entre quatre significats en
+    # català: entrena a lligar el que se sent amb el que està escrit, que és el pas que falta per
+    # poder llegir el que ja s'entén d'orella (#387). La resposta bona és sempre `text_tachelhit`
+    # —escrit per algú—: la lectura de màquina viu a `text_tachelhit_suggested` i no hi entra.
+    "pick_written": (True, "escolta i tria quina de les quatre frases escrites és"),
     "note":         (False, "llegeix: una explicació, un títol, una imatge"),
 }
 
@@ -42,6 +47,11 @@ KINDS: Dict[str, tuple] = {
 FROM_LEGACY = {"text_input": "write_heard", "audio": "listen_pick", "video": "listen_pick",
                "combined": "listen_pick"}
 DEFAULT_KIND = "listen_pick"
+
+#: Les eines que demanen repetir el que se sent: la gravació hi fa de model, i per tant ha de ser
+#: d'una persona amb nom (#273). Les d'escoltar i entendre no hi són: per escoltar, totes les
+#: veus són benvingudes.
+PER_IMITAR = ("say_it", "write_heard")
 
 
 class StepError(ValueError):
@@ -100,6 +110,30 @@ def replace_steps(db, test_id: int, steps: List[dict]) -> List[dict]:
         if gone:
             raise StepError("aquests passos apunten a frases que ja no existeixen: "
                             + ", ".join(str(g) for g in gone[:8]))
+    # Per escoltar, totes les veus; per imitar, només una veu amb nom (#273).
+    #
+    # «Digues-ho i compara't amb la veu de debò» només és veritat si la veu és d'algú: si la
+    # referència és un tall anònim —o d'un canal, que sovint parla una altra varietat— li estem
+    # dient a algú que imiti una pronúncia que no és la que està aprenent, i no té manera de
+    # saber-ho. Ho diu el validador i no la bona voluntat de qui munta la pràctica.
+    imiten = [s for s in cleaned if s["kind"] in PER_IMITAR and s["drill_id"]]
+    if imiten:
+        import grammar as grammar_course
+        quins = {d.id: d for d in db.query(DrillModel).filter(
+            DrillModel.id.in_([s["drill_id"] for s in imiten])).all()}
+        for s in imiten:
+            d = quins.get(s["drill_id"])
+            if d is None:
+                continue
+            veu = grammar_course.qui_ho_diu(d)
+            if not veu["per_imitar"]:
+                raise StepError(
+                    f"«{s['kind']}» demana repetir el que se sent, i la frase {s['drill_id']} "
+                    + {"cap": "no té cap gravació",
+                       "canal": f"té una veu d'un canal ({veu['qui']}), no d'una persona que coneguem",
+                       "captura": "té una veu retallada d'un vídeo i no sabem de qui és",
+                       }.get(veu["mena"], "no té una veu que es pugui posar com a model")
+                    + ". Per escoltar i entendre serveix; per imitar, cal una veu amb nom.")
     db.query(PracticeStep).filter(PracticeStep.test_id == test_id).delete(synchronize_session=False)
     for i, s in enumerate(cleaned):
         db.add(PracticeStep(test_id=test_id, position=i, kind=s["kind"],

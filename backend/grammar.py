@@ -715,6 +715,47 @@ def our_speaker(d) -> Optional[str]:
     return None
 
 
+#: Noms que hi ha al lloc del parlant i que no són ningú: el procés que va retallar la frase.
+PROCESSOS = ("auto capture", "autocapture")
+
+
+def qui_ho_diu(d) -> Dict:
+    """Qui diu aquesta frase, i si la seva veu es pot posar com a model a imitar (#273, #288).
+
+    La regla, del pedagog i confirmada pel propietari: **per escoltar, totes les veus són
+    benvingudes i omplen forats; per imitar, només una veu amb nom.** «Compara't amb la veu de
+    debò» només és veritat si la veu és d'algú.
+
+    Les quatre coses que es poden trobar al lloc del parlant, i que no es poden confondre:
+
+      `nostra`   la Halima o en Driss, o una gravació del seu poble: la veu del curs.
+      `persona`  algú altre amb nom, que també es pot imitar.
+      `canal`    un canal de vídeo —«ILoveLanguages (parlant nadiu)»—, que no és una persona que
+                 el projecte conegui i que sovint parla una altra varietat.
+      `captura`  «Auto Capture», que és el procés que va retallar el tall, no ningú.
+      `cap`      no hi ha veu.
+    """
+    veu = (getattr(d, "audio_url", "") or "").strip()
+    qui = (getattr(d, "speaker", None) or getattr(d, "author", None) or "").strip()
+    if not veu:
+        return {"qui": qui or None, "mena": "cap", "per_imitar": False}
+    if our_speaker(d) or "mraw" in (getattr(d, "region", "") or "").lower():
+        return {"qui": qui or None, "mena": "nostra", "per_imitar": True}
+    if not qui or qui.lower() in PROCESSOS:
+        return {"qui": None, "mena": "captura", "per_imitar": False}
+    # Un canal al lloc del parlant: o ve dit amb un parèntesi —«ILoveLanguages (parlant nadiu)»—
+    # o és literalment el nom del canal d'on vam treure el tall.
+    canal = (getattr(d, "source_channel", "") or "").strip()
+    if "(" in qui or (canal and qui.lower() == canal.lower()):
+        return {"qui": qui, "mena": "canal", "per_imitar": False}
+    return {"qui": qui, "mena": "persona", "per_imitar": True}
+
+
+def per_imitar(d) -> bool:
+    """Si aquesta gravació es pot fer servir com a model per repetir-la."""
+    return bool(qui_ho_diu(d)["per_imitar"])
+
+
 def origin(d) -> str:
     """Where a drill's sentence comes from, for the lesson writer and the card."""
     tag = (d.tag or "").lower(); region = (d.region or "").strip()

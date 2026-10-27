@@ -67,13 +67,15 @@ const ReviewNavButton = ({ compact = false }: { compact?: boolean }) => {
     api.reviewStreak().then(s => setStreak(s.streak_days || 0)).catch(() => {});
   }, []);
 
-  const pending = (counts?.due || 0) + (counts?.new || 0);
+  // El que toca avui és el que ja has vist i torna. Les que no has vist mai no són un deute:
+  // sumades aquí, el botó deia «4811 nous» i el de la portada «Repassa 4815» (#416).
+  const toca = counts?.due || 0;
 
-  if (!pending) {
+  if (!toca) {
     return (
       <button
         onClick={() => navigate('/player')}
-        title="Practica tots els drills"
+        title="Practica: comença frases que encara no has vist"
         style={{
           flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap',
           padding: compact ? '8px 10px' : '8px 14px', background: 'var(--emerald-soft)', color: 'var(--emerald)',
@@ -96,7 +98,7 @@ const ReviewNavButton = ({ compact = false }: { compact?: boolean }) => {
         border: 'none', borderRadius: 'var(--r-pill)', fontWeight: 700, fontSize: compact ? '13px' : '14px', cursor: 'pointer'
       }}
     >
-      <FaRedo size={13} /> {counts!.due > 0 ? counts!.due : compact ? counts!.new : `${counts!.new} nous`}
+      <FaRedo size={13} /> {toca}
       {streak > 0 && !compact && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><FaFire size={12} />{streak}</span>}
     </button>
   );

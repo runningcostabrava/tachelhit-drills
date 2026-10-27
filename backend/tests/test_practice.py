@@ -1,6 +1,6 @@
 """Pràctica: collections, sessions, pronunciation tips and the word-by-word comparison."""
 import practice
-from test_api import client
+from test_api import client, register
 
 
 def test_tips_name_the_hard_sounds_in_any_spelling():
@@ -56,7 +56,12 @@ def test_a_practice_is_a_sequence_of_steps_and_belongs_to_whoever_made_it():
                                              "username": "the_maker"}).json()
     hdr = {"X-User-Token": mine["token"]}
     d1 = client.post("/drills/", json={"text_catalan": "aigua", "text_tachelhit": "aman"}, headers=hdr).json()
-    d2 = client.post("/drills/", json={"text_catalan": "pa", "text_tachelhit": "aɣrum"}, headers=hdr).json()
+    # La «pa» porta veu d'una persona amb nom perquè després se li demani un pas per IMITAR:
+    # «digues-ho i compara't» només és veritat si la veu és d'algú (#273).
+    d2 = client.post("/drills/", json={"text_catalan": "pa", "text_tachelhit": "aɣrum",
+                                       "author": "Halima", "region": "Aït Mraw (Azilal)",
+                                       "audio_url": "https://res.cloudinary.com/x/video/upload/v1/halima-agrum.mp3"},
+                     headers=hdr).json()
 
     made = client.post("/tests/", headers=hdr, json={
         "title": "La meva llista", "question_type": "audio", "hint_level": "none",
@@ -563,3 +568,92 @@ def test_fewer_options_is_better_than_a_useless_one():
     import escoltar
     bona = _Fals(1, "el gat dorm sota la taula")
     assert escoltar.opcions_dolentes(bona, [bona]) == []
+
+
+def test_escoltar_i_triar_la_frase_escrita_es_una_eina_de_la_practica():
+    """«Escolta i tria la frase» (#387) no és l'«escolta i tria» de sempre: aquell dona quatre
+    significats en català i entrena a entendre; aquest dona quatre frases en amazic i entrena a
+    lligar el que se sent amb el que està escrit. Per tant demana una frase, com les altres."""
+    import practice_steps
+
+    assert "pick_written" in practice_steps.KINDS
+    needs_drill, que_demana = practice_steps.KINDS["pick_written"]
+    assert needs_drill, "sense frase no hi ha res a sentir ni a triar"
+    assert "escrites" in que_demana, que_demana
+
+    net = practice_steps.validate({"kind": "pick_written", "drill_id": 7})
+    assert net["kind"] == "pick_written" and net["drill_id"] == 7
+
+    try:
+        practice_steps.validate({"kind": "pick_written"})
+    except practice_steps.StepError as e:
+        assert "frase" in str(e)
+    else:
+        raise AssertionError("un pas sense frase s'ha d'explicar, no acceptar")
+
+
+def test_un_pas_per_imitar_no_pot_apuntar_a_una_veu_que_no_es_de_ningu():
+    """Regla del pedagog (#273): per escoltar, totes les veus; per imitar, només una veu amb nom.
+
+    «Digues-ho i compara't amb la veu de debò» només és veritat si la veu és d'algú. Si la
+    referència és un tall anònim —o d'un canal, que sovint parla una altra varietat— li estem
+    dient a algú que imiti una pronúncia que no és la que està aprenent, i no té manera de
+    saber-ho. Ho diu el validador, no la bona voluntat de qui munta la pràctica."""
+    hdr = {"X-User-Token": register("imitar_veu")}
+    nostra = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "aigua", "text_tachelhit": "aman", "author": "Halima",
+        "region": "Aït Mraw (Azilal)",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/halima-aman.mp3"}).json()
+    canal = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "bon dia", "text_tachelhit": "tifawin", "author": "ILoveLanguages (parlant nadiu)",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/canal-tifawin.mp3"}).json()
+    muda = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "la botiga", "text_tachelhit": "thanut"}).json()
+
+    p = client.post("/tests/", headers=hdr, json={
+        "title": "Per imitar", "question_type": "audio", "hint_level": "none", "drill_ids": ""}).json()
+
+    ok = client.put(f"/tests/{p['id']}/steps", headers=hdr, json={"steps": [
+        {"kind": "say_it", "drill_id": nostra["id"]},
+        {"kind": "write_heard", "drill_id": nostra["id"]}]})
+    assert ok.status_code == 200, ok.text
+
+    for mal, diu in ((canal, "canal"), (muda, "gravació")):
+        r = client.put(f"/tests/{p['id']}/steps", headers=hdr, json={"steps": [
+            {"kind": "say_it", "drill_id": mal["id"]}]})
+        assert r.status_code == 400, f"{diu}: {r.text}"
+        assert diu in r.json()["detail"], r.json()["detail"]
+
+    # Per escoltar i entendre, totes són benvingudes: això no es bloqueja.
+    escoltar = client.put(f"/tests/{p['id']}/steps", headers=hdr, json={"steps": [
+        {"kind": "listen_pick", "drill_id": canal["id"]}]})
+    assert escoltar.status_code == 200, escoltar.text
+
+    # I els passos que hi havia no s'han esborrat per un pas refusat.
+    assert [s["kind"] for s in client.get(f"/tests/{p['id']}/steps").json()["steps"]] == ["listen_pick"]
+
+
+def test_les_practiques_que_ja_hi_havia_es_poden_revisar():
+    """El validador ho impedeix d'ara endavant; les pràctiques muntades abans es van fer quan res
+    no ho impedia, i per això es poden comptar en comptes de confiar que no n'hi hagi cap (#273)."""
+    hdr = {"X-User-Token": register("revisa_imitacio")}
+    canal = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "el mercat", "text_tachelhit": "ssuq",
+        "author": "ILoveLanguages (parlant nadiu)",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/canal-ssuq.mp3"}).json()
+    p = client.post("/tests/", headers=hdr, json={
+        "title": "Muntada abans de la regla", "question_type": "audio", "hint_level": "none",
+        "drill_ids": ""}).json()
+
+    # Com es muntaven abans: escrivint el pas directament, sense passar pel validador.
+    from main import SessionLocal
+    from models import PracticeStep
+    with SessionLocal() as db:
+        db.add(PracticeStep(test_id=p["id"], position=0, kind="say_it", drill_id=canal["id"]))
+        db.commit()
+
+    r = client.get("/practice/imitation-audit").json()
+    meu = next((q for q in r["quins"] if q["test_id"] == p["id"]), None)
+    assert meu, r
+    assert meu["kind"] == "say_it" and meu["veu"]["mena"] == "canal"
+    assert r["fallen"] >= 1 and r["passos_per_imitar"] >= r["fallen"]

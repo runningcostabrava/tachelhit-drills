@@ -813,6 +813,16 @@ export default function MethodLesson({
                           {d.from_book
                             ? <span style={{ fontWeight: 700 }}>del manual{d.speaker ? `, dit per ${d.speaker}` : ', encara sense parlant'}</span>
                             : (d.speaker || 'sense nom')}
+                          {/* D'on surt la veu, dit ABANS de prémer (#288). Una veu d'un canal no
+                              és una persona que el projecte conegui, i sovint parla una altra
+                              varietat: per escoltar-la, benvinguda; per imitar-la, no. */}
+                          {d.veu && !d.veu.per_imitar && d.veu.mena !== 'cap' && (
+                            <span style={{ display: 'block', fontSize: 10.5, color: 'var(--amber-strong, #8a6100)', fontWeight: 700, marginTop: 2 }}>
+                              {d.veu.mena === 'canal'
+                                ? 'veu d’un canal, no d’algú que coneguem: per escoltar-la, no per imitar-la'
+                                : 'veu retallada d’un vídeo, no sabem de qui: per escoltar-la, no per imitar-la'}
+                            </span>
+                          )}
                           {(d.variety || d.region) && (
                             <span style={{ fontSize: 10.5, opacity: 0.6 }}>
                               {d.variety ? ` · ${d.variety}` : ''}{d.region ? ` · ${d.region}` : ''}

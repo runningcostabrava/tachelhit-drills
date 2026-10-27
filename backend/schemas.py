@@ -97,6 +97,11 @@ class DrillBase(BaseModel):
     requested_by: Optional[str] = None
     requested_note: Optional[str] = None
     variant_of: Optional[int] = None
+    #: «so» (la mateixa paraula escrita o dita d'una altra manera) o «paraula» (una altra manera
+    #: de dir-ho). `None` quan ningú no ho ha dit (#332).
+    variant_kind: Optional[str] = None
+    #: El que qui l'ha escrita vol dir d'aquesta versió seva.
+    variant_note: Optional[str] = None
     glosses: Optional[str] = None
 
     # Validators for URL fields

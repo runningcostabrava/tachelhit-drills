@@ -27,6 +27,16 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
   const [ownText, setOwnText] = useState(drill.text_tachelhit || '');
   const [ownVariety, setOwnVariety] = useState('');
   const [ownTown, setOwnTown] = useState('');
+  // «Sóc jo altra vegada» (#332): si ja hi tens una presa, la nova la substitueix per defecte.
+  // Dues preses de la mateixa veu de la mateixa frase no diuen res: ningú no sap quina val.
+  const [substitueix, setSubstitueix] = useState(true);
+  // Les mateixes paraules, però no sona igual: no són altres paraules, és la mateixa paraula
+  // dita d'una altra manera. Es marca perquè algú ho miri.
+  const [sonsDiferents, setSonsDiferents] = useState(false);
+  // Si escrius una frase diferent de la de la targeta, de quina mena és (#332). Un sinònim no és
+  // una variant dialectal: la primera diu com sona la paraula que s'està estudiant, la segona
+  // ensenya una paraula nova. Si no ho dius, no s'endevina.
+  const [mena, setMena] = useState<'so' | 'paraula' | ''>('');
   // the speaker's declared profile: a take without a place is not accepted (every voice carries its town)
   const [profile, setProfile] = useState<{ variety: string | null; region: string | null; is_native?: boolean | null } | null | undefined>(undefined);
   // `is_native` ve del servidor i abans es llençava aquí. Com que `mustAsk` el mira, la pregunta
@@ -86,10 +96,18 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
       // whose voice this is: a learner's take must never pass for a model pronunciation
       const native = isNative ?? profile?.is_native;
       if (native !== undefined && native !== null) fd.append('is_native', String(native));
+      if (tincPresa && substitueix) fd.append('substitueix', 'true');
+      if (sonsDiferents) fd.append('sons_diferents', 'true');
+      if (mena && altresParaules) fd.append('mena', mena);
       const res = await fetch(`${API_BASE}/drills/${drill.id}/recordings`, { method: 'POST', body: fd });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || 'upload failed');
       const saved = await res.json().catch(() => null);
-      toast.success(saved?.variant_id ? 'Veu afegida. Com que ho dius amb altres paraules, ara hi ha una targeta pròpia amb la teva versió, enllaçada a aquesta.' : 'Veu afegida');
+      toast.success(
+        saved?.variant_id
+          ? 'Veu afegida. Com que ho dius amb altres paraules, ara hi ha una targeta pròpia amb la teva versió, enllaçada a aquesta.'
+          : saved?.substituida
+            ? 'Feta. Aquesta presa substitueix la teva d’abans; les dels altres no s’han tocat.'
+            : 'Veu afegida');
       if (profile && isNative !== null && profile.is_native === undefined) api.updateMe({ is_native: isNative }).catch(() => {});
       if (profile !== undefined && profile !== null && (!profile.region || !profile.variety) && (ownTown.trim() || ownVariety)) {
         api.updateMe({ ...(ownTown.trim() && !profile.region ? { region: ownTown.trim() } : {}), ...(ownVariety && !profile.variety ? { variety: ownVariety } : {}) }).catch(() => {});
@@ -115,13 +133,28 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
   const inList = new Set(recs.map((r) => r.audio_url));
   const showPrimary = !!primary && !inList.has(primary);
   const varieties = new Set(recs.map((r) => r.variety).filter(Boolean));
+  const tincPresa = recs.some((r) => r.mine);
+  const altresParaules = !!ownText.trim() && ownText.trim() !== (drill.text_tachelhit || '').trim();
   const takeCount = recs.length + (showPrimary ? 1 : 0);
 
   const badge = (v?: string | null) => v ? (
     <span title={varietyLabel(v)} style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.03em', background: 'var(--saffron-soft)', color: 'var(--saffron-strong)', padding: '2px 7px', borderRadius: 'var(--r-pill)' }}>{varietyShort(v)}</span>
   ) : null;
 
-  const takeRow = (key: string, label: string, url: string, v?: string | null, region?: string | null, onDelete?: () => void, ownWords?: string | null) => (
+  // Quina veu és la de la targeta (#332). `drill.audio_url` no és una presa més: és el que sona
+  // al Mètode, a la pràctica, i el que la puntuació de pronunciació fa servir de referència.
+  const faPrincipal = async (id: number) => {
+    setBusy(true);
+    try {
+      await api.makeRecordingPrimary(id);
+      toast.success('Feta. Aquesta és la veu que sonarà a la targeta.');
+      load(); onSaved();
+    } catch (e: any) {
+      toast.error(e?.message || 'No s’ha pogut canviar la veu de la targeta');
+    } finally { setBusy(false); }
+  };
+
+  const takeRow = (key: string, label: string, url: string, v?: string | null, region?: string | null, onDelete?: () => void, ownWords?: string | null, onPrimary?: () => void, isPrimary?: boolean) => (
     <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)' }}>
       <button onClick={() => play(url)} aria-label="Reprodueix" style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-1)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FaPlay size={12} /></button>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -131,6 +164,13 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
           {region && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{region}</span>}
         </div>
         {ownWords && <div style={{ fontSize: '13px', color: 'var(--brand-1)', marginTop: '4px', fontWeight: 600 }} title="Com ho diu aquesta persona">{ownWords}</div>}
+        {isPrimary && <div style={{ fontSize: '11px', color: 'var(--emerald)', marginTop: 3, fontWeight: 700 }}>és la veu de la targeta</div>}
+        {!isPrimary && onPrimary && (
+          <button onClick={onPrimary} disabled={busy}
+                  style={{ marginTop: 4, padding: 0, border: 'none', background: 'none', color: 'var(--brand-1)', fontWeight: 700, fontSize: '11.5px', cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', textUnderlineOffset: 3 }}>
+            Fes que soni aquesta
+          </button>
+        )}
       </div>
       {onDelete && (
         <button onClick={onDelete} disabled={busy} aria-label="Esborra la veu" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--rose)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FaTrash size={12} /></button>
@@ -155,7 +195,16 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
           {showPrimary && takeRow('primary', 'Àudio principal', primary, drill.variety, drill.region)}
           {/* La paperera només damunt de la teva presa: la veu d'un altre no l'has d'esborrar tu,
               i oferir-ho era convidar a fer-ho. El servidor ho impedeix igualment. */}
-          {recs.map((r) => takeRow(`r${r.id}`, r.speaker || 'Anònim', r.audio_url, r.variety, r.region, r.mine ? () => del(r.id) : undefined, r.text))}
+          {recs.map((r) => takeRow(`r${r.id}`, r.speaker || 'Anònim', r.audio_url, r.variety, r.region,
+                                   r.mine ? () => del(r.id) : undefined, r.text,
+                                   r.mine ? () => faPrincipal(r.id) : undefined,
+                                   (r.audio_url || '').trim() === primary))}
+          {recs.some((r) => r.sounds_differ) && (
+            <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              Alguna d’aquestes preses diu les mateixes paraules d’una altra manera: qui la va
+              gravar ho va fer constar perquè algú ho miri.
+            </div>
+          )}
         </div>
 
         {/* record a new take */}
@@ -172,6 +221,40 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
             </select>
             <input value={ownTown} onChange={(e) => setOwnTown(e.target.value)} placeholder="El teu poble (opcional)" aria-label="El teu poble" style={{ flex: '1 1 140px', minWidth: 0, padding: '8px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text)', fontSize: '13px' }} />
           </div>
+          {/* I si el que has escrit no és el que diu la targeta: de quina mena és (#332). */}
+          {altresParaules && (
+            <div style={{ marginBottom: '10px', padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-soft)', marginBottom: 8, lineHeight: 1.45 }}>
+                El que has escrit no és el que diu la targeta. Què hi passa?
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {([['so', 'És la mateixa paraula, dita o escrita d’una altra manera'],
+                   ['paraula', 'Al meu poble en diem una altra']] as const).map(([k, etiqueta]) => (
+                  <button key={k} onClick={() => setMena(mena === k ? '' : k)}
+                          style={{ padding: '7px 12px', borderRadius: 'var(--r-pill)', fontSize: '12.5px', fontWeight: 700,
+                                   cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                                   border: `1px solid ${mena === k ? 'var(--brand-1)' : 'var(--border)'}`,
+                                   background: 'var(--surface)', color: mena === k ? 'var(--brand-1)' : 'var(--text)' }}>
+                    {etiqueta}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Les mateixes paraules, però no sona igual (#332). Preguntat sempre, perquè és el
+              cas que es perdia: la fitxa deia que es diu d'una manera i la veu en deia una altra
+              sense que constés enlloc. */}
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '12px', color: 'var(--text-soft)', marginBottom: '10px', cursor: 'pointer', lineHeight: 1.45 }}>
+            <input type="checkbox" checked={sonsDiferents} onChange={(e) => setSonsDiferents(e.target.checked)} style={{ marginTop: 2 }} />
+            <span>Dic les mateixes paraules, però <strong>no sonen com estan escrites</strong>. (Queda marcat perquè algú ho miri.)</span>
+          </label>
+          {/* I si ja n'hi tens una de teva: la teva, no la d'un altre. */}
+          {tincPresa && (
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '12px', color: 'var(--text-soft)', marginBottom: '10px', cursor: 'pointer', lineHeight: 1.45 }}>
+              <input type="checkbox" checked={substitueix} onChange={(e) => setSubstitueix(e.target.checked)} style={{ marginTop: 2 }} />
+              <span>Ja hi tens una presa teva: <strong>substitueix-la</strong> per aquesta. (Desmarca-ho per deixar-hi totes dues; les dels altres no es toquen mai.)</span>
+            </label>
+          )}
           {blobUrl && <audio controls src={blobUrl} style={{ width: '100%', marginBottom: '10px' }} />}
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             {!recording ? (
