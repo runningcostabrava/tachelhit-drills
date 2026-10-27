@@ -60,9 +60,12 @@ def test_no_es_pot_fer_sonar_una_paraula_que_ningu_no_ha_dit():
     """La paraula inventada («iɣḍdn» per «enfadat») no és a cap frase nostra: l'eina no la fa
     sonar i diu per què, de manera que el copilot ho ha de dir en comptes d'oferir-ho."""
     hdr = {"X-User-Token": register("copilot_veu")}
-    client.post("/drills/", headers=hdr, json={
-        "text_catalan": "el pa", "text_tachelhit": "aɣrum",
-        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/pa.mp3", "author": "Halima"}).json()
+    # Una paraula que no fa servir cap altra prova: la base de proves no es llença entre
+    # execucions i «aɣrum» ja hi és de tres o quatre bandes, amb altres veus.
+    meva = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "el sitjot", "text_tachelhit": "tasraft",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/tasraft.mp3",
+        "author": "Halima"}).json()
 
     db, run = _eines()
     try:
@@ -70,12 +73,13 @@ def test_no_es_pot_fer_sonar_una_paraula_que_ningu_no_ha_dit():
         assert "error" in no and "no és a la biblioteca" in no["error"], no
 
         # el que SÍ que hi és, sona amb la veu de qui el va dir, no amb la de màquina
-        si = run("speak_tachelhit", {"text": "aɣrum"})
+        si = run("speak_tachelhit", {"text": "tasraft"})
+        assert si.get("drill_id") == meva["id"], si
         assert si.get("veu") == "d'una persona" and si["speaker"] == "Halima", si
-        assert "pa.mp3" in si["audio_url"]
+        assert "tasraft.mp3" in si["audio_url"]
 
         # i escrit d'una altra manera, és la mateixa paraula: es casa pel so
-        igual = run("speak_tachelhit", {"text": "aghrum"})
+        igual = run("speak_tachelhit", {"text": "tasrafte"})
         assert igual.get("audio_url") and "error" not in igual, igual
     finally:
         db.close()
