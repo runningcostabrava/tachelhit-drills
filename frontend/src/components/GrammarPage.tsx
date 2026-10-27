@@ -144,13 +144,11 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
 
   const cards = useMemo<Card[]>(() => (page ? [{ type: 'intro' }, ...page.lesson.steps] : []), [page]);
   const card = cards[i];
-  const cover = useMemo(() => {
-    if (!page) return null;
-    for (const s of page.lesson.steps) {
-      if (s.type === 'explain') { const e = s.examples.find((x) => x.image_url); if (e) return e; }
-    }
-    return page.drills.find((d) => d.image_url) ? { image_url: page.drills.find((d) => d.image_url)!.image_url } : null;
-  }, [page]);
+  // La portada la decideix el servidor (#229): el dibuix de la unitat si n'hi ha, i si no la
+  // primera imatge NOSTRA. Aquí s'endevinava —«la primera frase que tingui imatge»— i per això
+  // la unitat dels possessius s'encapçalava amb una foto d'un projecte de la Viquipèdia en jukun
+  // que havia heretat una frase.
+  const cover = useMemo(() => (page?.cover ? { image_url: page.cover } : null), [page]);
 
   const canGoNext = !!card && (card.type !== 'quiz' || answers[i] !== undefined) && i < cards.length - 1;
   const next = useCallback(() => { if (canGoNext) setI((x) => x + 1); }, [canGoNext]);

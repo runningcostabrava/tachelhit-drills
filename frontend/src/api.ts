@@ -798,7 +798,13 @@ export type LessonStep =
  *  previous one meanwhile. */
 export interface GrammarLesson { intro: string; steps: LessonStep[]; study?: string; error?: string; writing?: boolean; stale?: boolean }
 /** `practice`: the ids the unit's test is made of (real sentences only: no single words, no conjugation lists). */
-export interface GrammarUnitPage extends GrammarUnit { lesson: GrammarLesson; total: number; practice: number[]; drills: Drill[]; ortografia?: NotaOrtografia | null }
+export interface GrammarUnitPage extends GrammarUnit {
+  lesson: GrammarLesson; total: number; practice: number[]; drills: Drill[];
+  ortografia?: NotaOrtografia | null;
+  /** La portada de la unitat, decidida pel servidor: el dibuix de la unitat, o la primera imatge
+   *  NOSTRA de les frases que cita. Mai una foto trobada (#229). */
+  cover?: string | null;
+}
 /** Pràctica: how the library is offered for practice, and what a session card needs beyond the drill. */
 export interface PracticeCollections {
   days: { day: string; speaker: string; count: number }[];
