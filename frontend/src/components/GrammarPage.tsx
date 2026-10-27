@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { formes } from '../utils/tifinag';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from '../toast';
@@ -338,8 +339,13 @@ function Example({ e, highlight, onAsk, onRecord, onWant, signedIn, isAdmin }: {
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'var(--surface-2)', border: `1px solid ${border}`, borderRadius: 'var(--r-lg)', flexWrap: 'wrap' }}>
       {e.image_url && <img src={getMediaUrl(e.image_url)} alt="" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 'var(--r-md)', flexShrink: 0 }} onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = 'none'; }} />}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 800, fontSize: '17px', color: 'var(--text)', lineHeight: 1.3 }}>{withFocus(shown.shi, e.focus)}</div>
-        {e.tif && <div lang="zgh" style={{ fontFamily: 'var(--font-tifinagh)', fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.4 }}>{e.tif}</div>}
+        {/* El tifinag primer i gran (#339). El llatí es queda a sota perquè és el que porta el
+            ressaltat del tros que la unitat ensenya (`withFocus`), i això no es pot perdre: el
+            que canvia és qui mana a la pantalla, no què s'hi veu. */}
+        <div lang="zgh" style={{ fontFamily: 'var(--font-tifinagh)', fontWeight: 800, fontSize: '19px', color: 'var(--text)', lineHeight: 1.45 }}>
+          {e.tif || formes(shown.shi).tif}
+        </div>
+        <div style={{ fontWeight: 600, fontSize: '14.5px', color: 'var(--text-soft)', lineHeight: 1.35 }}>{withFocus(shown.shi, e.focus)}</div>
         <div style={{ fontSize: '14px', color: 'var(--text-soft)' }}>{shown.ca}</div>
         {/* El crèdit: qui ho diu i d'on és. Si la frase està gravada i no en sabem el poble, es
             diu —«no sabem d'on és»— en comptes de deixar el lloc buit o, com abans, d'omplir-lo

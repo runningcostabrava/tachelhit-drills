@@ -62,6 +62,29 @@ def prompt(frases: List[dict]) -> str:
     )
 
 
+def _quina_frase(clau, val, frases: List[dict], per_id: Dict[str, dict], n: int):
+    """A quina frase respon aquesta entrada de la resposta.
+
+    **La clau que torna el model no és de fiar.** Se li demana `{"<id>": …}` i torna `{"id 1": …}`,
+    copiant el format de la llista que se li ha passat («- id 1: «…»»). Buscar `"1"` no trobava
+    res i es llençava tot: 268 anàlisis de 281, i semblava que el model no en sabés.
+
+    Per ordre: el número que hi hagi dins la clau; si no, el text de la frase, que el model sol
+    repetir; i si no, l'ordre, que els models sí que respecten.
+    """
+    m = re.search(r"\d+", str(clau))
+    if m and m.group(0) in per_id:
+        return per_id[m.group(0)]
+    per_text = {f["shi"]: f for f in frases}
+    if isinstance(clau, str) and clau.strip() in per_text:
+        return per_text[clau.strip()]
+    if isinstance(val, dict):
+        seva = (val.get("frase") or val.get("shi") or "").strip()
+        if seva in per_text:
+            return per_text[seva]
+    return frases[n] if n < len(frases) else None
+
+
 def neteja(resposta: dict, frases: List[dict]) -> Dict[int, dict]:
     """Quedar-se només amb el que s'aguanta.
 
@@ -70,9 +93,11 @@ def neteja(resposta: dict, frases: List[dict]) -> Dict[int, dict]:
     """
     per_id = {str(f["id"]): f for f in frases}
     fora: Dict[int, dict] = {}
-    for clau, val in (resposta or {}).items():
-        f = per_id.get(str(clau))
-        if not f or not isinstance(val, dict):
+    for n, (clau, val) in enumerate((resposta or {}).items()):
+        if not isinstance(val, dict):
+            continue
+        f = _quina_frase(clau, val, frases, per_id, n)
+        if not f:
             continue
         text = (val.get("analisi") or "").strip()
         if not text:
