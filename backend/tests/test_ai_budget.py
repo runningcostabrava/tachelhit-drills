@@ -5,6 +5,7 @@ from test_api import client
 import main
 import ai_budget
 import gemini_client
+from sqlalchemy import func
 from models import GeminiUsage
 
 
@@ -91,6 +92,16 @@ def test_anonymous_daily_cap_then_429(monkeypatch):
     monkeypatch.setattr(gemini_client.requests, "post", _fake_post())
     monkeypatch.setattr(main, "_build_system_instruction", lambda db, question="": "sys")
     from test_api import as_stranger
+    # On era la taula abans de començar.
+    #
+    # El que es comprova aquí és que l'etiqueta de la porta («ask») arribi al comptador, i això
+    # es veu a les files que escriu AQUESTA prova. Llegir la taula sencera feia que qualsevol
+    # altra prova que hi hagués deixat una fila amb una altra etiqueta la tombés — i la CI
+    # barreja l'ordre a posta, de manera que havia de sortir un dia, en un PR que no hi tindria
+    # res a veure (#350). Va caure una vegada i no es va poder repetir, que és justament el
+    # pitjor cas: una prova que cau sense dir per què no es pot arreglar.
+    with main.SessionLocal() as db:
+        abans = db.query(func.max(GeminiUsage.id)).scalar() or 0
     with as_stranger():  # the small daily allowance is counted by address, for people with no account
         for _ in range(2):
             assert client.post("/ai/ask", json={"question": "hola?"}).status_code == 200
@@ -99,13 +110,9 @@ def test_anonymous_daily_cap_then_429(monkeypatch):
         u = client.get("/ai/usage").json()
     assert u["today"] == {"used": 2, "limit": 2, "remaining": 0}
     with main.SessionLocal() as db:
-        rows = [(r.feature, r.model, r.ok) for r in db.query(GeminiUsage).all()]
-    # El que es comprova és que l'etiqueta de la porta arribi al comptador. La taula, però, es
-    # llegeix sencera, i això només s'aguanta si ningú més no hi escriu mentre la prova corre:
-    # va caure una vegada en una bateria sencera i no s'ha pogut repetir —ni amb la bateria
-    # sencera (286 passades) ni amb test_grammar al davant (43 passades). Mentre no se sàpiga qui
-    # hi escriu, la traça ha de portar les files: una prova que cau sense dir per què no es pot
-    # arreglar (#350).
+        rows = [(r.feature, r.model, r.ok) for r in
+                db.query(GeminiUsage).filter(GeminiUsage.id > abans).all()]
+    assert rows, "les tres crides no han deixat cap fila d'ús"
     assert {f for f, _m, _ok in rows} == {"ask"}, rows
 
 
