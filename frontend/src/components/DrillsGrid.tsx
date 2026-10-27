@@ -27,7 +27,10 @@ import {
     FaTag,
     FaPlus,
     FaMicrophone,
-    FaCamera
+    FaCamera,
+    FaPlay,
+    FaRobot,
+    FaLightbulb
 } from 'react-icons/fa';
 import RecordAudioModal from './RecordAudioModal';
 import WordGloss from './WordGloss';
@@ -758,7 +761,11 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                             )}
                         </div>
 
-                        {/* Thumbnail View */}
+                        {/* La foto, amb la veu a sobre.
+                            La mida d'un botó ha de dir què val. El que més es prem d'una targeta
+                            és sentir com sona la frase, i estava en una fila de cinc botons del
+                            mateix pes, al costat d'una veu de màquina i d'un botó per mirar una
+                            foto. Ara va gran, a sobre de la imatge, i no comparteix fila amb res. */}
                         {(drill.image_url || pendingMedia[drill.id]?.image) && (
                             <div style={{ position: 'relative' }}>
                                 <img
@@ -769,12 +776,33 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                     style={{ width: '100%', height: '180px', objectFit: 'contain', background: 'var(--surface-2)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)' }}
                                 />
+                                {drill.audio_url && (
+                                    <button
+                                        onClick={() => {
+                                            const audio = new Audio(getMediaUrl(drill.audio_url!));
+                                            audio.play().catch(e => console.error('Playback fail:', e));
+                                        }}
+                                        aria-label="Escolta com sona"
+                                        style={{
+                                            position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)',
+                                            width: '64px', height: '64px', borderRadius: '50%', border: 'none',
+                                            background: 'var(--brand-gradient)', color: '#fff', cursor: 'pointer',
+                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                            boxShadow: '0 4px 16px rgba(15,23,42,0.35)', padding: 0
+                                        }}
+                                    >
+                                        <FaPlay size={22} style={{ marginLeft: 4 }} />
+                                    </button>
+                                )}
                             </div>
                         )}
 
-                        {/* Interactive Audio Controls */}
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            {drill.audio_url && (
+                        {/* La resta, petita i sense text.
+                            Cinc botons amb text i el mateix pes no deien quin importava. El que
+                            porta text ara és el que la gent no endevinaria d'una icona. */}
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            {/* Sense foto, la veu no té on anar a sobre: es queda gran aquí. */}
+                            {drill.audio_url && !(drill.image_url || pendingMedia[drill.id]?.image) && (
                                 <button
                                     onClick={() => {
                                         const audio = new Audio(getMediaUrl(drill.audio_url!));
@@ -782,95 +810,96 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                                     }}
                                     style={{
                                         flex: 1,
-                                        padding: '11px',
-                                        background: 'var(--brand-gradient-soft)',
-                                        border: '1px solid var(--border)',
+                                        padding: '14px',
+                                        background: 'var(--brand-gradient)',
+                                        border: 'none',
                                         borderRadius: 'var(--r-md)',
-                                        fontSize: '14px',
-                                        fontWeight: 700,
-                                        color: 'var(--brand-1)',
+                                        fontSize: '15px',
+                                        fontWeight: 800,
+                                        color: '#fff',
                                         cursor: 'pointer',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        gap: '8px'
+                                        gap: '10px'
                                     }}
                                 >
-                                    <FaVolumeUp /> Àudio
+                                    <FaPlay /> Escolta com sona
                                 </button>
                             )}
+                            {/* La veu de màquina porta un robot, no un altaveu.
+                                És la mateixa regla del #288 aplicada al so sintètic: qui prem ha
+                                de saber ABANS de prémer que el que sentirà no és ningú. Amb la
+                                icona d'altaveu, les dues veus es distingien per una paraula en
+                                anglès («TTS») que no diu res a qui aprèn. */}
                             {drill.text_tachelhit && (
                                 <button
                                     onClick={() => handleTachelhitTTS(drill)}
                                     disabled={actionLoadingId === `tts-${drill.id}`}
+                                    aria-label="Fes-ho llegir a una veu de màquina"
+                                    title="Una veu de màquina, no la d'una persona d'aquí"
                                     style={{
-                                        flex: 1,
-                                        padding: '11px',
+                                        width: '38px', height: '38px', flexShrink: 0,
+                                        padding: 0,
                                         background: 'var(--amber-soft)',
                                         border: '1px solid var(--amber)',
-                                        borderRadius: 'var(--r-md)',
-                                        fontSize: '14px',
-                                        fontWeight: 700,
+                                        borderRadius: 'var(--r-pill)',
                                         color: 'var(--amber-strong)',
                                         opacity: actionLoadingId === `tts-${drill.id}` ? 0.5 : 1,
                                         cursor: actionLoadingId === `tts-${drill.id}` ? 'not-allowed' : 'pointer',
-                                        display: 'flex',
+                                        display: 'inline-flex',
                                         alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '8px'
+                                        justifyContent: 'center'
                                     }}
                                 >
-                                    <FaVolumeUp />{actionLoadingId === `tts-${drill.id}` ? '...' : 'TTS'}
+                                    {actionLoadingId === `tts-${drill.id}` ? '…' : <FaRobot size={15} />}
                                 </button>
                             )}
                             {(drill.text_tachelhit || drill.text_tachelhit_suggested || drill.text_tachelhit_latin) && (
                                 <button
                                     onClick={() => setExplainDrill(drill)}
+                                    aria-label="Explica'm la frase paraula per paraula"
                                     title="Explica'm la frase paraula per paraula"
-                                    style={{ flex: 1, padding: '11px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '14px', fontWeight: 700, color: 'var(--text)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                    style={{ width: '38px', height: '38px', flexShrink: 0, padding: 0, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', color: 'var(--text)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                                 >
-                                    💡 Explica'm
+                                    <FaLightbulb size={15} />
                                 </button>
                             )}
                             {drill.video_url && (
                                 <button
                                     onClick={() => openPreviewOf(drill)}
-                                    style={{
-                                        flex: 1,
-                                        padding: '11px',
-                                        background: 'var(--brand-gradient-soft)',
-                                        border: '1px solid var(--border)',
-                                        borderRadius: 'var(--r-md)',
-                                        fontSize: '14px',
-                                        fontWeight: 700,
-                                        color: 'var(--brand-2)',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '8px'
-                                    }}
+                                    aria-label="Mira el vídeo d'on surt"
+                                    title="Mira el vídeo d'on surt"
+                                    style={{ width: '38px', height: '38px', flexShrink: 0, padding: 0, background: 'var(--brand-gradient-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', color: 'var(--brand-2)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                                 >
-                                    <FaVideo /> Vídeo
+                                    <FaVideo size={15} />
                                 </button>
                             )}
+                            {/* Afegir-hi una foto és una feina d'edició, no una cosa que es faci
+                                mentre s'estudia: icona i prou, i a la punta. */}
+                            <button
+                                onClick={() => handleQuickPhoto(drill.id)}
+                                aria-label="Posa-hi una foto"
+                                title="Posa-hi una foto"
+                                style={{ width: '38px', height: '38px', flexShrink: 0, marginLeft: 'auto', padding: 0, background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid var(--emerald)', borderRadius: 'var(--r-pill)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                            ><FaCamera size={15} /></button>
                         </div>
 
 
                         <SourceCredit drill={drill} />
                         <hr style={{ border: 'none', height: '1px', background: 'var(--border)', margin: '2px 0' }} />
 
-                        {/* Quick Update Row */}
-                        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                            <button
-                                onClick={() => handleQuickPhoto(drill.id)}
-                                style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '11px', background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid var(--emerald)', borderRadius: 'var(--r-md)', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
-                            ><FaCamera /> Foto</button>
-                            <button
-                                onClick={() => setRecordDrill(drill)}
-                                style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '11px', background: 'var(--rose-soft)', color: 'var(--rose)', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
-                            ><FaMicrophone /> Veus</button>
-                        </div>
+                        {/* Posar-hi la teva veu.
+                            Es deia «Veus» i ocupava el mateix que mirar una foto. És la feina que
+                            fa créixer la biblioteca —i la que cap màquina no pot fer per
+                            nosaltres—, de manera que va sola, ampla, i diu què fa.
+                            El gest de mantenir premut arriba amb el #370; mentre no hi sigui, el
+                            botó no el promet: un botó que diu una cosa i en fa una altra és
+                            pitjor que un que diu poc. */}
+                        <button
+                            onClick={() => setRecordDrill(drill)}
+                            style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '15px', marginBottom: '8px', background: 'var(--rose-soft)', color: 'var(--rose)', border: '1.5px solid var(--rose)', borderRadius: 'var(--r-lg)', fontSize: '15px', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}
+                        ><FaMicrophone size={18} /> Grava la teva versió</button>
 
                         {/* Previews for pending media */}
                         {pendingMedia[drill.id] && (
