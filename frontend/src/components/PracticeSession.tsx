@@ -93,7 +93,46 @@ function Highlighted({ text, marks }: { text: string; marks: string[] }) {
   return <>{text.split(re).map((part, i) => (ms.includes(part) ? <mark key={i} style={{ background: 'var(--brand-gradient-soft)', color: 'inherit', borderRadius: 6, padding: '0 3px' }}>{part}</mark> : <span key={i}>{part}</span>))}</>;
 }
 
+// Una pràctica feta a mà és una SEQÜÈNCIA i es juga amb l'eina de cada pas (`StepSession`); una
+// col·lecció —un dia, un tema, una unitat— és una pila de frases i es juga escoltant.
+//
+// Qui ho decideix és aquest component, i no toca res més. Abans ho decidia el de sota a l'hora
+// de pintar, i els seus hooks ja havien corregut: carregava frases, muntava el seu reproductor i,
+// en mode automàtic, acabava escrivint un resultat que ningú no havia fet. Dues veus sonant
+// alhora i un resultat fals (#218). Un `return` no es salta els hooks: el que s'ha de saltar és
+// el component sencer.
 export default function PracticeSession() {
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const testId = Number(params.get('test_id')) || 0;
+  const [asSteps, setAsSteps] = useState<boolean | null>(testId ? null : false);
+
+  useEffect(() => {
+    if (!testId) return;        // sense pràctica, l'estat inicial ja diu que no són passos
+    let viu = true;
+    api.practiceSteps(testId)
+      .then((r) => { if (viu) setAsSteps(r.steps.some((s) => s.kind !== 'note' || s.payload?.text)); })
+      .catch(() => { if (viu) setAsSteps(false); });
+    return () => { viu = false; };
+  }, [testId]);
+
+  const title = useMemo(() => {
+    if (params.get('daily')) return 'Sessió d’avui';
+    if (params.get('day')) return `${params.get('speaker')} · ${params.get('day')}`;
+    if (params.get('topic')) return `Tema: ${params.get('topic')}`;
+    if (params.get('unit')) return `Unitat: ${params.get('unit')}`;
+    return 'Pràctica';
+  }, [params]);
+
+  if (asSteps === null) {
+    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Preparant la pràctica…</div>;
+  }
+  if (asSteps) return <StepSession testId={testId} title={title} onExit={() => navigate('/tests')} />;
+  return <SessioDEscoltar />;
+}
+
+/** La pila de frases: escoltar-les, repetir-les i dir si ja te'n surts. */
+function SessioDEscoltar() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [drills, setDrills] = useState<Drill[]>([]);
@@ -149,18 +188,6 @@ export default function PracticeSession() {
     };
     load();
   }, [params]);
-
-  // A hand-made practice is a SEQUENCE: every step has its own tool, and it is played with that
-  // tool (StepSession). This listening session stays for the collections — a day, a subject, a
-  // grammar unit — which are a pile of sentences and nothing more (#199).
-  const testId = Number(params.get('test_id')) || 0;
-  const [asSteps, setAsSteps] = useState<boolean | null>(testId ? null : false);
-  useEffect(() => {
-    if (!testId) return;
-    api.practiceSteps(testId)
-      .then((r) => setAsSteps(r.steps.some((s) => s.kind !== 'note' || s.payload?.text)))
-      .catch(() => setAsSteps(false));
-  }, [testId]);
 
   const drill = drills[i]; const card = cards[i];
   // Aquí escoltar és la feina, i per això la veu de màquina pot sonar quan ningú no ha gravat la
@@ -255,9 +282,6 @@ export default function PracticeSession() {
       ))}
     </div>
   );
-
-  if (asSteps === null) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Preparant la pràctica…</div>;
-  if (asSteps) return <StepSession testId={testId} title={title} onExit={() => navigate('/tests')} />;
 
   if (loadError) return <div style={{ padding: '40px 16px', maxWidth: 520, margin: '0 auto', textAlign: 'center' }}><p style={{ color: 'var(--text-soft)' }}>{loadError}</p><button onClick={exit} style={btn('ghost')}>Torna a Pràctica</button></div>;
   if (!drill) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Preparant la sessió…</div>;

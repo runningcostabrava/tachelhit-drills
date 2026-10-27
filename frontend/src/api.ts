@@ -553,6 +553,10 @@ export const api = {
     request<Drill>('/drills/', { method: 'POST', body: JSON.stringify(d) }),
   // --- Pràctiques: una seqüència de passos, no una llista de números (ADR 0002) ---
   /** The steps of a practice, in the order a learner meets them, plus the tools that exist. */
+  /** Deixar constància d'una pràctica jugada, perquè les estadístiques d'una pràctica no
+   *  siguin sempre zero quan es juga amb passos (#218). */
+  saveAttempt: (a: { test_id: number; score: number; total_questions: number; correct_answers: number; time_taken_seconds: number; user_name?: string | null }) =>
+    request<{ id: number }>('/test-attempts/', { method: 'POST', body: JSON.stringify(a) }),
   practiceSteps: (testId: number) => request<{ test_id: number; steps: PracticeStep[]; kinds: Record<string, { needs_drill: boolean; asks: string }> }>(`/tests/${testId}/steps`),
   /** Rewrite them in this order. Whoever made the practice, or an admin. */
   savePracticeSteps: (testId: number, steps: PracticeStep[]) =>
@@ -803,7 +807,13 @@ export type LessonStep =
  *  previous one meanwhile. */
 export interface GrammarLesson { intro: string; steps: LessonStep[]; study?: string; error?: string; writing?: boolean; stale?: boolean }
 /** `practice`: the ids the unit's test is made of (real sentences only: no single words, no conjugation lists). */
-export interface GrammarUnitPage extends GrammarUnit { lesson: GrammarLesson; total: number; practice: number[]; drills: Drill[]; ortografia?: NotaOrtografia | null }
+export interface GrammarUnitPage extends GrammarUnit {
+  lesson: GrammarLesson; total: number; practice: number[]; drills: Drill[];
+  ortografia?: NotaOrtografia | null;
+  /** La portada de la unitat, decidida pel servidor: el dibuix de la unitat, o la primera imatge
+   *  NOSTRA de les frases que cita. Mai una foto trobada (#229). */
+  cover?: string | null;
+}
 /** Pràctica: how the library is offered for practice, and what a session card needs beyond the drill. */
 export interface PracticeCollections {
   days: { day: string; speaker: string; count: number }[];

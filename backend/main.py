@@ -7451,6 +7451,33 @@ def _grammar_unit_rows(db, slug: str, limit: int = 1500):
     return [d for d in rows if slug in grammar_course.parse(d.grammar)]
 
 
+def _grammar_cover(db, slug: str, lesson: dict, rows) -> Optional[str]:
+    """La portada d'una unitat, decidida aquí i no endevinada a la pantalla (#229).
+
+    Era «la imatge de la primera frase que en tingui», i per això la unitat dels possessius
+    s'encapçalava amb una diapositiva d'un projecte de la Viquipèdia en jukun: era la foto que
+    havia heretat una frase, no una portada de res.
+
+    L'ordre ara és: el dibuix que hàgim fet per a la unitat; si no n'hi ha, la primera imatge
+    NOSTRA de les frases que la lliçó cita; i si tampoc, cap. **Una foto trobada no fa de
+    portada**: il·lustra com a molt una paraula, i de vegades ni això.
+    """
+    dibuix = (artwork(db, "grammar") or {}).get(slug)
+    if (dibuix or "").strip():
+        return dibuix
+    for step in (lesson.get("steps") or []):
+        quines = list(step.get("examples") or [])
+        if isinstance(step.get("example"), dict):
+            quines.append(step["example"])
+        for e in quines:
+            if grammar_course.our_picture(e.get("image_url")):
+                return e["image_url"]
+    for d in rows:
+        if grammar_course.our_picture(getattr(d, "image_url", None)):
+            return d.image_url
+    return None
+
+
 def _grammar_unit_payload(db, slug: str, limit: int, force: bool, deep: bool = False):
     unit = next((u for u in grammar_course.UNITS if u["slug"] == slug), None)
     if unit is None:
@@ -7489,6 +7516,7 @@ def _grammar_unit_payload(db, slug: str, limit: int, force: bool, deep: bool = F
     total = len(rows)  # the rows are already every drill of the unit (the query's limit is far above any unit)
     fora = {**{k: unit[k] for k in ("slug", "title", "level")}, "lesson": lesson, "total": total,
             "practice": [d.id for d in practice],
+            "cover": _grammar_cover(db, slug, lesson, rows),
             "drills": [Drill.model_validate(d, from_attributes=True) for d in rows[:max(1, min(limit, 300))]]}
     # La unitat dels sons diu que la mateixa lletra s'escriu de dues maneres (#364). Va aquí i no
     # dins la lliçó perquè la lliçó l'escriu un model i això és un fet comptat: ha de dir sempre
