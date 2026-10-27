@@ -12,6 +12,7 @@ import NotaOrtografia from './NotaOrtografia';
 import AiAssistant from './AiAssistant';
 import { GlossWords } from './WordGloss';
 import SentenceVariants from './SentenceVariants';
+import ExercicisDeLaUnitat from './ExercicisDeLaUnitat';
 import type { Drill } from '../types';
 
 // The grammar course: the library organised as a sequence of grammar units (backend/grammar.py).
@@ -96,7 +97,7 @@ function CourseView() {
 
 // ---------------- the unit: a lesson in cards ----------------
 
-type Card = { type: 'intro' } | LessonStep;
+type Card = { type: 'intro' } | { type: 'exercicis' } | LessonStep;
 
 function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
   const navigate = useNavigate();
@@ -142,7 +143,18 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
     return k >= 0 ? units.slice(k + 1).find((u) => counts[u.slug]) || null : null;
   }, [units, counts, slug]);
 
-  const cards = useMemo<Card[]>(() => (page ? [{ type: 'intro' }, ...page.lesson.steps] : []), [page]);
+  // «Fes-ho tu» va just abans del final: s'ha llegit la unitat i ara es fa (#428). Si la unitat
+  // no en té cap —perquè les seves frases no permeten fer-ne un d'honest— no hi ha targeta.
+  const cards = useMemo<Card[]>(() => {
+    if (!page) return [];
+    const passos: Card[] = [...page.lesson.steps];
+    if (page.exercicis && page.exercicis.length > 0) {
+      const fi = passos.findIndex((s) => s.type === 'end');
+      const fes: Card = { type: 'exercicis' };
+      if (fi >= 0) passos.splice(fi, 0, fes); else passos.push(fes);
+    }
+    return [{ type: 'intro' }, ...passos];
+  }, [page]);
   const card = cards[i];
   // La portada la decideix el servidor (#229): el dibuix de la unitat si n'hi ha, i si no la
   // primera imatge NOSTRA. Aquí s'endevinava —«la primera frase que tingui imatge»— i per això
@@ -222,6 +234,7 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
               {c.type === 'pattern' && <PatternCard step={c} slug={slug} index={k - 1} deep={deep} signedIn={signedIn} onRecord={setRecording} />}
               {c.type === 'quiz' && <QuizCard step={c} chosen={answers[k]} onChoose={(j) => setAnswers((a) => ({ ...a, [k]: j }))} active={false} onEdit={isAdmin ? () => navigate(`/grammar/${slug}/editor?step=${k - 1}`) : undefined} />}
               {(c.type === 'tip' || c.type === 'dialect') && <NoteCard step={c} />}
+              {c.type === 'exercicis' && <ExercicisDeLaUnitat exercicis={page.exercicis} />}
               {c.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} onEdit={() => navigate(`/grammar/${slug}/editor`)} nextUnit={nextUnit} proposals={proposals} onDecided={loadProposals} deep={deep} />}
               {(c.type === 'explain' || c.type === 'tip' || c.type === 'dialect' || c.type === 'intro') && page.lesson.steps.length > 0 && <ProposeChange slug={slug} step={k - 1} current={c.type === 'intro' ? page.lesson.intro : c.text} signedIn={signedIn} onSent={loadProposals} />}
             </div>
@@ -242,6 +255,7 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
             {card.type === 'pattern' && <PatternCard step={card} slug={slug} index={i - 1} deep={deep} signedIn={signedIn} onRecord={setRecording} />}
             {card.type === 'quiz' && <QuizCard step={card} chosen={answers[i]} onChoose={(k) => setAnswers((a) => ({ ...a, [i]: k }))} onEdit={isAdmin ? () => navigate(`/grammar/${slug}/editor?step=${i - 1}`) : undefined} />}
             {(card.type === 'tip' || card.type === 'dialect') && <NoteCard step={card} />}
+            {card.type === 'exercicis' && <ExercicisDeLaUnitat exercicis={page.exercicis} />}
             {card.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} onEdit={() => navigate(`/grammar/${slug}/editor`)} nextUnit={nextUnit} proposals={proposals} onDecided={loadProposals} deep={deep} />}
         {(card.type === 'explain' || card.type === 'tip' || card.type === 'dialect' || card.type === 'intro') && page.lesson.steps.length > 0 && <ProposeChange slug={slug} step={i - 1} current={card.type === 'intro' ? page.lesson.intro : card.text} signedIn={signedIn} onSent={loadProposals} />}
           </div>
