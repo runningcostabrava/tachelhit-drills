@@ -844,3 +844,55 @@ def test_el_pas_dun_so_obre_amb_la_frase_que_lescriu_amb_la_seva_lletra():
     shown = [e["shi"] for e in lesson["steps"][0]["examples"]]
     assert shown[0] == "3afaš", f"primer la que porta la š de debò, i surt {shown}"
     assert set(shown) == {"Shore", "tshua", "3afaš", "Sharjm"}, "i no se'n perd cap"
+
+
+def test_el_titol_que_anomena_una_lletra_la_pinta_en_tifinag():
+    """«Consonants emfàtiques: ṭ, ḍ, ṣ, ẓ» citava quatre lletres i no en pintava cap (#366), i
+    el títol és el lloc on més es mira de la secció. S'arregla en servir: una lliçó ja escrita no
+    ha d'esperar que algú la reescrigui."""
+    import grammar as grammar_course
+
+    lesson = {"intro": "", "steps": [
+        {"type": "explain", "title": "Consonants emfàtiques: ṭ, ḍ, ṣ, ẓ", "text": "t", "examples": []},
+        {"type": "explain", "title": "Les vocals bàsiques: a, i, u", "text": "t", "examples": []},
+        {"type": "explain", "title": "El so 'gh ⵖ': una 'r' francesa", "text": "t", "examples": []},
+        {"type": "explain", "title": "Els noms: masculí i femení", "text": "t", "examples": []},
+        {"type": "end"}]}
+    grammar_course.amb_lletres_als_titols(lesson)
+    titols = [s.get("title") for s in lesson["steps"]]
+    assert titols[0] == "Consonants emfàtiques: ṭ ⵟ, ḍ ⴹ, ṣ ⵚ, ẓ ⵥ", titols[0]
+    assert titols[1] == "Les vocals bàsiques: a ⴰ, i ⵉ, u ⵓ", titols[1]
+    assert titols[2] == "El so 'gh ⵖ': una 'r' francesa", "el que ja en porta no es toca"
+    assert titols[3] == "Els noms: masculí i femení", "i un títol sense lletres amazigues tampoc"
+
+
+def test_la_seccio_de_les_vocals_ensenya_paraules_que_en_porten():
+    """«Fixa't com apareixen en aquests exemples» damunt de `Zr` i `trt`, que no porten cap
+    vocal, és el contrari d'ensenyar (#365). Al davant, una paraula per vocal i curta."""
+    import grammar as grammar_course
+
+    def ex(i, shi):
+        return {"id": i, "shi": shi, "ca": "x", "audio_url": None}
+
+    lesson = {"intro": "", "steps": [
+        {"type": "explain", "title": "Les vocals bàsiques: a, i, u", "text": "t",
+         "examples": [ex(1, "Zr"), ex(2, "trt"), ex(3, "bba"), ex(4, "illi"), ex(5, "udm"),
+                      ex(6, "aman n tagant")]},
+        {"type": "end"}]}
+    grammar_course.with_the_sound_it_teaches(lesson, grammar_course.SOUNDS_UNIT)
+    mostra = [e["shi"] for e in lesson["steps"][0]["examples"]]
+    assert "Zr" not in mostra and "trt" not in mostra, f"fora les que no en porten cap: {mostra}"
+    assert mostra[:3] == ["bba", "illi", "udm"], f"una de cada vocal i les curtes primer: {mostra}"
+    assert "aman n tagant" in mostra, "i no se'n perd cap de les que sí que en porten"
+
+
+def test_un_pas_de_vocals_sense_cap_exemple_bo_es_queda_com_esta():
+    """Un pas sense cap exemple seria pitjor que un pas amb exemples barrejats."""
+    import grammar as grammar_course
+
+    lesson = {"intro": "", "steps": [
+        {"type": "explain", "title": "Les vocals bàsiques: a, i, u", "text": "t",
+         "examples": [{"id": 1, "shi": "Zr", "ca": "veure"}]},
+        {"type": "end"}]}
+    grammar_course.with_the_sound_it_teaches(lesson, grammar_course.SOUNDS_UNIT)
+    assert [e["shi"] for e in lesson["steps"][0]["examples"]] == ["Zr"]
