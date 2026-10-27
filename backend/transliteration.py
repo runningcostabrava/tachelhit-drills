@@ -141,6 +141,18 @@ def to_forms(raw: str) -> dict:
     }
 
 
+def phonemes(raw: str) -> list:
+    """Els fonemes d'una paraula, en ordre, tal com els llegeix aquest mòdul.
+
+    `key` ja els dona ajuntats i sense repetits; això els dona un per un i sencers, que és el que
+    cal per saber si una paraula PORTA una lletra i en quina posició (l'abecedari del #368: la ɣ
+    no sona igual al començament que al final). El que no és una lletra —espais, comes, xifres—
+    no hi surt.
+    """
+    return [v for kind, v in _tokenize(unicodedata.normalize("NFC", raw or "").lower())
+            if kind == "phon" and v != "ʷ"]
+
+
 def phonemic_key(raw: str) -> str:
     """Just the matching key — for search / dedup / pronunciation scoring."""
     return to_forms(raw)["key"]

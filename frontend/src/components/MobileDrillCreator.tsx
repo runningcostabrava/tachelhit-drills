@@ -23,6 +23,11 @@ const errMsg = (err: any, fallback: string) =>
 
 const isOnline = async () => (await Network.getStatus()).connected;
 
+/** On es guarda el que s'escriu mentre la frase no és desada. */
+const ESBORRANY = 'td_esborrany_frase';
+
+const hasText = (d: Partial<Drill>) => !!(d.text_catalan?.trim() || d.text_tachelhit?.trim() || d.text_arabic?.trim());
+
 /**
  * "Nou drill" sheet.
  *
@@ -53,6 +58,35 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     // uploads) must not save a stale closure of `drill`.
     const drillRef = useRef(drill);
     drillRef.current = drill;
+
+    // L'esborrany: el que s'ha escrit no es perd.
+    //
+    // Fer una frase nova es fa sovint amb algú al davant dient-la, i qualsevol cosa —una
+    // trucada, tancar sense voler— deixava la pantalla en blanc la propera vegada (#372). El
+    // text viu al dispositiu mentre no s'ha desat, i marxa quan la frase ja és a la biblioteca.
+    const [recuperat, setRecuperat] = useState(false);
+    useEffect(() => {
+        try {
+            const cru = localStorage.getItem(ESBORRANY);
+            if (!cru) return;
+            const d = JSON.parse(cru) as Partial<Drill>;
+            if (!hasText(d)) return;
+            setDrill(prev => ({ ...prev, text_catalan: d.text_catalan || '', text_tachelhit: d.text_tachelhit || '', text_arabic: d.text_arabic || '', tag: d.tag || '' }));
+            setRecuperat(true);
+        } catch { /* sense magatzem no hi ha esborrany, i prou */ }
+    }, []);
+    useEffect(() => {
+        try {
+            if (hasText(drill)) {
+                localStorage.setItem(ESBORRANY, JSON.stringify({
+                    text_catalan: drill.text_catalan, text_tachelhit: drill.text_tachelhit,
+                    text_arabic: drill.text_arabic, tag: drill.tag,
+                }));
+            } else {
+                localStorage.removeItem(ESBORRANY);
+            }
+        } catch { /* ídem */ }
+    }, [drill.text_catalan, drill.text_tachelhit, drill.text_arabic, drill.tag]);
 
     // What the library may already hold that says this. Looked up when you stop typing, not on
     // every keystroke, and never blocking: it is something to know, not a rule.
@@ -93,7 +127,6 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
     const licenseFor = () => (corpusConsent ? 'CC-BY-SA' : 'private');
 
-    const hasText = (d: Partial<Drill>) => !!(d.text_catalan?.trim() || d.text_tachelhit?.trim() || d.text_arabic?.trim());
     const hasMedia = (d: Partial<Drill>) => !!(d.audio_url || d.video_url || d.image_url);
 
     /** Create the server drill once and return its id (serialised). */
@@ -389,6 +422,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 text_catalan: d.text_catalan, text_tachelhit: d.text_tachelhit,
                 text_arabic: d.text_arabic, tag: d.tag,
             });
+            try { localStorage.removeItem(ESBORRANY); } catch { /* res a esborrar */ }
             toast.success('Drill desat');
             onDrillCreated(serverIdRef.current ?? undefined);
         } catch (err: any) {
@@ -437,6 +471,46 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px', paddingBottom: 'calc(120px + env(safe-area-inset-bottom, 0px))' }}>
+                {/* Què cal de debò, dit abans de res: una frase i què vol dir. Tot el que ve
+                    després —la veu, la imatge, el poble— es pot afegir un altre dia, i el que
+                    s'ha escrit no es perd si se'n surt (#372). */}
+                <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.5, color: 'var(--text-soft)' }}>
+                    Només calen dues coses: <strong style={{ color: 'var(--text)' }}>la frase en amazic</strong> i{' '}
+                    <strong style={{ color: 'var(--text)' }}>què vol dir</strong>. La veu, la imatge i el poble es poden
+                    afegir més tard.
+                </p>
+                {recuperat && (
+                    <div style={{ padding: '10px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--emerald)', background: 'var(--emerald-soft)', color: 'var(--emerald)', fontSize: '13px', fontWeight: 700 }}>
+                        Això és el que escrivies l'última vegada. Continua on eres.
+                    </div>
+                )}
+                <div style={{ background: 'var(--surface)', padding: '20px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div><label htmlFor="new-catalan" style={labelStyle}>Català</label><textarea id="new-catalan" lang="ca" value={drill.text_catalan || ''} onChange={(e) => setField('text_catalan', e.target.value)} onBlur={(e) => { if (!(drill.text_tachelhit || '').trim()) lookForTwins(e.target.value, 'catalan'); }} rows={3} style={inputStyle} /></div>
+                    <div><label htmlFor="new-tachelhit" style={labelStyle}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label><textarea id="new-tachelhit" lang="shi" autoCapitalize="off" autoCorrect="off" spellCheck={false} value={drill.text_tachelhit || ''} onChange={(e) => setField('text_tachelhit', e.target.value)} onBlur={(e) => lookForTwins(e.target.value, 'tachelhit')} rows={3} style={{ ...inputStyle, color: 'var(--brand-1)', fontWeight: 700, fontFamily: 'var(--font-tifinagh)' }} /></div>
+
+                    {/* The library may already say this. Not a rule — saying it another way is what
+                        the variants are for — but you should know before writing a second copy. */}
+                    {already.length > 0 && (
+                        <div style={{ padding: '12px 14px', borderRadius: 'var(--r-lg)', border: '1px solid var(--amber-strong, #8a6100)', background: 'var(--amber-soft, #fdf3e0)', fontSize: '13px', lineHeight: 1.5 }}>
+                            <strong>{already.length === 1 ? 'La biblioteca ja diu això.' : `La biblioteca ja diu això de ${already.length} maneres.`}</strong>{' '}
+                            Si la teva és una altra manera de dir-la, millor apuntar-la com a variant de la que hi ha que no pas fer-ne una de nova.
+                            <ul style={{ margin: '8px 0 0', paddingInlineStart: 18 }}>
+                                {already.map((m) => (
+                                    <li key={m.id} style={{ marginBottom: 3 }}>
+                                        <span style={{ fontWeight: 700 }}>{m.text_tachelhit || '—'}</span>
+                                        {m.text_catalan ? <span style={{ color: 'var(--text-soft)' }}> · {m.text_catalan}</span> : null}
+                                        {m.author ? <span style={{ color: 'var(--text-muted)' }}> · {m.author}</span> : null}
+                                        {m.has_voice ? <span style={{ color: 'var(--emerald)' }}> · amb veu</span> : null}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                    <div><label htmlFor="new-arabic" style={labelStyle}>Àrab (العربية)</label><textarea id="new-arabic" lang="ar" dir="rtl" value={drill.text_arabic || ''} onChange={(e) => setField('text_arabic', e.target.value)} rows={2} style={inputStyle} /></div>
+                    <div><label htmlFor="new-tag" style={labelStyle}>Tag</label><input id="new-tag" type="text" value={drill.tag || ''} onChange={(e) => setField('tag', e.target.value)} style={inputStyle} /></div>
+                    {serverId && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Drill #{serverId}</div>}
+                </div>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Hi pots afegir veu, foto o vídeo</div>
                 <div style={{ background: 'var(--surface)', padding: '16px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)' }}>
                     <div style={{ gridTemplateColumns: 'repeat(5, 1fr)', display: 'grid', gap: '8px' }}>
                         <button onClick={capturePhoto} disabled={disabled} aria-label="Fes una foto" style={tileStyle('var(--emerald-soft)', 'var(--emerald)')}><FaCamera size={20} />Foto</button>
@@ -551,32 +625,6 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                     <span>Consento que aquesta gravació s'afegeixi al corpus per documentar la llengua (CC BY-SA). Desmarca-ho per mantenir-la privada.</span>
                 </label>
 
-                <div style={{ background: 'var(--surface)', padding: '20px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div><label htmlFor="new-catalan" style={labelStyle}>Català</label><textarea id="new-catalan" lang="ca" value={drill.text_catalan || ''} onChange={(e) => setField('text_catalan', e.target.value)} onBlur={(e) => { if (!(drill.text_tachelhit || '').trim()) lookForTwins(e.target.value, 'catalan'); }} rows={3} style={inputStyle} /></div>
-                    <div><label htmlFor="new-tachelhit" style={labelStyle}>Tachelhit (ⵜⴰⵛⵍⵃⵉⵜ)</label><textarea id="new-tachelhit" lang="shi" autoCapitalize="off" autoCorrect="off" spellCheck={false} value={drill.text_tachelhit || ''} onChange={(e) => setField('text_tachelhit', e.target.value)} onBlur={(e) => lookForTwins(e.target.value, 'tachelhit')} rows={3} style={{ ...inputStyle, color: 'var(--brand-1)', fontWeight: 700, fontFamily: 'var(--font-tifinagh)' }} /></div>
-
-                    {/* The library may already say this. Not a rule — saying it another way is what
-                        the variants are for — but you should know before writing a second copy. */}
-                    {already.length > 0 && (
-                        <div style={{ padding: '12px 14px', borderRadius: 'var(--r-lg)', border: '1px solid var(--amber-strong, #8a6100)', background: 'var(--amber-soft, #fdf3e0)', fontSize: '13px', lineHeight: 1.5 }}>
-                            <strong>{already.length === 1 ? 'La biblioteca ja diu això.' : `La biblioteca ja diu això de ${already.length} maneres.`}</strong>{' '}
-                            Si la teva és una altra manera de dir-la, millor apuntar-la com a variant de la que hi ha que no pas fer-ne una de nova.
-                            <ul style={{ margin: '8px 0 0', paddingInlineStart: 18 }}>
-                                {already.map((m) => (
-                                    <li key={m.id} style={{ marginBottom: 3 }}>
-                                        <span style={{ fontWeight: 700 }}>{m.text_tachelhit || '—'}</span>
-                                        {m.text_catalan ? <span style={{ color: 'var(--text-soft)' }}> · {m.text_catalan}</span> : null}
-                                        {m.author ? <span style={{ color: 'var(--text-muted)' }}> · {m.author}</span> : null}
-                                        {m.has_voice ? <span style={{ color: 'var(--emerald)' }}> · amb veu</span> : null}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    )}
-                    <div><label htmlFor="new-arabic" style={labelStyle}>Àrab (العربية)</label><textarea id="new-arabic" lang="ar" dir="rtl" value={drill.text_arabic || ''} onChange={(e) => setField('text_arabic', e.target.value)} rows={2} style={inputStyle} /></div>
-                    <div><label htmlFor="new-tag" style={labelStyle}>Tag</label><input id="new-tag" type="text" value={drill.tag || ''} onChange={(e) => setField('tag', e.target.value)} style={inputStyle} /></div>
-                    {serverId && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Drill #{serverId}</div>}
-                </div>
             </div>
         </div>
     );
