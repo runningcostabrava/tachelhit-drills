@@ -1173,23 +1173,36 @@ def test_una_seccio_pot_dir_que_el_que_ensenya_es_diu_sencer():
     finally:
         db.close()
 
-    client.put("/method/els-convidats/content", headers=hdr, json={
-        "intro": "Rebre algú a casa.",
-        "sections": [
-            {"id": "acomiadar", "title": "Acomiadar-se", "formula": True,
-             "examples": [{"shi": "add yawi ṛbbi sslamt", "ca": "Que Déu t'acompanyi"}]},
-            {"id": "com-estas", "title": "Com estàs?",
-             "examples": [{"shi": "manza k-inn?", "ca": "Com estàs?"}]},
-        ]})
+    try:
+        client.put("/method/els-convidats/content", headers=hdr, json={
+            "intro": "Rebre algú a casa.",
+            "sections": [
+                {"id": "acomiadar", "title": "Acomiadar-se", "formula": True,
+                 "examples": [{"shi": "add yawi ṛbbi sslamt", "ca": "Que Déu t'acompanyi"}]},
+                {"id": "com-estas", "title": "Com estàs?",
+                 "examples": [{"shi": "manza k-inn?", "ca": "Com estàs?"}]},
+            ]})
 
-    seccions = {s["id"]: s for s in client.get("/method/els-convidats").json()["content"]["sections"]}
-    assert seccions["acomiadar"]["formula"] is True, "la fórmula es diu sencera"
-    assert "formula" not in seccions["com-estas"], "i la secció on desmuntar cal, no ho diu"
+        seccions = {s["id"]: s for s in client.get("/method/els-convidats").json()["content"]["sections"]}
+        assert seccions["acomiadar"]["formula"] is True, "la fórmula es diu sencera"
+        assert "formula" not in seccions["com-estas"], "i la secció on desmuntar cal, no ho diu"
 
-    # i una correcció del text no s'endú la marca
-    client.put("/method/els-convidats/content", headers=hdr, json={
-        "intro": "Rebre algú a casa, i acomiadar-lo.",
-        "sections": [dict(seccions["acomiadar"], text="El que es diu en marxar."),
-                     seccions["com-estas"]]})
-    tornada = {s["id"]: s for s in client.get("/method/els-convidats").json()["content"]["sections"]}
-    assert tornada["acomiadar"]["formula"] is True
+        # i una correcció del text no s'endú la marca
+        client.put("/method/els-convidats/content", headers=hdr, json={
+            "intro": "Rebre algú a casa, i acomiadar-lo.",
+            "sections": [dict(seccions["acomiadar"], text="El que es diu en marxar."),
+                         seccions["com-estas"]]})
+        tornada = {s["id"]: s for s in client.get("/method/els-convidats").json()["content"]["sections"]}
+        assert tornada["acomiadar"]["formula"] is True
+    finally:
+        # La base de proves no es llença entre execucions, i hi ha una prova que diu
+        # «index["els-convidats"]["written"] is False»: el capítol que s'escriu aquí s'ha de
+        # treure, passi el que passi. En local no es veia —el fitxer ja venia escrit d'abans—;
+        # a la CI, amb la base buida, queia la prova de l'altre.
+        db = main.SessionLocal()
+        try:
+            from models import MethodChapter
+            db.query(MethodChapter).filter(MethodChapter.slug == "els-convidats").delete()
+            db.commit()
+        finally:
+            db.close()

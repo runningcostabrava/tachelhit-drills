@@ -592,6 +592,8 @@ export const api = {
 
   // --- AI Space health (reliability) ---
   spacesHealth: () => request<SpacesHealth>('/health/spaces'),
+  /** Quina màquina fa cada feina i si ara mateix contesta (#295). */
+  serveis: () => request<Serveis>('/serveis'),
   wakeSpaces: (only?: string[]) =>
     request<{ waking: string[] }>(`/health/spaces/wake${only && only.length ? `?only=${only.join(',')}` : ''}`, { method: 'POST' }),
 
@@ -798,6 +800,16 @@ export interface PracticeCollections {
 }
 /** Where one word is spoken: the recording, and the seconds it sits between. `source`:
  *  'library' = one of our speakers, with a name; 'tosd' = the open corpus, anonymous. */
+/** Una feina i qui la pot fer, amb l'estat de cadascú ara mateix (#295). */
+export interface Serveis {
+  feines: {
+    id: string; titol: string; explica: string; regla: string; funciona: boolean;
+    qui: { nom: string; mena: string; paper: string; estat: string; diu: string }[];
+  }[];
+  aturades: string[];
+  avis: string;
+  regles: string[];
+}
 export interface WordClip {
   word: string; drill_id: number; audio_url: string; start: number; end: number;
   speaker: string | null; source: string; sentence: string | null; meaning: string | null;
