@@ -9,6 +9,7 @@ import { preferredRecorderMime } from '../utils/media';
 import { saveDone } from './PracticePage';
 import StepSession from './StepSession';
 import WordGloss from './WordGloss';
+import SentenceVariants from './SentenceVariants';
 
 // One practice session: up to 10 sentences said by our speakers.
 //
@@ -333,6 +334,9 @@ function SessioDEscoltar() {
         </p>
         <p style={{ margin: 0, fontSize: 15, color: 'var(--text-soft)' }}>{drill.text_catalan}</p>
         <WordGloss drill={drill} size="sm" />
+        {/* I com ho diu qui ho diu d'una altra manera (#239): es veia només allà on es grava, i
+            aquí és on s'està aprenent la frase. */}
+        <SentenceVariants variants={card?.variants} size="sm" />
         {drill.source_url && <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>Font: {drill.source_channel || 'vídeo original'}{drill.source_title ? ` · «${drill.source_title}»` : ''} · <a href={drill.source_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-1)', fontWeight: 700 }}>vídeo original ↗</a></p>}
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={() => play(1)} disabled={!voice} style={{ ...btn('primary'), flex: 1, height: 44, fontSize: 14 }}><FaPlay size={12} /> Escolta</button>

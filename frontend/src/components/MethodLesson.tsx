@@ -8,7 +8,7 @@ import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import RecordAudioModal from './RecordAudioModal';
 import { GlossWords } from './WordGloss';
-import SentenceVariants from './SentenceVariants';
+import SentenceVariants, { type Variant } from './SentenceVariants';
 import MethodExercises from './MethodExercises';
 
 // La lliçó d'un capítol: l'explicació, el diàleg i el vocabulari.
@@ -349,7 +349,7 @@ function CdVeu({ cd }: { cd: MethodCd }) {
 
 function BookLine({
   slug, where, look, who, shi, ca, note, gloss, drillId, canEdit, extra, audio, image,
-  speaker, region, heard, cd, failed, playing, onPlay, onSave, onRecorded, formula,
+  speaker, region, heard, cd, failed, playing, onPlay, onSave, onRecorded, formula, variants,
 }: {
   slug: string; where: Where; look: 'row' | 'turn' | 'word';
   who?: string; shi: string; ca?: string; note?: string; tif?: string | null; gloss?: MethodGloss[];
@@ -367,6 +367,9 @@ function BookLine({
   onRecorded: (drillId: number) => void;
   /** És una secció de fórmules: el que s'hi diu es diu sencer (#289). */
   formula?: boolean;
+  /** Com ho diu qui ho diu d'una altra manera (#239). Al diàleg és on més importa: el text ve
+   *  del manual i és del Souss. */
+  variants?: Variant[] | null;
 }) {
   const [edit, setEdit] = useState<{ shi: string; ca: string } | null>(null);
   const [saving, setSaving] = useState(false);
@@ -507,6 +510,9 @@ function BookLine({
             {cd && <CdVeu cd={cd} />}
           </span>
           {extra}
+          {variants && variants.length > 0 && (
+            <span style={{ flexBasis: '100%' }}><SentenceVariants variants={variants} size="sm" /></span>
+          )}
           {tools}
         </div>
       </div>
@@ -730,7 +736,7 @@ export default function MethodLesson({
                 return (
                   <BookLine key={k} slug={slug} where={where} look="turn" who={t.who}
                             shi={t.shi} ca={t.ca} tif={t.tif} gloss={t.gloss}
-                            drillId={t.drill_id} canEdit={canEdit}
+                            drillId={t.drill_id} canEdit={canEdit} variants={t.variants}
                             audio={t.audio_url} speaker={t.speaker} region={t.region}
                             failed={!!broken[`turn:${k}`]}
                             playing={sounding === `turn:${k}`} onPlay={() => playOne(`turn:${k}`)}
