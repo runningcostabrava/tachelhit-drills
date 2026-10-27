@@ -5,7 +5,7 @@ import axios from 'axios';
 import { API_BASE } from './config';
 import { api } from './api';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaBookOpen, FaMicrophone, FaInfo, FaSearch, FaPlus, FaFeatherAlt } from 'react-icons/fa';
+import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaBookOpen, FaMicrophone, FaInfo, FaSearch, FaPlus, FaFeatherAlt, FaFont } from 'react-icons/fa';
 import { syncManager } from './services/OfflineSyncManager';
 import * as cuaDeVeus from './services/cuaDeVeus';
 import ToastHost from './components/ToastHost';
@@ -43,6 +43,7 @@ const LessonEditor = lazy(() => import('./components/LessonEditor'));
 const StoriesPage = lazy(() => import('./components/StoriesPage'));
 const ListenPage = lazy(() => import('./components/ListenPage'));
 const GrammarPage = lazy(() => import('./components/GrammarPage'));
+const AlfabetPage = lazy(() => import('./components/AlfabetPage'));
 const PracticeEditor = lazy(() => import('./components/PracticeEditor'));
 const VerifyQueue = lazy(() => import('./components/VerifyQueue'));
 
@@ -170,6 +171,9 @@ function App() {
     { to: '/stories', label: 'Històries', Icon: FaFeatherAlt },
     { to: '/metode', label: 'Mètode', Icon: FaBookOpen },
     { to: '/grammar', label: 'Gramàtica', Icon: FaBook },
+    // Els sons i l'escriptura són una secció pròpia, al mateix nivell que la Gramàtica i el
+    // Mètode (#368): l'abecedari que sona no és un apèndix d'una lliçó.
+    { to: '/alfabet', label: 'Sons', Icon: FaFont },
     { to: '/tests', label: 'Pràctica', Icon: FaGraduationCap },
     { to: '/veus', label: 'Posa-hi veu', Icon: FaMicrophone },   // the route keeps its old name: links point at it
     { to: '/video-creator', label: 'Captura', Icon: FaVideo },
@@ -272,6 +276,7 @@ function App() {
         <Route path="/listen" element={<ListenPage />} />
         <Route path="/stories" element={<StoriesPage />} />
         <Route path="/stories/:slug" element={<StoriesPage />} />
+        <Route path="/alfabet" element={<AlfabetPage />} />
         <Route path="/grammar" element={<GrammarPage />} />
         <Route path="/grammar/:slug" element={<GrammarPage />} />
         <Route path="/grammar/:slug/editor" element={<LessonEditor />} />
