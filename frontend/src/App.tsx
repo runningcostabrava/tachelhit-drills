@@ -18,37 +18,73 @@ import './App.css';
 
 // Route-level code splitting: each page loads its chunk on first visit,
 // keeping the initial bundle small (AG Grid, players, creators all split out)
-const HomePage = lazy(() => import('./components/HomePage'));
-const SearchPage = lazy(() => import('./components/SearchPage'));
-const AddSentencePage = lazy(() => import('./components/AddSentencePage'));
-const DrillsResponsive = lazy(() => import('./components/DrillsResponsive'));
-const TestsDashboard = lazy(() => import('./components/TestsDashboard'));
-const PracticePage = lazy(() => import('./components/PracticePage'));
-const PracticeSession = lazy(() => import('./components/PracticeSession'));
-const PracticeGroupPage = lazy(() => import('./components/PracticeGroupPage'));
-const VeusPage = lazy(() => import('./components/VeusPage'));
-const UserPage = lazy(() => import('./components/UserPage'));
-const DrillPlayerPage = lazy(() => import('./components/DrillPlayerPage'));
-const PublicTestView = lazy(() => import('./components/PublicTestView'));
-const VideoDrillCreator = lazy(() => import('./components/VideoDrillCreator'));
-const SrtImport = lazy(() => import('./components/SrtImport'));
-const VideoLibraryPage = lazy(() => import('./components/VideoLibraryPage'));
-const CaptureReview = lazy(() => import('./components/CaptureReview'));
-const MethodPage = lazy(() => import('./components/MethodPage'));
-const MethodChapter = lazy(() => import('./components/MethodChapter'));
-const ProfilePage = lazy(() => import('./components/ProfilePage'));
-const AuthPage = lazy(() => import('./components/AuthPage'));
-const CorpusPage = lazy(() => import('./components/CorpusPage'));
-const CreditsPage = lazy(() => import('./components/CreditsPage'));
-const ServeisPage = lazy(() => import('./components/ServeisPage'));
-const LessonEditor = lazy(() => import('./components/LessonEditor'));
-const StoriesPage = lazy(() => import('./components/StoriesPage'));
-const ListenPage = lazy(() => import('./components/ListenPage'));
-const GrammarPage = lazy(() => import('./components/GrammarPage'));
-const AlfabetPage = lazy(() => import('./components/AlfabetPage'));
-const PracticeEditor = lazy(() => import('./components/PracticeEditor'));
-const VerifyQueue = lazy(() => import('./components/VerifyQueue'));
-const RevisaPage = lazy(() => import('./components/RevisaPage'));
+/**
+ * Baixar la pantalla, i si falla perquè l'app s'ha actualitzat, tornar-hi.
+ *
+ * Cada pantalla és un tros de programa a part i el seu nom porta una empremta del contingut.
+ * En publicar una versió nova, els trossos vells deixen d'existir: qui tenia l'app oberta,
+ * en canviar de pantalla, demana un fitxer que ja no hi és. Això no és «no hi ha servidor»
+ * —que vol dir espera't o mira el wifi— sinó «m'acabo d'actualitzar», que vol dir recarrega.
+ *
+ * I si ho sabem, no cal ni dir-ho: es recarrega sol. Una vegada. Si després de recarregar
+ * torna a fallar, el problema no és la versió nova i aleshores sí que s'ha de dir, perquè
+ * amagar-ho deixaria l'app donant voltes.
+ */
+const JA_RECARREGADA = 'app.recarregada-per-versio-nova';
+// Les pantalles tenen propietats de tota mena i aqui no se'n mira cap: nomes es baixen.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function lazyPagina<T extends React.ComponentType<any>>(carrega: () => Promise<{ default: T }>) {
+  return lazy(async () => {
+    try {
+      const m = await carrega();
+      try { sessionStorage.removeItem(JA_RECARREGADA); } catch { /* finestra privada */ }
+      return m;
+    } catch (e) {
+      let tornada = true;
+      try { tornada = sessionStorage.getItem(JA_RECARREGADA) !== '1'; } catch { tornada = false; }
+      if (tornada) {
+        try { sessionStorage.setItem(JA_RECARREGADA, '1'); } catch { /* finestra privada */ }
+        window.location.reload();
+        // La pàgina se'n va: aquesta promesa no s'ha de resoldre mai, o React pintaria
+        // l'error mig segon abans de marxar.
+        return new Promise<never>(() => {});
+      }
+      throw e;
+    }
+  });
+}
+
+const HomePage = lazyPagina(() => import('./components/HomePage'));
+const SearchPage = lazyPagina(() => import('./components/SearchPage'));
+const AddSentencePage = lazyPagina(() => import('./components/AddSentencePage'));
+const DrillsResponsive = lazyPagina(() => import('./components/DrillsResponsive'));
+const TestsDashboard = lazyPagina(() => import('./components/TestsDashboard'));
+const PracticePage = lazyPagina(() => import('./components/PracticePage'));
+const PracticeSession = lazyPagina(() => import('./components/PracticeSession'));
+const PracticeGroupPage = lazyPagina(() => import('./components/PracticeGroupPage'));
+const VeusPage = lazyPagina(() => import('./components/VeusPage'));
+const UserPage = lazyPagina(() => import('./components/UserPage'));
+const DrillPlayerPage = lazyPagina(() => import('./components/DrillPlayerPage'));
+const PublicTestView = lazyPagina(() => import('./components/PublicTestView'));
+const VideoDrillCreator = lazyPagina(() => import('./components/VideoDrillCreator'));
+const SrtImport = lazyPagina(() => import('./components/SrtImport'));
+const VideoLibraryPage = lazyPagina(() => import('./components/VideoLibraryPage'));
+const CaptureReview = lazyPagina(() => import('./components/CaptureReview'));
+const MethodPage = lazyPagina(() => import('./components/MethodPage'));
+const MethodChapter = lazyPagina(() => import('./components/MethodChapter'));
+const ProfilePage = lazyPagina(() => import('./components/ProfilePage'));
+const AuthPage = lazyPagina(() => import('./components/AuthPage'));
+const CorpusPage = lazyPagina(() => import('./components/CorpusPage'));
+const CreditsPage = lazyPagina(() => import('./components/CreditsPage'));
+const ServeisPage = lazyPagina(() => import('./components/ServeisPage'));
+const LessonEditor = lazyPagina(() => import('./components/LessonEditor'));
+const StoriesPage = lazyPagina(() => import('./components/StoriesPage'));
+const ListenPage = lazyPagina(() => import('./components/ListenPage'));
+const GrammarPage = lazyPagina(() => import('./components/GrammarPage'));
+const AlfabetPage = lazyPagina(() => import('./components/AlfabetPage'));
+const PracticeEditor = lazyPagina(() => import('./components/PracticeEditor'));
+const VerifyQueue = lazyPagina(() => import('./components/VerifyQueue'));
+const RevisaPage = lazyPagina(() => import('./components/RevisaPage'));
 
 const RouteLoader = () => (
   <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
