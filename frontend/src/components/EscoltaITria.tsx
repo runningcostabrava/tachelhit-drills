@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FaCheck, FaRedo, FaTimes, FaVolumeUp } from 'react-icons/fa';
 import type { Drill } from '../types';
 import Frase from './Frase';
@@ -32,18 +32,29 @@ const OPCIONS = 4;
 
 const veu = (d: Drill) => (d.audio_url || '').trim();
 const escrit = (d: Drill) => (d.text_tachelhit || '').trim();
+const vol_dir = (d: Drill) => (d.text_catalan || '').trim();
 const mots = (t: string) => t.toLowerCase().split(/[^\p{L}\p{N}ʷ]+/u).filter((w) => w.length > 1);
 const barreja = <T,>(x: T[]) => x.map((v) => ({ v, k: Math.random() })).sort((a, b) => a.k - b.k).map((o) => o.v);
 
-/** Les tres falses: d'una llargada semblant i, quan es pugui, que comparteixin alguna paraula. */
-function distraccions(bona: Drill, totes: Drill[], quantes: number): Drill[] {
-  const bo = escrit(bona);
+/**
+ * Les tres falses: d'una llargada semblant i, quan es pugui, que comparteixin alguna paraula.
+ *
+ * Això no és un detall de presentació, és el que fa que l'exercici mesuri alguna cosa. Amb tres
+ * opcions a l'atzar —«el llop se'l va menjar» contra «vaig comprar pa» contra «fa fred»—
+ * qualsevol les descarta per eliminació sense haver entès res, i el que es mesura és la sort.
+ *
+ * `mira` diu en quin text es busca la semblança: l'amazic quan es tria la frase, el català quan
+ * es tria el significat.
+ */
+function distraccions(bona: Drill, totes: Drill[], quantes: number,
+                      mira: (d: Drill) => string = escrit): Drill[] {
+  const bo = mira(bona);
   const seus = new Set(mots(bo));
   const pesades = totes
-    .filter((d) => d.id !== bona.id && escrit(d) && escrit(d) !== bo)
+    .filter((d) => d.id !== bona.id && mira(d) && mira(d) !== bo)
     .map((d) => {
-      const compartides = mots(escrit(d)).filter((w) => seus.has(w)).length;
-      return { d, pes: Math.abs(escrit(d).length - bo.length) - compartides * 6 };
+      const compartides = mots(mira(d)).filter((w) => seus.has(w)).length;
+      return { d, pes: Math.abs(mira(d).length - bo.length) - compartides * 6 };
     })
     .sort((a, b) => a.pes - b.pes);
   // De les més semblants, tres a l'atzar: si sempre fossin les tres primeres, la segona vegada
@@ -51,9 +62,21 @@ function distraccions(bona: Drill, totes: Drill[], quantes: number): Drill[] {
   return barreja(pesades.slice(0, quantes * 3)).slice(0, quantes).map((x) => x.d);
 }
 
+/**
+ * Què es tria.
+ *
+ * `frase` — sona una línia i es tria **quina de les quatre frases amaziges** és: lliga el que se
+ * sent amb el que està escrit (#387).
+ * `traduccio` — es té la frase al davant i es tria **què vol dir**: una destresa diferent, perquè
+ * es pot reconèixer la forma d'una frase sense entendre-la.
+ */
+export type Mena = 'frase' | 'traduccio';
+
 export interface EscoltaITriaProps {
   /** Les línies de la història, en ordre. */
   drills: Drill[];
+  /** Què es tria: la frase que sona o el seu significat. Per defecte, la frase. */
+  mena?: Mena;
   /** Fer sonar la veu d'una línia amb el reproductor de la història. */
   sona: (d: Drill) => void | Promise<void>;
   /** Aturar el que soni ara. */
@@ -61,7 +84,7 @@ export interface EscoltaITriaProps {
   onTanca: () => void;
 }
 
-export default function EscoltaITria({ drills, sona, atura, onTanca }: EscoltaITriaProps) {
+export default function EscoltaITria({ drills, sona, atura, onTanca, mena = 'frase' }: EscoltaITriaProps) {
   const [ronda, setRonda] = useState(0);
   const [i, setI] = useState(0);
   const [tria, setTria] = useState<number | null>(null);
@@ -70,30 +93,57 @@ export default function EscoltaITria({ drills, sona, atura, onTanca }: EscoltaIT
   // Les preguntes d'aquesta ronda. Es trien una vegada: si es recalculessin a cada pintada, les
   // opcions ballarien sota el dit.
   const preguntes = useMemo(() => {
-    const bones = drills.filter((d) => veu(d) && escrit(d));
+    // Per triar el significat no cal que la línia tingui veu —es llegeix—, però sí que el
+    // significat l'hagi escrit algú: una traducció de màquina com a resposta bona diria que és
+    // certa una cosa que no ha mirat ningú.
+    const mira = mena === 'traduccio' ? vol_dir : escrit;
+    const bones = drills.filter((d) => escrit(d) && (mena === 'traduccio' ? vol_dir(d) : veu(d)));
     return barreja(bones).slice(0, RONDA).map((bona) => ({
       bona,
-      opcions: barreja([bona, ...distraccions(bona, drills, OPCIONS - 1)]),
+      opcions: barreja([bona, ...distraccions(bona, drills, OPCIONS - 1, mira)]),
     }));
     // `ronda` hi és a posta: demanar-ne una altra vol dir tornar a triar.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drills, ronda]);
+  }, [drills, ronda, mena]);
 
   const q = preguntes[i];
   const torna = useCallback(() => { if (q) sona(q.bona); }, [q, sona]);
 
-  // Cada pregunta comença sonant: escoltar ÉS la pregunta.
-  useEffect(() => { torna(); }, [i, ronda]);  // eslint-disable-line react-hooks/exhaustive-deps
+  /**
+   * En canviar de pregunta, la pregunta nova ha de quedar a dalt.
+   *
+   * Després de respondre, l'explicació creix per sota i «Següent» queda al final de tot; prement
+   * allà, la pregunta nova es pintava però la pantalla es quedava on era, i es veia començada pel
+   * mig. Es mou la caixa de l'exercici, no la finestra: l'exercici viu dins de la pàgina de la
+   * història i el que ha de quedar a dalt és ell.
+   *
+   * A la primera no: qui acaba de prémer el botó ja hi és, i moure-li la pantalla sense motiu
+   * fa més nosa que servei.
+   */
+  const puja_dalt = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (i === 0) return;
+    puja_dalt.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }, [i, ronda]);
+
+  // Quan es tria la frase, cada pregunta comença sonant: escoltar ÉS la pregunta. Quan es tria
+  // el significat, la frase ja és a la pantalla i el so és una ajuda, no l'enunciat: sonar sol
+  // faria que es respongués d'orella sense llegir.
+  useEffect(() => { if (mena === 'frase') torna(); }, [i, ronda, mena]);  // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => atura(), []);         // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!preguntes.length) {
     return (
       <section style={caixa}>
-        <Capçalera onTanca={onTanca} dreta={null} />
+        <Capçalera onTanca={onTanca} dreta={null} mena={mena} />
         <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.6, color: 'var(--text-soft)' }}>
-          Aquesta història encara no es pot practicar així: calen línies que tinguin <strong>la veu
-          d'una persona</strong> i <strong>les paraules escrites</strong>. Si parles amazic, posar
-          la veu o escriure una línia obre aquest exercici per a tothom.
+          {mena === 'traduccio'
+            ? <>Aquesta història encara no es pot practicar així: calen línies que tinguin <strong>les
+                paraules escrites</strong> i <strong>què volen dir</strong>. Escriure'n una obre
+                aquest exercici per a tothom.</>
+            : <>Aquesta història encara no es pot practicar així: calen línies que tinguin <strong>la
+                veu d'una persona</strong> i <strong>les paraules escrites</strong>. Si parles
+                amazic, posar la veu o escriure una línia obre aquest exercici per a tothom.</>}
         </p>
       </section>
     );
@@ -101,8 +151,8 @@ export default function EscoltaITria({ drills, sona, atura, onTanca }: EscoltaIT
 
   if (i >= preguntes.length) {
     return (
-      <section style={caixa}>
-        <Capçalera onTanca={onTanca} dreta={null} />
+      <section ref={puja_dalt} style={caixa}>
+        <Capçalera onTanca={onTanca} dreta={null} mena={mena} />
         <p style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>
           {encerts} de {preguntes.length} {encerts === 1 ? 'encertada' : 'encertades'}.
         </p>
@@ -120,14 +170,27 @@ export default function EscoltaITria({ drills, sona, atura, onTanca }: EscoltaIT
   const encertada = tria != null && tria === q.bona.id;
 
   return (
-    <section style={caixa}>
-      <Capçalera onTanca={onTanca} dreta={`${i + 1} de ${preguntes.length}`} />
+    <section ref={puja_dalt} style={caixa}>
+      <Capçalera onTanca={onTanca} dreta={`${i + 1} de ${preguntes.length}`} mena={mena} />
 
       <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-soft)', lineHeight: 1.55 }}>
-        Sona una línia de la història. Quina de les quatre és?
+        {mena === 'traduccio'
+          ? 'Aquesta línia de la història, què vol dir? Les quatre s’assemblen.'
+          : 'Sona una línia de la història. Quina de les quatre és?'}
       </p>
 
-      <button onClick={torna} style={secundari}><FaVolumeUp size={13} /> Torna-ho a sentir</button>
+      {/* Triant el significat, la frase és l'enunciat i es veu; el so hi és per si ajuda. */}
+      {mena === 'traduccio' && (
+        <div style={{ padding: '12px 14px', borderRadius: 'var(--r-lg)', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+          <Frase text={escrit(q.bona)} latin={q.bona.text_tachelhit_latin} size="lg" />
+        </div>
+      )}
+
+      {(mena === 'frase' || veu(q.bona)) && (
+        <button onClick={torna} style={secundari}>
+          <FaVolumeUp size={13} /> {mena === 'traduccio' ? 'Sentir-la' : 'Torna-ho a sentir'}
+        </button>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {q.opcions.map((o) => {
@@ -149,7 +212,9 @@ export default function EscoltaITria({ drills, sona, atura, onTanca }: EscoltaIT
                       cursor: tria == null ? 'pointer' : 'default',
                     }}>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <Frase text={escrit(o)} size="md" />
+                {mena === 'traduccio'
+                  ? <span style={{ fontSize: 14.5, lineHeight: 1.45 }}>{vol_dir(o)}</span>
+                  : <Frase text={escrit(o)} size="md" />}
               </span>
               {marca === 'bona' && <FaCheck size={14} color="var(--emerald)" />}
               {marca === 'falsa' && <FaTimes size={14} color="var(--rose)" />}
@@ -163,7 +228,9 @@ export default function EscoltaITria({ drills, sona, atura, onTanca }: EscoltaIT
       {tria != null && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 14px', borderRadius: 'var(--r-lg)', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
           <strong style={{ fontSize: 13.5, color: encertada ? 'var(--emerald)' : 'var(--rose)' }}>
-            {encertada ? 'Sí, és aquesta.' : 'Era aquesta altra.'}
+            {encertada
+              ? (mena === 'traduccio' ? 'Sí, vol dir això.' : 'Sí, és aquesta.')
+              : (mena === 'traduccio' ? 'Volia dir aquesta altra cosa.' : 'Era aquesta altra.')}
           </strong>
           <Frase text={escrit(q.bona)} size="md" />
           {(q.bona.text_catalan || '').trim() && (
@@ -184,10 +251,12 @@ export default function EscoltaITria({ drills, sona, atura, onTanca }: EscoltaIT
   );
 }
 
-function Capçalera({ onTanca, dreta }: { onTanca: () => void; dreta: string | null }) {
+function Capçalera({ onTanca, dreta, mena = 'frase' }: { onTanca: () => void; dreta: string | null; mena?: Mena }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-      <strong style={{ fontSize: 15 }}>Escolta i tria la frase</strong>
+      <strong style={{ fontSize: 15 }}>
+        {mena === 'traduccio' ? 'Tria què vol dir' : 'Escolta i tria la frase'}
+      </strong>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
         {dreta && <span style={{ fontSize: 12.5, color: 'var(--text-muted)', fontWeight: 700 }}>{dreta}</span>}
         <button onClick={onTanca} aria-label="Tanca l'exercici"

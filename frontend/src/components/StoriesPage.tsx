@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FaChevronLeft, FaCrosshairs, FaExpand, FaInfinity, FaExternalLinkAlt, FaHeadphones, FaPause, FaPlay, FaRedo, FaStepBackward, FaStepForward, FaStop } from 'react-icons/fa';
+import { FaBookOpen, FaChevronLeft, FaCrosshairs, FaExpand, FaInfinity, FaExternalLinkAlt, FaHeadphones, FaPause, FaPlay, FaRedo, FaStepBackward, FaStepForward, FaStop } from 'react-icons/fa';
 import { api, type Story, type StoryPage, type WordTime } from '../api';
 import { getMediaUrl, thumb } from '../config';
 import type { Drill } from '../types';
@@ -297,7 +297,7 @@ function OneStory({ slug }: { slug: string }) {
   const [gran, setGran] = useState(true);
   const [vel, setVel] = useState(1);
   // Estudiar-la d'orella: sona una línia i es tria quina de les quatre escrites és (#387).
-  const [exercici, setExercici] = useState(false);
+  const [exercici, setExercici] = useState<null | 'frase' | 'traduccio'>(null);
 
   useEffect(() => {
     api.story(slug).then((r) => { setPage(r); document.title = `${r.title} · Tamazight`; })
@@ -570,6 +570,9 @@ function OneStory({ slug }: { slug: string }) {
   const sonant = reading != null || at != null;
   const escrites = page.drills.filter((d) => (d.text_tachelhit || '').trim());
   const potPracticar = escrites.length >= 4 && escrites.some((d) => (d.audio_url || '').trim());
+  // Triar el significat no demana veu —la frase es llegeix— però sí que el català l'hagi escrit
+  // algú: amb menys de quatre no hi ha res entre què triar.
+  const potTriarSentit = escrites.filter((d) => (d.text_catalan || '').trim()).length >= 4;
 
   return (
     <div style={{ padding: sonant ? '20px 16px 120px' : '20px 16px 60px', maxWidth: 760, margin: '0 auto' }}>
@@ -633,15 +636,27 @@ function OneStory({ slug }: { slug: string }) {
           de les quatre escrites és (#387). Només hi és quan la història ho permet —cal una veu
           de persona i almenys quatre línies amb les paraules escrites— perquè un botó que porta
           a un exercici que no es pot fer és pitjor que cap botó. */}
-      {potPracticar && (
-        <div style={{ marginBottom: 14 }}>
-          <button onClick={() => { atura(); setExercici((v) => !v); }} style={secundari}>
-            <FaHeadphones size={12} /> {exercici ? 'Tanca l’exercici' : 'Escolta i tria la frase'}
-          </button>
+      {(potPracticar || potTriarSentit) && (
+        <div style={{ marginBottom: 14, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {potPracticar && (
+            <button onClick={() => { atura(); setExercici((v) => (v === 'frase' ? null : 'frase')); }}
+                    style={{ ...secundari, ...(exercici === 'frase' ? triat : null) }}>
+              <FaHeadphones size={12} /> {exercici === 'frase' ? 'Tanca l’exercici' : 'Escolta i tria la frase'}
+            </button>
+          )}
+          {/* L'altra meitat: reconèixer la forma d'una frase i entendre-la són destreses
+              diferents, i es poden tenir per separat. */}
+          {potTriarSentit && (
+            <button onClick={() => { atura(); setExercici((v) => (v === 'traduccio' ? null : 'traduccio')); }}
+                    style={{ ...secundari, ...(exercici === 'traduccio' ? triat : null) }}>
+              <FaBookOpen size={12} /> {exercici === 'traduccio' ? 'Tanca l’exercici' : 'Tria què vol dir'}
+            </button>
+          )}
         </div>
       )}
       {exercici && (
         <EscoltaITria
+          mena={exercici}
           drills={page.drills}
           sona={(d) => {
             const u = amazic(d);
@@ -651,7 +666,7 @@ function OneStory({ slug }: { slug: string }) {
             void sonaEncenent(d, u);
           }}
           atura={atura}
-          onTanca={() => setExercici(false)} />
+          onTanca={() => setExercici(null)} />
       )}
 
       {/* Dir-ho tot, i dir-ho abans que ningú estudiï res d'aquí.
@@ -901,6 +916,11 @@ const xipGran: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 52, padding: '12px 20px',
   borderRadius: 'var(--r-pill)', border: '1.5px solid var(--border)', background: 'var(--surface)',
   color: 'var(--text)', fontWeight: 800, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit',
+};
+
+/** El botó de l'exercici que està obert. */
+const triat: React.CSSProperties = {
+  borderColor: 'var(--brand-1)', background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)',
 };
 
 const credit: React.CSSProperties = {
