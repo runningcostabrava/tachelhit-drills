@@ -32,25 +32,23 @@ export default function DataNotice() {
   if (!waking && !stale) return null;
 
   /**
-   * Una fitxa petita a un costat, no una barra de banda a banda.
+   * Una ratlla DINS del flux, no una capa per damunt.
    *
-   * Això és un avís secundari —diu d'on surt el que s'està veient— i s'estava quedant una
-   * franja sencera de pantalla, a baix de tot, que és on van els comandaments del que s'està
-   * fent: a una història tapava el botó d'aturar (#393), i a qualsevol altra pantalla es menja
-   * l'espai del contingut. Va a dalt a la dreta, sota el menú, on no hi ha res més, i ocupa el
-   * que diu.
+   * Això ja s'havia mogut una vegada: era una franja de banda a banda al peu i tapava el botó
+   * d'aturar d'una història (#393), i es va passar a una fitxa a dalt a la dreta. En una
+   * pantalla d'ordinador allà no hi ha res; en un telèfon, 320 px damunt de 375 és gairebé tota
+   * l'amplada, i tapava el títol de la pàgina i la imatge (#447).
+   *
+   * El problema no era on es posava: era que **flotava**. En un telèfon no hi ha cap racó
+   * lliure. Dins del flux, sota el menú, ocupa el seu lloc i empeny el contingut avall: es veu
+   * igual i no tapa res.
    */
   const bar: React.CSSProperties = {
-    position: 'fixed', zIndex: 1200,
-    top: `calc(var(--nav-h, 56px) + env(safe-area-inset-top, 0px) + 10px)`,
-    right: `max(12px, env(safe-area-inset-right, 0px))`,
-    maxWidth: 'min(320px, calc(100vw - 24px))',
     display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-    padding: '9px 13px',
-    background: 'var(--surface)', border: '1px solid var(--border)',
-    borderRadius: 'var(--r-lg)',
+    padding: '7px max(12px, env(safe-area-inset-left, 0px)) 7px max(12px, env(safe-area-inset-right, 0px))',
+    background: 'var(--surface-soft, var(--surface))',
+    borderBottom: '1px solid var(--border)',
     fontSize: 12.5, color: 'var(--text-soft)', lineHeight: 1.4,
-    boxShadow: '0 6px 18px rgba(15,23,42,0.12)',
   };
 
   if (waking) {

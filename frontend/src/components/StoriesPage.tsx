@@ -262,9 +262,20 @@ function OneStory({ slug }: { slug: string }) {
    */
   const torn = useRef(0);
   const [pausat, setPausat] = useState(false);
-  /** Tornar a començar en acabar. La referència és la que llegeix la fila mentre corre. */
-  const [enBucle, setEnBucle] = useState(false);
+  /** Tornar a començar en acabar. La referència és la que llegeix la fila mentre corre.
+   *
+   *  Es recorda al navegador: qui escolta una història sense parar ho vol a la següent també, i
+   *  haver-ho de tornar a prémer a cada conte és justament el que feia que no es fes servir. */
+  const [enBucle, setEnBucle] = useState(() => {
+    try { return localStorage.getItem('historia.bucle') === '1'; } catch { return false; }
+  });
   const bucle = useRef(false);
+  const posaBucle = (v: boolean) => {
+    bucle.current = v;
+    setEnBucle(v);
+    try { localStorage.setItem('historia.bucle', v ? '1' : '0'); } catch { /* finestra privada */ }
+  };
+  useEffect(() => { bucle.current = enBucle; }, [enBucle]);
   const [vel, setVel] = useState(1);
   // Estudiar-la d'orella: sona una línia i es tria quina de les quatre escrites és (#387).
   const [exercici, setExercici] = useState(false);
@@ -548,6 +559,17 @@ function OneStory({ slug }: { slug: string }) {
         <button onClick={() => readThrough('amb-catala')} style={secundari}>
           {reading === 'amb-catala' ? <><FaPause size={12} /> Atura</> : <><FaPlay size={12} /> Escolta-la amb el català</>}
         </button>
+        {/* Sense parar.
+            El bucle ja existia, però era un xip d'onze píxels dins de la barra que NOMÉS surt
+            mentre sona: per posar-lo havies de començar, trobar-lo i encertar-lo amb el dit
+            (#448). És una decisió que es pren ABANS de prémer play —«deixa-me-la sonant mentre
+            faig una altra cosa»— i per això ha d'estar aquí, al costat del play i prou gran.
+            I es recorda: qui escolta en bucle ho vol cada vegada, no una. */}
+        <button onClick={() => posaBucle(!enBucle)} aria-pressed={enBucle}
+                title={enBucle ? 'En acabar, torna a començar' : 'En acabar, s’atura'}
+                style={{ ...secundari, ...(enBucle ? { borderColor: 'var(--brand-1)', background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)' } : null) }}>
+          <FaInfinity size={13} /> {enBucle ? 'sense parar' : 'un cop'}
+        </button>
       </div>
       <p style={{ color: 'var(--text-soft)', fontSize: 12.5, margin: '0 0 14px', lineHeight: 1.5 }}>
         Sencera, només en amazic · amb el català, cada línia et diu primer què vol dir i després
@@ -706,7 +728,7 @@ function OneStory({ slug }: { slug: string }) {
           </div>
 
           {/* En bucle: el conte torna a començar tot sol en acabar. */}
-          <button onClick={() => { bucle.current = !enBucle; setEnBucle(!enBucle); }}
+          <button onClick={() => posaBucle(!enBucle)}
                   style={{ ...xip, ...(enBucle ? xipTriat : null), display: 'inline-flex', alignItems: 'center', gap: 5 }}
                   title={enBucle ? 'En acabar, torna a començar' : 'En acabar, s’atura'}>
             <FaInfinity size={11} /> {enBucle ? 'en bucle' : 'un cop'}
