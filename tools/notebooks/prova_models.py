@@ -87,10 +87,41 @@ prova = [f for f in files if f.get("split") == "test"]
 print("corpus: %d talls | de prova: %d" % (len(files), len(prova)))
 
 # %%
-# La mesura. El CER es compta sobre LLETRES: la puntuació i els espais no diuen res de si el
-# model hi sent bé, i comptar-los faria pujar el número per coses que no són errors.
+# La mesura.
+#
+# Dues coses, i la segona és la que fa que el número vulgui dir alguna cosa:
+#
+# · el CER es compta sobre LLETRES. La puntuació i els espais no diuen res de si el model hi
+#   sent bé, i comptar-los faria pujar el número per coses que no són errors.
+#
+# · **els dos costats es passen al mateix alfabet abans de restar.** La nostra referència és
+#   en tifinag i molts models escriuen en llatí: comparats tal qual, `ⵜⴰⵣⵣⵍⴰ` i `tazzla` —que
+#   són LA MATEIXA PARAULA— donen un error del 100%. Va passar de debò: el wav2vec2-berber va
+#   sortir amb CER 1,17 i resulta que llegia bé les nostres paraules.
+#
+# Això és la lliçó del projecte escrita en codi: abans de creure's un número, comprova que les
+# dues bandes parlen el mateix idioma.
+
+#: El tifinag passat a llatí, per poder comparar amb els models que escriuen en llatí.
+#: Surt de `backend/transliteration.py`; aquí va a mà perquè el quadern ha de ser autònom.
+TIF_A_LLATI = {
+    "ⴰ": "a", "ⴱ": "b", "ⴳ": "g", "ⴷ": "d", "ⴹ": "d", "ⴻ": "e", "ⴼ": "f", "ⴽ": "k",
+    "ⵀ": "h", "ⵃ": "h", "ⵄ": "a", "ⵅ": "x", "ⵇ": "q", "ⵉ": "i", "ⵊ": "j", "ⵍ": "l",
+    "ⵎ": "m", "ⵏ": "n", "ⵓ": "u", "ⵔ": "r", "ⵕ": "r", "ⵖ": "g", "ⵙ": "s", "ⵚ": "s",
+    "ⵛ": "c", "ⵜ": "t", "ⵟ": "t", "ⵡ": "w", "ⵢ": "y", "ⵣ": "z", "ⵥ": "z", "ⵯ": "w",
+}
+#: I el llatí, plegat a les mateixes lletres: els models escriuen `gh`/`ɣ`, `ch`/`š`, `3`/`ɛ`…
+#: Sense plegar-ho, la mateixa paraula escrita per dues mans compta com a error.
+PLEGA = {"ɣ": "g", "ɛ": "a", "ḥ": "h", "ḍ": "d", "ṭ": "t", "ẓ": "z", "ṣ": "s", "ṛ": "r",
+         "š": "c", "ž": "j", "ǧ": "j", "e": "", "'": "", "’": ""}
+
 def net(t):
-    t = unicodedata.normalize("NFC", (t or "")).strip()
+    """Totes dues bandes reduïdes a la mateixa forma: lletres llatines plegades, i prou."""
+    t = unicodedata.normalize("NFC", (t or "")).strip().lower()
+    t = "".join(TIF_A_LLATI.get(c, c) for c in t)
+    for mult, un in (("gh", "g"), ("kh", "x"), ("ch", "c"), ("sh", "c"), ("ou", "u")):
+        t = t.replace(mult, un)
+    t = "".join(PLEGA.get(c, c) for c in t)
     return "".join(c for c in t if c.isalnum())
 
 def distancia(a, b):
