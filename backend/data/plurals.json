@@ -1,0 +1,73 @@
+{
+  "_llegeix-me": [
+    "Noms amazics en singular i en plural, amb la manera com el plural es fa.",
+    "",
+    "Per què existeix. La unitat «noms-genere-nombre» no té cap peça que es pugui trobar amb un",
+    "patró dins d'una frase: el plural no és un tros que s'afegeix sempre igual —de vegades hi ha",
+    "una terminació, de vegades canvien les vocals de dins— i buscar-lo amb una expressió",
+    "regular donaria exercicis que ensenyen una cosa falsa. Amb una taula de les dues formes,",
+    "l'exercici ja es pot preguntar bé, com es va fer amb l'estat d'annexió (data/annexio.json).",
+    "",
+    "D'on surt. De dues classes de Lhoucine Ait ouarab (@LhouMassinisa), que té permís del",
+    "propietari des del 26-10-2026 (docs/PERMISOS.md). Les taules hi van escrites a la pantalla,",
+    "només en tifinag; s'han llegit amb la carta de lletres del nostre propi transliterador",
+    "(tools/text_de_video/). Cada parella diu de quin vídeo i de quin segon surt.",
+    "",
+    "'cert' diu si la lectura és segura. Fals vol dir que el signe es confon amb un altre a la",
+    "mida que té a la pantalla, i aleshores la parella NO s'usa per fer exercicis: hi és perquè",
+    "algú la miri i la confirmi. Una lectura de màquina no és text de ningú.",
+    "",
+    "La tifinag no s'escriu aquí: la posa el servidor amb el transliterador, com a tota l'app."
+  ],
+  "regles": [
+    {
+      "id": "extern",
+      "nom": "El plural que s'afegeix pel davant i pel darrere",
+      "diu": "El masculí canvia la a- del principi per i- i afegeix -n al final; el femení ta-…-t es torna ti-…-in.",
+      "font": {
+        "obra": "Amagut (asgʷt) amadus — el plural extern",
+        "autor": "Lhoucine Ait ouarab",
+        "canal": "@LhouMassinisa",
+        "url": "https://www.youtube.com/watch?v=Y43zixFMN_4",
+        "segon": 375
+      },
+      "parelles": [
+        {"un": "akal", "molts": "ikaln", "ca": "terra, sòl", "cert": true},
+        {"un": "izm", "molts": "izmawn", "ca": "lleó", "cert": true},
+        {"un": "aḍar", "molts": "iḍarn", "ca": "peu", "cert": true},
+        {"un": "amdya", "molts": "imdyatn", "ca": "exemple", "cert": true},
+        {"un": "tarbat", "molts": "tirbatin", "ca": "noia", "cert": true},
+        {"un": "tabrat", "molts": "tibratin", "ca": "carta", "cert": true},
+        {"un": "talɣʷmt", "molts": "tilɣʷmin", "ca": "camella", "cert": true},
+        {"un": "asafar", "molts": "isafarn", "ca": "medicament", "cert": true},
+        {"un": "tagmart", "molts": "tagmarin", "ca": "euga", "cert": true},
+        {"un": "anbgi", "molts": "inbgiwn", "ca": "convidat", "cert": true}
+      ]
+    },
+    {
+      "id": "intern",
+      "nom": "El plural que canvia les vocals de dins",
+      "diu": "Aquí no s'hi afegeix res: les vocals de dins del nom canvien. La a- del principi es torna i-, i les vocals de dins passen de a…a a u…a.",
+      "font": {
+        "obra": "Amagut amṛẓu (agʷnsan) — el plural intern o trencat",
+        "autor": "Lhoucine Ait ouarab",
+        "canal": "@LhouMassinisa",
+        "url": "https://www.youtube.com/watch?v=_eTBph7l1-k",
+        "segon": 201
+      },
+      "parelles": [
+        {"un": "adrar", "molts": "idurar", "ca": "muntanya", "cert": true},
+        {"un": "aɣbalu", "molts": "iɣbula", "ca": "font", "cert": true},
+        {"un": "amalu", "molts": "imula", "ca": "ombra", "cert": true},
+        {"un": "abaɣus", "molts": "ibuɣas", "ca": "mico", "cert": true},
+        {"un": "tamurt", "molts": "timura", "ca": "terra, país", "cert": true},
+        {"un": "agadir", "molts": "igudar", "ca": "graner fortificat", "cert": true},
+        {"un": "tadawt", "molts": "tiduwwa", "ca": "esquena", "cert": true},
+        {"un": "amaḍn", "molts": "imuḍan", "ca": "malalt", "cert": false,
+         "dubte": "la vocal del final del singular no s'acaba de veure; el diccionari en diu «amaḍun»"},
+        {"un": "awallu", "molts": "iwulla", "ca": null, "cert": false,
+         "dubte": "la paraula no s'ha pogut confirmar enlloc; el patró sí que es veu"}
+      ]
+    }
+  ]
+}
