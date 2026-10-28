@@ -194,7 +194,6 @@ function App() {
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <ToastHost />
       <StaleBuildBanner />
-      <DataNotice />
       {aiOpen && <AiCopilot onClose={() => setAiOpen(false)} />}
       {aboutOpen && <AboutPanel onClose={() => setAboutOpen(false)} />}
 
@@ -257,6 +256,11 @@ function App() {
           {!compactNav && <button onClick={() => navigate('/profile')} title="Perfil" aria-label="Perfil" style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '9px 12px', borderRadius: 'var(--r-pill)', cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)' }}><FaUser size={15} /></button>}
         </nav>
       )}
+
+      {/* D'on surt el que s'està veient. Va AQUÍ, entre el menú i el contingut, i no flotant
+          per damunt: en un telèfon una fitxa flotant de 320 px tapa el títol de la pàgina, i
+          no hi ha cap racó lliure on posar-la (#447). Dins del flux, empeny i no tapa. */}
+      <DataNotice />
 
       {showNav && compactNav && <MenuMobil onCopilot={() => setAiOpen(true)} onAbout={() => setAboutOpen(true)} />}
 
