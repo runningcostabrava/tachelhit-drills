@@ -276,6 +276,17 @@ function OneStory({ slug }: { slug: string }) {
     try { localStorage.setItem('historia.bucle', v ? '1' : '0'); } catch { /* finestra privada */ }
   };
   useEffect(() => { bucle.current = enBucle; }, [enBucle]);
+  /** Quedar-se en UNA frase (#455).
+   *
+   *  No es el bucle de dalt: aquell torna a comencar el conte en acabar, i quan la frase que
+   *  volies torna a passar ja n'has sentit trenta-sis mes. Aixo es l'altra cosa —sonar, callar
+   *  perque la diguis tu, i tornar-hi— que es com s'apren una frase de memoria.
+   *
+   *  I no es recorda al navegador, a diferencia del bucle: quedar-se en una frase es una
+   *  decisio sobre AQUESTA frase. Si s'enganxes, la historia seguent no avancaria mai. */
+  const [repetint, setRepetint] = useState(false);
+  const repeteix = useRef(false);
+  const posaRepeticio = (v: boolean) => { repeteix.current = v; setRepetint(v); };
   const [vel, setVel] = useState(1);
   // Estudiar-la d'orella: sona una línia i es tria quina de les quatre escrites és (#387).
   const [exercici, setExercici] = useState(false);
@@ -485,6 +496,7 @@ function OneStory({ slug }: { slug: string }) {
         onNext: () => vesA(idx.current + 1),
         onPrev: () => vesA(idx.current - 1),
       });
+      const comenca = Date.now();
       if (manera === 'amb-catala') {
         await playLine(page.drills[i], i);
       } else {
@@ -495,6 +507,13 @@ function OneStory({ slug }: { slug: string }) {
         await sonaEncenent(page.drills[i], amazic(page.drills[i]));
       }
       if (salt.current != null) { i = salt.current; salt.current = null; continue; }
+      // Quedar-se en aquesta: la pausa dura el mateix que la frase, que es el temps que et cal
+      // per dir-la tu. Es surt del bucle apagant el xip o passant de linia, no esperant.
+      if (repeteix.current) {
+        await gap(Math.min(6000, Math.max(900, Date.now() - comenca)));
+        if (salt.current != null) { i = salt.current; salt.current = null; }
+        continue;
+      }
       await gap(350);
       if (salt.current != null) { i = salt.current; salt.current = null; continue; }
       i++;
@@ -732,6 +751,15 @@ function OneStory({ slug }: { slug: string }) {
                   style={{ ...xip, ...(enBucle ? xipTriat : null), display: 'inline-flex', alignItems: 'center', gap: 5 }}
                   title={enBucle ? 'En acabar, torna a començar' : 'En acabar, s’atura'}>
             <FaInfinity size={11} /> {enBucle ? 'en bucle' : 'un cop'}
+          </button>
+
+          {/* Quedar-se en una frase (#455). Va al costat del bucle de tota la història
+              perquè són la mateixa pregunta feta a dues mides: «torna-hi» de tot, o «torna-hi»
+              d'aquesta. El xip diu quina de les dues està encesa. */}
+          <button onClick={() => posaRepeticio(!repetint)} aria-pressed={repetint}
+                  style={{ ...xip, ...(repetint ? xipTriat : null), display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                  title={repetint ? 'Es queda en aquesta frase, amb una pausa per dir-la tu' : 'En acabar la frase, passa a la següent'}>
+            <FaRedo size={10} /> {repetint ? 'repetint aquesta' : 'repeteix aquesta'}
           </button>
 
           {/* Posar-ho en quiet amb el botó és una decisió, i no es desfà sola: el que es desfà
