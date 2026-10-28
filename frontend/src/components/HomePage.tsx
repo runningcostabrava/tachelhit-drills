@@ -31,6 +31,10 @@ import { getMediaUrl, thumb } from '../config';
 // el navegador no pot començar a baixar una imatge fins que en sap l'adreça, i l'adreça venia
 // després de l'API — que és un servei gratuït que s'adorm. Sabent-les, les portes es pinten
 // mentre l'API encara s'aixeca.
+//: Un nombre tal com es diu en català. Viu aquí fora i no dins de la portada perquè la
+//: franja de les lletres també el fa servir.
+const n = (x?: number) => (x === undefined ? '…' : x.toLocaleString('ca-ES'));
+
 const DOORS_KNOWN: Record<string, string> = {
   method: 'https://res.cloudinary.com/du26ppvh0/image/upload/v1792770886/tachelhit/app/porta-method.webp',
   grammar: 'https://res.cloudinary.com/du26ppvh0/image/upload/v1792770883/tachelhit/app/porta-grammar.webp',
@@ -70,7 +74,6 @@ export default function HomePage() {
     api.reviewStreak().then((s) => setStreak(s.streak_days || 0)).catch(() => {});
   }, []);
 
-  const n = (x?: number) => (x === undefined ? '…' : x.toLocaleString('ca-ES'));
   // El que toca AVUI és el que ja has vist i torna, i prou.
   //
   // Aquest número era `due + new`, i `new` és tota la biblioteca que encara no has vist: la
@@ -207,14 +210,12 @@ export default function HomePage() {
         <Door to="/drills" Icon={FaLayerGroup} title="La biblioteca" cover={d?.covers.library || DOORS_KNOWN.library}
               what="Totes les frases, una a una: qui les diu, d’on són i com sonen."
               count={d && `${n(d.library.sentences)} frases · ${n(d.library.with_voice)} amb veu`} />
-        <Door to="/alfabet" Icon={FaFont} title="Els sons i l’escriptura"
-              what="Les 33 lletres, una per una: com sona cada una i amb quina paraula nostra."
-              count={d?.sounds && `${n(d.sounds.amb_so)} de ${n(d.sounds.total)} lletres ja sonen`} />
         <Door to="/stories" Icon={FaBookOpen} title="Històries i cançons" cover={d?.covers.stories || DOORS_KNOWN.stories}
               what="El que es llegeix de cap a cap: contes, cançons, converses senceres." />
         <Door to="/video-creator" Icon={FaVideo} title="Captura" cover={d?.covers.capture || DOORS_KNOWN.capture}
               what="Un vídeo entra, frases en surten: talla, escolta i decideix."
               count={d && `${n(d.library.videos)} vídeos a la biblioteca`} />
+        <FranjaLletres sounds={d?.sounds} />
       </div>
 
       {/* La biblioteca és el projecte. Que es vegi créixer, i que es vegi què li falta. */}
@@ -311,6 +312,56 @@ function Door({ to, Icon, title, what, count, cover }: {
         <span style={{ fontSize: 13, color: 'var(--text-soft)', lineHeight: 1.5, flex: 1 }}>{what}</span>
         {count && <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>{count}</span>}
       </span>
+    </button>
+  );
+}
+
+/** Els sons i l'escriptura: una franja ampla amb les lletres de debò, no una porta més (#440).
+ *
+ * Les altres sis targetes són **llocs on vas a fer alguna cosa**: llegir el Mètode, practicar,
+ * mirar la biblioteca. Els sons no; els sons són una **taula**, la de les 33 lletres. Posats a
+ * la mateixa graella feien dues coses lletges alhora: eren l'única targeta sense il·lustració
+ * —el servidor no en té cap per a aquesta— i deixaven una setena fila orfe.
+ *
+ * Ensenyar les lletres mateixes ho arregla sense cap dibuix nou, i de passada posa el tifinag
+ * al lloc d'honor a la primera pantalla de l'app, que és la regla de la casa (#339).
+ *
+ * Les lletres venen del servidor i no d'una còpia d'aquí: així el que s'ensenya i el compte del
+ * costat no poden dir coses diferents. Si encara no les envia, la franja es queda amb el compte.
+ */
+function FranjaLletres({ sounds }: { sounds?: { total: number; amb_so: number; lletres?: { tif: string; lat: string }[] } }) {
+  const navigate = useNavigate();
+  const lletres = sounds?.lletres || [];
+  return (
+    <button onClick={() => navigate('/alfabet')}
+            style={{ gridColumn: '1 / -1', textAlign: 'left', padding: '14px 16px 15px', borderRadius: 'var(--r-lg)',
+                     border: '1px solid var(--border)', background: 'var(--brand-gradient-soft)', cursor: 'pointer',
+                     fontFamily: 'inherit', color: 'var(--text)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '2px 10px' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <FaFont size={14} style={{ color: 'var(--brand-1)' }} />
+          <span style={{ fontWeight: 800, fontSize: 15.5 }}>Els sons i l’escriptura</span>
+        </span>
+        <span style={{ fontSize: 13, color: 'var(--text-soft)', lineHeight: 1.5 }}>
+          Les {sounds ? n(sounds.total) : 33} lletres, una per una: com sona cada una i amb quina paraula nostra.
+        </span>
+      </span>
+      {lletres.length > 0 && (
+        <span aria-hidden style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 4px' }}>
+          {lletres.map((l) => (
+            <span key={l.lat} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
+                                       minWidth: 26, lineHeight: 1 }}>
+              <span style={{ fontSize: 21 }}>{l.tif}</span>
+              <span style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3 }}>{l.lat}</span>
+            </span>
+          ))}
+        </span>
+      )}
+      {sounds && (
+        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>
+          {n(sounds.amb_so)} de {n(sounds.total)} lletres ja sonen
+        </span>
+      )}
     </button>
   );
 }

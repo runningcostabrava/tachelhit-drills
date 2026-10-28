@@ -136,3 +136,18 @@ def test_primer_les_veus_de_casa_i_cap_tros_de_paraula(monkeypatch):
     g = next(l for l in tot["lletres"] if l["lat"] == "g")
     assert g["de_casa"] >= 1 and g["quantes"] > g["de_casa"]
     assert "nomes_de_fora" in tot, "les lletres que només sonen en una veu de fora es diuen"
+
+
+def test_la_portada_sap_com_s_escriuen_les_lletres_i_no_nomes_quantes_n_hi_ha():
+    """La franja de la portada ensenya les lletres de debò en comptes d'una il·lustració (#440).
+
+    Han de venir del servidor i no d'una còpia al web: si algú afegeix una lletra a `LLETRES`,
+    el que s'ensenya i el compte del costat han de dir el mateix el mateix dia.
+    """
+    import alfabet
+
+    comptes = client.get("/home").json()["sounds"]
+    assert comptes["total"] == len(alfabet.LLETRES)
+    assert len(comptes["lletres"]) == comptes["total"], "n'hi ha d'haver tantes com diu el compte"
+    assert comptes["lletres"][0] == {"tif": "ⴰ", "lat": "a"}, "en l'ordre de l'IRCAM, la a primer"
+    assert all(l["tif"] and l["lat"] for l in comptes["lletres"]), "cap lletra sense escriure"
