@@ -9211,7 +9211,16 @@ def create_test_from_weakest(
     db.add(test)
     db.commit()
     db.refresh(test)
-    return {"test_id": test.id, "title": test.title, "drill_count": len(drill_ids)}
+    # Una practica ES una seqüencia de passos (ADR 0002). Sense aixo naixia amb la llista plana
+    # i cap pas, i el taller l'ensenyava buida a qui l'acabava de demanar.
+    from models import PracticeStep as PracticeStepModel
+    passos = practice_steps.passos_automatics(db, drill_ids)
+    for i, s in enumerate(passos):
+        db.add(PracticeStepModel(test_id=test.id, position=i, kind=s["kind"],
+                                 drill_id=s["drill_id"], payload=None))
+    db.commit()
+    return {"test_id": test.id, "title": test.title, "drill_count": len(drill_ids),
+            "step_count": len(passos)}
 
 @app.get("/reviews/streak")
 def review_streak(db: Session = Depends(get_db),
