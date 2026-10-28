@@ -8913,6 +8913,9 @@ def revisa_seguent(pila: str, saltats: Optional[str] = None, db: Session = Depen
         "opcions": revisa.PILES[pila]["opcions"],
         "drill": Drill.model_validate(d, from_attributes=True),
         "companya": Drill.model_validate(altre, from_attributes=True) if altre else None,
+        # Els esborranys amb la seva procedència: qui decideix ha de veure quants models ho han
+        # llegit i si coincideixen, no només un text sense pare.
+        "esborranys": revisa.esborranys_de(d),
     }
 
 

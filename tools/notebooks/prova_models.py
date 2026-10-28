@@ -189,8 +189,13 @@ for model_id, mena in MODELS:
         if mena == "nemo":
             from nemo.collections.asr.models import ASRModel
             m = ASRModel.from_pretrained(model_name=model_id)
+            import librosa as _lr
             def digues(camins):
-                return [str(x) for x in m.transcribe(camins, batch_size=8, verbose=False)]
+                # El so, obert per nosaltres. El carregador del NeMo depen d'un `torchaudio.io`
+                # que la seva propia instal·lacio deixa trencat a Kaggle; passant-li l'onada
+                # ja llegida, aquell cami no s'hi fa servir.
+                ones = [_lr.load(c, sr=16000, mono=True)[0] for c in camins]
+                return [str(x) for x in m.transcribe(ones, batch_size=8, verbose=False)]
         else:
             import torch
             from transformers import AutoProcessor, AutoModelForCTC
