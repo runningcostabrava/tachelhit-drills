@@ -27,13 +27,16 @@ export interface FraseProps {
   mots?: WordTime[];
   /** Quina paraula sona ara; `null` quan no en sona cap. */
   encesa?: number | null;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
 const MIDES = {
   sm: { tif: 15, lat: 12.5 },
   md: { tif: 18, lat: 14 },
   lg: { tif: 22, lat: 15.5 },
+  // Per a la pantalla d'escoltar corrent (#449): es mira de lluny, un segon, amb el braç
+  // estirat i movent-se. Vint-i-dos píxels no s'hi llegeixen.
+  xl: { tif: 34, lat: 21 },
 };
 
 export default function Frase({ text, latin, mots, encesa = null, size = 'md' }: FraseProps) {

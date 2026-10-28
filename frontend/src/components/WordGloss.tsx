@@ -21,12 +21,12 @@ export function parseGlosses(drill: Pick<Drill, 'glosses'> | null | undefined): 
   try { const g = JSON.parse(drill.glosses); return Array.isArray(g) ? g.filter((x) => x && typeof x.shi === 'string') : []; } catch { return []; }
 }
 
-export default function WordGloss({ drill, size = 'md', align = 'left' }: { drill: Pick<Drill, 'glosses'> | null | undefined; size?: 'sm' | 'md'; align?: 'left' | 'center' }) {
+export default function WordGloss({ drill, size = 'md', align = 'left' }: { drill: Pick<Drill, 'glosses'> | null | undefined; size?: 'sm' | 'md' | 'lg'; align?: 'left' | 'center' }) {
   return <GlossWords words={parseGlosses(drill)} size={size} align={align} />;
 }
 
 // The same strip from words already parsed — the grammar lessons carry theirs in the lesson itself.
-export function GlossWords({ words: g, size = 'md', align = 'left' }: { words: Gloss[] | null | undefined; size?: 'sm' | 'md'; align?: 'left' | 'center' }) {
+export function GlossWords({ words: g, size = 'md', align = 'left' }: { words: Gloss[] | null | undefined; size?: 'sm' | 'md' | 'lg'; align?: 'left' | 'center' }) {
   // Which word is sounding, and who said it, so the strip can show it without asking again.
   const [saying, setSaying] = useState<string | null>(null);
   const [heard, setHeard] = useState<Record<string, string | null>>({});
@@ -76,7 +76,9 @@ export function GlossWords({ words: g, size = 'md', align = 'left' }: { words: G
   };
 
   if (!g || g.length === 0) return null;
-  const fs = size === 'sm' ? 12 : 14;
+  // La mida gran es per a la pantalla d'escoltar corrent (#449): de lluny i movent-se,
+  // catorze pixels no es llegeixen.
+  const fs = size === 'sm' ? 12 : size === 'lg' ? 19 : 14;
   return (
     <div aria-label="Paraula per paraula" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 8px', justifyContent: align === 'center' ? 'center' : 'flex-start', marginTop: 8 }}>
       {g.map((w, i) => {
