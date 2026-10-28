@@ -809,12 +809,22 @@ export interface GrammarLesson { intro: string; steps: LessonStep[]; study?: str
 /** `practice`: the ids the unit's test is made of (real sentences only: no single words, no conjugation lists). */
 /** Un exercici que pregunta LA PEÇA de la unitat, fet amb una frase de la biblioteca (#428).
  *  `opcions` buides vol dir que s'escriu; si no, es tria. */
+/** D'on surt un exercici que NO ve d'una frase de la biblioteca: quina obra, qui la signa i en
+ *  quin segon del vídeo surt, perquè es pugui tornar a mirar. */
+export interface FontExercici {
+  obra?: string | null; autor?: string | null; canal?: string | null;
+  url?: string | null; segon?: number | null;
+}
 export interface Exercici {
-  kind: 'omple' | 'tria'; unit: string; drill_id: number;
+  /** El seu nom, per posar-los un per un: els que no surten d'una frase no tenen `drill_id`. */
+  id: string;
+  kind: 'omple' | 'tria'; unit: string; drill_id: number | null;
   pregunta: string; ajuda: string; que: string;
   shi: string; tif?: string | null; ca: string;
   resposta: string; opcions: string[];
   audio_url?: string | null; speaker?: string | null; region?: string | null;
+  /** Buit quan la frase és de la biblioteca: aleshores qui la va dir ja és a `speaker`. */
+  font?: FontExercici | null;
 }
 export interface GrammarUnitPage extends GrammarUnit {
   lesson: GrammarLesson; total: number; practice: number[]; drills: Drill[];

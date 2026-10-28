@@ -23,8 +23,10 @@ i es diu**, com ja fem amb les seccions buides del Mètode.
 """
 from __future__ import annotations
 
+import json
 import random
 import re
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import practice
@@ -60,13 +62,18 @@ PECES: Dict[str, Dict] = {
     },
 }
 
-#: L'estat d'annexió es queda fora a posta.
+#: L'estat d'annexió no té patró, i per això no és a `PECES`.
 #:
 #: La seva peça són les primeres lletres del nom —«argaz» es torna «urgaz», «tamɣart» es torna
 #: «tmɣart»—, i això no es pot trobar amb un patró: darrere d'una preposició, un nom que COMENÇA
 #: per t- («taffiwin», «tirra») s'hi veu igual que un que ha perdut la a-, i el patró en faria un
-#: exercici que ensenya una cosa falsa. Caldrà la forma lliure del nom per poder-ho preguntar:
-#: aleshores l'exercici és «com comença darrere de la preposició?» amb les dues formes al davant.
+#: exercici que ensenya una cosa falsa.
+#:
+#: Es pregunta d'una altra manera, i per això va a part (`fes_annexio`): amb una taula de noms en
+#: les dues formes, l'exercici és «aquí tens el nom sol, com queda darrere de la preposició?».
+#: La taula viu a `data/annexio.json` i diu de quin vídeo i de quin segon surt cada parella.
+ANNEXIO_UNITAT = "estat-annexio"
+ANNEXIO_FITXER = Path(__file__).parent / "data" / "annexio.json"
 
 #: Com a mínim, perquè un exercici valgui la pena: quatre frases per poder-ne fer tres i que les
 #: respostes falses surtin de la mateixa unitat.
@@ -106,12 +113,96 @@ def _amb_el_buit(text: str, m: re.Match) -> str:
     return text[:m.start(1)] + "·" * max(3, len(m.group(1))) + text[m.end(1):]
 
 
+def tif_amb_buit(text: str) -> str:
+    """La mateixa frase en tifinag, amb el buit al mateix lloc.
+
+    El transliterador només tradueix lletres, i els punts del buit se li perdien pel camí: a la
+    pantalla, la ratlla tifinag sortia sense cap forat —i a l'exercici de l'annexió, que és «g»
+    i prou més el buit, quedava una sola lletra solta que semblava una errada.
+
+    Per això es tradueix el que hi ha a banda i banda i els punts es tornen a posar a mà."""
+    fora = []
+    for i, tros in enumerate(re.split(r"(·+)", text)):
+        if i % 2:
+            fora.append(tros)
+            continue
+        # El transliterador retalla els espais de les puntes, i sense tornar-los a posar la
+        # frase quedava enganxada al buit («ⴳ······» en comptes de «ⴳ ······»).
+        davant = tros[:len(tros) - len(tros.lstrip())]
+        darrere = tros[len(tros.rstrip()):]
+        fora.append(davant + transliteration.to_forms(tros)["tifinagh"] + darrere)
+    return "".join(fora)
+
+
+def _taula_annexio() -> Dict:
+    try:
+        return json.loads(ANNEXIO_FITXER.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        # Sense taula no hi ha exercici, i prou: una unitat sense «Fes-ho tu» és una pantalla
+        # més curta, i inventar-se les formes seria ensenyar paraules que ningú no diu.
+        return {}
+
+
+def fes_annexio(quants: int = 3) -> List[Dict]:
+    """«Aquí tens el nom sol: com queda darrere de la preposició?»
+
+    Les parelles surten d'una classe de gramàtica que les té escrites a la pantalla, i el fitxer
+    diu de quin vídeo i de quin segon (`data/annexio.json`). Dues regles que fan que valgui:
+
+    · **Només les lectures segures.** Les parelles amb `cert: false` hi són perquè algú les
+      confirmi, no per ensenyar-les: el tifinag es va llegir a ull i hi ha signes que s'assemblen.
+    · **Les respostes falses són formes de la MATEIXA regla.** Si les tries d'una altra, la bona
+      es veu de lluny i l'exercici no ensenya res.
+    """
+    taula = _taula_annexio()
+    font = taula.get("font") or {}
+    fora: List[Dict] = []
+    for regla in taula.get("regles") or []:
+        bones = [p for p in (regla.get("parelles") or []) if p.get("cert")]
+        if len(bones) < MIN_FRASES:
+            continue
+        formes = [p["annexat"] for p in bones]
+        rnd = random.Random(regla.get("id") or "")
+        tria = list(bones)
+        rnd.shuffle(tria)
+        for p in tria[:max(1, quants)]:
+            r = random.Random(p["lliure"])
+            altres = [f for f in formes if not igual_de_so(f, p["annexat"])]
+            r.shuffle(altres)
+            opcions = [p["annexat"]] + altres[:3]
+            r.shuffle(opcions)
+            buit = "·" * max(3, len(p["annexat"]))
+            fora.append({
+                "id": "annexio:%s:%s" % (regla.get("id"), p["lliure"]),
+                "kind": "tria" if len(opcions) >= 4 else "omple",
+                "unit": ANNEXIO_UNITAT,
+                "drill_id": None,
+                "pregunta": "El nom sol és «%s». Darrere de la preposició, com queda?" % p["lliure"],
+                "ajuda": regla.get("diu"),
+                "que": "l'estat d'annexió",
+                "shi": "g " + buit,
+                "tif": tif_amb_buit("g " + buit),
+                "ca": p.get("ca"),
+                "resposta": p["annexat"],
+                "opcions": opcions if len(opcions) >= 4 else [],
+                "audio_url": None,
+                "speaker": None,
+                "region": None,
+                "font": {**font, "segon": regla.get("segon")},
+            })
+    return fora
+
+
 def fes(slug: str, frases: List, quants: int = 3) -> List[Dict]:
     """Els exercicis que aquesta unitat pot fer de debò amb les seves frases.
 
     `frases` són les files de la unitat (drills). Torna una llista buida quan no n'hi ha prou:
     val més cap exercici que un de dolent.
     """
+    if slug == ANNEXIO_UNITAT:
+        # Aquesta no es fa amb les frases de la unitat sinó amb una taula de formes: la seva peça
+        # és el principi del nom, i cap patró no la sap trobar dins d'una frase.
+        return fes_annexio(quants)
     peca = PECES.get(slug)
     if not peca:
         return []
@@ -145,6 +236,9 @@ def fes(slug: str, frases: List, quants: int = 3) -> List[Dict]:
         opcions = [resposta.lower()] + altres[:3]
         rnd.shuffle(opcions)
         fora.append({
+            # Cada exercici porta el seu nom: la pantalla n'hi ha de poder posar un per un, i
+            # els d'annexió no surten de cap frase i per tant no tenen `drill_id`.
+            "id": "%s:%s" % (slug, d.id),
             "kind": "omple" if len(opcions) < 4 else "tria",
             "unit": slug,
             "drill_id": d.id,
@@ -152,13 +246,15 @@ def fes(slug: str, frases: List, quants: int = 3) -> List[Dict]:
             "ajuda": peca["ajuda"],
             "que": peca["nom"],
             "shi": _amb_el_buit(text, m),
-            "tif": transliteration.to_forms(_amb_el_buit(text, m))["tifinagh"],
+            "tif": tif_amb_buit(_amb_el_buit(text, m)),
             "ca": ca,
             "resposta": resposta,
             "opcions": opcions if len(opcions) >= 4 else [],
             "audio_url": (getattr(d, "audio_url", "") or "").strip() or None,
             "speaker": getattr(d, "speaker", None) or getattr(d, "author", None),
             "region": getattr(d, "region", None),
+            # Aquests surten de la biblioteca, i qui els va dir ja consta a `speaker`.
+            "font": None,
         })
     return fora
 

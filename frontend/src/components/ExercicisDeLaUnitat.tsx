@@ -25,17 +25,26 @@ function pla(s: string): string {
     .replace(/[^a-z0-9]/g, '');
 }
 
+/** L'enllaç del vídeo, obert al segon on surt la taula: qui ho vulgui comprovar no ha de buscar
+ *  deu minuts. Sense segon, l'enllaç de sempre. */
+function minut(url: string, segon?: number | null): string {
+  if (!segon) return url;
+  return url + (url.includes('?') ? '&' : '?') + 't=' + Math.max(0, Math.floor(segon));
+}
+
 export default function ExercicisDeLaUnitat({ exercicis }: { exercicis?: Exercici[] | null }) {
   if (!exercicis || exercicis.length === 0) return null;
   return (
     <div>
       <h2 style={{ fontSize: 18, margin: '0 0 4px' }}>Fes-ho tu</h2>
       <p style={{ margin: '0 0 12px', fontSize: 13.5, color: 'var(--text-soft)', lineHeight: 1.55 }}>
-        Frases de la biblioteca, amb el tros que aquesta unitat ensenya tapat. La resposta és la
-        que va dir qui la va dir.
+        El tros que aquesta unitat ensenya, tapat. Quan la frase és de la biblioteca, la resposta
+        és la que va dir qui la va dir; quan surt d'una classe de gramàtica, ho diu a sota.
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {exercicis.map((e) => <Un key={e.drill_id} e={e} />)}
+        {/* La clau és `id` i no `drill_id`: els exercicis de l'estat d'annexió no surten de cap
+            frase —es fan amb una taula de formes— i tots tindrien `drill_id` buit. */}
+        {exercicis.map((e) => <Un key={e.id} e={e} />)}
       </div>
     </div>
   );
@@ -109,6 +118,18 @@ function Un({ e }: { e: Exercici }) {
             <FaRedo size={10} /> Torna-hi
           </button>
         </div>
+      )}
+
+      {/* El crèdit, sempre i encertis o no: aquestes formes són d'una classe d'algú, i el minut
+          hi va perquè qui vulgui les pugui tornar a veure escrites a la pantalla. */}
+      {e.font?.autor && (
+        <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+          {e.font.obra ? `${e.font.obra} · ` : ''}{e.font.autor}
+          {e.font.url && (
+            <> · <a href={minut(e.font.url, e.font.segon)} target="_blank" rel="noreferrer"
+                    style={{ color: 'var(--brand-1)' }}>mira-ho al vídeo</a></>
+          )}
+        </p>
       )}
     </section>
   );
