@@ -151,3 +151,40 @@ def test_la_portada_sap_com_s_escriuen_les_lletres_i_no_nomes_quantes_n_hi_ha():
     assert len(comptes["lletres"]) == comptes["total"], "n'hi ha d'haver tantes com diu el compte"
     assert comptes["lletres"][0] == {"tif": "ⴰ", "lat": "a"}, "en l'ordre de l'IRCAM, la a primer"
     assert all(l["tif"] and l["lat"] for l in comptes["lletres"]), "cap lletra sense escriure"
+
+
+def test_una_x_que_es_una_gh_ensordida_no_ensenya_la_x():
+    """El capítol de la ⵅ ensenyava la lletra amb `rix`, `cix` i `nnix` (#364).
+
+    Totes tres són primera persona del singular, que el compendi dona com a `-ɣ` sense cap
+    variació dialectal. La ɣ i la x són el mateix so amb veu i sense, i al final de paraula
+    s'ensordeix: el parlant escriu el que sent. La seva grafia és bona i no es toca; el que no
+    pot ser és que decideixi a quin capítol va la paraula.
+    """
+    import alfabet
+    import transliteration as tr
+
+    for mot in ("rix", "cix", "nnix"):
+        fon = tr.phonemes(mot)
+        assert not alfabet.porta(fon, "x"), f"«{mot}» acaba en la ɣ de «jo», no en ⵅ"
+
+    # Davant de consonant sorda, el mateix: iɣf «cap» s'escriu ixf.
+    for mot in ("ixf", "tixsi"):
+        assert not alfabet.porta(tr.phonemes(mot), "x"), f"la x de «{mot}» és una ɣ ensordida"
+
+    # I les ⵅ de debò segueixen ensenyant la ⵅ.
+    for mot in ("axxam", "lxdmt"):
+        assert alfabet.porta(tr.phonemes(mot), "x"), f"«{mot}» porta una ⵅ de debò"
+
+    # La ⵖ no es toca: `sġix` porta una ɣ escrita, i segueix essent exemple de ⵖ.
+    assert alfabet.porta(tr.phonemes("sġix"), "ɣ")
+
+
+def test_la_posicio_es_mesura_on_la_lletra_hi_es_de_debo():
+    """Si la primera x d'una paraula és una ɣ ensordida, la posició no pot sortir d'ella."""
+    import alfabet
+    import transliteration as tr
+
+    fon = tr.phonemes("axxam")
+    assert alfabet.on_hi_es(fon, "x") == [1, 2], fon
+    assert alfabet._posicio(fon, "x") == "mig"

@@ -78,7 +78,11 @@ LLETRES: List[Dict] = [
     {"tif": "ⵄ", "lat": "ɛ", "com": "feta ben avall a la gola, estrenyent-la. És l'ayn de l'àrab.",
      "altres": ["3", "ε"], "mena": "gola"},
     {"tif": "ⵅ", "lat": "x", "com": "com la j castellana de «jota», o la ch alemanya de «Bach».",
-     "altres": ["kh", "5"]},
+     "altres": ["kh", "5"],
+     "nota": "Compte amb una cosa: la ⵅ i la ⵖ són el mateix so, una sense veu i l'altra amb "
+             "veu, i la ⵖ s'ensordeix molt sovint. Per això els nostres parlants escriuen «rix» (jo vull) "
+             "i «ixf» (cap) on el llibre escriu «riɣ» i «iɣf». Aquelles x no són ⵅ: són ⵖ dites "
+             "sense veu, i per això no surten aquí d'exemple."},
     {"tif": "ⵇ", "lat": "q", "com": "una k feta més enrere, amb la part del darrere de la llengua.",
      "altres": ["9"]},
     {"tif": "ⵉ", "lat": "i", "com": "com la i del català.", "mena": "vocal"},
@@ -92,6 +96,8 @@ LLETRES: List[Dict] = [
     {"tif": "ⵖ", "lat": "ɣ", "com": "la r francesa de «Paris». És la mateixa posició que la ⵅ, "
                                      "però amb veu. Molts l'escriuen «gh», i al recull de Beni "
                                      "Mellal s'escriu «x» (#364).",
+     "nota": "Quan va al final d'un verb és el «jo»: «krzɣ» vol dir «he llaurat». I com que allà es queda "
+             "sense veu, molts dels nostres l'escriuen «x»: «rix» i «riɣ» són la mateixa paraula.",
      "altres": ["gh", "ġ", "8", "γ"]},
     {"tif": "ⵙ", "lat": "s", "com": "com la s de «sol»."},
     {"tif": "ⵚ", "lat": "ṣ", "com": "una s emfàtica, dita amb la llengua més enrere.", "mena": "emfatica"},
@@ -166,14 +172,65 @@ def so_de(lletra: Dict) -> str:
     return str(lletra.get("so") or lletra["lat"])
 
 
+#: Les consonants sordes. Davant d'una d'aquestes, la ɣ s'ensordeix.
+SORDES = {"f", "k", "kʷ", "q", "qʷ", "s", "ṣ", "š", "t", "ṭ", "x", "ḥ", "h"}
+#: Les vocals.
+VOCALS = {"a", "i", "u", "ə"}
+
+
+def x_pot_ser_gh(fon: List[str], i: int) -> bool:
+    """Aquesta `x` pot ser en realitat una ɣ ensordida? (#364)
+
+    La ɣ i la x són **el mateix so amb veu i sense**, i la ɣ s'ensordeix molt sovint. L'estàndard
+    escriu sempre la sonora; els nostres parlants escriuen el que senten. El compendi d'amazic.cat
+    ho diu a §1: `ⵉⵖⴼ iɣf` [ɪʁf] o [ɪχf] «cap», i «en aquestes assimilacions mantenim la sonora
+    en la grafia estàndard».
+
+    Passa en dos llocs, i tots dos són mesurables sense endevinar res:
+
+    · **Al final de paraula, darrere de vocal**: és el sufix de primera persona del singular, que
+      el compendi dona com a `__ⵖ` sense cap variació dialectal (§5.1.1). Per això `rix`, `cix` i
+      `nnix` —«jo vull», «jo menjo», «jo dic»— acabaven al capítol de la ⵅ sense tenir-hi res a
+      veure.
+    · **Davant d'una consonant sorda**: `iɣf` → `ixf`, `tiɣsi` → `tixsi`.
+
+    La geminada no hi entra: la `xx` d'`axxam` («casa») és una x de debò, i la primera queda
+    davant d'una sorda només perquè la sorda és ella mateixa.
+
+    Això **no toca el que va escriure el parlant**, que és sagrat: només diu que aquesta paraula
+    no serveix per ensenyar la ⵅ. Qui escriu `rix` no s'equivoca; el que seria fals és
+    ensenyar-la com a exemple d'una lletra que no hi és.
+    """
+    if fon[i] != "x":
+        return False
+    seguent = fon[i + 1] if i + 1 < len(fon) else None
+    if seguent is None:
+        return i > 0 and fon[i - 1] in VOCALS
+    return seguent != "x" and seguent in SORDES
+
+
+def on_hi_es(fon: List[str], so: str) -> List[int]:
+    """On hi és aquest so de debò, descartant les x que poden ser una ɣ ensordida (#364)."""
+    llocs = [i for i, f in enumerate(fon) if f == so]
+    if so != "x":
+        return llocs
+    return [i for i in llocs if not x_pot_ser_gh(fon, i)]
+
+
+def porta(fon: List[str], so: str) -> bool:
+    """Aquesta paraula pot ensenyar aquesta lletra?"""
+    return bool(on_hi_es(fon, so))
+
+
 def _posicio(fon: List[str], so: str) -> Optional[str]:
     """On sona la lletra dins la paraula: al començament, al mig o al final.
 
     Importa: la ⵖ no sona igual al començament que al final, i és justament el que explica el
     #364 de la x i la ɣ."""
-    if so not in fon:
+    llocs = on_hi_es(fon, so)
+    if not llocs:
         return None
-    i = fon.index(so)
+    i = llocs[0]
     if i == 0:
         return "inici"
     return "final" if i == len(fon) - 1 else "mig"
@@ -196,7 +253,7 @@ def _ordena(mots: List[dict]) -> List[dict]:
 
 def exemples(db, so: str, limit: int = 6) -> List[dict]:
     """Les paraules de la biblioteca que porten aquest so i es poden sentir."""
-    quines = [m for m in _mots(db) if so in m["fonemes"]]
+    quines = [m for m in _mots(db) if porta(m["fonemes"], so)]
     fora = []
     for m in _ordena(quines)[:max(1, limit)]:
         fora.append({**{k: v for k, v in m.items() if k != "fonemes"},
@@ -213,7 +270,7 @@ def abecedari(db, exemples_per_lletra: int = 2) -> Dict:
     fora = []
     for l in LLETRES:
         so = so_de(l)
-        seves = [m for m in mots if so in m["fonemes"]]
+        seves = [m for m in mots if porta(m["fonemes"], so)]
         tria = _ordena(seves)[:max(0, exemples_per_lletra)]
         de_casa = [m for m in seves if m.get("de_casa")]
         fora.append({
@@ -252,7 +309,9 @@ def comptes(db) -> Dict:
     que hi ha al costat.
     """
     mots = _mots(db)
-    tenen = {so for m in mots for so in m["fonemes"]}
+    # Pel mateix camí que els exemples (#364): una ⵅ que pot ser una ɣ ensordida no fa que
+    # la ⵅ «ja soni». Si no, el compte diria que sona gràcies a paraules que no la porten.
+    tenen = {so for m in mots for so in set(m["fonemes"]) if porta(m["fonemes"], so)}
     mudes = [l["lat"] for l in LLETRES if so_de(l) not in tenen]
     return {
         "total": len(LLETRES),

@@ -881,6 +881,10 @@ export interface MotDeLletra extends WordClip {
  *  pot sentir encara, i llavors es diu (#302, #368). */
 export interface Lletra {
   tif: string; lat: string; com: string; altres?: string[];
+  /** Una cosa que cal saber d'aquesta lletra i que no és «com sona»: avui, que la ⵅ i la ⵖ són
+   *  el mateix so amb veu i sense, i que per això els nostres parlants escriuen «rix» on el
+   *  llibre escriu «riɣ» (#364). */
+  nota?: string;
   mena?: 'vocal' | 'emfatica' | 'labialitzada' | 'gola';
   quantes?: number; sona: boolean; exemples: MotDeLletra[];
   /** Quantes d'aquelles paraules les diu algú que coneixem (#302): el número que converteix el

@@ -157,6 +157,17 @@ export default function AlfabetPage() {
               A la biblioteca també la trobaràs escrita {oberta.altres.map((a) => `«${a}»`).join(', ')}.
             </p>
           ) : null}
+          {/* La nota no és «com sona»: és el que fa que les paraules d'aquesta lletra siguin les
+              que són. A la ⵅ i a la ⵖ explica per què «rix» i «riɣ» són la mateixa paraula, que
+              és de les coses més útils que es poden saber d'aquesta llengua i no una errada a
+              amagar (#364, #239). Per això es veu, i no en lletra petita. */}
+          {oberta.nota ? (
+            <p style={{ margin: '10px 0 0', padding: '10px 12px', fontSize: 13.5, lineHeight: 1.6,
+                        borderRadius: 'var(--r-md, 8px)', background: 'var(--brand-gradient-soft)',
+                        border: '1px solid var(--border)' }}>
+              {oberta.nota}
+            </p>
+          ) : null}
 
           {oberta.exemples.length ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
