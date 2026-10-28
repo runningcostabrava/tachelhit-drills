@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FaChevronLeft, FaCrosshairs, FaInfinity, FaExternalLinkAlt, FaHeadphones, FaPause, FaPlay, FaRedo, FaStepBackward, FaStepForward, FaStop } from 'react-icons/fa';
+import { FaChevronLeft, FaCrosshairs, FaExpand, FaInfinity, FaExternalLinkAlt, FaHeadphones, FaPause, FaPlay, FaRedo, FaStepBackward, FaStepForward, FaStop } from 'react-icons/fa';
 import { api, type Story, type StoryPage, type WordTime } from '../api';
 import { getMediaUrl, thumb } from '../config';
 import type { Drill } from '../types';
@@ -287,6 +287,14 @@ function OneStory({ slug }: { slug: string }) {
   const [repetint, setRepetint] = useState(false);
   const repeteix = useRef(false);
   const posaRepeticio = (v: boolean) => { repeteix.current = v; setRepetint(v); };
+  /** La pantalla d'escoltar corrent (#449). Mentre sona, per defecte.
+   *
+   *  Qui escolta una història corrent no està estudiant: està fent orella. Si una vegada de
+   *  cada deu mira la pantalla i hi veu la paraula que acaba de sentir, prou gran per llegir-la
+   *  en un segon, l'app ha fet la seva feina; si s'ha d'aturar i acostar-se el telèfon, no.
+   *
+   *  Es pot sortir sense aturar res, perquè qui estudia assegut vol la llista sencera. */
+  const [gran, setGran] = useState(true);
   const [vel, setVel] = useState(1);
   // Estudiar-la d'orella: sona una línia i es tria quina de les quatre escrites és (#387).
   const [exercici, setExercici] = useState(false);
@@ -412,9 +420,35 @@ function OneStory({ slug }: { slug: string }) {
     if (!veu) return;
     setAt(i);
     idx.current = i;
-    torn.current++;
-    await sonaEncenent(drill, veu);
+    const meu = ++torn.current;
+    // I si s'ha demanat repetir, es repeteix: sona, calla tant com ha durat —que és el temps
+    // que et cal per dir-la tu— i hi torna. Sense això, prémer el ▶ d'una frase feia sortir el
+    // xip «repeteix aquesta» sense que hi hagués cap fila que el mirés, i prémer-lo no feia
+    // res. Se'n surt apagant el xip, prement una altra frase o aturant.
+    for (;;) {
+      const comenca = Date.now();
+      await sonaEncenent(drill, veu);
+      if (torn.current !== meu || !repeteix.current) return;
+      await gap(Math.min(6000, Math.max(900, Date.now() - comenca)));
+      if (torn.current !== meu || !repeteix.current) return;
+    }
   }, [sonaEncenent]);
+
+  /** Prémer «repeteix aquesta».
+   *
+   *  Amb la història sonant, només encén o apaga: la fila que la llegeix ja ho mira a cada
+   *  volta. Amb una frase sola a la pantalla no hi ha cap fila, i per això encendre'l no feia
+   *  res —el xip s'encenia i la frase no tornava a sonar. Encendre'l aquí vol dir «torna-hi
+   *  amb aquesta», o sigui engegar-la.
+   */
+  const premRepeticio = () => {
+    const nou = !repetint;
+    posaRepeticio(nou);
+    if (nou && !readingRef.current && page
+        && idx.current >= 0 && idx.current < page.drills.length) {
+      nomesAmazic(page.drills[idx.current], idx.current);
+    }
+  };
 
   /**
    * Anar a una línia: la mateixa (repetir-la), la d'abans o la de sota.
@@ -714,12 +748,81 @@ function OneStory({ slug }: { slug: string }) {
         })}
       </div>
 
+
+      {/* La pantalla d'escoltar corrent (#449).
+          Mentre sona, això és el que es veu: la imatge, el tifinag, el català i les capsetes de
+          les paraules, tot gran, i cinc botons que es puguin prémer amb el telèfon a la mà. */}
+      {sonant && gran && (() => {
+        const i = Math.max(0, Math.min(page.drills.length - 1, at ?? idx.current));
+        const d = page.drills[i];
+        const written = (d.text_tachelhit || '').trim();
+        const mots = page.word_times?.[String(d.id)];
+        const dins = mot && mot.drill === d.id ? mot.i : null;
+        const gl = dins != null ? parseGlosses(d)[dins] : undefined;
+        return (
+          <div style={pantallaGran}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+              <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-soft)' }}>
+                línia {i + 1} de {page.drills.length}
+              </div>
+              <button onClick={() => setGran(false)} style={{ ...xip, marginLeft: 'auto', padding: '10px 16px', fontSize: 13 }}>
+                la llista
+              </button>
+            </div>
+
+            {(d.image_url || '').trim() && (
+              <img src={thumb(getMediaUrl(d.image_url), 900)} alt=""
+                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                   style={{ width: '100%', height: 'auto', aspectRatio: '4 / 3', objectFit: 'cover',
+                            borderRadius: 'var(--r-lg)', display: 'block', marginBottom: 14 }} />
+            )}
+
+            {written
+              ? <Frase text={written} latin={d.text_tachelhit_latin} mots={mots} encesa={dins} size="xl" />
+              : <div style={{ fontSize: 19, color: 'var(--saffron-dark, #7A4A12)', fontWeight: 700 }}>
+                  (aquesta línia encara no té les paraules escrites)
+                </div>}
+            <CatalaEncès text={d.text_catalan || ''} gl={gl}
+                         estil={{ fontSize: 'clamp(22px, 6.4vw, 32px)', color: 'var(--text)',
+                                  lineHeight: 1.4, margin: '10px 0 4px', fontWeight: 600 }} />
+            <WordGloss drill={d} size="lg" />
+
+            {/* Els comandaments. Pocs i grossos: res per sota de la mida d'un dit, i repartits
+                per no encertar-ne un per l'altre. La velocitat i «segueix la veu» no són
+                comandaments de córrer i es decideixen abans. */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, margin: '22px 0 14px' }}>
+              <button onClick={() => vesA(idx.current - 1)} style={rodoGran} aria-label="La línia d'abans">
+                <FaStepBackward size={22} />
+              </button>
+              <button onClick={pausaOSegueix} style={{ ...rodoGran, width: 86, height: 86, background: 'var(--brand-gradient)', color: '#fff', border: 'none' }}
+                      aria-label={pausat ? 'Continua' : 'Para un moment'}>
+                {pausat ? <FaPlay size={30} /> : <FaPause size={30} />}
+              </button>
+              <button onClick={() => vesA(idx.current + 1)} style={rodoGran} aria-label="La línia de sota">
+                <FaStepForward size={22} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
+              <button onClick={premRepeticio} aria-pressed={repetint}
+                      style={{ ...xipGran, ...(repetint ? xipTriat : null) }}>
+                <FaRedo size={15} /> {repetint ? 'repetint aquesta' : 'repeteix aquesta'}
+              </button>
+              <button onClick={() => posaBucle(!enBucle)} aria-pressed={enBucle}
+                      style={{ ...xipGran, ...(enBucle ? xipTriat : null) }}>
+                <FaInfinity size={15} /> {enBucle ? 'en bucle' : 'un cop'}
+              </button>
+              <button onClick={atura} style={xipGran}><FaStop size={14} /> atura</button>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Els comandaments, mentre soni alguna cosa.
           Una història en una llengua que no saps no s'escolta de cap a cap i prou: t'atures,
           tornes enrere, sents la mateixa frase quatre vegades i la poses lenta per saber on
           s'acaba una paraula. Fins ara l'única cosa que es podia fer era deixar-la sonar o
           parar-la del tot. */}
-      {sonant && (
+      {sonant && !gran && (
         <div style={barra}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <button onClick={() => vesA(idx.current - 1)} style={rodo} aria-label="La línia d'abans"><FaStepBackward size={12} /></button>
@@ -756,7 +859,7 @@ function OneStory({ slug }: { slug: string }) {
           {/* Quedar-se en una frase (#455). Va al costat del bucle de tota la història
               perquè són la mateixa pregunta feta a dues mides: «torna-hi» de tot, o «torna-hi»
               d'aquesta. El xip diu quina de les dues està encesa. */}
-          <button onClick={() => posaRepeticio(!repetint)} aria-pressed={repetint}
+          <button onClick={premRepeticio} aria-pressed={repetint}
                   style={{ ...xip, ...(repetint ? xipTriat : null), display: 'inline-flex', alignItems: 'center', gap: 5 }}
                   title={repetint ? 'Es queda en aquesta frase, amb una pausa per dir-la tu' : 'En acabar la frase, passa a la següent'}>
             <FaRedo size={10} /> {repetint ? 'repetint aquesta' : 'repeteix aquesta'}
@@ -770,12 +873,35 @@ function OneStory({ slug }: { slug: string }) {
             <FaCrosshairs size={11} /> {segueix ? 'segueix la veu' : 'quieta'}
           </button>
 
-          <button onClick={atura} style={{ ...xip, marginLeft: 'auto' }}><FaStop size={10} /> atura</button>
+          <button onClick={() => setGran(true)} style={{ ...xip, marginLeft: 'auto' }}
+                  title="La pantalla d'escoltar, amb la lletra i els botons grans">
+            <FaExpand size={10} /> pantalla gran
+          </button>
+          <button onClick={atura} style={xip}><FaStop size={10} /> atura</button>
         </div>
       )}
     </div>
   );
 }
+
+/** La pantalla d'escoltar corrent: tapa la resta, perquè la resta no és per a ara. */
+const pantallaGran: React.CSSProperties = {
+  position: 'fixed', inset: 0, zIndex: 1100, overflowY: 'auto',
+  background: 'var(--bg, var(--surface))',
+  padding: `calc(var(--nav-h, 56px) + env(safe-area-inset-top, 0px) + 14px) max(16px, env(safe-area-inset-left, 0px)) calc(96px + env(safe-area-inset-bottom, 0px))`,
+  maxWidth: 760, margin: '0 auto',
+};
+/** Res per sota de la mida d'un dit: 64 px el normal, 86 el de pausa. */
+const rodoGran: React.CSSProperties = {
+  width: 64, height: 64, borderRadius: '50%', border: '1.5px solid var(--border)',
+  background: 'var(--surface)', color: 'var(--brand-1)', cursor: 'pointer',
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+};
+const xipGran: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 52, padding: '12px 20px',
+  borderRadius: 'var(--r-pill)', border: '1.5px solid var(--border)', background: 'var(--surface)',
+  color: 'var(--text)', fontWeight: 800, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit',
+};
 
 const credit: React.CSSProperties = {
   padding: '12px 14px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)',
