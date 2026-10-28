@@ -48,6 +48,7 @@ const GrammarPage = lazy(() => import('./components/GrammarPage'));
 const AlfabetPage = lazy(() => import('./components/AlfabetPage'));
 const PracticeEditor = lazy(() => import('./components/PracticeEditor'));
 const VerifyQueue = lazy(() => import('./components/VerifyQueue'));
+const RevisaPage = lazy(() => import('./components/RevisaPage'));
 
 const RouteLoader = () => (
   <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -269,6 +270,7 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/drills" element={<DrillsResponsive />} />
+        <Route path="/revisa" element={<RevisaPage />} />
         <Route path="/cerca" element={<SearchPage />} />
         <Route path="/afegeix" element={<AddSentencePage />} />
         <Route path="/tests" element={<PracticePage />} />
