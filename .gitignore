@@ -68,3 +68,6 @@ backend/bakeoff/
 backend/bakeoff2/
 # Third-party lexicon (Oulhaj dictionary, IRCAM conjugations) fetched from HuggingFace at runtime
 backend/knowledge/lexicon/
+
+# material baixat per llegir-ne el text cremat (tools/text_de_video)
+feina/
