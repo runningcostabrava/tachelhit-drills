@@ -74,8 +74,91 @@ def test_una_unitat_sense_prou_frases_no_fa_cap_exercici():
         "una unitat sense peça escrita no s'inventa cap exercici"
 
 
-def test_lestat_dannexio_no_te_exercici_a_posta():
-    """La seva peça són les primeres lletres del nom, i amb un patró no es pot distingir un nom
-    que ha perdut la «a-» d'un que comença per «t-» de tota la vida: l'exercici ensenyaria una
-    cosa falsa. Queda per fer amb la forma lliure del nom al davant."""
+def test_lestat_dannexio_no_es_fa_amb_un_patro():
+    """No hi és a `PECES`, i no hi ha de ser.
+
+    La seva peça són les primeres lletres del nom, i amb un patró no es pot distingir un nom que
+    ha perdut la «a-» d'un que comença per «t-» de tota la vida: l'exercici ensenyaria una cosa
+    falsa. Es pregunta amb una taula de formes (`fes_annexio`), no buscant dins d'una frase."""
     assert "estat-annexio" not in exercicis.PECES
+
+
+def test_lestat_dannexio_pregunta_amb_la_forma_lliure_al_davant():
+    """L'exercici dona el nom sol i demana com queda darrere de la preposicio."""
+    fets = exercicis.fes("estat-annexio", [])
+    assert fets, "la unitat de l'annexio ha de tenir exercicis"
+    e = fets[0]
+    assert e["unit"] == "estat-annexio" and e["drill_id"] is None
+    assert "«" in e["pregunta"], "la pregunta ha de dir QUIN nom es pregunta"
+    assert e["resposta"] and e["resposta"] in e["opcions"]
+    assert len(e["opcions"]) == 4, "quatre opcions: una de bona i tres de la mateixa regla"
+    assert e["shi"].startswith("g ") and "·" in e["shi"], "el buit va dins d'una frase"
+    assert e["tif"], "la tifinag la posa el servidor"
+
+
+def test_lannexio_nomes_fa_servir_les_lectures_segures(monkeypatch):
+    """El tifinag d'aquella classe es va llegir a ull, i hi ha signes que s'assemblen molt.
+
+    Les parelles marcades `cert: false` hi son perque algu les confirmi; si sortissin com a
+    exercici, l'app ensenyaria com a cert el que encara no ho es.
+
+    La taula de debo es posa i es treu dubtes a mesura que es comproven, i per aixo aqui se'n
+    fa una de falsa: el que s'ha de complir es **el filtre**, no que el fitxer d'avui tingui cap
+    parella dubtosa.
+    """
+    taula = {"font": {"autor": "algu", "url": "http://exemple", "obra": "una classe"},
+             "regles": [{"id": "prova", "nom": "prova", "diu": "prova", "segon": 1, "parelles": [
+                 {"lliure": "argaz", "annexat": "urgaz", "ca": "home", "cert": True},
+                 {"lliure": "adlis", "annexat": "udlis", "ca": "llibre", "cert": True},
+                 {"lliure": "afus", "annexat": "ufus", "ca": "ma", "cert": True},
+                 {"lliure": "amud", "annexat": "umud", "ca": "llavor", "cert": True},
+                 {"lliure": "axxx", "annexat": "uxxx", "ca": None, "cert": False},
+             ]}]}
+    monkeypatch.setattr(exercicis, "_taula_annexio", lambda: taula)
+    fets = exercicis.fes("estat-annexio", [], quants=99)
+    assert fets, "amb quatre parelles segures ja se'n pot fer"
+    for e in fets:
+        assert e["resposta"] != "uxxx"
+        assert "uxxx" not in e["opcions"], "tampoc com a resposta falsa"
+
+
+def test_lannexio_amb_poques_parelles_segures_no_fa_cap_exercici(monkeypatch):
+    """Val mes cap exercici que un amb dues opcions: la bona es veuria de lluny."""
+    taula = {"font": {}, "regles": [{"id": "curta", "diu": "", "segon": 1, "parelles": [
+        {"lliure": "argaz", "annexat": "urgaz", "cert": True},
+        {"lliure": "adlis", "annexat": "udlis", "cert": True},
+        {"lliure": "afus", "annexat": "ufus", "cert": False},
+    ]}]}
+    monkeypatch.setattr(exercicis, "_taula_annexio", lambda: taula)
+    assert exercicis.fes("estat-annexio", []) == []
+
+
+def test_el_buit_tambe_es_veu_a_la_ratlla_tifinag():
+    """El transliterador només tradueix lletres, i els punts del buit se li perdien.
+
+    A la pantalla, la ratlla tifinag sortia sencera i sense cap forat —i a l'exercici de
+    l'annexió, que és «g» i prou més el buit, quedava una lletra solta que semblava una errada.
+    Els espais de les puntes també es retallaven, i la frase quedava enganxada al buit.
+    """
+    assert exercicis.tif_amb_buit("g ···") == "ⴳ ···"
+
+    enmig = exercicis.tif_amb_buit("is dar-k ···· ɣ wass")
+    assert " ···· " in enmig, "el buit ha de quedar separat del que té al costat"
+    assert enmig.startswith("ⵉⵙ "), "i el que hi ha abans del buit s'ha de traduir igual"
+
+    e = exercicis.fes("estat-annexio", [])[0]
+    assert "·" in e["tif"], "l'exercici que es serveix ha de portar el buit a la tifinag"
+
+
+def test_lannexio_diu_d_on_surt():
+    """Credit: cada exercici porta l'obra, qui la signa i el segon del video."""
+    e = exercicis.fes("estat-annexio", [])[0]
+    assert e["font"]["autor"] and e["font"]["url"] and e["font"]["segon"]
+
+
+def test_cada_exercici_porta_el_seu_nom():
+    """La pantalla els posa un per un i necessita una clau; els d'annexio no tenen `drill_id`."""
+    frases = [fila(i, "tigmmi-nns", "casa seva") for i in range(1, 7)]
+    tots = exercicis.fes("possessius", frases) + exercicis.fes("estat-annexio", [])
+    noms = [e["id"] for e in tots]
+    assert all(noms) and len(set(noms)) == len(noms)

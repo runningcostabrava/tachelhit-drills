@@ -1,0 +1,87 @@
+{
+  "_llegeix-me": [
+    "Noms amazics en la seva forma LLIURE i en la forma ANNEXADA, la que pren el nom darrere",
+    "d'una preposició o d'un verb ('argaz' -> 'g urgaz').",
+    "",
+    "Per què existeix aquest fitxer. Els exercicis de la unitat es fan amb les frases de la",
+    "biblioteca i amb un patró que troba la peça que la unitat ensenya (`backend/exercicis.py`).",
+    "L'estat d'annexió és l'únic que no es pot trobar així: la peça són les primeres lletres del",
+    "nom, i darrere d'una preposició un nom que COMENÇA per t- s'escriu igual que un que ha",
+    "perdut la a-. Sense saber la forma lliure, el patró faria exercicis que ensenyen una cosa",
+    "falsa. Amb aquesta taula, l'exercici ja es pot preguntar bé: aquí tens el nom sol, com queda",
+    "darrere de la preposició?",
+    "",
+    "D'on surt. De la classe 'Addad n yism (ilelli / amaruz)' de Lhoucine Ait ouarab",
+    "(@LhouMassinisa), que té permís del propietari des del 26-10-2026 (docs/PERMISOS.md). Les",
+    "taules hi van escrites a la pantalla, només en tifinag; s'han llegit amb la carta de lletres",
+    "del nostre propi transliterador (tools/text_de_video/). Cada parella diu en quin segon del",
+    "vídeo surt, perquè es pugui tornar a mirar.",
+    "",
+    "'cert' diu si la lectura és segura. Fals vol dir que el signe es confon amb un altre a la",
+    "mida que té a la pantalla, i aleshores la parella NO s'usa per fer exercicis: hi és perquè",
+    "algú la miri i la confirmi, no per ensenyar-la. Una lectura de màquina no és text de ningú.",
+    "",
+    "La tifinag no s'escriu aquí: la posa el servidor amb el transliterador, com a tota l'app."
+  ],
+  "font": {
+    "obra": "Addad n yism (ilelli / amaruz) — Tajṛṛumt / Grammaire",
+    "autor": "Lhoucine Ait ouarab",
+    "canal": "@LhouMassinisa",
+    "url": "https://www.youtube.com/watch?v=ZQmcIwAU6mk",
+    "permis": "sí, 26-10-2026 (docs/PERMISOS.md)",
+    "llegit": "2026-10-28, a ull amb la carta de lletres del transliterador"
+  },
+  "regles": [
+    {
+      "id": "alternanca",
+      "nom": "La a es torna u",
+      "diu": "El nom masculí que comença per a- canvia la a per una u.",
+      "segon": 405,
+      "parelles": [
+        {"lliure": "adlis", "annexat": "udlis", "ca": "llibre", "cert": true},
+        {"lliure": "agadir", "annexat": "ugadir", "ca": "graner fortificat", "cert": true},
+        {"lliure": "amɣar", "annexat": "umɣar", "ca": "home gran, cap", "cert": true},
+        {"lliure": "asaru", "annexat": "usaru", "ca": null, "cert": true},
+        {"lliure": "aɣbalu", "annexat": "uɣbalu", "ca": "font", "cert": true},
+        {"lliure": "atbir", "annexat": "utbir", "ca": "colom", "cert": true}
+      ]
+    },
+    {
+      "id": "prefix",
+      "nom": "Se li posa una y o una w al davant",
+      "diu": "El nom que comença per i- pren una y- al davant; el que comença per u-, i alguns que comencen per a-, prenen una w-.",
+      "segon": 507,
+      "parelles": [
+        {"lliure": "ifri", "annexat": "yifri", "ca": "cova", "cert": true},
+        {"lliure": "ilsawn", "annexat": "yilsawn", "ca": "llengües", "cert": true},
+        {"lliure": "iwaliwn", "annexat": "yiwaliwn", "ca": "paraules", "cert": true},
+        {"lliure": "itri", "annexat": "yitri", "ca": "estrella", "cert": true},
+        {"lliure": "udm", "annexat": "wudm", "ca": "cara", "cert": true},
+        {"lliure": "uššn", "annexat": "wuššn", "ca": "xacal", "cert": true},
+        {"lliure": "ussan", "annexat": "wussan", "ca": "dies", "cert": true},
+        {"lliure": "awal", "annexat": "wawal", "ca": "paraula, parla", "cert": true},
+        {"lliure": "ayyis", "annexat": "wayyis", "ca": "cavall", "cert": true},
+        {"lliure": "addad", "annexat": "waddad", "ca": "estat", "cert": true},
+        {"lliure": "izm", "annexat": "yizm", "ca": "lleó", "cert": true,
+         "com": "la x, la z i la f s'assemblen; es va comprovar escrivint izm, ixf i izf amb el nostre transliterador i comparant signe a signe"},
+        {"lliure": "ixf", "annexat": "yixf", "ca": "cap", "cert": true,
+         "com": "igual que «izm»: la x hi surt sense el pal del mig, que és el que distingeix la z"}
+      ]
+    },
+    {
+      "id": "caiguda",
+      "nom": "La vocal del principi cau",
+      "diu": "El nom femení que comença per ta- o ti- perd la vocal: ta- es torna t-.",
+      "segon": 636,
+      "parelles": [
+        {"lliure": "tamɣart", "annexat": "tmɣart", "ca": "dona", "cert": true},
+        {"lliure": "taɣyult", "annexat": "tɣyult", "ca": "somera", "cert": true},
+        {"lliure": "tiwtmin", "annexat": "twtmin", "ca": "dones", "cert": true},
+        {"lliure": "tarbat", "annexat": "trbat", "ca": "noia", "cert": true},
+        {"lliure": "tamurt", "annexat": "tmurt", "ca": "terra, país", "cert": true},
+        {"lliure": "tafsut", "annexat": "tfsut", "ca": "primavera", "cert": true},
+        {"lliure": "taskkurt", "annexat": "tskkurt", "ca": "perdiu", "cert": true}
+      ]
+    }
+  ]
+}
