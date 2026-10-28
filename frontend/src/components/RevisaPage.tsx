@@ -32,9 +32,16 @@ interface Drill {
   image_url?: string | null; text_tachelhit_suggested?: string | null;
   region?: string | null; variety?: string | null; speaker?: string | null;
 }
+/**
+ * Un esborrany de màquina amb la seva procedència.
+ *
+ * `acord` és com de parescut és al que han llegit els altres models. És el número que de debò
+ * importa: una lectura sola és una endevinalla, i tres que diuen el mateix és una altra cosa.
+ */
+interface Esborrany { text: string; model?: string | null; acord?: number | null }
 interface Seguent {
   pila: string; queden: number; titol?: string; pregunta?: string; opcions?: Opcio[];
-  drill: Drill | null; companya?: Drill | null;
+  drill: Drill | null; companya?: Drill | null; esborranys?: Esborrany[];
 }
 
 export default function RevisaPage() {
@@ -124,6 +131,10 @@ export default function RevisaPage() {
   const d = item?.drill;
   const c = item?.companya;
   const opcions = item?.opcions || [];
+  const esborranys = item?.esborranys || [];
+  // Quants models han llegit aquesta gravació de la mateixa manera. Amb dos ja val la pena
+  // mirar-la; amb tres, molt més.
+  const coincideixen = esborranys.filter((e) => (e.acord ?? 0) >= 0.7).length;
 
   return (
     <div style={cos}>
@@ -155,6 +166,37 @@ export default function RevisaPage() {
           <Targeta d={d} />
           {c && <><div style={separador}>i</div><Targeta d={c} /></>}
 
+          {/* Els esborranys de màquina, amb de qui són i si coincideixen.
+              Això no és decoració: és la raó per mirar-se aquesta frase i no una altra. */}
+          {esborranys.length > 0 && (
+            <div style={caixaEsborranys}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                <strong style={{ fontSize: 13.5 }}>
+                  {esborranys.length === 1 ? 'Una màquina ho ha llegit així'
+                    : `${esborranys.length} màquines ho han llegit`}
+                </strong>
+                {coincideixen >= 2 && (
+                  <span style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--emerald, #0a7)' }}>
+                    i {coincideixen} hi coincideixen
+                  </span>
+                )}
+              </div>
+              {esborranys.map((e, k) => (
+                <div key={k} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{ fontSize: 15.5, lineHeight: 1.4 }}>{e.text}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    {e.model || 'no sabem de quin model surt'}
+                    {e.acord != null ? ` · acord ${e.acord.toFixed(2)}` : ''}
+                  </span>
+                </div>
+              ))}
+              <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-soft)', lineHeight: 1.5 }}>
+                Cap d’aquests no és el text d’un parlant. El que triïs es desa com a
+                <strong> proposta</strong>, perquè després algú que sàpiga la llengua el confirmi.
+              </p>
+            </div>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: 18 }}>
             {opcions.map((o) => (
               o.id === 'tria' && c ? (
@@ -164,9 +206,15 @@ export default function RevisaPage() {
                     {o.diu}: <strong>«{(quin.text_catalan || quin.text_tachelhit || '').slice(0, 44)}»</strong>
                   </button>
                 ))
-              ) : o.id === 'tria' && d.text_tachelhit_suggested ? (
-                <button key={o.id} onClick={() => decideix('tria', undefined, d.text_tachelhit_suggested || '')}
-                        disabled={ocupat} style={boto}>{o.diu}</button>
+              ) : o.id === 'tria' && esborranys.length ? (
+                // Un botó per esborrany: triar-ne un és dir «aquest és el bo», i amb tres
+                // lectures diferents al davant la tria és una decisió, no un sí o un no.
+                esborranys.map((e, k) => (
+                  <button key={`${o.id}-${k}`} onClick={() => decideix('tria', undefined, e.text)}
+                          disabled={ocupat} style={boto}>
+                    {o.diu}: <strong>«{e.text.slice(0, 60)}»</strong>
+                  </button>
+                ))
               ) : (
                 <button key={o.id} onClick={() => decideix(o.id)} disabled={ocupat}
                         style={o.id === 'no-ho-se' ? botoFluix : boto}>{o.diu}</button>
@@ -216,6 +264,12 @@ function Targeta({ d }: { d: Drill }) {
     </div>
   );
 }
+
+const caixaEsborranys: React.CSSProperties = {
+  display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14,
+  padding: '12px 14px', borderRadius: 'var(--r-lg)',
+  border: '1px solid var(--border)', background: 'var(--surface-2)',
+};
 
 const cos: React.CSSProperties = {
   padding: '20px max(16px, env(safe-area-inset-left, 0px)) 80px max(16px, env(safe-area-inset-right, 0px))',

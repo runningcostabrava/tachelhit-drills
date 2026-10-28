@@ -12,6 +12,7 @@ to a speaker.
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Dict, List, Optional
 
 # Speaking stayed; MARKING it went, on 2026-10-22. Our transcriber gets a CER of 0.78 on our own
@@ -138,8 +139,24 @@ def replace_steps(db, test_id: int, steps: List[dict]) -> List[dict]:
     for i, s in enumerate(cleaned):
         db.add(PracticeStep(test_id=test_id, position=i, kind=s["kind"],
                             drill_id=s["drill_id"], payload=s["payload"]))
+    toca_la_data(db, test_id)
     db.commit()
     return steps_of(db, test_id)
+
+
+def toca_la_data(db, test_id: int) -> None:
+    """Moure `tests.updated_at` quan es mouen els passos.
+
+    Des de l'ADR 0002 una practica ES la seva seqüencia de passos, pero `replace_steps` nomes
+    escrivia a `practice_steps` i la data de la practica es quedava on era. `GET /tests/?since=`
+    mira aquesta data: qui tenia l'app oberta fora de linia no s'assabentava que la practica
+    havia canviat i seguia fent la versio vella. La data ha de dir l'ultima vegada que la
+    practica va canviar, i canviar-ne els passos es canviar-la.
+    """
+    from models import Test as TestModel
+    t = db.query(TestModel).filter(TestModel.id == test_id).first()
+    if t is not None:
+        t.updated_at = datetime.utcnow()
 
 
 def forget(db, test_id: int) -> int:
@@ -155,6 +172,35 @@ def forget(db, test_id: int) -> int:
     n = db.query(PracticeStep).filter(PracticeStep.test_id == test_id).delete(
         synchronize_session=False)
     return n
+
+
+def passos_automatics(db, drill_ids: List[int]) -> List[dict]:
+    """Els passos d'una practica que munta la maquina, amb l'eina triada frase per frase.
+
+    «Escolta i escriu» demana repetir el que se sent, i per tant nomes val si la gravacio es
+    d'una persona amb nom (#273): si la veu es d'un canal, o retallada d'un video, li estariem
+    dient a algu que imiti una pronuncia que potser no es la que apren, i no te manera de
+    saber-ho. Per a aquestes, «escolta i tria», que per a escoltar admet qualsevol veu.
+
+    Les frases que ja no existeixen no hi entren: `practice_steps.drill_id` es una clau forana.
+    """
+    from models import Drill as DrillModel
+    import grammar as grammar_course
+    if not drill_ids:
+        return []
+    quins = {d.id: d for d in db.query(DrillModel).filter(DrillModel.id.in_(drill_ids)).all()}
+    fora = []
+    for i in drill_ids:
+        d = quins.get(i)
+        if d is None:
+            continue
+        try:
+            per_imitar = grammar_course.qui_ho_diu(d)["per_imitar"]
+        except Exception:                       # noqa: BLE001 -- una frase rara no tomba la practica
+            per_imitar = False
+        fora.append({"kind": "write_heard" if per_imitar else "listen_pick",
+                     "drill_id": i, "payload": None})
+    return fora
 
 
 def from_legacy(test) -> List[dict]:
