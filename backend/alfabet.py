@@ -239,15 +239,27 @@ def abecedari(db, exemples_per_lletra: int = 2) -> Dict:
 
 
 def comptes(db) -> Dict:
-    """Només els números: quantes lletres hi ha i quantes sonen ja.
+    """Els números, i les lletres mateixes.
 
     La portada n'ha de poder dir «18 de 33 lletres ja sonen» sense portar-se tot l'abecedari:
-    obrir l'app no ha de baixar la biblioteca.
+    obrir l'app no ha de baixar la biblioteca. Però sí que se'n porta **com s'escriuen** (#440),
+    perquè la portada les ensenya en comptes d'una il·lustració. Són 33 parelles de dos
+    caràcters: mig quilobyte. El que no ha de baixar són els exemples, les paraules i els sons,
+    que és el que fa gros l'abecedari sencer.
+
+    I es porten d'aquí i no d'una còpia al web: si algú afegeix una lletra a `LLETRES`, la
+    portada n'ensenya 34 el mateix dia, i no una llista que diu una altra cosa que el número
+    que hi ha al costat.
     """
     mots = _mots(db)
     tenen = {so for m in mots for so in m["fonemes"]}
     mudes = [l["lat"] for l in LLETRES if so_de(l) not in tenen]
-    return {"total": len(LLETRES), "amb_so": len(LLETRES) - len(mudes), "mudes": mudes}
+    return {
+        "total": len(LLETRES),
+        "amb_so": len(LLETRES) - len(mudes),
+        "mudes": mudes,
+        "lletres": [{"tif": l["tif"], "lat": l["lat"]} for l in LLETRES],
+    }
 
 
 def parelles(db, per_so: int = 4) -> List[Dict]:

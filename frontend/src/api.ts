@@ -249,7 +249,12 @@ export interface HomeData {
   grammar: { units: number; with_lesson: number };
   /** Quantes lletres de l'abecedari ja sonen (#368). Opcional: un servidor que encara no el
    *  serveix no ha de deixar la portada en blanc. */
-  sounds?: { total: number; amb_so: number; mudes: string[] };
+  sounds?: {
+    total: number; amb_so: number; mudes: string[];
+    /** Com s'escriuen, per ensenyar-les a la portada (#440). També opcional: un servidor d'abans
+     *  no les envia, i aleshores la franja ensenya el compte i prou. */
+    lletres?: { tif: string; lat: string }[];
+  };
   practice: { all: number; mine: number };
   you: { signed_in: boolean; name: string | null; is_admin: boolean; recordings: number };
 }
