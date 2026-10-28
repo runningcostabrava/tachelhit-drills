@@ -52,6 +52,26 @@ MODELS = [
 QUANTS = 300
 
 # %%
+# El NeMo no ve de serie ni a Kaggle ni a Colab, i sense ell el model de referencia no es pot ni
+# carregar: la passada anterior va morir amb «No module named 'nemo'». S'instal·la aqui, al
+# principi, perque trigui mentre encara no fa falta res mes.
+import subprocess  # noqa: E402
+import sys as _sys  # noqa: E402
+
+try:
+    import nemo  # noqa: F401
+    print("el nemo ja hi era")
+except Exception:
+    print("instal·lant el nemo...", flush=True)
+    subprocess.run([_sys.executable, "-m", "pip", "install", "-q", "nemo_toolkit[asr]"],
+                   check=False)
+    try:
+        import nemo  # noqa: F401
+        print("nemo llest")
+    except Exception as e:
+        print("el nemo no s'ha pogut instal·lar:", str(e)[:150])
+
+# %%
 import json
 import os
 import re
@@ -74,14 +94,31 @@ def secret(nom):
         pass
     raise SystemExit("falta el secret %s (Kaggle: Add-ons > Secrets; Colab: el pany)" % nom)
 
-HF_TOKEN = secret("HF_TOKEN")
+# El token NO es demana aqui: a Kaggle el corpus ve d'un dataset i no en cal cap. Demanar-lo
+# per endavant feia caure la passada a la segona cel·la encara que no fes falta.
+HF_TOKEN = None
 
 # %%
-# El corpus
-from huggingface_hub import snapshot_download
+# El corpus.
+#
+# A Kaggle ve d'un dataset privat enganxat al quadern, i aixo **no demana cap token**: corre amb
+# el compte de qui l'ha pujat. Es a posta. Mentre el corpus vivia darrere d'un token de
+# HuggingFace, cada vegada que es pujava una versio del quadern per l'API el secret s'hi
+# desenganxava i la passada queia amb «falta el secret HF_TOKEN» — van caure'n tres seguides.
+# Amb el dataset, pujar i llancar torna a ser una sola ordre i el peo pot correr sol.
+#
+# A Colab no hi ha datasets, i alla si que es baixa de HuggingFace amb el token.
+import os as _os
 
-carpeta = snapshot_download(repo_id="josepabloucr/tamazight-corpus", repo_type="dataset",
-                            token=HF_TOKEN)
+KAGGLE = "/kaggle/input/corpus-taixelhit"
+if _os.path.isdir(KAGGLE):
+    carpeta = KAGGLE
+    print("el corpus ve del dataset de Kaggle: no cal cap token")
+else:
+    from huggingface_hub import snapshot_download
+    carpeta = snapshot_download(repo_id="josepabloucr/tamazight-corpus", repo_type="dataset",
+                                token=secret("HF_TOKEN"))
+    print("el corpus ve de HuggingFace")
 files = [json.loads(l) for l in open(os.path.join(carpeta, "manifest.jsonl"), encoding="utf-8") if l.strip()]
 prova = [f for f in files if f.get("split") == "test"]
 print("corpus: %d talls | de prova: %d" % (len(files), len(prova)))
@@ -159,8 +196,8 @@ for model_id, mena in MODELS:
             from transformers import AutoProcessor, AutoModelForCTC
             import soundfile as sf
             import librosa
-            proc = AutoProcessor.from_pretrained(model_id, token=HF_TOKEN)
-            mod = AutoModelForCTC.from_pretrained(model_id, token=HF_TOKEN)
+            proc = AutoProcessor.from_pretrained(model_id)
+            mod = AutoModelForCTC.from_pretrained(model_id)
             mod = mod.to("cuda" if torch.cuda.is_available() else "cpu").eval()
             def digues(camins):
                 fora = []
