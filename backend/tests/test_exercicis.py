@@ -114,7 +114,7 @@ def test_lannexio_nomes_fa_servir_les_lectures_segures(monkeypatch):
                  {"lliure": "amud", "annexat": "umud", "ca": "llavor", "cert": True},
                  {"lliure": "axxx", "annexat": "uxxx", "ca": None, "cert": False},
              ]}]}
-    monkeypatch.setattr(exercicis, "_taula_annexio", lambda: taula)
+    monkeypatch.setattr(exercicis, "_taula", lambda _fitxer: taula)
     fets = exercicis.fes("estat-annexio", [], quants=99)
     assert fets, "amb quatre parelles segures ja se'n pot fer"
     for e in fets:
@@ -129,7 +129,7 @@ def test_lannexio_amb_poques_parelles_segures_no_fa_cap_exercici(monkeypatch):
         {"lliure": "adlis", "annexat": "udlis", "cert": True},
         {"lliure": "afus", "annexat": "ufus", "cert": False},
     ]}]}
-    monkeypatch.setattr(exercicis, "_taula_annexio", lambda: taula)
+    monkeypatch.setattr(exercicis, "_taula", lambda _fitxer: taula)
     assert exercicis.fes("estat-annexio", []) == []
 
 
@@ -154,6 +154,44 @@ def test_lannexio_diu_d_on_surt():
     """Credit: cada exercici porta l'obra, qui la signa i el segon del video."""
     e = exercicis.fes("estat-annexio", [])[0]
     assert e["font"]["autor"] and e["font"]["url"] and e["font"]["segon"]
+
+
+def test_el_plural_es_pregunta_amb_el_mot_sol_al_davant():
+    """«N'hi ha un de sol. I quan n'hi ha molts?», amb el singular a la vista."""
+    fets = exercicis.fes("noms-genere-nombre", [])
+    assert fets, "la unitat del nom ha de tenir exercicis"
+    e = fets[0]
+    assert e["unit"] == "noms-genere-nombre" and e["drill_id"] is None
+    assert e["resposta"] in e["opcions"] and len(e["opcions"]) == 4
+    assert e["shi"] and "·" not in e["shi"], \
+        "al plural no hi ha marc de frase: s'ensenya el mot sol, perquè no se'n pot inventar cap"
+    assert e["tif"], "la tifinag la posa el servidor"
+    assert e["font"]["autor"] and e["font"]["segon"]
+
+
+def test_el_plural_no_barreja_les_dues_maneres_de_fer_lo():
+    """Les respostes falses han de sortir de la MATEIXA regla.
+
+    Si a un plural intern se li posen de fals tres plurals externs, la bona es veu de lluny i
+    l'exercici deixa d'ensenyar res.
+    """
+    import json
+    taula = json.loads(exercicis.PLURAL_FITXER.read_text(encoding="utf-8"))
+    per_regla = {r["id"]: {p["molts"] for p in r["parelles"]} for r in taula["regles"]}
+    for e in exercicis.fes("noms-genere-nombre", [], quants=99):
+        quina = e["id"].split(":")[1]
+        assert set(e["opcions"]) <= per_regla[quina], \
+            "una opció surt d'una altra manera de fer el plural"
+
+
+def test_les_dues_taules_no_es_trepitgen():
+    """L'annexió i el plural fan servir el mateix constructor; els noms han de seguir sent únics."""
+    tots = exercicis.fes("estat-annexio", [], quants=99) + \
+        exercicis.fes("noms-genere-nombre", [], quants=99)
+    noms = [e["id"] for e in tots]
+    assert len(set(noms)) == len(noms)
+    unitats = {e["unit"] for e in tots}
+    assert unitats == {"estat-annexio", "noms-genere-nombre"}
 
 
 def test_cada_exercici_porta_el_seu_nom():

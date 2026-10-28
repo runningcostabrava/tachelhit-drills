@@ -75,6 +75,11 @@ PECES: Dict[str, Dict] = {
 ANNEXIO_UNITAT = "estat-annexio"
 ANNEXIO_FITXER = Path(__file__).parent / "data" / "annexio.json"
 
+#: El plural tampoc no te patro: de vegades es una terminacio i de vegades canvien les vocals de
+#: dins del mot. Es pregunta amb una taula, igual que l'estat d'annexio.
+PLURAL_UNITAT = "noms-genere-nombre"
+PLURAL_FITXER = Path(__file__).parent / "data" / "plurals.json"
+
 #: Com a mínim, perquè un exercici valgui la pena: quatre frases per poder-ne fer tres i que les
 #: respostes falses surtin de la mateixa unitat.
 MIN_FRASES = 4
@@ -134,63 +139,100 @@ def tif_amb_buit(text: str) -> str:
     return "".join(fora)
 
 
-def _taula_annexio() -> Dict:
+def _taula(fitxer) -> Dict:
+    """Una taula de formes, o res si no es pot llegir.
+
+    Sense taula no hi ha exercici, i prou: una unitat sense «Fes-ho tu» és una pantalla més
+    curta, i inventar-se les formes seria ensenyar paraules que ningú no diu.
+    """
     try:
-        return json.loads(ANNEXIO_FITXER.read_text(encoding="utf-8"))
+        return json.loads(fitxer.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        # Sense taula no hi ha exercici, i prou: una unitat sense «Fes-ho tu» és una pantalla
-        # més curta, i inventar-se les formes seria ensenyar paraules que ningú no diu.
         return {}
 
 
-def fes_annexio(quants: int = 3) -> List[Dict]:
-    """«Aquí tens el nom sol: com queda darrere de la preposició?»
+def _de_taula(taula: Dict, unitat: str, de: str, a: str, que: str,
+              pregunta, dins, quants: int) -> List[Dict]:
+    """Exercicis fets amb una taula de dues formes del mateix mot.
 
-    Les parelles surten d'una classe de gramàtica que les té escrites a la pantalla, i el fitxer
-    diu de quin vídeo i de quin segon (`data/annexio.json`). Dues regles que fan que valgui:
+    Hi ha unitats que no es poden preguntar buscant un tros dins d'una frase —l'estat d'annexió i
+    el plural són les dues— perquè la seva peça és **com canvia el mot sencer**. Per a aquestes,
+    la pregunta és «aquí tens una forma, quina és l'altra?», i les formes surten d'una taula que
+    diu de quin vídeo i de quin segon s'han tret.
+
+    Dues regles que fan que l'exercici valgui, i que són les mateixes dels exercicis de frases:
 
     · **Només les lectures segures.** Les parelles amb `cert: false` hi són perquè algú les
-      confirmi, no per ensenyar-les: el tifinag es va llegir a ull i hi ha signes que s'assemblen.
-    · **Les respostes falses són formes de la MATEIXA regla.** Si les tries d'una altra, la bona
+      confirmi, no per ensenyar-les: el tifinag es llegeix a ull i hi ha signes que s'assemblen.
+    · **Les respostes falses són formes de la MATEIXA regla.** Si es treuen d'una altra, la bona
       es veu de lluny i l'exercici no ensenya res.
+
+    `de` i `a` són com es diuen les dues formes al fitxer; `pregunta` rep la forma de partida i
+    torna el text de la pregunta; `dins` rep la forma de partida i el buit, i torna la frase que
+    es veu. Cada unitat demana una frase diferent, i no se'n pot inventar cap: a l'annexió el
+    marc és una preposició de debò («g ···»), que és justament el que fa canviar el nom; al
+    plural no hi ha cap marc que es pugui escriure sense comprovar-lo abans, i per això s'hi
+    ensenya el mot sol.
     """
-    taula = _taula_annexio()
-    font = taula.get("font") or {}
+    general = taula.get("font") or {}
     fora: List[Dict] = []
     for regla in taula.get("regles") or []:
         bones = [p for p in (regla.get("parelles") or []) if p.get("cert")]
         if len(bones) < MIN_FRASES:
             continue
-        formes = [p["annexat"] for p in bones]
+        formes = [p[a] for p in bones]
         rnd = random.Random(regla.get("id") or "")
         tria = list(bones)
         rnd.shuffle(tria)
+        font = {**general, **(regla.get("font") or {})}
+        if regla.get("segon") and not font.get("segon"):
+            font["segon"] = regla["segon"]
         for p in tria[:max(1, quants)]:
-            r = random.Random(p["lliure"])
-            altres = [f for f in formes if not igual_de_so(f, p["annexat"])]
+            r = random.Random(p[de])
+            altres = [f for f in formes if not igual_de_so(f, p[a])]
             r.shuffle(altres)
-            opcions = [p["annexat"]] + altres[:3]
+            opcions = [p[a]] + altres[:3]
             r.shuffle(opcions)
-            buit = "·" * max(3, len(p["annexat"]))
+            frase = dins(p[de], "·" * max(3, len(p[a])))
             fora.append({
-                "id": "annexio:%s:%s" % (regla.get("id"), p["lliure"]),
+                "id": "%s:%s:%s" % (unitat, regla.get("id"), p[de]),
                 "kind": "tria" if len(opcions) >= 4 else "omple",
-                "unit": ANNEXIO_UNITAT,
+                "unit": unitat,
                 "drill_id": None,
-                "pregunta": "El nom sol és «%s». Darrere de la preposició, com queda?" % p["lliure"],
+                "pregunta": pregunta(p[de]),
                 "ajuda": regla.get("diu"),
-                "que": "l'estat d'annexió",
-                "shi": "g " + buit,
-                "tif": tif_amb_buit("g " + buit),
+                "que": que,
+                "shi": frase,
+                "tif": tif_amb_buit(frase),
                 "ca": p.get("ca"),
-                "resposta": p["annexat"],
+                "resposta": p[a],
                 "opcions": opcions if len(opcions) >= 4 else [],
                 "audio_url": None,
                 "speaker": None,
                 "region": None,
-                "font": {**font, "segon": regla.get("segon")},
+                "font": font,
             })
     return fora
+
+
+def fes_annexio(quants: int = 3) -> List[Dict]:
+    """«Aquí tens el nom sol: com queda darrere de la preposició?»"""
+    return _de_taula(
+        _taula(ANNEXIO_FITXER), ANNEXIO_UNITAT, "lliure", "annexat", "l'estat d'annexió",
+        lambda u: "El nom sol és «%s». Darrere de la preposició, com queda?" % u,
+        lambda u, buit: "g " + buit, quants)
+
+
+def fes_plural(quants: int = 3) -> List[Dict]:
+    """«Aquí en tens un: i quan n'hi ha molts?»
+
+    El plural amazic no és una terminació que s'enganxi sempre igual —de vegades canvien les
+    vocals de dins del mot— i per això tampoc no es pot buscar amb un patró dins d'una frase.
+    """
+    return _de_taula(
+        _taula(PLURAL_FITXER), PLURAL_UNITAT, "un", "molts", "el plural",
+        lambda u: "N'hi ha un de sol. I quan n'hi ha molts?",
+        lambda u, buit: u, quants)
 
 
 def fes(slug: str, frases: List, quants: int = 3) -> List[Dict]:
@@ -199,10 +241,12 @@ def fes(slug: str, frases: List, quants: int = 3) -> List[Dict]:
     `frases` són les files de la unitat (drills). Torna una llista buida quan no n'hi ha prou:
     val més cap exercici que un de dolent.
     """
+    # Aquestes dues no es fan amb les frases de la unitat sinó amb una taula de formes: la seva
+    # peça és com canvia el mot sencer, i cap patró no la sap trobar dins d'una frase.
     if slug == ANNEXIO_UNITAT:
-        # Aquesta no es fa amb les frases de la unitat sinó amb una taula de formes: la seva peça
-        # és el principi del nom, i cap patró no la sap trobar dins d'una frase.
         return fes_annexio(quants)
+    if slug == PLURAL_UNITAT:
+        return fes_plural(quants)
     peca = PECES.get(slug)
     if not peca:
         return []
