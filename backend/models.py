@@ -45,6 +45,11 @@ class Drill(Base):
     # frase amb certesa alta també pot ser errònia, i per això segueix sent una PROPOSTA.
     suggested_confidence = Column(Float, nullable=True)
     text_catalan_suggested = Column(String, nullable=True)
+    # Els esborranys de maquina amb la seva procedencia (JSON): una llista de
+    # {"text", "model", "acord"}. Hi ha gravacions llegides per tres models independents, i el
+    # que fa que valgui la pena mirar-ne una no es el text sino que TRES hi coincideixin.
+    # `text_tachelhit_suggested` segueix essent el que algu ha triat d'aquesta llista.
+    esborranys = Column(Text, nullable=True)
     # Meaning check of text_tachelhit_suggested (draft_check.py): JSON with the draft
     # checked, its blind back-translation, verdict yes/roughly/no, confidence, note.
     draft_check = Column(String, nullable=True)

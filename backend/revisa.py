@@ -23,6 +23,7 @@ d'un botó.
 """
 from __future__ import annotations
 
+import json
 import re
 import unicodedata
 from typing import Dict, List, Optional
@@ -85,6 +86,35 @@ PILES: Dict[str, Dict] = {
 }
 
 TIFINAG = re.compile(r"[ⴰ-⵿]")
+
+
+def esborranys_de(d) -> List[Dict]:
+    """Els esborranys d'una frase, ordenats pel que més acord té amb els altres.
+
+    Qui decideix ha de veure **quants** models ho han llegit i **si coincideixen**: una lectura
+    sola és una endevinalla; tres que diuen el mateix és una altra cosa. Si la frase no en porta
+    cap de nou, es fa servir el `text_tachelhit_suggested` de sempre, perquè la pantalla segueixi
+    funcionant amb el que ja hi ha a la biblioteca.
+    """
+    fora = []
+    cru = (getattr(d, "esborranys", "") or "").strip()
+    if cru:
+        try:
+            carregats = json.loads(cru)
+            if isinstance(carregats, list):
+                for e in carregats:
+                    if isinstance(e, dict) and (e.get("text") or "").strip():
+                        fora.append({"text": e["text"].strip(),
+                                     "model": (e.get("model") or "").strip() or None,
+                                     "acord": e.get("acord")})
+        except Exception:
+            pass                       # un JSON trencat no ha de tombar la pantalla
+    if not fora:
+        vell = (getattr(d, "text_tachelhit_suggested", "") or "").strip()
+        if vell:
+            fora.append({"text": vell, "model": None, "acord": None})
+    fora.sort(key=lambda e: -(e.get("acord") or 0))
+    return fora
 
 
 def etiquetes(d) -> List[str]:

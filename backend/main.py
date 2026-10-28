@@ -8913,6 +8913,9 @@ def revisa_seguent(pila: str, saltats: Optional[str] = None, db: Session = Depen
         "opcions": revisa.PILES[pila]["opcions"],
         "drill": Drill.model_validate(d, from_attributes=True),
         "companya": Drill.model_validate(altre, from_attributes=True) if altre else None,
+        # Els esborranys amb la seva procedència: qui decideix ha de veure quants models ho han
+        # llegit i si coincideixen, no només un text sense pare.
+        "esborranys": revisa.esborranys_de(d),
     }
 
 
@@ -9211,7 +9214,16 @@ def create_test_from_weakest(
     db.add(test)
     db.commit()
     db.refresh(test)
-    return {"test_id": test.id, "title": test.title, "drill_count": len(drill_ids)}
+    # Una practica ES una seqüencia de passos (ADR 0002). Sense aixo naixia amb la llista plana
+    # i cap pas, i el taller l'ensenyava buida a qui l'acabava de demanar.
+    from models import PracticeStep as PracticeStepModel
+    passos = practice_steps.passos_automatics(db, drill_ids)
+    for i, s in enumerate(passos):
+        db.add(PracticeStepModel(test_id=test.id, position=i, kind=s["kind"],
+                                 drill_id=s["drill_id"], payload=None))
+    db.commit()
+    return {"test_id": test.id, "title": test.title, "drill_count": len(drill_ids),
+            "step_count": len(passos)}
 
 @app.get("/reviews/streak")
 def review_streak(db: Session = Depends(get_db),
