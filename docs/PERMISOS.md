@@ -12,12 +12,23 @@ permisos i el text per demanar-los.
 | *Ait ouarab / LhouMassinisa* | les taules de gramàtica i de lèxic, i la seva veu | **sí** | 26-10-2026 |
 | *MAFAWAL* | els contes del Souss, el vocabulari i els quizos | **sí** | 26-10-2026 |
 | *inaghizen* | el seu material | **sí** | 26-10-2026 |
-| Brahim Mansoub — «Apprends le Tamaziɣt berbère, leçon N°1» | el vocabulari il·lustrat (una paraula per lletra) | **per demanar** | — |
-| canal *Atlas* — «ⵉⵙⴽⴽⵉⵍⵏ ⵏⵜⵎⴰⵣⵉⵖⵜ» | els 33 talls de veu de les lletres | **per demanar** | — |
+| Brahim Mansoub — «Apprends le Tamaziɣt berbère, leçon N°1» | el vocabulari il·lustrat (una paraula per lletra) | **sí** | 28-10-2026 |
+| canal *Atlas* — «ⵉⵙⴽⴽⵉⵍⵏ ⵏⵜⵎⴰⵣⵉⵖⵜ» | els 33 talls de veu de les lletres | **sí** | 28-10-2026 |
 | IRCAM — *Tamawalt* (tal.ircam.ma) | les 520 gravacions (paraules i noms de les lletres) amb el seu text | **es dona per demanat** — font donada pel propietari, que les ha fet entrar | 27-10-2026 |
-| IRCAM — *Tinfusin Inu* | els contes amb veu | **per demanar** — encara no tenim el material | — |
-| *Rajae Marzouki fg* (Figuig) | els contes: el text cremat als vídeos, la seva veu i la traducció a l'àrab | **per demanar** | — |
-| *Hafida Benkahia* | els contes: el text cremat als vídeos i la seva veu | **per demanar** | — |
+| IRCAM — *Tinfusin Inu* | els contes amb veu | **sí** — encara no tenim el material | 28-10-2026 |
+| *Rajae Marzouki fg* (Figuig) | els contes: el text cremat als vídeos, la seva veu i la traducció a l'àrab | **sí** | 28-10-2026 |
+| *Hafida Benkahia* | els contes: el text cremat als vídeos i la seva veu | **sí** | 28-10-2026 |
+| *MTNRA / Amazigh-IA* — les 1.801 frases de taixelhit | fer-les servir per a més que mesurar: entrenar-hi | **sí** | 28-10-2026 |
+
+**Els sís del 28-10-2026 també els dona el propietari**, que informa d'una reunió a casa seva
+amb les persones implicades —els dos canals de contes, els col·laboradors i la gent del MTNRA—
+i diu que té el permís de tots. Queda escrit aquí amb la data i amb la seva base, com els del
+26, perquè qui ho llegeixi d'aquí a dos anys sàpiga sobre què es va construir.
+
+Una cosa que convé afegir-hi quan es pugui, i que no depèn de cap reunió: **la llicència d'un
+conjunt del HuggingFace és una propietat del repositori**. Mentre la fitxa del MTNRA no porti el
+camp de llicència o no en tinguem una línia per escrit de qui el va penjar, qualsevol altre que
+el trobi el veurà sense llicència. Val la pena demanar-los aquella línia.
 
 **Els sís del 26-10-2026 els dona el propietari**, que ho ha parlat amb cada un per WhatsApp: li
 han dit que volen veure el sistema desenvolupat. Afegeix que el web encara no surt als cercadors
@@ -29,10 +40,15 @@ El que **no** canvia amb un sí: el crèdit. Cada frase diu qui la va dir i de q
 (`source_title`, `source_channel`, `source_url`, `variety`, `region`). Això no és per demanar
 permís, és per reconèixer la feina, i es fa igual tant si el permís hi és com si no.
 
-Mentre les dues que falten no contestin: **les paraules sí, la seva veu i les seves imatges no.**
-Una paraula i el seu significat són de la llengua, no d'un vídeo; una gravació i un dibuix són de
-qui els ha fet. I abans que una paraula entri al Mètode, una segona font l'ha de confirmar — el
-diccionari DGLAi que ja tenim, o una veu nostra.
+Amb els sís del 28, ja no queda cap font esperant resposta. La regla que regia mentrestant
+—«les paraules sí, la seva veu i les seves imatges no»— es queda escrita perquè torna a valer
+el dia que entri una font nova, i perquè diu per què: una paraula i el seu significat són de la
+llengua, no d'un vídeo; una gravació i un dibuix són de qui els ha fet.
+
+El que **no** depèn de cap permís i segueix igual: abans que una paraula entri al Mètode, una
+segona font l'ha de confirmar —el diccionari DGLAi que ja tenim, o una veu nostra—, i **el text
+d'un parlant no el reescriu una màquina**. Tenir permís per fer servir un conte no és tenir
+permís per posar-hi paraules que ningú no ha dit.
 
 ---
 
