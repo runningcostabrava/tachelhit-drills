@@ -1,81 +1,112 @@
-"""Exercicis que ensenyen el punt de la unitat (#428).
+"""Els exercicis del llibre dins d'un capítol del Mètode (#380).
 
-El que es prova aquí és el que fa que un exercici valgui: que el buit caigui **a la peça de la
-unitat** i no a una paraula qualsevol, que una frase amb dues peces no serveixi, que les
-respostes falses siguin formes que la biblioteca fa servir de debò, i que es corregeixi **pel
-so** —qui escriu `gh` on la resposta diu `ɣ` ha encertat (#364).
+Tres coses que han de passar i que, si es trenquen, no es veurien fins que algú obrís el capítol:
+
+- que el capítol **se'ls guardi**: `strip_computed` treu del cos tot el que el servidor hi afegeix
+  en servir-lo, i una clau nova que hi caigués per descuit desapareixeria en desar;
+- que **cada frase porti la seva tifinag**, posada pel servidor i no escrita a mà, com a tot
+  arreu de l'app;
+- que un ítem **sense resposta** segueixi sortint. El llibre en deixa 160 en blanc a posta perquè
+  els faci qui aprèn, i una neteja que els llencés convertiria «fes-ho tu» en «no n'hi ha».
 """
-import types
+import json
 
-import exercicis
-
-
-def fila(id, shi, ca, audio=None, speaker=None):
-    return types.SimpleNamespace(id=id, text_tachelhit=shi, text_catalan=ca,
-                                 audio_url=audio, speaker=speaker, region=None, author=None)
+import main
+from test_api import client
 
 
-def test_el_buit_cau_a_la_peca_de_la_unitat_i_no_a_una_paraula_qualsevol():
-    frases = [
-        fila(1, "tigmmi-nns tmqqur", "la seva casa és gran"),
-        fila(2, "ism-inu Driss", "em dic Driss"),
-        fila(3, "tarbat nnm tella", "la teva filla hi és"),
-        fila(4, "gma-s iffuɣ", "el seu germà ha sortit"),
-        fila(5, "tigmmi nnɣ tmẓẓi", "la nostra casa és petita"),
-    ]
-    ex = exercicis.fes("possessius", frases, quants=3)
-    assert ex, "cinc frases amb possessiu donen exercicis"
-    for e in ex:
-        assert "·" in e["shi"], e["shi"]
-        # el que es tapa és el possessiu, i la resta de la frase es queda sencera
-        tapat = e["shi"].split("·")[0], e["shi"].split("·")[-1]
-        assert e["resposta"].lower() in ("nns", "inu", "nnm", "nnɣ"), e["resposta"]
-        assert e["ca"] and e["drill_id"] and e["unit"] == "possessius"
-        assert all(t in next(f.text_tachelhit for f in frases if f.id == e["drill_id"]) for t in tapat if t)
+def _admin(nom):
+    """Un administrador per prova.
+
+    Amb un sol nom per a totes, el segon registre xocava amb el primer i tornava un error sense
+    testimoni: les proves queien per aixo i no pel que miraven.
+    """
+    r = client.post("/users/register", json={"username": nom}).json()
+    h = {"X-User-Token": r["token"]}
+    from models import User
+    db = main.SessionLocal()
+    try:
+        u = db.query(User).filter(User.username == nom).first()
+        u.is_admin = True
+        db.commit()
+    finally:
+        db.close()
+    return h
 
 
-def test_una_frase_amb_dues_peces_no_serveix():
-    """Tapar-ne una és demanar una cosa que qui respon no pot endevinar quina és."""
-    dues = fila(9, "tigmmi-nns d tarbat-nns", "la seva casa i la seva filla")
-    frases = [dues] + [fila(i, f"ism-inu {i}", "em dic") for i in range(10, 15)]
-    ex = exercicis.fes("possessius", frases, quants=9)
-    assert dues.id not in [e["drill_id"] for e in ex], "la frase amb dos possessius es deixa"
+COS = {
+    "intro": "Un capítol de prova.",
+    "sections": [],
+    "exercises": [
+        {
+            "id": "prova-ex1",
+            "kind": "ordena",
+            "consigna": "Posa les paraules en ordre.",
+            "consigna_fr": "Remettez les mots dans l'ordre",
+            "model": {"pregunta": {"shi": "aman"}, "resposta": {"shi": "riɣ aman"}},
+            "items": [
+                {"pregunta": {"shi": "dar-k, is, tudit"},
+                 "resposta": {"shi": "is dar-k tudit?"}, "sense_solucio": False},
+                {"pregunta": {"shi": "tigmmi, tlla, mani-ɣ"},
+                 "resposta": None, "sense_solucio": True},
+            ],
+            "font": {"obra": "Initiation au tachelhit", "autor": "Abdallah El Mountassir",
+                     "any": 1999},
+        }
+    ],
+}
 
 
-def test_les_respostes_falses_son_formes_que_la_biblioteca_fa_servir():
-    frases = [
-        fila(1, "tigmmi-nns tmqqur", "la seva casa és gran"),
-        fila(2, "ism-inu Driss", "em dic Driss"),
-        fila(3, "tarbat nnm tella", "la teva filla hi és"),
-        fila(4, "tigmmi nnɣ tmẓẓi", "la nostra casa és petita"),
-        fila(5, "gma nnk iffuɣ", "el teu germà ha sortit"),
-    ]
-    ex = exercicis.fes("possessius", frases, quants=3)
-    formes = {"nns", "inu", "nnm", "nnɣ", "nnk"}
-    for e in ex:
-        assert len(e["opcions"]) == 4 and len(set(e["opcions"])) == 4, e["opcions"]
-        assert set(e["opcions"]) <= formes, e["opcions"]
-        assert any(exercicis.igual_de_so(o, e["resposta"]) for o in e["opcions"]), e
+def test_un_capitol_es_guarda_els_exercicis_i_els_serveix_amb_tifinag():
+    h = _admin("ex_admin_1")
+    r = client.put("/method/salutacions/content", json=COS, headers=h)
+    assert r.status_code == 200, r.text
+
+    d = client.get("/method/salutacions").json()["content"]
+    ex = d.get("exercises")
+    assert ex and len(ex) == 1, "el capítol no s'ha guardat els exercicis"
+    e = ex[0]
+    assert e["kind"] == "ordena" and e["consigna_fr"] == "Remettez les mots dans l'ordre"
+    assert e["font"]["any"] == 1999, "la font de l'exercici s'ha perdut"
+
+    # La tifinag la posa el servidor, a la pregunta i a la resposta.
+    it = e["items"][0]
+    assert it["pregunta"].get("tif"), "la pregunta ha de portar la seva tifinag"
+    assert it["resposta"].get("tif"), "la resposta ha de portar la seva tifinag"
+    assert "ⵉⵙ" in it["resposta"]["tif"]
+
+    # I el model, també.
+    assert e["model"]["resposta"].get("tif")
 
 
-def test_es_corregeix_pel_so_i_no_lletra_per_lletra():
-    """«gh» i «ɣ» són la mateixa lletra escrita per dues mans: dir que no seria ensenyar una
-    falsedat."""
-    e = {"resposta": "nnɣ"}
-    assert exercicis.corregeix(e, "nnɣ")
-    assert exercicis.corregeix(e, "nngh"), "la mateixa forma amb l'altra grafia val"
-    assert not exercicis.corregeix(e, "nns")
+def test_un_item_sense_resposta_no_es_llenca():
+    h = _admin("ex_admin_2")
+    client.put("/method/salutacions/content", json=COS, headers=h)
+    e = client.get("/method/salutacions").json()["content"]["exercises"][0]
+    assert len(e["items"]) == 2, "l'ítem que el llibre deixa en blanc ha desaparegut"
+    buit = e["items"][1]
+    assert buit["resposta"] is None and buit["sense_solucio"] is True
+    assert buit["pregunta"].get("tif"), "encara que no tingui resposta, la pregunta es llegeix"
 
 
-def test_una_unitat_sense_prou_frases_no_fa_cap_exercici():
-    """Val més cap exercici que un de dolent, com les seccions buides del Mètode."""
-    assert exercicis.fes("possessius", [fila(1, "ism-inu Driss", "em dic Driss")]) == []
-    assert exercicis.fes("aorist-ad", [fila(1, "ad dduɣ", "hi aniré")] * 6) == [], \
-        "una unitat sense peça escrita no s'inventa cap exercici"
+def test_desar_dues_vegades_no_duplica_ni_escriu_la_tifinag_al_cos():
+    """El capítol es desa tal com es veu, i el que es veu porta la tifinag afegida.
 
+    Sense treure-la en desar, cada correcció del capítol n'hi deixaria una còpia més i el text
+    aniria creixent amb tifinag repetida a dins.
+    """
+    h = _admin("ex_admin_3")
+    client.put("/method/salutacions/content", json=COS, headers=h)
+    servit = client.get("/method/salutacions").json()["content"]
+    client.put("/method/salutacions/content", json=servit, headers=h)
 
-def test_lestat_dannexio_no_te_exercici_a_posta():
-    """La seva peça són les primeres lletres del nom, i amb un patró no es pot distingir un nom
-    que ha perdut la «a-» d'un que comença per «t-» de tota la vida: l'exercici ensenyaria una
-    cosa falsa. Queda per fer amb la forma lliure del nom al davant."""
-    assert "estat-annexio" not in exercicis.PECES
+    from models import MethodChapter
+    db = main.SessionLocal()
+    try:
+        row = db.query(MethodChapter).filter(MethodChapter.slug == "salutacions").first()
+        cru = json.loads(row.body)
+    finally:
+        db.close()
+    it = cru["exercises"][0]["items"][0]
+    assert "tif" not in it["pregunta"], "la tifinag s'ha desat al cos en comptes de calcular-se"
+    assert "tif" not in it["resposta"]
