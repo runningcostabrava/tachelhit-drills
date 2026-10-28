@@ -657,3 +657,40 @@ def test_les_practiques_que_ja_hi_havia_es_poden_revisar():
     assert meu, r
     assert meu["kind"] == "say_it" and meu["veu"]["mena"] == "canal"
     assert r["fallen"] >= 1 and r["passos_per_imitar"] >= r["fallen"]
+
+
+def test_les_altres_maneres_de_dir_ho_arriben_a_la_practica(monkeypatch):
+    """Es veien només allà on es graven (#239). En una pràctica és on importen: qui estudia sent
+    una manera de dir-ho i no sabia que n'hi havia una altra, dita per algú altre i d'un altre
+    poble."""
+    import io as _io
+    import main
+
+    hdr = {"X-User-Token": register("altres_maneres")}
+    d = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "la porta de casa", "text_tachelhit": "tiflut n tgmmi", "author": "Halima",
+        "region": "Aït Mraw (Azilal)",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/tiflut.mp3"}).json()
+
+    # algú altre la grava i escriu com ho diu ell
+    altre = {"X-User-Token": register("altres_maneres_2")}
+    monkeypatch.setattr(main.cloudinary.uploader, "upload",
+                        lambda *a, **k: {"secure_url": "https://res.cloudinary.com/x/video/upload/v1/tawwurt.mp3"})
+    r = client.post(f"/drills/{d['id']}/recordings",
+                    files={"file": ("t.webm", _io.BytesIO(b"abc"), "audio/webm")},
+                    data={"text": "tawwurt n tgmmi", "region": "Taroudant", "variety": "shi"}, headers=altre)
+    assert r.status_code == 200, r.text
+
+    # d'un sol viatge, per a les pantalles que ensenyen frases
+    maneres = client.get(f"/other-ways?ids={d['id']}").json()
+    assert str(d["id"]) in maneres, maneres
+    una = maneres[str(d["id"])][0]
+    assert una["text"] == "tawwurt n tgmmi" and una["region"] == "Taroudant"
+    assert una["audio_url"].endswith("tawwurt.mp3") and una["tif"], una
+
+    # i a la targeta de la sessió de pràctica
+    sessio = client.get(f"/practice/session?ids={d['id']}&with_voice=0").json()
+    assert sessio["cards"][0]["variants"][0]["text"] == "tawwurt n tgmmi"
+
+    # el que s'escriu igual no és «una altra manera»: «aghrum» i «aɣrum» són la mateixa paraula
+    assert client.get("/other-ways?ids=").json() == {}
