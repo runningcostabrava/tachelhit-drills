@@ -30,7 +30,23 @@ python tools/text_de_video/carta_de_lletres.py          # la carta tifinag -> ll
 python tools/text_de_video/pantalles.py <id> --cada 2   # els fotogrames, i una pantalla per tanda
 python tools/text_de_video/frases.py <id> --cada 1      # una imatge i un tall de veu per frase
 python tools/text_de_video/tira.py <id> 1 8             # vuit frases en una imatge, per llegir-les
+python tools/text_de_video/zoom.py <id> 507 0.02,0.15,0.30,0.30 5   # un tros petit, ben gros
+python tools/text_de_video/prova_paraules.py izm ixf izf            # com s'escriurien, per comparar
 ```
+
+## Com es comprova una lectura
+
+Llegir no és endevinar. Quan dos signes s'assemblen —la `x`, la `z` i la `f` són els pitjors—,
+**no es tria el que sembla**: s'escriuen les paraules candidates amb el nostre propi
+transliterador (`prova_paraules.py`) i es comparen signe a signe amb el `zoom.py` de la pantalla.
+
+Això va passar de debò: a la classe de l'estat d'annexió, dues files eren `izm` o `izf`, i `ixf`
+o `izf`. Escrites les tres, la diferència es veu de seguida —la `z` porta un pal al mig de la X i
+la `x` no—, i les dues files van quedar resoltes. El que abans anava marcat com a dubtós ja no
+ho és, i ho diu el fitxer de dades (`backend/data/annexio.json`, camp `com`).
+
+La regla que se'n deriva: **si després de mirar-ho gros encara dubtes, es queda marcat com a
+dubtós i no surt a l'app.** Una lectura insegura que s'ensenya és pitjor que una casella buida.
 
 `pantalles.py` va bé per a **classes amb diapositives** (una taula que s'omple mentre el mestre
 parla); `frases.py`, per a **contes amb el text a la imatge** (una frase que canvia cada pocs
