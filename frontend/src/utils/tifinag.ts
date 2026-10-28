@@ -78,9 +78,13 @@ export function duesCares(original: string, latDesat?: string | null): Formes {
   const net = (original || '').trim();
   if (!net) return { tif: '', lat: '' };
   const f = formes(net);
-  return esTifinag(net)
-    ? { tif: net, lat: (latDesat || '').trim() || f.lat }
-    : { tif: f.tif, lat: net };
+  if (esTifinag(net)) return { tif: net, lat: (latDesat || '').trim() || f.lat };
+  // Un tros sense cap lletra —el buit d'un exercici, uns punts, un signe— no es pot transliterar:
+  // no en surt res, i la ratlla tifinag es quedava sense aquell tros. A l'exercici de l'estat
+  // d'annexió, que és «g ······», la ratlla de dalt deia «ⴳ» i prou, i semblava una errada.
+  // Es deixa igual a les dues cares, que és el que s'ha de veure.
+  if (!f.tif) return { tif: net, lat: net };
+  return { tif: f.tif, lat: net };
 }
 
 /** Les mateixes dues cares, però paraula per paraula, perquè es puguin encendre d'una en una. */
