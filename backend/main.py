@@ -38,6 +38,7 @@ import tram
 import escoltar
 import night_asr
 import exercicis
+import revisa
 import word_audio
 import alfabet
 import transliteration
@@ -8874,6 +8875,69 @@ def verify_queue_reason(d) -> Optional[tuple]:
     if max(reading_similarity(o, stored) for o in opts) < 0.6:
         return "differs", opts
     return "confirm", opts  # the listeners agree with the stored text: one tap to verify
+
+
+# ---------------------------------------------------------------- les piles de revisió (#454)
+#
+# Per què això i no la graella. Fins ara, per revisar, calia obrir `/drills`, prémer una
+# etiqueta i llegir una llista de 4.800 files decidint què fer amb cadascuna. Això no es fa:
+# una pila de cinc-centes frases «per revisar» no la mira ningú, i les que més mal fan es
+# queden allà any rere any.
+#
+# Aquí se serveix **una pregunta cada vegada**, amb les opcions que la resolen i res més.
+
+
+@app.get("/revisa")
+def revisa_piles(db: Session = Depends(get_db), _admin: UserModel = Depends(require_admin)):
+    """Les piles i quantes en queden. El compte de l'etiqueta ÉS la barra de progrés."""
+    comptes = revisa.comptes(db)
+    return {"piles": [{"id": k, **{x: y for x, y in v.items() if x != "opcions"},
+                       "opcions": v["opcions"], "queden": comptes.get(k, 0)}
+                      for k, v in revisa.PILES.items()]}
+
+
+@app.get("/revisa/{pila}")
+def revisa_seguent(pila: str, saltats: Optional[str] = None, db: Session = Depends(get_db),
+                   _admin: UserModel = Depends(require_admin)):
+    """La frase següent d'aquesta pila, amb la seva companya quan la pregunta és un parell."""
+    if pila not in revisa.PILES:
+        raise HTTPException(status_code=404, detail="Pila desconeguda")
+    fora = [int(x) for x in (saltats or "").split(",") if x.strip().isdigit()]
+    d = revisa.seguent(db, pila, fora)
+    if not d:
+        return {"pila": pila, "queden": revisa.comptes(db).get(pila, 0), "drill": None}
+    altre = revisa.companya(db, d, pila)
+    return {
+        "pila": pila, "queden": revisa.comptes(db).get(pila, 0),
+        "titol": revisa.PILES[pila]["titol"], "pregunta": revisa.PILES[pila]["pregunta"],
+        "opcions": revisa.PILES[pila]["opcions"],
+        "drill": Drill.model_validate(d, from_attributes=True),
+        "companya": Drill.model_validate(altre, from_attributes=True) if altre else None,
+    }
+
+
+@app.post("/revisa/{pila}")
+def revisa_decideix(pila: str, drill_id: int = Body(..., embed=True),
+                    opcio: str = Body(..., embed=True),
+                    tria: Optional[int] = Body(None, embed=True),
+                    esborrany: Optional[str] = Body(None, embed=True),
+                    db: Session = Depends(get_db), _admin: UserModel = Depends(require_admin)):
+    """El que ha dit una persona. El servidor l'aplica i treu la frase de la pila.
+
+    No decideix res sol: totes les operacions que fa —corregir, esborrar, enllaçar com a
+    variant— són les que ja existien, posades darrere d'un botó."""
+    if pila not in revisa.PILES:
+        raise HTTPException(status_code=404, detail="Pila desconeguda")
+    d = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+    if not d:
+        raise HTTPException(status_code=404, detail="Drill not found")
+    altre = revisa.companya(db, d, pila)
+    try:
+        fet = revisa.decideix(db, pila, d, altre, opcio, tria, esborrany)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    db.commit()
+    return {**fet, "queden": revisa.comptes(db).get(pila, 0)}
 
 
 @app.get("/corpus/verify-queue")

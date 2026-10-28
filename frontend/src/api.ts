@@ -501,6 +501,13 @@ export interface ImageFillStatus {
 }
 
 export const api = {
+  // --- revisió (#454) ---
+  // Dues ajudes genèriques. Les cinc piles de revisió tenen la mateixa forma i només canvia el
+  // nom de la pila; escriure cinc parelles de mètodes amb nom propi no aclariria res.
+  get: <T>(path: string) => request<T>(path),
+  post: <T>(path: string, body: unknown) =>
+    request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
+
   // --- spaced repetition ---
   dueReviews: (limit = 30) => request<Drill[]>(`/reviews/due?limit=${limit}`),
   gradeReview: (drillId: number, grade: number) =>
