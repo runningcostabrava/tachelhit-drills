@@ -37,6 +37,7 @@ import glossa
 import tram
 import escoltar
 import night_asr
+import exercicis
 import word_audio
 import alfabet
 import transliteration
@@ -7517,6 +7518,10 @@ def _grammar_unit_payload(db, slug: str, limit: int, force: bool, deep: bool = F
     fora = {**{k: unit[k] for k in ("slug", "title", "level")}, "lesson": lesson, "total": total,
             "practice": [d.id for d in practice],
             "cover": _grammar_cover(db, slug, lesson, rows),
+            # «Fes-ho tu»: exercicis que pregunten LA PEÇA de la unitat, fets amb les seves
+            # frases (#428). Si la unitat no en té prou per fer-ne un d'honest, la llista surt
+            # buida i la pantalla no ensenya res: val més cap exercici que un de dolent.
+            "exercicis": exercicis.fes(slug, rows),
             "drills": [Drill.model_validate(d, from_attributes=True) for d in rows[:max(1, min(limit, 300))]]}
     # La unitat dels sons diu que la mateixa lletra s'escriu de dues maneres (#364). Va aquí i no
     # dins la lliçó perquè la lliçó l'escriu un model i això és un fet comptat: ha de dir sempre

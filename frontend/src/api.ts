@@ -807,8 +807,19 @@ export type LessonStep =
  *  previous one meanwhile. */
 export interface GrammarLesson { intro: string; steps: LessonStep[]; study?: string; error?: string; writing?: boolean; stale?: boolean }
 /** `practice`: the ids the unit's test is made of (real sentences only: no single words, no conjugation lists). */
+/** Un exercici que pregunta LA PEÇA de la unitat, fet amb una frase de la biblioteca (#428).
+ *  `opcions` buides vol dir que s'escriu; si no, es tria. */
+export interface Exercici {
+  kind: 'omple' | 'tria'; unit: string; drill_id: number;
+  pregunta: string; ajuda: string; que: string;
+  shi: string; tif?: string | null; ca: string;
+  resposta: string; opcions: string[];
+  audio_url?: string | null; speaker?: string | null; region?: string | null;
+}
 export interface GrammarUnitPage extends GrammarUnit {
   lesson: GrammarLesson; total: number; practice: number[]; drills: Drill[];
+  /** «Fes-ho tu»: buit quan la unitat no té prou frases per fer-ne un d'honest. */
+  exercicis?: Exercici[];
   ortografia?: NotaOrtografia | null;
   /** La portada de la unitat, decidida pel servidor: el dibuix de la unitat, o la primera imatge
    *  NOSTRA de les frases que cita. Mai una foto trobada (#229). */
