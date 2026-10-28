@@ -412,9 +412,35 @@ function OneStory({ slug }: { slug: string }) {
     if (!veu) return;
     setAt(i);
     idx.current = i;
-    torn.current++;
-    await sonaEncenent(drill, veu);
+    const meu = ++torn.current;
+    // I si s'ha demanat repetir, es repeteix: sona, calla tant com ha durat —que és el temps
+    // que et cal per dir-la tu— i hi torna. Sense això, prémer el ▶ d'una frase feia sortir el
+    // xip «repeteix aquesta» sense que hi hagués cap fila que el mirés, i prémer-lo no feia
+    // res. Se'n surt apagant el xip, prement una altra frase o aturant.
+    for (;;) {
+      const comenca = Date.now();
+      await sonaEncenent(drill, veu);
+      if (torn.current !== meu || !repeteix.current) return;
+      await gap(Math.min(6000, Math.max(900, Date.now() - comenca)));
+      if (torn.current !== meu || !repeteix.current) return;
+    }
   }, [sonaEncenent]);
+
+  /** Prémer «repeteix aquesta».
+   *
+   *  Amb la història sonant, només encén o apaga: la fila que la llegeix ja ho mira a cada
+   *  volta. Amb una frase sola a la pantalla no hi ha cap fila, i per això encendre'l no feia
+   *  res —el xip s'encenia i la frase no tornava a sonar. Encendre'l aquí vol dir «torna-hi
+   *  amb aquesta», o sigui engegar-la.
+   */
+  const premRepeticio = () => {
+    const nou = !repetint;
+    posaRepeticio(nou);
+    if (nou && !readingRef.current && page
+        && idx.current >= 0 && idx.current < page.drills.length) {
+      nomesAmazic(page.drills[idx.current], idx.current);
+    }
+  };
 
   /**
    * Anar a una línia: la mateixa (repetir-la), la d'abans o la de sota.
@@ -756,7 +782,7 @@ function OneStory({ slug }: { slug: string }) {
           {/* Quedar-se en una frase (#455). Va al costat del bucle de tota la història
               perquè són la mateixa pregunta feta a dues mides: «torna-hi» de tot, o «torna-hi»
               d'aquesta. El xip diu quina de les dues està encesa. */}
-          <button onClick={() => posaRepeticio(!repetint)} aria-pressed={repetint}
+          <button onClick={premRepeticio} aria-pressed={repetint}
                   style={{ ...xip, ...(repetint ? xipTriat : null), display: 'inline-flex', alignItems: 'center', gap: 5 }}
                   title={repetint ? 'Es queda en aquesta frase, amb una pausa per dir-la tu' : 'En acabar la frase, passa a la següent'}>
             <FaRedo size={10} /> {repetint ? 'repetint aquesta' : 'repeteix aquesta'}
