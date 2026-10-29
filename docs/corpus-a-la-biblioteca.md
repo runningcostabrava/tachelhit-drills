@@ -2,7 +2,18 @@
 
 *Pla per a la decisió del 29 d'octubre de 2026: «incorporar tots els corpus disponibles a la
 biblioteca de drills, entenent les variants dialectals i fent arqueologia dialectal i gramatical».
-Res d'aquest document no s'ha executat a producció: és per aprovar.*
+En Pablo ho va aprovar el mateix dia («si passa a producció, mira de catalogar-ho bé»).*
+
+## Estat (29/10, vespre)
+
+| pas | estat |
+|---|---|
+| 1. Common Voice zgh | **a producció**: 1.474 drills amb àudio, ids 8750–10223, 0 errors (`tools/corpus/carrega_cv.py`) |
+| 2. MTNRA | **pujant**: 1.801 drills des del 10224, tres escriptures (`tools/corpus/carrega_mtnra.py`) |
+| 3. parelles CV↔MTNRA | preparat: 474 parelles; com que 25 frases del CV tenen dos clips del MTNRA, el lligam va **del MTNRA cap al CV** (`variant_of` = drill del CV, `variant_kind = "so"`) |
+| català | 2.429 de 2.597 frases diferents traduïdes **per màquina (Claude)** a `text_catalan_suggested`, mai a `text_catalan`; les 902 dubtoses acaben en `[?]`; les 168 que queden són lletres i síl·labes soltes |
+
+Cap drill nou no porta `text_catalan`: el català d'or el decideix una persona a `/revisa`.
 
 ## El que hi ha, comptat
 
