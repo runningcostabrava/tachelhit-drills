@@ -19,6 +19,24 @@ provar. El model havia sentit les veïnes de les frases que després li pregunt�
 **4. I es mesura per varietat.** Un sol número amaga justament el que volem saber: si fem el
 model millor en taixelhit i pitjor a Beni Mellal, una mitjana no ho ensenyarà.
 
+## Correcció de l'auditoria del 29 d'octubre — llegir ABANS de fiar-se dels números
+
+El punt 3 és veritat per a les històries, però **no per als tests**. Comprovat contra
+`corpus_v3.json`, camp `font`:
+
+    recull:benimellal-anki   train 1680 · test-dins 150 · dev-dins 130
+    MTNRA                    train 1501 · test-mtnra 300
+
+`test-dins` i `test-mtnra` comparteixen FONT amb l'entrenament: és partició per línia amb un
+altre nom. Mots del test ja vistos a l'entrenament: dins 57%, fora 69%, **MTNRA 82%**. El
+0,0841 del MTNRA no mesura generalització; el 0,1883 de dins tampoc. **L'únic test net és
+`test-fora`** (ILoveLanguages, Tamazight For All, Nomatrails: cap a train), amb 101 frases, i
+allà el v3 i el `mms-1b-all` sense afinar són indistingibles (IC 95% de la diferència
+[-0,045, +0,011]; per frase 44 guanya, 41 perd, 16 empat).
+
+I `speaker` és buit o val «MTNRA» a tot el corpus: la separació per parlant **no es pot
+comprovar enlloc**. Mentre això sigui així, «fuita de veu» no es pot ni confirmar ni refutar.
+
 ## El que s'ha de llegir del resultat
 
 **El CER sortirà pitjor que 0,2025, i no voldrà dir que el model hagi empitjorat.** Voldrà dir

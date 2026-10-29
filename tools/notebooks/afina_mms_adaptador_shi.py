@@ -109,8 +109,12 @@ print("base: %s amb l'adaptador %s" % (BASE, LLENGUA))
 #: el model sencer sense avisar i el resultat seria pitjor que no fer res.
 model.freeze_base_model()
 adaptadors = model._get_adapters()
-for p in adaptadors.values():
-    p.requires_grad = True
+#: `_get_adapters()` torna els adaptadors I el `lm_head`. La primera passada el reobria i el
+#: movia a 3e-4 contra 3.650 frases de text plegat: reajustar agressivament el cap de sortida
+#: calibrat de `shi` mentre l'acústica no es mou és la recepta exacta per empitjorar, i és el
+#: que va passar (auditoria del 29/10). El cap es queda congelat: només es mouen els adaptadors.
+for nom_p, p in adaptadors.items():
+    p.requires_grad = not nom_p.startswith("lm_head")
 mou = sum(p.numel() for p in model.parameters() if p.requires_grad)
 tot = sum(p.numel() for p in model.parameters())
 print("es mouen %.1f M paràmetres de %.0f M (%.2f%%)"
@@ -118,7 +122,12 @@ print("es mouen %.1f M paràmetres de %.0f M (%.2f%%)"
 if mou == 0 or mou > tot * 0.2:
     raise SystemExit("els adaptadors no s'han trobat bé: s'entrenaria el que no toca")
 
-model.gradient_checkpointing_enable()
+#: El forat que l'auditoria va trobar: amb la base congelada i el punt de control del gradient
+#: en mode reentrant (el defecte), cap entrada de l'encoder no demana gradient, el segment no
+#: retropropaga i els adaptadors de dins NO ES MOUEN. Només es movia el `lm_head`, que és fora.
+#: Es demana el mode no reentrant i que les entrades portin gradient, que és el que fa PEFT.
+model.enable_input_require_grads()
+model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
 
 vocab = set(proc.tokenizer.get_vocab())
 falten = collections.Counter()
@@ -155,6 +164,31 @@ def ajunta(lot):
     return x
 
 
+import re  # noqa: E402
+import unicodedata  # noqa: E402
+
+#: La MATEIXA taula que `compara_sobre_test_v3.py`, caràcter per caràcter. La primera passada
+#: d'aquest quadern comparava la sortida CRUA de l'adaptador (`ɣ ḍ ẓ ġ ḫ`...) amb el text d'or
+#: PLEGAT a 26 lletres, i el 0,4027 que en va sortir no era comparable amb el 0,3452 del
+#: quadern de comparació, que sí que plega: eren dues regles diferents (auditoria del 29/10).
+TIF_A_LLATI = {
+    "ⴰ": "a", "ⴱ": "b", "ⴳ": "g", "ⴷ": "d", "ⴹ": "d", "ⴻ": "e", "ⴼ": "f", "ⴽ": "k",
+    "ⵀ": "h", "ⵃ": "h", "ⵄ": "a", "ⵅ": "x", "ⵇ": "q", "ⵉ": "i", "ⵊ": "j", "ⵍ": "l",
+    "ⵎ": "m", "ⵏ": "n", "ⵓ": "u", "ⵔ": "r", "ⵕ": "r", "ⵖ": "g", "ⵙ": "s", "ⵚ": "s",
+    "ⵛ": "c", "ⵜ": "t", "ⵟ": "t", "ⵡ": "w", "ⵢ": "y", "ⵣ": "z", "ⵥ": "z", "ⵯ": "w",
+}
+PLEGA = {"ɣ": "g", "γ": "g", "ġ": "g", "ɛ": "a", "ḥ": "h", "ḫ": "x", "ḍ": "d", "ṭ": "t",
+         "ẓ": "z", "ṣ": "s", "ṛ": "r", "š": "c", "ž": "j", "ǧ": "j", "č": "c", "ʷ": "w",
+         "'": "", "’": ""}
+
+
+def a_llati(t):
+    t = unicodedata.normalize("NFC", (t or "")).strip().lower()
+    t = "".join(TIF_A_LLATI.get(c, c) for c in t)
+    t = "".join(PLEGA.get(c, c) for c in t)
+    return re.sub(r"[^a-z ]+", "", t).strip()
+
+
 def distancia(a, b):
     if a == b:
         return 0
@@ -170,13 +204,15 @@ def distancia(a, b):
 
 
 def mesura(pred):
+    """També aquí es plega: el CER de dev tria el millor model, i amb la regla equivocada
+    triava el que menys lletres riques escrivia, no el que millor sentia."""
     ids = np.argmax(pred.predictions, axis=-1)
     et = pred.label_ids
     et[et == -100] = proc.tokenizer.pad_token_id
-    dits = proc.batch_decode(ids)
-    refs = proc.batch_decode(et, group_tokens=False)
-    d = sum(distancia(r.strip(), h.strip()) for r, h in zip(refs, dits))
-    n = sum(len(r.strip()) for r in refs)
+    dits = [a_llati(x) for x in proc.batch_decode(ids)]
+    refs = [a_llati(x) for x in proc.batch_decode(et, group_tokens=False)]
+    d = sum(distancia(r, h) for r, h in zip(refs, dits))
+    n = sum(len(r) for r in refs)
     return {"cer": d / max(1, n)}
 
 
@@ -219,6 +255,7 @@ def llegeix(f):
 
 model.eval()
 sortida, taula = [], {}
+#: A partir d'aquí tot es compara PLEGAT, amb la sortida crua desada al costat.
 print("\n=== CER per banda ===")
 for nom, g in proves.items():
     if not g:
@@ -226,14 +263,15 @@ for nom, g in proves.items():
     d, n = 0, 0
     for f in g:
         try:
-            dit = llegeix(f)
+            cru = llegeix(f)
+            dit = a_llati(cru)
         except Exception as e:
             print("  %s ha fallat: %s" % (f["fitxer"], str(e)[:60]), flush=True)
             continue
         d += distancia(f["lletra"], dit)
         n += len(f["lletra"])
         sortida.append({"fitxer": f["fitxer"], "split": nom, "varietat": f["varietat"],
-                        "or": f["lletra"], "dit": dit})
+                        "or": f["lletra"], "dit": dit, "dit_cru": cru})
     taula[nom] = d / max(1, n)
     print("  %-11s CER %.4f  (%d frases)" % (nom, taula[nom], len(g)), flush=True)
 

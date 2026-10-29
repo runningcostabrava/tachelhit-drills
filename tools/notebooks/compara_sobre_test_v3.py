@@ -55,8 +55,14 @@ TIF_A_LLATI = {
     "ⵎ": "m", "ⵏ": "n", "ⵓ": "u", "ⵔ": "r", "ⵕ": "r", "ⵖ": "g", "ⵙ": "s", "ⵚ": "s",
     "ⵛ": "c", "ⵜ": "t", "ⵟ": "t", "ⵡ": "w", "ⵢ": "y", "ⵣ": "z", "ⵥ": "z", "ⵯ": "w",
 }
-PLEGA = {"ɣ": "g", "γ": "g", "ɛ": "a", "ḥ": "h", "ḍ": "d", "ṭ": "t", "ẓ": "z", "ṣ": "s",
-         "ṛ": "r", "š": "c", "ž": "j", "ǧ": "j", "č": "c", "ʷ": "w", "'": "", "’": ""}
+#: L'auditoria del 29/10 va trobar que aquesta taula cobria l'inventari del NOSTRE corpus i no el
+#: de les bases: la sortida real de l'adaptador `shi` porta `ġ` i `ḫ`, que no hi eren i que
+#: `a_llati` ESBORRAVA en comptes de plegar (`abġḫan` → `abhan`). El mms perdia el 15% dels
+#: caràcters a test-mtnra abans de comptar, i part del seu «error» era nostre. El guionet
+#: (U+2010 i U+002D) s'esborra a les dues bandes a posta: el text d'or també el perd.
+PLEGA = {"ɣ": "g", "γ": "g", "ġ": "g", "ɛ": "a", "ḥ": "h", "ḫ": "x", "ḍ": "d", "ṭ": "t",
+         "ẓ": "z", "ṣ": "s", "ṛ": "r", "š": "c", "ž": "j", "ǧ": "j", "č": "c", "ʷ": "w",
+         "'": "", "’": ""}
 
 
 def a_llati(t):
@@ -143,8 +149,11 @@ for nom, adaptador in MODELS:
                     ent = {k: v.cuda() for k, v in ent.items()}
                 with torch.no_grad():
                     ids = model(**ent).logits.argmax(-1)
-                #: El plegat, que és el que fa justa la comparació.
-                dit = a_llati(proc.batch_decode(ids)[0])
+                #: El plegat, que és el que fa justa la comparació. La sortida CRUA es desa
+                #: també: sense ella no es pot saber quanta pèrdua és del model i quanta de la
+                #: taula de plegat, que és just el que l'auditoria no va poder repartir.
+                cru = proc.batch_decode(ids)[0]
+                dit = a_llati(cru)
             except Exception as e:
                 print("    %s ha fallat: %s" % (f["fitxer"], str(e)[:60]), flush=True)
                 continue
@@ -152,7 +161,7 @@ for nom, adaptador in MODELS:
             n += len(f["lletra"])
             fets += 1
             sortida.append({"model": nom, "split": s, "fitxer": f["fitxer"],
-                            "or": f["lletra"], "dit": dit})
+                            "or": f["lletra"], "dit": dit, "dit_cru": cru})
         if fets:
             taula[s][nom] = d / max(1, n)
             print("  %-11s CER %.4f  (%d frases)" % (s, d / max(1, n), fets), flush=True)
@@ -171,9 +180,12 @@ for s in ("test-dins", "test-fora", "test-mtnra"):
         cel.append("%-26s" % ("%.4f" % v if v is not None else "—"))
     print("  %-11s %s" % (s, "  ".join(cel)))
 
-print("\ncom s'ha de llegir:")
-print("  test-dins  = Beni Mellal, amb la font apartada de l'entrenament")
-print("  test-fora  = canals i Ait Mraw: cap d'aquestes fonts no ha entrenat")
+print("\ncom s'ha de llegir (corregit per l'auditoria del 29/10):")
+print("  test-dins  = Beni Mellal, de la MATEIXA font que 1.680 frases d'entrenament")
+print("               (recull:benimellal-anki): NO és una font apartada, és dins de casa")
+print("  test-fora  = canals i Ait Mraw: cap d'aquestes fonts no ha entrenat. L'ÚNIC test net,")
+print("               i només té 101 frases: aquí v3 i mms sense afinar són indistingibles")
+print("               (bootstrap aparellat: IC 95% de la diferència [-0,045, +0,011])")
 print("  test-mtnra = taixelhit del Souss. ATENCIÓ: el MTNRA no diu qui parla, i per tant")
 print("               les veus de la prova poden ser les mateixes de l'entrenament.")
 print("               Treure les frases amb text repetit només el mou de 0,0841 a 0,0883,")
