@@ -7126,9 +7126,9 @@ def _library_mark(db, slug: str) -> tuple:
 def method_cd_tall(pista: str, inici: str, fi: str):
     """Un tros del CD del manual, servit des del disc d'aquesta màquina.
 
-    El CD d'El Mountassir no és nostre i no viu al repositori ni a cap CDN: viu en una carpeta
-    d'aquesta màquina que `CD_METODE_DIR` assenyala. Si la variable no hi és —a producció no hi
-    és— aquesta ruta no serveix res, i el capítol es veu exactament com abans.
+    Des del #495 (ADR 0007) els talls que ha sentit una persona són a Cloudinary i l'índex hi
+    apunta directament: aquesta ruta queda per provar talls nous en local abans de pujar-los, des
+    de la carpeta que `CD_METODE_DIR` assenyala. A producció la variable no hi és i no serveix res.
 
     Només talla el que l'índex diu. Els segons venen de la URL, i si no es troben tal qual dins
     de `data/cd_metode.json` no es talla res: així això no es pot fer servir per llegir cap
