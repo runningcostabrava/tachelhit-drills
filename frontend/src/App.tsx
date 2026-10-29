@@ -82,6 +82,8 @@ const StoriesPage = lazyPagina(() => import('./components/StoriesPage'));
 const ListenPage = lazyPagina(() => import('./components/ListenPage'));
 const GrammarPage = lazyPagina(() => import('./components/GrammarPage'));
 const AlfabetPage = lazyPagina(() => import('./components/AlfabetPage'));
+// The one page in English (#487): the first words for someone coming to run in the Atlas.
+const StartEnglish = lazyPagina(() => import('./components/StartEnglish'));
 const PracticeEditor = lazyPagina(() => import('./components/PracticeEditor'));
 const VerifyQueue = lazyPagina(() => import('./components/VerifyQueue'));
 const RevisaPage = lazyPagina(() => import('./components/RevisaPage'));
@@ -337,6 +339,7 @@ function App() {
         <Route path="/stories" element={<StoriesPage />} />
         <Route path="/stories/:slug" element={<StoriesPage />} />
         <Route path="/alfabet" element={<AlfabetPage />} />
+        <Route path="/start" element={<StartEnglish />} />
         <Route path="/grammar" element={<GrammarPage />} />
         <Route path="/grammar/:slug" element={<GrammarPage />} />
         <Route path="/grammar/:slug/editor" element={<LessonEditor />} />

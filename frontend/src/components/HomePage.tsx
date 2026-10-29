@@ -98,6 +98,19 @@ export default function HomePage() {
         ningú.
       </p>
 
+      {/* La porta en anglès (#487): qui no llegeix català ha de trobar per on començar a la
+          primera pantalla, i en la seva llengua. */}
+      <button type="button" lang="en" onClick={() => navigate('/start')}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', width: '100%',
+                       textAlign: 'left', margin: '0 0 16px', padding: '12px 16px', borderRadius: 'var(--r-lg)', cursor: 'pointer',
+                       border: '1px solid var(--brand-1)', background: 'var(--brand-gradient-soft)', color: 'var(--text)', fontFamily: 'inherit' }}>
+        <span style={{ minWidth: 0 }}>
+          <strong style={{ fontSize: 15 }}>New to Tamazight? Start here in English</strong>
+          <span style={{ display: 'block', fontSize: 13, color: 'var(--text-soft)' }}>Salam, tanmmirt, aman: your first words, with real voices.</span>
+        </span>
+        <span aria-hidden style={{ fontWeight: 800, color: 'var(--brand-1)' }}>→</span>
+      </button>
+
       {/* Cercar: la primera cosa que algú vol fer amb una biblioteca. */}
       <form onSubmit={(e) => { e.preventDefault(); navigate(`/cerca?q=${encodeURIComponent(find.trim())}`); }}
             style={{ display: 'flex', gap: 8, margin: '0 0 18px' }}>
