@@ -275,6 +275,27 @@ function OneStory({ slug }: { slug: string }) {
     setEnBucle(v);
     try { localStorage.setItem('historia.bucle', v ? '1' : '0'); } catch { /* finestra privada */ }
   };
+  /** Amb el català abans de cada línia, o només en amazic.
+   *
+   *  Eren dos botons de play de la mateixa mida, l'un al costat de l'altre. Però no són dues
+   *  accions: són la MATEIXA acció —engega la història— amb una decisió a sobre. Dos plays
+   *  obliguen a llegir-los tots dos per saber quin vols, i deixen la pantalla sense cap botó
+   *  que mani. Ara la decisió va a part i el play és un de sol.
+   *
+   *  Es recorda, com el bucle: qui vol el català el vol a la següent història també. */
+  const [ambCatala, setAmbCatala] = useState(() => {
+    try { return localStorage.getItem('historia.catala') === '1'; } catch { return false; }
+  });
+  const posaCatala = (v: boolean) => {
+    setAmbCatala(v);
+    try { localStorage.setItem('historia.catala', v ? '1' : '0'); } catch { /* finestra privada */ }
+    // Canviar-ho mentre sona no atura la història ni la torna a començar: segueix des d'on era,
+    // en la manera nova. Qui ho prem a mitja història vol sentir AQUESTA línia amb el català.
+    if (readingRef.current) {
+      salt.current = idx.current;
+      void readThrough(v ? 'amb-catala' : 'sol');
+    }
+  };
   useEffect(() => { bucle.current = enBucle; }, [enBucle]);
   /** Quedar-se en UNA frase (#455).
    *
@@ -608,36 +629,61 @@ function OneStory({ slug }: { slug: string }) {
         )}
       </section>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', marginBottom: 6 }}>
-        <button onClick={() => readThrough('sol')} style={primary}>
-          {reading === 'sol' ? <><FaPause size={12} /> Atura</> : <><FaPlay size={12} /> Escolta-la sencera</>}
-        </button>
-        <button onClick={() => readThrough('amb-catala')} style={secundari}>
-          {reading === 'amb-catala' ? <><FaPause size={12} /> Atura</> : <><FaPlay size={12} /> Escolta-la amb el català</>}
-        </button>
-        {/* Sense parar.
-            El bucle ja existia, però era un xip d'onze píxels dins de la barra que NOMÉS surt
-            mentre sona: per posar-lo havies de començar, trobar-lo i encertar-lo amb el dit
-            (#448). És una decisió que es pren ABANS de prémer play —«deixa-me-la sonant mentre
-            faig una altra cosa»— i per això ha d'estar aquí, al costat del play i prou gran.
-            I es recorda: qui escolta en bucle ho vol cada vegada, no una. */}
-        <button onClick={() => posaBucle(!enBucle)} aria-pressed={enBucle}
-                title={enBucle ? 'En acabar, torna a començar' : 'En acabar, s’atura'}
-                style={{ ...secundari, ...(enBucle ? { borderColor: 'var(--brand-1)', background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)' } : null) }}>
-          <FaInfinity size={13} /> {enBucle ? 'sense parar' : 'un cop'}
-        </button>
-      </div>
-      <p style={{ color: 'var(--text-soft)', fontSize: 12.5, margin: '0 0 14px', lineHeight: 1.5 }}>
-        Sencera, només en amazic · amb el català, cada línia et diu primer què vol dir i després
-        la sents dues vegades.
-      </p>
+      {/* Escoltar: una acció, i les decisions al seu costat.
+          Aquí hi havia cinc pastilles de la mateixa forma i la mateixa mida repartides en tres
+          fileres —dos play, el bucle i dos exercicis— amb dos blocs de lletra petita pel mig.
+          Totes semblaven la mateixa cosa, i per això no se'n veia cap.
+          Però d'acció només n'hi ha UNA: engega la història. La llengua i les vegades són
+          decisions que es prenen abans, i un exercici no és escoltar, és estudiar. La forma ho
+          diu: un botó que mana, un selector, un interruptor, i la pràctica a part amb el seu
+          títol. */}
+      <section style={escoltador}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+          <button onClick={() => readThrough(ambCatala ? 'amb-catala' : 'sol')} style={primary}>
+            {reading ? <><FaPause size={12} /> Atura</> : <><FaPlay size={12} /> Escolta la història</>}
+          </button>
+
+          <div role="radiogroup" aria-label="En quina llengua vols sentir-la" style={segment}>
+            {([[false, 'només amazic'], [true, 'amb el català']] as const).map(([v, diu]) => (
+              <button key={diu} role="radio" aria-checked={v === ambCatala}
+                      onClick={() => posaCatala(v)}
+                      style={{ ...opcioSeg, ...(v === ambCatala ? opcioTriada : null) }}>
+                {diu}
+              </button>
+            ))}
+          </div>
+
+          {/* Sense parar.
+              El bucle ja existia, però era un xip d'onze píxels dins de la barra que NOMÉS surt
+              mentre sona: per posar-lo havies de començar, trobar-lo i encertar-lo amb el dit
+              (#448). És una decisió que es pren ABANS de prémer play —«deixa-me-la sonant
+              mentre faig una altra cosa»— i per això és aquí. Ara bé: una decisió no pot tenir
+              la forma d'un botó de play, que és el que la feia competir amb ell.
+              I es recorda: qui escolta en bucle ho vol cada vegada, no una. */}
+          <button onClick={() => posaBucle(!enBucle)} aria-pressed={enBucle}
+                  title={enBucle ? 'En acabar, torna a començar' : 'En acabar, s’atura'}
+                  style={{ ...bucleXip, ...(enBucle ? bucleEncès : null) }}>
+            <FaInfinity size={13} /> {enBucle ? 'sense parar' : 'un cop'}
+          </button>
+        </div>
+        {/* El peu explica la decisió que tens presa, no les dues alhora. */}
+        <p style={peuEscoltador}>
+          {ambCatala
+            ? 'Cada línia et diu primer què vol dir, i després la sents dues vegades.'
+            : 'Una línia rere l’altra, només en amazic.'}
+        </p>
+      </section>
 
       {/* I una tercera manera, que no és escoltar sinó estudiar: sona una línia i es tria quina
           de les quatre escrites és (#387). Només hi és quan la història ho permet —cal una veu
           de persona i almenys quatre línies amb les paraules escrites— perquè un botó que porta
           a un exercici que no es pot fer és pitjor que cap botó. */}
       {(potPracticar || potTriarSentit) && (
-        <div style={{ marginBottom: 14, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <section style={{ marginBottom: 14 }}>
+          {/* Un títol de tres paraules fa la feina que abans no feia ningú: dir que el que ve
+              ara no és una altra manera d'escoltar, sinó una altra cosa. */}
+          <h2 style={titolSeccio}>o posa’t a prova</h2>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {potPracticar && (
             <button onClick={() => { atura(); setExercici((v) => (v === 'frase' ? null : 'frase')); }}
                     style={{ ...secundari, ...(exercici === 'frase' ? triat : null) }}>
@@ -652,7 +698,8 @@ function OneStory({ slug }: { slug: string }) {
               <FaBookOpen size={12} /> {exercici === 'traduccio' ? 'Tanca l’exercici' : 'Tria què vol dir'}
             </button>
           )}
-        </div>
+          </div>
+        </section>
       )}
       {exercici && (
         <EscoltaITria
@@ -916,6 +963,43 @@ const xipGran: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 52, padding: '12px 20px',
   borderRadius: 'var(--r-pill)', border: '1.5px solid var(--border)', background: 'var(--surface)',
   color: 'var(--text)', fontWeight: 800, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit',
+};
+
+/** El bloc d'escoltar: l'acció i les seves decisions, junts i en una sola filera. */
+const escoltador: React.CSSProperties = {
+  display: 'flex', flexDirection: 'column', gap: 8, margin: '0 0 18px',
+};
+const peuEscoltador: React.CSSProperties = {
+  color: 'var(--text-soft)', fontSize: 12.5, margin: 0, lineHeight: 1.5,
+};
+/** El selector de llengua: dues opcions dins d'una sola peça, perquè es vegi que són la mateixa
+ *  pregunta i no dos botons que fan coses diferents. */
+const segment: React.CSSProperties = {
+  display: 'inline-flex', gap: 3, padding: 3, borderRadius: 'var(--r-pill)',
+  border: '1px solid var(--border)', background: 'var(--surface-2)',
+};
+const opcioSeg: React.CSSProperties = {
+  padding: '7px 13px', borderRadius: 'var(--r-pill)', border: 'none', background: 'transparent',
+  color: 'var(--text-soft)', fontWeight: 700, fontSize: 13.5, cursor: 'pointer',
+  fontFamily: 'inherit', whiteSpace: 'nowrap',
+};
+const opcioTriada: React.CSSProperties = {
+  background: 'var(--surface)', color: 'var(--text)', boxShadow: '0 1px 2px rgba(0,0,0,.10)',
+};
+/** El bucle és un interruptor, no una acció: apagat gairebé no es veu, encès es veu molt. */
+const bucleXip: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px',
+  borderRadius: 'var(--r-pill)', border: '1px solid transparent', background: 'transparent',
+  color: 'var(--text-soft)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+  fontFamily: 'inherit',
+};
+const bucleEncès: React.CSSProperties = {
+  borderColor: 'var(--brand-1)', background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)',
+};
+/** Un títol petit que separa una secció de la següent sense fer soroll. */
+const titolSeccio: React.CSSProperties = {
+  margin: '0 0 8px', fontSize: 11.5, fontWeight: 800, letterSpacing: '.06em',
+  textTransform: 'uppercase', color: 'var(--text-soft)',
 };
 
 /** El botó de l'exercici que està obert. */
