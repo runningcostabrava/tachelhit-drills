@@ -19,6 +19,7 @@ import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 
 import type { Drill } from '../types';
+import { fetchAllDrills } from '../services/fetchAllDrills';
 
 const GlossaryModal = ({ onClose }: { onClose: () => void }) => {
   const [rowData, setRowData] = useState<any[]>([]);
@@ -250,8 +251,7 @@ export default function DrillsResponsive() {
       // empty local cache. The cache is only a fallback when the request
       // genuinely fails (real offline / native app without connectivity).
       try {
-        const response = await axios.get(`${API_BASE}/drills/`);
-        allDrills = Array.isArray(response.data) ? response.data : [];
+        allDrills = await fetchAllDrills();
         setLoadError(null);
       } catch (netErr) {
         console.warn('Server fetch failed, falling back to cached drills:', netErr);

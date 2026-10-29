@@ -4,6 +4,7 @@ import { API_BASE } from '../config';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import { TOPIC_LABELS, parseTopics, topicLabel, topicsSearchText } from '../utils/topics';
+import { fetchAllDrills } from '../services/fetchAllDrills';
 
 interface Drill {
   id: number;
@@ -74,8 +75,7 @@ export default function TestConfigPanel({ onClose, onTestCreated, initialSelecte
 
   const loadAllDrills = async () => {
     try {
-      const response = await axios.get(`${API_BASE}/drills/`);
-      setAllDrills(response.data);
+      setAllDrills(await fetchAllDrills());
     } catch (error) {
       console.error('Error loading all drills:', error);
     }
