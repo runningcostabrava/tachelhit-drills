@@ -81,7 +81,14 @@ FITXA = de_kaggle("tif_text.json")
 if not FITXA:
     raise SystemExit("no trobo tif_text.json: " + str(os.listdir("/kaggle/input")))
 ARREL = os.path.dirname(FITXA)
-TEXT = json.load(open(FITXA, encoding="utf-8"))
+import re  # noqa: E402
+
+#: L'auditoria del 29/10 va trobar 22 línies bilingües («Aina Trit (ⵎⴽ ⵜⵔⵉⴷ)») que ficaven
+#: lletres llatines i dígits a l'alfabet: 84 símbols per a una escriptura de 33 signes, i el
+#: model aprenia que dins d'una línia de tifinag hi pot haver llatí — el defecte que retraiem al
+#: Qwen. Només entren les línies de tifinag pur (signes, espai i puntuació).
+NOMES_TIF = re.compile(r"^[ⴰ-⵿\s,.!?:;«»()\-]+$")
+TEXT = [t for t in json.load(open(FITXA, encoding="utf-8")) if NOMES_TIF.match(t.strip() or "x")]
 
 
 def _font_bona(cami):
@@ -105,7 +112,19 @@ linies = sorted(set(t.strip() for t in TEXT if len(t.strip()) >= 3))
 rnd.shuffle(linies)
 TALL = int(len(linies) * 0.9)
 TRAIN_TXT, TEST_TXT = linies[:TALL], linies[TALL:]
-print("línies per entrenar: %d · per provar: %d" % (len(TRAIN_TXT), len(TEST_TXT)))
+#: La partició per línia NO era estanca (auditoria del 29/10): 29 de 275 línies de prova eren
+#: SUBCADENA literal d'una d'entrenament, i `un_text` retalla finestres de les llargues, de
+#: manera que la prova es podia dibuixar a l'entrenament. Es treu de la prova tota línia
+#: continguda en una d'entrenament, i de l'entrenament tota línia continguda en una de prova.
+_tr = " | ".join(TRAIN_TXT)
+_te = " | ".join(TEST_TXT)
+TEST_TXT = [t for t in TEST_TXT if t not in _tr]
+TRAIN_TXT = [t for t in TRAIN_TXT if t not in _te]
+print("línies per entrenar: %d · per provar: %d (després de treure les subcadenes)"
+      % (len(TRAIN_TXT), len(TEST_TXT)))
+print("AVÍS: el CER sobre text fabricat és CIRCULAR —mateixes fonts, fons i augmentació a les")
+print("dues bandes— i només controla la memorització de text. L'únic test que val és el de")
+print("franges de vídeo llegides per una persona.")
 
 #: L'alfabet surt del text, no d'una llista escrita a mà: si una frase porta un signe que no
 #: hi hagués, el model no el podria encertar mai i el CER duria un terra que no és culpa seva.
@@ -380,16 +399,33 @@ if OR:
         if not os.path.exists(cami):
             continue
         im = Image.open(cami).convert("L")
-        #: La franja de sota, que és on van els subtítols.
-        im = im.crop((0, int(im.height * 0.72), im.width, im.height))
-        w = max(16, min(MAX_AMPLE, int(im.width * ALT / im.height)))
-        x = torch.from_numpy(np.array(im.resize((w, ALT), Image.BILINEAR),
-                                      dtype=np.float32) / 255.0)
-        with torch.no_grad():
-            s = model(x.unsqueeze(0).unsqueeze(0).to(aparell))
-        dit = descodifica(s, torch.tensor([w // 4]))[0]
-        print("\n  %s" % nom)
+        #: Abans es retallava la franja de sota sencera i s'aixafava a 48 px: dues línies de
+        #: text en una, i el model —entrenat amb UNA línia— no en treia res (0,61 de
+        #: confiança i escombraria). Es parteix per línies pel perfil de vores, com fa
+        #: `tools/video/ocr_tif.py`, i es llegeix cada línia.
+        a = np.array(im)
+        v = np.abs(np.diff(a.astype(np.int16), axis=1)).mean(axis=1)
+        llindar = max(3.0, float(v.max()) * 0.22)
+        blocs, dins, inici = [], False, 0
+        for k, m in enumerate(list(v >= llindar) + [False]):
+            if m and not dins:
+                dins, inici = True, k
+            elif not m and dins:
+                dins = False
+                if k - inici >= 10:
+                    blocs.append((max(0, inici - 4), min(a.shape[0], k + 4)))
+        dits = []
+        for p, q in blocs:
+            l = im.crop((0, p, im.width, q))
+            w = max(16, min(MAX_AMPLE, int(l.width * ALT / l.height)))
+            x = torch.from_numpy(np.array(l.resize((w, ALT), Image.BILINEAR),
+                                          dtype=np.float32) / 255.0)
+            with torch.no_grad():
+                s = model(x.unsqueeze(0).unsqueeze(0).to(aparell))
+            dits.append(descodifica(s, torch.tensor([w // 4]))[0])
+        print("\n  %s  (%d línies trobades)" % (nom, len(dits)))
         print("     la persona: %s" % str(bo)[:60])
-        print("     el model  : %s" % dit[:60])
+        for dit in dits:
+            print("     el model  : %s" % dit[:60])
     print("\nAMB UNA LÍNIA D'OR NO ES MESURA UN OCR. Això és per mirar-ho amb els ulls,")
     print("no per treure'n un número. Cal que algú llegeixi vint o trenta franges a mà.")

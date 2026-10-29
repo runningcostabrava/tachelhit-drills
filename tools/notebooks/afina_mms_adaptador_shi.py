@@ -231,6 +231,25 @@ args = TrainingArguments(
 entrenador = Trainer(model=model, args=args, train_dataset=Talls(train),
                      eval_dataset=Talls(dev), data_collator=ajunta,
                      compute_metrics=mesura, processing_class=proc.feature_extractor)
+
+#: La comprovació que l'auditoria del 29/10 va demanar i que no es podia fer sense executar:
+#: una passada enrere sobre un lot, i la norma del gradient dels adaptadors SEPARADA de la del
+#: cap. Si la dels adaptadors és zero, el punt de control del gradient els ha deixat fora i
+#: només es mouria el cap: exactament la recepta que va empitjorar la primera passada.
+_ap = "cuda" if torch.cuda.is_available() else "cpu"
+model.to(_ap).train()
+_lot = ajunta([Talls(train)[i] for i in range(2)])
+_s = model(input_values=_lot["input_values"].to(_ap), labels=_lot["labels"].to(_ap))
+_s.loss.backward()
+_n_ad = sum(float(p.grad.norm()) ** 2 for n, p in model.named_parameters()
+            if p.grad is not None and not n.startswith("lm_head")) ** 0.5
+_n_cap = sum(float(p.grad.norm()) ** 2 for n, p in model.named_parameters()
+             if p.grad is not None and n.startswith("lm_head")) ** 0.5
+print("norma del gradient — adaptadors %.3e · cap %.3e" % (_n_ad, _n_cap))
+model.zero_grad()
+if _n_ad == 0.0:
+    raise SystemExit("els adaptadors NO reben gradient: no val la pena entrenar")
+
 entrenador.train()
 
 #: Es desa NOMÉS l'adaptador: són pocs megabytes contra els 3,9 GB del model sencer, i el
