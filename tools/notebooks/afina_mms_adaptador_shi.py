@@ -189,6 +189,22 @@ def a_llati(t):
     return re.sub(r"[^a-z ]+", "", t).strip()
 
 
+#: El test net (#482): els 256 clips de prova del Common Voice zgh, 26 parlants, disjunts per
+#: font i per veu de tot l'entrenament. És l'únic número que decideix aquesta passada: el mms
+#: sense afinar hi fa 0,2095 i el v3 0,2297. Els altres tres tests comparteixen font amb train.
+CV = de_kaggle("cv_test.json")
+if CV:
+    _cv = json.load(open(CV, encoding="utf-8"))
+    for c in _cv:
+        c["cami"] = os.path.join(os.path.dirname(CV), "audio", c["fitxer"])
+        c["lletra"] = a_llati(c["sentence"])
+        c["varietat"] = "cv:" + ((c.get("variant") or "sense variant")[:14])
+    proves["cv-zgh-test"] = [c for c in _cv if c["lletra"] and os.path.exists(c["cami"])]
+    print("test net del Common Voice zgh: %d clips" % len(proves["cv-zgh-test"]))
+else:
+    print("AVÍS: sense cv_test.json no hi ha test net; els altres tres comparteixen font amb train")
+
+
 def distancia(a, b):
     if a == b:
         return 0
