@@ -38,6 +38,29 @@ def _posa(drill_id, **camps):
         db.commit()
 
 
+def _demana(pila, drill_id, cap):
+    """La frase que busquem dins de la pila, saltant les que hi ha deixat una altra prova.
+
+    La pila serveix sempre la de l'identificador més baix, i les altres proves d'aquest fitxer
+    també n'hi deixen. Donar per fet que la primera és la nostra feia que la prova passés o
+    caigués segons l'ordre en què pytest les executa, que és aleatori. Es fa servir el `saltats`
+    de l'API de debò, que és per a això.
+    """
+    saltats = []
+    for _ in range(40):
+        r = client.get("/revisa/%s" % pila,
+                       params={"saltats": ",".join(str(x) for x in saltats)} if saltats else {},
+                       headers=cap)
+        assert r.status_code == 200, r.text
+        fora = r.json()
+        if not fora.get("drill"):
+            raise AssertionError("la frase #%d no surt a la pila %s" % (drill_id, pila))
+        if fora["drill"]["id"] == drill_id:
+            return fora
+        saltats.append(fora["drill"]["id"])
+    raise AssertionError("massa frases a la pila abans de la nostra")
+
+
 def test_els_esborranys_surten_ordenats_i_amb_el_seu_model():
     """Tres lectures de la mateixa gravació: la que més acord té, primera."""
     import revisa
@@ -49,10 +72,7 @@ def test_els_esborranys_surten_ordenats_i_amb_el_seu_model():
         {"text": "idda s tagant", "model": "nostre", "acord": 0.89},
     ], ensure_ascii=False))
 
-    r = client.get("/revisa/per-escriure", headers=_com_admin())
-    assert r.status_code == 200, r.text
-    fora = r.json()
-    assert fora["drill"] and fora["drill"]["id"] == i, fora
+    fora = _demana("per-escriure", i, _com_admin())
 
     esb = fora["esborranys"]
     assert len(esb) == 3, esb
