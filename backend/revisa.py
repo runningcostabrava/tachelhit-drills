@@ -125,6 +125,11 @@ def esborranys_de(d) -> List[Dict]:
                 for e in carregats:
                     if isinstance(e, dict) and (e.get("text") or "").strip():
                         fora.append({"text": e["text"].strip(),
+                                     # El que hi ha entre parèntesis a la línia del llibre no
+                                     # sona mai: «(dar)», «(afasi)», «(lbɛd n-tkal)» són
+                                     # indicacions de l'exercici. En Pablo ho va comprovar als
+                                     # 30 talls (29/10). La proposta que s'edita és aquesta.
+                                     "text_net": re.sub(r"\s*\([^)]*\)", "", e["text"]).strip(),
                                      "model": (e.get("model") or "").strip() or None,
                                      "acord": e.get("acord"),
                                      # D'on surt, quan no és una màquina: «pàgina 72 del
