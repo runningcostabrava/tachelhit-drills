@@ -926,17 +926,28 @@ def _said_key(text: Optional[str]) -> str:
     return " ".join(practice.sound_key(w) for w in practice.words_of(text or ""))
 
 
+def _said_keys(text: Optional[str]) -> List[str]:
+    """Totes les maneres com una frase de la biblioteca diu el que diu.
+
+    Una frase pot portar les seves variants separades per una barra —«I cg? / I ck?»—, i la veu
+    les diu totes dues (#504). Amb una sola clau per a la frase sencera, una línia que digués
+    «I ck?» no la trobava mai."""
+    keys = [_said_key(text)]
+    parts = [p for p in (text or "").split("/") if p.strip()]
+    if len(parts) > 1:
+        keys += [_said_key(p) for p in parts]
+    return [k for k in dict.fromkeys(keys) if k]
+
+
 def _by_what_it_says(rows: List) -> Dict[str, object]:
     said: Dict[str, object] = {}
     # la que es pugui mirar i escoltar primer; si no, la que tingui veu
     rank = lambda x: (0 if (x.image_url and x.audio_url) else 1 if x.audio_url else 2 if x.image_url else 3)
     for d in rows:
-        k = _said_key(getattr(d, "text_tachelhit", None))
-        if not k:
-            continue
-        have = said.get(k)
-        if have is None or rank(d) < rank(have):
-            said[k] = d
+        for k in _said_keys(getattr(d, "text_tachelhit", None)):
+            have = said.get(k)
+            if have is None or rank(d) < rank(have):
+                said[k] = d
     return said
 
 
@@ -986,15 +997,34 @@ def _short_drills(db, keys: set) -> List:
                     .all())
             by_key: Dict[str, object] = {}
             for r in rows:
-                k = _said_key(r[1])
-                if k and k not in by_key:
-                    by_key[k] = _Said(r)
+                for k in _said_keys(r[1]):
+                    if k not in by_key:
+                        by_key[k] = _Said(r)
             _short_index["by_key"], _short_index["stamp"] = by_key, stamp
     except Exception as e:   # una base de dades que no respon no deixa el capítol sense servir
         print(f"[METHOD] no s'ha pogut buscar veus a la biblioteca: {str(e)[:120]}")
         return []
     by_key = _short_index["by_key"]
     return [d for k, d in by_key.items() if k in keys]
+
+
+def voiced_for(db, forms: List[str]) -> Dict[str, Optional[Dict]]:
+    """La veu que la biblioteca ja té per a cada text amazic, si en té (#504).
+
+    Qualsevol pantalla que mostri amazic escrit a mà —la lliçó en anglès, una fitxa, la clau de
+    grafies— pot preguntar aquí abans de dir que «encara no té veu». Només compta si una frase
+    curta gravada diu exactament això (o una de les seves variants): una paraula que només surt
+    dins d'una frase més llarga no es fa passar per la paraula sola.
+    """
+    keys = {f: _said_key(f) for f in forms if (f or "").strip()}
+    found = _by_what_it_says(_short_drills(db, {k for k in keys.values() if k}))
+    out: Dict[str, Optional[Dict]] = {}
+    for f, k in keys.items():
+        d = found.get(k) if k else None
+        out[f] = None if d is None else {
+            "drill_id": d.id, "text_tachelhit": d.text_tachelhit, "audio_url": d.audio_url,
+            "speaker": d.speaker or d.author, "region": d.region or d.variety}
+    return out
 
 
 def _lines_of(body: Dict, kind: str) -> List[Dict]:

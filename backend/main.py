@@ -13,7 +13,7 @@ import shutil
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from urllib.parse import quote
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Body, Form, BackgroundTasks, Request, Response
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Body, Form, BackgroundTasks, Request, Response, Query
 from fastapi.encoders import jsonable_encoder
 from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -7120,6 +7120,15 @@ def _library_mark(db, slug: str) -> tuple:
     pn, plast = db.query(func.count(TestModel.id), func.max(TestModel.updated_at)).one()
     return (n, str(last), str(row[0]) if row else None, str(art[0]) if art else None,
             pn, str(plast))
+
+
+@app.get("/library/voiced")
+def library_voiced(form: List[str] = Query(default=[]), db: Session = Depends(get_db)):
+    """Per a cada text amazic, la frase gravada de la biblioteca que diu exactament això (#504).
+
+    Una pantalla que mostra amazic escrit sense veu pregunta aquí primer: si algú ja ho ha
+    gravat, ho ha de poder sentir. Màxim 50 textos per crida."""
+    return method_mod.voiced_for(db, form[:50])
 
 
 @app.get("/method/cd/{pista}/{inici}/{fi}")
