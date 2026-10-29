@@ -38,7 +38,12 @@ interface Drill {
  * `acord` és com de parescut és al que han llegit els altres models. És el número que de debò
  * importa: una lectura sola és una endevinalla, i tres que diuen el mateix és una altra cosa.
  */
-interface Esborrany { text: string; model?: string | null; acord?: number | null }
+interface Esborrany {
+  text: string; model?: string | null; acord?: number | null;
+  // La mateixa línia sense el que hi ha entre parèntesis, que al CD del Mètode no sona mai
+  // («(dar)», «(afasi)» són indicacions de l'exercici). És el que es proposa per editar.
+  text_net?: string | null; font?: string | null;
+}
 interface Seguent {
   pila: string; queden: number; titol?: string; pregunta?: string; opcions?: Opcio[];
   drill: Drill | null; companya?: Drill | null; esborranys?: Esborrany[];
@@ -52,6 +57,8 @@ export default function RevisaPage() {
   const [ocupat, setOcupat] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fet, setFet] = useState<string | null>(null);
+  // La línia del llibre tal com la deixa la persona a la caixa; null = encara sense tocar.
+  const [editat, setEditat] = useState<string | null>(null);
 
   useEffect(() => {
     api.get<{ piles: Pila[] }>('/revisa')
@@ -63,6 +70,7 @@ export default function RevisaPage() {
     setOcupat(true);
     try {
       const q = fora.length ? `?saltats=${fora.join(',')}` : '';
+      setEditat(null);
       setItem(await api.get<Seguent>(`/revisa/${quina}${q}`));
       setError(null);
     } catch {
@@ -206,6 +214,22 @@ export default function RevisaPage() {
                     {o.diu}: <strong>«{(quin.text_catalan || quin.text_tachelhit || '').slice(0, 44)}»</strong>
                   </button>
                 ))
+              ) : o.id === 'tria' && pila === 'casa-amb-el-llibre' && esborranys.length ? (
+                // Aquí el text és d'una persona (l'autor del llibre) i el que va fer la màquina
+                // és l'aparellament. En Pablo va escoltar 30 talls (29/10): el CD sovint diu
+                // només una PART de la línia (sense «yyih,», sense la segona frase) i el que
+                // és entre parèntesis no sona mai. Un «sí» que escrivís la línia tal qual
+                // posaria al camp del parlant coses que no sonen. Per això el «sí» porta la
+                // línia en una caixa: el que es desa és el que la persona hi deixa.
+                <div key={o.id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <textarea id="revisa-linia-editada" value={editat ?? (esborranys[0].text_net || esborranys[0].text)}
+                            onChange={(ev) => setEditat(ev.target.value)} rows={2} lang="zgh"
+                            style={{ ...boto, fontSize: 17, lineHeight: 1.5, resize: 'vertical', textAlign: 'left' }} />
+                  <button onClick={() => decideix('tria', undefined, (editat ?? (esborranys[0].text_net || esborranys[0].text)).trim())}
+                          disabled={ocupat || !(editat ?? (esborranys[0].text_net || esborranys[0].text)).trim()} style={boto}>
+                    {o.diu} <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>(es desa el que hi ha a la caixa)</span>
+                  </button>
+                </div>
               ) : o.id === 'tria' && esborranys.length ? (
                 // Un botó per esborrany: triar-ne un és dir «aquest és el bo», i amb tres
                 // lectures diferents al davant la tria és una decisió, no un sí o un no.
