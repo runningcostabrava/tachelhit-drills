@@ -19,7 +19,9 @@
     "que no són totes al llibre que aquesta veu llegeix (Initiation au tachelhit, 1999, #380).",
     "Les altres 55 poden ser bones: no ho sabem, i això és justament el problema.",
     "Per tornar-les a entrar fa falta una prova que no surti de la màquina sentint sola: alinear",
-    "el text del llibre, que la veu llegeix en ordre, contra l'àudio."
+    "el text del llibre, que la veu llegeix en ordre, contra l'àudio.",
+    "'sobra': true vol dir que en Pablo hi sent la línia sencera però el tall porta un tros",
+    "de més (una paraula veïna): serveix per fer-la sentir, no per entrenar cap model."
   ],
   "_pistes": {
     "e6nuUVOFB0U": "capítol 1 del llibre",
@@ -248,6 +250,38 @@
         "end": 112.41,
         "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793312985/tachelhit/cd_metode/mDMcR7vNA_A_108-63_112-41.mp3",
         "com": "sentit"
+      },
+      "com-estas:col2:0": {
+        "pista": "mDMcR7vNA_A",
+        "start": 38.12,
+        "end": 39.5,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313132/tachelhit/cd_metode/mDMcR7vNA_A_38-12_39-50.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "respostes:example:6": {
+        "pista": "mDMcR7vNA_A",
+        "start": 46.69,
+        "end": 48.01,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313134/tachelhit/cd_metode/mDMcR7vNA_A_46-69_48-01.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "escolta-tensio:example:0": {
+        "pista": "mDMcR7vNA_A",
+        "start": 13.05,
+        "end": 14.03,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313136/tachelhit/cd_metode/mDMcR7vNA_A_13-05_14-03.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "escolta-tensio:example:9": {
+        "pista": "mDMcR7vNA_A",
+        "start": 105.39,
+        "end": 106.65,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313138/tachelhit/cd_metode/mDMcR7vNA_A_105-39_106-65.mp3",
+        "com": "sentit",
+        "sobra": true
       }
     },
     "el-cami": {
@@ -355,6 +389,118 @@
         "end": 149.91,
         "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793312998/tachelhit/cd_metode/mDMcR7vNA_A_148-75_149-91.mp3",
         "com": "sentit"
+      },
+      "dreta:example:0": {
+        "pista": "mDMcR7vNA_A",
+        "start": 136.48,
+        "end": 137.58,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313139/tachelhit/cd_metode/mDMcR7vNA_A_136-48_137-58.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "annexio:col0:3": {
+        "pista": "mDMcR7vNA_A",
+        "start": 175.59,
+        "end": 176.68,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313141/tachelhit/cd_metode/mDMcR7vNA_A_175-59_176-68.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "annexio:col1:0": {
+        "pista": "mDMcR7vNA_A",
+        "start": 312.47,
+        "end": 313.59,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313142/tachelhit/cd_metode/mDMcR7vNA_A_312-47_313-59.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "annexio:col1:1": {
+        "pista": "mDMcR7vNA_A",
+        "start": 133.37,
+        "end": 134.49,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313143/tachelhit/cd_metode/mDMcR7vNA_A_133-37_134-49.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "annexio:col1:2": {
+        "pista": "mDMcR7vNA_A",
+        "start": 345.11,
+        "end": 346.21,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313144/tachelhit/cd_metode/mDMcR7vNA_A_345-11_346-21.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "annexio:col1:3": {
+        "pista": "mDMcR7vNA_A",
+        "start": 175.55,
+        "end": 176.68,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313144/tachelhit/cd_metode/mDMcR7vNA_A_175-55_176-68.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "tenir:col1:0": {
+        "pista": "mDMcR7vNA_A",
+        "start": 146.37,
+        "end": 147.35,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313145/tachelhit/cd_metode/mDMcR7vNA_A_146-37_147-35.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "parentiu:col0:0": {
+        "pista": "mDMcR7vNA_A",
+        "start": 138.74,
+        "end": 139.68,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313146/tachelhit/cd_metode/mDMcR7vNA_A_138-74_139-68.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "parentiu:col0:1": {
+        "pista": "mDMcR7vNA_A",
+        "start": 138.74,
+        "end": 139.68,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313146/tachelhit/cd_metode/mDMcR7vNA_A_138-74_139-68.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "parentiu:col1:0": {
+        "pista": "mDMcR7vNA_A",
+        "start": 363.48,
+        "end": 364.57,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313148/tachelhit/cd_metode/mDMcR7vNA_A_363-48_364-57.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "parentiu:col1:2": {
+        "pista": "mDMcR7vNA_A",
+        "start": 146.83,
+        "end": 147.79,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313149/tachelhit/cd_metode/mDMcR7vNA_A_146-83_147-79.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "cortesia:example:0": {
+        "pista": "mDMcR7vNA_A",
+        "start": 134.19,
+        "end": 135.27,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313149/tachelhit/cd_metode/mDMcR7vNA_A_134-19_135-27.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "vocabulary:12": {
+        "pista": "mDMcR7vNA_A",
+        "start": 326.05,
+        "end": 327.41,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313150/tachelhit/cd_metode/mDMcR7vNA_A_326-05_327-41.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "vocabulary:31": {
+        "pista": "mDMcR7vNA_A",
+        "start": 359.3,
+        "end": 360.52,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313152/tachelhit/cd_metode/mDMcR7vNA_A_359-30_360-52.mp3",
+        "com": "sentit",
+        "sobra": true
       }
     },
     "la-botiga": {
@@ -406,6 +552,94 @@
         "end": 22.2,
         "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313004/tachelhit/cd_metode/zkvUblbTdws_21-00_22-20.mp3",
         "com": "sentit"
+      },
+      "is-dar:col0:1": {
+        "pista": "zkvUblbTdws",
+        "start": 5.87,
+        "end": 6.89,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313153/tachelhit/cd_metode/zkvUblbTdws_5-87_6-89.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "is-dar:col0:2": {
+        "pista": "zkvUblbTdws",
+        "start": 101.98,
+        "end": 102.96,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313156/tachelhit/cd_metode/zkvUblbTdws_101-98_102-96.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "is-dar:col0:5": {
+        "pista": "zkvUblbTdws",
+        "start": 110.83,
+        "end": 111.91,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313156/tachelhit/cd_metode/zkvUblbTdws_110-83_111-91.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "is-dar:col0:6": {
+        "pista": "zkvUblbTdws",
+        "start": 110.83,
+        "end": 111.99,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313157/tachelhit/cd_metode/zkvUblbTdws_110-83_111-99.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "vocabulary:5": {
+        "pista": "zkvUblbTdws",
+        "start": 6.19,
+        "end": 7.33,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313158/tachelhit/cd_metode/zkvUblbTdws_6-19_7-33.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "vocabulary:6": {
+        "pista": "zkvUblbTdws",
+        "start": 13.03,
+        "end": 14.05,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313159/tachelhit/cd_metode/zkvUblbTdws_13-03_14-05.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "vocabulary:8": {
+        "pista": "zkvUblbTdws",
+        "start": 102.22,
+        "end": 103.36,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313160/tachelhit/cd_metode/zkvUblbTdws_102-22_103-36.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "vocabulary:11": {
+        "pista": "zkvUblbTdws",
+        "start": 171.09,
+        "end": 172.31,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313161/tachelhit/cd_metode/zkvUblbTdws_171-09_172-31.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "vocabulary:13": {
+        "pista": "zkvUblbTdws",
+        "start": 55.9,
+        "end": 56.94,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313161/tachelhit/cd_metode/zkvUblbTdws_55-90_56-94.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "vocabulary:15": {
+        "pista": "zkvUblbTdws",
+        "start": 427.45,
+        "end": 428.59,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313162/tachelhit/cd_metode/zkvUblbTdws_427-45_428-59.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "vocabulary:22": {
+        "pista": "zkvUblbTdws",
+        "start": 275.94,
+        "end": 277.12,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313163/tachelhit/cd_metode/zkvUblbTdws_275-94_277-12.mp3",
+        "com": "sentit",
+        "sobra": true
       }
     },
     "que-fas": {
@@ -576,6 +810,174 @@
         "end": 177.16,
         "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313026/tachelhit/cd_metode/YioipkEhqME_174-85_177-16.mp3",
         "com": "sentit"
+      },
+      "dialogue:1": {
+        "pista": "YioipkEhqME",
+        "start": 6.69,
+        "end": 11.11,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313164/tachelhit/cd_metode/YioipkEhqME_6-69_11-11.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "ma:example:0": {
+        "pista": "YioipkEhqME",
+        "start": 5.93,
+        "end": 7.13,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313165/tachelhit/cd_metode/YioipkEhqME_5-93_7-13.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "ma:example:1": {
+        "pista": "YioipkEhqME",
+        "start": 5.93,
+        "end": 7.13,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313165/tachelhit/cd_metode/YioipkEhqME_5-93_7-13.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "ma:example:4": {
+        "pista": "YioipkEhqME",
+        "start": 5.93,
+        "end": 7.05,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313168/tachelhit/cd_metode/YioipkEhqME_5-93_7-05.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "dies:example:0": {
+        "pista": "YioipkEhqME",
+        "start": 121.88,
+        "end": 123.28,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313168/tachelhit/cd_metode/YioipkEhqME_121-88_123-28.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "dies:col2:11": {
+        "pista": "YioipkEhqME",
+        "start": 114.09,
+        "end": 115.09,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313169/tachelhit/cd_metode/YioipkEhqME_114-09_115-09.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "imikk-n:example:0": {
+        "pista": "YioipkEhqME",
+        "start": 9.77,
+        "end": 11.11,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313171/tachelhit/cd_metode/YioipkEhqME_9-77_11-11.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "arrels-habitud:col1:0": {
+        "pista": "YioipkEhqME",
+        "start": 105.97,
+        "end": 106.95,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313172/tachelhit/cd_metode/YioipkEhqME_105-97_106-95.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "possessius-amic:example:2": {
+        "pista": "YioipkEhqME",
+        "start": 18.06,
+        "end": 19.3,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313172/tachelhit/cd_metode/YioipkEhqME_18-06_19-30.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "possessius-amic:col0:1": {
+        "pista": "YioipkEhqME",
+        "start": 18.06,
+        "end": 19.26,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313174/tachelhit/cd_metode/YioipkEhqME_18-06_19-26.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "possessius-amic:col0:2": {
+        "pista": "YioipkEhqME",
+        "start": 18.06,
+        "end": 19.26,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313174/tachelhit/cd_metode/YioipkEhqME_18-06_19-26.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "possessius-amic:col1:5": {
+        "pista": "YioipkEhqME",
+        "start": 246.97,
+        "end": 248.59,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313177/tachelhit/cd_metode/YioipkEhqME_246-97_248-59.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "possessius-amic:col1:6": {
+        "pista": "YioipkEhqME",
+        "start": 246.97,
+        "end": 248.59,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313177/tachelhit/cd_metode/YioipkEhqME_246-97_248-59.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "s-direccio:example:0": {
+        "pista": "YioipkEhqME",
+        "start": 96.14,
+        "end": 97.54,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313179/tachelhit/cd_metode/YioipkEhqME_96-14_97-54.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "noms-femenins:example:6": {
+        "pista": "YioipkEhqME",
+        "start": 550.37,
+        "end": 551.57,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313180/tachelhit/cd_metode/YioipkEhqME_550-37_551-57.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "noms-femenins:col0:9": {
+        "pista": "YioipkEhqME",
+        "start": 565.35,
+        "end": 566.57,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313181/tachelhit/cd_metode/YioipkEhqME_565-35_566-57.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "noms-femenins:col1:0": {
+        "pista": "YioipkEhqME",
+        "start": 529.35,
+        "end": 530.45,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313182/tachelhit/cd_metode/YioipkEhqME_529-35_530-45.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "vocabulary:20": {
+        "pista": "YioipkEhqME",
+        "start": 9.77,
+        "end": 10.75,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313186/tachelhit/cd_metode/YioipkEhqME_9-77_10-75.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "vocabulary:21": {
+        "pista": "YioipkEhqME",
+        "start": 18.06,
+        "end": 19.22,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313186/tachelhit/cd_metode/YioipkEhqME_18-06_19-22.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "vocabulary:26": {
+        "pista": "YioipkEhqME",
+        "start": 529.35,
+        "end": 530.45,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313182/tachelhit/cd_metode/YioipkEhqME_529-35_530-45.mp3",
+        "com": "sentit",
+        "sobra": true
+      },
+      "vocabulary:31": {
+        "pista": "YioipkEhqME",
+        "start": 103.46,
+        "end": 104.87,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313189/tachelhit/cd_metode/YioipkEhqME_103-46_104-87.mp3",
+        "com": "sentit",
+        "sobra": true
       }
     }
   },
