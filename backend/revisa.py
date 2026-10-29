@@ -83,6 +83,26 @@ PILES: Dict[str, Dict] = {
             {"id": "no-ho-se", "diu": "cap dels dos"},
         ],
     },
+    #: Aquesta pila és d'una altra naturalesa que les altres, i val la pena dir per què.
+    #:
+    #: A `per-escriure` el text és d'una màquina i el que es demana és si val. Aquí el text és
+    #: **d'una persona** —la línia del llibre, escrita per l'autor del mètode— i el que va fer
+    #: una màquina és l'**aparellament**: dir que aquesta gravació diu aquella línia. Per això
+    #: la pregunta no és «aquest text és bo?» sinó «la gravació diu això?», que es pot respondre
+    #: escoltant i llegint, sense saber la llengua.
+    #:
+    #: I per això, quan una persona ho confirma, el text sí que pot anar al camp d'or: ja no és
+    #: una màquina qui diu que aquella gravació diu allò.
+    "casa-amb-el-llibre": {
+        "titol": "Una gravació del CD i una línia del llibre",
+        "pregunta": "La gravació diu aquesta línia del llibre?",
+        "parella": False,
+        "opcions": [
+            {"id": "tria", "diu": "sí, diu això"},
+            {"id": "fora", "diu": "no diu això"},
+            {"id": "no-ho-se", "diu": "no ho sé"},
+        ],
+    },
 }
 
 TIFINAG = re.compile(r"[ⴰ-⵿]")
@@ -106,13 +126,17 @@ def esborranys_de(d) -> List[Dict]:
                     if isinstance(e, dict) and (e.get("text") or "").strip():
                         fora.append({"text": e["text"].strip(),
                                      "model": (e.get("model") or "").strip() or None,
-                                     "acord": e.get("acord")})
+                                     "acord": e.get("acord"),
+                                     # D'on surt, quan no és una màquina: «pàgina 72 del
+                                     # Mètode». Sense això, qui decideix no pot anar a
+                                     # mirar-ho al llibre, que és justament el que ha de fer.
+                                     "font": (e.get("font") or "").strip() or None})
         except Exception:
             pass                       # un JSON trencat no ha de tombar la pantalla
     if not fora:
         vell = (getattr(d, "text_tachelhit_suggested", "") or "").strip()
         if vell:
-            fora.append({"text": vell, "model": None, "acord": None})
+            fora.append({"text": vell, "model": None, "acord": None, "font": None})
     fora.sort(key=lambda e: -(e.get("acord") or 0))
     return fora
 
@@ -205,8 +229,29 @@ def decideix(db, pila: str, drill, altre, opcio: str, tria: Optional[int] = None
             treu_etiqueta(altre, pila)
         fet["canvis"].append("s'han deixat com estaven")
 
+    elif opcio == "fora":
+        # L'aparellament era fals. La gravació és real i es queda; el que se'n va és la
+        # proposta, perquè deixar-la seria deixar escrit que diu una cosa que no diu.
+        drill.text_tachelhit_suggested = None
+        drill.esborranys = None
+        treu_etiqueta(drill, pila)
+        fet["canvis"].append("s'ha tret la proposta: la gravació no diu aquella línia")
+
     elif opcio == "tria":
-        if pila == "per-escriure":
+        if pila == "casa-amb-el-llibre":
+            # Una persona ha escoltat i ha dit que sí. El text és de l'autor del llibre i
+            # l'aparellament ja no és de màquina: pot anar al camp del parlant.
+            text = (esborrany or drill.text_tachelhit_suggested or "").strip()
+            if not text:
+                raise ValueError("falta la línia del llibre")
+            drill.text_tachelhit = text
+            if not (drill.text_tachelhit_latin or "").strip() and not TIFINAG.search(text):
+                drill.text_tachelhit_latin = text
+            drill.text_tachelhit_suggested = None
+            treu_etiqueta(drill, pila)
+            fet["canvis"].append("la línia del llibre queda com a text del parlant")
+
+        elif pila == "per-escriure":
             # Un esborrany triat NO és el text del parlant: va a `*_suggested`, i allà el
             # confirma qui sàpiga la llengua. Aquesta pantalla no escriu text amazic de ningú.
             drill.text_tachelhit_suggested = (esborrany or "").strip() or None
