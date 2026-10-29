@@ -156,6 +156,15 @@ export default function StartEnglish() {
         water, and to say who you are. Every word is written in Tifinagh, the Amazigh alphabet, and
         in Latin letters, and when you press Listen you hear a person from the Atlas, never a computer.
       </p>
+      {/* Each source keeps its own spelling (a speaker's words are theirs), so the reader needs the
+          key to read three ways of writing one sound. */}
+      <p style={{ ...P, fontSize: 13.5, color: 'var(--text-soft)' }}>
+        Reading the Latin letters: each speaker writes the way they learned, so the same sound can
+        look different. <strong>c</strong>, <strong>š</strong> and <strong>sh</strong> are “sh”;
+        {' '}<strong>ɣ</strong>, <strong>ġ</strong> and <strong>gh</strong> are a French “r” at the
+        back of the throat; <strong>x</strong> is the “ch” of Scottish <em>loch</em>; <strong>ɛ</strong> and
+        {' '}<strong>3</strong> are a sound made deep in the throat; a doubled letter is held longer.
+      </p>
 
       {START_BLOCKS.map((b) => (
         <section key={b.title} style={{ margin: '26px 0' }}>
