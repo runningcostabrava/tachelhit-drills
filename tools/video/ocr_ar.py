@@ -18,9 +18,10 @@ import torch.nn as nn
 from PIL import Image
 
 S = os.path.dirname(os.path.abspath(__file__))
-PES = os.path.join(S, "k_ocr_ar_out", "ocr_arab.pt")
+#: Per defecte el model fabricat; amb OCR_AR_PES es pot carregar l'adaptat a un video.
+PES = os.environ.get("OCR_AR_PES") or os.path.join(S, "k_ocr_ar_out", "ocr_arab.pt")
 ALT = 48
-MAX_AMPLE = 1600
+MAX_AMPLE = 4000
 TASHKIL = re.compile(r"[ً-ْـٰ]")
 
 
@@ -84,8 +85,46 @@ def vores_per_fila(a):
     return d.mean(axis=1)
 
 
+def _clars_amb_vora(a):
+    """Els pixels de LLETRA de subtitol: molt clars amb un de fosc a tocar (la vora).
+
+    La vora per fila (el senyal d'abans) la te tambe l'escena: en una franja de 1920x182 amb
+    el text de 21 px, el segmentador agafava l'escena del costat i treia tires de 21x1920 que
+    despres s'esclafaven 2,7 vegades per cabre. Aquest senyal nomes el te la lletra blanca.
+    """
+    clar = a > 190
+    fosc = a < 80
+    prop = np.zeros_like(fosc)
+    for k in (1, 2, 3):
+        prop[:, k:] |= fosc[:, :-k]
+        prop[:, :-k] |= fosc[:, k:]
+        prop[k:, :] |= fosc[:-k, :]
+        prop[:-k, :] |= fosc[k:, :]
+    return clar & prop
+
+
+def _blocs(marca, minim):
+    fora, dins, inici = [], False, 0
+    for k, m in enumerate(list(marca) + [False]):
+        if m and not dins:
+            dins, inici = True, k
+        elif not m and dins:
+            dins = False
+            if k - inici >= minim:
+                fora.append((inici, k))
+    return fora
+
+
 def talla_linies(im, minim_alt=10):
     a = np.array(im.convert("L"))
+    #: Primer la lletra clara amb vora: si n'hi ha, es la que mana. Si no (lletra fosca o
+    #: sense vora), el senyal de vores d'abans.
+    c = _clars_amb_vora(a).sum(axis=1)
+    if c.max() >= 6:
+        blocs = _blocs(c >= max(4, c.max() * 0.25), max(6, minim_alt // 2))
+        if blocs:
+            return [im.crop((0, max(0, p - 5), im.width, min(a.shape[0], q + 5)))
+                    for p, q in blocs]
     v = vores_per_fila(a)
     if v.max() <= 0:
         return []
@@ -102,8 +141,15 @@ def talla_linies(im, minim_alt=10):
     return [im.crop((0, max(0, p - 4), im.width, min(a.shape[0], q + 4))) for p, q in blocs]
 
 
-def retalla_marges(im, marge=6):
+def retalla_marges(im, marge=8):
     a = np.array(im.convert("L"))
+    #: Les columnes amb lletra clara i vora: el subtitol es al mig i l'escena als costats.
+    c = _clars_amb_vora(a).sum(axis=0)
+    if c.max() >= 3:
+        cols = np.where(c >= max(2, c.max() * 0.12))[0]
+        if len(cols) >= 4 and (cols.max() - cols.min()) >= 24:
+            return im.crop((max(0, cols.min() - marge), 0,
+                            min(im.width, cols.max() + marge), im.height))
     d = np.abs(np.diff(a.astype(np.int16), axis=0)).mean(axis=0)
     if d.max() <= 0:
         return im
