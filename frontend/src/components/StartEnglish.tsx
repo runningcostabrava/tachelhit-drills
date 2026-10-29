@@ -26,7 +26,8 @@ function whoSpeaks(d: Drill): string {
   const place = (d.region || '').trim();
   if (/\bHalima\b/.test(tag)) return `Halima${place ? ` · ${place}` : ''}`;
   if (/\bDriss\b/.test(tag)) return `Driss${place ? ` · ${place}` : ''}`;
-  const who = (d.speaker || d.source_channel || '').trim();
+  // The library writes its labels in Catalan; on this page the reader has no Catalan.
+  const who = (d.speaker || d.source_channel || '').trim().replace(/\(parlant nadiu\)/i, '(native speaker)');
   return [who, place].filter(Boolean).join(' · ') || 'a speaker from our library';
 }
 
