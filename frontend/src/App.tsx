@@ -15,6 +15,7 @@ import AiCopilot from './components/AiCopilot';
 import AboutPanel from './components/AboutPanel';
 import MenuMobil from './components/MenuMobil';
 import './App.css';
+import { fetchAllDrills } from './services/fetchAllDrills';
 
 // Route-level code splitting: each page loads its chunk on first visit,
 // keeping the initial bundle small (AG Grid, players, creators all split out)
@@ -171,13 +172,13 @@ function App() {
       cuaDeVeus.engega();
 
       try {
-        const [drillsRes, testsRes] = await Promise.all([
-          axios.get(`${API_BASE}/drills/`),
+        const [drills, testsRes] = await Promise.all([
+          fetchAllDrills(),
           axios.get(`${API_BASE}/tests/`),
         ]);
         // saveDrillsToCache also kicks off background media caching
         // (audio & images only; videos are cached on demand)
-        await syncManager.saveDrillsToCache(drillsRes.data);
+        await syncManager.saveDrillsToCache(drills);
         await syncManager.saveTestsToCache(testsRes.data);
       } catch (e) {
         console.error('Failed to pre-cache data', e);
