@@ -73,9 +73,11 @@ def de_kaggle(nom):
     return None
 
 
-FITXA = de_kaggle("corpus_v3.json")
+#: El v4 (v3 + Common Voice acotat per parlant) si hi és; si no, el v3.
+FITXA = de_kaggle("corpus_v4.json") or de_kaggle("corpus_v3.json")
 if not FITXA:
-    raise SystemExit("no trobo corpus_v3.json: " + str(os.listdir("/kaggle/input")))
+    raise SystemExit("no trobo corpus_v4.json ni corpus_v3.json: " + str(os.listdir("/kaggle/input")))
+print("corpus: %s" % os.path.basename(FITXA))
 ARREL = os.path.dirname(FITXA)
 files = json.load(open(FITXA, encoding="utf-8"))
 for f in files:
@@ -138,6 +140,30 @@ for f in files:
 print("lletres del nostre text que l'alfabet %s no té: %s"
       % (LLENGUA, dict(falten.most_common(8)) or "cap"))
 
+#: La passada del 29/10 ho va ensenyar: l'alfabet `shi` no té `c` ni `x`, i el nostre text en
+#: porta 1.410 i 845. El tokenitzador les ESBORRAVA dels objectius, i el model aprenia a no dir
+#: aquelles lletres. Aquí es tornen a la lletra rica que sí que té l'alfabet (`c`→`š`, `x`→`ḫ`),
+#: que és el que escriuria un taixelhit ben escrit; a l'avaluació, `a_llati` les torna a plegar.
+CANDIDATS = {"c": ["š", "č", "ʃ"], "x": ["ḫ", "χ", "ẋ"], "v": ["f"], "p": ["b"], "o": ["u"]}
+SUBST = {}
+for lletra, opcions in CANDIDATS.items():
+    if lletra in vocab:
+        continue
+    for o in opcions:
+        if o in vocab:
+            SUBST[lletra] = o
+            break
+print("substitucions als objectius: %s" % (SUBST or "cap"))
+
+
+def objectiu(t):
+    return "".join(SUBST.get(c, c) for c in t)
+
+
+_queden = collections.Counter(c for f in files for c in objectiu(f["lletra"])
+                              if c not in vocab and c != " ")
+print("lletres que encara s'esborrarien: %s" % (dict(_queden.most_common(6)) or "cap"))
+
 
 class Talls(torch.utils.data.Dataset):
     def __init__(self, files):
@@ -151,7 +177,7 @@ class Talls(torch.utils.data.Dataset):
         ona, _ = librosa.load(f["cami"], sr=16000, mono=True)
         ona = ona[:int(SEGONS_MAXIM * 16000)]
         x = proc(ona, sampling_rate=16000).input_values[0]
-        y = proc.tokenizer(f["lletra"]).input_ids
+        y = proc.tokenizer(objectiu(f["lletra"])).input_ids
         return {"input_values": x, "labels": y}
 
 
@@ -179,7 +205,7 @@ TIF_A_LLATI = {
 }
 PLEGA = {"ɣ": "g", "γ": "g", "ġ": "g", "ɛ": "a", "ḥ": "h", "ḫ": "x", "ḍ": "d", "ṭ": "t",
          "ẓ": "z", "ṣ": "s", "ṛ": "r", "š": "c", "ž": "j", "ǧ": "j", "č": "c", "ʷ": "w",
-         "'": "", "’": ""}
+         "ʃ": "c", "χ": "x", "ẋ": "x", "'": "", "’": ""}
 
 
 def a_llati(t):
