@@ -6,6 +6,7 @@ import { API_BASE, getMediaUrl } from '../config';
 import { mimeForFileName } from './../utils/media';
 
 import type { Drill } from '../types';
+import { fetchAllDrills } from './fetchAllDrills';
 
 // Re-exported for existing imports (MobileDrillCreator/Editor)
 export type { Drill };
@@ -254,11 +255,11 @@ class OfflineSyncManager {
       await this.setDeadLetters(dead);
 
       // Refresh cache after sync
-      const [drillsRes, testsRes] = await Promise.all([
-        axios.get(`${API_BASE}/drills/`),
+      const [drills, testsRes] = await Promise.all([
+        fetchAllDrills(),
         axios.get(`${API_BASE}/tests/`)
       ]);
-      await this.saveDrillsToCache(drillsRes.data);
+      await this.saveDrillsToCache(drills);
       await this.saveTestsToCache(testsRes.data);
 
     } catch (err) {

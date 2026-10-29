@@ -1,11 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { FaPlay, FaCut } from 'react-icons/fa';
-import { API_BASE } from '../config';
 import { getYouTubeVideoId } from '../utils/youtubeUtils';
 import type { Drill } from '../types';
 import VideoLibraryPlayer from './VideoLibraryPlayer';
+import { fetchAllDrills } from '../services/fetchAllDrills';
 
 type LibraryVideo = { id: string; url: string; title: string; drills: Drill[] };
 
@@ -41,8 +40,8 @@ export default function VideoLibraryPage() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    axios.get(`${API_BASE}/drills/`)
-      .then(res => setDrills(res.data))
+    fetchAllDrills()
+      .then(setDrills)
       .catch(err => { console.error('Failed to load drills:', err); setError(true); })
       .finally(() => setLoading(false));
   }, []);

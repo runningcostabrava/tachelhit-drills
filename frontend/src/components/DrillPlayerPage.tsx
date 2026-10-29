@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
 import { Network } from '@capacitor/network';
-import { API_BASE } from '../config';
 import { api } from '../api';
 import { syncManager } from '../services/OfflineSyncManager';
 import type { Drill } from '../services/OfflineSyncManager';
 import DrillPlayer from './DrillPlayer';
+import { fetchAllDrills } from '../services/fetchAllDrills';
 
 export default function DrillPlayerPage() {
   const navigate = useNavigate();
@@ -28,8 +27,7 @@ export default function DrillPlayerPage() {
         let allDrills: Drill[] = [];
 
         if (status.connected) {
-          const response = await axios.get(`${API_BASE}/drills/`);
-          allDrills = response.data || [];
+          allDrills = await fetchAllDrills();
           await syncManager.saveDrillsToCache(allDrills);
         } else {
           allDrills = await syncManager.getDrills();
