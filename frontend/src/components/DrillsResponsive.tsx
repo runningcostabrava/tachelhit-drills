@@ -19,7 +19,7 @@ import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 
 import type { Drill } from '../types';
-import { fetchAllDrills } from '../services/fetchAllDrills';
+import { OBERTURA_MS, sincronitza } from '../services/biblioteca';
 
 const GlossaryModal = ({ onClose }: { onClose: () => void }) => {
   const [rowData, setRowData] = useState<any[]>([]);
@@ -242,19 +242,20 @@ export default function DrillsResponsive() {
     setPlaying(withVoice);
   };
 
-  const fetchDrills = async () => {
+  const fetchDrills = async (recent = 0) => {
     try {
       let allDrills: Drill[] = [];
 
       // Always try the server first — Capacitor's Network.getStatus() can
       // misreport "offline" on the web, which used to strand the app on an
-      // empty local cache. The cache is only a fallback when the request
-      // genuinely fails (real offline / native app without connectivity).
+      // empty local cache. The copy on the device is what we show either way;
+      // a failed sync only means it may be stale.
       try {
-        allDrills = await fetchAllDrills();
+        await sincronitza(recent);
+        allDrills = await syncManager.getDrills();
         setLoadError(null);
       } catch (netErr) {
-        console.warn('Server fetch failed, falling back to cached drills:', netErr);
+        console.warn('Server sync failed, showing the copy on the device:', netErr);
         allDrills = await syncManager.getDrills();
         // Tell the grid the list may be stale/empty because of the network, not
         // because there are no drills (a cold Render start used to show
@@ -262,10 +263,6 @@ export default function DrillsResponsive() {
         setLoadError(allDrills.length ? 'cached' : 'error');
         if (allDrills.length) toast.error('Sense resposta del servidor: es mostra la còpia local.');
       }
-      // Saving the offline copy happens AFTER, and on its own: a full local storage used to throw
-      // here, be caught as a network error, and show «no response from the server» over a library
-      // the server had just sent in full.
-      if (allDrills.length) syncManager.saveDrillsToCache(allDrills).catch(() => {});
 
       const queue = await syncManager.getQueue();
       const localCreates = queue
@@ -290,7 +287,7 @@ export default function DrillsResponsive() {
     }
   };
 
-  useEffect(() => { fetchDrills(); }, [location.search]);
+  useEffect(() => { fetchDrills(OBERTURA_MS); }, [location.search]);
 
   // Refresh when the AI copilot creates/edits drills
   useEffect(() => {
@@ -542,7 +539,7 @@ export default function DrillsResponsive() {
           </div>
         )}
         <div style={{ flex: 1, width: '100%', overflowX: 'hidden', overflowY: 'auto', padding: isMobile ? '12px 4px' : '0', position: 'relative', boxSizing: 'border-box' }}>
-          <DrillsGrid rowData={filteredDrills} refreshData={fetchDrills} onEditDrill={(drill) => setEditingDrill(drill)} loadError={loadError} onSelectionChange={setSelectedDrills} />
+          <DrillsGrid rowData={filteredDrills} refreshData={() => fetchDrills()} onEditDrill={(drill) => setEditingDrill(drill)} loadError={loadError} onSelectionChange={setSelectedDrills} />
         </div>
       </div>
 

@@ -18,7 +18,7 @@ import {
 } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { fetchAllDrills } from '../services/fetchAllDrills';
+import { bibliotecaAlDia } from '../services/biblioteca';
 
 // Define Test and Drill interfaces for better typing
 interface Test {
@@ -163,7 +163,7 @@ export default function TestEditPanel({ testId, onClose, onTestUpdated }: TestEd
     try {
       const [testResponse, allDrillsData] = await Promise.all([
         axios.get(`${API_BASE}/tests/${testId}`),
-        fetchAllDrills<Drill>(),
+        bibliotecaAlDia<Drill>(),
       ]);
 
       const testData = testResponse.data;
