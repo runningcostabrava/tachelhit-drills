@@ -36,3 +36,10 @@ va escriure en Pablo i diu que encara no té veu.
 - Quan una paraula de la lliçó rebi veu a la biblioteca, cal posar-hi l'id al fitxer: la pàgina no
   la troba sola.
 - Si un dia es vol tota l'app en anglès, aquesta pàgina no ho resol: és una ADR nova.
+
+## Revisió del 30-10-2026 (#500)
+
+Dos auditors (dialectologia d'Azilal–M'Goun i ensenyament a anglòfons) van trobar que la lliçó era
+un llibre de frases amb un qüestionari. Ara són dues lliçons fetes de pantalles (`Screen`) on la
+persona parla en cada pas. Només és nucli el que té gravació, primer les veus d'Aït Mraw; no es
+presenta com a local el que no ho és. `salam ɛlikum` i `lhamdullah` no entren fins que algú els gravi.
