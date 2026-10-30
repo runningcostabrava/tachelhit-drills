@@ -5,6 +5,8 @@ import SourceCredit from './SourceCredit';
 import { API_BASE, getMediaUrl } from '../config';
 import { preferredRecorderMime, toPlayableAudioUrl } from '../utils/media';
 import { getMediaWithOfflineFallback } from '../utils/offlineCache';
+import AmbSo from './AmbSo';
+import { rutaLocal } from '../services/audioLocal';
 import { getYouTubeVideoId, loadYouTubeApi } from '../utils/youtubeUtils';
 import { FaVideo, FaVolumeUp, FaPlay, FaPause, FaSync, FaTimes, FaStepBackward, FaStepForward, FaEye, FaStop, FaMicrophone } from 'react-icons/fa';
 import DrillVoices from './DrillVoices';
@@ -506,7 +508,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
 
     try {
       // Get audio URL with offline fallback
-      const audioUrl = await getMediaWithOfflineFallback(sourceUrl, (u) => toPlayableAudioUrl(getMediaUrl(u)));
+      const audioUrl = rutaLocal(sourceUrl) ?? await getMediaWithOfflineFallback(sourceUrl, (u) => toPlayableAudioUrl(getMediaUrl(u)));
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
       let internalCount = 0;
@@ -557,7 +559,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
   const handleSpeakCatalan = async (): Promise<void> => {
     if (currentDrill?.audio_tts_url) {
       try {
-        const audioUrl = await getMediaWithOfflineFallback(currentDrill.audio_tts_url, (u) => toPlayableAudioUrl(getMediaUrl(u)));
+        const audioUrl = rutaLocal(currentDrill.audio_tts_url) ?? await getMediaWithOfflineFallback(currentDrill.audio_tts_url, (u) => toPlayableAudioUrl(getMediaUrl(u)));
         const audio = new Audio(audioUrl);
         ttsAudioRef.current = audio;
 
@@ -1134,7 +1136,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
         </div>
 
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0 }}>
-          <button
+          <AmbSo url={currentDrill?.audio_url}><button
             onClick={togglePlayback}
             aria-label={isPlaying ? 'Pausa' : (isPaused ? 'Continua' : 'Reprodueix l\'àudio')}
             title={isPlaying ? 'Pausa' : (isPaused ? 'Continua' : 'Reprodueix')}
@@ -1155,7 +1157,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
             }}
           >
             {isPlaying ? <FaPause /> : <FaPlay />}
-          </button>
+          </button></AmbSo>
 
           <button
             onClick={goToNextDrill}

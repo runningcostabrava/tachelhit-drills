@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import SourceCredit from './SourceCredit';
 import axios from 'axios';
 import { API_BASE, getMediaUrl, getUserName } from '../config';
+import AmbSo from './AmbSo';
 import { answerSafeFilter } from '../utils/media';
 import { api } from '../api';
 import { toast } from '../toast';
@@ -854,7 +855,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
             }}>
               {/* Audio playback */}
               {currentDrill.audio_url && (test.question_type === 'audio' || test.question_type === 'combined') && (
-                <button
+                <AmbSo url={currentDrill.audio_url} dins><button
                   onClick={handlePlayMedia}
                   disabled={playing}
                   style={{
@@ -877,7 +878,7 @@ export default function TestTaking({ testId, onExit }: { testId: number; onExit:
                 >
                   <span>{playing ? '🔊' : '🔊'}</span>
                   <span>{playing ? 'Reproduint…' : 'Escolta l\'àudio'}</span>
-                </button>
+                </button></AmbSo>
               )}
 
               {/* Video playback */}

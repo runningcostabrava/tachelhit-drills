@@ -1,5 +1,5 @@
 import { FaPlay } from 'react-icons/fa';
-import { getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 
 // Les altres maneres de dir la mateixa frase.
 //
@@ -72,7 +72,7 @@ function Grup({ titol, quines, fs }: { titol: string; quines: Variant[]; fs: num
               </span>
             </span>
           </span>
-          <button onClick={() => new Audio(getMediaUrl(v.audio_url)).play().catch(() => {})}
+          <button onClick={() => new Audio(audioSrc(v.audio_url)).play().catch(() => {})}
                   aria-label={`Escolta com ho diu ${v.speaker || 'aquesta veu'}`} title="Escolta-la"
                   style={{ width: 28, height: 28, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--brand-1)', cursor: 'pointer', flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
             <FaPlay size={9} />

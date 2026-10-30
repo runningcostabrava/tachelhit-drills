@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaChevronLeft, FaExternalLinkAlt, FaPlay, FaRedo } from 'react-icons/fa';
 import { api, type ListenItem } from '../api';
-import { getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import { say, stop } from '../utils/veu';
 import { GlossWords, type Gloss } from './WordGloss';
 import Frase from './Frase';
@@ -38,11 +38,11 @@ export default function ListenPage() {
   useEffect(() => () => stop(), []);
 
   const item = items?.[n];
-  const sona = () => { if (item) say(getMediaUrl(item.audio_url)); };
+  const sona = () => { if (item) say(audioSrc(item.audio_url)); };
 
   // Sonar tot sol en arribar a un tall nou: el primer que ha de passar és sentir-lo.
   useEffect(() => {
-    if (item) say(getMediaUrl(item.audio_url));
+    if (item) say(audioSrc(item.audio_url));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item?.drill_id]);
 

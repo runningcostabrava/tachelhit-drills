@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { api } from '../api';
 import { getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import { subscribeSelection, notifyDrillsChanged } from '../selection';
 import AiQuota from './AiQuota';
 import { FaComments, FaPlay, FaRedo, FaChevronRight, FaPaperPlane, FaCheck, FaSearch, FaExclamationTriangle } from 'react-icons/fa';
@@ -34,7 +35,7 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }, [messages, busy]);
 
-  const play = (url: string) => { const a = new Audio(getMediaUrl(url)); a.play().catch(() => {}); };
+  const play = (url: string) => { const a = new Audio(audioSrc(url)); a.play().catch(() => {}); };
 
   const send = async (text: string) => {
     const q = text.trim();

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMediaUrl, getUserToken } from '../config';
+import { getUserToken } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import { api, type CorpusStats, type CorpusSources } from '../api';
 import { toast } from '../toast';
 import type { Drill } from '../types';
@@ -74,7 +75,7 @@ export default function CorpusPage() {
   const clearGap = () => { setActiveGap(null); runSearch(0, false); };
 
   const playAudio = (d: Drill) => {
-    const url = d.audio_url ? getMediaUrl(d.audio_url) : '';
+    const url = d.audio_url ? audioSrc(d.audio_url) : '';
     if (url) new Audio(url).play().catch(() => {});
   };
 

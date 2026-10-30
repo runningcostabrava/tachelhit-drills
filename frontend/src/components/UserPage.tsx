@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { FaChevronLeft, FaMapMarkerAlt, FaMicrophone, FaVolumeUp } from 'react-icons/fa';
 import { api, type UserPublicPage, type ContributionDrill } from '../api';
 import { getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import { varietyLabel } from '../varieties';
 
 // A person's page («fitxa»): who they are and what they gave the library — the drills they
@@ -15,7 +16,7 @@ export default function UserPage() {
   const [page, setPage] = useState<UserPublicPage | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { if (username) api.userPage(username).then(setPage).catch((e) => setError(e?.message || 'Error')); }, [username]);
-  const play = (url?: string | null) => { if (url) new Audio(getMediaUrl(url)).play().catch(() => {}); };
+  const play = (url?: string | null) => { if (url) new Audio(audioSrc(url)).play().catch(() => {}); };
   if (error) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>{error === 'User not found' ? 'No hi ha cap persona amb aquest nom.' : error}</div>;
   if (!page) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Carregant…</div>;
   const c = page.counts;
