@@ -163,3 +163,9 @@ export function sincronitza(recent = 0): Promise<void> {
   })().finally(() => { enCurs = null; });
   return enCurs;
 }
+
+/** La biblioteca per llegir-la: al dia si hi ha xarxa, i la còpia del dispositiu si no n'hi ha. */
+export async function bibliotecaAlDia<T extends { id: number } = Drill>(): Promise<T[]> {
+  await sincronitza(OBERTURA_MS).catch(e => console.warn('[Biblioteca] Sense sincronitzar:', e));
+  return (await drillsLocals()) as unknown as T[];
+}
