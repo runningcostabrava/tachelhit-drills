@@ -310,6 +310,21 @@ class SentenceAnalysis(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
 
 
+class DrillAiText(Base):
+    """L'anàlisi o l'explicació d'una frase, desada la primera vegada que algú la demana (#458).
+
+    És un text de màquina al costat de la frase, mai dins seu. `empremta` diu quin text ha llegit:
+    si el text de la frase canvia, aquest deixa de valer i es torna a escriure.
+    """
+    __tablename__ = "drill_ai_text"
+
+    drill_id = Column(Integer, primary_key=True)
+    kind = Column(String, primary_key=True)              # analyze | explain
+    body = Column(Text, nullable=False)
+    empremta = Column(String, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
+
+
 class GrammarNote(Base):
     """Why ONE sentence sits in ONE grammar unit: what that sentence shows of that unit's point.
     A sentence belongs to up to three units and shows something different in each, so the note is
