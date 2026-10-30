@@ -4,7 +4,7 @@ import { API_BASE } from '../config';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import { TOPIC_LABELS, parseTopics, topicLabel, topicsSearchText } from '../utils/topics';
-import { fetchAllDrills } from '../services/fetchAllDrills';
+import { bibliotecaAlDia } from '../services/biblioteca';
 
 interface Drill {
   id: number;
@@ -75,7 +75,7 @@ export default function TestConfigPanel({ onClose, onTestCreated, initialSelecte
 
   const loadAllDrills = async () => {
     try {
-      setAllDrills(await fetchAllDrills());
+      setAllDrills(await bibliotecaAlDia());
     } catch (error) {
       console.error('Error loading all drills:', error);
     }
