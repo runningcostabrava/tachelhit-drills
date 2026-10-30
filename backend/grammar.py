@@ -698,7 +698,7 @@ def example_dict(d) -> dict:
             "source_url": getattr(d, "source_url", None), "source_channel": getattr(d, "source_channel", None)}
 
 
-AIT_MRAW = "Aït Mraw (Boutharar, Azilal)"
+AIT_MRAW = "Aït Mraw (Boutharar, Tinghir)"
 
 OUR_SPEAKERS = ("Halima", "Driss")
 
@@ -926,7 +926,7 @@ def _study_prompt(unit: dict, reference: str) -> str:
         f"Study these sections of an Amazigh grammar reference (amazic.cat compendium, in Catalan, centred on the "
         f"Souss Tachelhit with notes on other varieties) for the lesson «{unit['title']}». Write a STUDY SHEET in "
         "Catalan, at most 900 words, that a teacher will use to explain this point with real sentences from the "
-        "Central Atlas (Aït Mraw near Boutharar, Azilal; Beni Mellal):\n"
+        "Central Atlas (Aït Mraw near Boutharar, Tinghir; Beni Mellal):\n"
         "1. RULES: the rules of this point, numbered, one or two sentences each, in plain words.\n"
         "2. FORMS: the forms (prefixes, suffixes, particles, pronouns…) as a compact table in standard Latin "
         "spelling (ɣ, ḥ, ṣ, ṭ, ẓ, ɛ, š), with what each one means.\n"
@@ -999,7 +999,7 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str, tables: Optiona
     ex = "\n".join(f"- id {e['id']} ({e.get('origin') or 'origen desconegut'}{', gravat' if e.get('recorded') else ''}): «{e['shi']}» — {e['ca']}" for e in sorted(examples, key=simplicity))
     return (
         f"Write the lesson «{unit['title']}» of a course of Central Atlas Tamazight (the speech of Aït Mraw near "
-        "Boutharar, Azilal, and of Beni Mellal) for Catalan-speaking adults who are NOT linguists: a curious "
+        "Boutharar, Tinghir, and of Beni Mellal) for Catalan-speaking adults who are NOT linguists: a curious "
         "traveller, a partner of a Tamazight speaker. Plain, warm Catalan; short sentences; explain every grammatical "
         "word the first time you use it («el perfectiu, la forma que es fa servir per a accions acabades…»). Never use "
         "these words: " + ", ".join(BANNED_TERMS) + ". Say «pronom enganxat al verb» instead of clític, «forma de "
