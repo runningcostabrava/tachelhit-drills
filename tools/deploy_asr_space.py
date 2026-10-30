@@ -16,6 +16,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 SPACE_DIR = os.path.join(ROOT, "huggingface-asr-space")
 SPACE_ID = os.getenv("ASR_SPACE_ID", "josepabloucr/huggingface-asr-space")
+ADAPTER_REPO = os.getenv("MMS_ADAPTER_REPO", "josepabloucr/mms-1b-shi-tachelhit")
 
 
 def token() -> str:
@@ -49,10 +50,16 @@ def main():
                              headers={"Authorization": f"Bearer {token()}"}, timeout=30, stream=True)
             print(r.text[-6000:] if r.ok else f"logs: {r.status_code}")
         return
+    # The fine-tuned MMS adapter (8.9 MB) is not in git: it lives in a private model repo and
+    # is copied into the Space at deploy time, so the Space needs no secret to read it (#491).
+    from huggingface_hub import hf_hub_download
+    import shutil
+    got = hf_hub_download(ADAPTER_REPO, "adaptador_shi.pt", token=token())
+    shutil.copy(got, os.path.join(SPACE_DIR, "adaptador_shi.pt"))
     print(f"uploading {SPACE_DIR} -> {SPACE_ID}")
     api.upload_folder(folder_path=SPACE_DIR, repo_id=SPACE_ID, repo_type="space",
                       ignore_patterns=["__pycache__/*", "*.pyc", ".DS_Store"],
-                      commit_message="NeMo stt_zgh_fastconformer_ctc_small + forced alignment (/align)")
+                      commit_message="NeMo (/transcribe, /align) + MMS-1b-all with our shi adapter (/transcribe_mms)")
     print("uploaded; the Space is rebuilding")
     deadline = time.time() + a.wait * 60
     last = None
