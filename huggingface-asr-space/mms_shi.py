@@ -3,7 +3,9 @@
 On the first test set that is clean of every training source and speaker (Common Voice zgh test,
 256 clips, 26 speakers, 29-10-2026), MMS with our adapter (corpus v3, «c»→š and «x»→ḫ so the
 targets are not erased) reads at a CER of 0.154, against 0.210 for MMS alone and 0.230 for the
-wav2vec2 model we had. It writes Latin in the MMS `shi` alphabet (š, ḫ, ɣ, ḥ…).
+wav2vec2 model we had. Since ADR 0009 the adapter is trained on the rich letters instead of text
+folded to 26: CER 0.144 on that same test and 0.291 against 0.339 on test-fora, measured unfolded.
+It writes Latin in the MMS `shi` alphabet, where ɣ is ġ and ɛ is ε; ṛ is not in it.
 
 It lives next to NeMo instead of replacing it: NeMo writes Tifinagh, /align is built on it, and
 parts of the backend expect that output. HuggingFace no longer lets a free account create a new
@@ -22,8 +24,8 @@ import torch
 
 BASE = "facebook/mms-1b-all"
 LANG = "shi"
-ADAPTER = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"adaptador_{LANG}.pt")
-MODEL_ID = f"{BASE}+adaptador_{LANG}(tamazight-drills, corpus v3)"
+ADAPTER = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"adaptador_{LANG}_ric.pt")
+MODEL_ID = f"{BASE}+adaptador_{LANG}_ric(tamazight-drills, corpus sencer)"
 SR = 16000
 #: MMS was trained on utterances: a long file is read in windows that overlap a little, so a
 #: word cut at one edge is heard whole in the other.
