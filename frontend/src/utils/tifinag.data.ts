@@ -54,6 +54,7 @@ export const ENTRADA: Record<string, string> = {
   "č": "š",
   "Ġ": "ɣ",
   "ġ": "ɣ",
+  "ḫ": "x",
   "š": "š",
   "ž": "j",
   "ɛ": "ɛ",
