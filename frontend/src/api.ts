@@ -560,6 +560,10 @@ export const api = {
   aiExplainDrill: (drillId: number) =>
     request<{ explanation: string; draft: boolean; related: RelatedDrill[] }>(`/ai/explain/${drillId}`, { method: 'POST' }),
   drill: (id: number) => request<Drill>(`/drills/${id}`),
+  /** For each Amazigh text, the recorded library sentence that says exactly that, if any (#504). */
+  voiced: (forms: string[]) =>
+    request<Record<string, { drill_id: number; audio_url: string; speaker: string | null } | null>>(
+      `/library/voiced?${forms.map((f) => `form=${encodeURIComponent(f)}`).join('&')}`),
   /** Una frase nova. Amb el text amazic buit, neix esperant que algú la digui. */
   createDrill: (d: { text_catalan: string; text_tachelhit?: string; note?: string | null }) =>
     request<Drill>('/drills/', { method: 'POST', body: JSON.stringify(d) }),

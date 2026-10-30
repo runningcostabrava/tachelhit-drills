@@ -127,6 +127,8 @@ const P: React.CSSProperties = { margin: '0 0 10px', fontSize: 15, lineHeight: 1
 
 export default function StartEnglish() {
   const [drills, setDrills] = useState<Record<number, Drill>>({});
+  // Words the owner wrote by hand: if somebody has since recorded one, it plays (#504).
+  const [found, setFound] = useState<Record<string, Drill>>({});
   const [playing, setPlaying] = useState<string | null>(null);
 
   useEffect(() => {
@@ -134,11 +136,21 @@ export default function StartEnglish() {
     let alive = true;
     Promise.all(START_DRILL_IDS.map((id) => api.drill(id).then((d) => [id, d] as const).catch(() => null)))
       .then((rows) => { if (alive) setDrills(Object.fromEntries(rows.filter((r): r is readonly [number, Drill] => !!r))); });
+    const written = START_BLOCKS.flatMap((b) => b.words).filter((w) => !w.drillId && w.text);
+    if (written.length) {
+      api.voiced(written.map((w) => w.text as string))
+        .then((v) => Promise.all(written.map((w) => {
+          const hit = v[w.text as string];
+          return hit ? api.drill(hit.drill_id).then((d) => [w.key, d] as const).catch(() => null) : null;
+        })))
+        .then((rows) => { if (alive) setFound(Object.fromEntries(rows.filter((r): r is readonly [string, Drill] => !!r))); })
+        .catch(() => {});
+    }
     return () => { alive = false; };
   }, []);
 
   const play = (w: StartWord) => {
-    const d = w.drillId ? drills[w.drillId] : undefined;
+    const d = w.drillId ? drills[w.drillId] : found[w.key];
     if (!d?.audio_url) return;
     setPlaying(w.key);
     say(getMediaUrl(d.audio_url)).then(() => setPlaying((p) => (p === w.key ? null : p)));
@@ -171,7 +183,7 @@ export default function StartEnglish() {
           <h2 style={H2}>{b.title}</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
             {b.words.map((w) => (
-              <WordCard key={w.key} w={w} d={w.drillId ? drills[w.drillId] : undefined}
+              <WordCard key={w.key} w={w} d={w.drillId ? drills[w.drillId] : found[w.key]}
                         playing={playing === w.key} onPlay={() => play(w)} />
             ))}
           </div>
