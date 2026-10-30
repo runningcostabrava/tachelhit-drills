@@ -326,7 +326,7 @@ export interface MethodContent {
     examples?: MethodExample[];
     table?: { title: string; rows: { p: string; v: string; v_tif?: string | null;
                                      sound?: string; heard?: MethodHeard | null }[] };
-    /** `cd`: la veu del manual, quan aquesta màquina té el CD. */
+    /** `cd`: la veu del manual (un tall del CD a Cloudinary, ADR 0007). */
     /** Les parelles mínimes. `audio_url` i companyia els enganxa el servidor quan la biblioteca
      *  té una frase que diu exactament això: una parella que no es pot escoltar no ensenya res. */
     columns?: { title: string; rows: { shi: string; ca: string; tif?: string | null;
