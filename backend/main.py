@@ -3243,7 +3243,8 @@ async def test_upload_endpoint(drill_id: int, media_type: str):
     }
 
 @app.post("/upload-media/{drill_id}/{media_type}")
-async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(...), db: Session = Depends(get_db),
+                       user: Optional[UserModel] = Depends(get_current_user)):
     print(f"[UPLOAD] Received POST upload request for drill {drill_id}, media_type {media_type}")
     print(f"[UPLOAD] Request method: POST")
     print(f"[UPLOAD] File name: {file.filename}")
@@ -3258,6 +3259,8 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
     drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found")
+    # The audio is a speaker's voice: same rule as PUT /drills/{id} (#486).
+    owner_or_admin(drill, user)
 
     try:
         # Read file content

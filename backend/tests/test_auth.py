@@ -116,3 +116,18 @@ def test_the_handle_can_be_changed_and_nothing_is_lost():
                                               "username": "someone"}).json()
     taken = client.post("/auth/username", json={"username": "pablo"}, headers={"X-User-Token": other["token"]})
     assert taken.status_code == 409  # one handle, one person
+
+
+def test_upload_media_is_the_owners(monkeypatch):
+    """#486: the audio is a speaker's voice, and drill ids are easy to guess."""
+    from test_api import as_stranger
+    monkeypatch.delenv("CLOUDINARY_CLOUD_NAME", raising=False)
+    mine = client.post("/auth/signup", json={"email": "own486@example.com", "password": "secret-123", "username": "own486"}).json()["token"]
+    other = client.post("/auth/signup", json={"email": "oth486@example.com", "password": "secret-123", "username": "oth486"}).json()["token"]
+    drill = client.post("/drills/", json={"text_catalan": "prova 486"}, headers={"X-User-Token": mine}).json()
+    fitxer = {"file": ("v.mp3", b"so", "audio/mpeg")}
+    url = f"/upload-media/{drill['id']}/audio"
+    with as_stranger():
+        assert client.post(url, files=fitxer).status_code == 401
+    assert client.post(url, files=fitxer, headers={"X-User-Token": other}).status_code == 403
+    assert client.post(url, files=fitxer, headers={"X-User-Token": mine}).status_code == 200
