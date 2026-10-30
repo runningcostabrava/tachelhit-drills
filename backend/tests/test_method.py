@@ -1146,6 +1146,9 @@ def test_lindex_del_cd_nomes_fa_sonar_el_que_ha_sentit_una_persona():
             assert d.get("com") == "sentit", \
                 "%s/%s sona sense que l'hagi sentida ningú: «%s»" % (slug, on, d.get("com"))
             assert d.get("url"), "%s/%s diu que sona i no porta tall" % (slug, on)
+            # #495: una adreça /method/cd/... només sona a la màquina que té el CD; a la web el
+            # botó hi era i no sonava res
+            assert d["url"].startswith("https://"),                 "%s/%s apunta a un tall que només existeix en aquesta màquina: %s" % (slug, on, d["url"])
     for slug, linies in (dades.get("per_comprovar") or {}).items():
         for on, d in linies.items():
             assert "url" not in d, \
