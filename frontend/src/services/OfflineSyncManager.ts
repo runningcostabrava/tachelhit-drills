@@ -6,7 +6,7 @@ import { API_BASE, getMediaUrl } from '../config';
 import { mimeForFileName } from './../utils/media';
 
 import type { Drill } from '../types';
-import { fetchAllDrills } from './fetchAllDrills';
+import { desaDrills, drillsLocals, sincronitza, treuDrill } from './biblioteca';
 
 // Re-exported for existing imports (MobileDrillCreator/Editor)
 export type { Drill };
@@ -25,7 +25,6 @@ export interface SyncAction {
   lastError?: string;
 }
 
-const DRILLS_CACHE_KEY = 'cached_drills';
 const TESTS_CACHE_KEY = 'cached_tests';
 const SYNC_QUEUE_KEY = 'sync_queue';
 const DEAD_QUEUE_KEY = 'sync_dead';
@@ -44,34 +43,18 @@ class OfflineSyncManager {
   private lastMediaSyncAt = 0;
 
   async getDrills(): Promise<Drill[]> {
-    const { value } = await Preferences.get({ key: DRILLS_CACHE_KEY });
-    return value ? JSON.parse(value) : [];
+    return drillsLocals();
   }
 
-  // On the web, Preferences is localStorage: about 5 MB for the whole origin, and the library
-  // passed that long ago. A cache that cannot be written is a pity, not a failure — losing the
-  // offline copy must never look like losing the server, so this never throws. When the whole
-  // library does not fit, what a person needs offline is kept (the texts and the media links)
-  // and the rest is dropped.
+  /** Desa les files a la còpia del dispositiu i en mira les imatges i els àudios. */
   async saveDrillsToCache(drills: Drill[]) {
-    const write = async (value: string) => Preferences.set({ key: DRILLS_CACHE_KEY, value });
-    try {
-      await write(JSON.stringify(drills));
-    } catch {
-      const slim = drills.map((d: any) => ({
-        id: d.id, text_catalan: d.text_catalan, text_tachelhit: d.text_tachelhit,
-        text_arabic: d.text_arabic, audio_url: d.audio_url, image_url: d.image_url,
-        tag: d.tag, region: d.region, variety: d.variety, date_created: d.date_created,
-      }));
-      try {
-        await write(JSON.stringify(slim));
-        console.warn(`[Sync] Library too big for local storage: kept a light copy of ${slim.length} drills.`);
-      } catch {
-        try { await Preferences.remove({ key: DRILLS_CACHE_KEY }); } catch { /* nothing to do */ }
-        console.warn('[Sync] No room for an offline copy of the drills; the app will always ask the server.');
-      }
-    }
-    // Trigger media sync in background when drills are updated
+    await desaDrills(drills);
+    this.syncAllMedia();
+  }
+
+  /** Posa la biblioteca al dia i baixa el que hi hagi de nou. Falla sense xarxa. */
+  async refreshDrills(recent = 0) {
+    await sincronitza(recent);
     this.syncAllMedia();
   }
 
@@ -255,11 +238,10 @@ class OfflineSyncManager {
       await this.setDeadLetters(dead);
 
       // Refresh cache after sync
-      const [drills, testsRes] = await Promise.all([
-        fetchAllDrills(),
+      const [, testsRes] = await Promise.all([
+        this.refreshDrills(),
         axios.get(`${API_BASE}/tests/`)
       ]);
-      await this.saveDrillsToCache(drills);
       await this.saveTestsToCache(testsRes.data);
 
     } catch (err) {
@@ -271,11 +253,7 @@ class OfflineSyncManager {
   // delete (skipped entirely for drills created offline that never synced).
   // Resolves once a sync attempt has run, so callers can refresh afterwards.
   async deleteDrill(id: number) {
-    const drills = await this.getDrills();
-    await Preferences.set({
-      key: DRILLS_CACHE_KEY,
-      value: JSON.stringify(drills.filter(d => d.id !== id)),
-    });
+    await treuDrill(id);
     await this.queueAction({ type: 'DELETE', drillId: id });
     await this.sync();
   }
