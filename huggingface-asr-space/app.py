@@ -9,6 +9,7 @@ Routes (FastAPI, first-class so Gradio's catch-all never shadows them):
   GET  /health
   POST /transcribe   audio_file                      -> {"text", "segments":[{start,end,text}]}
   POST /align        audio_file, text, split_on_newline -> {"text", "segments":[{start,end,text,words}]}
+  POST /transcribe_mms audio_file  -> same shape, Latin, by MMS + our shi adapter (mms_shi.py)
 Gradio (for gradio_client): api_name="predict" (audio -> text) and api_name="align".
 
 Timestamps come from NeMo Forced Aligner (align.py + utils/, copied from
@@ -31,6 +32,7 @@ from fastapi import FastAPI, File, Form, UploadFile, HTTPException
 
 from nemo.collections.asr.models import ASRModel
 from align import AlignmentConfig, CTMFileConfig, main as nfa_main
+import mms_shi
 
 torch.set_num_threads(max(1, os.cpu_count() or 1))
 MODEL_ID = os.getenv("ASR_MODEL_ID", "ayymen/stt_zgh_fastconformer_ctc_small")
@@ -188,11 +190,13 @@ def align_file(src_path: str, text: str, split_on_newline: bool = True) -> dict:
 
 
 app = FastAPI(title="Tachelhit ASR + alignment service")
+mms_shi.start()   # the second reader loads in the background; NeMo's routes answer meanwhile
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "model": MODEL_ID, "routes": ["/transcribe", "/align"]}
+    return {"status": "ok", "model": MODEL_ID, "routes": ["/transcribe", "/align", "/transcribe_mms"],
+            "mms": mms_shi.status()}
 
 
 async def _save_upload(upload: UploadFile) -> str:
@@ -233,6 +237,25 @@ async def align_uploaded_file(audio_file: UploadFile = File(...), text: str = Fo
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"alignment failed: {e}")
+    finally:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+
+@app.post("/transcribe_mms")
+async def transcribe_mms(audio_file: UploadFile = File(...)):
+    """The fine-tuned MMS reader: Latin (`shi` alphabet), same shape as /transcribe."""
+    if not mms_shi.status()["ready"]:
+        raise HTTPException(status_code=503, detail=mms_shi.status()["error"] or "MMS is still loading")
+    path = await _save_upload(audio_file)
+    try:
+        return mms_shi.transcribe(path, MAX_SECS)
+    except ValueError as e:
+        raise HTTPException(status_code=413, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"MMS failed: {e}")
     finally:
         try:
             os.remove(path)
