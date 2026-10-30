@@ -1,6 +1,6 @@
 # ADR 0009: El MMS s'entrena amb les lletres riques
 
-- **Estat:** proposada
+- **Estat:** acceptada
 - **Data:** 2026-10-30
 - **Decideix:** Pablo (propietari)
 - **Issue:** #511
