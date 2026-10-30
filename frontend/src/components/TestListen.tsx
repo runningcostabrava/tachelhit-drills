@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import type { Drill } from '../types';
 import { FaStepBackward, FaStepForward, FaPlay, FaPause, FaTimes } from 'react-icons/fa';
 
@@ -78,11 +79,11 @@ export default function TestListen({ drills, title, onExit }: Props) {
 
   // One drill, start to finish, honouring the order and repeat preferences.
   const playDrill = useCallback(async (d: Drill, run: number) => {
-    const ta = d.audio_url ? getMediaUrl(d.audio_url) : d.video_url ? getMediaUrl(d.video_url) : null;
+    const ta = d.audio_url ? audioSrc(d.audio_url) : d.video_url ? getMediaUrl(d.video_url) : null;
     const ca = async () => {
       if (!d.text_catalan) return;
       setPhase('ca');
-      if (d.audio_tts_url) await playUrl(getMediaUrl(d.audio_tts_url), run);
+      if (d.audio_tts_url) await playUrl(audioSrc(d.audio_tts_url), run);
       else await speakCa(d.text_catalan, run);
       await wait(500, run);
     };

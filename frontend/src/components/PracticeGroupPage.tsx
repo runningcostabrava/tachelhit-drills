@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FaBullseye, FaChevronLeft, FaPlay, FaVolumeUp } from 'react-icons/fa';
 import { api, type PracticeCard } from '../api';
 import { getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 
 import type { Drill } from '../types';
 import DrillPlayer from './DrillPlayer';
@@ -60,7 +61,7 @@ export default function PracticeGroupPage() {
     for (const k of KEYS) { const v = params.get(k); if (v) q.set(k, v); }
     navigate(`/tests/sessio?${q.toString()}`);
   };
-  const play = (url?: string | null) => { if (url) new Audio(getMediaUrl(url)).play().catch(() => {}); };
+  const play = (url?: string | null) => { if (url) new Audio(audioSrc(url)).play().catch(() => {}); };
 
   if (playing && drills && drills.length > 0) return <DrillPlayer drills={drills} onExit={() => setPlaying(false)} />;
 
