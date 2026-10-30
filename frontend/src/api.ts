@@ -326,7 +326,7 @@ export interface MethodContent {
     examples?: MethodExample[];
     table?: { title: string; rows: { p: string; v: string; v_tif?: string | null;
                                      sound?: string; heard?: MethodHeard | null }[] };
-    /** `cd`: la veu del manual, quan aquesta màquina té el CD. */
+    /** `cd`: la veu del manual (un tall del CD a Cloudinary, ADR 0007). */
     /** Les parelles mínimes. `audio_url` i companyia els enganxa el servidor quan la biblioteca
      *  té una frase que diu exactament això: una parella que no es pot escoltar no ensenya res. */
     columns?: { title: string; rows: { shi: string; ca: string; tif?: string | null;
@@ -560,6 +560,10 @@ export const api = {
   aiExplainDrill: (drillId: number) =>
     request<{ explanation: string; draft: boolean; related: RelatedDrill[] }>(`/ai/explain/${drillId}`, { method: 'POST' }),
   drill: (id: number) => request<Drill>(`/drills/${id}`),
+  /** For each Amazigh text, the recorded library sentence that says exactly that, if any (#504). */
+  voiced: (forms: string[]) =>
+    request<Record<string, { drill_id: number; audio_url: string; speaker: string | null } | null>>(
+      `/library/voiced?${forms.map((f) => `form=${encodeURIComponent(f)}`).join('&')}`),
   /** Una frase nova. Amb el text amazic buit, neix esperant que algú la digui. */
   createDrill: (d: { text_catalan: string; text_tachelhit?: string; note?: string | null }) =>
     request<Drill>('/drills/', { method: 'POST', body: JSON.stringify(d) }),
