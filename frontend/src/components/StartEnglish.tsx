@@ -230,7 +230,7 @@ export default function StartEnglish() {
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, margin: '6px 0 8px', lineHeight: 1.15 }}>
           Your first Tamazight <span lang="zgh" className="tifinagh" style={{ color: 'var(--brand-1)', fontWeight: 400 }}>ⵜⴰⵎⴰⵣⵉⵖⵜ</span>
         </h1>
-        <p style={{ ...P, color: 'var(--text-soft)' }}>Two short lessons for the valleys between Azilal and Kalaat M’Gouna. Real voices, and you speak in every step.</p>
+        <p style={{ ...P, color: 'var(--text-soft)' }}>Two short lessons for the route from Aït Bouguemmez to Kalaat M’Gouna. Real voices, and you speak in every step.</p>
         <div style={{ display: 'grid', gap: 10 }}>
           {LESSONS.map((l) => (
             <button key={l.id} type="button" onClick={() => setOpen(l.id)} style={{ ...OPT, display: 'flex', justifyContent: 'space-between', gap: 10, fontWeight: 700 }}>
@@ -254,9 +254,9 @@ export default function StartEnglish() {
             </p>
             <h2 style={H2}>Where we run</h2>
             <p style={P}>
-              The Central High Atlas around the M’Goun massif: the Aït Bouguemmez on the north side, in
-              Azilal province, and the M’Goun valley on the south side, down to Kalaat M’Gouna in Tinghir
-              province. Speech changes from valley to valley, so you will hear other forms. On the south
+              Our route crosses the Central High Atlas from the Aït Bouguemmez valley, in Azilal province,
+              over the M’Goun massif and down the M’Goun valley to Kalaat M’Gouna, in Tinghir province.
+              Speech changes from valley to valley, so you will hear other forms. On the south
               side many people say <em>k</em> where other valleys say <em>c</em> (<em>manik</em>, <em>ɛafak</em>).
             </p>
             <h2 style={H2}>The voices</h2>
