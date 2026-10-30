@@ -256,12 +256,13 @@ export default function StartEnglish() {
             <p style={P}>
               Our route crosses the Central High Atlas from the Aït Bouguemmez valley, in Azilal province,
               over the M’Goun massif and down the M’Goun valley to Kalaat M’Gouna, in Tinghir province.
-              Speech changes from valley to valley, so you will hear other forms. On the south
-              side many people say <em>k</em> where other valleys say <em>c</em> (<em>manik</em>, <em>ɛafak</em>).
+              Speech changes from valley to valley, so you will hear other forms. Our lesson says
+              {' '}<em>manimsh tjit</em>; on the south side you will hear <em>manik tgit</em>.
             </p>
             <h2 style={H2}>The voices</h2>
             <p style={P}>
-              Halima and Driss are from Aït Mraw. A few items come from a native speaker recorded by
+              Halima and Driss are from Aït Mraw, and our speech notes are about them, not about every
+              valley on the route. A few items come from a native speaker recorded by
               ILoveLanguages!, whose region we do not know, and one from Beni Mellal. Each card says who
               is speaking. Around here people usually greet with <em>salam ɛlikum</em> and answer with
               {' '}<em>labas, lhamdullah</em>. We have no recording of those yet, so they are not in the lessons.
