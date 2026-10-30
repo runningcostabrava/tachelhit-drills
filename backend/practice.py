@@ -144,7 +144,7 @@ def quotable_any(d, slug: Optional[str] = None) -> bool:
 
 def practicable(d, slug: Optional[str] = None) -> bool:
     """A drill a spoken session can use: quotable and with some voice."""
-    return quotable_any(d, slug) and bool(d.audio_url or getattr(d, "audio_tts_shi_url", None))
+    return quotable_any(d, slug) and bool(d.audio_url)
 
 
 def order_key(d):
