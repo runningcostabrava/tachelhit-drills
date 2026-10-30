@@ -1,6 +1,6 @@
 # ADR 0008: L'app mòbil funciona sense connexió, tret de la IA
 
-- **Estat:** proposta
+- **Estat:** acceptada
 - **Data:** 2026-10-30
 - **Decideix:** Pablo (propietari)
 - **Issue:** #506
