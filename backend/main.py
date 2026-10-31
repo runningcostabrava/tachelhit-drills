@@ -444,6 +444,10 @@ SessionLocal = sessionmaker(bind=engine)
 # interactive features (see ai_budget.py). Attached to the client so no call escapes it.
 ai_meter = ai_budget.Meter(SessionLocal, GeminiUsageModel)
 gemini_client.set_meter(ai_meter)
+# El mateix comptador per al segon proveïdor: el que gasta el copilot amb DeepSeek ha de sortir
+# a la mateixa factura i sota el mateix sostre.
+import deepseek_client as _deepseek_client
+_deepseek_client.set_meter(ai_meter)
 
 # ---------------------------------------------------------------------------
 # Auto-capture guard (P5.2): ASR on English or music sometimes yields English
@@ -7781,8 +7785,19 @@ def ai_usage(request: Request, user: Optional[UserModel] = Depends(get_current_u
 
 @app.get("/ai/status")
 def ai_status():
-    """Whether the AI agent is configured (and within budget), and the grammar corpus size."""
-    return {"available": gemini_available() and ai_meter.budget_ok(), "configured": gemini_available(),
+    """Whether the AI agent is configured (and within budget), and the grammar corpus size.
+
+    `copilot` diu quin proveïdor fa anar les eines i si hi és: sense això, canviar de proveïdor
+    era una cosa que només se sabia llegint els registres del servidor.
+    """
+    import gemini_client as _gc
+    import deepseek_client as _ds
+    qui = _gc.agent_provider()
+    return {"available": (gemini_available() or _ds.deepseek_available()) and ai_meter.budget_ok(),
+            "configured": gemini_available() or _ds.deepseek_available(),
+            "copilot": qui,
+            "copilot_llest": _ds.deepseek_available() if qui == "deepseek" else gemini_available(),
+            "gemini": gemini_available(), "deepseek": _ds.deepseek_available(),
             "budget_ok": ai_meter.budget_ok(), "budget_eur": ai_budget.monthly_budget_eur(),
             "grammar_chars": len(_load_grammar())}
 

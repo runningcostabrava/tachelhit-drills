@@ -74,6 +74,33 @@ export default function SenseConnexio() {
     toast.success('El català llegit i les imatges ja són al telèfon.');
   };
 
+  /**
+   * Posa-ho tot al dia, i només el que ha canviat.
+   *
+   * L'amo (31-10): «si hi ha actualització de l'app, no cal perdre tota la info descarregada
+   * offline, excepte la info que hagi estat actualitzada; cal poder sincronitzar les dades
+   * offline». Actualitzar l'app no esborra res —els fitxers i la còpia viuen a la carpeta de
+   * dades, no dins de l'app—, però fins ara per posar-ho al dia calia prémer tres botons i
+   * saber quin.
+   *
+   * Això és un de sol, i cada pas ja sap saltar-se el que té: les frases es demanen per
+   * `since=` i només arriben les que han canviat (i les mortes, per treure-les); una veu que ja
+   * és a disc no es torna a baixar, i si algú ha tornat a gravar-la l'adreça canvia i llavors
+   * sí. Es pot aturar i reprendre.
+   */
+  const posaAlDia = async () => {
+    if (baixantAudios() || baixantExtres() || baixantCurs()) {
+      aturaBaixada(); aturaExtres(); aturaCurs();
+      return;
+    }
+    const d = await bibliotecaAlDia().catch(() => drillsLocals());
+    await baixaTotsElsAudios(d, setVeus);
+    await baixaExtresDeTot(d, setExtres);
+    await baixaElCurs(setCurs);
+    await mesura();
+    toast.success('Tot al dia al telèfon.');
+  };
+
   const allibera = async () => {
     if (!window.confirm('Esborrar totes les veus baixades? Les tornaràs a poder baixar quan vulguis.')) return;
     setNetejant(true);
@@ -100,6 +127,20 @@ export default function SenseConnexio() {
         artificial —transcriure, traduir, el copilot, la captura de vídeos— necessita connexió
         sempre.
       </p>
+
+      {/* El botó que fa falta quan surt una versió nova: un de sol, i només el que ha canviat. */}
+      <Bloc
+        titol="Posa-ho tot al dia"
+        ara={corrent || extresCorrent || cursCorrent ? 'anant-hi…' : ''}
+        peu="Actualitzar l’app no esborra res del que tens baixat. Això demana només el que ha canviat des de l’últim cop: les frases noves o retocades, les veus que encara no tens i les pantalles del curs."
+      >
+        <button type="button" onClick={posaAlDia}
+                style={corrent || extresCorrent || cursCorrent ? boto.atura : boto.gran}>
+          {corrent || extresCorrent || cursCorrent
+            ? <><FaStop size={14} /> Atura</>
+            : <><FaCloudDownloadAlt size={16} /> Posa-ho tot al dia</>}
+        </button>
+      </Bloc>
 
       <Bloc titol="Les frases" ara={frases ? `${frases.total.toLocaleString('ca')} al telèfon` : '…'}
             peu="Es posen al dia soles quan hi ha connexió." />
