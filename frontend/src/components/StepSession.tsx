@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { FaCheck, FaLightbulb, FaMicrophone, FaPlay, FaTimes } from 'react-icons/fa';
 import { api, type PracticeStep } from '../api';
 import { getMediaUrl, getUserName } from '../config';
+import AmbSo from './AmbSo';
+import { audioSrc } from '../services/audioLocal';
 import { toast } from '../toast';
 import type { Drill } from '../types';
 import { preferredRecorderMime } from '../utils/media';
@@ -83,7 +85,7 @@ export default function StepSession({ testId, title, onExit }: Props) {
   const play = useCallback((rate = 1) => {
     if (!voice) return;
     audioRef.current?.pause();
-    const a = new Audio(getMediaUrl(voice)); a.playbackRate = rate; audioRef.current = a;
+    const a = new Audio(audioSrc(voice)); a.playbackRate = rate; audioRef.current = a;
     a.play().catch(() => {});
   }, [voice]);
 
@@ -366,8 +368,8 @@ export default function StepSession({ testId, title, onExit }: Props) {
           {(tool === 'listen_pick' || tool === 'write_heard' || tool === 'pick_written') && (
             <div style={{ marginBottom: 12 }}>
               <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={() => play(1)} style={{ ...btn('primary'), flex: 1, height: 44, fontSize: 14 }}><FaPlay size={12} /> Torna-ho a sentir</button>
-                <button onClick={() => play(0.7)} style={{ ...btn('ghost'), flex: 1, height: 44, fontSize: 14 }}>A poc a poc</button>
+                <AmbSo url={voice} dins><button onClick={() => play(1)} style={{ ...btn('primary'), flex: 1, height: 44, fontSize: 14 }}><FaPlay size={12} /> Torna-ho a sentir</button></AmbSo>
+                <AmbSo url={voice} dins><button onClick={() => play(0.7)} style={{ ...btn('ghost'), flex: 1, height: 44, fontSize: 14 }}>A poc a poc</button></AmbSo>
               </div>
             </div>
           )}
@@ -469,7 +471,7 @@ export default function StepSession({ testId, title, onExit }: Props) {
                 </span>
                 {myTake && (
                   <div style={{ display: 'flex', gap: 10 }}>
-                    <button onClick={() => play(1)} style={{ ...btn('ghost'), height: 40, fontSize: 13 }}><FaPlay size={10} /> La veu</button>
+                    <AmbSo url={voice} dins><button onClick={() => play(1)} style={{ ...btn('ghost'), height: 40, fontSize: 13 }}><FaPlay size={10} /> La veu</button></AmbSo>
                     <button onClick={() => { const u = URL.createObjectURL(myTake); const a = new Audio(u); a.onended = () => URL.revokeObjectURL(u); a.play().catch(() => {}); }}
                             style={{ ...btn('ghost'), height: 40, fontSize: 13 }}><FaPlay size={10} /> El que has dit</button>
                   </div>
@@ -515,7 +517,7 @@ export default function StepSession({ testId, title, onExit }: Props) {
               <p style={{ margin: '0 0 12px', fontSize: 13.5, color: 'var(--text-muted)', lineHeight: 1.5 }}>
                 Escolta i tria com ho escriu qui parla. No hi ha una ortografia oficial: la bona és la seva.
               </p>
-              {voice && <button onClick={() => play(1)} style={{ ...btn('primary'), width: '100%', marginBottom: 10 }}><FaPlay size={12} /> Escolta</button>}
+              {voice && <AmbSo url={voice} dins><button onClick={() => play(1)} style={{ ...btn('primary'), width: '100%', marginBottom: 10 }}><FaPlay size={12} /> Escolta</button></AmbSo>}
               {spellings.length === 2 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {spellings.map((o) => {

@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { FaBookOpen, FaChevronLeft, FaCrosshairs, FaExpand, FaInfinity, FaExternalLinkAlt, FaHeadphones, FaPause, FaPlay, FaRedo, FaStepBackward, FaStepForward, FaStop } from 'react-icons/fa';
 import { api, type Story, type StoryPage, type WordTime } from '../api';
 import { getMediaUrl, thumb } from '../config';
+import AmbSo from './AmbSo';
+import { audioSrc } from '../services/audioLocal';
 import type { Drill } from '../types';
 import WordGloss, { parseGlosses, type Gloss } from './WordGloss';
 import Frase from './Frase';
@@ -348,7 +350,7 @@ function OneStory({ slug }: { slug: string }) {
 
   // Un so, i s'espera que s'acabi. El reproductor és el de tota l'app: un sol element, dins el
   // document i declarat al sistema, perquè la veu no calli quan s'apaga la pantalla (#342).
-  const sona = useCallback((url: string) => say(url.trim() ? getMediaUrl(url) : ''), []);
+  const sona = useCallback((url: string) => say(url.trim() ? audioSrc(url) : ''), []);
 
   /**
    * La veu amaziga d'una línia, amb la paraula encesa a mesura que es diu (#340).
@@ -726,10 +728,10 @@ function OneStory({ slug }: { slug: string }) {
               <div style={{ display: 'flex', gap: 10 }}>
               {/* Amb la història engegada, el ▶ d'una línia hi porta la lectura en comptes de
                   sonar-hi a sobre; i torni d'on torni, la pantalla torna a seguir la veu. */}
-              <button onClick={() => vesA(i)} aria-label={`Escolta la línia ${i + 1}`}
+              <AmbSo url={amazic(d)}><button onClick={() => vesA(i)} aria-label={`Escolta la línia ${i + 1}`}
                       style={{ flexShrink: 0, width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'var(--surface-2)', color: 'var(--brand-1)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                 <FaPlay size={11} />
-              </button>
+              </button></AmbSo>
               <div style={{ flex: 1, minWidth: 0 }}>
                 {written ? (
                   <Frase text={written} latin={d.text_tachelhit_latin} mots={mots} encesa={dins} size="md" />

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { api, type RelatedDrill } from '../api';
 import { API_BASE, getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import AiQuota from './AiQuota';
 import DrillVoices from './DrillVoices';
 import type { Drill } from '../types';
@@ -27,7 +28,7 @@ export default function AiAssistant({ drillId, drillLabel, autoAction, onClose }
   // the learner comes back to the explanation with «Torna» without leaving what they were doing
   const [visiting, setVisiting] = useState<Drill | null>(null);
   const [visitBusy, setVisitBusy] = useState(false);
-  const playUrl = (url?: string | null) => { if (url) new Audio(getMediaUrl(url)).play().catch(() => {}); };
+  const playUrl = (url?: string | null) => { if (url) new Audio(audioSrc(url)).play().catch(() => {}); };
   const visit = async (id: number) => {
     setVisitBusy(true);
     try { setVisiting(await api.drill(id)); } catch { /* the row stays */ } finally { setVisitBusy(false); }

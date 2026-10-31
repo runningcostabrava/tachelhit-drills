@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaMicrophone, FaStop, FaSave, FaTrash, FaTimes, FaPlay } from 'react-icons/fa';
-import { API_BASE, getMediaUrl } from '../config';
+import { API_BASE } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import { api, type Recording } from '../api';
 import { toast } from '../toast';
 import { varietyShort, varietyLabel, VARIETIES } from '../varieties';
@@ -53,7 +54,7 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
   useEffect(load, [drill.id]);
   useEffect(() => () => { if (blobUrl) URL.revokeObjectURL(blobUrl); }, [blobUrl]);
 
-  const play = (url: string) => { const a = new Audio(getMediaUrl(url)); a.play().catch(() => {}); };
+  const play = (url: string) => { const a = new Audio(audioSrc(url)); a.play().catch(() => {}); };
 
   const start = async () => {
     try {

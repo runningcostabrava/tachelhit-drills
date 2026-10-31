@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FaChevronLeft, FaPlay, FaCheck } from 'react-icons/fa';
 import { api } from '../api';
-import { getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import Frase from './Frase';
 
 /**
@@ -268,7 +268,7 @@ function Targeta({ d }: { d: Drill }) {
     <div style={targeta}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
         {(d.audio_url || '').trim() && (
-          <button onClick={() => { const a = new Audio(getMediaUrl(d.audio_url || '')); a.play().catch(() => {}); }}
+          <button onClick={() => { const a = new Audio(audioSrc(d.audio_url || '')); a.play().catch(() => {}); }}
                   aria-label="Escolta-la"
                   style={{ flexShrink: 0, width: 44, height: 44, borderRadius: '50%', border: 'none',
                            background: 'var(--brand-gradient)', color: '#fff', cursor: 'pointer',

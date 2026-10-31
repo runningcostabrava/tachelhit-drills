@@ -96,6 +96,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return copy.body as T;
 }
 
+/**
+ * Baixa una pantalla i la desa per tenir-la sense connexió, per sempre (#506, pas 4).
+ *
+ * No passa per `request`: aquí no es vol el cau com a xarxa de seguretat sinó el contrari, posar
+ * a dins una cosa que encara no s'ha demanat mai. Torna `false` si no s'ha pogut, i no llença:
+ * una pantalla que falla no ha d'aturar la baixada de les altres cent.
+ */
+export async function baixaPerOffline(path: string): Promise<boolean> {
+  try {
+    const body = await fromNetwork<unknown>(path);
+    await writeCached(path, body, true);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export interface ReviewStats {
   total_drills: number;
   new: number;

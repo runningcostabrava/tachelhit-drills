@@ -6,6 +6,7 @@ import { syncManager } from '../services/OfflineSyncManager';
 import { api, type AdminUser, type Me, type MailSettings } from '../api';
 import { toast } from '../toast';
 import { AiSpendAdmin } from './AiQuota';
+import SenseConnexio from './SenseConnexio';
 import { VARIETIES } from '../varieties';
 import { FaCheck, FaLayerGroup, FaRedo, FaFire } from 'react-icons/fa';
 
@@ -478,6 +479,10 @@ export default function ProfilePage() {
                   </button>
                 )}
               </div>
+            </div>
+            <div style={{ marginBottom: '18px' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, margin: '0 0 10px' }}>Al telèfon</h2>
+              <SenseConnexio />
             </div>
             {deadCount > 0 && (
               <div style={{ marginBottom: '18px', padding: '12px 14px', background: 'var(--amber-soft)', border: '1px solid var(--amber)', borderRadius: 'var(--r-md)' }}>

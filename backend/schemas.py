@@ -115,7 +115,14 @@ class DrillBase(BaseModel):
         return normalize_media_url(v)
 
 class DrillCreate(DrillBase):
-    pass
+    #: «La gravació ja la tinc, l'estic pujant» (#450). No és cap camp de la fila.
+    #:
+    #: Per pujar un fitxer cal l'id de la frase, i per crear la frase cal contingut: amb els dos
+    #: micròfons del telèfon, on el primer que es fa és gravar, això deixava la frase sense poder
+    #: néixer. Qui captura ho diu explícitament i la fila es crea buida perquè el fitxer hi
+    #: arribi tot seguit. La regla de no crear files en blanc (P1.9) es manté per a tothom que
+    #: no ho digui.
+    capturing: Optional[bool] = None
 
 class DrillUpdate(DrillBase):
     #: Una càrrega massiva de qui administra: desa el text i no engega ni la traducció a l'àrab ni
