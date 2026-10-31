@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FaMicrophone, FaPlay, FaSearch, FaStop } from 'react-icons/fa';
-import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { api } from '../api';
 import type { Drill } from '../types';
-import { hasIdentity, isNativeApp } from '../config';
+import { hasIdentity } from '../config';
 import { audioSrc, imatgeSrc } from '../services/audioLocal';
 import { cercaLocal } from '../services/cercaLocal';
 import { ordena } from '../utils/casaFrase';
 import { gap, keepAwake, nowPlaying, say, stop } from '../utils/veu';
+import { useDictat } from '../utils/dictat';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import RecordAudioModal from './RecordAudioModal';
@@ -56,52 +56,9 @@ export default function SearchPage() {
   useEffect(() => { document.title = 'Cerca · Tamazight'; box.current?.focus(); }, []);
   useEffect(() => { setText(q); }, [q]);
 
-  // ── Buscar parlant ────────────────────────────────────────────────────────────────────────
-  //
-  // Es prem una vegada per començar i una altra per acabar, no es manté premut: una cerca és
-  // curta i amb el dit a sobre no es veu el que s'està escrivint. En acabar, busca sol.
-  const [dictant, setDictant] = useState(false);
-  const [potDictar, setPotDictar] = useState(false);
-  const dictatRef = useRef('');
-
-  useEffect(() => {
-    let viu = true;
-    SpeechRecognition.available()
-      .then((r) => { if (viu) setPotDictar(!!(typeof r === 'boolean' ? r : r?.available)); })
-      .catch(() => { if (viu) setPotDictar(false); });
-    return () => { viu = false; void SpeechRecognition.removeAllListeners().catch(() => {}); };
-  }, []);
-
-  const acabaDictat = useCallback(async () => {
-    setDictant(false);
-    try { await SpeechRecognition.stop(); } catch { /* ja s'ha aturat sol */ }
-    const dit = dictatRef.current.trim();
-    if (dit) setParams({ q: dit });
-  }, [setParams]);
-
-  const dicta = useCallback(async () => {
-    if (dictant) return void acabaDictat();
-    try {
-      if (isNativeApp()) {
-        const perm = await SpeechRecognition.checkPermissions();
-        if (perm.speechRecognition !== 'granted'
-          && (await SpeechRecognition.requestPermissions()).speechRecognition !== 'granted') {
-          return toast.error('Cal permís de reconeixement de veu');
-        }
-      }
-      dictatRef.current = '';
-      await SpeechRecognition.removeAllListeners();
-      SpeechRecognition.addListener('partialResults', (data: { matches?: string[] }) => {
-        const m = data.matches?.[0];
-        if (m) { dictatRef.current = m; setText(m); }
-      });
-      setDictant(true);
-      await SpeechRecognition.start({ language: 'ca-ES', partialResults: true, popup: false });
-    } catch (e) {
-      setDictant(false);
-      toast.error(whyItFailed(e, 'El dictat no ha funcionat'));
-    }
-  }, [dictant, acabaDictat]);
+  // Buscar parlant: el micròfon de la caixa de cerca. El dictat viu a `utils/dictat.ts`
+  // perquè la caixa de la portada també el té.
+  const { dictant, dicta } = useDictat((dit) => setParams({ q: dit }));
 
   /** Quina frase sona ara de la seqüència, i quina seqüència manda. */
   const [sonant, setSonant] = useState<number | null>(null);
@@ -218,7 +175,7 @@ export default function SearchPage() {
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, margin: '0 0 4px' }}>Cerca</h1>
       <p style={{ color: 'var(--text-soft)', fontSize: 14, margin: '0 0 14px', lineHeight: 1.55 }}>
         Una frase o una paraula, en amazic o en català. Tant li fa com l’escriguis: «aghrum»,
-        «aɣrum» i «ⴰⵖⵔⵓⵎ» troben la mateixa frase.{potDictar && ' O prem el micròfon i digue-ho.'}
+        «aɣrum» i «ⴰⵖⵔⵓⵎ» troben la mateixa frase. O prem el micròfon i digue-ho.
       </p>
 
       <form onSubmit={submit} style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
@@ -226,14 +183,12 @@ export default function SearchPage() {
                placeholder={dictant ? 'Parla…' : 'pa, aɣrum, «tinc gana»…'} aria-label="Què busques"
                autoCapitalize="off" autoCorrect="off" spellCheck={false}
                style={{ flex: 1, minWidth: 0, padding: '11px 14px', fontSize: 15.5, borderRadius: 'var(--r-pill)', border: `1px solid ${dictant ? 'var(--rose, #b5435a)' : 'var(--border)'}`, background: 'var(--surface)', color: 'var(--text)', fontFamily: 'inherit' }} />
-        {potDictar && (
-          <button type="button" onClick={dicta}
+        <button type="button" onClick={() => dicta(setText)}
                   aria-label={dictant ? 'Prou, busca-ho' : 'Digues què busques'}
                   title={dictant ? 'Prou, busca-ho' : 'Digues què busques'}
                   style={{ padding: '11px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: dictant ? 'var(--rose, #b5435a)' : 'var(--surface)', color: dictant ? '#fff' : 'var(--brand-1)', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-            <FaMicrophone size={15} />
-          </button>
-        )}
+          <FaMicrophone size={15} />
+        </button>
         <button type="submit" aria-label="Cerca"
                 style={{ padding: '11px 18px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
           <FaSearch size={13} />
