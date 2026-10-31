@@ -657,7 +657,7 @@ function EndCard({ page, answers, cards, onTest, isAdmin, onRewrite, rewriting, 
                 <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: '14px' }}>{d.text_tachelhit}</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-soft)' }}>{d.text_catalan}{d.region ? <span style={{ color: 'var(--text-muted)' }}> · {d.region}</span> : null}</div>
               </div>
-              <button onClick={() => play(d.audio_url || d.audio_tts_shi_url)} disabled={!d.audio_url && !d.audio_tts_shi_url} aria-label="Escolta" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : d.audio_tts_shi_url ? 'var(--sky)' : 'var(--surface)', color: d.audio_url || d.audio_tts_shi_url ? '#fff' : 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={12} /></button>
+              <button onClick={() => play(d.audio_url)} disabled={!d.audio_url} aria-label="Escolta" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : d.audio_tts_shi_url ? 'var(--sky)' : 'var(--surface)', color: d.audio_url || d.audio_tts_shi_url ? '#fff' : 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={12} /></button>
             </div>
           ))}
         </div>
@@ -721,7 +721,7 @@ function WishlistView() {
                   <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: '14px' }}>{d.text_tachelhit}</div>
                   <div style={{ fontSize: '12px', color: 'var(--text-soft)' }}>{d.text_catalan}{d.region ? <span style={{ color: 'var(--text-muted)' }}> · {d.region}</span> : null}</div>
                 </div>
-                <button onClick={() => play(d.audio_url || d.audio_tts_shi_url)} disabled={!d.audio_url && !d.audio_tts_shi_url} aria-label="Escolta" title="Escolta com ho diuen" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : d.audio_tts_shi_url ? 'var(--sky)' : 'var(--surface)', color: d.audio_url || d.audio_tts_shi_url ? '#fff' : 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={12} /></button>
+                <button onClick={() => play(d.audio_url)} disabled={!d.audio_url} aria-label="Escolta" title="Escolta com ho diuen" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : d.audio_tts_shi_url ? 'var(--sky)' : 'var(--surface)', color: d.audio_url || d.audio_tts_shi_url ? '#fff' : 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={12} /></button>
                 <button onClick={() => setRecording(d)} aria-label="Grava-ho tu" title="Grava-ho a la teva manera" style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaMicrophone size={14} /></button>
               </div>
             ))}

@@ -189,7 +189,7 @@ export default function AiAssistant({ drillId, drillLabel, autoAction, onClose }
               <div style={{ fontWeight: 800, fontSize: '13px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>Altres drills amb les mateixes paraules</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {related.map(r => {
-                  const voice = r.audio_url || r.audio_tts_shi_url;
+                  const voice = r.audio_url;
                   return (
                     <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text)', fontSize: '13px', lineHeight: 1.4, padding: '8px 10px', borderRadius: 'var(--r-md)', background: 'var(--surface-2)' }}>
                       <button onClick={() => playUrl(voice)} disabled={!voice} aria-label="Escolta" title={r.audio_url ? 'Veu gravada' : r.audio_tts_shi_url ? 'Veu sintètica' : 'Sense veu'} style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 'var(--r-pill)', border: 'none', background: r.audio_url ? 'var(--brand-1)' : r.audio_tts_shi_url ? 'var(--sky)' : 'var(--surface)', color: voice ? '#fff' : 'var(--text-muted)', cursor: voice ? 'pointer' : 'default', fontSize: '13px' }}>▶</button>
@@ -215,7 +215,7 @@ export default function AiAssistant({ drillId, drillLabel, autoAction, onClose }
               <div style={{ fontSize: '20px', fontWeight: 800, lineHeight: 1.3 }}>{visiting.text_tachelhit || visiting.text_tachelhit_latin || visiting.text_tachelhit_suggested}</div>
               <div style={{ fontSize: '14px', color: 'var(--text-soft)' }}>{visiting.text_catalan}{visiting.region ? <span style={{ color: 'var(--text-muted)' }}> · {visiting.region}</span> : null}</div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={() => playUrl(visiting.audio_url || visiting.audio_tts_shi_url)} disabled={!(visiting.audio_url || visiting.audio_tts_shi_url)} style={{ flex: 1, height: 40, borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-1)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>▶ Escolta</button>
+                <button onClick={() => playUrl(visiting.audio_url)} disabled={!visiting.audio_url} style={{ flex: 1, height: 40, borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-1)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>▶ Escolta</button>
                 <button onClick={() => playUrl(visiting.audio_tts_url)} disabled={!visiting.audio_tts_url} style={{ flex: 1, height: 40, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Català</button>
               </div>
               <DrillVoices drillId={visiting.id} />
