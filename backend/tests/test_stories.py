@@ -33,6 +33,31 @@ def test_a_group_of_timed_recorded_lines_from_one_source_is_a_story():
     assert page["source_url"] or page["video_url"]
 
 
+def test_els_episodis_duna_serie_retallada_pels_subtitols_son_histories():
+    """Baba Ali (#535): 3.600 línies amb veu, cada una amb el seu títol «Baba Ali · episodi N · m:ss»
+    i cap amb el segon dins del vídeo, perquè no ve de YouTube. La pantalla d'històries no en veia
+    cap. L'episodi és la història; el minut del títol, l'ordre; i dues rèpliques del mateix minut
+    no són un munt, són veïnes."""
+    hdr = {"X-User-Token": register("qui_mira_baba_ali")}
+    minuts = ["0:05", "0:09", "0:09", "0:14", "1:02", "1:30", "2:11"]   # dues al mateix minut
+    for i, m in enumerate(reversed(minuts)):
+        client.post("/drills/", headers=hdr, json={
+            "text_catalan": f"rèplica {m}", "text_tachelhit": f"awal {m}",
+            "audio_url": f"https://res.cloudinary.com/x/video/upload/v1/baba-{i}.mp3",
+            "source_title": f"Prova Baba · episodi 3 · {m}", "source_url": "https://forja.ma/content/baba-ali"})
+    client.post("/drills/", headers=hdr, json={   # un altre episodi, amb una línia sola: no és cap història
+        "text_catalan": "x", "text_tachelhit": "x", "source_title": "Prova Baba · episodi 4 · 0:01"})
+
+    stories = client.get("/stories").json()["stories"]
+    ep = next((s for s in stories if s["title"] == "Prova Baba · episodi 3"), None)
+    assert ep, "l'episodi és una història, encara que cap línia no porti el segon del vídeo"
+    assert ep["lines"] == 7 and ep["voiced"] == 7 and ep["series"] in (None, "Prova Baba") and (ep["chapter"] in (None, 3))
+    assert not any(s["title"].startswith("Prova Baba · episodi 4") for s in stories)
+
+    page = client.get(f"/stories/{ep['slug']}").json()
+    assert [d["text_catalan"] for d in page["drills"]] == [f"rèplica {m}" for m in minuts], "en l'ordre del minut del títol"
+
+
 def test_five_loose_sentences_are_not_a_story():
     """Six lines is the floor: fewer is a pile from the same video, not something to follow."""
     hdr = {"X-User-Token": register("story_short")}
