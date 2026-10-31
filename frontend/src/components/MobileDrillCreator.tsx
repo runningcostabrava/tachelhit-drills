@@ -9,6 +9,7 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { VoiceRecorder } from 'capacitor-voice-recorder';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { API_BASE, getMediaUrl, isNativeApp } from '../config';
+import { baixaAudio } from '../services/audioLocal';
 import { syncManager, type Drill } from '../services/OfflineSyncManager';
 import { toast } from '../toast';
 import { fileNameFor, kindOf, type MediaKind } from '../utils/media';
@@ -281,6 +282,16 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 if (!url) throw new Error('El servidor no ha retornat cap URL');
                 posaD(e, { [`${kind}_url`]: url } as Partial<Drill>);
                 setEstat('desat');
+                // Que la gravació quedi també al disc del telèfon, de seguida.
+                //
+                // L'amo, mirant una frase que acabava de gravar amb el telèfon en mode avió:
+                // «why no audio?». La veu havia pujat, però el fitxer no era al telèfon —les
+                // baixades en bloc són d'abans—, i sense senyal no hi havia d'on treure'l. Una
+                // frase gravada EN AQUEST telèfon ha de sonar-hi sempre. Val una còpia de no res,
+                // i es fa ara, que la xarxa hi és perquè acaba de pujar.
+                if (kind === 'audio' && e.serverId) {
+                    void baixaAudio({ id: e.serverId, audio_url: url }).catch(() => {});
+                }
                 return url;
             }
             if (!isNativeApp()) throw new Error('Sense connexió: no es pot pujar des del navegador.');
@@ -394,7 +405,9 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                     return toast.error('Cal permís de reconeixement de veu');
                 }
             }
-            if (!(await SpeechRecognition.available())) {
+            // `available()` torna un objecte, i un objecte sempre és cert: tal com estava, aquest
+            // avís no hauria saltat mai en un telèfon que no sap dictar.
+            if (!(await SpeechRecognition.available()).available) {
                 toast.error('Aquest telèfon no sap dictar: grava l’amazic i escriu el significat');
                 return;
             }

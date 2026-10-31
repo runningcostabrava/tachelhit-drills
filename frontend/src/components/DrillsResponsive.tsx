@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { VARIETIES } from '../varieties';
 import { FaPlay, FaPlus, FaTimes, FaLink, FaChevronDown, FaSearch, FaBook, FaTrash, FaFileImport, FaFilm, FaBookOpen } from 'react-icons/fa';
 import axios from 'axios';
+import { Network } from '@capacitor/network';
 import { API_BASE, hasIdentity } from '../config';
 import { syncManager } from '../services/OfflineSyncManager';
 import { AgGridReact } from 'ag-grid-react';
@@ -281,7 +282,13 @@ export default function DrillsResponsive() {
         // Diu-ho a la graella: la llista pot ser vella o buida per la xarxa, no perquè no hi hagi
         // frases (un Render acabat de despertar ensenyava «Encara no hi ha cap drill» amb 600 a la base).
         setLoadError(quantes ? 'cached' : 'error');
-        if (quantes) toast.error('Sense resposta del servidor: es mostra la còpia local.');
+        // Sense senyal no hi ha cap error: l'app ha de funcionar així, i dir-ho en vermell com si
+        // s'hagués espatllat una cosa espanta per no res. En Pablo ho va veure en mode avió.
+        const senseXarxa = !(await Network.getStatus().then(s => s.connected).catch(() => true));
+        if (quantes) {
+          if (senseXarxa) toast.info('Sense connexió: es veu el que tens al telèfon.');
+          else toast.error('Sense resposta del servidor: es mostra la còpia local.');
+        }
       }
     } catch (error) {
       console.error('Error loading drills:', error);
