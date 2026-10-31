@@ -242,46 +242,47 @@ export default function DrillsResponsive() {
     setPlaying(withVoice);
   };
 
+  /** La còpia del dispositiu, amb el que encara espera senyal al davant, pintada ja. */
+  const mostraLaCopia = async (): Promise<number> => {
+    const allDrills = await syncManager.getDrills();
+    const queue = await syncManager.getQueue();
+    const localCreates = queue
+      .filter(a => a.type === 'CREATE')
+      .map(a => ({
+        ...a.payload,
+        id: a.drillId,
+        is_local: true,
+        date_created: a.payload.date_created || new Date().toISOString()
+      }));
+
+    const serverIds = new Set(allDrills.map(d => d.id));
+    const uniqueLocals = localCreates.filter(d => !serverIds.has(d.id));
+    const tot = [...uniqueLocals, ...allDrills];
+    setDrills(tot.sort((a: Drill, b: Drill) =>
+      new Date(b.date_created).getTime() - new Date(a.date_created).getTime()));
+    return tot.length;
+  };
+
+  // Primer la còpia, després la xarxa.
+  //
+  // Abans s'esperava la sincronització i només llavors es pintava, i això deixava la pantalla en
+  // blanc tant sense senyal com —pitjor— amb senyal dolent o amb el Render adormit, que triga
+  // mig minut. La còpia del dispositiu és el que es mostra de totes passades; la xarxa només la
+  // posa al dia. En Pablo: «in this phone the offline is not working».
   const fetchDrills = async (recent = 0) => {
     try {
-      let allDrills: Drill[] = [];
-
-      // Always try the server first — Capacitor's Network.getStatus() can
-      // misreport "offline" on the web, which used to strand the app on an
-      // empty local cache. The copy on the device is what we show either way;
-      // a failed sync only means it may be stale.
+      const quantes = await mostraLaCopia().catch(() => 0);
       try {
         await sincronitza(recent);
-        allDrills = await syncManager.getDrills();
         setLoadError(null);
+        await mostraLaCopia();
       } catch (netErr) {
         console.warn('Server sync failed, showing the copy on the device:', netErr);
-        allDrills = await syncManager.getDrills();
-        // Tell the grid the list may be stale/empty because of the network, not
-        // because there are no drills (a cold Render start used to show
-        // "Encara no hi ha cap drill" on a 600-drill database).
-        setLoadError(allDrills.length ? 'cached' : 'error');
-        if (allDrills.length) toast.error('Sense resposta del servidor: es mostra la còpia local.');
+        // Diu-ho a la graella: la llista pot ser vella o buida per la xarxa, no perquè no hi hagi
+        // frases (un Render acabat de despertar ensenyava «Encara no hi ha cap drill» amb 600 a la base).
+        setLoadError(quantes ? 'cached' : 'error');
+        if (quantes) toast.error('Sense resposta del servidor: es mostra la còpia local.');
       }
-
-      const queue = await syncManager.getQueue();
-      const localCreates = queue
-        .filter(a => a.type === 'CREATE')
-        .map(a => ({
-          ...a.payload,
-          id: a.drillId,
-          is_local: true,
-          date_created: a.payload.date_created || new Date().toISOString()
-        }));
-
-      const serverIds = new Set(allDrills.map(d => d.id));
-      const uniqueLocals = localCreates.filter(d => !serverIds.has(d.id));
-      allDrills = [...uniqueLocals, ...allDrills];
-
-      const sorted = allDrills.sort((a: Drill, b: Drill) =>
-        new Date(b.date_created).getTime() - new Date(a.date_created).getTime()
-      );
-      setDrills(sorted);
     } catch (error) {
       console.error('Error loading drills:', error);
     }

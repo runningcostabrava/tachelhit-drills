@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    FaCamera, FaCheck, FaChevronDown, FaKeyboard, FaMicrophone, FaPlay,
-    FaPlus, FaRedo, FaTimes, FaVideo,
+    FaCamera, FaCheck, FaChevronDown, FaChevronLeft, FaChevronRight, FaKeyboard,
+    FaMicrophone, FaPlay, FaPlus, FaRedo, FaTimes, FaVideo,
 } from 'react-icons/fa';
 import axios from 'axios';
 import { Network } from '@capacitor/network';
@@ -39,8 +39,15 @@ interface MobileDrillCreatorProps {
  *  · **El text ve després.** El català es dicta amb el reconeixedor del mateix telèfon, que va
  *    sense connexió; l'amazic es transcriu quan es pugui, i va a `text_tachelhit_suggested`
  *    —mai al camp del parlant, que no és d'una màquina (ADR 0003).
+ *  · **La màquina sempre diu la seva**, i es veu al costat: la transcripció es demana a cada
+ *    gravació, encara que la frase ja porti text escrit, i del que la màquina ha sentit se'n
+ *    demana el significat en català, que es mostra entre parèntesis darrere el teu. Serveix per
+ *    veure de seguida si la màquina ha entès el mateix que tu —sovint no— i va a
+ *    `text_catalan_suggested`, no al camp del significat.
  *  · **El «+» fa la següent** sense sortir de la pantalla: tres toc i ja ets a la frase de
  *    després, que és el que decideix si se'n capturen tres o trenta en una tarda.
+ *  · **I s'hi pot tornar.** Les frases d'aquesta estona queden en una tira: amb les fletxes
+ *    s'hi va endavant i enrere, s'escolten i es corregeixen sense sortir de la pantalla.
  */
 
 const errMsg = (err: any, fallback: string) =>
@@ -67,25 +74,54 @@ type Gravant = null | 'shi' | 'ca';
 let seguitProvisional = 0;
 const idProvisional = () => Date.now() * 1000 + (seguitProvisional++ % 1000);
 
-export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDrillCreatorProps) {
-    const tempId = useRef(idProvisional());
-    const serverIdRef = useRef<number | null>(null);
-    const creating = useRef<Promise<number> | null>(null);
+/**
+ * Una frase de l'estona: la seva, amb el seu id i les seves gravacions.
+ *
+ * Abans la pantalla només tenia la d'ara, i en prémer «+» l'anterior desapareixia de la vista.
+ * Qui grava deu frases seguides amb algú al davant necessita poder tornar enrere a escoltar la
+ * que acaba de fer —i corregir-ne el text— sense anar a buscar-la a la biblioteca. Els camps es
+ * canvien a dins de l'objecte perquè una pujada que torna mig segon després trobi la seva frase
+ * i no la que ara es té a la pantalla.
+ */
+type Entrada = {
+    tempId: number;
+    serverId: number | null;
+    creant: Promise<number> | null;
+    d: Partial<Drill>;
+    /** Les adreces `blob:` del que s'acaba de gravar: deixen escoltar-ho també sense senyal. */
+    pAudio: string | null;
+    pImg: string | null;
+    pVid: string | null;
+};
 
-    const [drill, setDrill] = useState<Partial<Drill>>({ text_catalan: '', text_tachelhit: '', text_arabic: '', tag: '' });
-    const drillRef = useRef(drill);
-    drillRef.current = drill;
+const novaEntrada = (): Entrada => ({
+    tempId: idProvisional(), serverId: null, creant: null,
+    d: { text_catalan: '', text_tachelhit: '', text_arabic: '', tag: '' },
+    pAudio: null, pImg: null, pVid: null,
+});
+
+export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDrillCreatorProps) {
+    // `entradesRef` és qui manda: les crides que tornen d'una pujada o d'una transcripció hi
+    // escriuen de seguida, i `setEntrades` només serveix per tornar a pintar.
+    const [entrades, setEntrades] = useState<Entrada[]>(() => [novaEntrada()]);
+    const entradesRef = useRef(entrades);
+    const [i, setI] = useState(0);
+    const iRef = useRef(0);
+
+    const refresca = useCallback(() => setEntrades([...entradesRef.current]), []);
+    /** L'entrada que es té a la pantalla ara mateix. */
+    const act = useCallback(() => entradesRef.current[iRef.current], []);
+    const posaD = useCallback((e: Entrada, canvis: Partial<Drill>) => {
+        e.d = { ...e.d, ...canvis };
+        refresca();
+    }, [refresca]);
 
     const [gravant, setGravant] = useState<Gravant>(null);
     const gravantRef = useRef<Gravant>(null);
-    const [previewImage, setPreviewImage] = useState<string | null>(null);
-    const [previewVideo, setPreviewVideo] = useState<string | null>(null);
-    const [previewAudio, setPreviewAudio] = useState<string | null>(null);
     const [busy, setBusy] = useState<string | null>(null);
     const [estat, setEstat] = useState<string>('');
     const [obertText, setObertText] = useState(false);
     const [corpusConsent, setCorpusConsent] = useState(true);
-    const [fetes, setFetes] = useState(0);
     /** Quantes coses esperen senyal. Una cua silenciosa és una cua que algú es pensa que ha perdut. */
     const [pendents, setPendents] = useState(0);
     const compta = useCallback(() => {
@@ -105,6 +141,8 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         Camera.requestPermissions().catch(() => {});
     }, []);
 
+    const drill = entrades[i]?.d ?? {};
+
     // L'esborrany: el que s'ha escrit no es perd si entra una trucada o es tanca sense voler (#372).
     const [recuperat, setRecuperat] = useState(false);
     useEffect(() => {
@@ -113,23 +151,26 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             if (!cru) return;
             const d = JSON.parse(cru) as Partial<Drill>;
             if (!hasText(d)) return;
-            setDrill(prev => ({ ...prev, ...d }));
+            posaD(entradesRef.current[0], d);
             setRecuperat(true);
         } catch { /* sense magatzem no hi ha esborrany, i prou */ }
-    }, []);
+    }, [posaD]);
     useEffect(() => {
         try {
             if (hasText(drill)) localStorage.setItem(ESBORRANY, JSON.stringify({
                 text_catalan: drill.text_catalan, text_tachelhit: drill.text_tachelhit,
-                text_tachelhit_suggested: drill.text_tachelhit_suggested, tag: drill.tag,
+                text_tachelhit_suggested: drill.text_tachelhit_suggested,
+                text_catalan_suggested: drill.text_catalan_suggested, tag: drill.tag,
             }));
             else localStorage.removeItem(ESBORRANY);
         } catch { /* ídem */ }
-    }, [drill.text_catalan, drill.text_tachelhit, drill.text_tachelhit_suggested, drill.tag]);
+    }, [drill.text_catalan, drill.text_tachelhit, drill.text_tachelhit_suggested, drill.text_catalan_suggested, drill.tag, drill]);
 
     useEffect(() => () => {
-        [previewImage, previewVideo, previewAudio].forEach(u => { if (u?.startsWith('blob:')) URL.revokeObjectURL(u); });
-    }, [previewImage, previewVideo, previewAudio]);
+        entradesRef.current.forEach(e => {
+            [e.pAudio, e.pImg, e.pVid].forEach(u => { if (u?.startsWith('blob:')) URL.revokeObjectURL(u); });
+        });
+    }, []);
 
     const licenseFor = () => (corpusConsent ? 'CC-BY-SA' : 'private');
 
@@ -140,85 +181,102 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
      * gravar i encara no hi ha cap text, i el servidor no deixa crear files en blanc. Qui ho
      * demana explícitament sí que pot, perquè el fitxer hi arriba tot seguit (#450).
      */
-    const ensureServerDrill = async (capturant = false): Promise<number> => {
-        if (serverIdRef.current) return serverIdRef.current;
-        if (creating.current) return creating.current;
-        creating.current = (async () => {
+    const ensureServerDrill = useCallback(async (e: Entrada, capturant = false): Promise<number> => {
+        if (e.serverId) return e.serverId;
+        if (e.creant) return e.creant;
+        e.creant = (async () => {
             const res = await axios.post(`${API_BASE}/drills/`, {
-                ...drillRef.current, license: licenseFor(), ...(capturant ? { capturing: true } : {}),
+                ...e.d, license: licenseFor(), ...(capturant ? { capturing: true } : {}),
             });
             const id: number = res.data.id;
-            serverIdRef.current = id;
-            setDrill(prev => ({ ...res.data, ...prev, id }));
+            e.serverId = id;
+            e.d = { ...res.data, ...e.d, id };
+            refresca();
             return id;
-        })().finally(() => { creating.current = null; });
-        return creating.current;
-    };
+        })().finally(() => { e.creant = null; });
+        return e.creant;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [corpusConsent, refresca]);
 
     /** Desa (PUT amb xarxa, cua al telèfon sense). Tot passa per aquí: no hi ha botó «Desa». */
-    const desa = useCallback(async (fields: Partial<Drill>): Promise<void> => {
+    const desa = useCallback(async (e: Entrada, fields: Partial<Drill>): Promise<void> => {
         const payload = { ...fields, license: licenseFor() };
         if (await isOnline()) {
-            const id = await ensureServerDrill();
+            const id = await ensureServerDrill(e);
             const res = await axios.put(`${API_BASE}/drills/${id}`, payload);
-            setDrill(prev => ({ ...prev, ...res.data, ...fields }));
+            e.d = { ...e.d, ...res.data, ...fields };
+            refresca();
             setEstat('desat');
             return;
         }
         if (!isNativeApp()) throw new Error('Sense connexió: no es pot desar des del navegador.');
         await syncManager.queueAction({
-            type: serverIdRef.current ? 'UPDATE' : 'CREATE',
-            drillId: serverIdRef.current ?? tempId.current,
+            type: e.serverId ? 'UPDATE' : 'CREATE',
+            drillId: e.serverId ?? e.tempId,
             payload: {
-                ...drillRef.current, ...payload,
-                id: serverIdRef.current ?? tempId.current,
-                is_local: !serverIdRef.current, date_created: new Date().toISOString(),
+                ...e.d, ...payload,
+                id: e.serverId ?? e.tempId,
+                is_local: !e.serverId, date_created: new Date().toISOString(),
             } as Drill,
         });
         setEstat('al telèfon');
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [corpusConsent]);
+    }, [corpusConsent, ensureServerDrill, refresca]);
+
+    /** El que es desa d'una frase: els textos i l'etiqueta. Els fitxers van pel seu compte. */
+    const textos = (d: Partial<Drill>): Partial<Drill> => ({
+        text_catalan: d.text_catalan, text_tachelhit: d.text_tachelhit,
+        text_tachelhit_suggested: d.text_tachelhit_suggested,
+        text_catalan_suggested: d.text_catalan_suggested, tag: d.tag,
+    });
 
     /**
      * Desa sol, sense que ningú premi res.
      *
      * Espera un segon i mig des de l'últim canvi: amb algú al davant dictant, desar a cada lletra
      * ompliria la cua de versions a mig fer. Només desa quan hi ha alguna cosa que valgui la pena.
+     *
+     * Canviar de frase amb les fletxes no és un canvi a desar: el que entra a la pantalla ja és
+     * desat, i tornar-lo a enviar ompliria la cua de còpies. Per això se salta la passada que ve
+     * just després d'un salt.
      */
     const primer = useRef(true);
+    const darrerI = useRef(0);
     useEffect(() => {
-        if (primer.current) { primer.current = false; return; }
+        if (primer.current) { primer.current = false; darrerI.current = i; return; }
+        if (darrerI.current !== i) { darrerI.current = i; return; }
         if (!hasText(drill) && !hasMedia(drill)) return;
+        const e = entradesRef.current[i];
+        if (!e) return;
         setEstat('desant…');
         const t = window.setTimeout(() => {
-            desa({
-                text_catalan: drill.text_catalan, text_tachelhit: drill.text_tachelhit,
-                text_tachelhit_suggested: drill.text_tachelhit_suggested, tag: drill.tag,
-            }).catch(() => setEstat('no s’ha pogut desar'));
+            desa(e, textos(e.d)).catch(() => setEstat('no s’ha pogut desar'));
         }, 1500);
         return () => window.clearTimeout(t);
-    }, [drill.text_catalan, drill.text_tachelhit, drill.text_tachelhit_suggested, drill.tag, desa]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [drill.text_catalan, drill.text_tachelhit, drill.text_tachelhit_suggested, drill.text_catalan_suggested, drill.tag, i, desa]);
 
-    const posa = (field: keyof Drill, value: string) => setDrill(prev => ({ ...prev, [field]: value }));
+    const posa = (field: keyof Drill, value: string) => posaD(act(), { [field]: value } as Partial<Drill>);
 
     /** Puja un fitxer i enganxa la seva adreça a la frase. Sense xarxa, es queda a la cua. */
-    const enganxa = async (blob: Blob, kind: MediaKind, prefix?: string) => {
+    const enganxa = async (e: Entrada, blob: Blob, kind: MediaKind, prefix?: string) => {
         const fileName = fileNameFor(blob, kind, prefix);
         const previewUrl = URL.createObjectURL(blob);
-        if (kind === 'image') setPreviewImage(previewUrl);
-        if (kind === 'video') setPreviewVideo(previewUrl);
-        if (kind === 'audio') setPreviewAudio(previewUrl);
+        if (kind === 'image') e.pImg = previewUrl;
+        if (kind === 'video') e.pVid = previewUrl;
+        if (kind === 'audio') e.pAudio = previewUrl;
+        refresca();
 
         setBusy(kind);
         try {
             if (await isOnline()) {
-                const id = await ensureServerDrill(true);
+                const id = await ensureServerDrill(e, true);
                 const fd = new FormData();
                 fd.append('file', blob, fileName);
                 const res = await axios.post(`${API_BASE}/upload-media/${id}/${kind}`, fd);
                 const url: string | undefined = res.data?.url;
                 if (!url) throw new Error('El servidor no ha retornat cap URL');
-                setDrill(prev => ({ ...prev, [`${kind}_url`]: url }));
+                posaD(e, { [`${kind}_url`]: url } as Partial<Drill>);
                 setEstat('desat');
                 return url;
             }
@@ -229,11 +287,11 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             // no s'havia demanat mai: quan tornava el senyal, el fitxer no tenia on anar. La
             // cua ja ajunta els CREATE d'una mateixa frase, de manera que fer-ho a cada fitxer
             // no en crea dos (#450).
-            if (!serverIdRef.current) {
+            if (!e.serverId) {
                 await syncManager.queueAction({
-                    type: 'CREATE', drillId: tempId.current,
+                    type: 'CREATE', drillId: e.tempId,
                     payload: {
-                        ...drillRef.current, id: tempId.current, is_local: true,
+                        ...e.d, id: e.tempId, is_local: true,
                         license: licenseFor(), capturing: true,
                         date_created: new Date().toISOString(),
                     } as unknown as Drill,
@@ -241,7 +299,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             }
             await syncManager.saveMediaLocally(blob, fileName);
             await syncManager.queueAction({
-                type: 'UPLOAD_MEDIA', drillId: serverIdRef.current ?? tempId.current,
+                type: 'UPLOAD_MEDIA', drillId: e.serverId ?? e.tempId,
                 mediaType: kind, localPath: fileName, fileName,
             });
             setEstat('al telèfon, pujarà sol');
@@ -276,36 +334,48 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const acabaAmazic = async () => {
         if (gravantRef.current !== 'shi') return;
         gravantRef.current = null; setGravant(null);
+        // La frase d'ara, agafada abans de cap espera: el que torni després és SEU, encara que
+        // entretant s'hagi passat a una altra amb les fletxes o amb el «+».
+        const e = act();
         try {
             const r = await VoiceRecorder.stopRecording();
             const b64 = r.value?.recordDataBase64;
             if (!b64) return;
             const mime = r.value.mimeType || 'audio/aac';
             const blob = await (await fetch(`data:${mime};base64,${b64}`)).blob();
-            const url = await enganxa(blob, 'audio', 'rec');
-            if (url) void transcriuAmazic(url);
+            const url = await enganxa(e, blob, 'audio', 'rec');
+            if (url) void transcriuAmazic(e, url);
         } catch (err: any) {
             toast.error(`Micròfon: ${errMsg(err, 'error en aturar')}`);
         }
     };
 
     /**
-     * El que diu la gravació en amazic, quan es pot.
+     * El que diu la gravació en amazic, i què en vol dir la màquina.
      *
-     * Va a `text_tachelhit_suggested` i mai al camp del parlant: ho ha escrit una màquina i ho ha
-     * de confirmar una persona. Si no hi ha xarxa no passa res: la gravació ja és desada i això
-     * es podrà fer un altre dia des de la fitxa.
+     * Es demana **sempre** que hi hagi senyal, encara que la frase ja porti text escrit o una
+     * transcripció d'abans: en Pablo ho va demanar així, i té sentit —el que val d'això no és
+     * omplir un buit sinó poder comparar. La transcripció va a `text_tachelhit_suggested` i el
+     * seu significat a `text_catalan_suggested`: mai als camps del parlant, que no són d'una
+     * màquina (ADR 0003). Si no hi ha xarxa no passa res: la gravació ja és desada i això es
+     * podrà fer un altre dia des de la fitxa.
      */
-    const transcriuAmazic = async (audioUrl: string) => {
+    const transcriuAmazic = async (e: Entrada, audioUrl: string) => {
         if (!(await isOnline())) return;
         setBusy('transcriu');
         try {
             const res = await axios.post(`${API_BASE}/transcribe/`, { audio_url: audioUrl });
             const text = (res.data?.corrected_transcription || '').trim();
-            if (text) {
-                setDrill(prev => ({ ...prev, text_tachelhit_suggested: text }));
-                toast.info('Transcrit: mira-ho abans de donar-ho per bo');
-            }
+            if (!text) return;
+            posaD(e, { text_tachelhit_suggested: text });
+            toast.info('Transcrit: mira-ho abans de donar-ho per bo');
+            try {
+                const tr = await axios.post(`${API_BASE}/translate`, {
+                    text, source_lang: 'shi', target_lang: 'ca',
+                });
+                const ca = (tr.data?.translated_text || '').trim();
+                if (ca) posaD(e, { text_catalan_suggested: ca });
+            } catch { /* sense significat, la transcripció ja val per ella mateixa */ }
         } catch { /* la gravació ja hi és: una transcripció que falla no és una frase perduda */ }
         finally { setBusy(null); }
     };
@@ -325,9 +395,10 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 toast.error('Aquest telèfon no sap dictar: grava l’amazic i escriu el significat');
                 return;
             }
+            const e = act();
             await SpeechRecognition.removeAllListeners();
             SpeechRecognition.addListener('partialResults', (data: any) => {
-                if (data.matches?.length) posa('text_catalan', data.matches[0]);
+                if (data.matches?.length) posaD(e, { text_catalan: data.matches[0] });
             });
             gravantRef.current = 'ca'; setGravant('ca');
             await SpeechRecognition.start({ language: 'ca-ES', partialResults: true, popup: false });
@@ -346,6 +417,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     // ── Foto i vídeo ─────────────────────────────────────────────────────────────────────────
 
     const fesFoto = async () => {
+        const e = act();
         try {
             const status = await Camera.requestPermissions();
             if (status.camera !== 'granted' && status.photos !== 'granted') return toast.error('Cal permís de càmera');
@@ -356,7 +428,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             if (!image.base64String) return;
             const mime = `image/${image.format || 'jpeg'}`;
             const blob = await (await fetch(`data:${mime};base64,${image.base64String}`)).blob();
-            await enganxa(blob, 'image', 'foto');
+            await enganxa(e, blob, 'image', 'foto');
         } catch (err: any) {
             const m = String(err?.message || '');
             if (/cancel/i.test(m)) return;            // tancar la càmera no és cap error
@@ -366,52 +438,60 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
     const fesVideo = () => document.getElementById('native-video-input')?.click();
 
-    const deFitxer = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        e.target.value = '';
-        if (file) await enganxa(file, kindOf(file, 'video'));
+    const deFitxer = async (ev: React.ChangeEvent<HTMLInputElement>) => {
+        const e = act();
+        const file = ev.target.files?.[0];
+        ev.target.value = '';
+        if (file) await enganxa(e, file, kindOf(file, 'video'));
     };
 
-    // ── La següent ───────────────────────────────────────────────────────────────────────────
+    // ── Anar d'una a l'altra ─────────────────────────────────────────────────────────────────
+
+    const vesA = useCallback((idx: number) => {
+        if (idx < 0 || idx >= entradesRef.current.length) return;
+        iRef.current = idx;
+        setI(idx);
+        setEstat('');
+        setRecuperat(false);
+    }, []);
 
     /** Desa el que hi ha i deixa la pantalla a punt per a la frase següent, sense sortir-ne. */
     const seguent = async () => {
-        if (hasText(drillRef.current) || hasMedia(drillRef.current)) {
-            try {
-                await desa({
-                    text_catalan: drill.text_catalan, text_tachelhit: drill.text_tachelhit,
-                    text_tachelhit_suggested: drill.text_tachelhit_suggested, tag: drill.tag,
-                });
-            } catch { /* el que no s'ha pogut desar ja ho diu l'estat */ }
-            onDrillCreated(serverIdRef.current ?? undefined);
-            setFetes(n => n + 1);
+        const e = act();
+        if (hasText(e.d) || hasMedia(e.d)) {
+            try { await desa(e, textos(e.d)); } catch { /* el que no s'ha pogut desar ja ho diu l'estat */ }
+            onDrillCreated(e.serverId ?? undefined);
         }
-        tempId.current = idProvisional();
-        serverIdRef.current = null;
-        setDrill({ text_catalan: '', text_tachelhit: '', text_arabic: '', tag: '' });
-        setPreviewImage(null); setPreviewVideo(null); setPreviewAudio(null);
-        setEstat(''); setRecuperat(false);
         try { localStorage.removeItem(ESBORRANY); } catch { /* ídem */ }
+        // Si l'última de la tira encara és en blanc, no en cal una altra: s'hi va.
+        const ultima = entradesRef.current[entradesRef.current.length - 1];
+        if (ultima && !hasText(ultima.d) && !hasMedia(ultima.d)) {
+            return vesA(entradesRef.current.length - 1);
+        }
+        entradesRef.current = [...entradesRef.current, novaEntrada()];
+        setEntrades(entradesRef.current);
+        vesA(entradesRef.current.length - 1);
     };
 
     const tanca = async () => {
-        if (hasText(drillRef.current) || hasMedia(drillRef.current)) {
+        const e = act();
+        if (hasText(e.d) || hasMedia(e.d)) {
             try {
-                await desa({
-                    text_catalan: drill.text_catalan, text_tachelhit: drill.text_tachelhit,
-                    text_tachelhit_suggested: drill.text_tachelhit_suggested, tag: drill.tag,
-                });
+                await desa(e, textos(e.d));
                 try { localStorage.removeItem(ESBORRANY); } catch { /* ídem */ }
             } catch { /* ídem */ }
-            onDrillCreated(serverIdRef.current ?? undefined);
+            onDrillCreated(e.serverId ?? undefined);
         }
         onClose();
     };
 
     const sona = (url: string | null) => { if (url) new Audio(url).play().catch(() => {}); };
-    const audioPreview = previewAudio || (drill.audio_url ? getMediaUrl(drill.audio_url) : null);
-    const imatgePreview = previewImage || (drill.image_url ? getMediaUrl(drill.image_url) : null);
-    const videoPreview = previewVideo || (drill.video_url ? getMediaUrl(drill.video_url) : null);
+    const veuDe = (e: Entrada) => e.pAudio || (e.d.audio_url ? getMediaUrl(e.d.audio_url) : null);
+    const entrada = entrades[i];
+    const audioPreview = entrada ? veuDe(entrada) : null;
+    const imatgePreview = entrada?.pImg || (drill.image_url ? getMediaUrl(drill.image_url) : null);
+    const videoPreview = entrada?.pVid || (drill.video_url ? getMediaUrl(drill.video_url) : null);
+    const fetes = entrades.filter(e => hasText(e.d) || hasMedia(e.d)).length;
 
     return (
         <div style={full}>
@@ -420,7 +500,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <strong style={{ fontSize: 16 }}>Frase nova</strong>
                     <div style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
-                        {estat || (fetes ? `${fetes} fetes en aquesta estona` : 'Prem i parla; es desa sol')}
+                        {estat || (fetes ? `${fetes} ${fetes === 1 ? 'feta' : 'fetes'} en aquesta estona` : 'Prem i parla; es desa sol')}
                         {pendents > 0 && <> · <span style={{ color: 'var(--amber-strong, var(--text-soft))' }}>{pendents} esperen senyal</span></>}
                     </div>
                 </div>
@@ -428,6 +508,30 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
             </header>
 
             <div style={cos}>
+                {/* La tira de l'estona: endavant, enrere, i escoltar la que es té al davant. */}
+                {entrades.length > 1 && (
+                    <div style={tira}>
+                        <button onClick={() => vesA(i - 1)} disabled={i === 0} style={{ ...fletxa, opacity: i === 0 ? 0.35 : 1 }}
+                                aria-label="La frase d'abans">
+                            <FaChevronLeft size={16} />
+                        </button>
+                        <button onClick={() => sona(audioPreview)} disabled={!audioPreview}
+                                style={{ ...rodo, opacity: audioPreview ? 1 : 0.35 }} aria-label="Escolta aquesta">
+                            <FaPlay size={13} />
+                        </button>
+                        <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>{i + 1} de {entrades.length}</div>
+                            <div style={{ fontSize: 11.5, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {drill.text_catalan?.trim() || drill.text_tachelhit?.trim() || 'encara sense text'}
+                            </div>
+                        </div>
+                        <button onClick={() => vesA(i + 1)} disabled={i >= entrades.length - 1}
+                                style={{ ...fletxa, opacity: i >= entrades.length - 1 ? 0.35 : 1 }} aria-label="La frase de després">
+                            <FaChevronRight size={16} />
+                        </button>
+                    </div>
+                )}
+
                 {recuperat && (
                     <p style={avis}>Hi havia una frase a mig fer i l’hem recuperada.</p>
                 )}
@@ -482,11 +586,22 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                     </div>
                 )}
 
-                {(drill.text_catalan || drill.text_tachelhit || drill.text_tachelhit_suggested) && (
+                {(drill.text_catalan || drill.text_tachelhit || drill.text_tachelhit_suggested || drill.text_catalan_suggested) && (
                     <div style={fitxa}>
-                        {drill.text_catalan && <p style={{ margin: 0, fontSize: 16 }}>{drill.text_catalan}</p>}
+                        {(drill.text_catalan || drill.text_catalan_suggested) && (
+                            <p style={{ margin: 0, fontSize: 16 }}>
+                                {drill.text_catalan}
+                                {drill.text_catalan_suggested && (
+                                    <span style={maquina} title="El que la màquina ha entès de la gravació">
+                                        {drill.text_catalan ? ' ' : ''}({drill.text_catalan_suggested})
+                                    </span>
+                                )}
+                            </p>
+                        )}
                         {drill.text_tachelhit && <p style={{ margin: 0, fontSize: 16, fontWeight: 700 }} lang="shi">{drill.text_tachelhit}</p>}
-                        {!drill.text_tachelhit && drill.text_tachelhit_suggested && (
+                        {/* La transcripció es veu SEMPRE, també quan el text ja és escrit: és el que
+                            deixa comparar el que has escrit amb el que la màquina ha sentit. */}
+                        {drill.text_tachelhit_suggested && (
                             <p style={{ margin: 0, fontSize: 15, fontStyle: 'italic', color: 'var(--text-soft)' }} lang="shi">
                                 {drill.text_tachelhit_suggested}
                                 <span style={{ fontSize: 11, marginLeft: 6, color: 'var(--text-muted)' }}>(ho ha escrit la màquina)</span>
@@ -557,6 +672,15 @@ const fitxa: React.CSSProperties = {
     padding: 12, display: 'flex', flexDirection: 'column', gap: 10,
 };
 const fila: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10 };
+const tira: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface-2)',
+    border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', padding: '6px 8px',
+};
+const fletxa: React.CSSProperties = {
+    width: 42, height: 42, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)',
+    background: 'var(--surface)', color: 'var(--text)', display: 'inline-flex', alignItems: 'center',
+    justifyContent: 'center', flexShrink: 0, cursor: 'pointer',
+};
 const rodo: React.CSSProperties = {
     width: 38, height: 38, borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-1)', color: '#fff',
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer',
@@ -576,3 +700,4 @@ const camp: React.CSSProperties = {
     borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', minHeight: 44,
 };
 const avis: React.CSSProperties = { fontSize: 12.5, color: 'var(--text-soft)', margin: 0 };
+const maquina: React.CSSProperties = { fontSize: 14, fontStyle: 'italic', color: 'var(--text-muted)' };

@@ -5,6 +5,7 @@ import { api } from '../api';
 import type { Drill } from '../types';
 import { getMediaUrl, hasIdentity, thumb } from '../config';
 import { audioSrc } from '../services/audioLocal';
+import { cercaLocal } from '../services/cercaLocal';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import RecordAudioModal from './RecordAudioModal';
@@ -16,7 +17,14 @@ import RecordAudioModal from './RecordAudioModal';
 // biblioteca i filtrar-hi, i per afegir-ne una, saber on era el creador.
 //
 // Es busca per les dues llengües i per qualsevol escriptura: «aghrum», «aɣrum» i «ⴰⵖⵔⵓⵎ» troben
-// la mateixa frase, perquè el servidor compara també per so.
+// la mateixa frase, perquè es compara també per so.
+//
+// **Primer el telèfon, després el servidor.** En Pablo, amb l'app a la mà: «in this phone the
+// offline is not working, I can not search phrase». La cerca només preguntava a `/corpus/search`,
+// i sense xarxa no hi havia res a fer —ni amb xarxa dolenta, perquè la petició es penja i la
+// pantalla amb ella, i el Render triga mig minut a despertar-se. Ara es cerca de seguida a la
+// còpia del telèfon, que és la biblioteca sencera, i quan el servidor respon es posa la seva
+// resposta, que és la bona. Sense senyal, la del telèfon es queda, i es diu.
 //
 // I quan no hi és, no es diu «cap resultat» i avall: es diu que ningú no ho ha dit encara, i
 // s'ofereixen les dues sortides que el projecte té — demanar-la (algú que ho sàpiga la gravarà)
@@ -30,18 +38,44 @@ export default function SearchPage() {
   const [rows, setRows] = useState<Drill[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [recording, setRecording] = useState<Drill | null>(null);
+  /** El que es veu ve de la còpia del telèfon i el servidor encara no ha dit la seva. */
+  const [delTelefon, setDelTelefon] = useState(false);
   const box = useRef<HTMLInputElement | null>(null);
+  /** Quina cerca és la vigent: una resposta que arriba tard no ha de trepitjar la nova. */
+  const torn = useRef(0);
 
   useEffect(() => { document.title = 'Cerca · Tamazight'; box.current?.focus(); }, []);
   useEffect(() => { setText(q); }, [q]);
 
   const look = useCallback((term: string) => {
-    if (!term.trim()) { setRows(null); return; }
+    const net = term.trim();
+    if (!net) { setRows(null); setDelTelefon(false); return; }
+    const meu = ++torn.current;
+    let servidorJaHaDit = false;
     setBusy(true);
-    api.corpusSearch({ q: term.trim(), limit: 40 })
-      .then(setRows)
-      .catch((e) => { setRows([]); toast.error(whyItFailed(e, 'No s’ha pogut cercar')); })
-      .finally(() => setBusy(false));
+    setDelTelefon(false);
+
+    // La còpia del telèfon: respon a l'instant i va sense xarxa.
+    cercaLocal(net).then((locals) => {
+      if (torn.current !== meu || servidorJaHaDit) return;
+      setRows(locals); setDelTelefon(true); setBusy(false);
+    }).catch(() => { /* sense còpia, s'espera el servidor */ });
+
+    api.corpusSearch({ q: net, limit: 40 })
+      .then((r) => {
+        if (torn.current !== meu) return;
+        servidorJaHaDit = true;
+        setRows(r); setDelTelefon(false);
+      })
+      .catch((e) => {
+        if (torn.current !== meu) return;
+        // Sense servidor es queda el que ha trobat el telèfon; només es crida si tampoc hi havia còpia.
+        setRows((prev) => {
+          if (prev === null) toast.error(whyItFailed(e, 'No s’ha pogut cercar'));
+          return prev ?? [];
+        });
+      })
+      .finally(() => { if (torn.current === meu) setBusy(false); });
   }, []);
 
   useEffect(() => { look(q); }, [q, look]);
@@ -96,6 +130,7 @@ export default function SearchPage() {
         <>
           <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: '0 0 8px' }}>
             {rows.length === 40 ? 'Les primeres 40' : `${rows.length} ${rows.length === 1 ? 'frase' : 'frases'}`}
+            {delTelefon && ' · de la còpia del telèfon'}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {rows.map((d) => (
