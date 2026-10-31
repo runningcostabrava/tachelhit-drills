@@ -913,6 +913,33 @@ def attach_library(db, body: Optional[Dict], rows: List) -> Optional[Dict]:
         if d is not None:
             from_drill(line, d)
             line["from_drill_id"] = d.id
+
+    # Una PARAULA del llibre que ningú no ha gravat sola, però que sona dins d'una frase nostra.
+    #
+    # El catàleg té milers de frases i gairebé cap paraula sola: de 224 línies del llibre sense
+    # veu, 12 tenien una gravació que digués exactament això i 58 més sortien dins d'una frase
+    # gravada (#534). La frase no substitueix la paraula: va al costat, amb qui la diu, igual
+    # que el capítol dels sons fa amb les lletres. Només paraules soles, i només frases que es
+    # poden entendre (amb català).
+    sense = [l for l in lines if not l.get("audio_url") and not l.get("heard")
+             and len(practice.words_of(l.get("shi") or "")) == 1]
+    if sense:
+        _short_drills(db, set())   # fa l'índex de paraules si no hi és
+        by_word = _short_index.get("by_word") or {}
+        for line in sense:
+            k = _said_key(line.get("shi"))
+            cands = by_word.get(k) or []
+            if not cands:
+                continue
+            # la més curta, i amb imatge si pot ser: una paraula se sent millor en quatre que en catorze
+            d = min(cands, key=lambda x: (len((x.text_tachelhit or "").split()), 0 if x.image_url else 1, x.id))
+            qui = d.speaker or d.author
+            captura = (qui or "").strip().lower() == "auto capture"
+            line["heard"] = {
+                "drill_id": d.id, "shi": d.text_tachelhit, "ca": d.text_catalan, "audio_url": d.audio_url,
+                "speaker": None if captura else qui, "captured": captura, "region": d.region, "what": "paraula",
+                "tif": (transliteration.to_forms(d.text_tachelhit or "")["tifinagh"] or "").strip() or None,
+            }
     return body
 
 
@@ -966,18 +993,19 @@ SHORT_LINE = 60
 class _Said:
     """El poc que una línia del capítol necessita d'una frase: qui la diu i on sona."""
     __slots__ = ("id", "text_tachelhit", "audio_url", "image_url", "speaker", "author",
-                 "region", "variety")
+                 "region", "variety", "text_tachelhit_latin", "text_catalan")
 
     def __init__(self, row):
         (self.id, self.text_tachelhit, self.audio_url, self.image_url,
-         self.speaker, self.author, self.region, self.variety) = row
+         self.speaker, self.author, self.region, self.variety,
+         self.text_tachelhit_latin, self.text_catalan) = row
 
 
 #: L'índex de «què diu cada frase curta gravada» es guarda entre peticions, perquè refer-lo vol
 #: dir llegir unes quantes milers de files i passar-les pel normalitzador a cada capítol que
 #: algú obre. El que decideix si encara val és un segell barat —quantes n'hi ha i quan es va
 #: tocar la darrera— de manera que una frase acabada de gravar hi entra de seguida.
-_short_index: Dict[str, object] = {"stamp": None, "by_key": {}}
+_short_index: Dict[str, object] = {"stamp": None, "by_key": {}, "by_word": {}}
 
 
 def _short_stamp(db) -> tuple:
@@ -997,17 +1025,30 @@ def _short_drills(db, keys: set) -> List:
         if _short_index["stamp"] != stamp:
             rows = (db.query(DrillModel.id, DrillModel.text_tachelhit, DrillModel.audio_url,
                              DrillModel.image_url, DrillModel.speaker, DrillModel.author,
-                             DrillModel.region, DrillModel.variety)
+                             DrillModel.region, DrillModel.variety,
+                             DrillModel.text_tachelhit_latin, DrillModel.text_catalan)
                     .filter(DrillModel.text_tachelhit.isnot(None))
                     .filter(DrillModel.audio_url.isnot(None))
                     .filter(func.length(DrillModel.text_tachelhit) <= SHORT_LINE)
                     .all())
             by_key: Dict[str, object] = {}
+            by_word: Dict[str, List[object]] = {}
             for r in rows:
-                for k in _said_keys(r[1]):
-                    if k not in by_key:
-                        by_key[k] = _Said(r)
-            _short_index["by_key"], _short_index["stamp"] = by_key, stamp
+                d = _Said(r)
+                # El que diu, escrit com sigui: milers de frases gravades (MTNRA, Common Voice,
+                # IRCAM) porten tifinag a `text_tachelhit` i el llatí a `text_tachelhit_latin`;
+                # la clau de so les fa iguals, però la segona grafia s'ha de mirar també (#534).
+                for text in (r[1], r[8]):
+                    for k in _said_keys(text):
+                        if k not in by_key:
+                            by_key[k] = d
+                # i cada paraula que conté, per poder fer sentir una paraula del llibre DINS
+                # d'una frase nostra quan ningú no l'ha gravada sola
+                if (r[9] or "").strip():
+                    for w in set(_said_key(r[1]).split()):
+                        if len(w) >= 2:
+                            by_word.setdefault(w, []).append(d)
+            _short_index["by_key"], _short_index["by_word"], _short_index["stamp"] = by_key, by_word, stamp
     except Exception as e:   # una base de dades que no respon no deixa el capítol sense servir
         print(f"[METHOD] no s'ha pogut buscar veus a la biblioteca: {str(e)[:120]}")
         return []

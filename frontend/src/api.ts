@@ -271,6 +271,8 @@ export interface MethodHeard {
   audio_url?: string | null; speaker?: string | null; region?: string | null;
   /** La frase es va retallar d'un vídeo: hi ha una veu humana i no sabem de qui és. */
   captured?: boolean;
+  /** Què s'hi sent dins: un so (el capítol de les lletres) o una paraula sencera del llibre (#534). */
+  what?: 'so' | 'paraula';
 }
 /** La veu del CD del manual dient aquesta línia. El crèdit hi va a dins, no a part: qui dibuixa
  *  el botó no el pot deixar fora. */
@@ -370,7 +372,7 @@ export interface MethodContent {
   };
   /** Els exercicis del llibre, per fer-los de debò i no per mirar-los (#380). */
   exercises?: MethodExercise[];
-  vocabulary?: { shi: string; ca: string; audio_url?: string | null; drill_id?: number; tif?: string | null; image_url?: string | null; speaker?: string | null; region?: string | null; from_drill_id?: number }[];
+  vocabulary?: { shi: string; ca: string; audio_url?: string | null; drill_id?: number; tif?: string | null; image_url?: string | null; speaker?: string | null; region?: string | null; from_drill_id?: number; heard?: MethodHeard | null }[];
   source_note?: string;
   source_pages?: string;
   updated_at?: string | null;
