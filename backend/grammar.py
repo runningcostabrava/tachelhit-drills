@@ -128,11 +128,22 @@ def parse(s: Optional[str]) -> List[str]:
     return [x.strip() for x in (s or "").split(",") if x.strip() and x.strip() in TITLES]
 
 
+#: Res gravat en càmera d'aquest canal va al curs.
+CANAL_FORA = "tamazight for all"
+
+
+def canal_fora(d) -> bool:
+    return any(CANAL_FORA in (getattr(d, c, "") or "").lower() for c in ("author", "source_channel", "speaker"))
+
+
 def not_excluded(query, DrillModel):
     """Keep drills whose tag doesn't name an excluded language."""
     from sqlalchemy import or_
     for t in EXCLUDED_TAGS:
         query = query.filter(or_(DrillModel.tag.is_(None), ~DrillModel.tag.ilike(f"%{t}%")))
+    # La regió no ho pot dir: 723 files del canal porten «Ait Mraw» sense que res ho provi.
+    for camp in (DrillModel.author, DrillModel.source_channel, DrillModel.speaker):
+        query = query.filter(or_(camp.is_(None), ~camp.ilike(f"%{CANAL_FORA}%")))
     return query
 
 
@@ -691,7 +702,7 @@ def example_dict(d) -> dict:
     the word-by-word reading when the library has one, and the sentence in Tifinagh."""
     # Tamazight only. `audio_tts_url` is the CATALAN reading of the meaning: in a lesson it would
     # say the answer out loud in the wrong language, and «escolta i tria el sentit» would be a joke.
-    audio = d.audio_url or getattr(d, "audio_tts_shi_url", None)
+    audio = d.audio_url
     return {"id": d.id, "shi": _clean_text(d.text_tachelhit), "ca": _clean_text(d.text_catalan),
             "image_url": d.image_url, "audio_url": audio, "recorded": bool(d.audio_url),
             "author": (d.author or "").strip() or None, "region": d.region, "origin": origin(d),
@@ -740,6 +751,8 @@ def qui_ho_diu(d) -> Dict:
     qui = (getattr(d, "speaker", None) or getattr(d, "author", None) or "").strip()
     if not veu:
         return {"qui": qui or None, "mena": "cap", "per_imitar": False}
+    if canal_fora(d):
+        return {"qui": qui or None, "mena": "canal", "per_imitar": False}
     if our_speaker(d) or "mraw" in (getattr(d, "region", "") or "").lower():
         return {"qui": qui or None, "mena": "nostra", "per_imitar": True}
     if not qui or qui.lower() in PROCESSOS:
@@ -760,6 +773,8 @@ def per_imitar(d) -> bool:
 def origin(d) -> str:
     """Where a drill's sentence comes from, for the lesson writer and the card."""
     tag = (d.tag or "").lower(); region = (d.region or "").strip()
+    if canal_fora(d):
+        return "Tamazight For All"
     if our_speaker(d) or "mraw" in region.lower():
         return AIT_MRAW
     if "benimellal" in tag or region.lower().startswith("beni mellal"):
