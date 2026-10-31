@@ -174,7 +174,7 @@ function SessioDEscoltar() {
       try {
         if (params.get('daily')) {
           const due = await api.reviewsDue(10);
-          const ids = due.filter((d) => d.text_tachelhit && (d.audio_url || d.audio_tts_shi_url)).map((d) => d.id);
+          const ids = due.filter((d) => d.text_tachelhit && d.audio_url).map((d) => d.id);
           if (!ids.length) { setLoadError('Avui no tens cap frase pendent. Tria un dia, un tema o una unitat.'); return; }
           const s = await api.practiceSession(`ids=${ids.join(',')}`);
           setDrills(s.drills); setCards(s.cards);
@@ -196,7 +196,7 @@ function SessioDEscoltar() {
   // frase. El que no pot fer és passar per una persona: el nom del parlant surt igualment de la
   // targeta, i comparar la teva pronúncia amb una síntesi mentre la pantalla et posa el nom d'algú
   // al costat és ensenyar-te a imitar una màquina sense dir-t'ho.
-  const voice = drill ? (drill.audio_url || drill.audio_tts_shi_url || '') : '';
+  const voice = drill ? (drill.audio_url || '') : '';
   const bySynth = !!voice && !drill?.audio_url;
   const speakerLabel = bySynth
     ? 'una veu de màquina · encara ningú no l’ha gravada'

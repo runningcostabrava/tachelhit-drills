@@ -47,25 +47,26 @@ UNITS: List[dict] = [
      "hint": "my, your, his/her, our house; kinship possessives (baba, mma, gma-s); 'of' with n"},
     {"slug": "preposicions", "title": "Les preposicions (s, g/ɣ, dar/ɣur, d, i, f, zg)", "chapters": [6], "level": 2,
      "hint": "in, to, at, with, for, from, on, under, before/after, and their pronoun forms (dar-i, fll-as)"},
-    {"slug": "ser-tenir", "title": "«Ser», «estar» i «tenir»: iga, illa, ɣur-i, dar-i", "chapters": [5, 7], "level": 1,
+    {"slug": "ser-tenir", "title": "«Ser», «estar» i «tenir»: ija/iga, illa, ghori/ɣur-i", "chapters": [5, 7], "level": 1,
      "hint": "to be / there is / to have: iga, illa, ɣur-i / dar-i (I have), ur illi, nominal sentences without a verb"},
     {"slug": "aorist-ad", "title": "L'aorist amb ad: futur, voluntat i ordre indirecte", "chapters": [5], "level": 2,
      "hint": "ad + aorist for future, wish or purpose: ad dduɣ (I will go), rad / ad, 'I want to'"},
-    {"slug": "perfectiu", "title": "El perfectiu: accions acabades (passat)", "chapters": [5], "level": 2,
-     "hint": "the perfective (accomplished): I went, she said, we ate; a finished action"},
+    {"slug": "perfectiu", "title": "El perfectiu: accions fetes i estats", "chapters": [5], "level": 2,
+     "hint": "the perfective (accomplished): I went, she said, we ate; a finished action, or a state that already holds, "
+             "so often but not always a past (ija 'is', mani s tdit 'where are you going?')"},
     {"slug": "imperfectiu-habitual", "title": "L'imperfectiu i l'habitual (da / ar + verb)", "chapters": [5], "level": 2,
      "hint": "habitual or ongoing actions with da / ar / la + intensive stem: I usually go, he is eating, every day"},
     {"slug": "imperatiu", "title": "L'imperatiu: ordres i peticions", "chapters": [5], "level": 1,
      "hint": "ONLY a real command or request said to someone, in a sentence: come here!, give me water, sit down, don't go "
              "(ur + aorist / imperfective). A verb given alone as a dictionary entry ('to eat' = šš, 'to go' = ddu) or a "
              "conjugation list is vocabulary, NOT a command: never 'imperatiu'"},
-    {"slug": "negacio", "title": "La negació: ur …, ur … ša / bu", "chapters": [5, 7], "level": 2,
+    {"slug": "negacio", "title": "La negació: ur i les paraules que l'acompanyen", "chapters": [5, 7], "level": 2,
      "hint": "negative sentences: not, never, nothing, nobody, no longer (ur, ur jjun, walu, ur ta)"},
-    {"slug": "preguntes", "title": "Les preguntes: is, ma, mani, manik, mšta, maymi", "chapters": [6, 7], "level": 1,
+    {"slug": "preguntes", "title": "Les preguntes: is, mayd, mani, manimsh, mšta, makh", "chapters": [6, 7], "level": 1,
      "hint": "yes/no questions with is; question words: what, who, where, how, how much, when, why"},
     {"slug": "clitics-objecte", "title": "Els pronoms d'objecte (-t, -tt, -i, -ak, -as) i la seva posició", "chapters": [4], "level": 3,
      "hint": "direct and indirect object clitics attached to the verb or attracted before it: give it to me, he saw her, tell him"},
-    {"slug": "relatiu-participi", "title": "El relatiu i el participi: lli, ay-, verb en -n", "chapters": [4, 7], "level": 3,
+    {"slug": "relatiu-participi", "title": "El relatiu i la forma en -n: nna, ayda, verb en -n", "chapters": [4, 7], "level": 3,
      "hint": "relative clauses and participles: the man who came (argaz lli d yuškan), what, the one that"},
     {"slug": "adjectius-qualitat", "title": "Qualitats: adjectius, verbs d'estat i comparació", "chapters": [3, 5], "level": 2,
      "hint": "big, small, good, beautiful, more than; stative verbs of quality (imqqur, iḥla)"},
@@ -127,11 +128,22 @@ def parse(s: Optional[str]) -> List[str]:
     return [x.strip() for x in (s or "").split(",") if x.strip() and x.strip() in TITLES]
 
 
+#: Res gravat en càmera d'aquest canal va al curs.
+CANAL_FORA = "tamazight for all"
+
+
+def canal_fora(d) -> bool:
+    return any(CANAL_FORA in (getattr(d, c, "") or "").lower() for c in ("author", "source_channel", "speaker"))
+
+
 def not_excluded(query, DrillModel):
     """Keep drills whose tag doesn't name an excluded language."""
     from sqlalchemy import or_
     for t in EXCLUDED_TAGS:
         query = query.filter(or_(DrillModel.tag.is_(None), ~DrillModel.tag.ilike(f"%{t}%")))
+    # La regió no ho pot dir: 723 files del canal porten «Ait Mraw» sense que res ho provi.
+    for camp in (DrillModel.author, DrillModel.source_channel, DrillModel.speaker):
+        query = query.filter(or_(camp.is_(None), ~camp.ilike(f"%{CANAL_FORA}%")))
     return query
 
 
@@ -690,7 +702,7 @@ def example_dict(d) -> dict:
     the word-by-word reading when the library has one, and the sentence in Tifinagh."""
     # Tamazight only. `audio_tts_url` is the CATALAN reading of the meaning: in a lesson it would
     # say the answer out loud in the wrong language, and «escolta i tria el sentit» would be a joke.
-    audio = d.audio_url or getattr(d, "audio_tts_shi_url", None)
+    audio = d.audio_url
     return {"id": d.id, "shi": _clean_text(d.text_tachelhit), "ca": _clean_text(d.text_catalan),
             "image_url": d.image_url, "audio_url": audio, "recorded": bool(d.audio_url),
             "author": (d.author or "").strip() or None, "region": d.region, "origin": origin(d),
@@ -739,6 +751,8 @@ def qui_ho_diu(d) -> Dict:
     qui = (getattr(d, "speaker", None) or getattr(d, "author", None) or "").strip()
     if not veu:
         return {"qui": qui or None, "mena": "cap", "per_imitar": False}
+    if canal_fora(d):
+        return {"qui": qui or None, "mena": "canal", "per_imitar": False}
     if our_speaker(d) or "mraw" in (getattr(d, "region", "") or "").lower():
         return {"qui": qui or None, "mena": "nostra", "per_imitar": True}
     if not qui or qui.lower() in PROCESSOS:
@@ -759,6 +773,8 @@ def per_imitar(d) -> bool:
 def origin(d) -> str:
     """Where a drill's sentence comes from, for the lesson writer and the card."""
     tag = (d.tag or "").lower(); region = (d.region or "").strip()
+    if canal_fora(d):
+        return "Tamazight For All"
     if our_speaker(d) or "mraw" in region.lower():
         return AIT_MRAW
     if "benimellal" in tag or region.lower().startswith("beni mellal"):
@@ -1001,9 +1017,9 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str, tables: Optiona
         f"Write the lesson «{unit['title']}» of a course of Central Atlas Tamazight (the speech of Aït Mraw near "
         "Boutharar, Tinghir, and of Beni Mellal) for Catalan-speaking adults who are NOT linguists: a curious "
         "traveller, a partner of a Tamazight speaker. Plain, warm Catalan; short sentences; explain every grammatical "
-        "word the first time you use it («el perfectiu, la forma que es fa servir per a accions acabades…»). Never use "
-        "these words: " + ", ".join(BANNED_TERMS) + ". Say «pronom enganxat al verb» instead of clític, «forma de "
-        "passat / acció acabada» instead of acomplert, and so on.\n\n"
+        "word the first time you use it («el perfectiu, la forma de les accions fetes i dels estats…»). Never use "
+        "these words: " + ", ".join(BANNED_TERMS) + ". Say «pronom enganxat al verb» instead of clític, «forma "
+        "d'acció feta o d'estat» instead of acomplert, and so on.\n\n"
         "METHOD. The study sheet below condenses the grammar reference and ends with the steps the point breaks "
         "into: follow them, one explanation each. The sentences below are what OUR speakers "
         "actually say. Your job is to show how the rules of the sheet appear in OUR sentences: every explanation "

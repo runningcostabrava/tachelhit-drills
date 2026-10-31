@@ -102,7 +102,7 @@ export default function PracticeGroupPage() {
         <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', background: 'var(--surface)' }}>
           {drills.map((d, i) => {
             const c = cards[i];
-            const voice = d.audio_url || d.audio_tts_shi_url;
+            const voice = d.audio_url;
             return (
               <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderTop: i ? '1px solid var(--border)' : 'none' }}>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 44, flexShrink: 0 }}>#{d.id}</span>

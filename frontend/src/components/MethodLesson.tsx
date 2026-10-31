@@ -304,13 +304,14 @@ function HeardHere({ h }: { h: MethodHeard }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexBasis: '100%',
                    marginTop: 2, fontSize: 11.5, color: 'var(--text-muted)' }}>
-      <AmbSo url={h.audio_url}><button onClick={play} aria-label={`Escolta el so dins de «${h.shi}»`} title={`Ho diu ${credit}`}
+      <AmbSo url={h.audio_url}><button onClick={play} aria-label={`Escolta ${h.what === 'paraula' ? 'la paraula' : 'el so'} dins de «${h.shi}»`} title={`Ho diu ${credit}`}
               style={{ ...iconBtn, width: 20, height: 20, border: 'none', flexShrink: 0,
                        background: playing ? 'var(--brand-1)' : 'var(--brand-gradient)', color: '#fff' }}>
         <FaPlay size={7} />
       </button></AmbSo>
       <span>
-        el so, dins d’una frase nostra: <span lang="shi" style={{ fontWeight: 700, color: 'var(--brand-1)' }}>{h.shi}</span>
+        {h.what === 'paraula' ? 'la paraula, dins d’una frase nostra: ' : 'el so, dins d’una frase nostra: '}
+        <span lang="shi" style={{ fontWeight: 700, color: 'var(--brand-1)' }}>{h.shi}</span>
         {h.ca ? ` «${h.ca}»` : ''} · ho diu {credit}
       </span>
     </span>
@@ -420,8 +421,13 @@ function BookLine({
   const credit = speaker
     ? `${speaker}${region ? ` · ${region}` : ''}`
     : 'una de les nostres veus';
+  // I un quart estat que no és cap dels tres: la diu l'autor del llibre (el CD) i cap parlant
+  // nostre. «Sense veu encara» amb un botó del CD a sota es llegia com «no es pot escoltar», i
+  // l'amo ho va preguntar (#534): la veu hi és, el que falta és la nostra.
   const voice = !audio ? (
-    <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>Encara no l’ha dita ningú</span>
+    <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+      {cd ? 'La diu l’autor del llibre; encara no l’ha dita cap parlant nostre' : 'Encara no l’ha dita ningú'}
+    </span>
   ) : failed ? (
     <span style={{ fontSize: 11.5, color: 'var(--amber, var(--text-soft))' }}>
       La diu {credit}, però ara el so no es carrega. Torna-ho a provar.
@@ -437,7 +443,7 @@ function BookLine({
   // tornarien a ser el mateix justament allà on s'han separat, i el nom s'ha de quedar, que la
   // persona sí que la va dir. Encara que sigui la línia més llarga de les sis.
   const voiceShort = !audio
-    ? 'sense veu encara'
+    ? (cd ? 'només la veu de l’autor; cap parlant nostre encara' : 'sense veu encara')
     : failed ? `ho diu ${credit}, però ara el so no es carrega` : `ho diu ${credit}`;
 
   const tools = (
@@ -769,6 +775,7 @@ export default function MethodLesson({
                           shi={v.shi} ca={v.ca} tif={v.tif}
                           drillId={v.drill_id} canEdit={canEdit}
                           audio={v.audio_url} image={v.image_url} speaker={v.speaker} region={v.region}
+                          heard={v.heard}
                           failed={!!broken[`vocabulary:${k}`]}
                           playing={sounding === `vocabulary:${k}`} onPlay={() => playOne(`vocabulary:${k}`)}
                           onSave={(shi, ca) => saveLine(where, shi, ca)}

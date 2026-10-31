@@ -45,7 +45,7 @@ _DEMOTIC = {
     # Arabic chat-alphabet numerals
     "3": "ɛ", "7": "ḥ", "9": "q", "5": "x", "8": "ɣ",
     # academic Berber-Latin pass-through
-    "ḥ": "ḥ", "ɛ": "ɛ", "ɣ": "ɣ", "ḍ": "ḍ", "ṭ": "ṭ", "ṣ": "ṣ",
+    "ḥ": "ḥ", "ɛ": "ɛ", "ɣ": "ɣ", "ḫ": "x", "ḍ": "ḍ", "ṭ": "ṭ", "ṣ": "ṣ",
     "ṛ": "ṛ", "ẓ": "ẓ", "š": "š", "ž": "j", "ʒ": "j", "č": "š",
     # Les lletres GREGUES que tothom escriu en comptes de les llatines, i la ġ de molts
     # reculls. Semblen iguals a la pantalla i no ho són (γ U+03B3 ≠ ɣ U+0263), i el que el mapa

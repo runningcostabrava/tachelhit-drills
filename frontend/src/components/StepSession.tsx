@@ -77,14 +77,10 @@ export default function StepSession({ testId, title, onExit }: Props) {
   // compara't amb la veu de debò» feia sonar una síntesi: qui ho feia s'emmotllava a una
   // pronúncia de màquina creient que imitava algú. En una llengua que documentem a partir de
   // parlants, és exactament el que no podem fer (docs/SCOPE.md).
+  // Ni per escoltar: cap veu sintètica en amazic. Sense gravació d'una persona, el pas queda mut (#532).
   //
-  // L'asimetria és volguda: per ESCOLTAR, la veu de màquina fa servei i només cal dir-ho; per
-  // IMITAR, o hi ha una gravació d'una persona o el pas no pot fer el que promet.
   const human = drill?.audio_url || '';
-  const machine = drill?.audio_tts_shi_url || '';
-  const imitating = step?.kind === 'say_it' || step?.kind === 'look_say';
-  const voice = imitating ? human : (human || machine);
-  const bySynth = !!voice && voice === machine;
+  const voice = human;
 
   const play = useCallback((rate = 1) => {
     if (!voice) return;
@@ -375,14 +371,6 @@ export default function StepSession({ testId, title, onExit }: Props) {
                 <AmbSo url={voice} dins><button onClick={() => play(1)} style={{ ...btn('primary'), flex: 1, height: 44, fontSize: 14 }}><FaPlay size={12} /> Torna-ho a sentir</button></AmbSo>
                 <AmbSo url={voice} dins><button onClick={() => play(0.7)} style={{ ...btn('ghost'), flex: 1, height: 44, fontSize: 14 }}>A poc a poc</button></AmbSo>
               </div>
-              {/* Escoltar per entendre no és imitar, i per això la veu de màquina pot quedar-s'hi
-                  —però dient-ho. Mentre no ho digui és la mateixa mentida que un botó que promet
-                  el capítol i fa sonar una altra cosa. */}
-              {bySynth && (
-                <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
-                  Aquesta la diu una veu de màquina: ningú no l’ha gravada encara.
-                </p>
-              )}
             </div>
           )}
 
