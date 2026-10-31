@@ -136,6 +136,150 @@
         "end": 103.32,
         "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793312970/tachelhit/cd_metode/e6nuUVOFB0U_101-92_103-32.mp3",
         "com": "sentit"
+      },
+      "tensio:col0:0": {
+        "pista": "e6nuUVOFB0U",
+        "start": 128.11,
+        "end": 128.47,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437543/tachelhit/cd_metode/e6nuUVOFB0U_128-11_128-47.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "gru",
+        "linia": "gru"
+      },
+      "tensio:col0:1": {
+        "pista": "e6nuUVOFB0U",
+        "start": 134.09,
+        "end": 134.47,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437544/tachelhit/cd_metode/e6nuUVOFB0U_134-09_134-47.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "imi",
+        "linia": "imi"
+      },
+      "tensio:col1:0": {
+        "pista": "e6nuUVOFB0U",
+        "start": 128.11,
+        "end": 128.47,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437543/tachelhit/cd_metode/e6nuUVOFB0U_128-11_128-47.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "gru",
+        "linia": "ggru"
+      },
+      "tensio:col1:1": {
+        "pista": "e6nuUVOFB0U",
+        "start": 134.09,
+        "end": 134.47,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437544/tachelhit/cd_metode/e6nuUVOFB0U_134-09_134-47.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "imi",
+        "linia": "immi"
+      },
+      "emfatiques:example:2": {
+        "pista": "e6nuUVOFB0U",
+        "start": 209.0,
+        "end": 209.57,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437547/tachelhit/cd_metode/e6nuUVOFB0U_209-00_209-57.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "azur",
+        "linia": "aẓur"
+      },
+      "emfatiques:example:3": {
+        "pista": "e6nuUVOFB0U",
+        "start": 214.83,
+        "end": 215.29,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437548/tachelhit/cd_metode/e6nuUVOFB0U_214-83_215-29.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "izi",
+        "linia": "iẓi"
+      },
+      "emfatiques:col0:0": {
+        "pista": "e6nuUVOFB0U",
+        "start": 161.04,
+        "end": 161.46,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437549/tachelhit/cd_metode/e6nuUVOFB0U_161-04_161-46.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "mḍi",
+        "linia": "mdi"
+      },
+      "emfatiques:col0:2": {
+        "pista": "e6nuUVOFB0U",
+        "start": 203.26,
+        "end": 203.7,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437550/tachelhit/cd_metode/e6nuUVOFB0U_203-26_203-70.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "bdu",
+        "linia": "bdu"
+      },
+      "emfatiques:col1:0": {
+        "pista": "e6nuUVOFB0U",
+        "start": 161.04,
+        "end": 161.46,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437549/tachelhit/cd_metode/e6nuUVOFB0U_161-04_161-46.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "mḍi",
+        "linia": "mḍi"
+      },
+      "emfatiques:col1:1": {
+        "pista": "e6nuUVOFB0U",
+        "start": 198.67,
+        "end": 199.47,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437551/tachelhit/cd_metode/e6nuUVOFB0U_198-67_199-47.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "adan",
+        "linia": "aḍan"
+      },
+      "emfatiques:col1:2": {
+        "pista": "e6nuUVOFB0U",
+        "start": 203.26,
+        "end": 203.7,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437550/tachelhit/cd_metode/e6nuUVOFB0U_203-26_203-70.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "bdu",
+        "linia": "bḍu"
+      },
+      "labiovelars:example:4": {
+        "pista": "e6nuUVOFB0U",
+        "start": 243.1,
+        "end": 243.72,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437553/tachelhit/cd_metode/e6nuUVOFB0U_243-10_243-72.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "aqwrad",
+        "linia": "aqwrab"
+      },
+      "labiovelars:col0:1": {
+        "pista": "e6nuUVOFB0U",
+        "start": 260.12,
+        "end": 260.47,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437554/tachelhit/cd_metode/e6nuUVOFB0U_260-12_260-47.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "ġi",
+        "linia": "ɣi"
+      },
+      "alfabet:example:11": {
+        "pista": "e6nuUVOFB0U",
+        "start": 134.09,
+        "end": 134.47,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437544/tachelhit/cd_metode/e6nuUVOFB0U_134-09_134-47.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "imi",
+        "linia": "imi"
+      },
+      "vocabulary:0": {
+        "pista": "e6nuUVOFB0U",
+        "start": 134.09,
+        "end": 134.47,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437544/tachelhit/cd_metode/e6nuUVOFB0U_134-09_134-47.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "imi",
+        "linia": "imi"
+      },
+      "vocabulary:1": {
+        "pista": "e6nuUVOFB0U",
+        "start": 134.09,
+        "end": 134.47,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437544/tachelhit/cd_metode/e6nuUVOFB0U_134-09_134-47.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "imi",
+        "linia": "immi"
       }
     },
     "salutacions": {
@@ -282,6 +426,123 @@
         "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313138/tachelhit/cd_metode/mDMcR7vNA_A_105-39_106-65.mp3",
         "com": "sentit",
         "sobra": true
+      },
+      "dialogue:6": {
+        "pista": "mDMcR7vNA_A",
+        "start": 83.02,
+        "end": 84.28,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437557/tachelhit/cd_metode/mDMcR7vNA_A_83-02_84-28.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "addyawi rbbi isslamt",
+        "linia": "add yawi ṛbbi sslamt."
+      },
+      "dialogue:7": {
+        "pista": "mDMcR7vNA_A",
+        "start": 23.78,
+        "end": 25.73,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437558/tachelhit/cd_metode/mDMcR7vNA_A_23-78_25-73.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "akkihdna rbbi ar tawal taḍnin",
+        "linia": "akk ihnna ṛbbi, ar tawaltt aḍnin."
+      },
+      "respostes:example:5": {
+        "pista": "mDMcR7vNA_A",
+        "start": 17.78,
+        "end": 18.92,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437559/tachelhit/cd_metode/mDMcR7vNA_A_17-78_18-92.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "thna kullu luqt",
+        "linia": "thnna kullu luqt"
+      },
+      "comiats:example:0": {
+        "pista": "mDMcR7vNA_A",
+        "start": 83.02,
+        "end": 84.28,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437557/tachelhit/cd_metode/mDMcR7vNA_A_83-02_84-28.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "addyawi rbbi isslamt",
+        "linia": "add yawi ṛbbi sslamt"
+      },
+      "comiats:example:1": {
+        "pista": "mDMcR7vNA_A",
+        "start": 90.9,
+        "end": 91.9,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437561/tachelhit/cd_metode/mDMcR7vNA_A_90-90_91-90.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "akihnna rbbi",
+        "linia": "akk ihnna ṛbbi"
+      },
+      "comiats:example:2": {
+        "pista": "mDMcR7vNA_A",
+        "start": 98.22,
+        "end": 99.33,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437562/tachelhit/cd_metode/mDMcR7vNA_A_98-22_99-33.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "ar tawal tadnin",
+        "linia": "ar tawaltt aḍnin"
+      },
+      "cortesia:example:1": {
+        "pista": "mDMcR7vNA_A",
+        "start": 118.49,
+        "end": 119.21,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437563/tachelhit/cd_metode/mDMcR7vNA_A_118-49_119-21.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "brrk darnġ",
+        "linia": "brrkat dar-nɣ"
+      },
+      "coneixer-se:col0:1": {
+        "pista": "mDMcR7vNA_A",
+        "start": 33.85,
+        "end": 35.03,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437564/tachelhit/cd_metode/mDMcR7vNA_A_33-85_35-03.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "biġir imma kmmi",
+        "linia": "bixir, imma kmmi?"
+      },
+      "ocasions:example:6": {
+        "pista": "mDMcR7vNA_A",
+        "start": 49.2,
+        "end": 49.85,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437565/tachelhit/cd_metode/mDMcR7vNA_A_49-20_49-85.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "ayεfu rbbi",
+        "linia": "a yɛfu ṛbbi"
+      },
+      "escolta-tensio:example:5": {
+        "pista": "mDMcR7vNA_A",
+        "start": 83.02,
+        "end": 84.28,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437557/tachelhit/cd_metode/mDMcR7vNA_A_83-02_84-28.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "addyawi rbbi isslamt",
+        "linia": "add yawi ṛbbi sslamt"
+      },
+      "escolta-tensio:example:6": {
+        "pista": "mDMcR7vNA_A",
+        "start": 90.9,
+        "end": 91.9,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437561/tachelhit/cd_metode/mDMcR7vNA_A_90-90_91-90.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "akihnna rbbi",
+        "linia": "akk ihnna ṛbbi"
+      },
+      "escolta-tensio:example:8": {
+        "pista": "mDMcR7vNA_A",
+        "start": 98.22,
+        "end": 99.33,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437562/tachelhit/cd_metode/mDMcR7vNA_A_98-22_99-33.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "ar tawal tadnin",
+        "linia": "ar tawaltt aḍnin"
+      },
+      "escolta-tensio:example:10": {
+        "pista": "mDMcR7vNA_A",
+        "start": 105.49,
+        "end": 106.61,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437576/tachelhit/cd_metode/mDMcR7vNA_A_105-49_106-61.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "ar tikklitaḍnin",
+        "linia": "ar tiklitt aḍnin"
       }
     },
     "el-cami": {
@@ -501,6 +762,60 @@
         "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313152/tachelhit/cd_metode/mDMcR7vNA_A_359-30_360-52.mp3",
         "com": "sentit",
         "sobra": true
+      },
+      "dialogue:1": {
+        "pista": "mDMcR7vNA_A",
+        "start": 136.18,
+        "end": 137.11,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437577/tachelhit/cd_metode/mDMcR7vNA_A_136-18_137-11.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "amẓaġaras afasi",
+        "linia": "amẓ aɣaras afasi."
+      },
+      "dialogue:2": {
+        "pista": "mDMcR7vNA_A",
+        "start": 138.13,
+        "end": 139.4,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437578/tachelhit/cd_metode/mDMcR7vNA_A_138-13_139-40.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "akissrbhabba gwma",
+        "linia": "akk issrbḥ ṛbbi a gʷma."
+      },
+      "dreta:example:2": {
+        "pista": "mDMcR7vNA_A",
+        "start": 136.18,
+        "end": 137.11,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437577/tachelhit/cd_metode/mDMcR7vNA_A_136-18_137-11.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "amẓaġaras afasi",
+        "linia": "amẓ aɣaras afasi"
+      },
+      "quan:example:3": {
+        "pista": "mDMcR7vNA_A",
+        "start": 277.32,
+        "end": 279.21,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437579/tachelhit/cd_metode/mDMcR7vNA_A_277-32_279-21.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "lla tmġart ġunwal",
+        "linia": "tlla tmɣart ɣ-unwal"
+      },
+      "cortesia:example:3": {
+        "pista": "mDMcR7vNA_A",
+        "start": 138.13,
+        "end": 139.4,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437578/tachelhit/cd_metode/mDMcR7vNA_A_138-13_139-40.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "akissrbhabba gwma",
+        "linia": "akk issrbḥ ṛbbi a gʷma"
+      },
+      "feina:example:3": {
+        "pista": "mDMcR7vNA_A",
+        "start": 269.1,
+        "end": 270.67,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437581/tachelhit/cd_metode/mDMcR7vNA_A_269-10_270-67.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "illa urga zġ ssuq",
+        "linia": "illa urgaz ɣ-ssuq"
       }
     },
     "la-botiga": {
@@ -640,6 +955,69 @@
         "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313163/tachelhit/cd_metode/zkvUblbTdws_275-94_277-12.mp3",
         "com": "sentit",
         "sobra": true
+      },
+      "dialogue:1": {
+        "pista": "zkvUblbTdws",
+        "start": 8.34,
+        "end": 9.71,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437582/tachelhit/cd_metode/zkvUblbTdws_8-34_9-71.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "iyih maškattrit",
+        "linia": "yyih, mnckk a trit?"
+      },
+      "dialogue:3": {
+        "pista": "zkvUblbTdws",
+        "start": 16.0,
+        "end": 17.11,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437582/tachelhit/cd_metode/zkvUblbTdws_16-00_17-11.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "kuẓyadamya ili tru",
+        "linia": "kkuẓ idamiyya i-litru."
+      },
+      "is-dar:example:0": {
+        "pista": "zkvUblbTdws",
+        "start": 5.98,
+        "end": 6.79,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437583/tachelhit/cd_metode/zkvUblbTdws_5-98_6-79.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "isdark tudi",
+        "linia": "is dar-k tudit?"
+      },
+      "iri:example:0": {
+        "pista": "zkvUblbTdws",
+        "start": 35.15,
+        "end": 35.84,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437584/tachelhit/cd_metode/zkvUblbTdws_35-15_35-84.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "is trit aggrn",
+        "linia": "is trit aman?"
+      },
+      "mesures:col0:5": {
+        "pista": "JkXAk3CKIPA",
+        "start": 19.1,
+        "end": 19.76,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437585/tachelhit/cd_metode/JkXAk3CKIPA_19-10_19-76.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "radidkilu",
+        "linia": "kraḍ id kilu"
+      },
+      "dar:example:0": {
+        "pista": "zkvUblbTdws",
+        "start": 3.72,
+        "end": 4.63,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437586/tachelhit/cd_metode/zkvUblbTdws_3-72_4-63.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "darbuthanus",
+        "linia": "dar butḥanut"
+      },
+      "vocabulary:0": {
+        "pista": "e6nuUVOFB0U",
+        "start": 301.58,
+        "end": 302.19,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437587/tachelhit/cd_metode/e6nuUVOFB0U_301-58_302-19.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "buthanus",
+        "linia": "butḥanut"
       }
     },
     "que-fas": {
@@ -978,6 +1356,33 @@
         "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793313189/tachelhit/cd_metode/YioipkEhqME_103-46_104-87.mp3",
         "com": "sentit",
         "sobra": true
+      },
+      "habitud:example:2": {
+        "pista": "YioipkEhqME",
+        "start": 21.4,
+        "end": 22.2,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437588/tachelhit/cd_metode/YioipkEhqME_21-40_22-20.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "ar bahraitḫdam",
+        "linia": "ar bahra ittxdam"
+      },
+      "ura:example:4": {
+        "pista": "YioipkEhqME",
+        "start": 32.84,
+        "end": 33.73,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437588/tachelhit/cd_metode/YioipkEhqME_32-84_33-73.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "ur asuskarn yat",
+        "linia": "ura skarn yat"
+      },
+      "llengues:example:0": {
+        "pista": "YioipkEhqME",
+        "start": 239.76,
+        "end": 240.95,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793437590/tachelhit/cd_metode/YioipkEhqME_239-76_240-95.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "sent": "isa tsawal tašlhid",
+        "linia": "isa tsawalt taclḥit?"
       }
     }
   },
@@ -997,13 +1402,6 @@
         "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵡⴰⵙⵙ ⵉⵍⵓ ⵜⴼ ⵓⴽⵚⵔⴽ», que s'assembla a «ⵜⵜⵓ» en un 67%",
         "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
       },
-      "emfatiques:col0:0": {
-        "pista": "e6nuUVOFB0U",
-        "start": 198.67,
-        "end": 199.541,
-        "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵓⴷⵉⵏⴷⴰⵉⴰⵏⴰⵏⴷⵓ», que s'assembla a «ⵎⴷⵉ» en un 67%",
-        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
-      },
       "emfatiques:col0:1": {
         "pista": "e6nuUVOFB0U",
         "start": 201.02,
@@ -1011,46 +1409,11 @@
         "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵓⴷⵉⵏⴷⴰⵉⴰⵏⴰⵏⴷⵓ», que s'assembla a «ⴰⴷⴰⵏ» en un 75%",
         "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
       },
-      "emfatiques:col0:2": {
-        "pista": "e6nuUVOFB0U",
-        "start": 203.257,
-        "end": 203.87,
-        "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⵓⴷⵉⵏⴷⴰⵉⴰⵏⴰⵏⴷⵓ», que s'assembla a «ⴱⴷⵓ» en un 67%",
-        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
-      },
-      "emfatiques:col1:0": {
-        "pista": "e6nuUVOFB0U",
-        "start": 205.574,
-        "end": 206.134,
-        "com": "sentit a cegues: la màquina hi sent «ⵎⴹⵓ», que s'assembla a «ⵎⴹⵉ» en un 67%",
-        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
-      },
-      "emfatiques:example:2": {
-        "pista": "e6nuUVOFB0U",
-        "start": 172.32,
-        "end": 172.743,
-        "com": "sentit a cegues: la màquina hi sent «ⴰⵥⵓⵔ», que s'assembla a «ⴰⵥⵓⵔ» en un 100%",
-        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
-      },
-      "emfatiques:example:3": {
-        "pista": "e6nuUVOFB0U",
-        "start": 177.339,
-        "end": 177.79,
-        "com": "sentit a cegues: la màquina hi sent «ⵢⵥⵉ», que s'assembla a «ⵉⵥⵉ» en un 67%",
-        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
-      },
       "labiovelars:col0:0": {
         "pista": "e6nuUVOFB0U",
         "start": 257.477,
         "end": 257.777,
         "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⴽⵉⵛⵛ», que s'assembla a «ⴽⵜⵉ» en un 67%",
-        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
-      },
-      "labiovelars:col0:1": {
-        "pista": "e6nuUVOFB0U",
-        "start": 260.115,
-        "end": 260.504,
-        "com": "sentit a cegues: la màquina hi sent «ⵖⵉⵍ», que s'assembla a «ⵖⵉ» en un 67%",
         "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
       },
       "labiovelars:example:1": {
@@ -1074,32 +1437,11 @@
         "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
         "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
       },
-      "labiovelars:example:4": {
-        "pista": "e6nuUVOFB0U",
-        "start": 243.099,
-        "end": 243.765,
-        "com": "sentit a cegues: la màquina hi sent «ⴰⵇⵔⴰⵏ», que s'assembla a «ⴰⵇⵯⵔⴰⴱ» en un 67%",
-        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
-      },
-      "tensio:col0:1": {
-        "pista": "e6nuUVOFB0U",
-        "start": 104.632,
-        "end": 105.184,
-        "com": "sentit a cegues: la màquina hi sent «ⵉⵎⵉ», que s'assembla a «ⵉⵎⵉ» en un 100%",
-        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
-      },
       "tensio:col0:4": {
         "pista": "e6nuUVOFB0U",
         "start": 110.759,
         "end": 111.301,
         "com": "sentit a cegues: la màquina hi sent «ⵜⵉⵙⵙⵉ», que s'assembla a «ⵜⵉⵙⵉ» en un 80%",
-        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
-      },
-      "tensio:col1:1": {
-        "pista": "e6nuUVOFB0U",
-        "start": 136.156,
-        "end": 136.851,
-        "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⴷⵓⵏⵉⵎⵉ», que s'assembla a «ⵉⵎⵎⵉ» en un 75%",
         "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
       },
       "tensio:col1:2": {
@@ -1143,6 +1485,15 @@
         "end": 78.14,
         "com": "per veïnatge",
         "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "labiovelars:example:0": {
+        "pista": "e6nuUVOFB0U",
+        "start": 228.94,
+        "end": 229.35,
+        "com": "lectura rica amb acord 0.75: a la pàgina d'escolta",
+        "sent": "akur",
+        "linia": "akwr",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
       }
     },
     "salutacions": {
@@ -1151,13 +1502,6 @@
         "start": 30.889,
         "end": 33.075,
         "com": "sentit a cegues: la màquina hi sent «ⴰⵃ ⵍⵅⵉⵔ ⴰ ⵔⵕⵉⵎ ⵎⴰⵔⵣⴰⴳⵉⵏ», que s'assembla a «ⵚⴱⴰⵃ ⵍⵅⵉⵔ ⴰ ⴱⵔⴰⵀⵉⵎ ⵎⴰⵏⵣⴰⴽⵉⵏⵏ» en un 67%",
-        "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
-      },
-      "coneixer-se:col0:1": {
-        "pista": "mDMcR7vNA_A",
-        "start": 33.842,
-        "end": 35.047,
-        "com": "sentit a cegues: la màquina hi sent «ⵎⵉⵅⵉⵔ ⵉ ⵎⴰⵜⵎⵉ», que s'assembla a «ⴱⵉⵅⵉⵔ ⵉⵎⵎⴰ ⴽⵎⵎⵉ» en un 69%",
         "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
       },
       "coneixer-se:col1:2": {
@@ -1179,27 +1523,6 @@
         "start": 8.627,
         "end": 10.628,
         "com": "sentit a cegues: la màquina hi sent «ⵜⵉⵎⵙⵉ ⵡⵉⵏⵃⵎⴷ ⵎⴰⵏⵉⴽ ⴰⴷ ⵜ ⵢⵉⴷ ⵎ», que s'assembla a «ⵜⵉⵎⵉⵏⵙⵉⵡⵉⵏ ⴰ ⵃⵎⴰⴷ ⵎⴰⵏⵉⴽⴰ ⵜⴳⵉⵜ» en un 68%",
-        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
-      },
-      "dialogue:6": {
-        "pista": "mDMcR7vNA_A",
-        "start": 21.454,
-        "end": 22.527,
-        "com": "sentit a cegues: la màquina hi sent «ⴰⴷ ⴷ ⵢⴰⵡⵉ ⵡⵉⵙⵍⴰⵎⵎⵜ», que s'assembla a «ⴰⴷⴷ ⵢⴰⵡⵉ ⵕⴱⴱⵉ ⵙⵙⵍⴰⵎⵜ» en un 71%",
-        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
-      },
-      "dialogue:7": {
-        "pista": "mDMcR7vNA_A",
-        "start": 23.778,
-        "end": 25.759,
-        "com": "sentit a cegues: la màquina hi sent «ⴰⴽⴽ ⵉⴷ ⵏ ⵔⵕⴱⴱⵉ ⴰⵔ ⵜⴰⵡⴰ ⵟⴰⴱⵏ», que s'assembla a «ⴰⴽⴽ ⵉⵀⵏⵏⴰ ⵕⴱⴱⵉ ⴰⵔ ⵜⴰⵡⴰⵍⵜⵜ ⴰⴹⵏⵉⵏ» en un 65%",
-        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
-      },
-      "escolta-tensio:example:10": {
-        "pista": "mDMcR7vNA_A",
-        "start": 105.488,
-        "end": 106.636,
-        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
         "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
       },
       "escolta-tensio:example:11": {
@@ -1244,33 +1567,75 @@
         "com": "sentit a cegues: la màquina hi sent «ⵕⴱⴱⵉ», que s'assembla a «ⵕⴱⴱⵉ» en un 100%",
         "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
       },
-      "escolta-tensio:example:5": {
-        "pista": "mDMcR7vNA_A",
-        "start": 83.02,
-        "end": 84.298,
-        "com": "sentit a cegues: la màquina hi sent «ⴰⴷ ⴷ ⵢⴰⵡⵉ ⵔⵕⴱⴱⵉ ⵙⵍⴰⵎⵜ», que s'assembla a «ⴰⴷⴷ ⵢⴰⵡⵉ ⵕⴱⴱⵉ ⵙⵙⵍⴰⵎⵜ» en un 88%",
-        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
-      },
-      "escolta-tensio:example:6": {
-        "pista": "mDMcR7vNA_A",
-        "start": 90.901,
-        "end": 91.924,
-        "com": "sentit a cegues: la màquina hi sent «ⴰⴽⴽ ⵉⵀⵏⵏⴰ ⵔⵕⴱⴱⵉ», que s'assembla a «ⴰⴽⴽ ⵉⵀⵏⵏⴰ ⵕⴱⴱⵉ» en un 92%",
-        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
-      },
-      "escolta-tensio:example:8": {
-        "pista": "mDMcR7vNA_A",
-        "start": 98.213,
-        "end": 99.393,
-        "com": "sentit a cegues: la màquina hi sent «ⴰⵔ ⴷ ⴰⵡⴰⵍ ⵜⴰⴹⵏ», que s'assembla a «ⴰⵔ ⵜⴰⵡⴰⵍⵜⵜ ⴰⴹⵏⵉⵏ» en un 71%",
-        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
-      },
       "escolta-tensio:example:9": {
         "pista": "mDMcR7vNA_A",
         "start": 102.255,
         "end": 102.858,
         "com": "sentit a cegues: la màquina hi sent «ⵜⴽⵍⵉⵜ», que s'assembla a «ⵜⵉⴽⵍⵉⵜⵜ» en un 71%",
         "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "dialogue:3": {
+        "pista": "mDMcR7vNA_A",
+        "start": 15.55,
+        "end": 16.97,
+        "com": "lectura rica amb acord 0.692: a la pàgina d'escolta",
+        "sent": "biġir yuškr rbbi",
+        "linia": "bixir, nckr i-ṛbbi.",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
+      },
+      "dialogue:5": {
+        "pista": "mDMcR7vNA_A",
+        "start": 19.38,
+        "end": 20.22,
+        "com": "lectura rica amb acord 0.778: a la pàgina d'escolta",
+        "sent": "nas εtad",
+        "linia": "thnna, ssaɛt-ad.",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
+      },
+      "hores:example:3": {
+        "pista": "mDMcR7vNA_A",
+        "start": 51.59,
+        "end": 52.49,
+        "com": "lectura rica amb acord 0.5: a la pàgina d'escolta",
+        "sent": "imnsiwinazin",
+        "linia": "timinsiwin",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
+      },
+      "com-estas:col1:2": {
+        "pista": "mDMcR7vNA_A",
+        "start": 44.53,
+        "end": 45.9,
+        "com": "lectura rica amb acord 0.647: a la pàgina d'escolta",
+        "sent": "imma kmmi ṣṣaḥtnmlabas",
+        "linia": "ṣṣaḥt-nm labas?",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
+      },
+      "respostes:example:4": {
+        "pista": "mDMcR7vNA_A",
+        "start": 55.08,
+        "end": 55.7,
+        "com": "lectura rica amb acord 0.7: a la pàgina d'escolta",
+        "sent": "ulši biḫil",
+        "linia": "kulci bixir",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
+      },
+      "cortesia:example:0": {
+        "pista": "mDMcR7vNA_A",
+        "start": 115.4,
+        "end": 115.88,
+        "com": "lectura rica amb acord 0.667: a la pàgina d'escolta",
+        "sent": "brr",
+        "linia": "brrk",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
+      },
+      "vocabulary:0": {
+        "pista": "mDMcR7vNA_A",
+        "start": 51.59,
+        "end": 52.49,
+        "com": "lectura rica amb acord 0.5: a la pàgina d'escolta",
+        "sent": "imnsiwinazin",
+        "linia": "timinsiwin",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
       }
     },
     "el-cami": {
@@ -1280,13 +1645,6 @@
         "end": 135.11,
         "com": "sentit a cegues: la màquina hi sent «ⵎⴰⵏ ⴷ ⵉⵍⵍⴰ ⵓⵡⴰⵔⴰⵙ ⵏ ⵜⴼⵔⴰⵜ ⵉ ⵕⴱⴱⵉ», que s'assembla a «ⵎⴰⵏⵉⵖ ⵉⵍⵍⴰ ⵓⵖⴰⵔⴰⵙ ⵏⵜⴼⵔⴰⵡⵜ ⵉⵕⴱⴱⵉ» en un 85%",
         "per_que_fora": "part de les seves paraules no són al llibre que aquesta veu llegeix"
-      },
-      "dialogue:1": {
-        "pista": "mDMcR7vNA_A",
-        "start": 136.178,
-        "end": 137.357,
-        "com": "sentit a cegues: la màquina hi sent «ⴰⵎⵥ ⴰⵙⴰ ⴰⴼⴰⵙⵉ», que s'assembla a «ⴰⵎⵥ ⴰⵖⴰⵔⴰⵙ ⴰⴼⴰⵙⵉ» en un 71%",
-        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
       },
       "dialogue:3": {
         "pista": "mDMcR7vNA_A",
@@ -1337,13 +1695,6 @@
         "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
         "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
       },
-      "feina:example:3": {
-        "pista": "mDMcR7vNA_A",
-        "start": 341.346,
-        "end": 342.563,
-        "com": "col·locada entre dues línies segures: entre l'una i l'altra hi ha tants talls com línies, i el CD llegeix el llibre en ordre",
-        "per_que_fora": "part de les seves paraules no són al llibre que aquesta veu llegeix"
-      },
       "mani:example:0": {
         "pista": "mDMcR7vNA_A",
         "start": 157.468,
@@ -1391,13 +1742,6 @@
         "start": 321.637,
         "end": 322.59,
         "com": "sentit a cegues: la màquina hi sent «ⵜⵔⵥ ⵏ ⵜⴳⵎⵎⵉ», que s'assembla a «ⵜⵔⵥⵎ ⵜⴳⵎⵎⵉ» en un 89%",
-        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
-      },
-      "quan:example:3": {
-        "pista": "mDMcR7vNA_A",
-        "start": 277.279,
-        "end": 279.256,
-        "com": "sentit a cegues: la màquina hi sent «ⵜⵍⵍⴰ ⴷ ⵎⵎⵖⴰⵔ ⴷ ⵖⵓⵍⵡⴰ», que s'assembla a «ⵜⵍⵍⴰ ⵜⵎⵖⴰⵔⵜ ⵖⵓⵏⵡⴰⵍ» en un 69%",
         "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
       },
       "vocabulary:0": {
@@ -1469,6 +1813,15 @@
         "end": 388.945,
         "com": "sentit a cegues: la màquina hi sent «ⵜⴰⵎⵣⵉⵔⵜ», que s'assembla a «ⵜⴰⵎⴰⵣⵉⵔⵜ» en un 88%",
         "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
+      },
+      "vocabulary:13": {
+        "pista": "mDMcR7vNA_A",
+        "start": 380.47,
+        "end": 381.19,
+        "com": "lectura rica amb acord 0.571: a la pàgina d'escolta",
+        "sent": "yanḫali",
+        "linia": "anwal",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
       }
     },
     "la-botiga": {
@@ -1484,13 +1837,6 @@
         "start": 5.976,
         "end": 6.88,
         "com": "sentit a cegues: la màquina hi sent «ⵉⵜⴷⴷⵔⴽ ⵜⵓⴷⵜ», que s'assembla a «ⵉⵙ ⴷⴰⵔⴽ ⵜⵓⴷⵉⵜ» en un 73%",
-        "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
-      },
-      "dialogue:3": {
-        "pista": "zkvUblbTdws",
-        "start": 16.001,
-        "end": 17.567,
-        "com": "sentit a cegues: la màquina hi sent «ⴽⵓⵥ ⵉⴹ ⵎⵢⴰ ⵉⵍⵉⵜⵔⵓ», que s'assembla a «ⴽⴽⵓⵥ ⵉⴷⴰⵎⵉⵢⵢⴰ ⵉⵍⵉⵜⵔⵓ» en un 72%",
         "per_que_fora": "la va posar la màquina sentint sola; les paraules sí que són al llibre, però cap persona no l'ha sentida"
       },
       "imperatiu:example:3": {
@@ -1520,6 +1866,98 @@
         "end": 177.512,
         "com": "sentit a cegues dins la finestra entre dues línies segures: la màquina hi sent «ⴰⵛⴽⵙⴽⴽⵔ ⵓⴽⴼⴼⴰⵢⵍⵉⵜⵔⵓⵎⴰⵛ ⴰⴷ ⵜⴽⴽⴽⵔ ⵜⴰⵎⵎ ⵏ ⵜⵉⴽⵉⵍⵓ», que s'assembla a «ⵍⵉⵜⵔⵓ» en un 100%",
         "per_que_fora": "aquesta línia ja no és al capítol: apunta a un lloc que no existeix"
+      },
+      "iri:example:2": {
+        "pista": "zkvUblbTdws",
+        "start": 37.23,
+        "end": 38.68,
+        "com": "lectura rica amb acord 0.545: a la pàgina d'escolta",
+        "sent": "iyi riġ aggrn",
+        "linia": "is tram aggwrn?",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
+      },
+      "iri:example:3": {
+        "pista": "zkvUblbTdws",
+        "start": 55.67,
+        "end": 56.55,
+        "com": "lectura rica amb acord 0.643: a la pàgina d'escolta",
+        "sent": "is trajjin blqhwa",
+        "linia": "is ira Ḥmad lqhwa?",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
+      },
+      "iri:example:4": {
+        "pista": "zkvUblbTdws",
+        "start": 58.05,
+        "end": 59.69,
+        "com": "lectura rica amb acord 0.5: a la pàgina d'escolta",
+        "sent": "ye trazin blqhba",
+        "linia": "is tra Zinb tisnt?",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
+      },
+      "preu:example:1": {
+        "pista": "JkXAk3CKIPA",
+        "start": 5.87,
+        "end": 6.89,
+        "com": "lectura rica amb acord 0.588: a la pàgina d'escolta",
+        "sent": "ška iskarba tatayal",
+        "linia": "mnckk a iskar watay?",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
+      },
+      "mesures:col0:4": {
+        "pista": "JkXAk3CKIPA",
+        "start": 15.5,
+        "end": 16.39,
+        "com": "lectura rica amb acord 0.538: a la pàgina d'escolta",
+        "sent": "riġ krradid kilu",
+        "linia": "sin id kilu",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
+      },
+      "vocabulary:10": {
+        "pista": "mDMcR7vNA_A",
+        "start": 389.6,
+        "end": 390.11,
+        "com": "lectura rica amb acord 0.667: a la pàgina d'escolta",
+        "sent": "tisnad",
+        "linia": "tisnt",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
+      }
+    },
+    "que-fas": {
+      "habitud:example:1": {
+        "pista": "YioipkEhqME",
+        "start": 8.32,
+        "end": 9.05,
+        "com": "lectura rica amb acord 0.778: a la pàgina d'escolta",
+        "sent": "ssaġ lqhwa",
+        "linia": "swiɣ lqhwa",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
+      },
+      "ma:example:2": {
+        "pista": "JkXAk3CKIPA",
+        "start": 21.75,
+        "end": 22.17,
+        "com": "lectura rica amb acord 0.75: a la pàgina d'escolta",
+        "sent": "timatrit",
+        "linia": "ma trit?",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
+      },
+      "vocabulary:16": {
+        "pista": "mDMcR7vNA_A",
+        "start": 389.6,
+        "end": 390.11,
+        "com": "lectura rica amb acord 0.667: a la pàgina d'escolta",
+        "sent": "tisnad",
+        "linia": "tisnt",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
+      },
+      "vocabulary:24": {
+        "pista": "JkXAk3CKIPA",
+        "start": 1.1,
+        "end": 1.8,
+        "com": "lectura rica amb acord 0.75: a la pàgina d'escolta",
+        "sent": "tamssirt",
+        "linia": "tamazirt",
+        "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
       }
     }
   }
