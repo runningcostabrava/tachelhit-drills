@@ -2575,9 +2575,12 @@ def create_drill(drill: DrillCreate = None, db: Session = Depends(get_db),
     # used to create blank rows (P1.9). Checked before the try/except below,
     # which turns any exception into a 500.
     drill_data = drill.model_dump(exclude_unset=True) if drill is not None else {}
+    # Qui captura amb el micròfon ja té la gravació a la mà i la puja tot seguit: la fila neix
+    # buida perquè el fitxer hi pugui arribar (#450). No és cap columna.
+    capturant = bool(drill_data.pop("capturing", False))
     _content_keys = ("text_catalan", "text_tachelhit", "text_arabic", "text_tachelhit_latin",
                      "audio_url", "video_url", "image_url")
-    if not any(str(drill_data.get(k) or "").strip() for k in _content_keys):
+    if not capturant and not any(str(drill_data.get(k) or "").strip() for k in _content_keys):
         raise HTTPException(status_code=422, detail="Cal almenys un text (català, tachelhit o àrab) o un fitxer.")
     try:
         db_drill = DrillModel(**drill_data)

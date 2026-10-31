@@ -133,12 +133,20 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
     const licenseFor = () => (corpusConsent ? 'CC-BY-SA' : 'private');
 
-    /** Es crea la frase al servidor una sola vegada, el primer cop que fa falta un id. */
-    const ensureServerDrill = async (): Promise<number> => {
+    /**
+     * Es crea la frase al servidor una sola vegada, el primer cop que fa falta un id.
+     *
+     * `capturing` diu que la gravació ja és a la mà: amb els micròfons, el primer que es fa és
+     * gravar i encara no hi ha cap text, i el servidor no deixa crear files en blanc. Qui ho
+     * demana explícitament sí que pot, perquè el fitxer hi arriba tot seguit (#450).
+     */
+    const ensureServerDrill = async (capturant = false): Promise<number> => {
         if (serverIdRef.current) return serverIdRef.current;
         if (creating.current) return creating.current;
         creating.current = (async () => {
-            const res = await axios.post(`${API_BASE}/drills/`, { ...drillRef.current, license: licenseFor() });
+            const res = await axios.post(`${API_BASE}/drills/`, {
+                ...drillRef.current, license: licenseFor(), ...(capturant ? { capturing: true } : {}),
+            });
             const id: number = res.data.id;
             serverIdRef.current = id;
             setDrill(prev => ({ ...res.data, ...prev, id }));
@@ -204,7 +212,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         setBusy(kind);
         try {
             if (await isOnline()) {
-                const id = await ensureServerDrill();
+                const id = await ensureServerDrill(true);
                 const fd = new FormData();
                 fd.append('file', blob, fileName);
                 const res = await axios.post(`${API_BASE}/upload-media/${id}/${kind}`, fd);
@@ -215,6 +223,22 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 return url;
             }
             if (!isNativeApp()) throw new Error('Sense connexió: no es pot pujar des del navegador.');
+            // Primer que existeixi la frase, i després el fitxer.
+            //
+            // Sense això, gravar sense connexió deixava a la cua una pujada per a una frase que
+            // no s'havia demanat mai: quan tornava el senyal, el fitxer no tenia on anar. La
+            // cua ja ajunta els CREATE d'una mateixa frase, de manera que fer-ho a cada fitxer
+            // no en crea dos (#450).
+            if (!serverIdRef.current) {
+                await syncManager.queueAction({
+                    type: 'CREATE', drillId: tempId.current,
+                    payload: {
+                        ...drillRef.current, id: tempId.current, is_local: true,
+                        license: licenseFor(), capturing: true,
+                        date_created: new Date().toISOString(),
+                    } as unknown as Drill,
+                });
+            }
             await syncManager.saveMediaLocally(blob, fileName);
             await syncManager.queueAction({
                 type: 'UPLOAD_MEDIA', drillId: serverIdRef.current ?? tempId.current,
