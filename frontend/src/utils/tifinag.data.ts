@@ -67,6 +67,7 @@ export const ENTRADA: Record<string, string> = {
   "ε̣": "ɛ",
   "ḍ": "ḍ",
   "ḥ": "ḥ",
+  "ḫ": "x",
   "ṛ": "ṛ",
   "ṣ": "ṣ",
   "ṭ": "ṭ",
