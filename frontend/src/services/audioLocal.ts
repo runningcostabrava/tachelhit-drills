@@ -131,11 +131,43 @@ async function carrega() {
   const uri = await Filesystem.getUri({ path: CARPETA, directory: Directory.Data });
   carpeta = uri.uri;
   // La carpeta encara no existeix fins a la primera baixada.
-  const noms = await Filesystem.readdir({ path: CARPETA, directory: Directory.Data })
-    .then(r => new Set(r.files.map(f => f.name)))
-    .catch(() => new Set<string>());
+  const llista = await Filesystem.readdir({ path: CARPETA, directory: Directory.Data })
+    .then(r => r.files)
+    .catch(() => [] as { name: string; size?: number }[]);
+  const noms = new Set(llista.map(f => f.name));
   (await indexDesat()).filter(f => noms.has(f.fitxer)).forEach(registra);
   (await extresDesats()).filter(f => noms.has(f.fitxer)).forEach(f => extres.set(f.url, f));
+  await treuLaRuna(llista);
+}
+
+/** Els noms que la versió d'ara sap fer: `<id>.<ext>`, `<id>-ca.<ext>`, `<id>-img.<ext>`. */
+const NOM_BO = /^\d+(-ca|-img)?\.[a-z0-9]+$/i;
+
+/**
+ * Treu els fitxers que cap camí del codi d'ara no pot trobar mai.
+ *
+ * Una versió antiga desava els fitxers amb el nom de l'adreça —les de Wikimedia hi porten
+ * `?utm_source=…` i tot— i la d'ara els desa pel número de la frase. Els vells s'hi van quedar:
+ * al telèfon de l'amo eren **14.904 fitxers de 17.685**, la major part dels 936 MB, i el comptador
+ * de la pantalla «Al telèfon» els comptava com si fossin veus: deia «17.685 de 10.844 · totes les
+ * gravacions són al telèfon» quan només n'hi havia 2.781.
+ *
+ * Es mira NOMÉS el nom, no l'índex. Si algun dia IndexedDB s'esborra —a iOS pot passar si el disc
+ * s'omple— l'índex queda buit i tots els fitxers semblarien orfes: esborrar-los per això seria
+ * llençar un giga de veus bones. Un nom que la versió d'ara no sap fer, en canvi, és antic amb
+ * índex o sense.
+ */
+async function treuLaRuna(llista: { name: string; size?: number }[]) {
+  const vells = llista.filter(f => !NOM_BO.test(f.name));
+  if (!vells.length) return;
+  let fets = 0;
+  for (const f of vells) {
+    const ok = await Filesystem.deleteFile({ path: `${CARPETA}/${f.name}`, directory: Directory.Data })
+      .then(() => true).catch(() => false);
+    if (ok) fets++;
+  }
+  console.info(`[Mèdia] ${fets} fitxers d'una versió antiga, trets de ${CARPETA}`);
+  avisa();
 }
 
 /** Una vegada, en obrir l'app. Els botons ja tornen a preguntar sols quan acaba. */
@@ -417,13 +449,21 @@ export async function baixaExtresDeTot(
   return tandaE;
 }
 
-/** Quantes veus hi ha al disc i quant ocupen. Es compta la carpeta, no l'índex: és el que val. */
-export async function resumAudios(): Promise<{ fitxers: number; bytes: number }> {
-  if (!isNativeApp()) return { fitxers: 0, bytes: 0 };
+/**
+ * Què hi ha al disc: quantes VEUS, quants extres, quants fitxers i quant ocupen.
+ *
+ * `veus` surt de l'índex i no de comptar la carpeta. Comptar la carpeta era el que hi havia, i
+ * mentre només hi hagués veus anava bé; amb les imatges, el català llegit i les restes d'una
+ * versió antiga, la pantalla deia «17.685 de 10.844 · totes les gravacions són al telèfon» amb
+ * 2.781 veus de debò. Un comptador que menteix cap amunt és pitjor que no tenir-ne.
+ */
+export async function resumAudios(): Promise<{ fitxers: number; bytes: number; veus: number; extres: number }> {
+  if (!isNativeApp()) return { fitxers: 0, bytes: 0, veus: 0, extres: 0 };
   await engegaAudios();
   const r = await Filesystem.readdir({ path: CARPETA, directory: Directory.Data }).catch(() => null);
-  if (!r) return { fitxers: 0, bytes: 0 };
-  return { fitxers: r.files.length, bytes: r.files.reduce((n, f) => n + (f.size || 0), 0) };
+  const buit = { fitxers: 0, bytes: 0, veus: perId.size, extres: extres.size };
+  if (!r) return buit;
+  return { ...buit, fitxers: r.files.length, bytes: r.files.reduce((n, f) => n + (f.size || 0), 0) };
 }
 
 /** Esborra totes les veus del disc i l'índex: els botons tornen a dir «sense baixar». */
