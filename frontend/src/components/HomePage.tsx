@@ -1,3 +1,4 @@
+import { imatgeSrc } from '../services/audioLocal';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -5,7 +6,6 @@ import {
   FaPlay, FaPlus, FaRedo, FaSearch, FaVideo, FaFont, FaChevronRight as FaCap,
 } from 'react-icons/fa';
 import { api, type HomeData } from '../api';
-import { getMediaUrl, thumb } from '../config';
 
 // La casa.
 //
@@ -313,7 +313,7 @@ function Door({ to, Icon, title, what, count, cover }: {
     <button onClick={() => navigate(to)}
             style={{ textAlign: 'left', padding: 0, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', cursor: 'pointer', fontFamily: 'inherit', color: 'var(--text)', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 112 }}>
       {cover && (
-        <img src={thumb(getMediaUrl(cover), 560)} alt="" loading="eager" fetchPriority="high"
+        <img src={imatgeSrc(cover, 560)} alt="" loading="eager" fetchPriority="high"
              style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', display: 'block' }}
              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
       )}

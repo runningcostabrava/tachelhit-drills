@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     FaCamera, FaCheck, FaChevronDown, FaChevronLeft, FaChevronRight, FaKeyboard,
     FaMicrophone, FaPlay, FaPlus, FaRedo, FaTimes, FaVideo,
@@ -141,7 +141,10 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         Camera.requestPermissions().catch(() => {});
     }, []);
 
-    const drill = entrades[i]?.d ?? {};
+    // Un objecte nou a cada repintada faria dir «ha canviat» als efectes que el vigilen, i
+    // l'esborrany es tornaria a escriure a cada tecla de qualsevol altra cosa.
+    const buida: Partial<Drill> = useMemo(() => ({}), []);
+    const drill = entrades[i]?.d ?? buida;
 
     // L'esborrany: el que s'ha escrit no es perd si entra una trucada o es tanca sense voler (#372).
     const [recuperat, setRecuperat] = useState(false);
