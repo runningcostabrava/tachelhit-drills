@@ -3,10 +3,12 @@ import { useIsMobileLayout } from './utils/layout';
 import { Network } from '@capacitor/network';
 import axios from 'axios';
 import { API_BASE } from './config';
+import { OBERTURA_MS } from './services/biblioteca';
 import { api } from './api';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaBookOpen, FaMicrophone, FaInfo, FaSearch, FaPlus, FaFeatherAlt, FaFont } from 'react-icons/fa';
 import { syncManager } from './services/OfflineSyncManager';
+import { engegaAudios } from './services/audioLocal';
 import * as cuaDeVeus from './services/cuaDeVeus';
 import ToastHost from './components/ToastHost';
 import StaleBuildBanner from './components/StaleBuildBanner';
@@ -15,7 +17,6 @@ import AiCopilot from './components/AiCopilot';
 import AboutPanel from './components/AboutPanel';
 import MenuMobil from './components/MenuMobil';
 import './App.css';
-import { fetchAllDrills } from './services/fetchAllDrills';
 
 // Route-level code splitting: each page loads its chunk on first visit,
 // keeping the initial bundle small (AG Grid, players, creators all split out)
@@ -151,6 +152,7 @@ function App() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [veusPendents, setVeusPendents] = useState(0);
   useEffect(() => cuaDeVeus.escolta(setVeusPendents), []);
+  useEffect(() => { void engegaAudios(); }, []);
 
   // Offline sync bootstrap. All queue processing lives in OfflineSyncManager;
   // this effect just pushes pending actions and refreshes the local caches on
@@ -172,13 +174,10 @@ function App() {
       cuaDeVeus.engega();
 
       try {
-        const [drills, testsRes] = await Promise.all([
-          fetchAllDrills(),
+        const [, testsRes] = await Promise.all([
+          syncManager.refreshDrills(OBERTURA_MS),
           axios.get(`${API_BASE}/tests/`),
         ]);
-        // saveDrillsToCache also kicks off background media caching
-        // (audio & images only; videos are cached on demand)
-        await syncManager.saveDrillsToCache(drills);
         await syncManager.saveTestsToCache(testsRes.data);
       } catch (e) {
         console.error('Failed to pre-cache data', e);

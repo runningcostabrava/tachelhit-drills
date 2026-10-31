@@ -787,6 +787,47 @@ def test_un_capitol_sense_frases_propies_troba_la_veu_a_la_biblioteca():
     assert body["vocabulary"][0].get("audio_url"), "i la paraula del vocabulari"
 
 
+def test_una_paraula_del_llibre_troba_la_veu_en_tifinag_i_sona_dins_duna_frase():
+    """El catàleg és immens i gairebé no hi lligava res (#534). Dues raons, i les dues es proven:
+
+    · milers de frases gravades porten TIFINAG (MTNRA, Common Voice, IRCAM) i la clau de so no
+      hi casava la «y» del llatí: «aydi» i «ⴰⵢⴷⵉ» eren dues claus;
+    · una paraula que ningú no ha gravat sola sí que sona dins d'una frase nostra, i el capítol
+      la pot fer sentir allà, al costat, com fa amb les lletres."""
+    import main
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("qui_busca_veus_al_cataleg")}
+    db = main.SessionLocal()
+    try:
+        me = client.get("/users/me", headers=hdr).json()
+        db.query(main.UserModel).filter(main.UserModel.id == me["id"]).first().is_admin = True
+        db.commit()
+    finally:
+        db.close()
+
+    client.post("/drills/", headers=hdr, json={   # gravada en tifinag, el llatí a part
+        "text_catalan": "el gos", "text_tachelhit": "ⴰⵢⴷⵉ", "text_tachelhit_latin": "aydi",
+        "author": "Prova-tifinag", "audio_url": "https://res.cloudinary.com/x/video/upload/v1/aydi.mp3"})
+    client.post("/drills/", headers=hdr, json={   # la paraula «tissi» només dins d'una frase
+        "text_catalan": "bevem la beguda", "text_tachelhit": "ar nssa tissi",
+        "author": "Prova-frase", "audio_url": "https://res.cloudinary.com/x/video/upload/v1/tissi.mp3"})
+
+    client.put("/method/sons/content", headers=hdr, json={
+        "sections": [{"id": "veus", "title": "Veus del catàleg",
+                      "examples": [{"shi": "aydi", "ca": "gos"}, {"shi": "tissi", "ca": "beguda"},
+                                   {"shi": "tamɣart", "ca": "dona"}]}],
+        "vocabulary": [{"shi": "tissi", "ca": "beguda"}]})
+
+    body = client.get("/method/sons").json()["content"]
+    gos, tissi, tamɣart = body["sections"][0]["examples"]
+    assert gos.get("audio_url") and gos.get("speaker") == "Prova-tifinag", "la veu en tifinag lliga amb la línia en llatí"
+    assert not tissi.get("audio_url"), "ningú no ha dit «tissi» sola"
+    assert tissi.get("heard") and tissi["heard"]["shi"] == "ar nssa tissi" and tissi["heard"]["what"] == "paraula"
+    assert not tamɣart.get("audio_url") and not tamɣart.get("heard"), "el que no hi és enlloc es queda com era"
+    assert body["vocabulary"][0].get("heard"), "i la paraula del vocabulari també la sent dins de la frase"
+
+
 def test_la_parella_minima_es_pot_escoltar_i_no_es_desa_la_veu_dins_del_text():
     """Les files de les columnes són les parelles mínimes del capítol dels sons. El servidor els
     enganxa la veu en servir-les, i aquesta veu NO s'ha de desar dins del text del capítol: és
@@ -1135,6 +1176,10 @@ def test_lindex_del_cd_nomes_fa_sonar_el_que_ha_sentit_una_persona():
     Per això, mentre no hi hagi una prova que no surti de la màquina sentint sola, només sona el
     que ha comprovat una persona. La feina de la màquina no es llença: es desa a `per_comprovar`,
     i allà no porta adreça de tall, que és el que fa que no soni.
+
+    L'ADR 0010 (31-10) hi afegeix UNA prova que no surt de la màquina sola: la lectura rica
+    (ADR 0009) aparellada per ordre del llibre i calibrada amb les 130 escoltes d'en Pablo. En el
+    tram d'acord ≥ 0,80, 39 de 40 escoltes eren «sí». Aquestes entrades sonen i ho diuen a `com`.
     """
     import json
     from pathlib import Path
@@ -1143,8 +1188,9 @@ def test_lindex_del_cd_nomes_fa_sonar_el_que_ha_sentit_una_persona():
     dades = json.loads(Path(method.CD_FITXER).read_text(encoding="utf-8"))
     for slug, linies in (dades.get("capitols") or {}).items():
         for on, d in linies.items():
-            assert d.get("com") == "sentit", \
-                "%s/%s sona sense que l'hagi sentida ningú: «%s»" % (slug, on, d.get("com"))
+            com = d.get("com") or ""
+            assert com == "sentit" or com.startswith("lectura rica ≥0,80"), \
+                "%s/%s sona sense que l'hagi sentida ningú ni la lectura calibrada: «%s»" % (slug, on, com)
             assert d.get("url"), "%s/%s diu que sona i no porta tall" % (slug, on)
             # #495: una adreça /method/cd/... només sona a la màquina que té el CD; a la web el
             # botó hi era i no sonava res

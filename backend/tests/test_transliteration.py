@@ -143,3 +143,7 @@ def test_la_mateixa_paraula_escrita_de_dues_maneres_te_una_sola_clau():
     for word in ("3afaš", "sġix", "aḍar", "tiṭṭ"):
         assert (practice.sound_key(unicodedata.normalize("NFD", word))
                 == practice.sound_key(unicodedata.normalize("NFC", word))), word
+
+
+def test_la_h_ratllada_del_model_no_es_perd():
+    assert to_forms("taḫam")["tifinagh"] == "ⵜⴰⵅⴰⵎ"

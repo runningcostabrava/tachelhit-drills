@@ -7,7 +7,6 @@ import {
   FaMicrophone,
   FaKeyboard,
   FaFolderOpen,
-  FaVolumeUp,
   FaFileAlt,
   FaMicroscope,
   FaClipboardCheck,
@@ -374,29 +373,6 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         }
     };
 
-  const handleTachelhitTTS = async () => {
-    const text = localDrill.text_tachelhit;
-    if (!text) return toast.error('El camp de tachelhit és buit.');
-
-    const status = await Network.getStatus();
-    if (!status.connected) return toast.error('El TTS requereix connexió a internet.');
-
-    setAiLoadingKey('tts-shi');
-    addLog('Generating Tachelhit TTS...');
-    try {
-        const res = await axios.post(`${API_BASE}/tts/tachelhit`, { text, drill_id: localDrill.id });
-        if (res.data.url) {
-            addLog('TTS ready, playing...');
-            new Audio(getMediaUrl(res.data.url)).play();
-        }
-    } catch (err: any) {
-        const msg = err.response?.data?.detail || err.message;
-        toast.error(`El TTS ha fallat: ${msg}`);
-    } finally {
-        setAiLoadingKey(null);
-    }
-  };
-
   const handleTranslateAction = async (source: 'ca' | 'shi', target: 'ca' | 'shi') => {
     const status = await Network.getStatus();
     if (!status.connected) return toast.error('La traducció requereix internet.');
@@ -721,7 +697,6 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', background: 'var(--surface)', padding: '16px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)' }}>
           <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}><FaLanguage size={18} /> {aiLoadingKey === 'trans-text_tachelhit' ? '…' : 'CA➔SH'}</button>
           <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}><FaLanguage size={18} /> {aiLoadingKey === 'trans-text_catalan' ? '…' : 'SH➔CA'}</button>
-          <button onClick={handleTachelhitTTS} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: 'var(--amber-soft)', color: 'var(--amber-strong)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}><FaVolumeUp size={18} /> {aiLoadingKey === 'tts-shi' ? '…' : 'TTS'}</button>
           <button
                 onClick={() => {
                     const hasAudio = localDrill.audio_url;

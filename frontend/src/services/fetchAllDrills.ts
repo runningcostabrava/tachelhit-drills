@@ -14,11 +14,11 @@ import type { Drill } from '../types';
 const PAGE = 500;
 
 /** Generic because two `Drill` types live in this app (types.ts and the offline manager's). */
-export async function fetchAllDrills<T extends { id: number } = Drill>(): Promise<T[]> {
+export async function fetchAllDrills<T extends { id: number } = Drill>(filtre: { since?: string } = {}): Promise<T[]> {
   const seen = new Set<number>();
   const all: T[] = [];
   for (let offset = 0; ; offset += PAGE) {
-    const res = await axios.get<T[]>(`${API_BASE}/drills/`, { params: { limit: PAGE, offset } });
+    const res = await axios.get<T[]>(`${API_BASE}/drills/`, { params: { ...filtre, limit: PAGE, offset } });
     const page = Array.isArray(res.data) ? res.data : [];
     for (const d of page) {
       if (seen.has(d.id)) continue;

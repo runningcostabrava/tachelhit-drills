@@ -17,7 +17,7 @@ No és un diccionari, ni un traductor automàtic, ni un curs genèric d'«amazic
 |---|---|
 | qui aprèn | adult catalanoparlant, no lingüista: un viatger encuriosit, la parella d'algú que el parla |
 | qui no parla català | qui ve a córrer a l'Atles i només llegeix anglès: té **una** pàgina en anglès, `/start`, amb les primeres paraules i el context (ADR 0005); la resta de l'app continua en català |
-| qui el parla | Halima i Driss (Aït Mraw, Boutharar, Azilal), els reculls de Beni Mellal i d'Azilal, i qualsevol parlant que hi vulgui posar la veu |
+| qui el parla | Halima i Driss (Aït Mraw, uns 10 km al nord de Boutharar, a Tinghir, a prop del riu que baixa de Kalaat M'Gouna), els reculls de Beni Mellal i d'Azilal, i qualsevol parlant que hi vulgui posar la veu |
 | qui administra | manté la biblioteca, decideix què hi entra i corregeix el que cal |
 
 ## Què ha de fer

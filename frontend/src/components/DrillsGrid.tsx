@@ -11,6 +11,8 @@ import { syncManager } from '../services/OfflineSyncManager';
 import { Network } from '@capacitor/network';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { API_BASE, getMediaUrl } from '../config';
+import AmbSo, { BaixaAudio } from './AmbSo';
+import { audioSrc, baixaAudio } from '../services/audioLocal';
 import { parseTopics, topicLabel } from '../utils/topics';
 import { answerSafeFilter } from '../utils/media';
 import { setSelectedDrillIds } from '../selection';
@@ -29,7 +31,6 @@ import {
     FaMicrophone,
     FaCamera,
     FaPlay,
-    FaRobot,
     FaLightbulb
 } from 'react-icons/fa';
 import RecordAudioModal from './RecordAudioModal';
@@ -70,26 +71,6 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
     const [cardTifinagh, setCardTifinagh] = useState<{ id: number; text: string } | null>(null);
     // Synthetic Tamazight voice on the card: an extra way to hear the phrase or one word,
     // never a replacement for the recording or the clip (those keep their own player).
-    const [speaking, setSpeaking] = useState(false);
-    const speak = async (text: string, drill?: Drill) => {
-        const t = (text || '').trim();
-        if (!t || speaking) return;
-        setSpeaking(true);
-        try {
-            // The backend keeps the voice on the drill and returns it when it is current
-            // (voices made before v2 were read from Latin letters: it remakes those).
-            const r = await axios.post(`${API_BASE}/tts/tachelhit`, {
-                text: t, drill_id: drill && drill.text_tachelhit === t ? drill.id : null, meaning: drill?.text_catalan || null,
-            });
-            const url = r.data?.url || '';
-            if (!url) throw new Error('sense veu');
-            await new Audio(getMediaUrl(url)).play();
-        } catch {
-            toast.error('No s\'ha pogut generar la veu sintètica ara mateix.');
-        } finally {
-            setSpeaking(false);
-        }
-    };
     useEffect(() => {
         const d = preview?.drillId != null ? rowData.find((x) => x.id === preview.drillId) : undefined;
         if (!d) { setCardTifinagh(null); return; }
@@ -275,40 +256,6 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
         }
     };
 
-    // 🔊 Smart Tachelhit TTS Pipeline
-    const handleTachelhitTTS = async (drill: Drill) => {
-        const text = drill.text_tachelhit;
-        if (!text) {
-            toast.error('El camp de amazic és buit.');
-            return;
-        }
-
-        const loadingKey = `tts-${drill.id}`;
-        setActionLoadingId(loadingKey);
-
-        try {
-            const status = await Network.getStatus();
-            if (!status.connected) {
-                toast.error("⚠️ El TTS requereix una connexió a internet activa.");
-                return;
-            }
-
-            const res = await axios.post(`${API_BASE}/tts/tachelhit`, {
-                text,
-                drill_id: drill.id
-            });
-
-            if (res.data.url) {
-                new Audio(getMediaUrl(res.data.url)).play();
-                await refreshKeepingScroll();
-            }
-        } catch (err) {
-            console.error('TTS workflow crashed:', err);
-            toast.error("No s'ha pogut generar l'àudio de TTS.");
-        } finally {
-            setActionLoadingId(null);
-        }
-    };
 
     const onCellValueChanged = async (params: any) => {
         const { data, colDef, newValue } = params;
@@ -545,7 +492,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
     const playable = rowData.filter((d) => d.video_url || d.audio_url);
     const previewIndex = preview?.drillId != null ? playable.findIndex((d) => d.id === preview.drillId) : -1;
     const openPreviewOf = (d: Drill) => {
-        const url = d.video_url ? getMediaUrl(d.video_url) : getMediaUrl(d.audio_url!);
+        const url = d.video_url ? getMediaUrl(d.video_url) : audioSrc(d.audio_url!);
         setPreview({ url, kind: d.video_url ? 'video' : 'audio', title: d.text_catalan || d.text_tachelhit || `Drill #${d.id}`, drillId: d.id });
         setReveal(false);
         if (autoNextTimer.current) { window.clearTimeout(autoNextTimer.current); autoNextTimer.current = null; }
@@ -573,19 +520,9 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                 <div style={{ fontSize: '19px', fontWeight: 700, color: 'var(--text)', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     {latin ? (
                         <span>
-                            {latin.split(/(\s+)/).map((w, i) => w.trim()
-                                ? <span key={i} role="button" tabIndex={0} title="Pronuncia aquesta paraula (veu sintètica)" onClick={() => speak(w.replace(/[.,;:!?¿¡«»"()]/g, ''))}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') speak(w); }} style={{ cursor: 'pointer', borderBottom: '1px dotted var(--border)' }}>{w}</span>
-                                : <span key={i}>{w}</span>)}
+                            {latin}
                         </span>
                     ) : null}
-                    {(d.text_tachelhit || latin) && (
-                        <button onClick={() => speak(d.text_tachelhit || latin || '', d)} disabled={speaking}
-                            title="Veu sintètica de la frase: un complement, no substitueix la gravació ni el vídeo"
-                            style={{ padding: '4px 10px', fontSize: '12px', fontWeight: 700, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', cursor: speaking ? 'wait' : 'pointer', color: 'var(--text-soft)' }}>
-                            {speaking ? '…' : '🔊 Veu sintètica'}
-                        </button>
-                    )}
                     {!latin && (draft ? <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>{draft} <span style={{ fontSize: '11px' }}>(esborrany IA)</span></span> : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>{d.text_tachelhit_suggested ? DRAFT_REJECTED_LABEL : 'sense transcripció'}</span>)}
                 </div>
                 {tifinagh && <div style={{ fontSize: '15px', color: 'var(--text-soft)', marginTop: '2px' }}>{tifinagh}</div>}
@@ -788,9 +725,9 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                                     style={{ width: '100%', height: '180px', objectFit: 'contain', background: 'var(--surface-2)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)' }}
                                 />
                                 {drill.audio_url && (
-                                    <button
+                                    <AmbSo url={drill.audio_url} dins><button
                                         onClick={() => {
-                                            const audio = new Audio(getMediaUrl(drill.audio_url!));
+                                            const audio = new Audio(audioSrc(drill.audio_url!));
                                             audio.play().catch(e => console.error('Playback fail:', e));
                                         }}
                                         aria-label="Escolta com sona"
@@ -803,7 +740,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                                         }}
                                     >
                                         <FaPlay size={22} style={{ marginLeft: 4 }} />
-                                    </button>
+                                    </button></AmbSo>
                                 )}
                             </div>
                         )}
@@ -814,9 +751,9 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                             {/* Sense foto, la veu no té on anar a sobre: es queda gran aquí. */}
                             {drill.audio_url && !(drill.image_url || pendingMedia[drill.id]?.image) && (
-                                <button
+                                <AmbSo url={drill.audio_url} dins><button
                                     onClick={() => {
-                                        const audio = new Audio(getMediaUrl(drill.audio_url!));
+                                        const audio = new Audio(audioSrc(drill.audio_url!));
                                         audio.play().catch(e => console.error('Playback fail:', e));
                                     }}
                                     style={{
@@ -836,35 +773,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                                     }}
                                 >
                                     <FaPlay /> Escolta com sona
-                                </button>
-                            )}
-                            {/* La veu de màquina porta un robot, no un altaveu.
-                                És la mateixa regla del #288 aplicada al so sintètic: qui prem ha
-                                de saber ABANS de prémer que el que sentirà no és ningú. Amb la
-                                icona d'altaveu, les dues veus es distingien per una paraula en
-                                anglès («TTS») que no diu res a qui aprèn. */}
-                            {drill.text_tachelhit && (
-                                <button
-                                    onClick={() => handleTachelhitTTS(drill)}
-                                    disabled={actionLoadingId === `tts-${drill.id}`}
-                                    aria-label="Fes-ho llegir a una veu de màquina"
-                                    title="Una veu de màquina, no la d'una persona d'aquí"
-                                    style={{
-                                        width: '38px', height: '38px', flexShrink: 0,
-                                        padding: 0,
-                                        background: 'var(--amber-soft)',
-                                        border: '1px solid var(--amber)',
-                                        borderRadius: 'var(--r-pill)',
-                                        color: 'var(--amber-strong)',
-                                        opacity: actionLoadingId === `tts-${drill.id}` ? 0.5 : 1,
-                                        cursor: actionLoadingId === `tts-${drill.id}` ? 'not-allowed' : 'pointer',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}
-                                >
-                                    {actionLoadingId === `tts-${drill.id}` ? '…' : <FaRobot size={15} />}
-                                </button>
+                                </button></AmbSo>
                             )}
                             {(drill.text_tachelhit || drill.text_tachelhit_suggested || drill.text_tachelhit_latin) && (
                                 <button
@@ -888,6 +797,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                             )}
                             {/* Afegir-hi una foto és una feina d'edició, no una cosa que es faci
                                 mentre s'estudia: icona i prou, i a la punta. */}
+                            <BaixaAudio drill={drill} style={{ width: '38px', height: '38px', flexShrink: 0, padding: 0, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', color: 'var(--text-soft)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} />
                             <button
                                 onClick={() => handleQuickPhoto(drill.id)}
                                 aria-label="Posa-hi una foto"
@@ -1005,13 +915,10 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
             cellRenderer: (params: any) => (
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                     {params.data.audio_url && (
-                        <button onClick={() => new Audio(getMediaUrl(params.data.audio_url)).play()} style={{ background: 'var(--brand-gradient-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px', cursor: 'pointer', color: 'var(--brand-1)' }} title="Reprodueix la gravació" aria-label="Reprodueix la gravació"><FaVolumeUp size={16} /></button>
-                    )}
-                    {!params.data.audio_url && params.data.audio_tts_shi_url && (
-                        <button onClick={() => new Audio(getMediaUrl(params.data.audio_tts_shi_url)).play()} style={{ background: 'var(--sky-soft, #e6f1f7)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px', cursor: 'pointer', color: 'var(--sky)' }} title="Veu sintètica (amazic)" aria-label="Veu sintètica en amazic"><FaVolumeUp size={16} /></button>
+                        <AmbSo url={params.data.audio_url}><button onClick={() => new Audio(audioSrc(params.data.audio_url)).play()} style={{ background: 'var(--brand-gradient-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px', cursor: 'pointer', color: 'var(--brand-1)' }} title="Reprodueix la gravació" aria-label="Reprodueix la gravació"><FaVolumeUp size={16} /></button></AmbSo>
                     )}
                     {params.data.audio_tts_url && (
-                        <button onClick={() => new Audio(getMediaUrl(params.data.audio_tts_url)).play()} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '6px 7px', cursor: 'pointer', color: 'var(--text-soft)', fontSize: '11px', fontWeight: 800 }} title="Veu sintètica (català)" aria-label="Veu sintètica en català">CA</button>
+                        <button onClick={() => new Audio(audioSrc(params.data.audio_tts_url)).play()} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '6px 7px', cursor: 'pointer', color: 'var(--text-soft)', fontSize: '11px', fontWeight: 800 }} title="Veu sintètica (català)" aria-label="Veu sintètica en català">CA</button>
                     )}
                     {params.data.video_url && (
                         <button onClick={() => openPreviewOf(params.data)} style={{ background: 'var(--brand-gradient-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px', cursor: 'pointer', color: 'var(--brand-2)' }} title="Reprodueix el vídeo" aria-label="Reprodueix el vídeo"><FaVideo size={16} /></button>
@@ -1040,9 +947,10 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                 const save = async () => {
                     if (!media) return;
                     setActionLoadingId(`down-${d.id}`);
-                    await syncManager.downloadAndCacheMedia(media, d.audio_url ? 'audio' : 'video');
+                    const fet = d.audio_url ? await baixaAudio(d) : !!(await syncManager.downloadAndCacheMedia(media, 'video'));
                     setActionLoadingId(null);
-                    toast.success('Mèdia descarregat per a ús fora de línia!');
+                    if (fet) toast.success('Mèdia descarregat per a ús fora de línia!');
+                    else toast.error("No s'ha pogut desar: només es pot a l'app, i amb connexió.");
                 };
                 return (
                     <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
@@ -1053,7 +961,6 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                             { key: 'ta-ca', icon: <span style={{ color: 'var(--emerald)', display: 'flex' }}><FaLanguage /></span>, title: 'Tradueix amazic → català', description: 'Proposa la traducció catalana. Si ja n\'hi ha, va com a suggeriment.', run: () => handleTranslate(d, 'shi', 'ca'), disabled: !d.text_tachelhit },
                             { key: 'transcribe', icon: <span style={{ color: 'var(--sky)', display: 'flex' }}><FaMagic /></span>, title: "Transcriu l'àudio", description: 'La màquina escolta la gravació i escriu el que sent. Va com a esborrany; el text del parlant es manté.', run: transcribe, disabled: !media },
                             ...(d.audio_url && d.video_url ? [{ key: 'transcribe-video', icon: <span style={{ color: 'var(--sky)', display: 'flex' }}><FaMagic /></span>, title: 'Transcriu el so del vídeo', description: 'Escolta el vídeo en lloc de la gravació. També va com a esborrany.', run: () => handleTranscribe(d, 'video'), disabled: actionLoadingId !== null }] : []),
-                            { key: 'tts', icon: <span style={{ color: 'var(--saffron)', display: 'flex' }}><FaVolumeUp /></span>, title: 'Genera una veu sintètica', description: 'Llegeix el amazic amb veu artificial, marcada com a sintètica. Útil quan no hi ha gravació.', run: () => handleTachelhitTTS(d), disabled: !d.text_tachelhit },
                             { key: 'voices', icon: <span style={{ color: 'var(--rose)', display: 'flex' }}><FaMicrophone /></span>, title: 'Veus del drill', description: 'Escolta o grava parlants reals dient aquesta frase, cadascú amb la seva varietat.', run: () => setRecordDrill(d) },
                             { key: 'save', icon: <span style={{ color: 'var(--text-muted)', display: 'flex' }}><FaSave /></span>, title: 'Desa fora de línia', description: 'Guarda l\'àudio o el vídeo al dispositiu per practicar sense connexió.', run: save, disabled: !media },
                         ]} />

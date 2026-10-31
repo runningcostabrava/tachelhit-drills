@@ -101,7 +101,7 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
 
-from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel, LessonProposal as LessonProposalModel, AppSetting as AppSettingModel, CaptureRequest as CaptureRequestModel, DrillTombstone as DrillTombstoneModel, UserSession as UserSessionModel, GeminiUsage as GeminiUsageModel  # ← Alias for ORM models
+from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel, LessonProposal as LessonProposalModel, AppSetting as AppSettingModel, CaptureRequest as CaptureRequestModel, DrillTombstone as DrillTombstoneModel, UserSession as UserSessionModel, GeminiUsage as GeminiUsageModel, DrillAiText as DrillAiTextModel  # ← Alias for ORM models
 from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort, VideoProcessingJobCreate, VideoProcessingJob, VideoSegmentCreate, VideoSegment, TranscribeRequest, TranscribeResponse, TranslateRequest, TranslateResponse, DrillPairInfo, GlossaryItem, GlossaryItemCreate, SrtImportRequest, SrtImportResponse, SrtSegment, BulkVideoUrlUpdateRequest, BulkVideoUrlUpdateResponse, iso_z  # ← Pydantic schemas
 from srt_parser import parse_srt_content, create_youtube_url_with_timestamp
 
@@ -2575,9 +2575,12 @@ def create_drill(drill: DrillCreate = None, db: Session = Depends(get_db),
     # used to create blank rows (P1.9). Checked before the try/except below,
     # which turns any exception into a 500.
     drill_data = drill.model_dump(exclude_unset=True) if drill is not None else {}
+    # Qui captura amb el micròfon ja té la gravació a la mà i la puja tot seguit: la fila neix
+    # buida perquè el fitxer hi pugui arribar (#450). No és cap columna.
+    capturant = bool(drill_data.pop("capturing", False))
     _content_keys = ("text_catalan", "text_tachelhit", "text_arabic", "text_tachelhit_latin",
                      "audio_url", "video_url", "image_url")
-    if not any(str(drill_data.get(k) or "").strip() for k in _content_keys):
+    if not capturant and not any(str(drill_data.get(k) or "").strip() for k in _content_keys):
         raise HTTPException(status_code=422, detail="Cal almenys un text (català, tachelhit o àrab) o un fitxer.")
     try:
         db_drill = DrillModel(**drill_data)
@@ -2634,6 +2637,10 @@ def update_drill(drill_id: int, update_data: DrillUpdate, db: Session = Depends(
     owner_or_admin(drill, user)
 
     update_dict = update_data.model_dump(exclude_unset=True)
+    # Una càrrega massiva (#539): el text es desa i els efectes —traducció a l'àrab, veu
+    # catalana— no s'engeguen. Només per a qui administra: des de l'app, cada canvi d'una
+    # persona segueix portant la seva traducció i la seva veu.
+    quiet = bool(update_dict.pop("quiet", False)) and bool(getattr(user, "is_admin", False))
 
     # Subjects set by hand win over the automatic catalogue and are never re-classified
     if "topics" in update_dict and "topics_source" not in update_dict:
@@ -2678,7 +2685,7 @@ def update_drill(drill_id: int, update_data: DrillUpdate, db: Session = Depends(
             update_dict["tag"] = None
 
     # Check if text_catalan is being updated and is not empty
-    text_catalan_updated = "text_catalan" in update_dict and update_dict["text_catalan"]
+    text_catalan_updated = "text_catalan" in update_dict and update_dict["text_catalan"] and not quiet
     previous_text_catalan = drill.text_catalan
 
     for key, value in update_dict.items():
@@ -7819,21 +7826,59 @@ def ai_ask(
         print(f"[AI] ask failed: {e}")
         raise HTTPException(status_code=502, detail=f"AI assistant error: {str(e)[:200]}")
 
+def _ai_empremta(drill) -> str:
+    """El que el text desat ha llegit: si canvia, el text ja no val."""
+    camps = (drill.text_tachelhit, drill.text_catalan, drill.text_tachelhit_suggested, drill.text_tachelhit_latin)
+    return hashlib.sha256("|".join(c or "" for c in camps).encode("utf-8")).hexdigest()
+
+
+def _ai_desat(db: Session, drill_id: int, kind: str) -> Optional[str]:
+    """L'anàlisi d'una frase no canvia si no canvia la frase (#458)."""
+    fila = db.get(DrillAiTextModel, (drill_id, kind))
+    drill = db.get(DrillModel, drill_id) if fila else None
+    return fila.body if drill and fila.empremta == _ai_empremta(drill) else None
+
+
+def _ai_desa(db: Session, drill, kind: str, body: str) -> None:
+    fila = db.get(DrillAiTextModel, (drill.id, kind)) or DrillAiTextModel(drill_id=drill.id, kind=kind)
+    fila.body, fila.empremta, fila.updated_at = body, _ai_empremta(drill), datetime.utcnow()
+    db.add(fila)
+    try:
+        db.commit()
+    except Exception as e:  # ja està pagat i la persona ha de rebre'l: només es tornarà a calcular
+        db.rollback()
+        print(f"[AI] no s'ha pogut desar {kind} de {drill.id}: {e}")
+
+
+def _ai_gate_si_no_desat(feature: str):
+    """Llegir el que ja està desat no costa res: ni el pressupost ni la clau no ho poden aturar."""
+    gate = _ai_gate(feature)
+    async def dep(request: Request, drill_id: int, db: Session = Depends(get_db),
+                  user: Optional[UserModel] = Depends(get_current_user)) -> Dict[str, Any]:
+        if await run_in_threadpool(_ai_desat, db, drill_id, feature) is not None:
+            return {}
+        return await gate(request, user)
+    return dep
+
+
 @app.post("/ai/analyze-drill/{drill_id}")
-def ai_analyze_drill(drill_id: int, db: Session = Depends(get_db), _gate: Dict[str, Any] = Depends(_ai_gate("analyze"))):
+def ai_analyze_drill(drill_id: int, db: Session = Depends(get_db), _gate: Dict[str, Any] = Depends(_ai_gate_si_no_desat("analyze"))):
     """
     Morphological/grammatical analysis of the ATTESTED Tachelhit form the user
     collected in this drill — grounded in the grammar and the learner's own
     corpus. This is documentation, not correction: it explains the form as it
     is, and notes how it differs from the standard.
     """
-    if not gemini_available():
-        raise HTTPException(status_code=503, detail="AI assistant not configured (GEMINI_API_KEY missing)")
     drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found")
     if not (drill.text_tachelhit or "").strip():
         raise HTTPException(status_code=400, detail="Aquest drill no té text en taixelhit per analitzar")
+    desat = _ai_desat(db, drill_id, "analyze")
+    if desat is not None:
+        return {"drill_id": drill_id, "analysis": desat}
+    if not gemini_available():
+        raise HTTPException(status_code=503, detail="AI assistant not configured (GEMINI_API_KEY missing)")
 
     prompt = (
         _drill_context(drill) + "\n\n"
@@ -7850,6 +7895,7 @@ def ai_analyze_drill(drill_id: int, db: Session = Depends(get_db), _gate: Dict[s
     try:
         analysis = gemini_generate(_build_system_instruction(db),
                                    [{"role": "user", "text": prompt}], max_output_tokens=1400)
+        _ai_desa(db, drill, "analyze", analysis)
         return {"drill_id": drill_id, "analysis": analysis}
     except BudgetExceeded as e:
         raise HTTPException(status_code=429, detail=str(e))
@@ -7889,15 +7935,13 @@ def _related_drills(drill, db, limit: int = 8) -> list:
 
 
 @app.post("/ai/explain/{drill_id}")
-def ai_explain_drill(drill_id: int, db: Session = Depends(get_db), _gate: Dict[str, Any] = Depends(_ai_gate("explain"))):
+def ai_explain_drill(drill_id: int, db: Session = Depends(get_db), _gate: Dict[str, Any] = Depends(_ai_gate_si_no_desat("explain"))):
     """
     Learner's explanation of a drill: the Tachelhit phrase word by word, which Catalan
     word each one answers to, what is not said literally — plus the other drills in the
     corpus that use the same words. Works on the speaker's text or, failing that, on the
     machine draft (said so to the learner).
     """
-    if not gemini_available():
-        raise HTTPException(status_code=503, detail="AI assistant not configured (GEMINI_API_KEY missing)")
     drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found")
@@ -7909,6 +7953,11 @@ def ai_explain_drill(drill_id: int, db: Session = Depends(get_db), _gate: Dict[s
         raise HTTPException(status_code=400, detail="Aquest drill encara no té cap lectura en taixelhit per explicar")
     if not text and draft and draft_status(getattr(drill, "draft_check", None), drill.text_tachelhit_suggested) == "no":
         raise HTTPException(status_code=400, detail="La lectura automàtica d'aquest drill no quadra amb el significat: cal la transcripció d'un parlant abans d'explicar-la")
+    desat = _ai_desat(db, drill_id, "explain")
+    if desat is not None:
+        return {"drill_id": drill_id, "explanation": desat, "draft": not text, "related": _related_drills(drill, db)}
+    if not gemini_available():
+        raise HTTPException(status_code=503, detail="AI assistant not configured (GEMINI_API_KEY missing)")
     source_note = ("" if text else
                    "ATENCIÓ: no hi ha text confirmat pel parlant; la lectura és un ESBORRANY automàtic "
                    f"(«{draft}»). Explica'l igualment però digues-ho a l'aprenent en una línia. Per a CADA paraula digues si és una "
@@ -7934,6 +7983,7 @@ def ai_explain_drill(drill_id: int, db: Session = Depends(get_db), _gate: Dict[s
     except Exception as e:
         print(f"[AI] explain failed: {e}")
         raise HTTPException(status_code=502, detail=f"AI assistant error: {str(e)[:200]}")
+    _ai_desa(db, drill, "explain", explanation)
     return {"drill_id": drill_id, "explanation": explanation, "draft": not text,
             "related": _related_drills(drill, db)}
 

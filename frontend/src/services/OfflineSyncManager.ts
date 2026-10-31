@@ -4,9 +4,10 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import axios from 'axios';
 import { API_BASE, getMediaUrl } from '../config';
 import { mimeForFileName } from './../utils/media';
+import { rutaLocal } from './audioLocal';
 
 import type { Drill } from '../types';
-import { fetchAllDrills } from './fetchAllDrills';
+import { desaDrills, drillsLocals, sincronitza, treuDrill } from './biblioteca';
 
 // Re-exported for existing imports (MobileDrillCreator/Editor)
 export type { Drill };
@@ -25,7 +26,6 @@ export interface SyncAction {
   lastError?: string;
 }
 
-const DRILLS_CACHE_KEY = 'cached_drills';
 const TESTS_CACHE_KEY = 'cached_tests';
 const SYNC_QUEUE_KEY = 'sync_queue';
 const DEAD_QUEUE_KEY = 'sync_dead';
@@ -33,46 +33,25 @@ const MAX_ATTEMPTS = 5;
 /** A media URL that failed to download is not retried before this (a 404 waits a day). */
 const MEDIA_RETRY_MS = 60 * 60 * 1000;
 const MEDIA_RETRY_404_MS = 24 * 60 * 60 * 1000;
-/** A full media walk (one Filesystem.stat per drill asset) runs at most this often. */
-const MEDIA_SYNC_MIN_INTERVAL_MS = 10 * 60 * 1000;
 const newUid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
 class OfflineSyncManager {
   private syncPromise: Promise<void> | null = null;
   /** url -> time before which it must not be downloaded again (dead links, 404s, offline blips). */
   private mediaRetryAfter = new Map<string, number>();
-  private lastMediaSyncAt = 0;
 
   async getDrills(): Promise<Drill[]> {
-    const { value } = await Preferences.get({ key: DRILLS_CACHE_KEY });
-    return value ? JSON.parse(value) : [];
+    return drillsLocals();
   }
 
-  // On the web, Preferences is localStorage: about 5 MB for the whole origin, and the library
-  // passed that long ago. A cache that cannot be written is a pity, not a failure — losing the
-  // offline copy must never look like losing the server, so this never throws. When the whole
-  // library does not fit, what a person needs offline is kept (the texts and the media links)
-  // and the rest is dropped.
+  /** Desa les files a la còpia del dispositiu. */
   async saveDrillsToCache(drills: Drill[]) {
-    const write = async (value: string) => Preferences.set({ key: DRILLS_CACHE_KEY, value });
-    try {
-      await write(JSON.stringify(drills));
-    } catch {
-      const slim = drills.map((d: any) => ({
-        id: d.id, text_catalan: d.text_catalan, text_tachelhit: d.text_tachelhit,
-        text_arabic: d.text_arabic, audio_url: d.audio_url, image_url: d.image_url,
-        tag: d.tag, region: d.region, variety: d.variety, date_created: d.date_created,
-      }));
-      try {
-        await write(JSON.stringify(slim));
-        console.warn(`[Sync] Library too big for local storage: kept a light copy of ${slim.length} drills.`);
-      } catch {
-        try { await Preferences.remove({ key: DRILLS_CACHE_KEY }); } catch { /* nothing to do */ }
-        console.warn('[Sync] No room for an offline copy of the drills; the app will always ask the server.');
-      }
-    }
-    // Trigger media sync in background when drills are updated
-    this.syncAllMedia();
+    await desaDrills(drills);
+  }
+
+  /** Posa la biblioteca al dia. Falla sense xarxa. L'àudio només es baixa si es demana (`audioLocal`). */
+  async refreshDrills(recent = 0) {
+    await sincronitza(recent);
   }
 
   async getTests(): Promise<any[]> {
@@ -255,11 +234,10 @@ class OfflineSyncManager {
       await this.setDeadLetters(dead);
 
       // Refresh cache after sync
-      const [drills, testsRes] = await Promise.all([
-        fetchAllDrills(),
+      const [, testsRes] = await Promise.all([
+        this.refreshDrills(),
         axios.get(`${API_BASE}/tests/`)
       ]);
-      await this.saveDrillsToCache(drills);
       await this.saveTestsToCache(testsRes.data);
 
     } catch (err) {
@@ -271,11 +249,7 @@ class OfflineSyncManager {
   // delete (skipped entirely for drills created offline that never synced).
   // Resolves once a sync attempt has run, so callers can refresh afterwards.
   async deleteDrill(id: number) {
-    const drills = await this.getDrills();
-    await Preferences.set({
-      key: DRILLS_CACHE_KEY,
-      value: JSON.stringify(drills.filter(d => d.id !== id)),
-    });
+    await treuDrill(id);
     await this.queueAction({ type: 'DELETE', drillId: id });
     await this.sync();
   }
@@ -428,6 +402,8 @@ class OfflineSyncManager {
 
   async getLocalMediaUrl(url: string): Promise<string> {
     if (!url || url.startsWith('blob:') || url.startsWith('data:')) return url;
+    const baixat = rutaLocal(url);
+    if (baixat) return baixat;
     try {
       const fileName = url.split('/').pop();
       const stat = await Filesystem.stat({
@@ -437,66 +413,6 @@ class OfflineSyncManager {
       return (window as any).Capacitor.convertFileSrc(stat.uri);
     } catch (e) {
       return getMediaUrl(url);
-    }
-  }
-
-  async syncAllMedia(options?: { includeVideos?: boolean; batchSize?: number; force?: boolean }) {
-    // Only perform background sync if running in a regular web browser on localhost OR if in Capacitor environment
-    // For production web (Vercel), we don't want to try downloading files to a filesystem that doesn't exist
-    const isCapacitor = (window as any).Capacitor?.isNativePlatform();
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
-    if (!isCapacitor && !isLocalhost) {
-      return;
-    }
-
-    const status = await Network.getStatus();
-    if (!status.connected) return;
-
-    // The drill list is refreshed often (every page visit, after every change); walking
-    // every asset each time is a native-bridge call per asset. Once per interval is plenty.
-    if (!options?.force && Date.now() - this.lastMediaSyncAt < MEDIA_SYNC_MIN_INTERVAL_MS) return;
-
-    // Use a lock to prevent concurrent syncAllMedia runs
-    if ((this as any).isMediaSyncing) {
-      console.log('[OfflineSync] Media sync already in progress, skipping...');
-      return;
-    }
-    (this as any).isMediaSyncing = true;
-    this.lastMediaSyncAt = Date.now();
-
-    try {
-      const drills = await this.getDrills();
-      const includeVideos = options?.includeVideos ?? false; // Don't cache videos by default
-      const batchSize = options?.batchSize ?? 3; // Slightly increased batch size since we're being selective
-
-      console.log(`[OfflineSync] Syncing media for ${drills.length} drills (includeVideos: ${includeVideos})...`);
-
-      // Use smaller batches and sequential processing to avoid "AxiosError: Network Error"
-      for (let i = 0; i < drills.length; i += batchSize) {
-        const batch = drills.slice(i, i + batchSize);
-        // Process batch sequentially to avoid connection flooding
-        for (const drill of batch) {
-          try {
-            if (drill.audio_url) await this.downloadAndCacheMedia(drill.audio_url, 'audio');
-            if (drill.image_url) await this.downloadAndCacheMedia(drill.image_url, 'image');
-            // Only cache videos if explicitly requested - they can be very large
-            if (includeVideos && drill.video_url) {
-              await this.downloadAndCacheMedia(drill.video_url, 'video');
-            }
-          } catch (drillErr) {
-            console.warn(`[OfflineSync] Failed to sync media for drill ${drill.id}:`, drillErr);
-            // Continue with next drill instead of failing the entire batch
-          }
-        }
-        // Small breathing room between batches to avoid overwhelming the connection
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-      console.log('[OfflineSync] Media sync complete');
-    } catch (err) {
-      console.error('[OfflineSync] Media sync failed:', err);
-    } finally {
-      (this as any).isMediaSyncing = false;
     }
   }
 }

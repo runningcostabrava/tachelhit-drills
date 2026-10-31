@@ -4,7 +4,7 @@ import { FaPlay, FaCut } from 'react-icons/fa';
 import { getYouTubeVideoId } from '../utils/youtubeUtils';
 import type { Drill } from '../types';
 import VideoLibraryPlayer from './VideoLibraryPlayer';
-import { fetchAllDrills } from '../services/fetchAllDrills';
+import { bibliotecaAlDia } from '../services/biblioteca';
 
 type LibraryVideo = { id: string; url: string; title: string; drills: Drill[] };
 
@@ -40,7 +40,7 @@ export default function VideoLibraryPage() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetchAllDrills()
+    bibliotecaAlDia()
       .then(setDrills)
       .catch(err => { console.error('Failed to load drills:', err); setError(true); })
       .finally(() => setLoading(false));

@@ -4,6 +4,7 @@ import { FaMicrophone, FaPlay, FaSearch } from 'react-icons/fa';
 import { api } from '../api';
 import type { Drill } from '../types';
 import { getMediaUrl, hasIdentity, thumb } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import RecordAudioModal from './RecordAudioModal';
@@ -114,7 +115,7 @@ export default function SearchPage() {
                   </div>
                 </div>
                 {d.audio_url ? (
-                  <button onClick={() => new Audio(getMediaUrl(d.audio_url as string)).play().catch(() => {})}
+                  <button onClick={() => new Audio(audioSrc(d.audio_url as string)).play().catch(() => {})}
                           aria-label="Escolta-la" title="Escolta-la"
                           style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: 'var(--brand-gradient)', color: '#fff', cursor: 'pointer', flexShrink: 0 }}>
                     <FaPlay size={11} />

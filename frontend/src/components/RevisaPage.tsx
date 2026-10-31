@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FaChevronLeft, FaPlay, FaCheck } from 'react-icons/fa';
 import { api } from '../api';
-import { getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import Frase from './Frase';
 
 /**
@@ -29,7 +29,7 @@ interface Pila { id: string; titol: string; pregunta: string; opcions: Opcio[]; 
 interface Drill {
   id: number; text_tachelhit?: string | null; text_tachelhit_latin?: string | null;
   text_catalan?: string | null; text_arabic?: string | null; audio_url?: string | null;
-  image_url?: string | null; text_tachelhit_suggested?: string | null;
+  image_url?: string | null; text_tachelhit_suggested?: string | null; text_catalan_suggested?: string | null;
   region?: string | null; variety?: string | null; speaker?: string | null;
 }
 /**
@@ -214,6 +214,17 @@ export default function RevisaPage() {
                     {o.diu}: <strong>«{(quin.text_catalan || quin.text_tachelhit || '').slice(0, 44)}»</strong>
                   </button>
                 ))
+              ) : o.id === 'tria' && pila === 'per-traduir' ? (
+                <div key={o.id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>Traducció de màquina: corregeix-la si cal.</span>
+                  <textarea value={editat ?? (d?.text_catalan_suggested || '')}
+                            onChange={(ev) => setEditat(ev.target.value)} rows={2} lang="ca"
+                            style={{ ...boto, fontSize: 17, lineHeight: 1.5, resize: 'vertical', textAlign: 'left' }} />
+                  <button onClick={() => decideix('tria', undefined, (editat ?? (d?.text_catalan_suggested || '')).trim())}
+                          disabled={ocupat || !(editat ?? (d?.text_catalan_suggested || '')).trim()} style={boto}>
+                    {o.diu} <span style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>(es desa el que hi ha a la caixa)</span>
+                  </button>
+                </div>
               ) : o.id === 'tria' && pila === 'casa-amb-el-llibre' && esborranys.length ? (
                 // Aquí el text és d'una persona (l'autor del llibre) i el que va fer la màquina
                 // és l'aparellament. En Pablo va escoltar 30 talls (29/10): el CD sovint diu
@@ -257,7 +268,7 @@ function Targeta({ d }: { d: Drill }) {
     <div style={targeta}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
         {(d.audio_url || '').trim() && (
-          <button onClick={() => { const a = new Audio(getMediaUrl(d.audio_url || '')); a.play().catch(() => {}); }}
+          <button onClick={() => { const a = new Audio(audioSrc(d.audio_url || '')); a.play().catch(() => {}); }}
                   aria-label="Escolta-la"
                   style={{ flexShrink: 0, width: 44, height: 44, borderRadius: '50%', border: 'none',
                            background: 'var(--brand-gradient)', color: '#fff', cursor: 'pointer',
