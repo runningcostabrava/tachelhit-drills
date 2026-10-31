@@ -405,7 +405,9 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                     return toast.error('Cal permís de reconeixement de veu');
                 }
             }
-            if (!(await SpeechRecognition.available())) {
+            // `available()` torna un objecte, i un objecte sempre és cert: tal com estava, aquest
+            // avís no hauria saltat mai en un telèfon que no sap dictar.
+            if (!(await SpeechRecognition.available()).available) {
                 toast.error('Aquest telèfon no sap dictar: grava l’amazic i escriu el significat');
                 return;
             }
