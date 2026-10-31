@@ -118,7 +118,10 @@ class DrillCreate(DrillBase):
     pass
 
 class DrillUpdate(DrillBase):
-    pass
+    #: Una càrrega massiva de qui administra: desa el text i no engega ni la traducció a l'àrab ni
+    #: la veu catalana (#539). No és cap camp de la fila. Escriure centenars de catalans seguits
+    #: amb els efectes engegats tombava el Render.
+    quiet: Optional[bool] = None
 
 class Drill(DrillBase):
     id: int
