@@ -2968,6 +2968,512 @@
         "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
         "linia": "tswa tudit sḍist idamiyya … -kilu."
       }
+    },
+    "el-mercat": {
+      "dialogue:4": {
+        "pista": "JkXAk3CKIPA",
+        "start": 27.73,
+        "end": 29.49,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443751/tachelhit/cd_metode/JkXAk3CKIPA_27-73_29-49.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "riɣ yan kilu d-nṣṣ n-matica inwan."
+      },
+      "ad-ann:example:12": {
+        "pista": "JkXAk3CKIPA",
+        "start": 245.05,
+        "end": 245.91,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443751/tachelhit/cd_metode/JkXAk3CKIPA_245-05_245-91.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "is tẓrit lfilm-ad?"
+      },
+      "preu:example:8": {
+        "pista": "JkXAk3CKIPA",
+        "start": 450.81,
+        "end": 452.57,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443752/tachelhit/cd_metode/JkXAk3CKIPA_450-81_452-57.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "mnckk a iskar baṭaṭa dar bulxʷḍrt?"
+      },
+      "preu:example:10": {
+        "pista": "JkXAk3CKIPA",
+        "start": 461.12,
+        "end": 463.05,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443753/tachelhit/cd_metode/JkXAk3CKIPA_461-12_463-05.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "mnckk ad skarn kraḍid kilu n-baṭaṭa?"
+      },
+      "preu:example:12": {
+        "pista": "JkXAk3CKIPA",
+        "start": 472.7,
+        "end": 474.52,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443754/tachelhit/cd_metode/JkXAk3CKIPA_472-70_474-52.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "mnckk n-kilu n-baṭaṭa ayra Brahim?"
+      },
+      "regatejar:example:1": {
+        "pista": "JkXAk3CKIPA",
+        "start": 67.67,
+        "end": 68.38,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443755/tachelhit/cd_metode/JkXAk3CKIPA_67-67_68-38.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "taɣawsa n’lmliḥ"
+      },
+      "regatejar:example:2": {
+        "pista": "JkXAk3CKIPA",
+        "start": 74.81,
+        "end": 75.57,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443756/tachelhit/cd_metode/JkXAk3CKIPA_74-81_75-57.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "taɣawsa ifulkin"
+      },
+      "regatejar:example:4": {
+        "pista": "JkXAk3CKIPA",
+        "start": 421.27,
+        "end": 422.92,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443757/tachelhit/cd_metode/JkXAk3CKIPA_421-27_422-92.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "fk-iyyi taɣawsa ifulkin i-ṛbbi."
+      },
+      "participi:example:7": {
+        "pista": "JkXAk3CKIPA",
+        "start": 484.06,
+        "end": 485.71,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443758/tachelhit/cd_metode/JkXAk3CKIPA_484-06_485-71.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "mnckk n-matica inwan a yra Brahim?"
+      },
+      "fulki:example:4": {
+        "pista": "JkXAk3CKIPA",
+        "start": 435.14,
+        "end": 436.33,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443759/tachelhit/cd_metode/JkXAk3CKIPA_435-14_436-33.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "tfulki bahra tgmmi-yad."
+      },
+      "colors:example:2": {
+        "pista": "JkXAk3CKIPA",
+        "start": 416.17,
+        "end": 417.4,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443760/tachelhit/cd_metode/JkXAk3CKIPA_416-17_417-40.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "ur dar-k ififl azgzaw?"
+      },
+      "colors:example:3": {
+        "pista": "JkXAk3CKIPA",
+        "start": 196.02,
+        "end": 198.51,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443760/tachelhit/cd_metode/JkXAk3CKIPA_196-02_198-51.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "tskr-aɣ Zinb llubia tazgzawt ass n-ssbt."
+      },
+      "colors:example:4": {
+        "pista": "JkXAk3CKIPA",
+        "start": 219.58,
+        "end": 222.09,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443761/tachelhit/cd_metode/JkXAk3CKIPA_219-58_222-09.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "iɛbr-as bulfakit kilu n-waḍil umlil."
+      },
+      "colors:example:5": {
+        "pista": "JkXAk3CKIPA",
+        "start": 153.54,
+        "end": 155.98,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443762/tachelhit/cd_metode/JkXAk3CKIPA_153-54_155-98.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "fkan-as imddukkʷal-ns yat tẓrbit tawraɣt."
+      },
+      "ur:example:0": {
+        "pista": "JkXAk3CKIPA",
+        "start": 230.03,
+        "end": 231.6,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443763/tachelhit/cd_metode/JkXAk3CKIPA_230-03_231-60.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "is tfta Faṭim s-ssuq ass n-ssbt?"
+      },
+      "ur:example:2": {
+        "pista": "JkXAk3CKIPA",
+        "start": 237.55,
+        "end": 239.2,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443764/tachelhit/cd_metode/JkXAk3CKIPA_237-55_239-20.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "is tramt imikk n-zzit tabldit?"
+      },
+      "ur:example:4": {
+        "pista": "JkXAk3CKIPA",
+        "start": 252.31,
+        "end": 254.32,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443764/tachelhit/cd_metode/JkXAk3CKIPA_252-31_254-32.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "is tsɣa Zinb tinaffin dar bulxʷḍrt?"
+      },
+      "ur:example:6": {
+        "pista": "JkXAk3CKIPA",
+        "start": 261.63,
+        "end": 263.97,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443765/tachelhit/cd_metode/JkXAk3CKIPA_261-63_263-97.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "is tfta Zinb d-Yamna s-lḥmmam ass n-lḥd?"
+      },
+      "ur:example:8": {
+        "pista": "JkXAk3CKIPA",
+        "start": 271.46,
+        "end": 272.69,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443766/tachelhit/cd_metode/JkXAk3CKIPA_271-46_272-69.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "is dar-k llubia tazgzawt?"
+      },
+      "ur:example:10": {
+        "pista": "JkXAk3CKIPA",
+        "start": 278.51,
+        "end": 279.39,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443767/tachelhit/cd_metode/JkXAk3CKIPA_278-51_279-39.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "is dar-sn tarwa?"
+      },
+      "yan-yat:example:0": {
+        "pista": "JkXAk3CKIPA",
+        "start": 289.56,
+        "end": 290.83,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443768/tachelhit/cd_metode/JkXAk3CKIPA_289-56_290-83.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "is tẓrit Ḥmad ɣ-lqhwa?"
+      },
+      "yan-yat:example:2": {
+        "pista": "JkXAk3CKIPA",
+        "start": 295.67,
+        "end": 296.74,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443768/tachelhit/cd_metode/JkXAk3CKIPA_295-67_296-74.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "is dar-k kra n-iqariḍn?"
+      },
+      "yan-yat:example:4": {
+        "pista": "JkXAk3CKIPA",
+        "start": 301.94,
+        "end": 302.7,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443769/tachelhit/cd_metode/JkXAk3CKIPA_301-94_302-70.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "ur tswam lqhwa?"
+      },
+      "yan-yat:example:6": {
+        "pista": "JkXAk3CKIPA",
+        "start": 307.77,
+        "end": 308.73,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443770/tachelhit/cd_metode/JkXAk3CKIPA_307-77_308-73.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "is tram kra n-lḥlwa?"
+      },
+      "yan-yat:example:8": {
+        "pista": "JkXAk3CKIPA",
+        "start": 313.68,
+        "end": 314.91,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443771/tachelhit/cd_metode/JkXAk3CKIPA_313-68_314-91.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "ur tẓramt Mbark ɣ-uɣaras?"
+      },
+      "yan-yat:example:10": {
+        "pista": "JkXAk3CKIPA",
+        "start": 319.64,
+        "end": 320.61,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443772/tachelhit/cd_metode/JkXAk3CKIPA_319-64_320-61.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "is tskr Yamna ibrin?"
+      },
+      "yan-yat:example:12": {
+        "pista": "JkXAk3CKIPA",
+        "start": 325.69,
+        "end": 326.96,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443773/tachelhit/cd_metode/JkXAk3CKIPA_325-69_326-96.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "is tssnt kra ɣ-uḍwwar-ad?"
+      },
+      "ili-sul:example:2": {
+        "pista": "JkXAk3CKIPA",
+        "start": 337.34,
+        "end": 338.31,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443774/tachelhit/cd_metode/JkXAk3CKIPA_337-34_338-31.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "ur tram kra n-lxʷḍrt?"
+      },
+      "ili-sul:example:4": {
+        "pista": "JkXAk3CKIPA",
+        "start": 344.3,
+        "end": 345.55,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443774/tachelhit/cd_metode/JkXAk3CKIPA_344-30_345-55.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "ur trit aɣrum bahra inwan?"
+      },
+      "ili-sul:example:6": {
+        "pista": "JkXAk3CKIPA",
+        "start": 351.07,
+        "end": 351.88,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443775/tachelhit/cd_metode/JkXAk3CKIPA_351-07_351-88.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "ur sɣan llitcin?"
+      },
+      "ili-sul:example:8": {
+        "pista": "JkXAk3CKIPA",
+        "start": 356.99,
+        "end": 357.96,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443776/tachelhit/cd_metode/JkXAk3CKIPA_356-99_357-96.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "ur tram tirkmin-ad?"
+      },
+      "ili-sul:example:10": {
+        "pista": "JkXAk3CKIPA",
+        "start": 363.62,
+        "end": 364.77,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443777/tachelhit/cd_metode/JkXAk3CKIPA_363-62_364-77.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "ur isɣa lfakit ɣ-ssuq?"
+      },
+      "pronoms-indirectes:example:0": {
+        "pista": "JkXAk3CKIPA",
+        "start": 82.86,
+        "end": 85.7,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443778/tachelhit/cd_metode/JkXAk3CKIPA_82-86_85-70.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "isti bulxʷḍrt kkuẓid kilu n-tnaffin i-Zinb."
+      },
+      "pronoms-indirectes:example:1": {
+        "pista": "JkXAk3CKIPA",
+        "start": 87.25,
+        "end": 89.81,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443778/tachelhit/cd_metode/JkXAk3CKIPA_87-25_89-81.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "isti-yas bulxḍrt kkuẓid kilu n-tnaffin."
+      },
+      "pronoms-indirectes:example:2": {
+        "pista": "JkXAk3CKIPA",
+        "start": 92.29,
+        "end": 95.5,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443779/tachelhit/cd_metode/JkXAk3CKIPA_92-29_95-50.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "stiɣ sin id kilu n-ttffaḥ inwan i-ymddukkʷal-inu."
+      },
+      "pronoms-indirectes:example:4": {
+        "pista": "JkXAk3CKIPA",
+        "start": 102.61,
+        "end": 105.49,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443780/tachelhit/cd_metode/JkXAk3CKIPA_102-61_105-49.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "ixllṣ Brahim miyya d-kraḍ idaw ɛcrin i-bulxʷḍrt."
+      },
+      "pronoms-indirectes:example:5": {
+        "pista": "JkXAk3CKIPA",
+        "start": 108.22,
+        "end": 110.85,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443781/tachelhit/cd_metode/JkXAk3CKIPA_108-22_110-85.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "ixllṣ-as Brahim miyya d-kraḍ idaw ɛcrin."
+      },
+      "pronoms-indirectes:example:6": {
+        "pista": "JkXAk3CKIPA",
+        "start": 132.28,
+        "end": 134.42,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443782/tachelhit/cd_metode/JkXAk3CKIPA_132-28_134-42.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "nlḍr tamubil i-Mbark ass n-lxmis."
+      },
+      "pronoms-indirectes:example:7": {
+        "pista": "JkXAk3CKIPA",
+        "start": 137.24,
+        "end": 138.93,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443782/tachelhit/cd_metode/JkXAk3CKIPA_137-24_138-93.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "nlḍr-as tamubil ass n-lxmis."
+      },
+      "pronoms-indirectes:example:8": {
+        "pista": "JkXAk3CKIPA",
+        "start": 425.87,
+        "end": 427.28,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443783/tachelhit/cd_metode/JkXAk3CKIPA_425-87_427-28.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "is tskrt ttilifun i-Ḥmad?"
+      },
+      "dfar:example:2": {
+        "pista": "JkXAk3CKIPA",
+        "start": 535.99,
+        "end": 538.64,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443784/tachelhit/cd_metode/JkXAk3CKIPA_535-99_538-64.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "iḍfar-as bulxḍrt miyya d-kraḍidaw ɛcrin"
+      },
+      "dfar:example:5": {
+        "pista": "JkXAk3CKIPA",
+        "start": 113.43,
+        "end": 115.75,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443785/tachelhit/cd_metode/JkXAk3CKIPA_113-43_115-75.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "tḍfar Zinb alf ryal i-tmddakʷlt-ns."
+      },
+      "dfar:example:6": {
+        "pista": "JkXAk3CKIPA",
+        "start": 118.89,
+        "end": 120.42,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443786/tachelhit/cd_metode/JkXAk3CKIPA_118-89_120-42.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "tḍfar-as Zinb alf ryal."
+      },
+      "dfar:example:7": {
+        "pista": "JkXAk3CKIPA",
+        "start": 123.25,
+        "end": 125.83,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443787/tachelhit/cd_metode/JkXAk3CKIPA_123-25_125-83.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "ḍfarɣ smmus ida miyya i-Ḥmad d-Yamna."
+      },
+      "dfar:example:8": {
+        "pista": "JkXAk3CKIPA",
+        "start": 128.64,
+        "end": 130.17,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443787/tachelhit/cd_metode/JkXAk3CKIPA_128-64_130-17.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "ḍfarɣ-asn smmus ida miyya."
+      },
+      "dfar:example:9": {
+        "pista": "JkXAk3CKIPA",
+        "start": 527.21,
+        "end": 528.78,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443788/tachelhit/cd_metode/JkXAk3CKIPA_527-21_528-78.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "mnckk a yḍfar bulxʷḍrt i-Brahim?"
+      },
+      "mad:example:0": {
+        "pista": "JkXAk3CKIPA",
+        "start": 146.32,
+        "end": 148.16,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443789/tachelhit/cd_metode/JkXAk3CKIPA_146-32_148-16.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "ifka-yaɣ Brahim timitac."
+      },
+      "mad:example:1": {
+        "pista": "JkXAk3CKIPA",
+        "start": 149.77,
+        "end": 151.1,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443790/tachelhit/cd_metode/JkXAk3CKIPA_149-77_151-10.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "mad-awn ifka Brahim?"
+      },
+      "mad:example:2": {
+        "pista": "JkXAk3CKIPA",
+        "start": 165.66,
+        "end": 166.99,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443791/tachelhit/cd_metode/JkXAk3CKIPA_165-66_166-99.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "mad-ak tlḍr Faṭim?"
+      },
+      "mad:example:3": {
+        "pista": "JkXAk3CKIPA",
+        "start": 173.32,
+        "end": 174.85,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443791/tachelhit/cd_metode/JkXAk3CKIPA_173-32_174-85.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "mad-as lḍrnt istt mas?"
+      },
+      "mad:example:4": {
+        "pista": "JkXAk3CKIPA",
+        "start": 183.48,
+        "end": 184.56,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443792/tachelhit/cd_metode/JkXAk3CKIPA_183-48_184-56.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "mad-ak ifka umddakʷl-nk?"
+      },
+      "mad:example:5": {
+        "pista": "JkXAk3CKIPA",
+        "start": 186.72,
+        "end": 188.62,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443793/tachelhit/cd_metode/JkXAk3CKIPA_186-72_188-62.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "ifka-yyi umddakʷl-inu yat tllitcint."
+      },
+      "mad:example:6": {
+        "pista": "JkXAk3CKIPA",
+        "start": 191.5,
+        "end": 192.97,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443794/tachelhit/cd_metode/JkXAk3CKIPA_191-50_192-97.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "mad-awn tskr Zinb ass n-ssbt?"
+      },
+      "mad:example:7": {
+        "pista": "JkXAk3CKIPA",
+        "start": 201.48,
+        "end": 202.98,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443794/tachelhit/cd_metode/JkXAk3CKIPA_201-48_202-98.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "mad-awnt isɣa Brahim ɣ-ssuq?"
+      },
+      "mad:example:8": {
+        "pista": "JkXAk3CKIPA",
+        "start": 205.21,
+        "end": 207.14,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443795/tachelhit/cd_metode/JkXAk3CKIPA_205-21_207-14.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "isɣa-yaɣ Brahim tazart ɣ-ssuq."
+      },
+      "mad:example:9": {
+        "pista": "JkXAk3CKIPA",
+        "start": 209.56,
+        "end": 210.61,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443796/tachelhit/cd_metode/JkXAk3CKIPA_209-56_210-61.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "mad-am tfka ultma-m?"
+      },
+      "mad:example:10": {
+        "pista": "JkXAk3CKIPA",
+        "start": 212.6,
+        "end": 213.67,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443797/tachelhit/cd_metode/JkXAk3CKIPA_212-60_213-67.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "tfka-yyi ultma lluz."
+      },
+      "mad:example:11": {
+        "pista": "JkXAk3CKIPA",
+        "start": 216.38,
+        "end": 217.54,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443797/tachelhit/cd_metode/JkXAk3CKIPA_216-38_217-54.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "mad-as iɛbr bulfakit?"
+      },
+      "dar-bulxdrt:example:0": {
+        "pista": "JkXAk3CKIPA",
+        "start": 443.39,
+        "end": 444.34,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443798/tachelhit/cd_metode/JkXAk3CKIPA_443-39_444-34.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "mani-s ifta Brahim?"
+      },
+      "dar-bulxdrt:example:2": {
+        "pista": "JkXAk3CKIPA",
+        "start": 494.5,
+        "end": 495.72,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443799/tachelhit/cd_metode/JkXAk3CKIPA_494-50_495-72.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "is illa xizzu dar bulxʷḍrt?"
+      },
+      "dar-bulxdrt:example:4": {
+        "pista": "JkXAk3CKIPA",
+        "start": 506.71,
+        "end": 508.43,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443800/tachelhit/cd_metode/JkXAk3CKIPA_506-71_508-43.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "is isɣa Brahim taxsayt dar bulxʷḍrt?"
+      },
+      "dar-bulxdrt:example:5": {
+        "pista": "JkXAk3CKIPA",
+        "start": 430.58,
+        "end": 431.98,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443800/tachelhit/cd_metode/JkXAk3CKIPA_430-58_431-98.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "is dar-m tigmmi ɣ-udrar?"
+      },
+      "vocabulary:57": {
+        "pista": "JkXAk3CKIPA",
+        "start": 74.81,
+        "end": 75.57,
+        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443756/tachelhit/cd_metode/JkXAk3CKIPA_74-81_75-57.mp3",
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "taɣawsa ifulkin"
+      }
     }
   },
   "per_comprovar": {
