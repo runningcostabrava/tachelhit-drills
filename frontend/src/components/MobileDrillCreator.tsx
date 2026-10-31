@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { FaCamera, FaVideo, FaMicrophone, FaKeyboard, FaFolderOpen, FaVolumeUp, FaFileAlt, FaLanguage, FaSave, FaTimes, FaCut as FaScissors } from 'react-icons/fa';
+import { FaCamera, FaVideo, FaMicrophone, FaKeyboard, FaFolderOpen, FaFileAlt, FaLanguage, FaSave, FaTimes, FaCut as FaScissors } from 'react-icons/fa';
 import axios from 'axios';
 import { Network } from '@capacitor/network';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
@@ -318,25 +318,6 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         }
     };
 
-    const handleTachelhitTTS = async () => {
-        const text = drillRef.current.text_tachelhit?.trim();
-        if (!text) return toast.error('El camp de tachelhit és buit.');
-        if (!(await requireOnline('El TTS'))) return;
-        setBusy('tts');
-        try {
-            const id = await ensureServerDrill();
-            const res = await axios.post(`${API_BASE}/tts/tachelhit`, { text, drill_id: id });
-            if (res.data.url) {
-                setDrill(prev => ({ ...prev, audio_tts_shi_url: res.data.url }));
-                new Audio(getMediaUrl(res.data.url)).play().catch(() => {});
-            }
-        } catch (err: any) {
-            toast.error(`El TTS ha fallat: ${errMsg(err, 'error')}`);
-        } finally {
-            setBusy(null);
-        }
-    };
-
     const handleTranslateAction = async (source: 'ca' | 'shi', target: 'ca' | 'shi') => {
         const d = drillRef.current;
         const sourceText = (source === 'ca' ? d.text_catalan : d.text_tachelhit)?.trim();
@@ -605,7 +586,6 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', background: 'var(--surface)', padding: '16px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)' }}>
                     <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={disabled} aria-label="Tradueix del català al tachelhit" style={aiTileStyle('var(--brand-gradient-soft)', 'var(--brand-1)')}><FaLanguage size={18} /> {busy === 'trans-text_tachelhit' ? '…' : 'CA➔SH'}</button>
                     <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={disabled} aria-label="Tradueix del tachelhit al català" style={aiTileStyle('var(--emerald-soft)', 'var(--emerald)')}><FaLanguage size={18} /> {busy === 'trans-text_catalan' ? '…' : 'SH➔CA'}</button>
-                    <button onClick={handleTachelhitTTS} disabled={disabled} aria-label="Veu sintètica en tachelhit" style={aiTileStyle('var(--amber-soft)', 'var(--amber-strong)')}><FaVolumeUp size={18} /> {busy === 'tts' ? '…' : 'TTS'}</button>
                     <button
                         onClick={() => {
                             const hasAudio = !!drill.audio_url, hasVideo = !!drill.video_url;
