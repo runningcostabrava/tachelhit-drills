@@ -1135,6 +1135,10 @@ def test_lindex_del_cd_nomes_fa_sonar_el_que_ha_sentit_una_persona():
     Per això, mentre no hi hagi una prova que no surti de la màquina sentint sola, només sona el
     que ha comprovat una persona. La feina de la màquina no es llença: es desa a `per_comprovar`,
     i allà no porta adreça de tall, que és el que fa que no soni.
+
+    L'ADR 0010 (31-10) hi afegeix UNA prova que no surt de la màquina sola: la lectura rica
+    (ADR 0009) aparellada per ordre del llibre i calibrada amb les 130 escoltes d'en Pablo. En el
+    tram d'acord ≥ 0,80, 39 de 40 escoltes eren «sí». Aquestes entrades sonen i ho diuen a `com`.
     """
     import json
     from pathlib import Path
@@ -1143,8 +1147,9 @@ def test_lindex_del_cd_nomes_fa_sonar_el_que_ha_sentit_una_persona():
     dades = json.loads(Path(method.CD_FITXER).read_text(encoding="utf-8"))
     for slug, linies in (dades.get("capitols") or {}).items():
         for on, d in linies.items():
-            assert d.get("com") == "sentit", \
-                "%s/%s sona sense que l'hagi sentida ningú: «%s»" % (slug, on, d.get("com"))
+            com = d.get("com") or ""
+            assert com == "sentit" or com.startswith("lectura rica ≥0,80"), \
+                "%s/%s sona sense que l'hagi sentida ningú ni la lectura calibrada: «%s»" % (slug, on, com)
             assert d.get("url"), "%s/%s diu que sona i no porta tall" % (slug, on)
             # #495: una adreça /method/cd/... només sona a la màquina que té el CD; a la web el
             # botó hi era i no sonava res
