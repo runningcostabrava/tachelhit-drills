@@ -137,7 +137,7 @@ export default function VeusPage() {
                   {it.requested_by ? `Ho demana ${it.requested_by}` : d.region ? d.region : 'sense lloc'}{it.note ? ` · ${it.note}` : ''}{it.units.length ? ` · ${it.units.join(', ')}` : ''}
                 </div>
               </div>
-              {(d.audio_url || d.audio_tts_shi_url) && <button onClick={() => play(d.audio_url || d.audio_tts_shi_url)} aria-label="Escolta" title={d.audio_url ? 'Veu gravada' : 'Veu sintètica'} style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : 'var(--sky)', color: '#fff', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={12} /></button>}
+              {(d.audio_url) && <button onClick={() => play(d.audio_url)} aria-label="Escolta" title="Veu gravada" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : 'var(--sky)', color: '#fff', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={12} /></button>}
               <button onClick={() => setRecording(d)} aria-label="Grava-ho tu" title="Grava-ho a la teva manera" style={{ flexShrink: 0, width: 38, height: 38, borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaMicrophone size={15} /></button>
             </div>
           );

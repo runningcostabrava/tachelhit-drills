@@ -57,7 +57,7 @@ const SOURCES: { kind: SourceKind; label: string }[] = [
 
 // A sentence is only usable if somebody has written what it says, in both languages.
 const usable = (d?: Drill) => !!d && !!(d.text_tachelhit || '').trim() && !!(d.text_catalan || '').trim();
-const hasVoice = (d?: Drill) => !!d && !!((d.audio_url || '').trim() || (d.audio_tts_shi_url || '').trim());
+const hasVoice = (d?: Drill) => !!d && !!((d.audio_url || '').trim());
 
 /** Les eines que demanen repetir el que se sent: la gravació hi fa de model (#273). */
 const PER_IMITAR: PracticeStep['kind'][] = ['say_it', 'write_heard'];
@@ -623,7 +623,7 @@ export default function PracticeEditor() {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end', marginTop: 8 }}>
                     {drill && hasVoice(drill) && (
-                      <button onClick={() => new Audio(getMediaUrl(drill.audio_url || drill.audio_tts_shi_url || '')).play().catch(() => {})}
+                      <button onClick={() => new Audio(getMediaUrl(drill.audio_url || '')).play().catch(() => {})}
                               title="Escolta" style={icon}><FaPlay size={11} /></button>
                     )}
                     {drill && !hasVoice(drill) && (

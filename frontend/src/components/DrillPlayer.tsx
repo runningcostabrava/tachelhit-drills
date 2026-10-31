@@ -2,11 +2,11 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { duesCares } from '../utils/tifinag';
 import { answerSafeFilter } from '../utils/media';
 import SourceCredit from './SourceCredit';
-import { API_BASE, getMediaUrl } from '../config';
+import { getMediaUrl } from '../config';
 import { preferredRecorderMime, toPlayableAudioUrl } from '../utils/media';
 import { getMediaWithOfflineFallback } from '../utils/offlineCache';
 import { getYouTubeVideoId, loadYouTubeApi } from '../utils/youtubeUtils';
-import { FaVideo, FaVolumeUp, FaPlay, FaPause, FaSync, FaTimes, FaStepBackward, FaStepForward, FaEye, FaStop, FaMicrophone } from 'react-icons/fa';
+import { FaVideo, FaPlay, FaPause, FaSync, FaTimes, FaStepBackward, FaStepForward, FaEye, FaStop, FaMicrophone } from 'react-icons/fa';
 import DrillVoices from './DrillVoices';
 import WordGloss from './WordGloss';
 import AiAssistant from './AiAssistant';
@@ -165,8 +165,6 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
   };
 
   // Synthetic-voice scaffold state (marks TTS fallback playback)
-  const [usingSyntheticVoice, setUsingSyntheticVoice] = useState(false);
-  const [synthesizingVoice, setSynthesizingVoice] = useState(false);
 
   // Say it yourself, then hear the two takes one after the other (review mode).
   //
@@ -309,7 +307,6 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
     // New card starts hidden again (recall-first)
     setAnswerRevealed(false);
     answerRevealedRef.current = false;
-    setUsingSyntheticVoice(false);
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -469,40 +466,14 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
   };
 
   const playTachelhitAudio = async (): Promise<void> => {
-    // Voice-source chain: native recording (gold) -> stored synthetic voice
-    // (scaffold) -> synthesize on demand for text-only cards (the backend
-    // stores the result so this only happens once per drill)
-    // A captured video clip IS the native voice: play its sound track before any synthetic voice.
-    // A stored synthetic voice counts only when it is current (v2: read from standard Tifinagh;
-    // earlier voices were read from Latin letters and are near silence).
-    const storedVoice = /tts_v2_/.test(currentDrill?.audio_tts_shi_url || '') ? currentDrill?.audio_tts_shi_url || '' : '';
-    let sourceUrl = currentDrill?.audio_url || currentDrill?.video_url || storedVoice || '';
-    let synthetic = !currentDrill?.audio_url && !currentDrill?.video_url && !!sourceUrl;
+    // Només veus de persona: la gravació o el so del vídeo. Una frase sense veu queda muda (#532).
+    const sourceUrl = currentDrill?.audio_url || currentDrill?.video_url || '';
 
-    if (!sourceUrl && currentDrill?.text_tachelhit) {
-      try {
-        setSynthesizingVoice(true);
-        const res = await fetch(`${API_BASE}/tts/tachelhit`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: currentDrill.text_tachelhit, drill_id: currentDrill.id, meaning: currentDrill.text_catalan || null }),
-        });
-        if (res.ok) {
-          sourceUrl = (await res.json()).url || '';
-          synthetic = !!sourceUrl;
-        }
-      } catch (e) {
-        console.warn('Tachelhit TTS synthesis failed:', e);
-      } finally {
-        setSynthesizingVoice(false);
-      }
-    }
 
     if (!sourceUrl) {
       if (autoPlayEnabled && !reviewMode) goToNextDrill();
       return;
     }
-    setUsingSyntheticVoice(synthetic);
 
     try {
       // Get audio URL with offline fallback
@@ -977,18 +948,6 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
           {explainOpen && currentDrill && <AiAssistant drillId={currentDrill.id} drillLabel={currentDrill.text_catalan || currentDrill.text_tachelhit || `#${currentDrill.id}`} autoAction="explain" onClose={() => setExplainOpen(false)} />}
 
           {/* Synthetic-voice scaffold marker: learners must know sketch from gold */}
-          {(synthesizingVoice || usingSyntheticVoice) && (
-            <div style={{ textAlign: 'center', paddingBottom: '10px' }}>
-              <span style={{
-                fontSize: '11px', fontWeight: 700, padding: '3px 10px',
-                borderRadius: 'var(--r-pill)', background: 'var(--sky-soft)', color: 'var(--sky)'
-              }}>
-                {synthesizingVoice
-                  ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><FaVolumeUp /> Sintetitzant la veu…</span>
-                  : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><FaVolumeUp /> Veu sintètica — encara sense gravació nativa</span>}
-              </span>
-            </div>
-          )}
 
           {/* Translations */}
           <div style={{ padding: '0 24px 8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>

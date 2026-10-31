@@ -232,7 +232,7 @@ export default function DrillsResponsive() {
 
   // A sentence with no voice would be a silent card: left out of the session, and counted so
   // the person knows why the number shrank.
-  const playable = (list: Drill[]) => list.filter((d) => (d.audio_url || '').trim() || (d.audio_tts_shi_url || '').trim());
+  const playable = (list: Drill[]) => list.filter((d) => (d.audio_url || '').trim() || (d.video_url || '').trim());
   const toPlay = selectedDrills.length ? selectedDrills : filteredDrills;
   const startPlaying = () => {
     const withVoice = playable(toPlay);

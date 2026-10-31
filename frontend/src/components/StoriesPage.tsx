@@ -377,7 +377,7 @@ function OneStory({ slug }: { slug: string }) {
     try { return await sona(url); } finally { viu = false; setMot(null); }
   }, [sona, page]);
 
-  const amazic = (d: Drill) => (d.audio_url || d.audio_tts_shi_url || '').trim();
+  const amazic = (d: Drill) => (d.audio_url || '').trim();
 
   // Estudiar una línia: primer saps QUÈ sentiràs, i després ho sents dues vegades.
   //
