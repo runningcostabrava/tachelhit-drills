@@ -70,9 +70,19 @@ def sound_key(word: str) -> str:
     # s i un capelló a part) i, sense ajuntar-les, la mateixa paraula escrita de dues maneres
     # donava dues claus — i per tant la frase gravada no es trobava mai.
     w = unicodedata.normalize("NFC", word or "").lower().strip("'’\"«»()[]¿?¡!.,;:-")
+    # Les llargues, una sola abans de plegar: a «ayyur» la primera y anava seguida d'una y i es
+    # plegava en i, la segona no, i la clau sortia «aiyur» contra «ayur» del tifinag.
+    w = re.sub(r"(.)\1+", r"\1", w)
     for pat, rep in _FOLD:
         w = re.sub(pat, rep, w)
     k = transliteration.phonemic_key(w) if w else ""
+    # Plegat també DESPRÉS de la transliteració: el tifinag surt del transliterador amb la seva
+    # «y» (ⴰⵢⴷⵉ → aydi) i el llatí ja hi havia entrat plegat (aydi → aidi), de manera que la
+    # mateixa paraula escrita en tifinag i en llatí donava dues claus. Amb una biblioteca on
+    # milers de frases gravades només porten tifinag (MTNRA, Common Voice, IRCAM), cap paraula
+    # amb «y» del llibre no trobava mai la seva veu (#534).
+    for pat, rep in _FOLD:
+        k = re.sub(pat, rep, k)
     k = re.sub(r"(.)\1+", r"\1", k)  # long consonants count once for the comparison
     return k or w
 
