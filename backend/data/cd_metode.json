@@ -3042,14 +3042,6 @@
         "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
         "linia": "mnckk n-matica inwan a yra Brahim?"
       },
-      "fulki:example:4": {
-        "pista": "JkXAk3CKIPA",
-        "start": 435.14,
-        "end": 436.33,
-        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443759/tachelhit/cd_metode/JkXAk3CKIPA_435-14_436-33.mp3",
-        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
-        "linia": "tfulki bahra tgmmi-yad."
-      },
       "colors:example:2": {
         "pista": "JkXAk3CKIPA",
         "start": 416.17,
@@ -3417,14 +3409,6 @@
         "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443796/tachelhit/cd_metode/JkXAk3CKIPA_209-56_210-61.mp3",
         "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
         "linia": "mad-am tfka ultma-m?"
-      },
-      "mad:example:10": {
-        "pista": "JkXAk3CKIPA",
-        "start": 212.6,
-        "end": 213.67,
-        "url": "https://res.cloudinary.com/du26ppvh0/video/upload/v1793443797/tachelhit/cd_metode/JkXAk3CKIPA_212-60_213-67.mp3",
-        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
-        "linia": "tfka-yyi ultma lluz."
       },
       "mad:example:11": {
         "pista": "JkXAk3CKIPA",
@@ -4048,6 +4032,24 @@
         "sent": "tamssirt",
         "linia": "tamazirt",
         "per_que_fora": "la lectura rica hi coincideix a mitges (0,65-0,80): una persona ho ha de sentir"
+      }
+    },
+    "el-mercat": {
+      "fulki:example:4": {
+        "pista": "JkXAk3CKIPA",
+        "start": 435.14,
+        "end": 436.33,
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "tfulki bahra tgmmi-yad.",
+        "per_que_fora": "en Pablo (31-10): el tall comença tard, hi falta la primera síl·laba"
+      },
+      "mad:example:10": {
+        "pista": "JkXAk3CKIPA",
+        "start": 212.6,
+        "end": 213.67,
+        "com": "lectura rica ≥0,80 (calibrada amb 130 escoltes: 39 de 40 «sí»; ADR 0010)",
+        "linia": "tfka-yyi ultma lluz.",
+        "per_que_fora": "en Pablo (31-10): el tall comença tard, hi falta la primera síl·laba"
       }
     }
   }
