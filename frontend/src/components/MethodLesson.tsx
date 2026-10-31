@@ -4,6 +4,8 @@ import { FaPlay, FaStop, FaCommentDots, FaMicrophone, FaPen, FaCheck, FaTags, Fa
 import { api, type MethodCd, type MethodContent, type MethodExample, type MethodGloss, type MethodHeard } from '../api';
 import type { Drill } from '../types';
 import { getMediaUrl, hasIdentity, thumb } from '../config';
+import AmbSo from './AmbSo';
+import { audioSrc, estatAudio } from '../services/audioLocal';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import RecordAudioModal from './RecordAudioModal';
@@ -287,7 +289,7 @@ function HeardHere({ h }: { h: MethodHeard }) {
   const [playing, setPlaying] = useState(false);
   const play = () => {
     if (!h.audio_url) return;
-    const a = new Audio(getMediaUrl(h.audio_url));
+    const a = new Audio(audioSrc(h.audio_url));
     setPlaying(true);
     a.onended = () => setPlaying(false);
     a.onerror = () => setPlaying(false);
@@ -302,11 +304,11 @@ function HeardHere({ h }: { h: MethodHeard }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexBasis: '100%',
                    marginTop: 2, fontSize: 11.5, color: 'var(--text-muted)' }}>
-      <button onClick={play} aria-label={`Escolta ${h.what === 'paraula' ? 'la paraula' : 'el so'} dins de «${h.shi}»`} title={`Ho diu ${credit}`}
+      <AmbSo url={h.audio_url}><button onClick={play} aria-label={`Escolta ${h.what === 'paraula' ? 'la paraula' : 'el so'} dins de «${h.shi}»`} title={`Ho diu ${credit}`}
               style={{ ...iconBtn, width: 20, height: 20, border: 'none', flexShrink: 0,
                        background: playing ? 'var(--brand-1)' : 'var(--brand-gradient)', color: '#fff' }}>
         <FaPlay size={7} />
-      </button>
+      </button></AmbSo>
       <span>
         {h.what === 'paraula' ? 'la paraula, dins d’una frase nostra: ' : 'el so, dins d’una frase nostra: '}
         <span lang="shi" style={{ fontWeight: 700, color: 'var(--brand-1)' }}>{h.shi}</span>
@@ -328,7 +330,7 @@ function HeardHere({ h }: { h: MethodHeard }) {
 function CdVeu({ cd }: { cd: MethodCd }) {
   const [sonant, setSonant] = useState(false);
   const play = () => {
-    const a = new Audio(getMediaUrl(cd.url));
+    const a = new Audio(audioSrc(cd.url));
     setSonant(true);
     a.onended = () => setSonant(false);
     a.onerror = () => setSonant(false);
@@ -447,10 +449,10 @@ function BookLine({
   const tools = (
     <span style={{ marginInlineStart: 'auto', display: 'inline-flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
       {audio && onPlay && (
-        <button onClick={onPlay} aria-label={`Escolta «${shi}»`} title={`Ho diu ${credit}`}
+        <AmbSo url={audio}><button onClick={onPlay} aria-label={`Escolta «${shi}»`} title={`Ho diu ${credit}`}
                 style={{ ...iconBtn, border: 'none', background: playing ? 'var(--brand-1)' : 'var(--brand-gradient)', color: '#fff' }}>
           <FaPlay size={9} />
-        </button>
+        </button></AmbSo>
       )}
       <LineTools slug={slug} where={where} shi={shi} drillId={drillId} canEdit={canEdit}
                  onRecorded={onRecorded} onEdit={() => setEdit({ shi, ca: ca || '' })} />
@@ -668,11 +670,12 @@ export default function MethodLesson({
     const t = tracks[i];
     if (!t) { stop(); return; }
     audioRef.current?.pause();
-    const a = new Audio(t.url);
+    const a = new Audio(audioSrc(t.url));
     audioRef.current = a;
     setSounding(t.key);
     const next = () => { if (chainRef.current) playFrom(i + 1); else setSounding(null); };
-    const failed = () => { setBroken((b) => ({ ...b, [t.key]: true })); next(); };
+    // Sense baixar no és una gravació trencada: la fila salta la línia i prou.
+    const failed = () => { if (estatAudio(t.url).disponible) setBroken((b) => ({ ...b, [t.key]: true })); next(); };
     a.onended = next;
     a.onerror = failed;
     a.play().catch(failed);
@@ -846,11 +849,11 @@ export default function MethodLesson({
                           )}
                         </span>
                         {d.audio_url && (
-                          <button onClick={() => new Audio(getMediaUrl(d.audio_url as string)).play().catch(() => {})}
+                          <AmbSo url={d.audio_url}><button onClick={() => new Audio(audioSrc(d.audio_url as string)).play().catch(() => {})}
                                   aria-label="Escolta-la" title="Escolta-la"
                                   style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', background: 'var(--brand-gradient)', color: '#fff', cursor: 'pointer', flexShrink: 0 }}>
                             <FaPlay size={10} />
-                          </button>
+                          </button></AmbSo>
                         )}
                       </div>
                     </div>
@@ -914,11 +917,11 @@ export default function MethodLesson({
                       </span>
                       <span style={{ color: 'var(--text-soft)' }}>{r.ca}</span>
                       {r.audio_url && (
-                        <button onClick={() => playOne(key)} title={`Escolta «${r.shi}»`}
+                        <AmbSo url={r.audio_url}><button onClick={() => playOne(key)} title={`Escolta «${r.shi}»`}
                                 aria-label={`Escolta «${r.shi}»`}
                                 style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, flex: '0 0 auto', borderRadius: '50%', border: '1px solid var(--border)', background: here ? 'var(--brand-1)' : 'var(--surface)', color: here ? '#fff' : 'var(--brand-1)', cursor: 'pointer', padding: 0 }}>
                           {here ? <FaStop size={9} /> : <FaPlay size={9} />}
-                        </button>
+                        </button></AmbSo>
                       )}
                     </div>
                     );

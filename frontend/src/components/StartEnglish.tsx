@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FaVolumeUp } from 'react-icons/fa';
 import { api } from '../api';
-import { getMediaUrl } from '../config';
+import AmbSo from './AmbSo';
+import { audioSrc } from '../services/audioLocal';
 import type { Drill } from '../types';
 import { duesCares } from '../utils/tifinag';
 import { LESSONS, START_DRILL_IDS, WORDS, type Screen, type StartLesson, type StartWord } from '../lessons/startEnglish';
@@ -37,7 +38,7 @@ function usePlayer() {
   return (url: string | null | undefined, rate = 1): Promise<number> => new Promise((done) => {
     if (!url) { done(0); return; }
     ref.current?.pause();
-    const a = new Audio(getMediaUrl(url));
+    const a = new Audio(audioSrc(url));
     a.playbackRate = rate;
     ref.current = a;
     a.onended = () => done(a.duration || 0);
@@ -90,7 +91,7 @@ function ScreenView({ s, drills, onNext, onMiss }: { s: Screen; drills: Record<n
 
   const Next = <button type="button" style={{ ...GO, alignSelf: 'flex-start' }} onClick={onNext}>Next</button>;
   const Listen = ({ k, rate = 1, label = 'Listen' }: { k: string; rate?: number; label?: string }) => (
-    <button type="button" style={BTN} onClick={() => play(url(k), rate)}><FaVolumeUp size={12} /> {label}</button>
+    <AmbSo url={url(k)} dins><button type="button" style={BTN} onClick={() => play(url(k), rate)}><FaVolumeUp size={12} /> {label}</button></AmbSo>
   );
 
   switch (s.t) {
@@ -117,7 +118,7 @@ function ScreenView({ s, drills, onNext, onMiss }: { s: Screen; drills: Record<n
           return s.t === 'pick'
             ? <button key={o} type="button" disabled={picked !== null} style={{ ...OPT, border: `1px solid ${border}` }} onClick={() => setPicked(o)}>{WORDS[o].en}</button>
             : <div key={o} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <button type="button" style={BTN} onClick={() => play(url(o))}><FaVolumeUp size={12} /> {i + 1}</button>
+                <AmbSo url={url(o)} dins><button type="button" style={BTN} onClick={() => play(url(o))}><FaVolumeUp size={12} /> {i + 1}</button></AmbSo>
                 <button type="button" disabled={picked !== null} style={{ ...OPT, flex: 1, border: `1px solid ${border}` }} onClick={() => setPicked(o)}>This one</button>
               </div>;
         })}</div>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaMicrophone, FaPaperPlane, FaVolumeUp } from 'react-icons/fa';
 import { api, type PetitionItem, type Me } from '../api';
 import { getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import type { Drill } from '../types';
@@ -45,7 +46,7 @@ export default function VeusPage() {
       .catch((e) => { setListFailed(true); toast.error(whyItFailed(e, 'No s’ha pogut carregar la llista')); });
   }, [kind, tick]);
 
-  const play = (url?: string | null) => { if (url) new Audio(getMediaUrl(url)).play().catch(() => {}); };
+  const play = (url?: string | null) => { if (url) new Audio(audioSrc(url)).play().catch(() => {}); };
   const ask = async () => {
     if (!me) { navigate('/profile'); return; }
     if (text.trim().length < 2) { toast.error('Escriu què vols saber dir'); return; }

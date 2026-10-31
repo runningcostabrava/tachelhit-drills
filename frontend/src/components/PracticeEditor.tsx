@@ -7,6 +7,7 @@ import {
 } from 'react-icons/fa';
 import { api, type PracticeCollections, type PracticeList, type PracticeStep } from '../api';
 import { getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import MobileDrillCreator from './MobileDrillCreator';
@@ -623,7 +624,7 @@ export default function PracticeEditor() {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end', marginTop: 8 }}>
                     {drill && hasVoice(drill) && (
-                      <button onClick={() => new Audio(getMediaUrl(drill.audio_url || '')).play().catch(() => {})}
+                      <button onClick={() => new Audio(audioSrc(drill.audio_url || '')).play().catch(() => {})}
                               title="Escolta" style={icon}><FaPlay size={11} /></button>
                     )}
                     {drill && !hasVoice(drill) && (

@@ -11,6 +11,8 @@ import { syncManager } from '../services/OfflineSyncManager';
 import { Network } from '@capacitor/network';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { API_BASE, getMediaUrl } from '../config';
+import AmbSo, { BaixaAudio } from './AmbSo';
+import { audioSrc, baixaAudio } from '../services/audioLocal';
 import { parseTopics, topicLabel } from '../utils/topics';
 import { answerSafeFilter } from '../utils/media';
 import { setSelectedDrillIds } from '../selection';
@@ -490,7 +492,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
     const playable = rowData.filter((d) => d.video_url || d.audio_url);
     const previewIndex = preview?.drillId != null ? playable.findIndex((d) => d.id === preview.drillId) : -1;
     const openPreviewOf = (d: Drill) => {
-        const url = d.video_url ? getMediaUrl(d.video_url) : getMediaUrl(d.audio_url!);
+        const url = d.video_url ? getMediaUrl(d.video_url) : audioSrc(d.audio_url!);
         setPreview({ url, kind: d.video_url ? 'video' : 'audio', title: d.text_catalan || d.text_tachelhit || `Drill #${d.id}`, drillId: d.id });
         setReveal(false);
         if (autoNextTimer.current) { window.clearTimeout(autoNextTimer.current); autoNextTimer.current = null; }
@@ -723,9 +725,9 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                                     style={{ width: '100%', height: '180px', objectFit: 'contain', background: 'var(--surface-2)', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)' }}
                                 />
                                 {drill.audio_url && (
-                                    <button
+                                    <AmbSo url={drill.audio_url} dins><button
                                         onClick={() => {
-                                            const audio = new Audio(getMediaUrl(drill.audio_url!));
+                                            const audio = new Audio(audioSrc(drill.audio_url!));
                                             audio.play().catch(e => console.error('Playback fail:', e));
                                         }}
                                         aria-label="Escolta com sona"
@@ -738,7 +740,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                                         }}
                                     >
                                         <FaPlay size={22} style={{ marginLeft: 4 }} />
-                                    </button>
+                                    </button></AmbSo>
                                 )}
                             </div>
                         )}
@@ -749,9 +751,9 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                             {/* Sense foto, la veu no té on anar a sobre: es queda gran aquí. */}
                             {drill.audio_url && !(drill.image_url || pendingMedia[drill.id]?.image) && (
-                                <button
+                                <AmbSo url={drill.audio_url} dins><button
                                     onClick={() => {
-                                        const audio = new Audio(getMediaUrl(drill.audio_url!));
+                                        const audio = new Audio(audioSrc(drill.audio_url!));
                                         audio.play().catch(e => console.error('Playback fail:', e));
                                     }}
                                     style={{
@@ -771,7 +773,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                                     }}
                                 >
                                     <FaPlay /> Escolta com sona
-                                </button>
+                                </button></AmbSo>
                             )}
                             {(drill.text_tachelhit || drill.text_tachelhit_suggested || drill.text_tachelhit_latin) && (
                                 <button
@@ -795,6 +797,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                             )}
                             {/* Afegir-hi una foto és una feina d'edició, no una cosa que es faci
                                 mentre s'estudia: icona i prou, i a la punta. */}
+                            <BaixaAudio drill={drill} style={{ width: '38px', height: '38px', flexShrink: 0, padding: 0, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-pill)', color: 'var(--text-soft)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} />
                             <button
                                 onClick={() => handleQuickPhoto(drill.id)}
                                 aria-label="Posa-hi una foto"
@@ -912,10 +915,10 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
             cellRenderer: (params: any) => (
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                     {params.data.audio_url && (
-                        <button onClick={() => new Audio(getMediaUrl(params.data.audio_url)).play()} style={{ background: 'var(--brand-gradient-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px', cursor: 'pointer', color: 'var(--brand-1)' }} title="Reprodueix la gravació" aria-label="Reprodueix la gravació"><FaVolumeUp size={16} /></button>
+                        <AmbSo url={params.data.audio_url}><button onClick={() => new Audio(audioSrc(params.data.audio_url)).play()} style={{ background: 'var(--brand-gradient-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px', cursor: 'pointer', color: 'var(--brand-1)' }} title="Reprodueix la gravació" aria-label="Reprodueix la gravació"><FaVolumeUp size={16} /></button></AmbSo>
                     )}
                     {params.data.audio_tts_url && (
-                        <button onClick={() => new Audio(getMediaUrl(params.data.audio_tts_url)).play()} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '6px 7px', cursor: 'pointer', color: 'var(--text-soft)', fontSize: '11px', fontWeight: 800 }} title="Veu sintètica (català)" aria-label="Veu sintètica en català">CA</button>
+                        <button onClick={() => new Audio(audioSrc(params.data.audio_tts_url)).play()} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '6px 7px', cursor: 'pointer', color: 'var(--text-soft)', fontSize: '11px', fontWeight: 800 }} title="Veu sintètica (català)" aria-label="Veu sintètica en català">CA</button>
                     )}
                     {params.data.video_url && (
                         <button onClick={() => openPreviewOf(params.data)} style={{ background: 'var(--brand-gradient-soft)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px', cursor: 'pointer', color: 'var(--brand-2)' }} title="Reprodueix el vídeo" aria-label="Reprodueix el vídeo"><FaVideo size={16} /></button>
@@ -944,9 +947,10 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                 const save = async () => {
                     if (!media) return;
                     setActionLoadingId(`down-${d.id}`);
-                    await syncManager.downloadAndCacheMedia(media, d.audio_url ? 'audio' : 'video');
+                    const fet = d.audio_url ? await baixaAudio(d) : !!(await syncManager.downloadAndCacheMedia(media, 'video'));
                     setActionLoadingId(null);
-                    toast.success('Mèdia descarregat per a ús fora de línia!');
+                    if (fet) toast.success('Mèdia descarregat per a ús fora de línia!');
+                    else toast.error("No s'ha pogut desar: només es pot a l'app, i amb connexió.");
                 };
                 return (
                     <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>

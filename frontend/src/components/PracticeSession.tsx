@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FaLightbulb, FaMicrophone, FaPlay, FaStop, FaTimes } from 'react-icons/fa';
 import { api, type PracticeCard, type PracticeMode } from '../api';
 import { getMediaUrl } from '../config';
+import AmbSo from './AmbSo';
+import { audioSrc } from '../services/audioLocal';
 import { toast } from '../toast';
 import type { Drill } from '../types';
 import { preferredRecorderMime } from '../utils/media';
@@ -39,7 +41,7 @@ function Waveform({ src, label, color, autoHeight = 54 }: { src: string | Blob |
   const [failed, setFailed] = useState(false);
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const url = useMemo(() => (src instanceof Blob ? URL.createObjectURL(src) : src ? getMediaUrl(src) : ''), [src]);
+  const url = useMemo(() => (src instanceof Blob ? URL.createObjectURL(src) : src ? audioSrc(src) : ''), [src]);
   useEffect(() => () => { if (src instanceof Blob && url) URL.revokeObjectURL(url); }, [src, url]);
   useEffect(() => {
     let cancelled = false;
@@ -76,7 +78,7 @@ function Waveform({ src, label, color, autoHeight = 54 }: { src: string | Blob |
   };
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <button onClick={toggle} disabled={!url} aria-label={`Escolta: ${label}`} style={{ flexShrink: 0, width: 38, height: 38, borderRadius: '50%', border: 'none', background: url ? color : 'var(--surface-2)', color: '#fff', cursor: url ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{playing ? <FaStop size={12} /> : <FaPlay size={12} />}</button>
+      <AmbSo url={src instanceof Blob ? null : src}><button onClick={toggle} disabled={!url} aria-label={`Escolta: ${label}`} style={{ flexShrink: 0, width: 38, height: 38, borderRadius: '50%', border: 'none', background: url ? color : 'var(--surface-2)', color: '#fff', cursor: url ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{playing ? <FaStop size={12} /> : <FaPlay size={12} />}</button></AmbSo>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 2 }}>{label}</div>
         {bars ? <canvas ref={canvasRef} style={{ width: '100%', height: autoHeight, display: 'block' }} /> : <div style={{ height: autoHeight, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-muted)' }}>{!url ? 'sense veu' : failed ? 'no s’ha pogut dibuixar; prem per escoltar' : 'dibuixant…'}</div>}
@@ -203,7 +205,7 @@ function SessioDEscoltar() {
   const play = useCallback((rate = 1) => {
     if (!voice) return;
     if (audioRef.current) { audioRef.current.pause(); }
-    const a = new Audio(getMediaUrl(voice)); a.playbackRate = rate; audioRef.current = a; a.play().catch(() => {});
+    const a = new Audio(audioSrc(voice)); a.playbackRate = rate; audioRef.current = a; a.play().catch(() => {});
   }, [voice]);
   useEffect(() => { if (drill && mode !== 'auto') play(1); }, [drill?.id]);  // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -239,7 +241,7 @@ function SessioDEscoltar() {
     const playOnce = (url: string, rate = 1) => new Promise<void>((resolve) => {
       if (!url) { resolve(); return; }
       if (audioRef.current) audioRef.current.pause();
-      const a = new Audio(getMediaUrl(url)); a.playbackRate = rate; audioRef.current = a;
+      const a = new Audio(audioSrc(url)); a.playbackRate = rate; audioRef.current = a;
       a.onended = () => resolve(); a.onerror = () => resolve();
       a.play().catch(() => resolve());
     });
@@ -339,8 +341,8 @@ function SessioDEscoltar() {
         <SentenceVariants variants={card?.variants} size="sm" />
         {drill.source_url && <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>Font: {drill.source_channel || 'vídeo original'}{drill.source_title ? ` · «${drill.source_title}»` : ''} · <a href={drill.source_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-1)', fontWeight: 700 }}>vídeo original ↗</a></p>}
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => play(1)} disabled={!voice} style={{ ...btn('primary'), flex: 1, height: 44, fontSize: 14 }}><FaPlay size={12} /> Escolta</button>
-          <button onClick={() => play(0.7)} disabled={!voice} style={{ ...btn('ghost'), flex: 1, height: 44, fontSize: 14 }}>A poc a poc</button>
+          <AmbSo url={voice} dins><button onClick={() => play(1)} disabled={!voice} style={{ ...btn('primary'), flex: 1, height: 44, fontSize: 14 }}><FaPlay size={12} /> Escolta</button></AmbSo>
+          <AmbSo url={voice} dins><button onClick={() => play(0.7)} disabled={!voice} style={{ ...btn('ghost'), flex: 1, height: 44, fontSize: 14 }}>A poc a poc</button></AmbSo>
         </div>
       </div>
 
