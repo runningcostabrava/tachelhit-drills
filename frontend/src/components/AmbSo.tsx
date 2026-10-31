@@ -43,7 +43,7 @@ export default function AmbSo({ url, dins, children }: {
 export function BaixaAudio({ drill, style }: { drill: Drill; style?: React.CSSProperties }) {
   const { baixat } = useAudioSrc(drill);
   const [baixant, setBaixant] = useState(false);
-  if (!isNativeApp() || !(drill.audio_url || drill.audio_tts_shi_url)) return null;
+  if (!isNativeApp() || !drill.audio_url) return null;
   const baixa = async () => {
     setBaixant(true);
     const fet = await baixaAudio(drill);

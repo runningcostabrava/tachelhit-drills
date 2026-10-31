@@ -118,8 +118,11 @@ export function engegaAudios(): Promise<void> {
   return llest;
 }
 
-/** La veu que es baixa d'un drill: la gravació, o la de màquina si no n'hi ha. */
-const veuDe = (d: Partial<AmbVeu>) => (d.audio_url || d.audio_tts_shi_url || '').trim();
+/** La veu que es baixa d'un drill: la gravació d'una persona, i cap més.
+ *
+ *  La veu sintètica en amazic ja no sona enlloc (#532) i no s'ha de baixar: ocuparia disc per
+ *  no sonar mai. `audio_tts_url` és el significat llegit en CATALÀ i tampoc no és aquesta veu. */
+const veuDe = (d: Partial<AmbVeu>) => (d.audio_url || '').trim();
 
 const clau = (url: string | null | undefined) => getMediaUrl((url || '').trim());
 
@@ -210,4 +213,98 @@ export async function baixaAudio(d: AmbVeu): Promise<boolean> {
     enCurs.set(d.id, feina);
   }
   return feina;
+}
+
+// ─────────────────────────── Totes les veus, d'una tirada (#506, pas 3) ───────────────────────────
+//
+// En Pablo (31-10): «I need a system that have the audios, I should be able to download them all to
+// the phone». Són unes 7.000 gravacions i ~0,3 GB: no es pot fer d'un sol cop a la memòria ni en
+// paral·lel. Es baixen d'una en una (dues alhora com a molt), es pot aturar i reprendre, i el que
+// ja hi és no es torna a demanar. El progrés es diu a mesura que va, no al final.
+
+export interface ProgresAudios {
+  /** Quantes tenen veu i s'han de baixar en total. */ total: number;
+  /** Quantes ja són al disc. */ fetes: number;
+  /** Quantes han fallat (es poden reintentar: n'hi ha prou de tornar a començar). */ fallades: number;
+  /** Bytes que ocupa el que s'ha baixat en aquesta tanda. */ bytes: number;
+  corrent: boolean;
+}
+
+let aturar = false;
+let tanda: Promise<ProgresAudios> | null = null;
+
+/** Atura la baixada que corre. El que ja és a disc s'hi queda. */
+export function aturaBaixada() { aturar = true; }
+
+export function baixantAudios(): boolean { return !!tanda; }
+
+/**
+ * Baixa la veu de tots els drills que en tenen i encara no són al disc.
+ *
+ * `avisa` es crida després de cada fitxer perquè la pantalla pugui dir per on va. Torna el
+ * resum final. Si ja n'hi ha una de corrent, s'hi enganxa en comptes de començar-ne una altra.
+ */
+export async function baixaTotsElsAudios(
+  drills: Partial<AmbVeu>[],
+  passa?: (p: ProgresAudios) => void,
+): Promise<ProgresAudios> {
+  if (tanda) return tanda;
+  aturar = false;
+  tanda = (async () => {
+    const p: ProgresAudios = { total: 0, fetes: 0, fallades: 0, bytes: 0, corrent: true };
+    if (!isNativeApp()) return { ...p, corrent: false };
+    await engegaAudios();
+    const falten: { id: number; font: string }[] = [];
+    for (const d of drills) {
+      const font = clau(veuDe(d));
+      if (!/^https?:/.test(font) || d.id == null) continue;
+      p.total++;
+      if (perUrl.has(font)) p.fetes++;
+      else falten.push({ id: d.id, font });
+    }
+    passa?.({ ...p });
+    for (const { id, font } of falten) {
+      if (aturar) break;
+      const ok = await baixa(id, font);
+      if (ok) {
+        p.fetes++;
+        const fila = perId.get(id);
+        if (fila) {
+          const { size } = await Filesystem.stat({ path: `${CARPETA}/${fila.fitxer}`, directory: Directory.Data }).catch(() => ({ size: 0 }));
+          p.bytes += size || 0;
+        }
+      } else p.fallades++;
+      passa?.({ ...p });
+    }
+    return { ...p, corrent: false };
+  })().finally(() => { tanda = null; aturar = false; avisa(); });
+  return tanda;
+}
+
+/** Quantes veus hi ha al disc i quant ocupen. Es compta la carpeta, no l'índex: és el que val. */
+export async function resumAudios(): Promise<{ fitxers: number; bytes: number }> {
+  if (!isNativeApp()) return { fitxers: 0, bytes: 0 };
+  await engegaAudios();
+  const r = await Filesystem.readdir({ path: CARPETA, directory: Directory.Data }).catch(() => null);
+  if (!r) return { fitxers: 0, bytes: 0 };
+  return { fitxers: r.files.length, bytes: r.files.reduce((n, f) => n + (f.size || 0), 0) };
+}
+
+/** Esborra totes les veus del disc i l'índex: els botons tornen a dir «sense baixar». */
+export async function alliberaAudios(): Promise<void> {
+  if (!isNativeApp()) return;
+  aturar = true;
+  await Filesystem.rmdir({ path: CARPETA, directory: Directory.Data, recursive: true }).catch(() => {});
+  perId.clear();
+  perUrl.clear();
+  const base = await obre();
+  if (base) {
+    await new Promise<void>(resolve => {
+      const tx = base.transaction(AUDIOS, 'readwrite');
+      tx.objectStore(AUDIOS).clear();
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  }
+  avisa();
 }
