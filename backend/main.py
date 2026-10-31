@@ -2634,6 +2634,10 @@ def update_drill(drill_id: int, update_data: DrillUpdate, db: Session = Depends(
     owner_or_admin(drill, user)
 
     update_dict = update_data.model_dump(exclude_unset=True)
+    # Una càrrega massiva (#539): el text es desa i els efectes —traducció a l'àrab, veu
+    # catalana— no s'engeguen. Només per a qui administra: des de l'app, cada canvi d'una
+    # persona segueix portant la seva traducció i la seva veu.
+    quiet = bool(update_dict.pop("quiet", False)) and bool(getattr(user, "is_admin", False))
 
     # Subjects set by hand win over the automatic catalogue and are never re-classified
     if "topics" in update_dict and "topics_source" not in update_dict:
@@ -2678,7 +2682,7 @@ def update_drill(drill_id: int, update_data: DrillUpdate, db: Session = Depends(
             update_dict["tag"] = None
 
     # Check if text_catalan is being updated and is not empty
-    text_catalan_updated = "text_catalan" in update_dict and update_dict["text_catalan"]
+    text_catalan_updated = "text_catalan" in update_dict and update_dict["text_catalan"] and not quiet
     previous_text_catalan = drill.text_catalan
 
     for key, value in update_dict.items():
