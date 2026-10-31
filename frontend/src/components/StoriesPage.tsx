@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FaBookOpen, FaChevronLeft, FaCrosshairs, FaExpand, FaInfinity, FaExternalLinkAlt, FaHeadphones, FaPause, FaPlay, FaRedo, FaStepBackward, FaStepForward, FaStop } from 'react-icons/fa';
 import { api, type Story, type StoryPage, type WordTime } from '../api';
-import { getMediaUrl, thumb } from '../config';
+import { getMediaUrl } from '../config';
 import AmbSo from './AmbSo';
-import { audioSrc } from '../services/audioLocal';
+import { audioSrc, imatgeSrc } from '../services/audioLocal';
 import type { Drill } from '../types';
 import WordGloss, { parseGlosses, type Gloss } from './WordGloss';
 import Frase from './Frase';
@@ -717,7 +717,7 @@ function OneStory({ slug }: { slug: string }) {
                   mateix riu, el mateix xai (#390)— i es demanen a la mida que es veuen, que no
                   és la que pesen. */}
               {(d.image_url || '').trim() && (
-                <img src={thumb(getMediaUrl(d.image_url), 760)} alt=""
+                <img src={imatgeSrc(d.image_url, 760)} alt=""
                      loading="lazy" decoding="async"
                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
                      // Sencer, i no retallat. Amb un topall d'alçada i `cover` es perdia mitja
@@ -788,7 +788,7 @@ function OneStory({ slug }: { slug: string }) {
             </div>
 
             {(d.image_url || '').trim() && (
-              <img src={thumb(getMediaUrl(d.image_url), 900)} alt=""
+              <img src={imatgeSrc(d.image_url, 900)} alt=""
                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                    style={{ width: '100%', height: 'auto', aspectRatio: '4 / 3', objectFit: 'cover',
                             borderRadius: 'var(--r-lg)', display: 'block', marginBottom: 14 }} />

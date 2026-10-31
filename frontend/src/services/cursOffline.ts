@@ -4,7 +4,9 @@ import { api, baixaPerOffline } from '../api';
  * El curs sencer al telèfon (#506, ADR 0008, pas 4).
  *
  * Fins ara, sense connexió només s'obrien les pantalles que algú ja havia visitat: la resta eren
- * una pantalla d'error. En Pablo (31-10): «the gramatica, metode and histories should work».
+ * una pantalla d'error. En Pablo (31-10): «the gramatica, metode and histories should work», i
+ * després «comprova que és capaç de descarregar tot, que tot és accessible» —d'aquí que hi entri
+ * també la Pràctica, que s'havia quedat fora.
  *
  * Aquí es demanen totes, un cop, i es desen al cau de lectura marcades com a fixes (`fix`): no
  * caduquen als 30 dies ni compten per al sostre de 300 còpies. El que pesa —les veus— no és
@@ -63,6 +65,17 @@ async function pantalles(): Promise<{ path: string; nom: string }[]> {
   // un `limit` diferent seria una altra entrada i la pantalla no la trobaria.
   for (const l of a?.lletres || []) {
     fora.push({ path: `/alfabet/${encodeURIComponent(l.tif)}?limit=12`, nom: `Sons · ${l.tif} ${l.lat}` });
+  }
+
+  // La Pràctica. Hi faltava, i era el forat gros: sense haver-la visitat abans, «Pràctica» no
+  // s'obria sense senyal. Es baixa la portada i els passos de cada llista, que és el que la
+  // pantalla demana. El que no es pot baixar és una sessió feta a l'atzar ni el repàs espaiat:
+  // això es tria al servidor a cada crida i té el seu propi pas pendent (#506, passos 5 i 6).
+  fora.push({ path: '/practice/collections', nom: 'Pràctica' });
+  fora.push({ path: '/tests/', nom: 'Pràctica · les llistes' });
+  const pr = await mira(() => api.practiceCollections());
+  for (const l of pr?.lists || []) {
+    fora.push({ path: `/tests/${l.id}/steps`, nom: `Pràctica · ${l.title}` });
   }
   return fora;
 }

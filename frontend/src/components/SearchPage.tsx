@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FaMicrophone, FaPlay, FaSearch } from 'react-icons/fa';
+import { FaMicrophone, FaPlay, FaSearch, FaStop } from 'react-icons/fa';
 import { api } from '../api';
 import type { Drill } from '../types';
-import { getMediaUrl, hasIdentity, thumb } from '../config';
-import { audioSrc } from '../services/audioLocal';
+import { hasIdentity } from '../config';
+import { audioSrc, imatgeSrc } from '../services/audioLocal';
 import { cercaLocal } from '../services/cercaLocal';
+import { ordena } from '../utils/casaFrase';
+import { gap, keepAwake, nowPlaying, say, stop } from '../utils/veu';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import RecordAudioModal from './RecordAudioModal';
@@ -47,7 +49,57 @@ export default function SearchPage() {
   useEffect(() => { document.title = 'Cerca · Tamazight'; box.current?.focus(); }, []);
   useEffect(() => { setText(q); }, [q]);
 
+  /** Quina frase sona ara de la seqüència, i quina seqüència manda. */
+  const [sonant, setSonant] = useState<number | null>(null);
+  const seq = useRef(0);
+
+  const aturaVeu = useCallback(() => {
+    seq.current++;
+    stop();
+    setSonant(null);
+    keepAwake(false);
+    nowPlaying(null);
+  }, []);
+
+  useEffect(() => () => aturaVeu(), [aturaVeu]);
+
+  /**
+   * Escoltar-les totes, en l'ordre que es veuen.
+   *
+   * En Pablo: «I should be able to reproduce in that order all the results of the search». Sona
+   * pel reproductor de tota l'app —un sol element declarat al sistema— i per `audioSrc`, de
+   * manera que surt del fitxer del telèfon quan ja és baixat: també va sense xarxa i no calla
+   * quan s'apaga la pantalla. Les que encara no tenen veu se salten, i es diu quantes són.
+   */
+  const escoltaTotes = useCallback(async () => {
+    const ambVeu = (rows || []).filter((d) => (d.audio_url || '').trim());
+    if (!ambVeu.length) { toast.info('Cap d’aquestes frases no té veu encara.'); return; }
+    const mudes = (rows || []).length - ambVeu.length;
+    if (mudes) toast.info(`${mudes} ${mudes === 1 ? 'frase no té veu i se salta' : 'frases no tenen veu i se salten'}.`);
+    const meu = ++seq.current;
+    keepAwake(true);
+    nowPlaying({ title: `Cerca: ${q}`, artist: 'Tamazight', onPause: aturaVeu });
+    for (const d of ambVeu) {
+      if (seq.current !== meu) return;
+      setSonant(d.id);
+      await say(audioSrc(d.audio_url as string));
+      if (seq.current !== meu) return;
+      await gap(350);
+    }
+    if (seq.current !== meu) return;
+    setSonant(null); keepAwake(false); nowPlaying(null);
+  }, [rows, q, aturaVeu]);
+
+  /** Una sola frase: atura la seqüència, perquè dues veus alhora no s'entenen. */
+  const sonaUna = useCallback((d: Drill) => {
+    seq.current++;
+    keepAwake(false); nowPlaying(null);
+    setSonant(d.id);
+    void say(audioSrc(d.audio_url as string)).then(() => setSonant((ara) => (ara === d.id ? null : ara)));
+  }, []);
+
   const look = useCallback((term: string) => {
+    seq.current++; stop(); setSonant(null);
     const net = term.trim();
     if (!net) { setRows(null); setDelTelefon(false); return; }
     const meu = ++torn.current;
@@ -65,7 +117,9 @@ export default function SearchPage() {
       .then((r) => {
         if (torn.current !== meu) return;
         servidorJaHaDit = true;
-        setRows(r); setDelTelefon(false);
+        // El servidor les torna per data. Es reordenen aquí amb la mateixa regla que la còpia del
+        // telèfon, perquè l'ordre que es veu no depengui d'on ha vingut la resposta.
+        setRows(ordena(r, net)); setDelTelefon(false);
       })
       .catch((e) => {
         if (torn.current !== meu) return;
@@ -128,15 +182,23 @@ export default function SearchPage() {
 
       {!busy && rows && rows.length > 0 && (
         <>
-          <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: '0 0 8px' }}>
-            {rows.length === 40 ? 'Les primeres 40' : `${rows.length} ${rows.length === 1 ? 'frase' : 'frases'}`}
-            {delTelefon && ' · de la còpia del telèfon'}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '0 0 8px' }}>
+            <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: 0, flex: 1, minWidth: 0 }}>
+              {rows.length === 40 ? 'Les primeres 40' : `${rows.length} ${rows.length === 1 ? 'frase' : 'frases'}`}
+              , les més semblants primer
+              {delTelefon && ' · de la còpia del telèfon'}
+            </p>
+            <button onClick={sonant === null ? escoltaTotes : aturaVeu}
+                    aria-label={sonant === null ? 'Escolta-les totes, en aquest ordre' : 'Atura'}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '8px 14px', borderRadius: 'var(--r-pill)', border: 'none', background: sonant === null ? 'var(--brand-gradient)' : 'var(--rose, #b5435a)', color: '#fff', fontWeight: 800, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+              {sonant === null ? <><FaPlay size={10} /> Escolta-les totes</> : <><FaStop size={10} /> Atura</>}
+            </button>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {rows.map((d) => (
-              <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)' }}>
+              <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 'var(--r-lg)', background: 'var(--surface)', border: sonant === d.id ? '2px solid var(--brand-1)' : '1px solid var(--border)' }}>
                 {d.image_url && (
-                  <img src={thumb(getMediaUrl(d.image_url), 120)} alt="" loading="lazy"
+                  <img src={imatgeSrc(d.image_url, 120)} alt="" loading="lazy"
                        style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 'var(--r-md)', flexShrink: 0 }}
                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
                 )}
@@ -150,7 +212,7 @@ export default function SearchPage() {
                   </div>
                 </div>
                 {d.audio_url ? (
-                  <button onClick={() => new Audio(audioSrc(d.audio_url as string)).play().catch(() => {})}
+                  <button onClick={() => sonaUna(d)}
                           aria-label="Escolta-la" title="Escolta-la"
                           style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: 'var(--brand-gradient)', color: '#fff', cursor: 'pointer', flexShrink: 0 }}>
                     <FaPlay size={11} />

@@ -5,8 +5,9 @@ import { isNativeApp } from '../config';
 import { toast } from '../toast';
 import { bibliotecaAlDia, drillsLocals } from '../services/biblioteca';
 import {
-  alliberaAudios, aturaBaixada, baixaTotsElsAudios, baixantAudios, resumAudios,
-  type ProgresAudios,
+  alliberaAudios, aturaBaixada, aturaExtres, baixaExtresDeTot, baixaTotsElsAudios,
+  baixantAudios, baixantExtres, resumAudios,
+  type ProgresAudios, type ProgresExtres,
 } from '../services/audioLocal';
 import { aturaCurs, baixaElCurs, baixantCurs, type ProgresCurs } from '../services/cursOffline';
 
@@ -27,16 +28,22 @@ const mida = (b: number) => (b >= 1 << 30 ? `${(b / (1 << 30)).toFixed(2)} GB` :
 const BYTES_PER_VEU = 42 * 1024;
 
 export default function SenseConnexio() {
-  const [frases, setFrases] = useState<{ total: number; ambVeu: number } | null>(null);
+  const [frases, setFrases] = useState<{ total: number; ambVeu: number; ambExtres: number } | null>(null);
   const [disc, setDisc] = useState<{ fitxers: number; bytes: number } | null>(null);
   const [veus, setVeus] = useState<ProgresAudios | null>(null);
   const [curs, setCurs] = useState<ProgresCurs | null>(null);
+  const [extres, setExtres] = useState<ProgresExtres | null>(null);
   const [wifi, setWifi] = useState<boolean | null>(null);
   const [netejant, setNetejant] = useState(false);
 
   const mesura = useCallback(async () => {
     const d = await drillsLocals().catch(() => [] as Awaited<ReturnType<typeof drillsLocals>>);
-    setFrases({ total: d.length, ambVeu: d.filter((x) => (x.audio_url || '').trim()).length });
+    setFrases({
+      total: d.length,
+      ambVeu: d.filter((x) => (x.audio_url || '').trim()).length,
+      ambExtres: d.filter((x) => (x.audio_tts_url || '').trim()).length
+        + d.filter((x) => (x.image_url || '').trim()).length,
+    });
     setDisc(await resumAudios().catch(() => ({ fitxers: 0, bytes: 0 })));
   }, []);
 
@@ -59,6 +66,14 @@ export default function SenseConnexio() {
     toast.success('El curs ja es pot obrir sense connexió.');
   };
 
+  const baixaExtres = async () => {
+    if (baixantExtres()) { aturaExtres(); return; }
+    const d = await bibliotecaAlDia().catch(() => drillsLocals());
+    await baixaExtresDeTot(d, setExtres);
+    await mesura();
+    toast.success('El català llegit i les imatges ja són al telèfon.');
+  };
+
   const allibera = async () => {
     if (!window.confirm('Esborrar totes les veus baixades? Les tornaràs a poder baixar quan vulguis.')) return;
     setNetejant(true);
@@ -76,6 +91,7 @@ export default function SenseConnexio() {
   const faltenVeus = Math.max(0, (frases?.ambVeu || 0) - (veus?.fetes ?? disc?.fitxers ?? 0));
   const corrent = veus?.corrent || baixantAudios();
   const cursCorrent = curs?.corrent || baixantCurs();
+  const extresCorrent = extres?.corrent || baixantExtres();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -110,9 +126,25 @@ export default function SenseConnexio() {
       </Bloc>
 
       <Bloc
+        titol="El català llegit i les imatges"
+        ara={frases ? `${frases.ambExtres.toLocaleString('ca')} fitxers` : '…'}
+        peu="El significat llegit en veu alta —el que sona a «Escolta-la amb el català» i a la primera passada de la Pràctica— i les fotos de les targetes. Sense això, sense xarxa el català calla i les fotos no es veuen."
+      >
+        <button type="button" onClick={baixaExtres} style={extresCorrent ? boto.atura : boto.gran}>
+          {extresCorrent ? <><FaStop size={14} /> Atura</> : <><FaCloudDownloadAlt size={16} /> Baixa-ho</>}
+        </button>
+        {extres && (extres.corrent || extres.fetes > 0) && (
+          <Barra fet={extres.fetes} total={extres.total || 1}
+                 text={extres.corrent
+                   ? `${extres.ara} · ${extres.fetes.toLocaleString('ca')} de ${extres.total.toLocaleString('ca')}`
+                   : `${extres.fetes.toLocaleString('ca')} fitxers${extres.fallades ? ` · ${extres.fallades} no s’han pogut baixar` : ''}`} />
+        )}
+      </Bloc>
+
+      <Bloc
         titol="El curs"
-        ara="Gramàtica, Mètode, Històries i Sons"
-        peu="Perquè s’obrin totes les unitats i tots els capítols sense connexió, no només els que ja hagis mirat."
+        ara="Gramàtica, Mètode, Històries, Sons i Pràctica"
+        peu="Perquè s’obrin totes les unitats, tots els capítols i totes les llistes de pràctica sense connexió, no només els que ja hagis mirat."
       >
         <button type="button" onClick={baixaCurs} style={cursCorrent ? boto.atura : boto.gran}>
           {cursCorrent ? <><FaStop size={14} /> Atura</> : <><FaCloudDownloadAlt size={16} /> Baixa el curs</>}

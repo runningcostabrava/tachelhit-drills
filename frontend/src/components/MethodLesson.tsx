@@ -3,9 +3,9 @@ import Frase from './Frase';
 import { FaPlay, FaStop, FaCommentDots, FaMicrophone, FaPen, FaCheck, FaTags, FaBookOpen, FaHandPointer } from 'react-icons/fa';
 import { api, type MethodCd, type MethodContent, type MethodExample, type MethodGloss, type MethodHeard } from '../api';
 import type { Drill } from '../types';
-import { getMediaUrl, hasIdentity, thumb } from '../config';
+import { getMediaUrl, hasIdentity } from '../config';
 import AmbSo from './AmbSo';
-import { audioSrc, estatAudio } from '../services/audioLocal';
+import { audioSrc, estatAudio, imatgeSrc } from '../services/audioLocal';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import RecordAudioModal from './RecordAudioModal';
@@ -506,7 +506,7 @@ function BookLine({
       <div style={{ borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', overflow: 'hidden',
                     background: playing ? 'var(--brand-gradient-soft)' : 'var(--surface)' }}>
         {image && (
-          <img src={thumb(getMediaUrl(image), 380)} alt="" loading="lazy"
+          <img src={imatgeSrc(image, 380)} alt="" loading="lazy"
                style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', display: 'block' }}
                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
         )}
@@ -807,7 +807,7 @@ export default function MethodLesson({
                 {s.ours_drills.map((d) => (
                   <div key={d.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', background: 'var(--surface)' }}>
                     {d.image_url && (
-                      <img src={thumb(getMediaUrl(d.image_url), 460)} alt="" loading="lazy"
+                      <img src={imatgeSrc(d.image_url, 460)} alt="" loading="lazy"
                            style={{ width: '100%', aspectRatio: '16 / 10', objectFit: 'cover', display: 'block' }}
                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
                     )}

@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Network } from '@capacitor/network';
-import { getMediaUrl, isNativeApp } from '../config';
+import { getMediaUrl, isNativeApp, thumb } from '../config';
 import type { Drill } from '../types';
 
 // L'àudio al dispositiu (#506, ADR 0008, pas 2).
@@ -21,13 +21,24 @@ import type { Drill } from '../types';
 
 const BD = 'audios-baixats';
 const AUDIOS = 'audios';
+/**
+ * La resta de mèdia d'un drill: el significat llegit en català i la imatge (#506).
+ *
+ * Va en un magatzem a part perquè el dels àudios té la frase per clau —un sol fitxer per frase—
+ * i d'això n'hi ha tres. Aquí la clau és l'adreça, que és també com ho busquen les pantalles.
+ * Afegir-lo no toca el que ja és baixat: la veu del parlant es queda on era.
+ */
+const EXTRES = 'extres';
 const CARPETA = 'media';
 
 /** `url` és la que té el drill, tal com surt de `getMediaUrl`, encara que se n'hagi baixat una altra. */
 interface Baixat { id: number; url: string; fitxer: string }
+interface Extra { url: string; fitxer: string }
 
 /** Prou per trobar el so d'un drill; les pantalles del curs no porten el `Drill` sencer. */
 type AmbVeu = Pick<Drill, 'id' | 'audio_url' | 'audio_tts_shi_url'>;
+/** El que es baixa a part: el català llegit i la imatge. */
+type AmbExtres = Pick<Drill, 'id' | 'audio_tts_url' | 'image_url'>;
 
 export interface EstatAudio {
   /** El que s'ha de donar a `new Audio()`: el fitxer si hi és, l'URL si no. */
@@ -39,6 +50,8 @@ export interface EstatAudio {
 
 const perId = new Map<number, Baixat>();
 const perUrl = new Map<string, Baixat>();
+/** El català llegit i les imatges, per adreça. */
+const extres = new Map<string, Extra>();
 const enCurs = new Map<number, Promise<boolean>>();
 const oients = new Set<() => void>();
 /** Fins que la xarxa no digui el contrari: millor un botó encès que no fa res que l'app apagada. */
@@ -58,8 +71,12 @@ function avisa() {
 function obre(): Promise<IDBDatabase | null> {
   bd ??= new Promise(resolve => {
     try {
-      const req = indexedDB.open(BD, 1);
-      req.onupgradeneeded = () => { req.result.createObjectStore(AUDIOS, { keyPath: 'id' }); };
+      const req = indexedDB.open(BD, 2);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(AUDIOS)) db.createObjectStore(AUDIOS, { keyPath: 'id' });
+        if (!db.objectStoreNames.contains(EXTRES)) db.createObjectStore(EXTRES, { keyPath: 'url' });
+      };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => resolve(null);
       req.onblocked = () => resolve(null);
@@ -80,10 +97,27 @@ async function indexDesat(): Promise<Baixat[]> {
   });
 }
 
+async function extresDesats(): Promise<Extra[]> {
+  const db = await obre();
+  if (!db || !db.objectStoreNames.contains(EXTRES)) return [];
+  return new Promise(resolve => {
+    const req = db.transaction(EXTRES).objectStore(EXTRES).getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => resolve([]);
+  });
+}
+
 /** Sense IndexedDB el fitxer val mentre duri la sessió: el pitjor cas és tornar-lo a baixar. */
 async function escriuIndex(fila: Baixat) {
   const db = await obre();
   db?.transaction(AUDIOS, 'readwrite').objectStore(AUDIOS).put(fila);
+}
+
+async function escriuExtra(fila: Extra) {
+  const db = await obre();
+  if (db?.objectStoreNames.contains(EXTRES)) {
+    db.transaction(EXTRES, 'readwrite').objectStore(EXTRES).put(fila);
+  }
 }
 
 function registra(fila: Baixat) {
@@ -101,6 +135,7 @@ async function carrega() {
     .then(r => new Set(r.files.map(f => f.name)))
     .catch(() => new Set<string>());
   (await indexDesat()).filter(f => noms.has(f.fitxer)).forEach(registra);
+  (await extresDesats()).filter(f => noms.has(f.fitxer)).forEach(f => extres.set(f.url, f));
 }
 
 /** Una vegada, en obrir l'app. Els botons ja tornen a preguntar sols quan acaba. */
@@ -128,8 +163,19 @@ const clau = (url: string | null | undefined) => getMediaUrl((url || '').trim())
 
 /** El fitxer d'aquesta adreça, ja a punt per a `new Audio()`, o `null` si no s'ha baixat. */
 export function rutaLocal(url: string | null | undefined): string | null {
-  const fila = perUrl.get(clau(url));
+  const k = clau(url);
+  const fila = perUrl.get(k) || extres.get(k);
   return fila && carpeta ? Capacitor.convertFileSrc(`${carpeta}/${fila.fitxer}`) : null;
+}
+
+/**
+ * D'on surt una imatge: el fitxer del telèfon si ja és baixat, i si no la de Cloudinary retallada.
+ *
+ * `thumb` no toca un camí local —només reescriu adreces de Cloudinary—, però es demana el fitxer
+ * primer perquè sense xarxa la retallada no existeix i la local sí.
+ */
+export function imatgeSrc(url: string | null | undefined, amplada: number): string {
+  return rutaLocal(url) ?? thumb(clau(url), amplada);
 }
 
 /** Per a gestors i bucles, on un hook no hi cap. Si no hi ha fitxer ni xarxa, simplement no sona. */
@@ -281,6 +327,96 @@ export async function baixaTotsElsAudios(
   return tanda;
 }
 
+// ──────────────── El català llegit i les imatges (#506: «que tot sigui accessible») ────────────────
+//
+// En Pablo (31-10): «comprova que és capaç de descarregar tot, que tot és accessible» i «make sure
+// everything works offline in the phone». Faltaven dues coses: el significat llegit en CATALÀ
+// —que és el que fa sonar «Escolta-la amb el català» a les Històries i la primera passada de la
+// Pràctica— i les imatges de les targetes. Sense xarxa, l'un callava i les altres no es veien.
+//
+// Va a part de les veus perquè ocupa molt i no tothom el vol: es demana amb el seu botó. La veu
+// sintètica en AMAZIC segueix sense baixar-se mai: no sona enlloc (#532) i ocuparia disc per no
+// sonar.
+
+export interface ProgresExtres {
+  total: number;
+  fetes: number;
+  fallades: number;
+  bytes: number;
+  corrent: boolean;
+  /** Què s'està baixant: «el català llegit» o «les imatges». */
+  ara: string;
+}
+
+let aturarE = false;
+let tandaE: Promise<ProgresExtres> | null = null;
+
+export function baixantExtres(): boolean { return !!tandaE; }
+export function aturaExtres() { aturarE = true; }
+
+/** Baixa el que falta d'una llista d'adreces, amb el nom de fitxer que li toca. */
+async function baixaExtra(nom: string, font: string): Promise<number> {
+  try {
+    const { url, ext } = aBaixar(font);
+    const fitxer = `${nom}.${ext}`;
+    const path = `${CARPETA}/${fitxer}`;
+    await Filesystem.downloadFile({ url, path, directory: Directory.Data, recursive: true });
+    const { size } = await Filesystem.stat({ path, directory: Directory.Data });
+    if (!size) throw new Error('fitxer buit');
+    const fila = { url: font, fitxer };
+    extres.set(font, fila);
+    await escriuExtra(fila);
+    avisa();
+    return size;
+  } catch (e) {
+    console.warn(`[Mèdia] ${nom} no s'ha pogut baixar:`, e);
+    return -1;
+  }
+}
+
+/**
+ * Baixa el català llegit i les imatges de tots els drills que en tenen.
+ *
+ * D'un en un, es pot aturar i reprendre, i el que ja hi és no es torna a demanar — igual que les
+ * veus, i pel mateix motiu: el servidor és un Render de 512 MB.
+ */
+export async function baixaExtresDeTot(
+  drills: Partial<AmbExtres>[],
+  passa?: (p: ProgresExtres) => void,
+): Promise<ProgresExtres> {
+  if (tandaE) return tandaE;
+  aturarE = false;
+  tandaE = (async () => {
+    const p: ProgresExtres = { total: 0, fetes: 0, fallades: 0, bytes: 0, corrent: true, ara: '' };
+    if (!isNativeApp()) return { ...p, corrent: false };
+    await engegaAudios();
+    const falten: { nom: string; font: string; qui: string }[] = [];
+    for (const d of drills) {
+      if (d.id == null) continue;
+      for (const [camp, sufix, qui] of [
+        ['audio_tts_url', 'ca', 'el català llegit'],
+        ['image_url', 'img', 'les imatges'],
+      ] as const) {
+        const font = clau((d as Record<string, unknown>)[camp] as string | undefined);
+        if (!/^https?:/.test(font)) continue;
+        p.total++;
+        if (extres.has(font)) p.fetes++;
+        else falten.push({ nom: `${d.id}-${sufix}`, font, qui });
+      }
+    }
+    passa?.({ ...p });
+    for (const { nom, font, qui } of falten) {
+      if (aturarE) break;
+      p.ara = qui;
+      const mida = await baixaExtra(nom, font);
+      if (mida >= 0) { p.fetes++; p.bytes += mida; } else p.fallades++;
+      passa?.({ ...p });
+    }
+    return { ...p, ara: '', corrent: false };
+  })().finally(() => { tandaE = null; aturarE = false; avisa(); });
+  return tandaE;
+}
+
 /** Quantes veus hi ha al disc i quant ocupen. Es compta la carpeta, no l'índex: és el que val. */
 export async function resumAudios(): Promise<{ fitxers: number; bytes: number }> {
   if (!isNativeApp()) return { fitxers: 0, bytes: 0 };
@@ -294,14 +430,17 @@ export async function resumAudios(): Promise<{ fitxers: number; bytes: number }>
 export async function alliberaAudios(): Promise<void> {
   if (!isNativeApp()) return;
   aturar = true;
+  aturarE = true;
   await Filesystem.rmdir({ path: CARPETA, directory: Directory.Data, recursive: true }).catch(() => {});
   perId.clear();
   perUrl.clear();
+  extres.clear();
   const base = await obre();
   if (base) {
     await new Promise<void>(resolve => {
-      const tx = base.transaction(AUDIOS, 'readwrite');
-      tx.objectStore(AUDIOS).clear();
+      const noms = base.objectStoreNames.contains(EXTRES) ? [AUDIOS, EXTRES] : [AUDIOS];
+      const tx = base.transaction(noms, 'readwrite');
+      noms.forEach(n => tx.objectStore(n).clear());
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
     });

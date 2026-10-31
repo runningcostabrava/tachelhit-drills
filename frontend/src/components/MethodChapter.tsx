@@ -3,9 +3,9 @@ import NotaOrtografia from './NotaOrtografia';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FaBookOpen, FaMicrophone, FaPlay, FaTag } from 'react-icons/fa';
 import { api, type LessonProposal, type MethodChapterData, type MethodSentence } from '../api';
-import { getMediaUrl, hasIdentity, thumb } from '../config';
+import { hasIdentity } from '../config';
 import AmbSo from './AmbSo';
-import { audioSrc } from '../services/audioLocal';
+import { audioSrc, imatgeSrc } from '../services/audioLocal';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import MethodLesson from './MethodLesson';
@@ -29,7 +29,7 @@ function Sentence({ s }: { s: MethodSentence }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
       {s.image_url && (
-        <img src={thumb(getMediaUrl(s.image_url), 120)} alt="" loading="lazy"
+        <img src={imatgeSrc(s.image_url, 120)} alt="" loading="lazy"
              style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 'var(--r-md)', flexShrink: 0 }}
              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
       )}
