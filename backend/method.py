@@ -160,7 +160,14 @@ CHAPTERS: List[Dict] = [
             "dir els colors",
             "dir que no n'hi ha cap",
         ],
-        "grammar": ["demostratius", "negacio", "relatiu-participi", "adjectius-qualitat"],
+        # El capítol escrit (31-10) ensenya també els numerals del preu, les fórmules del
+        # regateig, «tenir» (dar-/ɣur-), els pronoms enganxats (ḍfar-as), les preguntes
+        # (mnckk, mad), l'imperatiu (sti, ẓr), el gènere i el nombre, les preposicions, el
+        # perfectiu i la y entre vocals: sense dir-ho aquí, aquelles seccions no rebrien cap
+        # frase nostra.
+        "grammar": ["demostratius", "negacio", "relatiu-participi", "adjectius-qualitat",
+                    "numerals", "formules", "ser-tenir", "clitics-objecte", "preguntes", "imperatiu",
+                    "noms-genere-nombre", "preposicions", "perfectiu", "sons-i-escriptura"],
         "topics": ["menjar", "mercat", "roba-colors"],
         "roles": ["qui compra", "qui para la parada"],
     },
