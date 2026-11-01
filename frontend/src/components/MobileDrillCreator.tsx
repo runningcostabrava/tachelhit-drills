@@ -11,6 +11,7 @@ import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { API_BASE, getMediaUrl, isNativeApp } from '../config';
 import { baixaAudio } from '../services/audioLocal';
 import { syncManager, type Drill } from '../services/OfflineSyncManager';
+import { notifyDrillsChanged } from '../selection';
 import { toast } from '../toast';
 import { fileNameFor, kindOf, type MediaKind } from '../utils/media';
 import { whyItFailed } from '../utils/errors';
@@ -477,6 +478,9 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         if (hasText(e.d) || hasMedia(e.d)) {
             try { await desa(e, textos(e.d)); } catch { /* el que no s'ha pogut desar ja ho diu l'estat */ }
             onDrillCreated(e.serverId ?? undefined);
+            // Que l'app sàpiga que n'hi ha una de nova: és el que fa que se'n demani
+            // la lectura de màquina de seguida, o quan torni el senyal.
+            notifyDrillsChanged();
         }
         try { localStorage.removeItem(ESBORRANY); } catch { /* ídem */ }
         // Si l'última de la tira encara és en blanc, no en cal una altra: s'hi va.
@@ -497,6 +501,9 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 try { localStorage.removeItem(ESBORRANY); } catch { /* ídem */ }
             } catch { /* ídem */ }
             onDrillCreated(e.serverId ?? undefined);
+            // Que l'app sàpiga que n'hi ha una de nova: és el que fa que se'n demani
+            // la lectura de màquina de seguida, o quan torni el senyal.
+            notifyDrillsChanged();
         }
         onClose();
     };

@@ -9,6 +9,7 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaBookOpen, FaMicrophone, FaInfo, FaSearch, FaPlus, FaFeatherAlt, FaFont } from 'react-icons/fa';
 import { syncManager } from './services/OfflineSyncManager';
 import { engegaAudios } from './services/audioLocal';
+import { posaLesLecturesQueFalten } from './services/lecturesPendents';
 import * as cuaDeVeus from './services/cuaDeVeus';
 import ToastHost from './components/ToastHost';
 import StaleBuildBanner from './components/StaleBuildBanner';
@@ -153,6 +154,32 @@ function App() {
   const [veusPendents, setVeusPendents] = useState(0);
   useEffect(() => cuaDeVeus.escolta(setVeusPendents), []);
   useEffect(() => { void engegaAudios(); }, []);
+
+  // Les gravacions que van quedar sense lectura de màquina, repescades.
+  //
+  // `/transcribe/` només es demana just després de gravar, i només si llavors hi ha xarxa: qui
+  // grava sense senyal —el cas d'anar pel camp amb algú que parla— es quedava sense per sempre,
+  // perquè el fitxer puja sol però ningú no en torna a demanar la lectura. Això ho mira en
+  // arrencar i cada cop que torna el senyal, només per a les teves i de vuit en vuit.
+  useEffect(() => {
+    let corrent = false;
+    const mira = async () => {
+      if (corrent) return;                     // una de sola: no se'n volen dues alhora
+      corrent = true;
+      try { await posaLesLecturesQueFalten(); } catch { /* el cop següent */ } finally { corrent = false; }
+    };
+    const aviat = () => window.setTimeout(() => { void mira(); }, 2500);
+    const t = window.setTimeout(() => { void mira(); }, 8000);   // deixa respirar la primera pantalla
+    // Tres moments: en obrir, quan torna el senyal, i cada cop que es fa o es toca una frase.
+    // Aquest últim és el que l'amo demanava: gravar-ne una i veure'n la lectura de seguida.
+    const nova = () => { aviat(); };
+    window.addEventListener('drills-changed', nova);
+    let treu: (() => void) | undefined;
+    Network.addListener('networkStatusChange', (s) => { if (s.connected) aviat(); })
+      .then((h) => { treu = () => h.remove(); })
+      .catch(() => {});
+    return () => { window.clearTimeout(t); window.removeEventListener('drills-changed', nova); treu?.(); };
+  }, []);
 
   // Offline sync bootstrap. All queue processing lives in OfflineSyncManager;
   // this effect just pushes pending actions and refreshes the local caches on

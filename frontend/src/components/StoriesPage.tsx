@@ -9,7 +9,6 @@ import type { Drill } from '../types';
 import WordGloss, { parseGlosses, type Gloss } from './WordGloss';
 import Frase from './Frase';
 import EscoltaITria from './EscoltaITria';
-import LaMaquina from './LaMaquina';
 import { llum } from '../utils/llum';
 import { ara, continua, esPausat, gap, keepAwake, nowPlaying, pausa, ritme, say, stop } from '../utils/veu';
 
@@ -757,7 +756,6 @@ function OneStory({ slug }: { slug: string }) {
                 )}
                 <CatalaEncès text={d.text_catalan || ''} gl={gl}
                              estil={{ fontSize: 14, color: 'var(--text-soft)', lineHeight: 1.45 }} />
-                <LaMaquina drill={d} />
                 <WordGloss drill={d} size="sm" />
                 <Desmuntada que={page.analisi?.[String(d.id)]} />
               </div>
@@ -798,9 +796,25 @@ function OneStory({ slug }: { slug: string }) {
 
             {written
               ? <Frase text={written} latin={d.text_tachelhit_latin} mots={mots} encesa={dins} size="xl" />
-              : <div style={{ fontSize: 19, color: 'var(--saffron-dark, #7A4A12)', fontWeight: 700 }}>
-                  (aquesta línia encara no té les paraules escrites)
-                </div>}
+              : (
+                // Sense el text del parlant, aquí es pinta el que la màquina hi sent, com fa la
+                // llista. Abans la pantalla gran es quedava amb l'avís i prou: l'amo va trobar una
+                // línia que deia «encara no té les paraules escrites» i tenia la lectura desada
+                // des de feia estona (#8677, `mani-ɣ izdɣ Mbark?`).
+                <>
+                  <div style={{ fontSize: 19, color: 'var(--saffron-dark, #7A4A12)', fontWeight: 700 }}>
+                    (aquesta línia encara no té les paraules escrites)
+                  </div>
+                  {(d.text_tachelhit_suggested || '').trim() && (
+                    <div style={{ marginTop: 6, color: 'var(--text-soft)' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>
+                        lectura de màquina
+                      </span>
+                      <Frase text={d.text_tachelhit_suggested || ''} size="lg" />
+                    </div>
+                  )}
+                </>
+              )}
             <CatalaEncès text={d.text_catalan || ''} gl={gl}
                          estil={{ fontSize: 'clamp(22px, 6.4vw, 32px)', color: 'var(--text)',
                                   lineHeight: 1.4, margin: '10px 0 4px', fontWeight: 600 }} />

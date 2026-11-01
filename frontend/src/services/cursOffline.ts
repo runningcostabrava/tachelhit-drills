@@ -24,6 +24,8 @@ export interface ProgresCurs {
   /** Què s'està baixant ara, per ensenyar-ho: «Gramàtica · el perfectiu». */
   ara: string;
   corrent: boolean;
+  /** Les parts que no s'han pogut ni llistar: aquelles no són a la baixada i cal dir-ho. */
+  sense: string[];
 }
 
 let aturar = false;
@@ -32,8 +34,18 @@ let tanda: Promise<ProgresCurs> | null = null;
 export function aturaCurs() { aturar = true; }
 export function baixantCurs(): boolean { return !!tanda; }
 
-/** Les pantalles del curs, amb el nom que es veu mentre es baixen. */
-async function pantalles(): Promise<{ path: string; nom: string }[]> {
+/**
+ * Les pantalles del curs, amb el nom que es veu mentre es baixen.
+ *
+ * `sense` recull les llistes que NO s'han pogut demanar. Abans això s'empassava en silenci: si
+ * `/grammar` fallava —i el servidor es queixa més del que voldríem—, les 23 unitats no entraven a
+ * la llista i la baixada deia «fet» sense elles. L'amo ho va veure l'1-11-2026: la seva baixada
+ * tenia 189 pantalles de les 331 que havia de tenir, i res no ho deia.
+ *
+ * Ara es prova tres vegades, amb espera entremig, i el que segueixi sense venir es diu pel seu
+ * nom. Val més una baixada incompleta i dita que una d'incompleta i callada.
+ */
+async function pantalles(sense: string[]): Promise<{ path: string; nom: string }[]> {
   const fora: { path: string; nom: string }[] = [
     { path: '/grammar', nom: 'Gramàtica' },
     { path: '/method/', nom: 'Mètode' },
@@ -41,26 +53,33 @@ async function pantalles(): Promise<{ path: string; nom: string }[]> {
     { path: '/alfabet', nom: 'Sons' },
     { path: '/alfabet/parelles?per_so=4', nom: 'Sons · parelles' },
   ];
-  const mira = async <T>(f: () => Promise<T>): Promise<T | null> => f().catch(() => null);
+  const espera = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const mira = async <T>(nom: string, f: () => Promise<T>): Promise<T | null> => {
+    for (let i = 0; i < 3; i++) {
+      try { return await f(); } catch { if (i < 2) await espera(3000 * (i + 1)); }
+    }
+    sense.push(nom);
+    return null;
+  };
 
-  const g = await mira(() => api.grammarUnits());
+  const g = await mira('Gramàtica', () => api.grammarUnits());
   for (const u of g?.units || []) {
     fora.push({ path: `/grammar/${u.slug}?limit=60`, nom: `Gramàtica · ${u.title}` });
     fora.push({ path: `/grammar/${u.slug}/lesson`, nom: `Gramàtica · ${u.title} · la lliçó` });
     fora.push({ path: `/grammar/${u.slug}/deep?limit=60`, nom: `Gramàtica · ${u.title} · a fons` });
   }
 
-  const m = await mira(() => api.methodIndex());
+  const m = await mira('Mètode', () => api.methodIndex());
   for (const c of m?.chapters || []) {
     fora.push({ path: `/method/${encodeURIComponent(c.slug)}`, nom: `Mètode · ${c.title}` });
   }
 
-  const s = await mira(() => api.stories());
+  const s = await mira('Històries', () => api.stories());
   for (const h of s?.stories || []) {
     fora.push({ path: `/stories/${encodeURIComponent(h.slug)}`, nom: `Històries · ${h.title}` });
   }
 
-  const a = await mira(() => api.alfabet());
+  const a = await mira('Sons', () => api.alfabet());
   // Exactament el camí que demana la pantalla, `limit` inclòs: el cau va per l'adreça sencera, i
   // un `limit` diferent seria una altra entrada i la pantalla no la trobaria.
   for (const l of a?.lletres || []) {
@@ -90,7 +109,7 @@ async function pantalles(): Promise<{ path: string; nom: string }[]> {
 
   fora.push({ path: '/practice/collections', nom: 'Pràctica' });
   fora.push({ path: '/tests/', nom: 'Pràctica · les llistes' });
-  const pr = await mira(() => api.practiceCollections());
+  const pr = await mira('Pràctica', () => api.practiceCollections());
   for (const u of pr?.units || []) sessio([['unit', u.slug]], `Pràctica · ${u.title}`);
   for (const t of pr?.topics || []) sessio([['topic', t.slug]], `Pràctica · ${t.label}`);
   for (const d of pr?.days || []) sessio([['day', d.day], ['speaker', d.speaker]], `Pràctica · ${d.speaker}`);
@@ -119,9 +138,9 @@ export async function baixaElCurs(passa?: (p: ProgresCurs) => void): Promise<Pro
   if (tanda) return tanda;
   aturar = false;
   tanda = (async () => {
-    const p: ProgresCurs = { total: 0, fetes: 0, fallades: 0, ara: 'Mirant què hi ha…', corrent: true };
+    const p: ProgresCurs = { total: 0, fetes: 0, fallades: 0, ara: 'Mirant què hi ha…', corrent: true, sense: [] };
     passa?.({ ...p });
-    const llista = await pantalles();
+    const llista = await pantalles(p.sense);
     p.total = llista.length;
     passa?.({ ...p });
     for (const { path, nom } of llista) {
