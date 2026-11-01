@@ -1402,6 +1402,37 @@ def detect_text_mode(frames: List[Tuple[float, str]]) -> str:
     return "none"
 
 
+def _space_mms_text(audio_url: str) -> str:
+    """El que el NOSTRE model sent a una gravació: MMS-1b-all amb l'adaptador shi afinat.
+
+    L'Space en porta dos lectors i fins ara el servidor només feia servir l'altre. Mesurat l'1-11
+    sobre catorze gravacions nostres d'Aït Mraw i Beni Mellal, comparant per clau fonèmica contra
+    el text que va escriure una persona: **el nostre llegeix a CER 0,279 i el NeMo a 0,448**. En
+    alguna encerta del tot on l'altre treu una cosa doblada (`ihla ġuri udġar`, drill 484).
+
+    L'ordre, doncs, va per com de bé llegeix cadascun: Gemini primer (0,19 a la prova del 17-10),
+    aquest després, i el NeMo com a xarxa de seguretat. Triga uns cinc segons en comptes d'un i
+    mig, i els val.
+
+    Torna '' si no pot: el model es carrega en segon pla a l'Space i respon 503 mentre no hi és.
+    """
+    try:
+        space = resolve_hf_space_host(os.getenv("HUGGINGFACE_ASR_SPACE_URL", ASR_SPACE_DEFAULT))
+        cru = requests.get(audio_url, timeout=120).content
+        hf_token = os.getenv("HUGGINGFACE_API_KEY")
+        headers = {"Authorization": f"Bearer {hf_token}"} if hf_token else {}
+        r = requests.post(space + "/transcribe_mms",
+                          files={"audio_file": ("clip.bin", cru, "application/octet-stream")},
+                          headers=headers, timeout=300)
+        if r.status_code != 200:
+            print(f"[ASR] el nostre model no pot ara ({r.status_code})")
+            return ""
+        return ((r.json() or {}).get("text") or "").strip()
+    except Exception as e:
+        print(f"[ASR] el nostre model ha fallat: {e}")
+        return ""
+
+
 def _space_transcribe_text(media_path: str) -> str:
     """Whole-file transcription by the ASR Space (NeMo, Tifinagh); '' on any failure."""
     try:
@@ -9867,6 +9898,14 @@ async def transcribe_audio(
             raise HTTPException(status_code=502, detail="No s'ha entès res de la gravació")
         reading = f"{latin} · {tif}" if latin and tif and latin != tif else (latin or tif)
         return TranscribeResponse(rough_transcription=latin, corrected_transcription=reading, similarity_score=0.0)
+
+    # El segon de la fila: el NOSTRE model. Abans el servidor saltava d'aquí al NeMo, que és d'un
+    # tercer i llegeix pitjor (0,448 contra 0,279, mesurat l'1-11 sobre gravacions nostres), i que
+    # per això fa totes les lectures de les frases noves quan Gemini no contesta.
+    nostre = await asyncio.to_thread(_space_mms_text, audio_url)
+    if len(re.sub(r"[^\w]", "", nostre)) >= 3:
+        return TranscribeResponse(rough_transcription=nostre, corrected_transcription=nostre,
+                                  similarity_score=0.0)
 
     # Call HF Space
     asr_space_url = os.getenv("HUGGINGFACE_ASR_SPACE_URL", ASR_SPACE_DEFAULT)
