@@ -67,16 +67,47 @@ async function pantalles(): Promise<{ path: string; nom: string }[]> {
     fora.push({ path: `/alfabet/${encodeURIComponent(l.tif)}?limit=12`, nom: `Sons · ${l.tif} ${l.lat}` });
   }
 
-  // La Pràctica. Hi faltava, i era el forat gros: sense haver-la visitat abans, «Pràctica» no
-  // s'obria sense senyal. Es baixa la portada i els passos de cada llista, que és el que la
-  // pantalla demana. El que no es pot baixar és una sessió feta a l'atzar ni el repàs espaiat:
-  // això es tria al servidor a cada crida i té el seu propi pas pendent (#506, passos 5 i 6).
+  // La Pràctica, sencera.
+  //
+  // El primer intent només baixava la portada i els passos de cada llista, i l'amo ho va notar de
+  // seguida: «per què no tots els continguts de pràctica es descarreguen?». Perquè la pantalla no
+  // té una porta sinó quatre —per dia de gravació, per tema, per unitat i per llista—, i cada
+  // una obre una SESSIÓ que es demana a `/practice/session` amb la seva consulta. Aquelles no hi
+  // eren.
+  //
+  // Es poden baixar perquè el servidor les tria sempre igual: la mateixa consulta dona les
+  // mateixes frases, en el mateix ordre (`practice_mod.session_rows`). Són 104 portes —19 dies,
+  // 29 temes, 23 unitats, 33 llistes— de deu frases cadascuna: poca cosa.
+  //
+  // L'adreça s'ha de construir EXACTAMENT com la fa la pantalla, perquè el cau va per adreça
+  // sencera: les claus en aquest ordre i `limit` al final (`PracticeSession.tsx`).
+  const sessio = (parts: [string, string][], nom: string) => {
+    const q = new URLSearchParams();
+    for (const [k, v] of parts) q.set(k, v);
+    q.set('limit', '10');
+    fora.push({ path: `/practice/session?${q.toString()}`, nom });
+  };
+
   fora.push({ path: '/practice/collections', nom: 'Pràctica' });
   fora.push({ path: '/tests/', nom: 'Pràctica · les llistes' });
   const pr = await mira(() => api.practiceCollections());
+  for (const u of pr?.units || []) sessio([['unit', u.slug]], `Pràctica · ${u.title}`);
+  for (const t of pr?.topics || []) sessio([['topic', t.slug]], `Pràctica · ${t.label}`);
+  for (const d of pr?.days || []) sessio([['day', d.day], ['speaker', d.speaker]], `Pràctica · ${d.speaker}`);
   for (const l of pr?.lists || []) {
     fora.push({ path: `/tests/${l.id}/steps`, nom: `Pràctica · ${l.title}` });
+    sessio([['test_id', String(l.id)]], `Pràctica · ${l.title}`);
+    // La porta que ensenya la llista sencera. Només per a les llistes: un tema o una unitat en
+    // pot tenir centenars de frases, i aquelles ja són a la còpia de la biblioteca.
+    const g = new URLSearchParams();
+    g.set('test_id', String(l.id));
+    g.set('with_voice', 'false');
+    g.set('limit', '400');
+    fora.push({ path: `/practice/session?${g.toString()}`, nom: `Pràctica · ${l.title} (la llista)` });
   }
+  // El que NO es pot baixar, i és per una raó i no per oblit: la pràctica del dia (`daily=1`) i
+  // el repàs espaiat surten de `/reviews/due`, que el servidor calcula al moment segons què t'ha
+  // tocat a tu i quan; demà no seria el mateix. Això vol la seva pròpia cua (#506, pas 6).
   return fora;
 }
 
