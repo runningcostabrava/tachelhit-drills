@@ -444,6 +444,10 @@ SessionLocal = sessionmaker(bind=engine)
 # interactive features (see ai_budget.py). Attached to the client so no call escapes it.
 ai_meter = ai_budget.Meter(SessionLocal, GeminiUsageModel)
 gemini_client.set_meter(ai_meter)
+# El mateix comptador per al segon proveïdor: el que gasta el copilot amb DeepSeek ha de sortir
+# a la mateixa factura i sota el mateix sostre.
+import deepseek_client as _deepseek_client
+_deepseek_client.set_meter(ai_meter)
 
 # ---------------------------------------------------------------------------
 # Auto-capture guard (P5.2): ASR on English or music sometimes yields English
@@ -7006,10 +7010,18 @@ def method_index(db: Session = Depends(get_db),
     el capítol demana. Un capítol curt vol dir que d'allò encara no n'hem gravat, i és l'argument
     per anar-hi. Vegeu ADR 0003: del manual se'n pren el pla, mai el text.
     """
+    mark = _index_mark(db)
+    done = _INDEX_CACHE.get("method")
+    if done and done[0] == mark:
+        return done[1]
     drawn = artwork(db, "method")
+    # Les candidates són les MATEIXES per als deu capítols: es demanen una vegada i es passen.
+    # Abans cada capítol repetia la consulta sobre tota la biblioteca, i amb 12.000 frases això
+    # eren disset segons a cada obertura del Mètode (31-10-2026).
+    totes = method_mod.candidates(db)
     out = []
     for c in method_mod.index():
-        rows = method_mod.sentences_for(db, c["slug"])
+        rows = method_mod.sentences_for(db, c["slug"], totes)
         out.append({**c,
                     # el dibuix del capítol: diu de què va abans de llegir-ne una paraula
                     "cover": drawn.get(c["slug"]),
@@ -7018,7 +7030,9 @@ def method_index(db: Session = Depends(get_db),
                     "sentences": len(rows),
                     "with_voice": sum(1 for d in rows if d.audio_url),
                     "varieties": sorted({(d.variety or "").strip() for d in rows if (d.variety or "").strip()})})
-    return {"chapters": out, "source": method_mod.SOURCE}
+    fora = {"chapters": out, "source": method_mod.SOURCE}
+    _INDEX_CACHE["method"] = (mark, fora)
+    return fora
 
 
 def _another_way(said: Optional[str], written: Optional[str]) -> bool:
@@ -7112,6 +7126,26 @@ def _amb_les_altres_maneres(body, said, db):
 #: el text del capítol ni la biblioteca, així que es guarda fet i es torna a fer quan alguna de
 #: les dues coses es mou. No hi ha res de qui mira: el capítol és el mateix per a tothom.
 _CHAPTER_CACHE: Dict[str, tuple] = {}
+
+#: L'índex del Mètode, que no en tenia i es recalculava sencer a cada obertura de la pantalla.
+_INDEX_CACHE: Dict[str, tuple] = {}
+
+
+def _index_mark(db) -> tuple:
+    """La marca de l'índex: com la d'un capítol, però de TOTS.
+
+    L'índex depèn de la biblioteca i de quan es va escriure qualsevol capítol, no només un. Si
+    aquestes dues coses no s'han mogut, el que hi havia servit segueix valent.
+    """
+    from sqlalchemy import func
+
+    from models import MethodChapter
+    n, last = db.query(func.count(DrillModel.id), func.max(DrillModel.updated_at)).one()
+    # El capítol va per `slug`: aquesta taula no té `id`.
+    cn, clast = db.query(func.count(MethodChapter.slug), func.max(MethodChapter.updated_at)).one()
+    art = db.query(AppSettingModel.updated_at).filter(AppSettingModel.key == "artwork_method").first()
+    pn, plast = db.query(func.count(TestModel.id), func.max(TestModel.updated_at)).one()
+    return (n, str(last), cn, str(clast), str(art[0]) if art else None, pn, str(plast))
 
 
 def _library_mark(db, slug: str) -> tuple:
@@ -7781,8 +7815,19 @@ def ai_usage(request: Request, user: Optional[UserModel] = Depends(get_current_u
 
 @app.get("/ai/status")
 def ai_status():
-    """Whether the AI agent is configured (and within budget), and the grammar corpus size."""
-    return {"available": gemini_available() and ai_meter.budget_ok(), "configured": gemini_available(),
+    """Whether the AI agent is configured (and within budget), and the grammar corpus size.
+
+    `copilot` diu quin proveïdor fa anar les eines i si hi és: sense això, canviar de proveïdor
+    era una cosa que només se sabia llegint els registres del servidor.
+    """
+    import gemini_client as _gc
+    import deepseek_client as _ds
+    qui = _gc.agent_provider()
+    return {"available": (gemini_available() or _ds.deepseek_available()) and ai_meter.budget_ok(),
+            "configured": gemini_available() or _ds.deepseek_available(),
+            "copilot": qui,
+            "copilot_llest": _ds.deepseek_available() if qui == "deepseek" else gemini_available(),
+            "gemini": gemini_available(), "deepseek": _ds.deepseek_available(),
             "budget_ok": ai_meter.budget_ok(), "budget_eur": ai_budget.monthly_budget_eur(),
             "grammar_chars": len(_load_grammar())}
 

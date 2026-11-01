@@ -1,9 +1,10 @@
 import { imatgeSrc } from '../services/audioLocal';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDictat } from '../utils/dictat';
 import {
   FaBook, FaBookOpen, FaChevronRight, FaFire, FaGraduationCap, FaLayerGroup, FaMicrophone,
-  FaPlay, FaPlus, FaRedo, FaSearch, FaVideo, FaFont, FaChevronRight as FaCap,
+  FaPlay, FaPlus, FaRedo, FaSearch, FaVideo, FaFont,
 } from 'react-icons/fa';
 import { api, type HomeData } from '../api';
 
@@ -46,6 +47,7 @@ const DOORS_KNOWN: Record<string, string> = {
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { dictant, dicta } = useDictat((dit) => navigate(`/cerca?q=${encodeURIComponent(dit)}`));
   const [d, setD] = useState<HomeData | null>(null);
   // Si els comptes no arriben, la casa segueix sent la casa: les portes hi són i no s'hi queda
   // cap «…» penjat ni un «0% es pot escoltar» que seria mentida.
@@ -98,39 +100,43 @@ export default function HomePage() {
         ningú.
       </p>
 
-      {/* La porta en anglès (#487): qui no llegeix català ha de trobar per on començar a la
-          primera pantalla, i en la seva llengua. */}
-      <button type="button" lang="en" onClick={() => navigate('/start')}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', width: '100%',
-                       textAlign: 'left', margin: '0 0 16px', padding: '12px 16px', borderRadius: 'var(--r-lg)', cursor: 'pointer',
-                       border: '1px solid var(--brand-1)', background: 'var(--brand-gradient-soft)', color: 'var(--text)', fontFamily: 'inherit' }}>
-        <span style={{ minWidth: 0 }}>
-          <strong style={{ fontSize: 15 }}>New to Tamazight? Start here in English</strong>
-          <span style={{ display: 'block', fontSize: 13, color: 'var(--text-soft)' }}>Salam, tanmmirt, aman: your first words, with real voices.</span>
-        </span>
-        <span aria-hidden style={{ fontWeight: 800, color: 'var(--brand-1)' }}>→</span>
-      </button>
-
-      {/* Cercar: la primera cosa que algú vol fer amb una biblioteca. */}
-      <form onSubmit={(e) => { e.preventDefault(); navigate(`/cerca?q=${encodeURIComponent(find.trim())}`); }}
-            style={{ display: 'flex', gap: 8, margin: '0 0 18px' }}>
+      {/* Cercar, i gran.
+          L'amo: «la búsqueda debería ser más grande». És la primera cosa que algú vol fer amb una
+          biblioteca, i anava en una línia prima entremig d'altres coses. Ara és el primer que es
+          veu, amb el micròfon al costat: es prem, es diu què busques i ja hi ets. */}
+      <form onSubmit={(e) => { e.preventDefault(); if (find.trim()) navigate(`/cerca?q=${encodeURIComponent(find.trim())}`); }}
+            style={{ display: 'flex', gap: 8, margin: '0 0 10px' }}>
         <input value={find} onChange={(e) => setFind(e.target.value)}
-               placeholder="Cerca una frase o una paraula: pa, aɣrum, «tinc gana»…"
+               placeholder={dictant ? 'Parla…' : 'Cerca: pa, aɣrum, «tinc gana»…'}
                aria-label="Cerca una frase o una paraula"
                autoCapitalize="off" autoCorrect="off" spellCheck={false}
-               style={{ flex: 1, minWidth: 0, padding: '11px 16px', fontSize: 14.5, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontFamily: 'inherit' }} />
-        <button type="submit" aria-label="Cerca"
-                style={{ padding: '11px 18px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
-          <FaSearch size={13} />
+               style={{ flex: 1, minWidth: 0, padding: '16px 20px', fontSize: 17, fontWeight: 600, borderRadius: 'var(--r-lg)', border: `2px solid ${dictant ? 'var(--rose, #b5435a)' : 'var(--brand-1)'}`, background: 'var(--surface)', color: 'var(--text)', fontFamily: 'inherit' }} />
+        <button type="button" onClick={() => dicta(setFind)}
+                aria-label={dictant ? 'Prou, busca-ho' : 'Digues què busques'}
+                title={dictant ? 'Prou, busca-ho' : 'Digues què busques'}
+                style={{ padding: '0 20px', minHeight: 58, borderRadius: 'var(--r-lg)', border: '2px solid var(--border)', background: dictant ? 'var(--rose, #b5435a)' : 'var(--surface)', color: dictant ? '#fff' : 'var(--brand-1)', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+          <FaMicrophone size={20} />
         </button>
-        {/* I el signe de sumar, que és l'altra cosa que es vol fer amb una biblioteca: afegir-hi.
-            L'amo: «falta un símbol + gran per crear un nou drill». */}
-        <button type="button" onClick={() => navigate('/afegeix')} aria-label="Afegeix una frase"
-                title="Afegeix una frase"
-                style={{ padding: '11px 18px', borderRadius: 'var(--r-pill)', border: '1px solid var(--brand-1)', background: 'var(--surface)', color: 'var(--brand-1)', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
-          <FaPlus size={14} />
+        <button type="submit" aria-label="Cerca"
+                style={{ padding: '0 22px', minHeight: 58, borderRadius: 'var(--r-lg)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+          <FaSearch size={18} />
         </button>
       </form>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '0 0 20px' }}>
+        {/* I el signe de sumar, que és l'altra cosa que es vol fer amb una biblioteca: afegir-hi.
+            L'amo: «falta un símbol + gran per crear un nou drill». */}
+        <button type="button" onClick={() => navigate('/afegeix')}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--brand-1)', background: 'var(--surface)', color: 'var(--brand-1)', fontWeight: 800, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit' }}>
+          <FaPlus size={13} /> Afegeix una frase
+        </button>
+        {/* La porta en anglès (#487): qui no llegeix català ha de trobar per on començar en la seva
+            llengua. Ocupava una caixa sencera a dalt de tot; l'amo: «el curso de inglés debe ser
+            algo pequeño». */}
+        <button type="button" lang="en" onClick={() => navigate('/start')}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-soft)', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+          New here? Start in English <span aria-hidden>→</span>
+        </button>
+      </div>
 
       {(slow || failed) && !d && (
         <p style={{ fontSize: 12.5, color: 'var(--text-muted)', margin: '-8px 0 14px', lineHeight: 1.55 }}>
@@ -190,23 +196,6 @@ export default function HomePage() {
           No cal fer-les totes: comença quan vulguis i el repàs ja te les anirà tornant.
         </p>
       )}
-
-      {/* Com funciona això, en quatre passos.
-          L'amo: «pensa sempre en el fàcil que sigui per l'usuari entendre-ho tot i entendre el
-          sistema». Les portes diuen ON pots anar; això diu PER QUÈ hi ha aquestes portes i en
-          quin ordre es fan servir. Cada pas porta al seu lloc, i el primer diu per on començar
-          si no has començat mai. */}
-      <h2 style={sectionTitle}>Com funciona</h2>
-      <ol style={{ listStyle: 'none', margin: '0 0 28px', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <Pas n={1} title="Algú ho diu" to="/drills" onGo={navigate}
-             what="Una frase entra a la biblioteca amb la veu de qui la diu, el seu nom i el seu poble. Res no ve d’un traductor automàtic." />
-        <Pas n={2} title="Ho ordenem" to="/metode" onGo={navigate}
-             what="El Mètode (de saludar a fer la compra), la Gramàtica (les regles) i els Sons (les lletres) només ensenyen amb frases d’aquesta biblioteca." />
-        <Pas n={3} title="Ho practiques" to="/tests" onGo={navigate}
-             what="Escoltes, tries, ho dius. El que et costa torna sol uns dies més tard: això és el repàs." />
-        <Pas n={4} title="Hi pots ajudar" to="/veus" onGo={navigate}
-             what="Si parles amazic, grava una frase o digues què vol dir. Si no, pots treure frases noves d’un vídeo." />
-      </ol>
 
       {/* Les portes. Cadascuna amb el seu número: on ets i què falta, a la mateixa línia. */}
       <h2 style={sectionTitle}>Per on vols entrar</h2>
@@ -376,29 +365,6 @@ function FranjaLletres({ sounds }: { sounds?: { total: number; amb_so: number; l
         </span>
       )}
     </button>
-  );
-}
-
-/** Un pas del «com funciona»: el número, què passa, i la porta on es fa. */
-function Pas({ n, title, what, to, onGo }: {
-  n: number; title: string; what: string; to: string; onGo: (to: string) => void;
-}) {
-  return (
-    <li>
-      <button onClick={() => onGo(to)}
-              style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', minHeight: 56,
-                       borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)',
-                       cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', color: 'var(--text)' }}>
-        <span aria-hidden style={{ flexShrink: 0, width: 26, height: 26, borderRadius: '50%', background: 'var(--brand-gradient-soft)',
-                                   color: 'var(--brand-1)', fontWeight: 800, fontSize: 13, display: 'inline-flex',
-                                   alignItems: 'center', justifyContent: 'center' }}>{n}</span>
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: 'block', fontWeight: 800, fontSize: 15 }}>{title}</span>
-          <span style={{ display: 'block', fontSize: 13, color: 'var(--text-soft)', lineHeight: 1.55 }}>{what}</span>
-        </span>
-        <FaCap size={11} style={{ color: 'var(--text-muted)', marginTop: 6, flexShrink: 0 }} />
-      </button>
-    </li>
   );
 }
 

@@ -1435,8 +1435,36 @@ def drill_for_line(db, slug: str, kind: str, section: Optional[str], index: int,
     return {"drill_id": d.id, "created": True}
 
 
-def sentences_for(db, slug: str) -> List:
+def candidates(db) -> List:
+    """Totes les frases que un capítol pot citar: la consulta, feta UNA vegada.
+
+    `sentences_for` la feia per a cada capítol i filtrava després en Python, de manera que
+    l'índex del Mètode la repetia deu vegades. Mentre la biblioteca era petita no es notava; el
+    31-10-2026, en omplir el significat en català de 5.522 frases, les files que torna gairebé es
+    van doblar —el filtre demana `text_catalan` no buit— i l'índex va passar a trigar **disset
+    segons**, que a l'app es llegia com «el servidor s'està despertant». Qui obria el capítol 3
+    esperava vint segons.
+
+    Les files surten amb la sessió oberta i es fan servir dins de la mateixa petició: no es
+    guarden entre peticions, que amb objectes de SQLAlchemy seria demanar problemes.
+    """
+    from models import Drill as DrillModel
+    # El recull de Beni Mellal («private») hi entra: l'amo en té permís (decisió de 23-10-2026).
+    # Aquella etiqueta protegeix la redistribució, no l'ensenyament. El que sí que queda fora és
+    # el de sempre: les llengües excloses.
+    return grammar.not_excluded(
+        db.query(DrillModel).filter(DrillModel.text_tachelhit != None,      # noqa: E711
+                                    DrillModel.text_tachelhit != "",
+                                    DrillModel.text_catalan != None,        # noqa: E711
+                                    DrillModel.text_catalan != ""),
+        DrillModel).all()
+
+
+def sentences_for(db, slug: str, rows: Optional[List] = None) -> List:
     """Les frases NOSTRES que fan el que aquest capítol demana.
+
+    `rows` són les candidates ja demanades (`candidates`), per a qui en vol diversos capítols
+    seguits i no vol pagar la consulta a cada un.
 
     Es trien pels slugs de gramàtica i de tema del capítol, i passen pels filtres d'exclusió de
     sempre (`grammar.not_excluded`): res gravat en càmera de «Tamazight For All», res etiquetat
@@ -1444,19 +1472,11 @@ def sentences_for(db, slug: str) -> List:
     només coincideix pel tema, i una amb veu va davant d'una muda: un capítol ha de començar pel
     que es pot escoltar.
     """
-    from models import Drill as DrillModel
     c = BY_SLUG.get(slug)
     if not c:
         return []
-    # El recull de Beni Mellal («private») hi entra: l'amo en té permís (decisió de 23-10-2026).
-    # Aquella etiqueta protegeix la redistribució, no l'ensenyament. El que sí que queda fora és
-    # el de sempre: les llengües excloses.
-    rows = grammar.not_excluded(
-        db.query(DrillModel).filter(DrillModel.text_tachelhit != None,      # noqa: E711
-                                    DrillModel.text_tachelhit != "",
-                                    DrillModel.text_catalan != None,        # noqa: E711
-                                    DrillModel.text_catalan != ""),
-        DrillModel).all()
+    if rows is None:
+        rows = candidates(db)
 
     units, subjects = set(c["grammar"]), set(c["topics"])
     by_unit, by_topic = [], []
