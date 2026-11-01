@@ -17,6 +17,7 @@ import { parseTopics, topicLabel } from '../utils/topics';
 import { answerSafeFilter } from '../utils/media';
 import { setSelectedDrillIds } from '../selection';
 import SourceCredit from './SourceCredit';
+import LaMaquina from './LaMaquina';
 import {
     FaVolumeUp,
     FaVideo,
@@ -537,6 +538,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                         <WordGloss drill={d} size="sm" />
                         {d.text_arabic && <div dir="rtl" style={{ fontSize: '15px', color: 'var(--text-soft)', textAlign: 'right' }}>{d.text_arabic}</div>}
                         {!d.text_catalan && !d.text_arabic && <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>sense traducció</div>}
+                        <LaMaquina drill={d} />
                     </div>
                 ) : (
                     <button onClick={() => setReveal(true)} style={{ marginTop: '8px', padding: '7px 12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontWeight: 700, cursor: 'pointer', color: 'var(--text)', fontSize: '13px' }}>

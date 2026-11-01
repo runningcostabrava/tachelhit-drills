@@ -9,6 +9,7 @@ import type { Drill } from '../types';
 import WordGloss, { parseGlosses, type Gloss } from './WordGloss';
 import Frase from './Frase';
 import EscoltaITria from './EscoltaITria';
+import LaMaquina from './LaMaquina';
 import { llum } from '../utils/llum';
 import { ara, continua, esPausat, gap, keepAwake, nowPlaying, pausa, ritme, say, stop } from '../utils/veu';
 
@@ -756,6 +757,7 @@ function OneStory({ slug }: { slug: string }) {
                 )}
                 <CatalaEncès text={d.text_catalan || ''} gl={gl}
                              estil={{ fontSize: 14, color: 'var(--text-soft)', lineHeight: 1.45 }} />
+                <LaMaquina drill={d} />
                 <WordGloss drill={d} size="sm" />
                 <Desmuntada que={page.analisi?.[String(d.id)]} />
               </div>
