@@ -7010,10 +7010,18 @@ def method_index(db: Session = Depends(get_db),
     el capítol demana. Un capítol curt vol dir que d'allò encara no n'hem gravat, i és l'argument
     per anar-hi. Vegeu ADR 0003: del manual se'n pren el pla, mai el text.
     """
+    mark = _index_mark(db)
+    done = _INDEX_CACHE.get("method")
+    if done and done[0] == mark:
+        return done[1]
     drawn = artwork(db, "method")
+    # Les candidates són les MATEIXES per als deu capítols: es demanen una vegada i es passen.
+    # Abans cada capítol repetia la consulta sobre tota la biblioteca, i amb 12.000 frases això
+    # eren disset segons a cada obertura del Mètode (31-10-2026).
+    totes = method_mod.candidates(db)
     out = []
     for c in method_mod.index():
-        rows = method_mod.sentences_for(db, c["slug"])
+        rows = method_mod.sentences_for(db, c["slug"], totes)
         out.append({**c,
                     # el dibuix del capítol: diu de què va abans de llegir-ne una paraula
                     "cover": drawn.get(c["slug"]),
@@ -7022,7 +7030,9 @@ def method_index(db: Session = Depends(get_db),
                     "sentences": len(rows),
                     "with_voice": sum(1 for d in rows if d.audio_url),
                     "varieties": sorted({(d.variety or "").strip() for d in rows if (d.variety or "").strip()})})
-    return {"chapters": out, "source": method_mod.SOURCE}
+    fora = {"chapters": out, "source": method_mod.SOURCE}
+    _INDEX_CACHE["method"] = (mark, fora)
+    return fora
 
 
 def _another_way(said: Optional[str], written: Optional[str]) -> bool:
@@ -7116,6 +7126,26 @@ def _amb_les_altres_maneres(body, said, db):
 #: el text del capítol ni la biblioteca, així que es guarda fet i es torna a fer quan alguna de
 #: les dues coses es mou. No hi ha res de qui mira: el capítol és el mateix per a tothom.
 _CHAPTER_CACHE: Dict[str, tuple] = {}
+
+#: L'índex del Mètode, que no en tenia i es recalculava sencer a cada obertura de la pantalla.
+_INDEX_CACHE: Dict[str, tuple] = {}
+
+
+def _index_mark(db) -> tuple:
+    """La marca de l'índex: com la d'un capítol, però de TOTS.
+
+    L'índex depèn de la biblioteca i de quan es va escriure qualsevol capítol, no només un. Si
+    aquestes dues coses no s'han mogut, el que hi havia servit segueix valent.
+    """
+    from sqlalchemy import func
+
+    from models import MethodChapter
+    n, last = db.query(func.count(DrillModel.id), func.max(DrillModel.updated_at)).one()
+    # El capítol va per `slug`: aquesta taula no té `id`.
+    cn, clast = db.query(func.count(MethodChapter.slug), func.max(MethodChapter.updated_at)).one()
+    art = db.query(AppSettingModel.updated_at).filter(AppSettingModel.key == "artwork_method").first()
+    pn, plast = db.query(func.count(TestModel.id), func.max(TestModel.updated_at)).one()
+    return (n, str(last), cn, str(clast), str(art[0]) if art else None, pn, str(plast))
 
 
 def _library_mark(db, slug: str) -> tuple:
