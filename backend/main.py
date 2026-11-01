@@ -1,6 +1,7 @@
 # INFO: Project: Tachelhit Drills. Feature: ASR, Correction, Translation, Video Processing. Status: Active.
 import asyncio
 import threading
+import time
 import os
 import sys
 import glob
@@ -1229,6 +1230,40 @@ def _dialect_examples(db, variety: Optional[str], n: int = 20) -> List[str]:
         if len(out) >= n:
             break
     return out
+
+
+#: Quan Gemini no contesta, deixar de preguntar-li una estona.
+#:
+#: L'amo, l'1-11-2026: «we don't have gemini». I es veia a les dades: de les més de mil
+#: cinc-centes lectures escrites aquella nit, **cap** portava la forma que deixa Gemini
+#: («llatí · ⵜⵉⴼⵉⵏⴰⵖ»); totes eren tifinag pur, que és el que escriu el model de fora. O sigui
+#: que no va contestar ni una vegada i cada crida va pagar l'espera abans de passar al següent.
+#:
+#: `gemini_available()` només diu si hi ha la clau CONFIGURADA, no si el proveïdor respon: amb
+#: el compte sense crèdit, la clau hi és i la resposta no ve mai. Això ho mira pel resultat, que
+#: és l'únic que no es pot discutir: tres vegades seguides sense treure'n res i es deixa de
+#: preguntar un quart d'hora. Si torna a contestar, es torna a comptar des de zero tot sol.
+_GEMINI_ASR_BUIDES = 0
+_GEMINI_ASR_FINS = 0.0
+_GEMINI_ASR_PROVES = 3
+_GEMINI_ASR_PAUSA = 15 * 60
+
+
+def _gemini_asr_val_la_pena() -> bool:
+    return time.time() >= _GEMINI_ASR_FINS
+
+
+def _gemini_asr_resultat(ha_contestat: bool) -> None:
+    global _GEMINI_ASR_BUIDES, _GEMINI_ASR_FINS
+    if ha_contestat:
+        _GEMINI_ASR_BUIDES = 0
+        _GEMINI_ASR_FINS = 0.0
+        return
+    _GEMINI_ASR_BUIDES += 1
+    if _GEMINI_ASR_BUIDES >= _GEMINI_ASR_PROVES:
+        _GEMINI_ASR_FINS = time.time() + _GEMINI_ASR_PAUSA
+        _GEMINI_ASR_BUIDES = 0
+        print(f"[ASR] Gemini no contesta; no li pregunto durant {_GEMINI_ASR_PAUSA // 60} minuts")
 
 
 def _transcribe_short_clip_with_gemini(audio_url: str, variety: Optional[str] = None, meaning: Optional[str] = None,
@@ -9889,7 +9924,15 @@ async def transcribe_audio(
             gold = (drill.text_tachelhit or "").strip()
             speaker_text = gold if gold and gold.lower() != "text" else None
             examples = _dialect_examples(db, variety)
-    short = await asyncio.to_thread(_transcribe_short_clip_with_gemini, audio_url, variety, meaning, speaker_text, examples)
+    # No se li pregunta si fa estona que no contesta: cada intent costa cinc segons i el que ve
+    # darrere —el nostre model— llegeix millor que el de fora de totes maneres.
+    short = None
+    if _gemini_asr_val_la_pena():
+        short = await asyncio.to_thread(_transcribe_short_clip_with_gemini, audio_url, variety, meaning, speaker_text, examples)
+        _gemini_asr_resultat(short is not None)
+    # Es compta pel resultat, no per l'excusa. Una gravació llarga també torna `None` i això fa
+    # avançar el comptador sense que Gemini en tingui cap culpa; no passa res, perquè la pausa és
+    # curta, es desfà sola a la primera resposta i el que ve darrere llegeix millor que el de fora.
     if short is not None:
         # Both scripts: the Latin reading (comparable letter by letter with what the speaker typed)
         # and its Tifinagh, «latin · ⵜⵉⴼⵉⵏⴰⵖ».
