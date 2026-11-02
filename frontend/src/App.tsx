@@ -11,6 +11,7 @@ import { syncManager } from './services/OfflineSyncManager';
 import { engegaAudios } from './services/audioLocal';
 import { posaLesLecturesQueFalten } from './services/lecturesPendents';
 import * as cuaDeVeus from './services/cuaDeVeus';
+import { toast } from './toast';
 import ToastHost from './components/ToastHost';
 import StaleBuildBanner from './components/StaleBuildBanner';
 import DataNotice from './components/DataNotice';
@@ -163,19 +164,48 @@ function App() {
   // arrencar i cada cop que torna el senyal, només per a les teves i de vuit en vuit.
   useEffect(() => {
     let corrent = false;
-    const mira = async () => {
+    let avisatSenseNom = false;
+    /**
+     * `acabes` = això ve de fer o tocar una frase, no d'arrencar l'app.
+     *
+     * És el que decideix si es parla o no (#556). Qui acaba de gravar espera una resposta i se li
+     * deu, també quan és «ara no s'ha pogut»; qui obre l'app al matí no ha demanat res i no vol
+     * un avís de fa tres setmanes. Les lectures que SÍ que s'han fet es diuen sempre: són una
+     * frase que ha canviat a la pantalla, i val més saber per què.
+     */
+    const mira = async (acabes: boolean) => {
       if (corrent) return;                     // una de sola: no se'n volen dues alhora
       corrent = true;
-      try { await posaLesLecturesQueFalten(); } catch { /* el cop següent */ } finally { corrent = false; }
+      try {
+        const r = await posaLesLecturesQueFalten();
+        if (r.motiu === 'sense-nom') {
+          if (r.falten > 0 && !avisatSenseNom) {
+            avisatSenseNom = true;
+            toast.info(`Tens ${r.falten} ${r.falten === 1 ? 'gravació' : 'gravacions'} sense llegir, `
+              + 'i sense un nom al perfil no se sap quines són teves. Posa-te\'l i es llegiran.');
+          }
+        } else if (r.fetes > 0) {
+          toast.success(`${r.fetes} ${r.fetes === 1 ? 'gravació llegida' : 'gravacions llegides'} `
+            + 'per la màquina' + (r.falten > 0 ? `; en queden ${r.falten}.` : '.'));
+        } else if (acabes && r.motiu === 'sense-senyal' && r.falten > 0) {
+          toast.info(`Sense senyal: ${r.falten} ${r.falten === 1 ? 'gravació espera' : 'gravacions esperen'} `
+            + 'la lectura de la màquina. Es farà sol quan en torni.');
+        } else if (acabes && r.fallades > 0) {
+          toast.info(`La màquina no ha pogut llegir ${r.fallades === 1 ? 'la gravació' : `${r.fallades} gravacions`} `
+            + 'ara mateix. Es tornarà a provar.');
+        }
+      } catch { /* el cop següent */ } finally { corrent = false; }
     };
-    const aviat = () => window.setTimeout(() => { void mira(); }, 2500);
-    const t = window.setTimeout(() => { void mira(); }, 8000);   // deixa respirar la primera pantalla
+    const aviat = (acabes: boolean) => window.setTimeout(() => { void mira(acabes); }, 2500);
+    const t = window.setTimeout(() => { void mira(false); }, 8000);   // deixa respirar la primera pantalla
     // Tres moments: en obrir, quan torna el senyal, i cada cop que es fa o es toca una frase.
     // Aquest últim és el que l'amo demanava: gravar-ne una i veure'n la lectura de seguida.
-    const nova = () => { aviat(); };
+    const nova = () => { aviat(true); };
     window.addEventListener('drills-changed', nova);
     let treu: (() => void) | undefined;
-    Network.addListener('networkStatusChange', (s) => { if (s.connected) aviat(); })
+    // Quan torna el senyal no s'hi diu res si no s'ha fet res: no és el moment de recordar-te
+    // una gravació de la setmana passada, però sí de dir-te què s'acaba de llegir.
+    Network.addListener('networkStatusChange', (s) => { if (s.connected) aviat(false); })
       .then((h) => { treu = () => h.remove(); })
       .catch(() => {});
     return () => { window.clearTimeout(t); window.removeEventListener('drills-changed', nova); treu?.(); };

@@ -6164,7 +6164,9 @@ async def add_recording(
                 "region": rec.region, "speaker": rec.speaker, "text": rec.text,
                 "sounds_differ": rec.sounds_differ,
                 "date_created": rec.date_created.isoformat(),
-                "variant_id": None, "substituida": True, "meves": len(meves)}
+                "variant_id": None,
+                "es_principal": (drill.audio_url or "").strip() == (url or "").strip(),
+                "substituida": True, "meves": len(meves)}
     rec = RecordingModel(
         drill_id=drill_id,
         user_id=user.id if user else None,
@@ -6228,6 +6230,11 @@ async def add_recording(
             "sounds_differ": rec.sounds_differ,
             "date_created": rec.date_created.isoformat(),
             "variant_id": variant.id if variant is not None else None,
+            # Si aquesta presa és la veu de la targeta (#556). Qui grava vol saber què hi ha
+            # entès la màquina, i la lectura només té on desar-se quan la veu és la principal:
+            # `text_tachelhit_suggested` és un sol camp i parla de `drill.audio_url`. Ho diu el
+            # servidor perquè el davant no hagi de tornar a endevinar la regla d'aquí dalt.
+            "es_principal": (drill.audio_url or "").strip() == (url or "").strip(),
             "substituida": False, "meves": len(meves) + 1}
 
 
@@ -9982,30 +9989,35 @@ async def transcribe_audio(
             except Exception as corr_err:
                 print(f"[CORRECTION] Failed, returning rough transcription: {corr_err}")
                 corrected, score = fixed, 0.0
-
-        return TranscribeResponse(
-            rough_transcription=rough,
-            corrected_transcription=corrected,
-            similarity_score=score
-        )
     except Exception as e:
         print(f"[ASR_SPACE ERROR] {type(e).__name__}: {str(e)}")
         # Try a fallback if handle_file fails
         try:
             client = Client(asr_space_url)
-            rough = await asyncio.to_thread(
-                client.predict,
-                audio_url,
-                api_name="/predict"
-            )
-            return TranscribeResponse(
-                rough_transcription=rough,
-                corrected_transcription=rough,
-                similarity_score=1.0
-            )
+            rough = await asyncio.to_thread(client.predict, audio_url, api_name="/predict")
+            corrected, score = rough, 1.0
         except Exception as fallback_e:
             print(f"[ASR_SPACE FALLBACK ERROR] {type(fallback_e).__name__}: {str(fallback_e)}")
             raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+
+    # Una lectura buida no és una lectura (#556).
+    #
+    # Fins ara, quan el NeMo tornava una cadena buida —l'Space acabat d'aixecar, un clip que no
+    # s'entén—, això contestava **200 amb la lectura buida**: una fallada disfressada d'encert.
+    # El davant feia `if (!text) return;` i es quedava sense dir res, i qui acabava de gravar no
+    # sabia si tenia lectura, si arribaria, o si no vindria mai. Ara es diu.
+    #
+    # El llindar és el mateix que el de Gemini tres passes més amunt: menys de tres lletres no és
+    # ningú parlant.
+    if len(re.sub(r"[^\w]", "", corrected if isinstance(corrected, str) else "")) < 3:
+        raise HTTPException(status_code=502,
+                            detail="Cap dels lectors no ha entès la gravació")
+
+    return TranscribeResponse(
+        rough_transcription=rough,
+        corrected_transcription=corrected,
+        similarity_score=score
+    )
 
 class ASRService:
     def transcribe(self, audio_url: str) -> str:
