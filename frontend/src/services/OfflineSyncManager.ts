@@ -254,13 +254,18 @@ class OfflineSyncManager {
     await this.sync();
   }
 
+  /**
+   * El número provisional desapareix i hi entra el de debò (#568).
+   *
+   * Això abans tenia dos problemes, i no es veien perquè res no posava mai la frase a la còpia
+   * del dispositiu. El primer: `desaDrills` desa **per número**, de manera que escriure la fila
+   * nova no esborrava la provisional i la frase sortia DUES vegades a la llista. El segon:
+   * canviar-la dins d'una còpia de tota la biblioteca tornava a escriure les dotze mil files per
+   * una.
+   */
   private async updateLocalDrillId(oldId: number, serverData: Drill) {
-    const drills = await this.getDrills();
-    const idx = drills.findIndex(d => d.id === oldId);
-    if (idx > -1) {
-      drills[idx] = { ...serverData, is_local: false };
-      await this.saveDrillsToCache(drills);
-    }
+    if (oldId !== serverData.id) await treuDrill(oldId);
+    await desaDrills([{ ...serverData, is_local: false }]);
   }
 
   private updateQueueDrillId(queue: SyncAction[], oldId: number, newId: number) {

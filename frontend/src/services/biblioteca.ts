@@ -106,9 +106,29 @@ function novaMarca(anterior: string | null, drills: Drill[], morts: Tombstone[])
   return anterior && instant(anterior) >= nova ? anterior : new Date(nova).toISOString();
 }
 
+/**
+ * Un número provisional: la frase es va fer al telèfon i el servidor encara no en sap res.
+ *
+ * Els de debò els dóna el servidor i van per ordre; els provisionals surten del rellotge
+ * (`Date.now() * 1000`), de manera que són milions de vegades més grans i no es poden confondre.
+ */
+export const esProvisional = (id: number) => id >= 1_000_000;
+
 async function baixadaSencera() {
   const drills = await fetchAllDrills();
-  await escriu({ buida: true, desa: drills, marca: novaMarca(null, drills, []) ?? undefined });
+  // El que encara no ha pujat no es perd (#568).
+  //
+  // Una baixada sencera buida la botiga, i les files fetes al telèfon no tenen cap frase del
+  // servidor que les substitueixi: buidar sense tornar-les a posar esborrava una gravació feta
+  // pel camp. Passa quan no hi ha marca de sincronització —la primera obertura, o si la marca
+  // es perd— i és justament quan menys s'espera.
+  const locals = (await drillsLocals().catch(() => [])).filter(d => esProvisional(d.id));
+  const delServidor = new Set(drills.map(d => d.id));
+  await escriu({
+    buida: true,
+    desa: [...drills, ...locals.filter(d => !delServidor.has(d.id))],
+    marca: novaMarca(null, drills, []) ?? undefined,
+  });
 }
 
 async function baixadaDelta(marca: string) {

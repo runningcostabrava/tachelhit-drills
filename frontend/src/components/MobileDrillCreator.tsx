@@ -11,6 +11,7 @@ import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { API_BASE, getMediaUrl, isNativeApp } from '../config';
 import { baixaAudio } from '../services/audioLocal';
 import { syncManager, type Drill } from '../services/OfflineSyncManager';
+import { desaDrills } from '../services/biblioteca';
 import { notifyDrillsChanged } from '../selection';
 import { llegeixIAvisa } from '../services/lectura';
 import { toast } from '../toast';
@@ -237,6 +238,36 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [corpusConsent, refresca]);
 
+    /**
+     * L'hora en què es va començar, no la de l'últim desat automàtic.
+     *
+     * És la data per la qual s'ordena la biblioteca: si es tornés a posar a cada tecla, la frase
+     * que estàs escrivint saltaria al davant de les altres a mig escriure-la.
+     */
+    const dataDe = (e: Entrada) => (e.d.date_created ||= new Date().toISOString());
+
+    /** La fila tal com s'ha de veure al telèfon mentre espera senyal. */
+    const filaLocal = (e: Entrada, extra: Partial<Drill> = {}): Drill => ({
+        ...e.d, ...extra,
+        id: e.serverId ?? e.tempId,
+        is_local: !e.serverId,
+        date_created: dataDe(e),
+    } as Drill);
+
+    /**
+     * I a la biblioteca del telèfon, de seguida (#568).
+     *
+     * Posar-la només a la cua la deixava invisible per a tot el que llegeix la còpia del
+     * dispositiu —el perfil, la cerca, el curs i la repesca de lectures—. La graella SÍ que la
+     * pintava, perquè es reconstrueix els `CREATE` de la cua a part, i això feia semblar que hi
+     * fos. I `OfflineSyncManager` ja compta amb trobar-la aquí per canviar-li el número quan
+     * pugi.
+     */
+    const posaALaBiblioteca = async (e: Entrada, extra: Partial<Drill> = {}) => {
+        try { await desaDrills([filaLocal(e, extra)]); }
+        catch (err) { console.warn('[Creador] La frase no s’ha pogut desar a la còpia:', err); }
+    };
+
     /** Desa (PUT amb xarxa, cua al telèfon sense). Tot passa per aquí: no hi ha botó «Desa». */
     const desa = useCallback(async (e: Entrada, fields: Partial<Drill>): Promise<void> => {
         const payload = { ...fields, license: licenseFor() };
@@ -252,12 +283,9 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         await syncManager.queueAction({
             type: e.serverId ? 'UPDATE' : 'CREATE',
             drillId: e.serverId ?? e.tempId,
-            payload: {
-                ...e.d, ...payload,
-                id: e.serverId ?? e.tempId,
-                is_local: !e.serverId, date_created: new Date().toISOString(),
-            } as Drill,
+            payload: filaLocal(e, payload),
         });
+        await posaALaBiblioteca(e, payload);
         setEstat('al telèfon');
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [corpusConsent, ensureServerDrill, refresca]);
@@ -316,14 +344,13 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
          */
         const alTelefon = async () => {
             if (!e.serverId) {
+                const extra = { license: licenseFor(), capturing: true } as Partial<Drill>;
                 await syncManager.queueAction({
-                    type: 'CREATE', drillId: e.tempId,
-                    payload: {
-                        ...e.d, id: e.tempId, is_local: true,
-                        license: licenseFor(), capturing: true,
-                        date_created: new Date().toISOString(),
-                    } as unknown as Drill,
+                    type: 'CREATE', drillId: e.tempId, payload: filaLocal(e, extra),
                 });
+                // També a la biblioteca: una captura de veu sense text escrit no passa per
+                // `desa()`, i sense això la frase no era enlloc fins que pujava (#568).
+                await posaALaBiblioteca(e, extra);
             }
             await syncManager.saveMediaLocally(blob, fileName);
             await syncManager.queueAction({

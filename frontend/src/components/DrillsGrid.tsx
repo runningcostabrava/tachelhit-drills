@@ -32,7 +32,8 @@ import {
     FaMicrophone,
     FaCamera,
     FaPlay,
-    FaLightbulb
+    FaLightbulb,
+    FaMobileAlt
 } from 'react-icons/fa';
 import RecordAudioModal from './RecordAudioModal';
 import MicrofonMantingut, { type PerfilVeu } from './MicrofonMantingut';
@@ -48,6 +49,7 @@ import 'ag-grid-community/styles/ag-theme-alpine.css';
 import type { Drill } from '../types';
 import { toast } from '../toast';
 import { isMobileLayout } from '../utils/layout';
+import { esProvisional } from '../services/biblioteca';
 import AiAssistant from './AiAssistant';
 import AiToolsMenu from './AiToolsMenu';
 import { draftUsable, DRAFT_REJECTED_LABEL } from '../utils/drafts';
@@ -276,7 +278,7 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
         try {
             const status = await Network.getStatus();
             for (const drill of selectedRows) {
-                if (status.connected && drill.id < 1000000) {
+                if (status.connected && !esProvisional(drill.id)) {
                     await axios.delete(`${API_BASE}/drills/${drill.id}`);
                 }
             }
@@ -686,7 +688,12 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
                         {/* Header Row */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)' }}>
-                                #{drill.id >= 1000000 ? 'Sinc. pendent' : drill.id}
+                                {esProvisional(drill.id)
+                                    ? <span title="Es va fer en aquest telèfon i el servidor encara no en sap res. Pujarà sola quan hi hagi senyal."
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--amber-strong, var(--text-soft))' }}>
+                                        <FaMobileAlt size={10} /> Al telèfon · pujarà sola
+                                      </span>
+                                    : `#${drill.id}`}
                             </span>
                             {drill.tag && (
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)', padding: '5px 12px', borderRadius: 'var(--r-pill)', fontSize: '12px', fontWeight: 700 }}>
