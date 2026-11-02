@@ -16,6 +16,7 @@
  * sostre, i allà hi caben com a blob, sense engreixar-les un terç passant-les a text.
  */
 import { API_BASE } from '../config';
+import { esborranysAmb, llegeixIAvisa } from './lectura';
 
 const BD = 'veus-pendents';
 const MAGATZEM = 'preses';
@@ -119,11 +120,14 @@ let buidant = false;
  * D'una en una i no totes alhora: són fitxers, sovint amb una cobertura dolenta, i sis pujades
  * en paral·lel en una barra de senyal es fan nosa i fallen totes.
  */
-export async function buida(): Promise<{ pujades: number; fallades: number }> {
-  if (buidant) return { pujades: 0, fallades: 0 };
+export async function buida(): Promise<{ pujades: number; fallades: number; llegides: number }> {
+  if (buidant) return { pujades: 0, fallades: 0, llegides: 0 };
   buidant = true;
   let pujades = 0;
   let fallades = 0;
+  // Les que han pujat en aquesta passada, per demanar-ne la lectura després. Es fa fora del
+  // bucle de pujada: una presa pujada no ha d'esperar que la màquina llegeixi l'anterior.
+  const pujat: { drillId: number; audioUrl: string; esPrincipal: boolean }[] = [];
   try {
     for (const p of await llista()) {
       if (p.intents >= MAX_INTENTS) continue;
@@ -140,6 +144,12 @@ export async function buida(): Promise<{ pujades: number; fallades: number }> {
           const detall = await res.json().catch(() => ({} as { detail?: string }));
           throw new Error(detall.detail || `el servidor ha dit ${res.status}`);
         }
+        const desada = await res.json().catch(() => null) as
+          { audio_url?: string; es_principal?: boolean } | null;
+        if (desada?.audio_url) {
+          pujat.push({ drillId: p.drillId, audioUrl: desada.audio_url,
+                       esPrincipal: !!desada.es_principal });
+        }
         await fes('readwrite', (s) => s.delete(p.id));
         pujades += 1;
       } catch (e) {
@@ -153,7 +163,41 @@ export async function buida(): Promise<{ pujades: number; fallades: number }> {
     buidant = false;
     avisa();
   }
-  return { pujades, fallades };
+  return { pujades, fallades, llegides: await lesLlegeix(pujat) };
+}
+
+/**
+ * I què hi ha entès la màquina de cada presa que ha pujat (#556).
+ *
+ * Aquest camí —el micròfon que es manté premut a la graella— no demanava cap lectura, i la
+ * repesca tampoc no l'agafava: només mira les frases de les quals ets l'autor, i aquí es grava
+ * damunt de targetes que són d'altri. Qui prem el micròfon i veu «Veu desada» no sabia si
+ * s'entenia res del que havia dit.
+ *
+ * Amb sostre, i a posta: cada lectura són uns cinc segons de servidor, i obrir l'app amb deu
+ * preses a la cua no ha de disparar deu crides ni deu avisos. Les que queden fora les recull la
+ * repesca si són teves.
+ */
+const MAX_LECTURES = 3;
+
+async function lesLlegeix(pujat: { drillId: number; audioUrl: string; esPrincipal: boolean }[]) {
+  let llegides = 0;
+  for (const q of pujat.slice(0, MAX_LECTURES)) {
+    const r = await llegeixIAvisa(q.audioUrl);
+    if (!r.ok) continue;
+    llegides += 1;
+    // Es desa només quan aquesta presa és la veu de la targeta: si no,
+    // `text_tachelhit_suggested` parlaria d'una altra gravació.
+    if (!q.esPrincipal) continue;
+    const cos: Record<string, unknown> = { text_tachelhit_suggested: r.text, quiet: true };
+    if (r.significat) cos.esborranys = esborranysAmb(null, r.text, r.significat);
+    try {
+      await fetch(`${API_BASE}/drills/${q.drillId}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cos),
+      });
+    } catch { /* la lectura ja s'ha dit; desar-la pot esperar la repesca */ }
+  }
+  return llegides;
 }
 
 /** Torna a provar les que s'havien rendit. */

@@ -12,6 +12,7 @@ import { API_BASE, getMediaUrl, isNativeApp } from '../config';
 import { baixaAudio } from '../services/audioLocal';
 import { syncManager, type Drill } from '../services/OfflineSyncManager';
 import { notifyDrillsChanged } from '../selection';
+import { llegeixIAvisa } from '../services/lectura';
 import { toast } from '../toast';
 import { fileNameFor, kindOf, type MediaKind } from '../utils/media';
 import { whyItFailed } from '../utils/errors';
@@ -368,31 +369,25 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     /**
      * El que diu la gravació en amazic, i què en vol dir la màquina.
      *
-     * Es demana **sempre** que hi hagi senyal, encara que la frase ja porti text escrit o una
-     * transcripció d'abans: en Pablo ho va demanar així, i té sentit —el que val d'això no és
-     * omplir un buit sinó poder comparar. La transcripció va a `text_tachelhit_suggested` i el
-     * seu significat a `text_catalan_suggested`: mai als camps del parlant, que no són d'una
-     * màquina (ADR 0003). Si no hi ha xarxa no passa res: la gravació ja és desada i això es
-     * podrà fer un altre dia des de la fitxa.
+     * Es demana **sempre**, encara que la frase ja porti text escrit o una transcripció d'abans:
+     * en Pablo ho va demanar així, i té sentit —el que val d'això no és omplir un buit sinó poder
+     * comparar. La transcripció va a `text_tachelhit_suggested` i el seu significat a
+     * `text_catalan_suggested`: mai als camps del parlant, que no són d'una màquina (ADR 0003).
+     *
+     * I **sempre diu què ha passat** (#556). Abans, això era tres `return` i un `catch {}` muts:
+     * sense senyal, lectura buida o servidor caigut acabaven igual —en res—, i qui havia gravat
+     * no sabia si tenia lectura, si arribaria, o si no vindria mai. L'avís el dóna
+     * `services/lectura.ts`, que és qui sap distingir «ara no hi ha senyal, ja es farà» de «s'ha
+     * escoltat i no s'hi ha entès res».
      */
     const transcriuAmazic = async (e: Entrada, audioUrl: string) => {
-        if (!(await isOnline())) return;
         setBusy('transcriu');
         try {
-            const res = await axios.post(`${API_BASE}/transcribe/`, { audio_url: audioUrl });
-            const text = (res.data?.corrected_transcription || '').trim();
-            if (!text) return;
-            posaD(e, { text_tachelhit_suggested: text });
-            toast.info('Transcrit: mira-ho abans de donar-ho per bo');
-            try {
-                const tr = await axios.post(`${API_BASE}/translate`, {
-                    text, source_lang: 'shi', target_lang: 'ca',
-                });
-                const ca = (tr.data?.translated_text || '').trim();
-                if (ca) posaD(e, { text_catalan_suggested: ca });
-            } catch { /* sense significat, la transcripció ja val per ella mateixa */ }
-        } catch { /* la gravació ja hi és: una transcripció que falla no és una frase perduda */ }
-        finally { setBusy(null); }
+            const r = await llegeixIAvisa(audioUrl);
+            if (!r.ok) return;
+            posaD(e, { text_tachelhit_suggested: r.text });
+            if (r.significat) posaD(e, { text_catalan_suggested: r.significat });
+        } finally { setBusy(null); }
     };
 
     /** La veu en català (o en la llengua que parlis): el reconeixedor del telèfon, que va sense xarxa. */
@@ -510,8 +505,11 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
     const sona = (url: string | null) => { if (url) new Audio(url).play().catch(() => {}); };
     const veuDe = (e: Entrada) => e.pAudio || (e.d.audio_url ? getMediaUrl(e.d.audio_url) : null);
+    /** Només la que és PUJADA: és l'única que la màquina pot anar a buscar per llegir-la. */
+    const veuPujadaDe = (e: Entrada) => (e.d.audio_url ? getMediaUrl(e.d.audio_url) : null);
     const entrada = entrades[i];
     const audioPreview = entrada ? veuDe(entrada) : null;
+    const veuPujada = entrada ? veuPujadaDe(entrada) : null;
     const imatgePreview = entrada?.pImg || (drill.image_url ? getMediaUrl(drill.image_url) : null);
     const videoPreview = entrada?.pVid || (drill.video_url ? getMediaUrl(drill.video_url) : null);
     const fetes = entrades.filter(e => hasText(e.d) || hasMedia(e.d)).length;
@@ -604,6 +602,30 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                             </div>
                         )}
                         {busy === 'transcriu' && <p style={{ ...avis, margin: 0 }}>Escoltant el que has gravat…</p>}
+                        {/* Hi ha veu i no hi ha lectura: es diu aquí i no només en un avís que
+                            s'apaga als quatre segons (#556). Són dos estats diferents i es diuen
+                            diferent, perquè només un demana que facis res:
+                              · la gravació encara és al telèfon -> no hi ha res a fer, puja sola;
+                              · ja és al servidor i no té lectura -> el botó hi torna, sense
+                                tornar a gravar. El servidor no pot llegir la còpia local, i per
+                                això el botó passa l'adreça de la pujada i no la del telèfon. */}
+                        {audioPreview && !drill.text_tachelhit_suggested && busy !== 'transcriu' && (
+                            veuPujada ? (
+                                <div style={{ ...fila, gap: 8 }}>
+                                    <span style={{ flex: 1, fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                                        Encara sense lectura de la màquina.
+                                    </span>
+                                    <button onClick={() => { const e = act(); const u = veuPujadaDe(e); if (u) void transcriuAmazic(e, u); }}
+                                            style={petit} aria-label="Torna a demanar la lectura de la màquina">
+                                        <FaRedo size={12} /> Llegeix-la
+                                    </button>
+                                </div>
+                            ) : (
+                                <p style={{ ...avis, margin: 0 }}>
+                                    La gravació encara és al telèfon. Quan pugi, se'n demanarà la lectura.
+                                </p>
+                            )
+                        )}
                         {imatgePreview && <img src={imatgePreview} alt="" style={{ width: '100%', borderRadius: 'var(--r-md)', maxHeight: 220, objectFit: 'cover' }} />}
                         {videoPreview && <video src={videoPreview} controls playsInline style={{ width: '100%', borderRadius: 'var(--r-md)', maxHeight: 220 }} />}
                     </div>
