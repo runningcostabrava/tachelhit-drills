@@ -292,36 +292,15 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         if (kind === 'audio') e.pAudio = previewUrl;
         refresca();
 
-        setBusy(kind);
-        try {
-            if (await isOnline()) {
-                const id = await ensureServerDrill(e, true);
-                const fd = new FormData();
-                fd.append('file', blob, fileName);
-                const res = await axios.post(`${API_BASE}/upload-media/${id}/${kind}`, fd);
-                const url: string | undefined = res.data?.url;
-                if (!url) throw new Error('El servidor no ha retornat cap URL');
-                posaD(e, { [`${kind}_url`]: url } as Partial<Drill>);
-                setEstat('desat');
-                // Que la gravació quedi també al disc del telèfon, de seguida.
-                //
-                // L'amo, mirant una frase que acabava de gravar amb el telèfon en mode avió:
-                // «why no audio?». La veu havia pujat, però el fitxer no era al telèfon —les
-                // baixades en bloc són d'abans—, i sense senyal no hi havia d'on treure'l. Una
-                // frase gravada EN AQUEST telèfon ha de sonar-hi sempre. Val una còpia de no res,
-                // i es fa ara, que la xarxa hi és perquè acaba de pujar.
-                if (kind === 'audio' && e.serverId) {
-                    void baixaAudio({ id: e.serverId, audio_url: url }).catch(() => {});
-                }
-                return url;
-            }
-            if (!isNativeApp()) throw new Error('Sense connexió: no es pot pujar des del navegador.');
-            // Primer que existeixi la frase, i després el fitxer.
-            //
-            // Sense això, gravar sense connexió deixava a la cua una pujada per a una frase que
-            // no s'havia demanat mai: quan tornava el senyal, el fitxer no tenia on anar. La
-            // cua ja ajunta els CREATE d'una mateixa frase, de manera que fer-ho a cada fitxer
-            // no en crea dos (#450).
+        /**
+         * Al telèfon i a la cua: puja sol quan es pugui.
+         *
+         * Primer que existeixi la frase, i després el fitxer. Sense això, gravar sense connexió
+         * deixava a la cua una pujada per a una frase que no s'havia demanat mai: quan tornava el
+         * senyal, el fitxer no tenia on anar. La cua ja ajunta els CREATE d'una mateixa frase, de
+         * manera que fer-ho a cada fitxer no en crea dos (#450).
+         */
+        const alTelefon = async () => {
             if (!e.serverId) {
                 await syncManager.queueAction({
                     type: 'CREATE', drillId: e.tempId,
@@ -338,6 +317,51 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 mediaType: kind, localPath: fileName, fileName,
             });
             setEstat('al telèfon, pujarà sol');
+        };
+
+        setBusy(kind);
+        try {
+            if (await isOnline()) {
+                try {
+                    const id = await ensureServerDrill(e, true);
+                    const fd = new FormData();
+                    fd.append('file', blob, fileName);
+                    const res = await axios.post(`${API_BASE}/upload-media/${id}/${kind}`, fd);
+                    const url: string | undefined = res.data?.url;
+                    if (!url) throw new Error('El servidor no ha retornat cap URL');
+                    posaD(e, { [`${kind}_url`]: url } as Partial<Drill>);
+                    setEstat('desat');
+                    // Que la gravació quedi també al disc del telèfon, de seguida.
+                    //
+                    // L'amo, mirant una frase que acabava de gravar amb el telèfon en mode avió:
+                    // «why no audio?». La veu havia pujat, però el fitxer no era al telèfon —les
+                    // baixades en bloc són d'abans—, i sense senyal no hi havia d'on treure'l. Una
+                    // frase gravada EN AQUEST telèfon ha de sonar-hi sempre. Val una còpia de no res,
+                    // i es fa ara, que la xarxa hi és perquè acaba de pujar.
+                    if (kind === 'audio' && e.serverId) {
+                        void baixaAudio({ id: e.serverId, audio_url: url }).catch(() => {});
+                    }
+                    return url;
+                } catch (err: any) {
+                    // Tenir cobertura dolenta era pitjor que no tenir-ne gens (#565).
+                    //
+                    // El 2-11-2026 la #15796 va quedar buida i la seva gravació es va perdre: hi
+                    // havia senyal, el servidor tornava 502 —estava reiniciant-se—, i aquest camí
+                    // deia «No s'ha pogut desar» i llençava el blob. La frase ja era creada, de
+                    // manera que el que quedava era una fitxa buida i una veu que ningú no tornarà
+                    // a gravar. Sense connexió això no passava, perquè allà el fitxer es desa.
+                    //
+                    // Ara una pujada que falla acaba al mateix lloc que una sense senyal: al
+                    // telèfon i a la cua, que ja sap reprendre-ho i ja compta els intents.
+                    if (!isNativeApp()) throw err;
+                    await alTelefon();
+                    toast.info('El servidor no l’ha pogut agafar ara: '
+                        + `${errMsg(err, 'ha fallat')}. La gravació és al telèfon i pujarà sola.`);
+                    return null;
+                }
+            }
+            if (!isNativeApp()) throw new Error('Sense connexió: no es pot pujar des del navegador.');
+            await alTelefon();
             return null;
         } catch (err: any) {
             toast.error(`No s'ha pogut desar: ${errMsg(err, 'error')}`);
