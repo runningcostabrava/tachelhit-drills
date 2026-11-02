@@ -150,14 +150,32 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
     const drill = entrades[i]?.d ?? buida;
 
     // L'esborrany: el que s'ha escrit no es perd si entra una trucada o es tanca sense voler (#372).
+    //
+    // Hi va amb el seu `serverId`, i això és el que impedeix la frase fantasma (#559).
+    //
+    // El 2-11-2026 van sortir dues frases amb dos segons de diferència: la #15794 amb el text i
+    // sense veu, i la #15795 amb la veu i sense res escrit. El text de la #15794 era una còpia
+    // del de la #15793, que ja existia. Passa així: restaurar l'esborrany canvia
+    // `drill.text_catalan`, que és dependència de l'autodesat; l'autodesat hi salta; i com que
+    // l'entrada no tenia `serverId`, desar-la CREAVA una frase nova per a un text que ja era
+    // d'una altra. L'esborrany sobrevivia perquè només es neteja a `seguent()` i `tanca()`, i el
+    // botó enrere d'Android desmunta el creador sense passar per cap dels dos
+    // (`AddSentencePage.tsx` el tanca amb `navigate(-1)`).
+    //
+    // Amb el `serverId` a dins, l'entrada restaurada neix lligada a la seva frase: el desat
+    // següent és un PUT a la mateixa, i si graves després de tornar-hi, la veu va a la frase on
+    // era el text, que és on l'esperes.
     const [recuperat, setRecuperat] = useState(false);
     useEffect(() => {
         try {
             const cru = localStorage.getItem(ESBORRANY);
             if (!cru) return;
-            const d = JSON.parse(cru) as Partial<Drill>;
+            const guardat = JSON.parse(cru) as Partial<Drill> & { serverId?: number | null };
+            const { serverId, ...d } = guardat;
             if (!hasText(d)) return;
-            posaD(entradesRef.current[0], d);
+            const e = entradesRef.current[0];
+            if (typeof serverId === 'number') { e.serverId = serverId; e.d = { ...e.d, id: serverId }; }
+            posaD(e, d);
             setRecuperat(true);
         } catch { /* sense magatzem no hi ha esborrany, i prou */ }
     }, [posaD]);
@@ -167,6 +185,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 text_catalan: drill.text_catalan, text_tachelhit: drill.text_tachelhit,
                 text_tachelhit_suggested: drill.text_tachelhit_suggested,
                 text_catalan_suggested: drill.text_catalan_suggested, tag: drill.tag,
+                serverId: entradesRef.current[iRef.current]?.serverId ?? null,
             }));
             else localStorage.removeItem(ESBORRANY);
         } catch { /* ídem */ }
@@ -490,10 +509,12 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
 
     const tanca = async () => {
         const e = act();
+        // Sempre, també quan no hi ha res a desar: abans només es netejava dins del `try` del
+        // desat, i un desat que fallava deixava l'esborrany per a la pròxima obertura (#559).
+        try { localStorage.removeItem(ESBORRANY); } catch { /* ídem */ }
         if (hasText(e.d) || hasMedia(e.d)) {
             try {
                 await desa(e, textos(e.d));
-                try { localStorage.removeItem(ESBORRANY); } catch { /* ídem */ }
             } catch { /* ídem */ }
             onDrillCreated(e.serverId ?? undefined);
             // Que l'app sàpiga que n'hi ha una de nova: és el que fa que se'n demani
