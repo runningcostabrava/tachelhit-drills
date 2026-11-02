@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FaCheck, FaCloudDownloadAlt, FaStop, FaTrashAlt } from 'react-icons/fa';
+import { FaCheck, FaCloudDownloadAlt, FaCloudUploadAlt, FaRedo, FaStop, FaTrashAlt } from 'react-icons/fa';
 import { Network } from '@capacitor/network';
 import { isNativeApp } from '../config';
 import { toast } from '../toast';
 import { bibliotecaAlDia, drillsLocals } from '../services/biblioteca';
+import { syncManager } from '../services/OfflineSyncManager';
 import {
   alliberaAudios, aturaBaixada, aturaExtres, baixaExtresDeTot, baixaTotsElsAudios,
   baixantAudios, baixantExtres, resumAudios,
@@ -35,6 +36,22 @@ export default function SenseConnexio() {
   const [extres, setExtres] = useState<ProgresExtres | null>(null);
   const [wifi, setWifi] = useState<boolean | null>(null);
   const [netejant, setNetejant] = useState(false);
+  // El que s'ha fet al telèfon i encara no és al servidor (#568).
+  const [cua, setCua] = useState<{ frases: number; fitxers: number; canvis: number; mortes: number } | null>(null);
+  const [pujant, setPujant] = useState(false);
+
+  const miraLaCua = useCallback(async () => {
+    const [q, mortes] = await Promise.all([
+      syncManager.getQueue().catch(() => []),
+      syncManager.getDeadLetters().catch(() => []),
+    ]);
+    setCua({
+      frases: q.filter((a) => a.type === 'CREATE').length,
+      fitxers: q.filter((a) => a.type === 'UPLOAD_MEDIA').length,
+      canvis: q.filter((a) => a.type === 'UPDATE' || a.type === 'DELETE').length,
+      mortes: mortes.length,
+    });
+  }, []);
 
   const mesura = useCallback(async () => {
     const d = await drillsLocals().catch(() => [] as Awaited<ReturnType<typeof drillsLocals>>);
@@ -49,8 +66,51 @@ export default function SenseConnexio() {
 
   useEffect(() => {
     void mesura();
+    void miraLaCua();
     Network.getStatus().then((s) => setWifi(s.connectionType === 'wifi')).catch(() => setWifi(null));
-  }, [mesura]);
+    // La cua es mou sola quan torna el senyal: mirar-la de tant en tant és el que fa que el
+    // número baixi davant dels teus ulls en comptes de quedar-se encallat a la pantalla.
+    const t = window.setInterval(() => { void miraLaCua(); }, 4000);
+    return () => window.clearInterval(t);
+  }, [mesura, miraLaCua]);
+
+  /** «Prova-ho ara»: empeny la cua sense esperar que l'app se n'adoni. */
+  const pujaAra = async () => {
+    if (!(await Network.getStatus()).connected) {
+      toast.error('Ara no hi ha connexió. Quan en torni, pujarà sol.');
+      return;
+    }
+    setPujant(true);
+    try {
+      await syncManager.sync();
+      await Promise.all([miraLaCua(), mesura()]);
+      const q = await syncManager.getQueue().catch(() => []);
+      toast.success(q.length ? `${q.length} encara esperen; s’hi tornarà.` : 'Tot pujat.');
+    } finally { setPujant(false); }
+  };
+
+  /** Les que han fallat cinc vegades i s'han apartat: tornar-ho a provar o descartar-les. */
+  const tornaHiAmbLesMortes = async () => {
+    setPujant(true);
+    try { await syncManager.retryDeadLetters(); await Promise.all([miraLaCua(), mesura()]); }
+    finally { setPujant(false); }
+  };
+
+  /**
+   * Treu-les de la cua, i prou.
+   *
+   * No esborra res del telèfon: la frase es queda a la biblioteca marcada «Al telèfon» i la
+   * gravació es queda al disc. L'únic que es perd és que l'app ho torni a intentar sola. Una
+   * gravació que algú ha fet amb una persona al davant no s'esborra per un botó d'aquesta
+   * pantalla.
+   */
+  const descartaLesMortes = async () => {
+    if (!window.confirm('Deixar d’intentar pujar-les?\n\nEs queden al telèfon —la frase a la '
+      + 'biblioteca i la gravació al disc—, però l’app no hi tornarà sola.')) return;
+    await syncManager.discardDeadLetters();
+    await miraLaCua();
+    toast.info('Fora de la cua. Segueixen al telèfon.');
+  };
 
   const baixaVeus = async () => {
     if (baixantAudios()) { aturaBaixada(); return; }
@@ -114,6 +174,38 @@ export default function SenseConnexio() {
       <p style={{ fontSize: 11.5, color: 'var(--text-muted)', margin: '-6px 0 0' }}>
         Aquesta app és del <strong>{__VERSIO__}</strong>
       </p>
+
+      {/* El que va cap amunt, no cap avall (#568).
+          L'amo: «vull poder crear drills offline i després que aquests drills es processin quan
+          hi hagi connexió». La cua ja ho feia sola, però no es veia enlloc: una frase gravada
+          pel camp i una de pujada s'assemblaven, i no hi havia manera de saber si s'havia
+          perdut. Aquí es veu, i es pot empènyer. */}
+      {cua && (cua.frases + cua.fitxers + cua.canvis + cua.mortes) > 0 && (
+        <Bloc
+          titol="El que espera per pujar"
+          ara={[cua.frases && `${cua.frases} ${cua.frases === 1 ? 'frase' : 'frases'}`,
+               cua.fitxers && `${cua.fitxers} ${cua.fitxers === 1 ? 'gravació' : 'gravacions'}`,
+               cua.canvis && `${cua.canvis} ${cua.canvis === 1 ? 'canvi' : 'canvis'}`]
+               .filter(Boolean).join(' · ') || 'res'}
+          peu={cua.mortes > 0
+            ? `${cua.mortes} ${cua.mortes === 1 ? 'cosa no s’ha' : 'coses no s’han'} pogut pujar després de cinc intents i s’han apartat. Res no s’esborra del telèfon: la frase és a la biblioteca i la gravació al disc.`
+            : 'Es puja sol quan hi ha senyal. Fins llavors és al telèfon i no es perd; les frases es veuen a la biblioteca marcades «Al telèfon».'}
+        >
+          <button type="button" onClick={pujaAra} disabled={pujant} style={pujant ? boto.atura : boto.gran}>
+            <FaCloudUploadAlt size={16} /> {pujant ? 'Pujant…' : 'Prova-ho ara'}
+          </button>
+          {cua.mortes > 0 && (
+            <>
+              <button type="button" onClick={tornaHiAmbLesMortes} disabled={pujant} style={boto.petit}>
+                <FaRedo size={12} /> Torna-ho a provar
+              </button>
+              <button type="button" onClick={descartaLesMortes} disabled={pujant} style={boto.petit}>
+                <FaTrashAlt size={12} /> Deixa d’intentar-ho
+              </button>
+            </>
+          )}
+        </Bloc>
+      )}
 
       <Bloc titol="Les frases" ara={frases ? `${frases.total.toLocaleString('ca')} al telèfon` : '…'}
             peu="Es posen al dia soles quan hi ha connexió." />
