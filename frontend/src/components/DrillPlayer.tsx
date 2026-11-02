@@ -7,6 +7,8 @@ import { preferredRecorderMime, toPlayableAudioUrl } from '../utils/media';
 import { getMediaWithOfflineFallback } from '../utils/offlineCache';
 import AmbSo from './AmbSo';
 import { rutaLocal } from '../services/audioLocal';
+import { toast } from '../toast';
+import { whyItFailed } from '../utils/errors';
 import { getYouTubeVideoId, loadYouTubeApi } from '../utils/youtubeUtils';
 import { FaVideo, FaPlay, FaPause, FaSync, FaTimes, FaStepBackward, FaStepForward, FaEye, FaStop, FaMicrophone } from 'react-icons/fa';
 import DrillVoices from './DrillVoices';
@@ -455,6 +457,18 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
     } catch (error) {
       console.error('Playback sequence error:', error);
       setIsPlaying(false);
+      // Dir per què calla (#562).
+      //
+      // L'amo, 2-11-2026, davant de la #6852: «there should be audio». I n'hi havia: el fitxer
+      // és a Cloudinary, dura 1,25 s i arriba a -13,3 dB, mesurat. El que no hi havia era cap
+      // manera de saber per què no sonava, perquè això era un `console.error` i prou —el mateix
+      // mal del #556, en un tercer lloc.
+      //
+      // Es calla en dos casos que NO són una avaria: canviar de frase mentre sona avorta el
+      // `play()`, i això rebota aquí; i una frase sense veu ja se salta abans d'arribar-hi.
+      if (currentIndexRef.current === startedAtIndex && (currentDrill?.audio_url || currentDrill?.video_url)) {
+        toast.error(`No s'ha pogut fer sonar la veu: ${whyItFailed(error, 'el fitxer no s’ha pogut obrir')}`);
+      }
       // Only auto-advance if the user hasn't already navigated away — an
       // interrupted play() also rejects, and advancing then would skip a drill
       if (autoPlayEnabled && !reviewMode && currentIndexRef.current === startedAtIndex) goToNextDrill();
@@ -465,6 +479,24 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     if (ttsAudioRef.current) { ttsAudioRef.current.pause(); ttsAudioRef.current = null; }
     if (speechSynthRef.current) { speechSynthesis.cancel(); speechSynthRef.current = null; }
+  };
+
+  /**
+   * Què ha passat de debò quan un `<audio>` es queixa (#562).
+   *
+   * El que arriba al `catch` és un `Event`, que no diu res: `error.message` és `undefined` i
+   * qualsevol avís que en surti acaba sent «alguna cosa ha anat malament». El motiu bo és a
+   * `audio.error.code`, i els quatre casos volen coses ben diferents de qui escolta: el fitxer
+   * que no hi és no és el mateix que un format que el telèfon no sap llegir.
+   */
+  const perQue = (error: unknown, audio: HTMLAudioElement): Error => {
+    const codi = audio.error?.code;
+    const local = audio.src.startsWith('http') ? '' : ' (la còpia del telèfon)';
+    if (codi === 1) return new Error('s’ha aturat a mitges');
+    if (codi === 2) return new Error(`no s’ha pogut llegir el fitxer${local}. Mira la connexió.`);
+    if (codi === 3) return new Error(`el fitxer està fet malbé${local}`);
+    if (codi === 4) return new Error(`el fitxer no hi és o el telèfon no el sap llegir${local}`);
+    return error instanceof Error ? error : new Error('el so no ha arrencat');
   };
 
   const playTachelhitAudio = async (): Promise<void> => {
@@ -510,7 +542,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
             audio.removeEventListener('error', handleError);
             setIsPlaying(false);
             // Advancing on failure is handled once, in playCurrentAudio's catch
-            reject(error);
+            reject(perQue(error, audio));
           };
 
           audio.addEventListener('ended', handleEnded);
