@@ -230,8 +230,9 @@ export default function PracticeEditor() {
   // A sentence that does not exist yet. The same sheet as everywhere else -- write the two texts,
   // let the AI translate one into the other, record it, attach media -- and when it comes back
   // with an id it goes straight into the sequence, so you never lose your place.
+  // El creador es queda obert: desar-ne una no vol dir haver acabat (#569). Qui en grava tres
+  // seguides les troba totes tres al final de la seqüència quan plega.
   const drillWasMade = async (drillId?: number) => {
-    setMakingDrill(false);
     if (!drillId) { toast.success('Desada. Busca-la aquí sota per afegir-la.'); return; }
     const got = await api.drillsByIds([drillId]).catch(() => [] as Drill[]);
     if (!got.length) { toast.error('S’ha creat, però no s’ha pogut llegir'); return; }

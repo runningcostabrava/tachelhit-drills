@@ -18,9 +18,20 @@ import { fileNameFor, kindOf, type MediaKind } from '../utils/media';
 import { whyItFailed } from '../utils/errors';
 
 interface MobileDrillCreatorProps {
+    /**
+     * Qui ho ha obert plega.
+     *
+     * **Només això vol dir que s'ha acabat** (#569). Abans els tres llocs que obren el creador
+     * tancaven dins de `onDrillCreated`, i per això cada frase et feia sortir: ni el «+» de la
+     * capçalera no et deixava quedar-t'hi, perquè també hi passava.
+     */
     onClose: () => void;
-    /** L'id del que s'ha fet, quan n'hi ha: el taller de pràctica vol saber quina frase posar a la
-     *  seqüència. Sense connexió encara no hi ha id de debò i no se'n diu cap. */
+    /**
+     * Se n'ha desat una. **No vol dir que s'hagi acabat**: posa la teva llista al dia i prou.
+     *
+     * L'id del que s'ha fet, quan n'hi ha: el taller de pràctica vol saber quina frase posar a la
+     * seqüència. Sense connexió encara no hi ha id de debò i no se'n diu cap.
+     */
     onDrillCreated: (drillId?: number) => void;
 }
 
@@ -118,6 +129,9 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         e.d = { ...e.d, ...canvis };
         refresca();
     }, [refresca]);
+
+    /** La part que es desplaça: cada frase nova comença mirant els micròfons, no el final. */
+    const cosRef = useRef<HTMLDivElement | null>(null);
 
     const [gravant, setGravant] = useState<Gravant>(null);
     const gravantRef = useRef<Gravant>(null);
@@ -508,6 +522,10 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         setI(idx);
         setEstat('');
         setRecuperat(false);
+        // Amunt, que és on són els micròfons. El botó «Ja està» és al final de la pantalla que es
+        // desplaça: sense això, prémer-lo deixava la vista avall, davant del mateix botó i del
+        // plec «Escriure-ho a mà», i semblava que no hagués passat res (#569).
+        cosRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
     }, []);
 
     /** Desa el que hi ha i deixa la pantalla a punt per a la frase següent, sense sortir-ne. */
@@ -548,6 +566,24 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
         onClose();
     };
 
+    /**
+     * «Ja està» vol dir «aquesta ja està», no «me'n vaig» (#569).
+     *
+     * L'amo: «vull que quan grabo un drill nou, "ja està", l'app em mostri la finestra per un
+     * altre drill». Abans aquest botó tancava el creador, i qui en gravava deu seguides havia de
+     * tornar a entrar-hi deu vegades. El que ja feia el que calia era el «+» de la capçalera, que
+     * és una icona petita a dalt a la dreta; el botó gran del final és el que es prem.
+     *
+     * Si la fitxa que tens al davant ja és en blanc, aleshores sí que surt: prement-lo dues
+     * vegades te'n vas, i així no hi ha manera de quedar-se tancat a dins. La X segueix sortint
+     * sempre, també a mitja frase.
+     */
+    const jaEsta = async () => {
+        const e = act();
+        if (!hasText(e.d) && !hasMedia(e.d)) return tanca();
+        await seguent();
+    };
+
     const sona = (url: string | null) => { if (url) new Audio(url).play().catch(() => {}); };
     const veuDe = (e: Entrada) => e.pAudio || (e.d.audio_url ? getMediaUrl(e.d.audio_url) : null);
     /** Només la que és PUJADA: és l'única que la màquina pot anar a buscar per llegir-la. */
@@ -573,7 +609,7 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                 <button onClick={seguent} aria-label="Desa i fes-ne una altra" style={mes}><FaPlus size={20} /></button>
             </header>
 
-            <div style={cos}>
+            <div style={cos} ref={cosRef}>
                 {/* La tira de l'estona: endavant, enrere, i escoltar la que es té al davant. */}
                 {entrades.length > 1 && (
                     <div style={tira}>
@@ -722,7 +758,10 @@ export default function MobileDrillCreator({ onClose, onDrillCreated }: MobileDr
                     </div>
                 )}
 
-                <button onClick={tanca} style={acabar}><FaCheck size={14} /> Ja està</button>
+                <button onClick={jaEsta} style={acabar}
+                    aria-label="Aquesta ja està: desa-la i obre'n una altra">
+                    <FaCheck size={14} /> Ja està
+                </button>
                 <input id="native-video-input" type="file" accept="video/*" capture="environment" onChange={deFitxer} style={{ display: 'none' }} />
             </div>
         </div>

@@ -26,6 +26,13 @@ export default function AddSentencePage() {
   const [feta, setFeta] = useState<Drill | null>(null);
   const [gravant, setGravant] = useState(false);
   const [teVeu, setTeVeu] = useState(false);
+  // Quantes se n'han desat en aquesta estona, i el número de l'última.
+  //
+  // La fitxa «Afegida a la biblioteca» ara surt al PLEGAR, no després de cada frase (#569).
+  // Abans sortia a la primera, i això treia del creador qui n'estava gravant una tirada: la
+  // pantalla següent era aquesta, amb un botó «Fes-ne una altra» per tornar a començar.
+  const [desades, setDesades] = useState(0);
+  const [ultima, setUltima] = useState<number | null>(null);
 
   useEffect(() => {
     document.title = 'Afegeix una frase · Tamazight';
@@ -69,7 +76,7 @@ export default function AddSentencePage() {
           <button onClick={() => setGravant(true)} style={primari}>
             <FaMicrophone size={13} /> {veu ? 'Posa-hi una altra veu' : 'Grava-la ara'}
           </button>
-          <button onClick={() => { setFeta(null); setTeVeu(false); }} style={secundari}>
+          <button onClick={() => { setFeta(null); setTeVeu(false); setDesades(0); setUltima(null); }} style={secundari}>
             <FaPlus size={12} /> Fes-ne una altra
           </button>
           <button onClick={() => navigate('/drills')} style={secundari}>
@@ -86,16 +93,21 @@ export default function AddSentencePage() {
   }
 
   return (
-    <MobileDrillCreator onClose={() => navigate(-1)}
-                        onDrillCreated={(drillId) => {
-                          if (!drillId) {           // desada sense connexió: encara no té número
-                            toast.success('Afegida a la biblioteca');
+    <MobileDrillCreator onClose={() => {
+                          if (!desades) return navigate(-1);   // no s'ha fet res: enrere i prou
+                          if (ultima == null) {                // sense connexió: encara no té número
+                            toast.success(desades === 1 ? 'Afegida a la biblioteca'
+                              : `${desades} frases afegides a la biblioteca`);
                             navigate('/drills');
                             return;
                           }
-                          api.drill(drillId)
+                          api.drill(ultima)
                             .then(setFeta)
                             .catch(() => { toast.success('Afegida a la biblioteca'); navigate('/drills'); });
+                        }}
+                        onDrillCreated={(drillId) => {
+                          setDesades(n => n + 1);
+                          if (drillId) setUltima(drillId);
                         }} />
   );
 }
