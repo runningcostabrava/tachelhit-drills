@@ -166,6 +166,28 @@ function App() {
     let corrent = false;
     let avisatSenseNom = false;
     /**
+     * El rellotge dels reintents (#560).
+     *
+     * Els tres moments d'abans no bastaven. El 2-11-2026 tres gravacions de l'amo es van quedar
+     * sense lectura perquè el servidor anava ofegat just llavors —una cua nostra li escrivia
+     * 5.389 lectures— i després no hi va tornar ningú: el senyal no havia caigut, i quan va
+     * parar de gravar ja no hi havia cap esdeveniment més. L'única sortida era tancar i obrir
+     * l'app, i això ningú no ho sap. Comprovat amb el servidor descansat, aquelles tres es
+     * llegien a la primera.
+     *
+     * Espera creixent i només mentre quedi feina: 30 s, 1 min, 2 min, 5 min i després cada 10.
+     */
+    const ESPERES = [30_000, 60_000, 120_000, 300_000, 600_000];
+    let passos = 0;
+    let rellotge: number | undefined;
+    const tornaHiMesTard = () => {
+      window.clearTimeout(rellotge);
+      const espera = ESPERES[Math.min(passos, ESPERES.length - 1)];
+      passos++;
+      rellotge = window.setTimeout(() => { void mira(false); }, espera);
+    };
+    const plegaElRellotge = () => { window.clearTimeout(rellotge); rellotge = undefined; passos = 0; };
+    /**
      * `acabes` = això ve de fer o tocar una frase, no d'arrencar l'app.
      *
      * És el que decideix si es parla o no (#556). Qui acaba de gravar espera una resposta i se li
@@ -194,9 +216,20 @@ function App() {
           toast.info(`La màquina no ha pogut llegir ${r.fallades === 1 ? 'la gravació' : `${r.fallades} gravacions`} `
             + 'ara mateix. Es tornarà a provar.');
         }
+        // Mentre quedi feina, s'hi torna sol. Una passada que no en deixa atura el rellotge i
+        // torna l'espera a trenta segons, de manera que la pròxima vegada que calgui serà aviat.
+        if (r.motiu !== 'sense-nom' && r.falten > 0) tornaHiMesTard();
+        else plegaElRellotge();
+        // Els reintents del rellotge són muts si no arreglen res (`acabes` és fals): un avís cada
+        // deu minuts no és informació, és sorra. El que es diu segueix sent el del #556.
       } catch { /* el cop següent */ } finally { corrent = false; }
     };
-    const aviat = (acabes: boolean) => window.setTimeout(() => { void mira(acabes); }, 2500);
+    // Un esdeveniment (gravar, tornar el senyal) torna l'espera a zero: si s'ha mogut alguna
+    // cosa, val la pena mirar-ho aviat encara que el rellotge anés pels deu minuts.
+    const aviat = (acabes: boolean) => {
+      passos = 0;
+      return window.setTimeout(() => { void mira(acabes); }, 2500);
+    };
     const t = window.setTimeout(() => { void mira(false); }, 8000);   // deixa respirar la primera pantalla
     // Tres moments: en obrir, quan torna el senyal, i cada cop que es fa o es toca una frase.
     // Aquest últim és el que l'amo demanava: gravar-ne una i veure'n la lectura de seguida.
@@ -208,7 +241,12 @@ function App() {
     Network.addListener('networkStatusChange', (s) => { if (s.connected) aviat(false); })
       .then((h) => { treu = () => h.remove(); })
       .catch(() => {});
-    return () => { window.clearTimeout(t); window.removeEventListener('drills-changed', nova); treu?.(); };
+    return () => {
+      window.clearTimeout(t);
+      plegaElRellotge();
+      window.removeEventListener('drills-changed', nova);
+      treu?.();
+    };
   }, []);
 
   // Offline sync bootstrap. All queue processing lives in OfflineSyncManager;
