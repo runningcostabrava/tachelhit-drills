@@ -109,6 +109,12 @@ export default function SenseConnexio() {
         sempre.
       </p>
 
+      {/* Quina versió portes. Sense això, una app antiga i una de nova es veuen igual, i un dia
+          sencer es va perdre buscant per què «ja està fet» no es veia a la pantalla. */}
+      <p style={{ fontSize: 11.5, color: 'var(--text-muted)', margin: '-6px 0 0' }}>
+        Aquesta app és del <strong>{__VERSIO__}</strong>
+      </p>
+
       <Bloc titol="Les frases" ara={frases ? `${frases.total.toLocaleString('ca')} al telèfon` : '…'}
             peu="Es posen al dia soles quan hi ha connexió." />
 
