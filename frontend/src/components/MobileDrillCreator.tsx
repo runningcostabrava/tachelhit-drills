@@ -18,9 +18,20 @@ import { fileNameFor, kindOf, type MediaKind } from '../utils/media';
 import { whyItFailed } from '../utils/errors';
 
 interface MobileDrillCreatorProps {
+    /**
+     * Qui ho ha obert plega.
+     *
+     * **Només això vol dir que s'ha acabat** (#569). Abans els tres llocs que obren el creador
+     * tancaven dins de `onDrillCreated`, i per això cada frase et feia sortir: ni el «+» de la
+     * capçalera no et deixava quedar-t'hi, perquè també hi passava.
+     */
     onClose: () => void;
-    /** L'id del que s'ha fet, quan n'hi ha: el taller de pràctica vol saber quina frase posar a la
-     *  seqüència. Sense connexió encara no hi ha id de debò i no se'n diu cap. */
+    /**
+     * Se n'ha desat una. **No vol dir que s'hagi acabat**: posa la teva llista al dia i prou.
+     *
+     * L'id del que s'ha fet, quan n'hi ha: el taller de pràctica vol saber quina frase posar a la
+     * seqüència. Sense connexió encara no hi ha id de debò i no se'n diu cap.
+     */
     onDrillCreated: (drillId?: number) => void;
 }
 

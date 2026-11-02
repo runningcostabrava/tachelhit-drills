@@ -574,8 +574,11 @@ export default function DrillsResponsive() {
       {playing && <DrillPlayer drills={playing} onExit={() => setPlaying(null)} />}
       {showGlossary && <GlossaryModal onClose={() => setShowGlossary(false)} />}
 
+      {/* Desar-ne una NO tanca el creador (#569): només qui prem la X, o el «Ja està» d'una fitxa
+          en blanc, ha acabat — i això arriba per `onClose`. */}
       {showMobileDrillCreator && (
-        <MobileDrillCreator onClose={() => setShowMobileDrillCreator(false)} onDrillCreated={() => { setNewestFirst(true); fetchDrills(); setShowMobileDrillCreator(false); }} />
+        <MobileDrillCreator onClose={() => setShowMobileDrillCreator(false)}
+                            onDrillCreated={() => { setNewestFirst(true); fetchDrills(); }} />
       )}
     </>
   );
