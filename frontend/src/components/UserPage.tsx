@@ -41,8 +41,15 @@ export default function UserPage() {
         {page.since && <span>des de {new Date(page.since).toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' })}</span>}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8, marginBottom: 20 }}>
-        {[[c.drills, 'drills aportats'], [c.takes, 'veus gravades'], [c.variants, 'variants pròpies'], [c.petitions, 'peticions'], [c.proposals_accepted, 'canvis al curs acceptats']].map(([n, l]) => (
-          <div key={String(l)} style={{ padding: '10px 12px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)' }}><div style={{ fontSize: 22, fontWeight: 800 }}>{n}</div><div style={{ fontSize: 12, color: 'var(--text-soft)' }}>{l}</div></div>
+        {/* Un de sol es diu en singular: aquesta és la pàgina que mira qui acaba d'aportar la
+            seva primera frase, i deia «1 drills aportats» (#564). */}
+        {([[c.drills, 'drill aportat', 'drills aportats'],
+           [c.takes, 'veu gravada', 'veus gravades'],
+           [c.variants, 'variant pròpia', 'variants pròpies'],
+           [c.petitions, 'petició', 'peticions'],
+           [c.proposals_accepted, 'canvi al curs acceptat', 'canvis al curs acceptats'],
+        ] as [number, string, string][]).map(([n, un, molts]) => (
+          <div key={molts} style={{ padding: '10px 12px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)' }}><div style={{ fontSize: 22, fontWeight: 800 }}>{n}</div><div style={{ fontSize: 12, color: 'var(--text-soft)' }}>{n === 1 ? un : molts}</div></div>
         ))}
       </div>
       {page.takes.length > 0 && (

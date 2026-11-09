@@ -401,11 +401,13 @@ export default function ProfilePage() {
             <Handle me={me} onChanged={(u) => setMe((m) => (m ? { ...m, username: u.username, display_name: u.display_name } : m))} />
             <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '18px' }}>
               <div style={{ padding: '12px 18px', background: 'var(--brand-gradient-soft)', borderRadius: 'var(--r-lg)', fontWeight: 700, color: 'var(--brand-1)' }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaLayerGroup /> {me.drills_contributed} drills aportats</span>
-                <a href={`/u/${me.username}`} style={{ color: 'var(--brand-1)', fontWeight: 700, textDecoration: 'none' }}>La meva fitxa: tot el que he aportat →</a>
+                {/* L'enllaç va a la seva línia: en línia amb el comptador sortia «1 drills
+                    aportatsLa meva fitxa…», tot junt (#564). */}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaLayerGroup /> {me.drills_contributed} {me.drills_contributed === 1 ? 'drill aportat' : 'drills aportats'}</span>
+                <a href={`/u/${me.username}`} style={{ display: 'block', marginTop: '6px', color: 'var(--brand-1)', fontWeight: 700, textDecoration: 'none' }}>La meva fitxa: tot el que he aportat →</a>
               </div>
               <div style={{ padding: '12px 18px', background: 'var(--emerald-soft)', borderRadius: 'var(--r-lg)', fontWeight: 700, color: 'var(--emerald)' }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaRedo /> {me.cards_learning} targetes en aprenentatge</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaRedo /> {me.cards_learning} {me.cards_learning === 1 ? 'targeta' : 'targetes'} en aprenentatge</span>
               </div>
               {streak && streak.streak_days > 0 && (
                 <div style={{ padding: '12px 18px', background: 'var(--amber-soft)', borderRadius: 'var(--r-lg)', fontWeight: 700, color: 'var(--amber-strong)' }}>
