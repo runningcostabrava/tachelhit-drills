@@ -105,6 +105,7 @@ cloudinary.config(
 from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel, LessonProposal as LessonProposalModel, AppSetting as AppSettingModel, CaptureRequest as CaptureRequestModel, DrillTombstone as DrillTombstoneModel, UserSession as UserSessionModel, GeminiUsage as GeminiUsageModel, DrillAiText as DrillAiTextModel  # ← Alias for ORM models
 from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort, VideoProcessingJobCreate, VideoProcessingJob, VideoSegmentCreate, VideoSegment, TranscribeRequest, TranscribeResponse, TranslateRequest, TranslateResponse, DrillPairInfo, GlossaryItem, GlossaryItemCreate, SrtImportRequest, SrtImportResponse, SrtSegment, BulkVideoUrlUpdateRequest, BulkVideoUrlUpdateResponse, iso_z  # ← Pydantic schemas
 from srt_parser import parse_srt_content, create_youtube_url_with_timestamp
+import magatzem  # l'únic lloc que sap on viuen els fitxers (#577)
 
 def normalize_media_url(url: str) -> str:
     """
@@ -312,13 +313,8 @@ def generate_catalan_tts(text: str, drill_id: int) -> str:
 
         if use_cloudinary:
             # Upload to Cloudinary
-            result = cloudinary.uploader.upload(
-                temp_path,
-                folder="tachelhit/tts",
-                public_id=f"tts_{drill_id}_{timestamp}",
-                resource_type="video"  # Cloudinary treats audio as video
-            )
-            url = result['secure_url']
+            url = magatzem.puja(temp_path, "tachelhit/tts",
+                                f"tts_{drill_id}_{timestamp}", "so")
         else:
             # Save locally
             dir_path = os.path.join(MEDIA_ROOT, "tts")
@@ -409,13 +405,8 @@ def generate_tachelhit_tts_hf(text: str, drill_id: int) -> str:
         use_cloudinary = bool(os.getenv("CLOUDINARY_CLOUD_NAME"))
         
         if use_cloudinary:
-            result = cloudinary.uploader.upload(
-                result_path,
-                folder="tachelhit/tts",
-                public_id=f"tachelhit_tts_{VOICE_VERSION}_{drill_id}_{timestamp}",
-                resource_type="video"
-            )
-            url = result['secure_url']
+            url = magatzem.puja(result_path, "tachelhit/tts",
+                                f"tachelhit_tts_{VOICE_VERSION}_{drill_id}_{timestamp}", "so")
         else:
             dir_path = os.path.join(MEDIA_ROOT, "tts")
             os.makedirs(dir_path, exist_ok=True)
@@ -2991,12 +2982,9 @@ async def generate_image(
 
         # PUJADA A CLOUDINARY (Això faltava o estava mal tancat al teu fitxer)
         if image_bytes:
-            result = cloudinary.uploader.upload(
-                image_bytes,
-                folder="tachelhit/images",
-                public_id=f"img_{drill_id}_{int(datetime.utcnow().timestamp())}"
-            )
-            drill.image_url = normalize_media_url(result['secure_url'])
+            drill.image_url = normalize_media_url(magatzem.puja(
+                image_bytes, "tachelhit/images",
+                f"img_{drill_id}_{int(datetime.utcnow().timestamp())}", "imatge"))
             db.commit()
             return {"image_url": drill.image_url, "photographer": photographer_info}
 
@@ -3075,11 +3063,9 @@ def _run_image_fill(only_depictable: bool = True):
                     result_path = _image_api_predict(client, prompt)
                     with open(result_path, "rb") as f:
                         image_bytes = f.read()
-                up = cloudinary.uploader.upload(
-                    image_bytes, folder="tachelhit/images",
-                    public_id=f"img_{d.id}_{int(datetime.utcnow().timestamp())}",
-                )
-                d.image_url = normalize_media_url(up["secure_url"])
+                d.image_url = normalize_media_url(magatzem.puja(
+                    image_bytes, "tachelhit/images",
+                    f"img_{d.id}_{int(datetime.utcnow().timestamp())}", "imatge"))
                 db.commit()
                 _image_fill_job["done"] += 1
             except Exception as e:
@@ -3379,23 +3365,16 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
             # Upload to Cloudinary
             print(f"[UPLOAD] Uploading {media_type} to Cloudinary for drill {drill_id}")
 
-            # Determine resource type
-            resource_type = "video" if media_type in ["audio", "video"] else "image"
+            mena = {"audio": "so", "video": "video", "image": "imatge"}[media_type]
 
-            # Per a àudio, utilitzar resource_type "video" a Cloudinary (també funciona per àudio)
-            if media_type == "audio":
-                resource_type = "video"
-
-            # Upload to Cloudinary — blocking HTTP, so off the event loop (P4.5)
-            result = await run_in_threadpool(
-                cloudinary.uploader.upload,
+            # Pujada — HTTP que bloqueja, o sigui fora del bucle d'esdeveniments (P4.5)
+            url = await run_in_threadpool(
+                magatzem.puja,
                 content,
-                folder=f"tachelhit/{media_type}",
-                public_id=f"{media_type}_{drill_id}_{int(datetime.utcnow().timestamp())}",
-                resource_type=resource_type
+                f"tachelhit/{media_type}",
+                f"{media_type}_{drill_id}_{int(datetime.utcnow().timestamp())}",
+                mena,
             )
-
-            url = result['secure_url']
             url = normalize_media_url(url)
             print(f"[UPLOAD] Cloudinary URL: {url}")
         else:
@@ -3703,13 +3682,9 @@ def background_video_vault(job_type: str, item_id: int, payload_data: list, job_
 
         # Step B: Upload the LOCAL file to Cloudinary
         print(f"[WORKER] ☁️ Uploading local file to Cloudinary: {local_video_path}")
-        upload_result = cloudinary.uploader.upload(
-            local_video_path,
-            folder=f"tachelhit/{job_type}s",
-            resource_type="video",
-            public_id=f"{job_type}_{item_id}_{int(datetime.utcnow().timestamp())}"
-        )
-        cloudinary_url = upload_result['secure_url']
+        cloudinary_url = magatzem.puja(
+            local_video_path, f"tachelhit/{job_type}s",
+            f"{job_type}_{item_id}_{int(datetime.utcnow().timestamp())}", "video")
         cloudinary_url = normalize_media_url(cloudinary_url)
 
         # Step C: Update Database
@@ -3832,7 +3807,7 @@ def delete_short(short_id: int, db: Session = Depends(get_db)):
         if short.video_path and short.video_path.startswith("http"):
             public_id = extract_cloudinary_public_id(short.video_path)
             if public_id:
-                cloudinary.uploader.destroy(public_id, resource_type="video")
+                magatzem.esborra(public_id, "video")
                 print(f"[API] Deleted Cloudinary asset: {public_id}")
         elif short.video_path:
             video_path = f"media/{short.video_path.replace('/media/', '')}"
@@ -6131,12 +6106,9 @@ async def add_recording(
     if variety and variety not in _VARIETY_CODES:
         raise HTTPException(status_code=400, detail="Varietat desconeguda")
     content = await file.read()
-    up = await run_in_threadpool(
-        cloudinary.uploader.upload,
-        content, resource_type="auto", folder="tachelhit/recordings",
-        public_id=f"rec_{drill_id}_{int(datetime.utcnow().timestamp())}",
-    )
-    url = normalize_media_url(up["secure_url"])
+    url = normalize_media_url(await run_in_threadpool(
+        magatzem.puja, content, "tachelhit/recordings",
+        f"rec_{drill_id}_{int(datetime.utcnow().timestamp())}", "auto"))
     # Les preses que aquesta persona ja té d'aquesta frase. Serveixen per a dues coses: per
     # substituir-ne una (si ho demana) i per dir-li quantes en té.
     meves = (db.query(RecordingModel)
@@ -8395,10 +8367,9 @@ def _agent_executor(db, user=None):
                 return {"error": "ara mateix no es poden dibuixar imatges"}
             try:
                 blob = generate_illustration(d.text_catalan or args.get("hint") or "", args.get("hint"))
-                up = cloudinary.uploader.upload(
-                    blob, folder="tachelhit/images",
-                    public_id=f"img_{d.id}_{int(datetime.utcnow().timestamp())}")
-                d.image_url = normalize_media_url(up["secure_url"])
+                d.image_url = normalize_media_url(magatzem.puja(
+                    blob, "tachelhit/images",
+                    f"img_{d.id}_{int(datetime.utcnow().timestamp())}", "imatge"))
                 d.updated_at = datetime.utcnow()
                 db.commit()
                 return {"drill_id": d.id, "image_url": d.image_url}
@@ -10293,14 +10264,9 @@ def trim_drill_audio(
                 trimmed.write_audiofile(tmp_out_path, logger=None)
 
         # Upload to Cloudinary
-        result = cloudinary.uploader.upload(
-            tmp_out_path,
-            folder="tachelhit/audio",
-            public_id=f"audio_trimmed_{drill_id}_{int(datetime.utcnow().timestamp())}",
-            resource_type="video"
-        )
-
-        url = normalize_media_url(result['secure_url'])
+        url = normalize_media_url(magatzem.puja(
+            tmp_out_path, "tachelhit/audio",
+            f"audio_trimmed_{drill_id}_{int(datetime.utcnow().timestamp())}", "so"))
         drill.audio_url = url
         db.commit()
 
@@ -10362,14 +10328,9 @@ def trim_drill_video(
                 trimmed.write_videofile(tmp_out_path, codec="libx264", audio_codec="aac", logger=None)
 
         # Upload to Cloudinary
-        result = cloudinary.uploader.upload(
-            tmp_out_path,
-            folder="tachelhit/video",
-            public_id=f"video_trimmed_{drill_id}_{int(datetime.utcnow().timestamp())}",
-            resource_type="video"
-        )
-
-        url = normalize_media_url(result['secure_url'])
+        url = normalize_media_url(magatzem.puja(
+            tmp_out_path, "tachelhit/video",
+            f"video_trimmed_{drill_id}_{int(datetime.utcnow().timestamp())}", "video"))
         drill.video_url = url
         db.commit()
 
