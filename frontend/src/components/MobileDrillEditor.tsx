@@ -31,6 +31,7 @@ import { syncManager, type Drill } from '../services/OfflineSyncManager';
 import { api } from '../api';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
+import { onVaLaLectura, queDirDeLaLectura } from '../services/lecturaDeMaquina';
 import AiAssistant from './AiAssistant';
 
 interface MobileDrillEditorProps {
@@ -361,9 +362,12 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
             const safeText = (res.data.corrected_transcription || '').trim();
             if (!safeText) return toast.error('La transcripció ha retornat un text buit.');
 
-            const updated = { ...localDrill, text_tachelhit: safeText };
+            // El text del parlant no es toca mai: si ja n'hi ha, la lectura va a suggeriment i
+            // ell es queda on és (#557, ADR 0003). La regla és compartida amb la graella.
+            const updated = { ...localDrill, ...onVaLaLectura(localDrill.text_tachelhit, safeText) };
             setLocalDrill(updated);
             triggerSave(updated);
+            toast.success(queDirDeLaLectura(localDrill.text_tachelhit, safeText));
             addLog('Transcription success');
         } catch (err: any) {
             const msg = err.response?.data?.detail || err.message;
