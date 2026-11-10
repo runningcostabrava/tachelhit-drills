@@ -53,6 +53,7 @@ import { esProvisional } from '../services/biblioteca';
 import AiAssistant from './AiAssistant';
 import AiToolsMenu from './AiToolsMenu';
 import { draftUsable, DRAFT_REJECTED_LABEL } from '../utils/drafts';
+import { onVaLaLectura, queDirDeLaLectura } from '../services/lecturaDeMaquina';
 
 interface DrillsGridProps {
     rowData: Drill[];
@@ -246,9 +247,10 @@ export default function DrillsGrid({ rowData, refreshData, onEditDrill, loadErro
 
             console.log(`[Transcribe] Saving updated Tachelhit text: ${preservedText}`);
             // Same rule as translation: keep what is there, store ASR as a suggestion.
+            // La decisió viu a `lecturaDeMaquina` perquè no torni a divergir entre pantalles (#557).
             const existingTa = (drill.text_tachelhit || '').trim();
-            await axios.put(`${API_BASE}/drills/${drill.id}`, existingTa ? { text_tachelhit_suggested: preservedText } : { text_tachelhit: preservedText });
-            if (existingTa) toast.success(`Transcripció desada com a suggeriment (es manté «${existingTa}»): ${preservedText}`);
+            await axios.put(`${API_BASE}/drills/${drill.id}`, onVaLaLectura(drill.text_tachelhit, preservedText));
+            if (existingTa) toast.success(queDirDeLaLectura(drill.text_tachelhit, preservedText));
             await refreshKeepingScroll();
             console.log('[Transcribe] Success.');
         } catch (error) {
