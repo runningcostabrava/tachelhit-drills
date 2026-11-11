@@ -49,7 +49,7 @@ import ai_budget
 import dialect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, false as sa_false, func as sa_func
 from sqlalchemy.orm import sessionmaker, Session
@@ -107,6 +107,11 @@ from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Tes
 from srt_parser import parse_srt_content, create_youtube_url_with_timestamp
 import magatzem  # l'únic lloc que sap on viuen els fitxers (#577)
 
+#: On és aquest servidor, per a les adreces que han de sortir senceres. És una variable
+#: d'entorn perquè en local i a les proves no és el mateix lloc.
+API_BASE = os.getenv("API_BASE", "https://tachelhit-drills-api.onrender.com").rstrip("/")
+
+
 def normalize_media_url(url: str) -> str:
     """
     Ensure URL has correct protocol (https:// or http://).
@@ -122,6 +127,7 @@ def normalize_media_url(url: str) -> str:
 
     # 2. Remove API_BASE prefix if present (with or without protocol)
     prefixes_to_remove = [
+        API_BASE,  # el d'ara, que en local i a les proves no és el de Render
         "https://tachelhit-drills-api.onrender.com",
         "http://tachelhit-drills-api.onrender.com",
         "tachelhit-drills-api.onrender.com",
@@ -139,6 +145,13 @@ def normalize_media_url(url: str) -> str:
     # 4. Ensure protocol for double slash
     if url.startswith("//"):
         url = "https:" + url
+
+    # 5. Les adreces de R2 es desen com a `/mitjans/...` (veg. magatzem.py), i a fora han de
+    #    sortir senceres: el frontend es serveix d'un altre domini i una adreça relativa hi
+    #    cauria a sobre, no pas aquí. El pas 2 ja ha tret el prefix si hi era, o sigui que
+    #    tornar-lo a posar aquí no el duplica.
+    if url.startswith("/mitjans/"):
+        return API_BASE + url
 
     # Return as is (could be relative path, absolute URL, etc.)
     return url
@@ -309,7 +322,7 @@ def generate_catalan_tts(text: str, drill_id: int) -> str:
         filename = f"tts_{drill_id}_{timestamp}.mp3"
 
         # Check if Cloudinary is configured
-        use_cloudinary = bool(os.getenv("CLOUDINARY_CLOUD_NAME"))
+        use_cloudinary = magatzem.disponible()  # R2 o Cloudinary: ho decideix el magatzem
 
         if use_cloudinary:
             # Upload to Cloudinary
@@ -402,7 +415,7 @@ def generate_tachelhit_tts_hf(text: str, drill_id: int) -> str:
         timestamp = int(datetime.utcnow().timestamp())
         filename = f"tachelhit_tts_{VOICE_VERSION}_{drill_id}_{timestamp}.wav"
         
-        use_cloudinary = bool(os.getenv("CLOUDINARY_CLOUD_NAME"))
+        use_cloudinary = magatzem.disponible()  # R2 o Cloudinary: ho decideix el magatzem
         
         if use_cloudinary:
             url = magatzem.puja(result_path, "tachelhit/tts",
@@ -3334,7 +3347,7 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
             raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
         # Check if Cloudinary is configured
-        use_cloudinary = bool(os.getenv("CLOUDINARY_CLOUD_NAME"))
+        use_cloudinary = magatzem.disponible()  # R2 o Cloudinary: ho decideix el magatzem
 
         # Determinar l'extensió del fitxer
         if file.filename and "." in file.filename:
@@ -3374,6 +3387,9 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
                 f"tachelhit/{media_type}",
                 f"{media_type}_{drill_id}_{int(datetime.utcnow().timestamp())}",
                 mena,
+                #: aquí l'extensió ja s'ha tret del nom del fitxer i s'ha validat a dalt;
+                #: passant-la, R2 no l'ha d'endevinar dels bytes.
+                ext,
             )
             url = normalize_media_url(url)
             print(f"[UPLOAD] Cloudinary URL: {url}")
@@ -6372,6 +6388,33 @@ def verify_drill(drill_id: int, verified: bool = Body(True, embed=True),
     drill.verified_by_user_id = user.id if verified else None
     db.commit()
     return {"drill_id": drill_id, "verified": drill.verified, "verified_by": user.username if verified else None}
+
+@app.get("/mitjans/{clau:path}")
+def serveix_mitja(clau: str):
+    """Desvia cap al fitxer de R2, amb una adreça signada que dura una hora.
+
+    Per què no es desa l'adreça signada a la base de dades: perquè caduca, i les adreces de
+    la base de dades hi viuen per sempre. I per què no es fa el bust públic: perquè així els
+    fitxers no queden penjats a una adreça permanent que qualsevol pugui repartir.
+
+    **El que això NO fa:** demanar qui ets. Qui tingui aquesta adreça rep el fitxer. Treu els
+    mitjans de Google i de l'enllaç de fora, no els tanca per usuari; per a això caldria que
+    el reproductor enviés el testimoni, i és una altra passa (#577).
+
+    Els bytes van de R2 al navegador sense passar per aquí: això només contesta un desviament.
+    """
+    if not magatzem.a_r2():
+        raise HTTPException(status_code=404, detail="Aquest servidor no serveix de R2")
+    if ".." in clau:
+        raise HTTPException(status_code=400, detail="Ruta no vàlida")
+    try:
+        adreca = magatzem.adreca_signada(clau)
+    except Exception as e:
+        print(f"[MITJANS] no he pogut signar {clau}: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=502, detail="El dipòsit no respon")
+    #: 307 i no 301: l'adreça caduca i no s'ha de guardar a la memòria del navegador
+    return RedirectResponse(adreca, status_code=307)
+
 
 @app.get("/version")
 def get_version():
