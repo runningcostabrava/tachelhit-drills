@@ -71,7 +71,7 @@ export default function CreditsPage() {
 
   const blocks = md ? parse(md) : [];
   return (
-    <div style={{ padding: '20px 16px 60px', maxWidth: 720, margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px 60px', maxWidth: 720, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate(-1)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: '4px 0', marginBottom: 8 }}>
         <FaChevronLeft /> Enrere
       </button>

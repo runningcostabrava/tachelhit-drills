@@ -47,7 +47,7 @@ export default function AddSentencePage() {
   if (feta) {
     const veu = teVeu || !!(feta.audio_url || '').trim();
     return (
-      <div style={{ padding: '24px 16px 60px', maxWidth: 560, margin: '0 auto' }}>
+      <div style={{ padding: '24px 16px 60px', maxWidth: 560, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--emerald)', fontWeight: 800, fontSize: 15 }}>
           <FaCheck size={14} /> Afegida a la biblioteca
         </div>

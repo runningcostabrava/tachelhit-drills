@@ -289,7 +289,7 @@ export default function StepSession({ testId, title, onExit }: Props) {
 
   if (!steps) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Preparant la pràctica…</div>;
   if (!steps.length) return (
-    <div style={{ padding: '40px 16px', maxWidth: 520, margin: '0 auto', textAlign: 'center' }}>
+    <div style={{ padding: '40px 16px', maxWidth: 520, margin: '0 auto', width: '100%', boxSizing: 'border-box', textAlign: 'center' }}>
       <p style={{ color: 'var(--text-soft)' }}>Aquesta pràctica encara no té cap pas.</p>
       <button onClick={() => navigate(`/tests/${testId}/editor`)} style={btn('primary')}>Obre el taller</button>
     </div>
@@ -308,7 +308,7 @@ export default function StepSession({ testId, title, onExit }: Props) {
   if (done) {
     const asked = steps.filter((s) => s.kind !== 'note').length;
     return (
-      <div style={{ padding: '20px 16px 32px', maxWidth: 520, margin: '0 auto' }}>
+      <div style={{ padding: '20px 16px 32px', maxWidth: 520, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
         {bar}
         <div style={{ textAlign: 'center', margin: '18px 0 22px' }}>
           <div style={{ width: 110, height: 110, borderRadius: '50%', border: `10px solid ${knew >= asked * 0.7 ? 'var(--emerald)' : 'var(--saffron)'}`, boxSizing: 'border-box', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -334,7 +334,7 @@ export default function StepSession({ testId, title, onExit }: Props) {
   const selfMarked = tool === 'say_it' || tool === 'look_say' || tool === 'word_by_word' || tool === 'script_swap';
 
   return (
-    <div style={{ padding: '20px 16px 32px', maxWidth: 520, margin: '0 auto', minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ padding: '20px 16px 32px', maxWidth: 520, margin: '0 auto', width: '100%', boxSizing: 'border-box', minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
       {bar}
 
       {tool === 'note' ? (

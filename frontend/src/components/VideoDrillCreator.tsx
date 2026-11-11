@@ -479,7 +479,7 @@ const VideoDrillCreator: React.FC = () => {
     <div className="video-drill-creator" style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: '48px' }}>
       {/* Section header */}
       <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '18px 24px' }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Captura</h1>
           <p style={{ margin: '4px 0 0 0', color: 'var(--text-soft)', fontSize: '14px' }}>
             Converteix un vídeo de YouTube, Instagram, TikTok o un podcast en drills.
@@ -487,7 +487,7 @@ const VideoDrillCreator: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px' }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto', width: '100%', boxSizing: 'border-box', padding: '24px' }}>
       <ServiceStatusBanner services={['asr', 'translation']} />
       <AutoCapturePanel />
       <div className="input-group" style={{

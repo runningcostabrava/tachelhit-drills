@@ -308,7 +308,7 @@ const caixaEsborranys: React.CSSProperties = {
 
 const cos: React.CSSProperties = {
   padding: '20px max(16px, env(safe-area-inset-left, 0px)) 80px max(16px, env(safe-area-inset-right, 0px))',
-  maxWidth: 640, margin: '0 auto',
+  maxWidth: 640, margin: '0 auto', width: '100%', boxSizing: 'border-box',
 };
 const titol: React.CSSProperties = { fontFamily: 'var(--font-display)', fontSize: 21, margin: '0 0 6px' };
 const enrere: React.CSSProperties = {

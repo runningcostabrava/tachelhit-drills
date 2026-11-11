@@ -66,7 +66,7 @@ export default function PracticeGroupPage() {
   if (playing && drills && drills.length > 0) return <DrillPlayer drills={drills} onExit={() => setPlaying(false)} />;
 
   return (
-    <div style={{ padding: '20px 16px 32px', maxWidth: 1100, margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px 32px', maxWidth: 1100, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate('/tests')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: '4px 0', marginBottom: 6 }}><FaChevronLeft /> Pràctica</button>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, margin: '0 0 4px' }}>{title}</h1>
       <p style={{ color: 'var(--text-soft)', fontSize: 14, margin: '0 0 14px' }}>{drills ? `${drills.length} drills` : 'Carregant…'}{drills && drills.length === 400 ? ' (els primers 400)' : ''}</p>

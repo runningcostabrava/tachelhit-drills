@@ -39,7 +39,7 @@ export default function ServeisPage() {
   useEffect(() => { document.title = 'Qui fa cada feina · Tamazight'; mira(); }, []);
 
   return (
-    <div style={{ padding: '20px 16px 60px', maxWidth: 780, margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px 60px', maxWidth: 780, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 25, margin: '0 0 6px', lineHeight: 1.25 }}>
         Qui fa cada feina
       </h1>
