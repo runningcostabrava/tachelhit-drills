@@ -1,0 +1,157 @@
+{
+ "_que_es": "Quin vídeo del canal del Baba Ali és cada episodi nostre, i quants segons separen les nostres marques de temps del començament de la pujada. El segon del vídeo és t + desplacament.",
+ "mesura": {
+  "quan": "2026-11-11",
+  "com": "Correlació creuada de l'envolvent del so (energia cada 20 ms) dels nostres talls desats contra la banda sonora de cada pujada del canal. El tall que tenim ÉS un tros d'aquell so, així que trobar-lo és un càlcul i no una endevinalla; es demana que molts talls donin EL MATEIX desplaçament.",
+  "criteri": "S'accepta si almenys tres talls coincideixen dins de mig segon i la probabilitat que hi caiguin per atzar (falsos_esperats) baixa de 1e-3, i cap altra pujada no s'hi acosta.",
+  "canal": "https://www.youtube.com/channel/UC5hZVXdX1xLIpILdNlq0BSw",
+  "guions": "scratchpad/visor/{fes_talls2,casa3,mira_ep}.py d'aquesta sessió"
+ },
+ "episodis": {
+  "episodi-2": {
+   "video": "ihwiZk1WmJM",
+   "desplacament": 1340.9,
+   "titol_pujada": "1-2",
+   "proves": {
+    "talls_dacord": 5,
+    "talls": 19,
+    "dispersio": 0.186,
+    "minuts_de_la_pujada": 52.0,
+    "falsos_esperats": 1.23e-10,
+    "segona_candidata": "18",
+    "falsos_de_la_segona": 1.0
+   }
+  },
+  "episodi-3": {
+   "video": "EJY3_hNxW5w",
+   "desplacament": -122.58,
+   "titol_pujada": "3-4",
+   "proves": {
+    "talls_dacord": 12,
+    "talls": 19,
+    "dispersio": 0.251,
+    "minuts_de_la_pujada": 53.0,
+    "falsos_esperats": 1.49e-34,
+    "segona_candidata": "18",
+    "falsos_de_la_segona": 1.0
+   }
+  },
+  "episodi-4": {
+   "video": "EJY3_hNxW5w",
+   "desplacament": 1454.84,
+   "titol_pujada": "3-4",
+   "proves": {
+    "talls_dacord": 10,
+    "talls": 18,
+    "dispersio": 0.194,
+    "minuts_de_la_pujada": 53.0,
+    "falsos_esperats": 1.31e-27,
+    "segona_candidata": "8",
+    "falsos_de_la_segona": 0.0937
+   }
+  },
+  "episodi-5": {
+   "video": "dKQg4fAQhVk",
+   "desplacament": -123.16,
+   "titol_pujada": "5",
+   "proves": {
+    "talls_dacord": 14,
+    "talls": 18,
+    "dispersio": 0.292,
+    "minuts_de_la_pujada": 27.0,
+    "falsos_esperats": 5.66e-39,
+    "segona_candidata": "11",
+    "falsos_de_la_segona": 0.093
+   }
+  },
+  "episodi-6": {
+   "video": "wRiRfqimjZc",
+   "desplacament": -127.82,
+   "titol_pujada": "6",
+   "proves": {
+    "talls_dacord": 15,
+    "talls": 17,
+    "dispersio": 0.243,
+    "minuts_de_la_pujada": 26.4,
+    "falsos_esperats": 2.15e-43,
+    "segona_candidata": "8",
+    "falsos_de_la_segona": 0.0833
+   }
+  },
+  "episodi-8": {
+   "video": "EwJnMTlukrw",
+   "desplacament": -134.96,
+   "titol_pujada": "8",
+   "proves": {
+    "talls_dacord": 15,
+    "talls": 19,
+    "dispersio": 0.239,
+    "minuts_de_la_pujada": 27.2,
+    "falsos_esperats": 4.07e-42,
+    "segona_candidata": "18",
+    "falsos_de_la_segona": 0.108
+   }
+  },
+  "episodi-10": {
+   "video": "_vmSLhdH3Fw",
+   "desplacament": -116.67,
+   "titol_pujada": "10",
+   "proves": {
+    "talls_dacord": 16,
+    "talls": 19,
+    "dispersio": 0.29,
+    "minuts_de_la_pujada": 26.5,
+    "falsos_esperats": 9.44e-46,
+    "segona_candidata": "5",
+    "falsos_de_la_segona": 0.105
+   }
+  },
+  "episodi-11": {
+   "video": "g7DPFoccZ9A",
+   "desplacament": -128.26,
+   "titol_pujada": "11",
+   "proves": {
+    "talls_dacord": 15,
+    "talls": 18,
+    "dispersio": 0.239,
+    "minuts_de_la_pujada": 27.4,
+    "falsos_esperats": 7.7e-43,
+    "segona_candidata": "18",
+    "falsos_de_la_segona": 1.0
+   }
+  },
+  "episodi-13": {
+   "video": "VMcz8Y3nz_U",
+   "desplacament": -192.4,
+   "titol_pujada": "12-13-14",
+   "proves": {
+    "talls_dacord": 4,
+    "talls": 19,
+    "dispersio": 0.207,
+    "minuts_de_la_pujada": 85.2,
+    "falsos_esperats": 2.91e-08,
+    "segona_candidata": "18",
+    "falsos_de_la_segona": 1.0
+   }
+  },
+  "episodi-15": {
+   "video": "VMcz8Y3nz_U",
+   "desplacament": 3146.94,
+   "titol_pujada": "12-13-14",
+   "proves": {
+    "talls_dacord": 13,
+    "talls": 18,
+    "dispersio": 0.298,
+    "minuts_de_la_pujada": 85.2,
+    "falsos_esperats": 2.71e-41,
+    "segona_candidata": "18",
+    "falsos_de_la_segona": 1.0
+   }
+  }
+ },
+ "sense_video": {
+  "episodi-7": "La pujada del canal que porta el número 7 (TjIpBxm2kO8) té el so MUT: -91 dB de cap a cap, baixada sencera l'11-11-2026. Sense so no es pot comprovar si és el nostre episodi, i no es posa un vídeo que no s'ha comprovat.",
+  "episodi-9": "La pujada que porta el número 9 (sdAMg7W_sTI) no s'ha pogut baixar (403 de YouTube els dos intents de l'11-11-2026), i sense el so no hi ha prova.",
+  "episodi-12": "Al canal no hi ha cap pujada d'aquest episodi. La que es diu «12 13 14» (VMcz8Y3nz_U) porta de fet els nostres 13, 14 i 15: el 13 hi comença a -192 s i el 15 a +3.147 s, mesurat."
+ }
+}

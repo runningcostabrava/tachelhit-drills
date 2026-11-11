@@ -672,6 +672,13 @@ export const api = {
   /** Admin: ask for every sentence the library cannot say out loud, in one pass. */
   askForEveryMissingVoice: () => request<{ asked: number; already_asked: number; with_a_take: number }>('/drills/voice-wanted/missing', { method: 'POST', body: JSON.stringify({ include_synthetic: true }) }),
   /** Ask our speakers to say this sentence out loud; it goes to the top of «Veus». */
+  // --- El Baba Ali: la serie, amb el nostre text a sota (#visor) ---
+  /** Els episodis que tenim i de quins en sabem el video del canal. */
+  babaAliIndex: () => request<{ episodis: BabaAliEpisodi[]; amb_video: number; linies: number;
+    font: { obra: string; canal: string; text: string } }>('/baba-ali/'),
+  /** Un episodi: el video, el desplacament mesurat i les linies en ordre. */
+  babaAliEpisodi: (episodi: string) =>
+    request<BabaAliEpisodiData>(`/baba-ali/${encodeURIComponent(episodi)}`),
   // --- El Mètode: deu capítols fets amb la nostra biblioteca (ADR 0003) ---
   methodIndex: () => request<MethodIndex>('/method/'),
   /** El que hi ha a casa: les portes i quant hi ha darrere de cadascuna. Només comptes. */
@@ -1006,4 +1013,30 @@ export interface AuthUser {
   region: string | null;
   is_admin: boolean;
   has_password: boolean;
+}
+
+/** Les proves que diuen que un episodi nostre es aquella pujada del canal (veg. backend/baba_ali.py). */
+export interface BabaAliProves {
+  talls_dacord: number; talls: number; dispersio: number | null;
+  minuts_de_la_pujada: number; falsos_esperats: number;
+  segona_candidata: string; falsos_de_la_segona: number;
+}
+/** Un episodi a la llista: quantes linies en tenim i, si s'ha mesurat, quin video es. */
+export interface BabaAliEpisodi {
+  episodi: string; linies: number; amb_so: number;
+  video: string | null; desplacament: number | null;
+  titol_pujada: string | null; comprovat: BabaAliProves | null;
+  /** Si no en sabem el video, per que: el canal no el te, o la pujada es muda. */
+  per_que_sense_video: string | null;
+}
+/** Una linia del subtitol. `t` es el segon NOSTRE; al video va a `t + desplacament`. */
+export interface BabaAliLinia {
+  id: number; t: number; fi: number; ca: string; ar: string; so: string | null; esmenat: boolean;
+}
+export interface BabaAliEpisodiData {
+  episodi: string; video: string | null; desplacament: number | null;
+  titol_pujada: string | null; comprovat: BabaAliProves | null;
+  per_que_sense_video: string | null; duplicades_tretes: number; esmenades: number;
+  font: { obra: string; canal: string; text: string };
+  linies: BabaAliLinia[];
 }
