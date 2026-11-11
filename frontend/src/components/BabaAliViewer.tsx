@@ -61,7 +61,9 @@ export default function BabaAliViewer() {
   useEffect(() => {
     if (!triat) return;
     setDades(null);
-    setTemps(0);
+    //: -1 i no 0: «encara no sona res». Amb 0, l'episodi que s'obre sense vídeo ensenyava una
+    //: línia marcada com si sonés —l'última lectura del rellotge de l'episodi anterior.
+    setTemps(-1);
     api.babaAliEpisodi(triat).then(setDades).catch(e => setError(String(e?.message || e)));
   }, [triat]);
 
@@ -105,7 +107,7 @@ export default function BabaAliViewer() {
   // Quina línia sona ara. Es busca per bisecció: amb 335 línies i cinc comptes per segon,
   // recórrer-les totes cada vegada es nota al mòbil.
   const ara = useMemo(() => {
-    if (!linies.length) return -1;
+    if (!linies.length || temps < 0) return -1;
     let a = 0, b = linies.length - 1, trobada = -1;
     while (a <= b) {
       const m = (a + b) >> 1;
