@@ -8,7 +8,8 @@
  * EL TEMPS. Les nostres marques les va escriure qui va fer els talls, i no casen amb la pujada:
  * cada pujada comença amb uns dos minuts de resum, i algunes porten dos o tres episodis seguits.
  * El desplaçament de cada episodi s'ha mesurat correlacionant el so (veg. `backend/baba_ali.py`),
- * i aquí només se suma: segon del vídeo = `t + desplacament`.
+ * o, a les dues pujades que YouTube serveix mudes, mirant quan canvia el subtítol de la imatge;
+ * aquí només se suma: segon del vídeo = `t + desplacament`.
  *
  * ELS QUE NO CASEN hi surten igualment, sense vídeo, amb els talls de so frase a frase: val més
  * dir «d'aquest no sabem quin vídeo és» que ensenyar-ne un que no sigui.
@@ -282,13 +283,25 @@ export default function BabaAliViewer() {
 
       {dades && (
         <p style={{ marginTop: 10, fontSize: 12, color: 'var(--text-2, #666)', lineHeight: 1.6 }}>
-          {proves
-            ? <>El vídeo és aquesta pujada («{dades.titol_pujada}») i l'episodi hi comença a{' '}
+          {!proves && <>Sense vídeo comprovat.</>}
+          {proves?.com === 'so' && (
+            <>El vídeo és aquesta pujada («{dades.titol_pujada}») i l'episodi hi comença a{' '}
               {rellotge(desplacament)}: {proves.talls_dacord} talls de {proves.talls} hi sonen al
               mateix segon{proves.dispersio !== null && <> (±{proves.dispersio.toFixed(2)} s)</>},
               i que caiguin junts per atzar dins de {proves.minuts_de_la_pujada} minuts passa{' '}
               {proves.falsos_esperats.toExponential(0)} vegades.</>
-            : <>Sense vídeo comprovat.</>}
+          )}
+          {proves?.com === 'imatge' && (
+            <>El vídeo és aquesta pujada («{dades.titol_pujada}») i l'episodi hi comença a{' '}
+              {rellotge(desplacament)}. Aquesta pujada ve MUDA de YouTube, així que no s'hi ha
+              pogut comparar el so: s'ha casat per la imatge, perquè el subtítol de la pantalla
+              canvia quan canvien les nostres línies. Hi casen {proves.marques_amb_canvi} de{' '}
+              {proves.marques} marques (±{proves.dispersio.toFixed(2)} s); dels{' '}
+              {proves.desplacaments_possibles_s} s de desplaçaments possibles, el millor de tots
+              els altres només n'hi casa {proves.millor_dels_altres_desplacaments}. I{' '}
+              {proves.frases_comprovades_a_la_pantalla} frases s'han llegit de la pantalla al
+              segon que això prediu, i hi diuen la nostra línia paraula per paraula.</>
+          )}
           {dades.esmenades > 0 && <> · {dades.esmenades} línies es mostren esmenades (el nom del
             mercader i les fórmules que la màquina feia marianes); a la biblioteca el text queda
             tal com el va deixar la màquina.</>}

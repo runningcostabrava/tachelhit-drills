@@ -173,14 +173,41 @@ def test_el_desplacament_del_video_ve_de_la_taula_mesurada():
 
 
 def test_cada_pujada_de_la_taula_porta_les_seves_proves():
-    """Un vídeo sense proves no hi pot ser: el visor diu a qui mira per què creu que és aquell."""
+    """Un vídeo sense proves no hi pot ser: el visor diu a qui mira per què creu que és aquell.
+
+    N'hi ha de dues menes. La del SO és la de sempre. La de la IMATGE és per a les dues pujades
+    que YouTube serveix mudes: allà es compta quantes de les nostres marques cauen on canvia el
+    subtítol de la pantalla, i s'exigeix que el desplaçament bo en casi clarament més que el
+    millor de tots els altres possibles, i que algú hagi llegit la pantalla per comprovar-ho."""
     for ep, p in baba_ali.pujades().items():
         assert p.get("video"), f"{ep} és a la taula sense vídeo"
         assert isinstance(p.get("desplacament"), (int, float)), ep
         proves = p.get("proves") or {}
-        assert proves.get("talls_dacord", 0) >= 3, f"{ep}: amb menys de tres talls no es diu que casi"
-        assert proves.get("falsos_esperats", 1) < 1e-3, f"{ep}: massa probable per atzar"
-        assert proves["dispersio"] <= 1.0, f"{ep}: els talls no diuen el mateix segon"
+        assert proves.get("com") in ("so", "imatge"), f"{ep}: les proves no diuen de quina mena són"
+        assert proves["dispersio"] <= 1.0, f"{ep}: les proves no diuen el mateix segon"
+        if proves["com"] == "so":
+            assert proves.get("talls_dacord", 0) >= 3, \
+                f"{ep}: amb menys de tres talls no es diu que casi"
+            assert proves.get("falsos_esperats", 1) < 1e-3, f"{ep}: massa probable per atzar"
+        else:
+            assert proves["sigmes"] >= 5, \
+                f"{ep}: el desplaçament no destaca prou de tots els altres possibles"
+            assert proves["marques_amb_canvi"] >= 1.4 * proves["millor_dels_altres_desplacaments"], \
+                f"{ep}: un altre desplaçament hi casa gairebé igual"
+            assert proves["frases_comprovades_a_la_pantalla"] >= 3, \
+                f"{ep}: no s'ha llegit prou pantalla per dir que és aquell vídeo"
+            assert proves["exemple"], f"{ep}: la prova de la pantalla no es pot repetir"
+
+
+def test_els_dos_episodis_muts_tenen_video_i_diuen_com_s_ha_sabut():
+    """El 7 i el 9 van estar sense vídeo mentre la prova era el so; ara la prova és la imatge."""
+    for ep in ("episodi-7", "episodi-9"):
+        p = baba_ali.pujades().get(ep)
+        assert p and p["video"], f"{ep} hauria de tenir vídeo"
+        assert p["proves"]["com"] == "imatge", f"{ep}: s'ha casat per la imatge, no pel so"
+        assert ep not in baba_ali.sense_video(), f"{ep} ja no és dels que no tenen vídeo"
+    assert "com_els_muts" in baba_ali.com_s_ha_mesurat(), \
+        "la mesura ha d'explicar també com es casen les pujades mudes"
 
 
 def test_l_esmena_no_toca_el_que_no_hi_surt():
