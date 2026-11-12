@@ -17,6 +17,16 @@ per sota. `data/baba_ali_pujades.json` guarda, per a cada episodi, el vídeo, el
 amb quantes proves s'ha dit. Els episodis que no han casat surten al visor igualment, però
 sense vídeo i dient-ho.
 
+I QUAN LA PUJADA ÉS MUDA. Dues pujades (les dels episodis 7 i 9) venen de YouTube amb el so
+esborrat: −91 dB de cap a cap, el silenci digital, segurament per una reclamació de la música.
+Allà la correlació del so no és possible mai. S'han casat per la IMATGE: el subtítol àrab va
+cremat a la franja de baix, i el moment en què un subtítol deixa lloc al següent és exactament
+el que són les nostres marques; es mira quant canvia la franja de fotograma a fotograma i es
+correlaciona igual. Com que l'episodi gairebé omple la pujada, només hi ha uns 40 s de
+desplaçaments possibles, i el bo en casa el doble que el millor de tots els altres. La prova
+que ho tanca és llegir fotogrames del segon que el desplaçament prediu i veure que la pantalla
+hi diu la nostra línia, paraula per paraula. Per això `proves` diu de quina mena és (`com`).
+
 EL TEMPS. `t` és el segon de la nostra marca. El segon del vídeo és `t + desplaçament`.
 
 EL TEXT. Les esmenes d'aquí NO toquen la biblioteca (ADR 0003: el text del parlant no es

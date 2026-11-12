@@ -1015,12 +1015,25 @@ export interface AuthUser {
   has_password: boolean;
 }
 
-/** Les proves que diuen que un episodi nostre es aquella pujada del canal (veg. backend/baba_ali.py). */
-export interface BabaAliProves {
+/**
+ * Les proves que diuen que un episodi nostre es aquella pujada del canal (veg. backend/baba_ali.py).
+ * N'hi ha de dues menes, i `com` diu quina: deu episodis es van casar pel SO, i els dos que
+ * YouTube serveix muts (el 7 i el 9) per la IMATGE -- quan canvia el subtitol de la pantalla.
+ */
+export interface BabaAliProvesSo {
+  com: 'so';
   talls_dacord: number; talls: number; dispersio: number | null;
   minuts_de_la_pujada: number; falsos_esperats: number;
   segona_candidata: string; falsos_de_la_segona: number;
 }
+export interface BabaAliProvesImatge {
+  com: 'imatge';
+  marques: number; marques_amb_canvi: number; dispersio: number;
+  minuts_de_la_pujada: number; millor_dels_altres_desplacaments: number;
+  desplacaments_possibles_s: number; sigmes: number;
+  frases_comprovades_a_la_pantalla: number; exemple: string;
+}
+export type BabaAliProves = BabaAliProvesSo | BabaAliProvesImatge;
 /** Un episodi a la llista: quantes linies en tenim i, si s'ha mesurat, quin video es. */
 export interface BabaAliEpisodi {
   episodi: string; linies: number; amb_so: number;
