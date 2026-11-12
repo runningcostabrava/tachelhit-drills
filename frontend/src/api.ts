@@ -1045,11 +1045,19 @@ export interface BabaAliEpisodi {
 /** Una linia del subtitol. `t` es el segon NOSTRE; al video va a `t + desplacament`. */
 export interface BabaAliLinia {
   id: number; t: number; fi: number; ca: string; ar: string; so: string | null; esmenat: boolean;
+  /** L'amazic que un model d'ASR va sentir al tall de veu. No es text de ningu. */
+  am: string | null;
+  /** Quants models l'han llegida. */
+  am_models: number;
+  /** Dos models independents hi senten el mateix: nomes passa a 50 linies de 2.727. */
+  am_acord: boolean;
 }
 export interface BabaAliEpisodiData {
   episodi: string; video: string | null; desplacament: number | null;
   titol_pujada: string | null; comprovat: BabaAliProves | null;
   per_que_sense_video: string | null; duplicades_tretes: number; esmenades: number;
+  /** Quantes linies porten lectura de maquina, i a quantes dos models hi senten el mateix. */
+  amb_veu_sentida: number; acords: number;
   font: { obra: string; canal: string; text: string };
   linies: BabaAliLinia[];
 }
