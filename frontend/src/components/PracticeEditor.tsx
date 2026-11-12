@@ -366,7 +366,7 @@ export default function PracticeEditor() {
   };
 
   return (
-    <div style={{ padding: '18px 16px 60px', maxWidth: 1180, margin: '0 auto' }}>
+    <div style={{ padding: '18px 16px 60px', maxWidth: 1180, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
         <button onClick={() => navigate('/tests')} style={back}>← Pràctiques</button>
         <button
@@ -490,7 +490,7 @@ export default function PracticeEditor() {
       </div>}
 
       {view === 'document' ? (
-        <article className="practice-document" style={{ maxWidth: 720, margin: '0 auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '28px 30px 36px' }}>
+        <article className="practice-document" style={{ maxWidth: 720, margin: '0 auto', width: '100%', boxSizing: 'border-box', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '28px 30px 36px' }}>
           <div className="no-print" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginBottom: 14 }}>
             <button onClick={() => window.print()} style={secondary}><FaPrint size={12} /> Imprimeix o desa en PDF</button>
             <button onClick={download} style={secondary}><FaDownload size={12} /> Baixa’l en text</button>

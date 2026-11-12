@@ -57,7 +57,7 @@ function CourseView() {
   const done = units.filter((u) => progress[u.slug]).length;
   const nextUnit = units.find((u) => !progress[u.slug] && counts[u.slug]);
   return (
-    <div style={{ padding: '20px 16px', maxWidth: '900px', margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px', maxWidth: '900px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', margin: '0 0 4px' }}>Gramàtica</h1>
       <div style={{ color: 'var(--text-soft)', fontSize: '14px', marginBottom: '14px' }}>
         El curs: cada unitat explica un punt de gramàtica pas a pas, amb les frases, les imatges i les veus de la biblioteca.
@@ -212,7 +212,7 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
   };
 
   return (
-    <div style={{ padding: '16px 16px 96px', maxWidth: '640px', margin: '0 auto' }}>
+    <div style={{ padding: '16px 16px 96px', maxWidth: '640px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate('/grammar')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: '4px 0', marginBottom: '6px' }}><FaChevronLeft /> Totes les unitats</button>
       {error && <div style={{ color: 'var(--rose)' }}>{error}</div>}
       {!page && !error && <LoadingUnit />}
@@ -262,7 +262,7 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
         {(card.type === 'explain' || card.type === 'tip' || card.type === 'dialect' || card.type === 'intro') && page.lesson.steps.length > 0 && <ProposeChange slug={slug} step={i - 1} current={card.type === 'intro' ? page.lesson.intro : card.text} signedIn={signedIn} onSent={loadProposals} />}
           </div>
           <div style={{ position: 'fixed', left: 0, right: 0, bottom: 'var(--menu-mobil-h, 0px)', padding: '10px 16px calc(10px + env(safe-area-inset-bottom))', background: 'var(--bg)', borderTop: '1px solid var(--border)', zIndex: 5 }}>
-            <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', gap: '10px' }}>
+            <div style={{ maxWidth: '640px', margin: '0 auto', width: '100%', boxSizing: 'border-box', display: 'flex', gap: '10px' }}>
               <button onClick={prev} disabled={i === 0} style={{ flex: 1, padding: '12px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: i === 0 ? 'var(--text-muted)' : 'var(--text)', fontWeight: 700, cursor: i === 0 ? 'default' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><FaChevronLeft /> Enrere</button>
               <button onClick={next} disabled={!canGoNext} style={{ flex: 2, padding: '12px', borderRadius: 'var(--r-pill)', border: 'none', background: canGoNext ? 'var(--brand-gradient)' : 'var(--surface-2)', color: canGoNext ? '#fff' : 'var(--text-muted)', fontWeight: 700, cursor: canGoNext ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                 {card.type === 'quiz' && answers[i] === undefined ? 'Tria una resposta' : card.type === 'end' ? 'Final' : i === 0 ? 'Comencem' : 'Següent'} <FaChevronRight />
@@ -697,7 +697,7 @@ function WishlistView() {
   }, [tick]);
   const play = (url?: string | null) => { if (url) new Audio(audioSrc(url)).play().catch(() => {}); };
   return (
-    <div style={{ padding: '20px 16px', maxWidth: '900px', margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px', maxWidth: '900px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate('/grammar')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: '4px 0', marginBottom: '6px' }}><FaChevronLeft /> El curs</button>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', margin: '0 0 4px' }}>Frases per gravar</h1>
       <p style={{ color: 'var(--text-soft)', fontSize: '14px', margin: '0 0 16px', lineHeight: 1.5 }}>

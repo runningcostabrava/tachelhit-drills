@@ -31,6 +31,7 @@ import topics as topics_catalog
 import grammar as grammar_course
 import practice_steps
 import method as method_mod
+import baba_ali  # la serie Baba Ali: quin video es cada episodi
 import practice as practice_mod
 import stories as stories_mod
 import analisi
@@ -7418,6 +7419,34 @@ def put_method_content(slug: str, body: dict = Body(...),
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return {"slug": slug, "ok": True, "sections": len(saved.get("sections") or [])}
+
+
+@app.get("/baba-ali/")
+def baba_ali_index(db: Session = Depends(get_db)):
+    """Els episodis del Baba Ali que tenim, i de quins en sabem el vídeo del canal.
+
+    Els que no han casat hi surten igualment, amb `video` buit: val més dir «d'aquest no
+    sabem quin vídeo és» que amagar-lo o ensenyar-ne un que no sigui.
+    """
+    eps = baba_ali.episodis(db)
+    return {"episodis": eps,
+            "amb_video": sum(1 for e in eps if e["video"]),
+            "linies": sum(e["linies"] for e in eps),
+            "mesura": baba_ali.com_s_ha_mesurat(),
+            "font": baba_ali.FONT}
+
+
+@app.get("/baba-ali/{episodi}")
+def baba_ali_episodi(episodi: str, db: Session = Depends(get_db)):
+    """Un episodi per mirar: el vídeo, el desplaçament mesurat i les línies en ordre.
+
+    El segon del vídeo és `t + desplacament`: les nostres marques les va escriure qui va fer
+    els talls i cada pujada comença amb dos minuts de resum. Vegeu `baba_ali.py`.
+    """
+    fora = baba_ali.linies(db, episodi, normalitza=normalize_media_url)
+    if not fora:
+        raise HTTPException(status_code=404, detail="D'aquest episodi no en tenim cap línia")
+    return fora
 
 
 @app.get("/practice/imitation-audit")

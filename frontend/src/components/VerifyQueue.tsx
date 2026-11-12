@@ -117,7 +117,7 @@ export default function VerifyQueue() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: 'calc(40px + env(safe-area-inset-bottom, 0px))' }}>
       <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '14px 16px' }}>
-        <div style={{ maxWidth: '640px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '640px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '12px' }}>
             <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '22px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Per verificar</h1>
             {data && <span style={{ color: 'var(--text-soft)', fontSize: '14px', fontWeight: 700 }}>{items.length ? `${idx + 1} / ${items.length}` : '0'}</span>}
@@ -138,7 +138,7 @@ export default function VerifyQueue() {
         </div>
       </div>
 
-      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '14px 16px' }}>
+      <div style={{ maxWidth: '640px', margin: '0 auto', width: '100%', boxSizing: 'border-box', padding: '14px 16px' }}>
         {registered === false && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', marginBottom: '12px', background: 'var(--surface-2)', border: '1px solid var(--saffron)', borderRadius: '12px', fontSize: '14px', color: 'var(--text)' }}>
             <FaUser /> Per verificar cal un perfil registrat: la verificació queda signada.
