@@ -219,7 +219,7 @@ const SrtImport: React.FC = () => {
     <div className="srt-import" style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: '48px' }}>
       {/* Section header */}
       <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '18px 24px' }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Importa des de SRT</h1>
           <p style={{ margin: '4px 0 0 0', color: 'var(--text-soft)', fontSize: '14px' }}>
             Converteix un fitxer de subtítols SRT en drills amb marques de temps.
@@ -227,7 +227,7 @@ const SrtImport: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px' }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto', width: '100%', boxSizing: 'border-box', padding: '24px' }}>
       <div className="import-form" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div className="input-section" style={sectionCardStyle}>
           <h3 style={sectionHeadingStyle}><span style={stepBadgeStyle}>1</span> Fitxer SRT</h3>
@@ -236,12 +236,14 @@ const SrtImport: React.FC = () => {
             <label htmlFor="srt-file" style={{ display: 'block', marginBottom: '10px', fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaUpload /> Puja un fitxer SRT</span>
             </label>
+            {/* El botó de fitxer porta amplada pròpia (hi cap el nom del fitxer dins):
+                sense topall, al telèfon se surt de la pantalla. */}
             <input
               id="srt-file"
               type="file"
               accept=".srt,.txt"
               onChange={handleFileUpload}
-              style={{ fontSize: '13px' }}
+              style={{ fontSize: '13px', maxWidth: '100%' }}
             />
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px', marginBottom: 0 }}>
               O enganxa el contingut SRT a sota

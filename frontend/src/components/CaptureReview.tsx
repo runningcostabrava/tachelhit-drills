@@ -151,7 +151,7 @@ export default function CaptureReview() {
 
   if (!url) return <p style={{ padding: 40, textAlign: 'center' }}>Falta dir quin vídeo.</p>;
   if (loadError) return (
-    <div style={{ padding: '40px 16px', maxWidth: 520, margin: '0 auto', textAlign: 'center' }}>
+    <div style={{ padding: '40px 16px', maxWidth: 520, margin: '0 auto', width: '100%', boxSizing: 'border-box', textAlign: 'center' }}>
       <p style={{ color: 'var(--text-soft)' }}>{loadError}</p>
       <button onClick={() => navigate('/library')} style={pill}>Torna als vídeos</button>
     </div>
@@ -161,7 +161,7 @@ export default function CaptureReview() {
   const span = (data.covered_to || 0) - (data.covered_from || 0) || 1;
 
   return (
-    <div style={{ padding: '18px 16px 40px', maxWidth: 1000, margin: '0 auto' }}>
+    <div style={{ padding: '18px 16px 40px', maxWidth: 1000, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate('/library')} style={{ ...pill, marginBottom: 10 }}>← Vídeos</button>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 23, margin: '0 0 2px' }}>{data.title || url}</h1>
       <p style={{ color: 'var(--text-soft)', fontSize: 13.5, margin: '0 0 14px' }}>

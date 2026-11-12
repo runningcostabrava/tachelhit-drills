@@ -87,7 +87,7 @@ export default function AlfabetPage() {
   }
 
   return (
-    <div style={{ padding: '20px 16px 60px', maxWidth: 820, margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px 60px', maxWidth: 820, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, margin: '0 0 6px', lineHeight: 1.2 }}>
         Els sons i l’escriptura
       </h1>
