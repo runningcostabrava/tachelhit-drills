@@ -285,14 +285,14 @@ function SessioDEscoltar() {
     </div>
   );
 
-  if (loadError) return <div style={{ padding: '40px 16px', maxWidth: 520, margin: '0 auto', textAlign: 'center' }}><p style={{ color: 'var(--text-soft)' }}>{loadError}</p><button onClick={exit} style={btn('ghost')}>Torna a Pràctica</button></div>;
+  if (loadError) return <div style={{ padding: '40px 16px', maxWidth: 520, margin: '0 auto', width: '100%', boxSizing: 'border-box', textAlign: 'center' }}><p style={{ color: 'var(--text-soft)' }}>{loadError}</p><button onClick={exit} style={btn('ghost')}>Torna a Pràctica</button></div>;
   if (!drill) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Preparant la sessió…</div>;
 
   if (finished) {
     const knew = drills.filter((d) => answers[d.id] === 'yes');
     const again = drills.filter((d) => answers[d.id] === 'no');
     return (
-      <div style={{ padding: '20px 16px 32px', maxWidth: 520, margin: '0 auto' }}>
+      <div style={{ padding: '20px 16px 32px', maxWidth: 520, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
         {bar}
         <div style={{ textAlign: 'center', margin: '12px 0 20px' }}>
           <div style={{ width: 110, height: 110, borderRadius: '50%', border: `10px solid ${knew.length >= drills.length * 0.7 ? 'var(--emerald)' : 'var(--saffron)'}`, boxSizing: 'border-box', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 30, fontWeight: 800, lineHeight: 1 }}>{knew.length}</span><span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-soft)' }}>de {drills.length}</span></div>
@@ -315,7 +315,7 @@ function SessioDEscoltar() {
 
   const tip = card?.tips[0];
   return (
-    <div style={{ padding: '20px 16px 32px', maxWidth: 520, margin: '0 auto', minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ padding: '20px 16px 32px', maxWidth: 520, margin: '0 auto', width: '100%', boxSizing: 'border-box', minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
       {bar}
       {modeBar}
       <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--brand-1)' }}>{mode === 'auto' ? 'Reproducció automàtica' : 'Escolta i digues-ho'}</div>

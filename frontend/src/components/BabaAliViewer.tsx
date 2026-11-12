@@ -156,7 +156,7 @@ export default function BabaAliViewer() {
   const proves = dades?.comprovat;
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '16px' }}>
+    <div style={{ maxWidth: 1100, margin: '0 auto', width: '100%', boxSizing: 'border-box', padding: '16px' }}>
       <h1 style={{ margin: '0 0 4px', fontSize: 22, display: 'flex', alignItems: 'center', gap: 8 }}>
         <FaYoutube color="#c4302b" /> Baba Ali
       </h1>
