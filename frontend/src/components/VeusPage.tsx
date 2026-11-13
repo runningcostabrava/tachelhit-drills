@@ -71,7 +71,7 @@ export default function VeusPage() {
   const tab = TABS.find((t) => t.kind === kind)!;
 
   return (
-    <div style={{ padding: '20px 16px 32px', maxWidth: '900px', margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px 32px', maxWidth: '900px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', margin: '0 0 4px' }}>Si us plau, necessitem la teva veu</h1>
       <p style={{ color: 'var(--text-soft)', fontSize: '14.5px', margin: '0 0 10px', lineHeight: 1.6 }}>
         Aquesta biblioteca només té el que la gent hi ha posat. Una frase escrita i muda ensenya a

@@ -31,7 +31,7 @@ export default function UserPage() {
     </div>
   );
   return (
-    <div style={{ padding: '20px 16px 32px', maxWidth: 900, margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px 32px', maxWidth: 900, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate(-1)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: '4px 0', marginBottom: 6 }}><FaChevronLeft /> Enrere</button>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, margin: '0 0 2px' }}>{page.display_name}</h1>
       <div style={{ fontSize: 13, color: 'var(--text-soft)', marginBottom: 14, display: 'flex', gap: 12, flexWrap: 'wrap' }}>

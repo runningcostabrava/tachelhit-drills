@@ -118,7 +118,7 @@ export default function CorpusPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: '48px' }}>
       <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '18px 24px' }}>
-        <div style={{ maxWidth: '860px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '860px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Corpus</h1>
           {stats && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '6px', flexWrap: 'wrap' }}>
@@ -222,7 +222,7 @@ export default function CorpusPage() {
         </div>
       )}
 
-      <div style={{ maxWidth: '860px', margin: '0 auto', padding: '20px 24px' }}>
+      <div style={{ maxWidth: '860px', margin: '0 auto', width: '100%', boxSizing: 'border-box', padding: '20px 24px' }}>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '18px' }}>
           <input
             value={q}

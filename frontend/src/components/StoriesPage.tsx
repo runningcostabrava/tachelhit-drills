@@ -42,7 +42,7 @@ function StoryList() {
   }, []);
 
   return (
-    <div style={{ padding: '20px 16px 40px', maxWidth: 900, margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px 40px', maxWidth: 900, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate('/grammar')} style={back}><FaChevronLeft /> Gramàtica</button>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, margin: '6px 0 4px' }}>Històries i cançons</h1>
       <p style={{ color: 'var(--text-soft)', fontSize: 14, margin: '0 0 18px', lineHeight: 1.55 }}>
@@ -577,7 +577,7 @@ function OneStory({ slug }: { slug: string }) {
   const potTriarSentit = escrites.filter((d) => (d.text_catalan || '').trim()).length >= 4;
 
   return (
-    <div style={{ padding: sonant ? '20px 16px 120px' : '20px 16px 60px', maxWidth: 760, margin: '0 auto' }}>
+    <div style={{ padding: sonant ? '20px 16px 120px' : '20px 16px 60px', maxWidth: 760, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate('/stories')} style={back}><FaChevronLeft /> Històries</button>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 25, margin: '6px 0 4px', lineHeight: 1.25 }}>{page.title}</h1>
       <p style={{ color: 'var(--text-soft)', fontSize: 13.5, margin: '0 0 14px' }}>
@@ -922,7 +922,7 @@ const pantallaGran: React.CSSProperties = {
   position: 'fixed', inset: 0, zIndex: 1100, overflowY: 'auto',
   background: 'var(--bg, var(--surface))',
   padding: `calc(var(--nav-h, 56px) + env(safe-area-inset-top, 0px) + 14px) max(16px, env(safe-area-inset-left, 0px)) calc(96px + env(safe-area-inset-bottom, 0px))`,
-  maxWidth: 760, margin: '0 auto',
+  maxWidth: 760, margin: '0 auto', width: '100%', boxSizing: 'border-box',
 };
 /** Res per sota de la mida d'un dit: 64 px el normal, 86 el de pausa. */
 const rodoGran: React.CSSProperties = {

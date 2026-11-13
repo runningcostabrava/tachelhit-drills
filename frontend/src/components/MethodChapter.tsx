@@ -120,7 +120,7 @@ export default function MethodChapter() {
   if (!c) return <p style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Carregant el capítol…</p>;
 
   return (
-    <div style={{ padding: '18px 16px 40px', maxWidth: 760, margin: '0 auto' }}>
+    <div style={{ padding: '18px 16px 40px', maxWidth: 760, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate('/metode')} style={{ ...pill, marginBottom: 12 }}>← El Mètode</button>
 
       {/* El dibuix del capítol: de què va, abans de llegir-ne una paraula. */}

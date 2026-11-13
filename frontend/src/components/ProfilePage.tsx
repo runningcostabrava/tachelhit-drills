@@ -349,12 +349,12 @@ export default function ProfilePage() {
         borderBottom: '1px solid var(--border)',
         padding: '18px 24px',
       }}>
-        <div style={{ maxWidth: '560px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '560px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Perfil</h1>
         </div>
       </div>
 
-      <div style={{ maxWidth: '560px', margin: '0 auto', padding: '24px' }}>
+      <div style={{ maxWidth: '560px', margin: '0 auto', width: '100%', boxSizing: 'border-box', padding: '24px' }}>
         {error && (
           <div role="alert" style={{ padding: '12px 16px', background: 'var(--rose-soft)', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', marginBottom: '16px', color: 'var(--rose)', fontWeight: 600 }}>
             {error}
