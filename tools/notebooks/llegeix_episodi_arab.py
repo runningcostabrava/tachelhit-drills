@@ -29,6 +29,15 @@ Per a l'episodi 1, el fitxer del disc (`baba-ali-01-02.mp4`, 3.118 s) ÉS la puj
 `ihwiZk1WmJM` de YouTube. Els segons que surten d'aquí ja són segons del vídeo del canal: no
 s'ha de casar res, a diferència dels dotze episodis que es van haver de correlacionar pel so.
 
+## Aquest és el primer; n'hi ha un de més nou
+
+`llegeix_episodi_votat.py` fa el mateix i a més sap llegir diversos retalls del mateix
+fotograma. Es va fer per votar entre tres retalls, i **el 13-11-2026 es va mesurar que votar
+entre retalls de la mateixa imatge és pitjor que fer servir-ne un de sol** (0,167 contra
+0,100 d'error per lletra; el 0,039 que s'havia apuntat era el sostre). Per a un episodi nou
+val la pena fer servir el més nou amb `"menes": ["alt"]`, que és exactament una franja per
+segon, la d'aquí.
+
 ## Com es fa servir
 
 A Kaggle, amb GPU (T4). Conjunt d'entrada: `josepabloucr/baba-ali-episodi-1-franges`, amb la
