@@ -185,9 +185,17 @@ lectures = []
 for i, clau in enumerate(claus):
     diu = {}
     for mena in MENES:
-        nom = f"{clau}_{mena}.png" if len(MENES) > 1 else f"{clau}.png"
-        cami = os.path.join(DADES, "arab", nom)
-        if not os.path.exists(cami):
+        #: El nom NO depèn de quants retalls hi ha. Fent-lo dependre, un conjunt d'un sol
+        #: retall anomenat `00001_alt.png` no es trobava: el bucle saltava els 1.582
+        #: fotogrames sense cridar el model i la sortida era una llista buida en cinc
+        #: minuts, amb l'estat «COMPLETE». Una passada que no llegeix res ha de fallar,
+        #: no acabar bé.
+        cami = None
+        for nom in (f"{clau}_{mena}.png", f"{clau}.png"):
+            if os.path.exists(os.path.join(DADES, "arab", nom)):
+                cami = os.path.join(DADES, "arab", nom)
+                break
+        if cami is None:
             continue
         try:
             diu[mena] = nomes_arab(llegeix(Image.open(cami).convert("RGB")))
@@ -219,7 +227,14 @@ for i, clau in enumerate(claus):
 
 json.dump(lectures, open("/kaggle/working/lectures.json", "w", encoding="utf-8"),
           ensure_ascii=False, indent=1)
-print("llegits", len(lectures), "segons")
+amb_text = sum(1 for L in lectures if L["diu"])
+print(f"llegits {len(lectures)} segons · {amb_text} amb text")
+#: Un episodi del Baba Ali té text a la pantalla la meitat del temps. Zero vol dir que
+#: alguna cosa no ha arribat al model —el nom dels fitxers, el retall, el conjunt—, i val
+#: més aturar-se aquí que desar una llista buida i dir que ha anat bé.
+if not amb_text:
+    raise SystemExit("cap dels {} fotogrames no ha donat text: mira el nom dels fitxers "
+                     "i la franja abans de tornar-ho a engegar".format(len(lectures)))
 
 # %%
 # --- 3. ajuntar els segons que diuen el mateix. Això és el que fa de rellotge.
