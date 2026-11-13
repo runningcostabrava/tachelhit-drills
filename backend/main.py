@@ -50,7 +50,7 @@ import ai_budget
 import dialect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, false as sa_false, func as sa_func
 from sqlalchemy.orm import sessionmaker, Session
@@ -2295,11 +2295,141 @@ def _page_bounds(limit: Optional[int], offset: Optional[int]):
     lim = DEFAULT_PAGE_LIMIT if limit is None else limit
     return max(0, offset or 0), max(1, min(lim, MAX_PAGE_LIMIT))
 
+#: Quantes files es demanen per volta quan es serveix el cataleg sencer (#566). Amb 200 files
+#: cada volta son uns 240 kB de JSON i el que la sessio arrossega es buida en acabar-la.
+LOT_DRILLS = 200
+
+
+def _filtra_drills(db: Session, tag: Optional[str], author: Optional[str],
+                   search: Optional[str], des_de):
+    """La consulta de `/drills/`, en un lloc.
+
+    Hi es perque el cataleg sencer es serveix a raigs (`_drills_a_raigs`) i aquella volta no pot
+    fer servir la sessio de la peticio: des del FastAPI 0.106, una dependencia amb `yield` es
+    tanca ABANS que el cos d'un `StreamingResponse` s'escrigui, o sigui que el generador necessita
+    la seva propia sessio i, per tant, tornar a muntar la consulta. Que la munti el mateix codi
+    es tota la gracia: si un dia s'hi afegeix un filtre, no se'n pot oblidar la meitat.
+
+    `des_de` ja ve convertit a datetime: el 400 d'un `since` escrit malament s'ha de donar abans
+    de comencar a escriure la resposta, no a mig raig.
+    """
+    query = db.query(DrillModel)
+
+    if tag:
+        # Simple substring match for tags (since they can be comma-separated)
+        query = query.filter(DrillModel.tag.ilike(f"%{tag}%"))
+
+    if author:
+        query = query.filter(DrillModel.author.ilike(f"%{author}%"))
+
+    if search and search.strip():
+        # Finding a sentence to put in a practice must not mean downloading the library:
+        # the search happens here, over both texts and the tag (issue #199).
+        from sqlalchemy import or_ as _or_search
+        needle = f"%{search.strip()}%"
+        query = query.filter(_or_search(DrillModel.text_catalan.ilike(needle),
+                                        DrillModel.text_tachelhit.ilike(needle),
+                                        DrillModel.tag.ilike(needle)))
+
+    if des_de is not None:
+        query = query.filter(
+            sa_func.coalesce(DrillModel.updated_at, DrillModel.date_created) >= des_de
+        )
+
+    return query
+
+
+def _un_drill(drill) -> Drill:
+    """Una fila com la dona l'API, i si no es pot validar, el rescat de sempre.
+
+    El rescat es d'abans: hi va haver files amb URL de mitjans que el validador no acceptava, i
+    perdre tota la pantalla per una fila es pitjor que ensenyar-la amb menys camps.
+    """
+    try:
+        return Drill.model_validate(drill)
+    except Exception as e:
+        print(f"[API] WARNING: Drill {drill.id} failed validation: {e}")
+        return Drill(**{
+            'id': drill.id,
+            'date_created': drill.date_created,
+            'tag': drill.tag,
+            'text_catalan': drill.text_catalan,
+            'text_tachelhit': drill.text_tachelhit,
+            'text_arabic': drill.text_arabic,
+            'audio_url': normalize_media_url(drill.audio_url) if drill.audio_url else None,
+            'audio_tts_url': normalize_media_url(drill.audio_tts_url) if drill.audio_tts_url else None,
+            'video_url': normalize_media_url(drill.video_url) if drill.video_url else None,
+            'image_url': normalize_media_url(drill.image_url) if drill.image_url else None,
+        })
+
+
+def _drills_a_raigs(tag: Optional[str], author: Optional[str], search: Optional[str],
+                    des_de) -> StreamingResponse:
+    """Tot el cataleg, sense tenir-lo mai sencer a la memoria (#566).
+
+    El 2-11-2026 produccio tornava 502 a TOT -`/health`, `/version`, una sola frase-: no anava
+    lenta, s'estava reiniciant. Quan va tornar, `/drills/` va servir **14,1 MB** de 12.195 frases
+    en una sola resposta, en una instancia de 512 MB. Catorze megues no son el problema; el
+    problema es que per fer-les calia tenir-ho tot dues vegades: els 12.195 objectes de
+    SQLAlchemy i el JSON sencer, fet a sobre. I cada cop que algu obria la pantalla de Frases,
+    hi tornava.
+
+    Aixo serveix la mateixa resposta, byte a byte, pero de 200 files en 200: cada volta es
+    serialitza i s'escriu, i despres es buida el que la sessio arrossega. La memoria es queda
+    plana en comptes de cre'ixer amb la biblioteca, que es l'altra meitat del problema: cada
+    lectura de maquina i cada traduccio que s'hi desa fan la resposta mes gran tota sola.
+
+    Qui demana `limit`/`offset` -el davant ho fa des del #489, de 500 en 500- no passa per aqui.
+    Aixo es per als clients d'abans, l'APK installat i qualsevol altre que demani el cataleg
+    sencer: val mes servir-los a poc a poc que no tombar el servidor per a tothom. I es serveix
+    SENCER a posta: retallar-ho a les primeres 500 i no dir res seria ensenyar mitja biblioteca
+    fent com si fos tota.
+    """
+    db = SessionLocal()
+    try:
+        total = _filtra_drills(db, tag, author, search, des_de).order_by(None).count()
+    except Exception:
+        db.close()
+        raise
+
+    def raigs():
+        # La sessio es tanca aqui, no al `finally` de fora: el cos s'escriu DESPRES que
+        # l'endpoint hagi tornat.
+        try:
+            yield "["
+            fetes = 0
+            primer = True
+            while True:
+                lot = (_filtra_drills(db, tag, author, search, des_de)
+                       .order_by(DrillModel.date_created.desc())
+                       .offset(fetes).limit(LOT_DRILLS).all())
+                if not lot:
+                    break
+                for d in lot:
+                    yield ("" if primer else ",") + _un_drill(d).model_dump_json(exclude_none=True)
+                    primer = False
+                fetes += len(lot)
+                # Sense aixo la sessio es queda totes les files que ha vist i la memoria torna a
+                # cre'ixer fila a fila, que es justament el que veniem a evitar.
+                db.expunge_all()
+                if len(lot) < LOT_DRILLS:
+                    break
+            yield "]"
+            print(f"[API] GET /drills/ (tag={tag}, author={author}, sencer) ha servit {fetes} frases "
+                  f"de {LOT_DRILLS} en {LOT_DRILLS}")
+        finally:
+            db.close()
+
+    return StreamingResponse(raigs(), media_type="application/json",
+                             headers={"X-Total-Count": str(total)})
+
+
 def _paginate(query, response: Response, limit: Optional[int], offset: Optional[int]):
     """Apply limit/offset to a query and set X-Total-Count (count BEFORE paging).
 
     Backwards compatibility: when neither limit nor offset is given, every row
-    is returned (the current web frontend loads all ~600 drills in one call).
+    is returned. `/drills/` ja no hi passa per aquest cami -- el cataleg sencer el
+    serveix `_drills_a_raigs` (#566) --, pero els altres llistats si, i son petits.
     When either is given, limit defaults to 100 and is capped at 500."""
     response.headers["X-Total-Count"] = str(query.order_by(None).count())
     bounds = _page_bounds(limit, offset)
@@ -2495,32 +2625,22 @@ def get_drills(response: Response, tag: Optional[str] = None, author: Optional[s
       instant; pair with GET /drills/tombstones?since= for deletions (P4.3).
     - `limit`/`offset` paginate (P4.2): limit defaults to 100 and is capped at
       500 **only when at least one of them is sent**. With neither, ALL rows
-      are returned, as the current frontend expects. `X-Total-Count` always
-      carries the unpaginated count.
+      are returned, as clients from before #489 expect -- but a raigs, de 200 en
+      200, sense tenir mai tot el cataleg a la memoria (#566). `X-Total-Count`
+      always carries the unpaginated count.
     """
     try:
-        query = db.query(DrillModel)
+        # El `since` es converteix aqui, abans de res: un 400 s'ha de poder donar amb la
+        # resposta encara sense comencar.
+        des_de = _parse_since(since) if since else None
 
-        if tag:
-            # Simple substring match for tags (since they can be comma-separated)
-            query = query.filter(DrillModel.tag.ilike(f"%{tag}%"))
+        # El cataleg sencer no es construeix de cop: es serveix a raigs, que es el que impedia
+        # que Render s'aixequés (#566). Els altres camins -per numeros, o paginat- son petits i
+        # es queden com eren.
+        if ids is None and _page_bounds(limit, offset) is None:
+            return _drills_a_raigs(tag, author, search, des_de)
 
-        if author:
-            query = query.filter(DrillModel.author.ilike(f"%{author}%"))
-
-        if search and search.strip():
-            # Finding a sentence to put in a practice must not mean downloading the library:
-            # the search happens here, over both texts and the tag (issue #199).
-            from sqlalchemy import or_ as _or_search
-            needle = f"%{search.strip()}%"
-            query = query.filter(_or_search(DrillModel.text_catalan.ilike(needle),
-                                            DrillModel.text_tachelhit.ilike(needle),
-                                            DrillModel.tag.ilike(needle)))
-
-        if since:
-            query = query.filter(
-                sa_func.coalesce(DrillModel.updated_at, DrillModel.date_created) >= _parse_since(since)
-            )
+        query = _filtra_drills(db, tag, author, search, des_de)
 
         if ids is not None:
             wanted = _parse_ids(ids)
@@ -2536,33 +2656,7 @@ def get_drills(response: Response, tag: Optional[str] = None, author: Optional[s
             drills = _paginate(query.order_by(DrillModel.date_created.desc()), response, limit, offset)
         print(f"[API] GET /drills/ (tag={tag}, author={author}, ids={ids}, since={since}, "
               f"limit={limit}, offset={offset}) returning {len(drills)} drills")
-        # Intentar serializar cada drill para detectar errores de validación Pydantic
-        serialized_drills = []
-        for drill in drills:
-            try:
-                # Usar el modelo Pydantic Drill para validar
-                drill_schema = Drill.from_orm(drill)
-                serialized_drills.append(drill_schema)
-            except Exception as e:
-                print(f"[API] WARNING: Drill {drill.id} failed validation: {e}")
-                # Si falla, intentar normalizar las URLs manualmente antes de serializar
-                # Crear un diccionario con los campos, aplicando normalize_media_url a las URLs
-                drill_dict = {
-                    'id': drill.id,
-                    'date_created': drill.date_created,
-                    'tag': drill.tag,
-                    'text_catalan': drill.text_catalan,
-                    'text_tachelhit': drill.text_tachelhit,
-                    'text_arabic': drill.text_arabic,
-                    'audio_url': normalize_media_url(drill.audio_url) if drill.audio_url else None,
-                    'audio_tts_url': normalize_media_url(drill.audio_tts_url) if drill.audio_tts_url else None,
-                    'video_url': normalize_media_url(drill.video_url) if drill.video_url else None,
-                    'image_url': normalize_media_url(drill.image_url) if drill.image_url else None,
-                }
-                # Crear el objeto Pydantic con el diccionario corregido
-                drill_schema = Drill(**drill_dict)
-                serialized_drills.append(drill_schema)
-        return serialized_drills
+        return [_un_drill(drill) for drill in drills]
     except HTTPException:
         raise
     except Exception as e:
