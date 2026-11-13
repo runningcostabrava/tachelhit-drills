@@ -88,6 +88,35 @@ def totes_les_claus(magatzem):
     return claus
 
 
+def adreces_de_lapi(servidor: str):
+    """Les adreces de mitjans de totes les frases, demanades al servidor.
+
+    Per a la passada en sec no cal entrar a la base: les adreces són al que l'API ja serveix a
+    tothom, i així l'informe de **producció** es pot llegir sense cap credencial. De 500 en 500,
+    que és com es demana la biblioteca des del #489 i per la raó del #566.
+
+    Torna la mateixa forma que la base: una llista de (id, {camp: adreça}).
+    """
+    import requests
+    fora, offset = [], 0
+    while True:
+        r = requests.get(servidor.rstrip("/") + "/drills/",
+                         params={"limit": 500, "offset": offset}, timeout=180)
+        r.raise_for_status()
+        pagina = r.json()
+        if not pagina:
+            break
+        for d in pagina:
+            fora.append((d.get("id"), {c: (d.get(c) or "") for c in CAMPS}))
+        total = r.headers.get("X-Total-Count")
+        offset += 500
+        print(f"  {len(fora):,}" + (f" de {total}" if total else "") + " frases")
+        if len(pagina) < 500 or (total and offset >= int(total)):
+            break
+    print()
+    return fora
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -100,6 +129,10 @@ def main():
     p.add_argument("--sense-comprovar-el-servidor", action="store_true",
                    help="salta la porta 1. Només per a una base de proves.")
     p.add_argument("--env", help="d'on surten les claus, si no s'executa des de backend/")
+    p.add_argument("--des-de-l-api", action="store_true",
+                   help="llegeix les adreces del servidor en comptes de la base. Només per a la "
+                        "passada en sec: no cal cap credencial de la base, i serveix per veure "
+                        "l'informe de producció des de qualsevol lloc.")
     a = p.parse_args()
 
     sys.path.insert(0, os.path.abspath("."))
@@ -117,15 +150,23 @@ def main():
     claus = totes_les_claus(magatzem)
     print(f"  {len(claus):,} fitxers a {magatzem._bust()}")
 
-    db = SessionLocal()
+    if a.des_de_l_api:
+        if a.escriu:
+            sys.exit("--des-de-l-api és només per a la passada en sec: per escriure cal la base.")
+        print(f"demanant les adreces a {a.servidor}…")
+        files = adreces_de_lapi(a.servidor)
+        db = None
+    else:
+        db = SessionLocal()
+        files = [(d.id, {c: (getattr(d, c, None) or "") for c in CAMPS})
+                 for d in db.query(DrillModel).all()]
     try:
-        files = db.query(DrillModel).all()
-        print(f"  {len(files):,} frases a la base")
+        print(f"  {len(files):,} frases")
 
         canvis, sense_fitxer, altres = [], [], 0
-        for d in files:
+        for ident, camps in files:
             for camp in CAMPS:
-                vell = (getattr(d, camp, None) or "").strip()
+                vell = (camps.get(camp) or "").strip()
                 if not vell:
                     continue
                 ruta = magatzem.clau_de_cloudinary(vell)
@@ -133,9 +174,9 @@ def main():
                     altres += 1              # Wikimedia, YouTube, o ja és /mitjans/
                     continue
                 if ruta not in claus:
-                    sense_fitxer.append((d.id, camp, vell, ruta))
+                    sense_fitxer.append((ident, camp, vell, ruta))
                     continue
-                canvis.append((d.id, camp, vell, "/mitjans/" + ruta))
+                canvis.append((ident, camp, vell, "/mitjans/" + ruta))
 
         print(f"\nadreces de Cloudinary que es poden reescriure: {len(canvis):,}")
         print(f"adreces de Cloudinary SENSE fitxer a R2:        {len(sense_fitxer):,}  (no es toquen)")
@@ -190,7 +231,8 @@ def main():
         print(f"per desfer-ho:  python ../tools/reescriu_a_r2.py --desfes {a.full} --escriu")
         return 0
     finally:
-        db.close()
+        if db is not None:
+            db.close()
 
 
 def desfes(full, SessionLocal, DrillModel, escriu):
