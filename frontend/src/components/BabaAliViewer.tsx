@@ -17,6 +17,12 @@
  * El text està SENSE REVISAR: l'àrab el va llegir una màquina de la imatge i el català el va
  * traduir una altra. Per això es mostren els dos de costat — qui sap àrab veu de seguida si el
  * que falla és la lectura o la traducció — i la pàgina ho diu a dalt.
+ *
+ * I HI HA UNA TERCERA LÍNIA (#535): l'amazic que un model d'ASR sent al tall de veu. Va en
+ * cursiva, dita com el que és, perquè no és text de cap parlant: el model enganxa els mots i
+ * s'inventa lletres. Van marcades les poques on dues lectures coincideixen LLETRA PER LLETRA
+ * (50 de 2.727). Assemblar-se no es marca: els dos models són de la mateixa família i
+ * s'assemblen gairebé sempre, així que no voldria dir res (veg. `backend/baba_ali.py`).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FaPlay, FaExclamationTriangle, FaYoutube, FaVolumeUp } from 'react-icons/fa';
@@ -34,13 +40,29 @@ const numero = (ep: string) => {
   return m ? m[0] : ep;
 };
 
+/**
+ * Dues lectures de màquina coincideixen lletra per lletra.
+ *
+ * Passa a 50 línies de les 2.727 llegides dues vegades. No fa certa la lectura —els dos models
+ * són parents i s'assemblen gairebé sempre—, però coincidir del tot els costa, i per això val
+ * la pena mirar-se just aquestes.
+ */
+const ApuntAcord = () => (
+  <span title="dues lectures coincideixen lletra per lletra; no vol dir que encertin"
+        style={{ marginLeft: 6, padding: '0 5px', borderRadius: 6, fontSize: 10,
+                 fontStyle: 'normal', verticalAlign: 'middle', whiteSpace: 'nowrap',
+                 background: 'var(--ok-bg, #e6f4ea)', color: 'var(--ok, #1e7b34)' }}>
+    dues lectures iguals
+  </span>
+);
+
 export default function BabaAliViewer() {
   const [episodis, setEpisodis] = useState<BabaAliEpisodi[] | null>(null);
   const [triat, setTriat] = useState<string | null>(null);
   const [dades, setDades] = useState<BabaAliEpisodiData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [temps, setTemps] = useState(0);           // en el nostre temps, no el del vídeo
-  const [mostra, setMostra] = useState<'tots' | 'ca' | 'ar'>('tots');
+  const [mostra, setMostra] = useState<'tots' | 'ca' | 'ar' | 'am'>('tots');
   const [seguir, setSeguir] = useState(true);
 
   const playerRef = useRef<any>(null);
@@ -155,6 +177,11 @@ export default function BabaAliViewer() {
 
   const tria = episodis.find(e => e.episodi === triat);
   const proves = dades?.comprovat;
+  //: quines de les tres línies es veuen. «tot» les ensenya totes; «el que se sent» deixa sola
+  //: la lectura de la màquina, que és com es repassa de pressa si val res.
+  const veuCa = mostra === 'tots' || mostra === 'ca';
+  const veuAr = mostra === 'tots' || mostra === 'ar';
+  const veuAm = mostra === 'tots' || mostra === 'am';
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', width: '100%', boxSizing: 'border-box', padding: '16px' }}>
@@ -218,10 +245,22 @@ export default function BabaAliViewer() {
           padding: '12px 14px', marginBottom: 12, borderRadius: 12,
           background: 'var(--surface-2, #f7f7f8)', border: '1px solid var(--border, #ddd)',
         }}>
-          {mostra !== 'ar' && <div style={{ fontSize: 17, fontWeight: 600 }}>{linies[ara].ca}</div>}
-          {mostra !== 'ca' && (
+          {veuCa && <div style={{ fontSize: 17, fontWeight: 600 }}>{linies[ara].ca}</div>}
+          {veuAr && (
             <div dir="rtl" lang="ar" style={{ fontSize: 19, marginTop: 6, textAlign: 'right' }}>
               {linies[ara].ar}
+            </div>
+          )}
+          {veuAm && linies[ara].am && (
+            <div style={{ marginTop: 8, paddingTop: 8, fontSize: 14, fontStyle: 'italic',
+                          borderTop: '1px dashed var(--border, #ddd)',
+                          color: 'var(--text-2, #666)' }}>
+              <span style={{ fontStyle: 'normal', fontSize: 11, textTransform: 'uppercase',
+                             letterSpacing: '.04em', marginRight: 6 }}>
+                la màquina hi sent
+              </span>
+              {linies[ara].am}
+              {linies[ara].am_acord && <ApuntAcord />}
             </div>
           )}
         </div>
@@ -229,13 +268,14 @@ export default function BabaAliViewer() {
 
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap',
                     marginBottom: 8, fontSize: 13 }}>
-        {(['tots', 'ca', 'ar'] as const).map(m => (
+        {(['tots', 'ca', 'ar', 'am'] as const).map(m => (
           <button key={m} onClick={() => setMostra(m)}
                   style={{ padding: '4px 10px', borderRadius: 8, cursor: 'pointer', fontSize: 13,
                            border: '1px solid var(--border, #ddd)',
                            background: mostra === m ? 'var(--brand-1, #2b6cb0)' : 'transparent',
                            color: mostra === m ? '#fff' : 'inherit' }}>
-            {m === 'tots' ? 'els dos' : m === 'ca' ? 'català' : 'àrab'}
+            {m === 'tots' ? 'tot' : m === 'ca' ? 'català' : m === 'ar' ? 'àrab'
+              : 'el que se sent'}
           </button>
         ))}
         <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
@@ -271,10 +311,16 @@ export default function BabaAliViewer() {
               {rellotge(l.t)}
             </span>
             <span style={{ minWidth: 0 }}>
-              {mostra !== 'ar' && <span style={{ display: 'block' }}>{l.ca}</span>}
-              {mostra !== 'ca' && (
+              {veuCa && <span style={{ display: 'block' }}>{l.ca}</span>}
+              {veuAr && (
                 <span dir="rtl" lang="ar" style={{ display: 'block', textAlign: 'right',
                                                    color: 'var(--text-2, #555)' }}>{l.ar}</span>
+              )}
+              {veuAm && l.am && (
+                <span style={{ display: 'block', fontSize: 13, fontStyle: 'italic',
+                               color: 'var(--text-2, #777)' }}>
+                  {l.am}{l.am_acord && <ApuntAcord />}
+                </span>
               )}
             </span>
           </button>
@@ -306,6 +352,13 @@ export default function BabaAliViewer() {
             mercader i les fórmules que la màquina feia marianes); a la biblioteca el text queda
             tal com el va deixar la màquina.</>}
           {dades.duplicades_tretes > 0 && <> · {dades.duplicades_tretes} línies duplicades tretes.</>}
+          {dades.amb_veu_sentida > 0 && <> · La tercera línia, en cursiva, és l'amazic que un
+            model d'ASR sent al tall de veu: {dades.amb_veu_sentida} d'aquest episodi. No és text
+            de ningú —el model enganxa els mots i s'inventa lletres—, i per això va a part.{' '}
+            {dades.acords > 0
+              ? <>A {dades.acords} hi coincideixen dues lectures lletra per lletra, i van
+                  marcades: no vol dir que encertin, però coincidir del tot els costa.</>
+              : <>En aquest episodi no n'hi ha cap on dues lectures coincideixin del tot.</>}</>}
         </p>
       )}
     </div>

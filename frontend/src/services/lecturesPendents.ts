@@ -91,10 +91,12 @@ export async function posaLesLecturesQueFalten(limit = CADA_COP): Promise<Repesc
   let fetes = 0;
   let fallades = 0;
   for (const d of falten) {
-    const r = await demanaLectura(d.audio_url as string);
+    const r = await demanaLectura(d.audio_url as string, d.id);
     if (!r.ok) { fallades++; continue; }
     const cos: Record<string, unknown> = { text_tachelhit_suggested: r.text, quiet: true };
-    if (r.significat) cos.esborranys = esborranysAmb(d.esborranys, r.text, r.significat);
+    // La base és el camp que ha tornat la lectura: la còpia d'aquí és d'abans que el servidor
+    // hi escrivís qui ha llegit (#575), i desar-la l'esborraria.
+    if (r.significat) cos.esborranys = esborranysAmb(r.esborranys ?? d.esborranys, r.text, r.significat);
     try {
       await axios.put(`${API_BASE}/drills/${d.id}`, cos);
       fetes++;

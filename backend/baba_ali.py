@@ -29,6 +29,13 @@ hi diu la nostra línia, paraula per paraula. Per això `proves` diu de quina me
 
 EL TEMPS. `t` és el segon de la nostra marca. El segon del vídeo és `t + desplaçament`.
 
+EL QUE LA MÀQUINA HI SENT (#535). A cada línia hi ha, a més, l'amazic que un model d'ASR va
+sentir al tall de veu (`am`, de `text_tachelhit_suggested`). No és text de ningú: el model
+enganxa els mots i s'inventa lletres, i per això va a part i es diu d'on surt. Les línies on
+dues lectures coincideixen lletra per lletra van marcades (`am_acord`): 50 de les 2.727 que
+s'han llegit dues vegades. Que s'ASSEMBLIN no es marca, perquè no vol dir res —els dos models
+són de la mateixa família i a 2.331 parelles passen del 0,8 de semblança—; veg. `hi_ha_acord`.
+
 EL TEXT. Les esmenes d'aquí NO toquen la biblioteca (ADR 0003: el text del parlant no es
 reescriu d'ofici). S'apliquen quan es serveix la línia, i la resposta ho diu amb `esmenat`.
 Són dues menes:
@@ -141,16 +148,70 @@ def esmena(ca: str, ar: str) -> tuple:
     return ca, ar, (ca != ca0 or ar != ar0)
 
 
-def _files(db: Session):
+def _files(db: Session, amb_veu: bool = False):
     """Les frases del Baba Ali, només les columnes que el visor fa servir.
 
-    Render dona 512 MB: demanar les files senceres de 3.621 frases (amb esborranys, glosses i
-    tot) omple la memòria sense cap motiu."""
+    Render dona 512 MB: demanar les files senceres de 3.621 frases (amb glosses i tot) omple la
+    memòria sense cap motiu. `amb_veu` hi suma el que la màquina sent a la veu, que només fa
+    falta quan es mira UN episodi, no per comptar-los tots."""
     from models import Drill as DrillModel
-    return (db.query(DrillModel.id, DrillModel.source_playlist, DrillModel.source_title,
-                     DrillModel.text_catalan, DrillModel.text_arabic, DrillModel.audio_url)
-            .filter(DrillModel.tag.ilike("%baba-ali%"))
-            .all())
+    cols = [DrillModel.id, DrillModel.source_playlist, DrillModel.source_title,
+            DrillModel.text_catalan, DrillModel.text_arabic, DrillModel.audio_url]
+    if amb_veu:
+        cols += [DrillModel.text_tachelhit_suggested, DrillModel.esborranys]
+    return db.query(*cols).filter(DrillModel.tag.ilike("%baba-ali%")).all()
+
+
+#: per comparar dues lectures: el que compta és què s'hi sent, no on talla els mots
+NOMES_LLETRES = re.compile(r"[^0-9a-zà-ɏɐ-ʯⴰ-⵿]")
+
+
+def _mateixa_lectura(a: str, b: str) -> bool:
+    """Dues lectures diuen el mateix si, tret dels espais i els signes, són iguals.
+
+    No es plega cap lletra: ɣ, ɛ, ḥ i les emfàtiques són el que distingeix una paraula d'una
+    altra, i plegar-les faria passar per acord el que no ho és."""
+    return NOMES_LLETRES.sub("", a.lower()) == NOMES_LLETRES.sub("", b.lower()) != ""
+
+
+def lectures(esborranys: Optional[str]) -> list:
+    """Les lectures de màquina desades a `esborranys`: [{"text", "model"}], sense repetides."""
+    try:
+        fora = json.loads(esborranys or "[]")
+    except (TypeError, ValueError):
+        return []
+    if not isinstance(fora, list):
+        return []
+    netes, vistos = [], set()
+    for e in fora:
+        if not isinstance(e, dict):
+            continue
+        text = (e.get("text") or "").strip()
+        model = (e.get("model") or "").strip()
+        if not text or model in vistos:
+            continue
+        vistos.add(model)
+        netes.append({"text": text, "model": model})
+    return netes
+
+
+def hi_ha_acord(lectures_: list) -> bool:
+    """Dues lectures de màquina diuen exactament el mateix.
+
+    QUANT VAL AIXÒ, mesurat sobre les 2.727 línies del Baba Ali que tenen dues lectures (MMS
+    afinat i MMS adaptador ric). Els dos models surten de la mateixa família, i per això
+    s'assemblen gairebé sempre: 1.181 parelles passen del 0,9 de semblança i 2.331 del 0,8. O
+    sigui que «s'assemblen» no diu res. Coincidir LLETRA PER LLETRA, en canvi, només passa a
+    50 línies, i és el que es marca.
+
+    Control, perquè la mesura no s'autoenganyi: aparellant lectures de línies DIFERENTS a
+    l'atzar (3.000 parelles), cap no arriba a 0,7 i una de mil passa de 0,6. La semblança, per
+    tant, sí que distingeix una línia d'una altra; el que no pot dir és si el que han sentit és
+    el que s'hi diu. Això ho ha de dir una persona, i per això la lectura va a part del text."""
+    if len(lectures_) < 2:
+        return False
+    primera = lectures_[0]["text"]
+    return all(_mateixa_lectura(primera, l["text"]) for l in lectures_[1:])
 
 
 def episodis(db: Session) -> list:
@@ -183,7 +244,7 @@ def linies(db: Session, episodi: str,
     Torna None si no en tenim cap línia, que és com el visor sap dir «aquest no el tenim»
     en comptes d'ensenyar una pantalla buida."""
     brutes = []
-    for f in _files(db):
+    for f in _files(db, amb_veu=True):
         if slug(f.source_playlist) != episodi:
             continue
         t = segon_de(f.source_title)
@@ -193,13 +254,21 @@ def linies(db: Session, episodi: str,
         so = f.audio_url or None
         if so and normalitza:
             so = normalitza(so)
-        brutes.append({"id": f.id, "t": t, "ca": ca, "ar": ar, "so": so, "esmenat": tocada})
+        llegides = lectures(f.esborranys)
+        brutes.append({"id": f.id, "t": t, "ca": ca, "ar": ar, "so": so, "esmenat": tocada,
+                       "am": (f.text_tachelhit_suggested or "").strip() or None,
+                       "am_models": len(llegides),
+                       "am_acord": hi_ha_acord(llegides)})
     if not brutes:
         return None
     brutes.sort(key=lambda x: (x["t"], x["id"]))
 
     #: Onze frases del Baba Ali estan duplicades a la biblioteca (mateix segon i mateix text,
     #: identificadors seguits). Al visor hi han de sortir un sol cop.
+    #: Les onze porten, això sí, un tall de veu diferent i una lectura de màquina diferent: el
+    #: subtítol es va aguantar a la pantalla mentre es deien dues coses. Aquí hi va la primera,
+    #: perquè el que es pinta és el subtítol; les altres segueixen a la biblioteca i a /revisa,
+    #: que és on es jutgen les lectures.
     vistes, netes = set(), []
     for x in brutes:
         clau = (x["t"], x["ca"], x["ar"])
@@ -222,5 +291,7 @@ def linies(db: Session, episodi: str,
             "per_que_sense_video": None if p.get("video") else sense_video().get(episodi),
             "duplicades_tretes": len(brutes) - len(netes),
             "esmenades": sum(1 for x in netes if x["esmenat"]),
+            "amb_veu_sentida": sum(1 for x in netes if x["am"]),
+            "acords": sum(1 for x in netes if x["am_acord"]),
             "font": FONT,
             "linies": netes}

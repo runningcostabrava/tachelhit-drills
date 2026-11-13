@@ -10010,6 +10010,95 @@ def list_available_pairs(db: Session = Depends(get_db)):
         ) for drill in drills
     ]
 
+# El nom amb que signa cada lector. Son els que la biblioteca ja porta escrits -3.129 lectures
+# amb l'adaptador ric, 3.554 amb l'afinat vell, 206 amb el NeMo-, i es diuen igual A POSTA: la
+# pantalla de revisio compta ACORDS entre models, i dos noms per al mateix lector serien dos
+# testimonis alla on nomes n'hi ha un. Si l'Space canvia d'adaptador, aquestes constants canvien
+# amb ell (ADR 0009: al Space hi va l'adaptador de tot el corpus).
+LECTOR_GEMINI = "Gemini"
+LECTOR_NOSTRE = "MMS adaptador ric (shi_ric)"
+LECTOR_NEMO = "NeMo stt_zgh_fastconformer"
+
+
+def _desa_lectura_de_maquina(db: Session, drill_id: Optional[int], text: str, lector: str,
+                             cru: Optional[str] = None) -> Optional[str]:
+    """Desa als esborranys el que una maquina acaba de llegir d'una gravacio (#575).
+
+    Fins ara `/transcribe/` no deixava cap rastre: ni qui havia llegit, ni que havia dit, ni
+    quan. Mesurat el 9-11-2026 sobre les 12.202 frases, nomes 12 es podien relacionar amb una
+    lectura desada, i cap no portava l'empremta de qui l'havia escrita. Per aixo la pregunta del
+    #557 -quantes frases de produccio han rebut text de maquina al camp del parlant- no es podia
+    contestar: no es que la resposta fos zero, es que no hi havia on mirar.
+
+    Tres fronteres:
+
+    - **No toca cap camp de persona.** `text_tachelhit`, `text_tachelhit_latin` i `text_catalan`
+      no es llegeixen ni s'escriuen aqui (ADR 0003). Ni `text_tachelhit_suggested`: qui decideix
+      quina de les lectures ocupa la proposta es el davant, i aixo no canvia.
+    - **Un JSON que no s'enten no s'esborra.** Si el camp porta una cosa que no sabem llegir, es
+      deixa estar i es diu al registre. Perdre esborranys d'altri per fer lloc al nostre seria
+      pitjor que no desar res.
+    - **No fa caure la resposta.** Qui acaba de gravar ha de rebre la seva lectura encara que el
+      desat falli; per aixo el `rollback` i el `None`.
+
+    Una relectura del mateix lector SUBSTITUEIX la seva entrada -l'ultim que ha dit es el que
+    diu-, i no n'afegeix una segona: si no, un boto premut tres vegades semblaria tres
+    testimonis, i l'acord entre models es justament el que fa que valgui la pena mirar-ne una.
+
+    Torna el camp tal com ha quedat, per tornar-lo a qui ha cridat.
+    """
+    net = (text or "").strip()
+    if not drill_id or not net:
+        return None
+    try:
+        drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+        if drill is None:
+            return None
+        llista = []
+        anterior = (drill.esborranys or "").strip()
+        if anterior:
+            try:
+                llista = json.loads(anterior)
+            except Exception:
+                print(f"[LECTURA] els esborranys del drill {drill_id} no es poden llegir; "
+                      f"no hi escric i els deixo com estan")
+                return None
+            if not isinstance(llista, list):
+                print(f"[LECTURA] els esborranys del drill {drill_id} no son una llista; "
+                      f"no hi escric i els deixo com estan")
+                return None
+        nova = {"text": net, "model": lector, "acord": None,
+                # Quan. Es una clau nova: `revisa.esborranys_de` nomes mira text/model/acord/font,
+                # o sigui que aixo queda escrit sense canviar cap pantalla.
+                "quan": iso_z(datetime.now(timezone.utc))}
+        # El que la maquina ha SENTIT, quan no es el mateix que proposa. El que torna el NeMo
+        # passa pel glossari i despres per l'aparellament amb el corpus: pot acabar essent una
+        # frase NOSTRA que s'hi assembla, i aixo es una altra afirmacio. Totes dues queden
+        # escrites, perque qui decideix ha de poder veure si la proposta surt de la gravacio o
+        # de la semblanca amb una frase que ja teniem.
+        if cru and cru.strip() and cru.strip() != net:
+            nova["cru"] = cru.strip()
+        mateix = [i for i, e in enumerate(llista)
+                  if isinstance(e, dict) and (e.get("model") or "").strip() == lector]
+        if mateix:
+            llista[mateix[0]] = nova
+            for i in reversed(mateix[1:]):
+                llista.pop(i)
+        else:
+            llista.append(nova)
+        drill.esborranys = json.dumps(llista, ensure_ascii=False)
+        db.commit()
+        return drill.esborranys
+    except Exception as e:
+        print(f"[LECTURA] no s'ha pogut desar la lectura del drill {drill_id}: "
+              f"{type(e).__name__}: {e}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return None
+
+
 @app.post("/transcribe/", response_model=TranscribeResponse)
 async def transcribe_audio(
     request: TranscribeRequest,
@@ -10084,7 +10173,9 @@ async def transcribe_audio(
         if len(re.sub(r"[^\w]", "", latin or tif)) < 3:
             raise HTTPException(status_code=502, detail="No s'ha entès res de la gravació")
         reading = f"{latin} · {tif}" if latin and tif and latin != tif else (latin or tif)
-        return TranscribeResponse(rough_transcription=latin, corrected_transcription=reading, similarity_score=0.0)
+        return TranscribeResponse(rough_transcription=latin, corrected_transcription=reading, similarity_score=0.0,
+                                  esborranys=_desa_lectura_de_maquina(db, request.drill_id, reading,
+                                                                      LECTOR_GEMINI, cru=latin))
 
     # El segon de la fila: el NOSTRE model. Abans el servidor saltava d'aquí al NeMo, que és d'un
     # tercer i llegeix pitjor (0,448 contra 0,279, mesurat l'1-11 sobre gravacions nostres), i que
@@ -10092,7 +10183,9 @@ async def transcribe_audio(
     nostre = await asyncio.to_thread(_space_mms_text, audio_url)
     if len(re.sub(r"[^\w]", "", nostre)) >= 3:
         return TranscribeResponse(rough_transcription=nostre, corrected_transcription=nostre,
-                                  similarity_score=0.0)
+                                  similarity_score=0.0,
+                                  esborranys=_desa_lectura_de_maquina(db, request.drill_id, nostre,
+                                                                      LECTOR_NOSTRE))
 
     # Call HF Space
     asr_space_url = os.getenv("HUGGINGFACE_ASR_SPACE_URL", ASR_SPACE_DEFAULT)
@@ -10153,7 +10246,9 @@ async def transcribe_audio(
     return TranscribeResponse(
         rough_transcription=rough,
         corrected_transcription=corrected,
-        similarity_score=score
+        similarity_score=score,
+        esborranys=_desa_lectura_de_maquina(db, request.drill_id, corrected, LECTOR_NEMO,
+                                            cru=rough if isinstance(rough, str) else None),
     )
 
 class ASRService:
