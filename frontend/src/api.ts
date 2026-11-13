@@ -1051,6 +1051,14 @@ export interface BabaAliLinia {
   am_models: number;
   /** Dos models independents hi senten el mateix: nomes passa a 50 linies de 2.727. */
   am_acord: boolean;
+  /**
+   * La paraula que la veu i el subtitol comparteixen, si n'hi ha cap.
+   *
+   * Son dues vies independents -el subtitol es arab llegit de la IMATGE, la lectura es
+   * taixelhit tret del SO- i es casen pel significat arab que el diccionari de l'IRCAM dona a
+   * les paraules amazigues. 206 linies de 3.621, contra 13 al control barrejat.
+   */
+  am_diu_igual: string | null;
 }
 export interface BabaAliEpisodiData {
   episodi: string; video: string | null; desplacament: number | null;
@@ -1058,6 +1066,8 @@ export interface BabaAliEpisodiData {
   per_que_sense_video: string | null; duplicades_tretes: number; esmenades: number;
   /** Quantes linies porten lectura de maquina, i a quantes dos models hi senten el mateix. */
   amb_veu_sentida: number; acords: number;
+  /** Quantes linies on la veu i el subtitol comparteixen un significat. */
+  diuen_igual: number;
   font: { obra: string; canal: string; text: string };
   linies: BabaAliLinia[];
 }

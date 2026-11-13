@@ -40,6 +40,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FaPlay, FaExclamationTriangle, FaYoutube, FaVolumeUp } from 'react-icons/fa';
 import { api, type BabaAliEpisodi, type BabaAliEpisodiData, type BabaAliLinia } from '../api';
 import { loadYouTubeApi } from '../utils/youtubeUtils';
+import { liniaAra } from '../services/liniaAra';
 
 const rellotge = (s: number) => {
   const m = Math.floor(Math.max(0, s) / 60);
@@ -51,6 +52,25 @@ const numero = (ep: string) => {
   const m = ep.match(/\d+/);
   return m ? m[0] : ep;
 };
+
+
+/**
+ * La veu diu el mateix que el subtítol.
+ *
+ * Dues vies independents: el subtítol és àrab llegit de la imatge, i la lectura és taixelhit
+ * treta del so. Es casen pel significat àrab que el diccionari de l'IRCAM dona a les paraules
+ * amazigues, sense cap traductor pel mig. Mesurat sobre les 3.621 línies: 206 coincideixen,
+ * contra 13 quan es comparen amb el subtítol d'una altra frase a l'atzar — 15,8 vegades més que
+ * per casualitat. El control és la meitat de la mesura: sense ell, 206 no voldria dir res.
+ */
+const ApuntDiuIgual = ({ mot }: { mot: string }) => (
+  <span title={`El diccionari diu que una paraula de la veu vol dir «${mot}», i «${mot}» surt al subtítol`}
+        style={{ marginLeft: 6, padding: '0 5px', borderRadius: 6, fontSize: 10,
+                 fontStyle: 'normal', verticalAlign: 'middle', whiteSpace: 'nowrap',
+                 background: 'var(--info-bg, #e7f0fb)', color: 'var(--info, #1f5fa8)' }}>
+    la veu ho diu també
+  </span>
+);
 
 /**
  * Dues lectures de màquina coincideixen lletra per lletra.
@@ -187,18 +207,10 @@ export default function BabaAliViewer() {
 
   // Quina línia sona ara. Es busca per bisecció: amb 335 línies i cinc comptes per segon,
   // recórrer-les totes cada vegada es nota al mòbil.
-  const ara = useMemo(() => {
-    //: El rellotge, amb el que qui mira hagi quadrat a mà (0 mentre no hi toqui ningú).
-    const quan = temps + ajust;
-    if (!linies.length || quan < 0) return -1;
-    let a = 0, b = linies.length - 1, trobada = -1;
-    while (a <= b) {
-      const m = (a + b) >> 1;
-      if (linies[m].t <= quan) { trobada = m; a = m + 1; } else { b = m - 1; }
-    }
-    if (trobada < 0) return -1;
-    return quan <= linies[trobada].fi + 0.4 ? trobada : -1;
-  }, [linies, temps, ajust]);
+  //: Quina línia es veu. La regla viu a `services/liniaAra` perquè es pugui provar: la va
+  //: canviar una mesura i no un criteri, i val més que la pròxima vegada caigui una prova.
+  //: `ajust` és el que qui mira hagi quadrat a mà (0 mentre no hi toqui ningú).
+  const ara = useMemo(() => liniaAra(linies, temps + ajust), [linies, temps, ajust]);
 
   useEffect(() => {
     if (!seguir || ara < 0) return;
@@ -422,6 +434,7 @@ export default function BabaAliViewer() {
               </span>
               {linies[ara].am}
               {linies[ara].am_acord && <ApuntAcord />}
+              {linies[ara].am_diu_igual && <ApuntDiuIgual mot={linies[ara].am_diu_igual} />}
             </div>
           )}
         </div>
@@ -483,6 +496,7 @@ export default function BabaAliViewer() {
                 <span style={{ display: 'block', fontSize: 13, fontStyle: 'italic',
                                color: 'var(--text-2, #777)' }}>
                   {l.am}{l.am_acord && <ApuntAcord />}
+                  {l.am_diu_igual && <ApuntDiuIgual mot={l.am_diu_igual} />}
                 </span>
               )}
             </span>
@@ -522,6 +536,13 @@ export default function BabaAliViewer() {
               ? <>A {dades.acords} hi coincideixen dues lectures lletra per lletra, i van
                   marcades: no vol dir que encertin, però coincidir del tot els costa.</>
               : <>En aquest episodi no n'hi ha cap on dues lectures coincideixin del tot.</>}</>}
+          {(dades.diuen_igual || 0) > 0 && <> · A {dades.diuen_igual} línies, el que la veu diu
+            i el que diu el subtítol <strong>volen dir el mateix</strong>, i van marcades. Són
+            dues vies independents —el subtítol és àrab llegit de la imatge; la lectura, taixelhit
+            tret del so— i es casen pel significat àrab que el diccionari de l'IRCAM dona a les
+            paraules amazigues, sense cap traductor pel mig. Sobre les 3.621 línies de la sèrie
+            passa a 206; comparant cada lectura amb el subtítol d'una altra frase a l'atzar, a 13.
+            El control és la meitat de la mesura: sense ell, 206 no voldria dir res.</>}
         </p>
       )}
        </>

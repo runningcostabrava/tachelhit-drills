@@ -285,3 +285,73 @@ def test_les_lectures_mal_desades_no_tomben_el_visor():
 def test_l_esmena_no_toca_el_que_no_hi_surt():
     ca, ar, tocada = baba_ali.esmena("Res a veure", "لا شيء")
     assert (ca, ar, tocada) == ("Res a veure", "لا شيء", False)
+
+
+# ---------------------------------------------------------------------------------------------
+# «La veu diu el mateix que el subtítol» (#535).
+#
+# El subtítol és àrab llegit de la IMATGE; la lectura és taixelhit tret del SO. Quan les dues
+# coincideixen, la línia té una confirmació que no surt de nosaltres. Aquestes proves guarden
+# les fronteres de la comparació, que és on es pot espatllar sense que es noti.
+
+def _lexic_de_mentida(monkeypatch, paraules):
+    """Un diccionari petit i nostre, per provar LA REGLA i no el diccionari.
+
+    Les proves d'això no poden fer servir el lèxic de debò, per dues raons que vam trobar el
+    13-11-2026 executant la passada sencera: el carrega una altra prova i el deixa tocat (soles
+    passaven, totes juntes fallaven), i sobretot **el baixa d'Internet** — 50.000 entrades que
+    la CI no ha de demanar a ningú per comprovar una regla de dues línies.
+    """
+    import lexicon
+    monkeypatch.setattr(lexicon, "status", lambda: {"loaded": True})
+    monkeypatch.setattr(lexicon, "lookup",
+                        lambda mot, max_words=1: (
+                            [{"ircam": [{"arabic": paraules[mot]}]}] if mot in paraules else []))
+    baba_ali._CAU_GLOSES.clear()
+
+
+def test_troba_la_paraula_que_les_dues_vies_comparteixen(monkeypatch):
+    """`tafukt` vol dir `شمس`; si el subtítol parla del sol, les dues vies diuen el mateix."""
+    _lexic_de_mentida(monkeypatch, {"tafukt": "شمس"})
+    assert baba_ali.acord_de_significat("tella tafukt", "تحرق الشمس اليوم") == "شمس"
+
+
+def test_amb_un_subtitol_que_parla_d_una_altra_cosa_no_hi_ha_acord(monkeypatch):
+    """La prova que fa que la marca vulgui dir alguna cosa: si casés sempre, no diria res."""
+    _lexic_de_mentida(monkeypatch, {"tafukt": "شمس"})
+    assert baba_ali.acord_de_significat("tella tafukt", "أين ذهب هذا الولد ؟") is None
+
+
+def test_sense_lexic_no_diu_res(monkeypatch):
+    """Si el diccionari no està carregat, això calla. És un extra, i no ha de fer caure una
+    pantalla ni esperar-se que es baixin 50.000 entrades.
+
+    Es comprova que amb el diccionari SÍ que hi hauria acord, perquè si no la prova passaria
+    igual amb la comprovació treta i no diria el que vol dir."""
+    import lexicon
+    _lexic_de_mentida(monkeypatch, {"tafukt": "شمس"})
+    assert baba_ali.acord_de_significat("tafukt", "تحرق الشمس اليوم") == "شمس"
+
+    monkeypatch.setattr(lexicon, "status", lambda: {"loaded": False})
+    baba_ali._CAU_GLOSES.clear()
+    assert baba_ali.acord_de_significat("tafukt", "تحرق الشمس اليوم") is None
+
+
+def test_les_paraules_de_tot_arreu_no_compten():
+    """«aquest», «el que», «era» surten a totes les frases: si comptessin, tot casaria amb tot
+    i la marca no voldria dir res."""
+    for corrent in ("هذا", "الذي", "كان", "ما"):
+        assert corrent not in baba_ali.paraules_ar(f"{corrent} البيت"), corrent
+    assert "بيت" in baba_ali.paraules_ar("في البيت")
+    assert "البيت" not in baba_ali.paraules_ar("في البيت")   # se'n treu l'article
+
+
+def test_l_article_i_les_vocals_no_fan_dues_paraules():
+    """`الشمس` i `شمس` són la mateixa paraula. Si es comparessin tal qual, la meitat dels acords
+    de debò es perdrien."""
+    assert baba_ali.paraules_ar("الشَّمس") == baba_ali.paraules_ar("شمس")
+
+
+def test_sense_subtitol_o_sense_lectura_no_hi_ha_acord():
+    for lec, sub in [("", "الشمس"), ("tafukt", ""), (None, None), ("tafukt", "   ")]:
+        assert baba_ali.acord_de_significat(lec, sub) is None
