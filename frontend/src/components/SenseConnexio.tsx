@@ -270,9 +270,17 @@ export default function SenseConnexio() {
 function Bloc({ titol, ara, peu, children }: { titol: string; ara: string; peu: string; children?: React.ReactNode }) {
   return (
     <section style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '14px 16px', background: 'var(--surface)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-        <h3 style={{ margin: 0, fontSize: 15 }}>{titol}</h3>
-        <span style={{ fontSize: 13, color: 'var(--text-soft)', fontVariantNumeric: 'tabular-nums' }}>{ara}</span>
+      {/* Dues columnes de debò, i no `space-between` amb embolcall.
+          Amb l'embolcall, un títol llarg —«El català llegit i les imatges»— empenyia el número
+          a la línia de sota, i allà `space-between` el deixava enganxat a l'esquerra: semblava
+          un text més del bloc i no la xifra d'aquell bloc. En una pantalla de telèfon passava
+          sempre. Ara el títol ocupa el que queda i pot partir-se; el número mana la seva
+          columna, es queda en una sola línia i sempre a la dreta. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto',
+                    alignItems: 'baseline', gap: 10 }}>
+        <h3 style={{ margin: 0, fontSize: 15, minWidth: 0 }}>{titol}</h3>
+        <span style={{ fontSize: 13, color: 'var(--text-soft)', fontVariantNumeric: 'tabular-nums',
+                       textAlign: 'right', whiteSpace: 'nowrap' }}>{ara}</span>
       </div>
       <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '6px 0 0', lineHeight: 1.5 }}>{peu}</p>
       {children && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 12 }}>{children}</div>}
