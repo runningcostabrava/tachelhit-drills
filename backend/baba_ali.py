@@ -237,6 +237,111 @@ def episodis(db: Session) -> list:
     return fora
 
 
+
+# --------------------------------------------------------------------------------------------
+# La veu diu el mateix que el subtitol?
+#
+# Son dues vies independents de la mateixa escena: el subtitol es ARAB, llegit de la imatge amb
+# OCR -el que l'autor va escriure-, i la lectura es TAIXELHIT, treta del so pel nostre model -el
+# que l'actor diu-. Quan les dues coincideixen, la linia te una confirmacio que no surt de
+# nosaltres mateixos.
+#
+# Es compara sense cap traductor pel mig, i aixo es el que ho fa net: el lexic de l'IRCAM dona el
+# significat EN ARAB de cada paraula amaziga (`tafukt` -> `شمس`), i el subtitol ja es arab.
+#
+# Mesurat el 13-11-2026 sobre les 3.621 linies del Baba Ali:
+#
+#     1.420 linies on el diccionari coneix alguna paraula de la veu
+#       206 on la veu i el subtitol comparteixen un significat   (14,5 %)
+#        13 contra un subtitol triat a l'atzar                   ( 0,9 %)
+#     -> 15,8 vegades mes que per casualitat
+#
+# El control es la meitat de la mesura. Dues frases qualssevol comparteixen paraules per
+# casualitat, i sense saber quantes, 206 no voldria dir res.
+#
+# Prova paraules concretes, no la frase sencera: una frase sencera no la sap jutjar cap model que
+# tinguem (el 30-10 el DeepSeek va contestar null a 150 de 150 lectures d'ASR).
+
+#: Les arabs que surten a tot arreu i no diuen res d'una escena.
+ATURA_AR = {"في", "من", "على", "إلى", "عن", "مع", "هذا", "هذه", "ذلك", "التي", "الذي", "ما",
+            "لا", "أن", "إن", "كان", "قد", "هو", "هي", "أنا", "أنت", "نحن", "كل", "ثم", "أو",
+            "يا", "و", "ب", "ل", "ك", "س"}
+
+_DIACRITICS = re.compile(r"[\u064b-\u0652\u0670\u0640]")
+_LLETRES = re.compile(r"[^\W\d_]+", re.UNICODE)
+_ARAB = re.compile(r"[\u0600-\u06ff]+")
+
+#: El lexic es gran i les cerques es repeteixen molt (un episodi te 300 linies i les paraules
+#: corrents hi surten desenes de vegades). Es guarda el que ja s'ha buscat.
+_CAU_GLOSES: dict = {}
+
+
+def _net_ar(t: str) -> str:
+    """Sense vocals curtes ni allargaments, i amb les formes que s'escriuen de dues maneres
+    portades a una de sola."""
+    t = _DIACRITICS.sub("", t or "")
+    for a, b in (("أ", "ا"), ("إ", "ا"), ("آ", "ا"), ("ى", "ي"), ("ة", "ه")):
+        t = t.replace(a, b)
+    return t
+
+
+def paraules_ar(t: str) -> list:
+    fora = []
+    for p in _ARAB.findall(_net_ar(t)):
+        if p.startswith("ال") and len(p) > 4:
+            p = p[2:]
+        if len(p) >= 3 and p not in ATURA_AR:
+            fora.append(p)
+    return fora
+
+
+def gloses_ar(lectura: Optional[str]) -> list:
+    """Els significats arabs de les paraules que la veu diu, segons el lexic de l'IRCAM.
+
+    Si el lexic no esta carregat, torna buit i prou: aixo es un extra, i no ha de fer caure una
+    pantalla ni esperar-se a que es baixin 50.000 entrades.
+    """
+    try:
+        import lexicon
+        if not lexicon.status().get("loaded"):
+            return []
+    except Exception:
+        return []
+    fora = []
+    for mot in _LLETRES.findall(lectura or ""):
+        if len(mot) < 3:
+            continue
+        if mot not in _CAU_GLOSES:
+            seves = []
+            try:
+                for r in lexicon.lookup(mot, max_words=1):
+                    for e in (r.get("ircam") or []):
+                        seves += paraules_ar(e.get("arabic") or "")
+            except Exception:
+                seves = []
+            _CAU_GLOSES[mot] = seves
+        fora += _CAU_GLOSES[mot]
+    return fora
+
+
+def acord_de_significat(lectura: Optional[str], subtitol: Optional[str]) -> Optional[str]:
+    """La paraula que les dues vies comparteixen, o None.
+
+    Es casa per arrel curta perque l'arab enganxa prefixos i sufixos: `الشمس` i `شمس` son la
+    mateixa paraula i no son la mateixa cadena.
+    """
+    if not (lectura or "").strip() or not (subtitol or "").strip():
+        return None
+    seves = paraules_ar(subtitol)
+    if not seves:
+        return None
+    for g in gloses_ar(lectura):
+        for p in seves:
+            if g == p or (len(g) >= 4 and len(p) >= 4 and (g in p or p in g)):
+                return g
+    return None
+
+
 def linies(db: Session, episodi: str,
            normalitza: Optional[Callable[[str], str]] = None) -> Optional[dict]:
     """Un episodi per mirar: les línies en ordre, amb el text esmenat i el tall de so.
@@ -258,7 +363,10 @@ def linies(db: Session, episodi: str,
         brutes.append({"id": f.id, "t": t, "ca": ca, "ar": ar, "so": so, "esmenat": tocada,
                        "am": (f.text_tachelhit_suggested or "").strip() or None,
                        "am_models": len(llegides),
-                       "am_acord": hi_ha_acord(llegides)})
+                       "am_acord": hi_ha_acord(llegides),
+                       #: la paraula que la veu i el subtitol comparteixen, si n'hi ha cap
+                       "am_diu_igual": acord_de_significat(
+                           (f.text_tachelhit_suggested or "").strip(), ar)})
     if not brutes:
         return None
     brutes.sort(key=lambda x: (x["t"], x["id"]))
@@ -293,5 +401,6 @@ def linies(db: Session, episodi: str,
             "esmenades": sum(1 for x in netes if x["esmenat"]),
             "amb_veu_sentida": sum(1 for x in netes if x["am"]),
             "acords": sum(1 for x in netes if x["am_acord"]),
+            "diuen_igual": sum(1 for x in netes if x["am_diu_igual"]),
             "font": FONT,
             "linies": netes}

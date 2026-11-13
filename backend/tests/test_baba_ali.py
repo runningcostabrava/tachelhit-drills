@@ -179,15 +179,30 @@ def test_el_desplacament_del_video_ve_de_la_taula_mesurada():
 def test_cada_pujada_de_la_taula_porta_les_seves_proves():
     """Un vídeo sense proves no hi pot ser: el visor diu a qui mira per què creu que és aquell.
 
-    N'hi ha de dues menes. La del SO és la de sempre. La de la IMATGE és per a les dues pujades
-    que YouTube serveix mudes: allà es compta quantes de les nostres marques cauen on canvia el
-    subtítol de la pantalla, i s'exigeix que el desplaçament bo en casi clarament més que el
-    millor de tots els altres possibles, i que algú hagi llegit la pantalla per comprovar-ho."""
+    N'hi ha de tres menes.
+
+    La del SO és la de sempre. La de la IMATGE és per a les dues pujades que YouTube serveix
+    mudes: allà es compta quantes de les nostres marques cauen on canvia el subtítol de la
+    pantalla, i s'exigeix que el desplaçament bo en casi clarament més que el millor de tots els
+    altres possibles, i que algú hagi llegit la pantalla per comprovar-ho.
+
+    I EL MATEIX FITXER, que no és una mesura: és que no n'hi ha hagut de fer cap. Les línies
+    d'aquell episodi s'han llegit de la imatge de la mateixa pujada, i el fitxer que es va
+    llegir ÉS el vídeo del canal, de manera que el desplaçament és 0 per construcció. El que se
+    li exigeix, doncs, no és que destaqui de res sinó que DIGUI per què no cal mesurar-ho i amb
+    quantes línies s'ha fet: si un dia algú hi posa un desplaçament que no sigui 0, aquesta
+    mena de prova ja no hi val."""
     for ep, p in baba_ali.pujades().items():
         assert p.get("video"), f"{ep} és a la taula sense vídeo"
         assert isinstance(p.get("desplacament"), (int, float)), ep
         proves = p.get("proves") or {}
-        assert proves.get("com") in ("so", "imatge"), f"{ep}: les proves no diuen de quina mena són"
+        assert proves.get("com") in ("so", "imatge", "el mateix fitxer"),             f"{ep}: les proves no diuen de quina mena són"
+        if proves["com"] == "el mateix fitxer":
+            assert p["desplacament"] == 0,                 f"{ep}: si el fitxer és el mateix vídeo, el desplaçament ha de ser 0"
+            assert proves.get("per_que"), f"{ep}: no diu per què no cal mesurar-ho"
+            assert proves.get("com_s_ha_llegit"), f"{ep}: no diu com s'han llegit les línies"
+            assert proves.get("linies_llegides", 0) > 0, f"{ep}: no diu quantes línies són"
+            continue
         assert proves["dispersio"] <= 1.0, f"{ep}: les proves no diuen el mateix segon"
         if proves["com"] == "so":
             assert proves.get("talls_dacord", 0) >= 3, \
@@ -285,3 +300,73 @@ def test_les_lectures_mal_desades_no_tomben_el_visor():
 def test_l_esmena_no_toca_el_que_no_hi_surt():
     ca, ar, tocada = baba_ali.esmena("Res a veure", "لا شيء")
     assert (ca, ar, tocada) == ("Res a veure", "لا شيء", False)
+
+
+# ---------------------------------------------------------------------------------------------
+# «La veu diu el mateix que el subtítol» (#535).
+#
+# El subtítol és àrab llegit de la IMATGE; la lectura és taixelhit tret del SO. Quan les dues
+# coincideixen, la línia té una confirmació que no surt de nosaltres. Aquestes proves guarden
+# les fronteres de la comparació, que és on es pot espatllar sense que es noti.
+
+def _lexic_de_mentida(monkeypatch, paraules):
+    """Un diccionari petit i nostre, per provar LA REGLA i no el diccionari.
+
+    Les proves d'això no poden fer servir el lèxic de debò, per dues raons que vam trobar el
+    13-11-2026 executant la passada sencera: el carrega una altra prova i el deixa tocat (soles
+    passaven, totes juntes fallaven), i sobretot **el baixa d'Internet** — 50.000 entrades que
+    la CI no ha de demanar a ningú per comprovar una regla de dues línies.
+    """
+    import lexicon
+    monkeypatch.setattr(lexicon, "status", lambda: {"loaded": True})
+    monkeypatch.setattr(lexicon, "lookup",
+                        lambda mot, max_words=1: (
+                            [{"ircam": [{"arabic": paraules[mot]}]}] if mot in paraules else []))
+    baba_ali._CAU_GLOSES.clear()
+
+
+def test_troba_la_paraula_que_les_dues_vies_comparteixen(monkeypatch):
+    """`tafukt` vol dir `شمس`; si el subtítol parla del sol, les dues vies diuen el mateix."""
+    _lexic_de_mentida(monkeypatch, {"tafukt": "شمس"})
+    assert baba_ali.acord_de_significat("tella tafukt", "تحرق الشمس اليوم") == "شمس"
+
+
+def test_amb_un_subtitol_que_parla_d_una_altra_cosa_no_hi_ha_acord(monkeypatch):
+    """La prova que fa que la marca vulgui dir alguna cosa: si casés sempre, no diria res."""
+    _lexic_de_mentida(monkeypatch, {"tafukt": "شمس"})
+    assert baba_ali.acord_de_significat("tella tafukt", "أين ذهب هذا الولد ؟") is None
+
+
+def test_sense_lexic_no_diu_res(monkeypatch):
+    """Si el diccionari no està carregat, això calla. És un extra, i no ha de fer caure una
+    pantalla ni esperar-se que es baixin 50.000 entrades.
+
+    Es comprova que amb el diccionari SÍ que hi hauria acord, perquè si no la prova passaria
+    igual amb la comprovació treta i no diria el que vol dir."""
+    import lexicon
+    _lexic_de_mentida(monkeypatch, {"tafukt": "شمس"})
+    assert baba_ali.acord_de_significat("tafukt", "تحرق الشمس اليوم") == "شمس"
+
+    monkeypatch.setattr(lexicon, "status", lambda: {"loaded": False})
+    baba_ali._CAU_GLOSES.clear()
+    assert baba_ali.acord_de_significat("tafukt", "تحرق الشمس اليوم") is None
+
+
+def test_les_paraules_de_tot_arreu_no_compten():
+    """«aquest», «el que», «era» surten a totes les frases: si comptessin, tot casaria amb tot
+    i la marca no voldria dir res."""
+    for corrent in ("هذا", "الذي", "كان", "ما"):
+        assert corrent not in baba_ali.paraules_ar(f"{corrent} البيت"), corrent
+    assert "بيت" in baba_ali.paraules_ar("في البيت")
+    assert "البيت" not in baba_ali.paraules_ar("في البيت")   # se'n treu l'article
+
+
+def test_l_article_i_les_vocals_no_fan_dues_paraules():
+    """`الشمس` i `شمس` són la mateixa paraula. Si es comparessin tal qual, la meitat dels acords
+    de debò es perdrien."""
+    assert baba_ali.paraules_ar("الشَّمس") == baba_ali.paraules_ar("شمس")
+
+
+def test_sense_subtitol_o_sense_lectura_no_hi_ha_acord():
+    for lec, sub in [("", "الشمس"), ("tafukt", ""), (None, None), ("tafukt", "   ")]:
+        assert baba_ali.acord_de_significat(lec, sub) is None
