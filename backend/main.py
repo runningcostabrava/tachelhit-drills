@@ -189,6 +189,60 @@ LANGUAGE_CODE_MAP = {
     "spa": "Spanish",
 }
 
+#: Les llengues que NO son amazigues. L'Space de traduccio esta afinat per a amazic-catala i
+#: fora d'aqui no s'hi pot confiar.
+NO_AMAZIGUES = {"Modern Standard Arabic", "English", "French", "Spanish"}
+
+
+def _tradueix_amb_deepseek(text: str, src_lang: str, tgt_lang: str) -> str:
+    """Una traduccio d'un model general, per a les llengues que l'Space no sap.
+
+    Torna "" si no es pot: qui crida ha de poder caure a l'Space.
+    """
+    import deepseek_client
+    if not deepseek_client.deepseek_available():
+        return ""
+    sistema = (f"Ets un traductor de {src_lang} a {tgt_lang}. Et donen una linia de dialeg "
+               f"d'una serie marroquina. Torna NOMES la traduccio, en una sola linia, sense "
+               f"cometes ni comentaris. Parla natural. Deixa els noms propis tal com son i "
+               f"tradueix el titol «القائد» per «caid».")
+    r = deepseek_client.deepseek_generate(sistema, [{"role": "user", "text": text}],
+                                          max_output_tokens=400, temperature=0.2)
+    linies = [x.strip() for x in (r or "").splitlines() if x.strip()]
+    return linies[0] if linies else ""
+
+
+def tradueix(text: str, src_lang: str, tgt_lang: str) -> str:
+    """La traduccio, amb el traductor que toqui a cada llengua.
+
+    L'Space (`translate_with_hf`) es un NLLB **afinat per a amazic-catala**, i es el que ha de
+    fer tota la feina d'amazic: per aixo hi es. Pero fora d'aquell parell no s'hi pot confiar,
+    i aixo no es una opinio. Les mateixes linies de l'arab del Baba Ali, el 13-11-2026:
+
+        سترافقني إلى بيت القائد
+          l'Space   : «Ens acompañaras a la casa del capita.»   (amb ñ i tot)
+          el DeepSeek: «M'acompanyaras a casa del caid»
+        يا تاجر بلقاسم
+          l'Space   : «Comerci de la muntanya»
+          el DeepSeek: «Oh, comerciant Belkacem»
+
+    I el segon casa paraula per paraula amb el que ja hi ha a la biblioteca als 3.621 drills
+    del Baba Ali, que es com es va saber qui els havia traduit.
+
+    Quan la llengua no es amaziga i hi ha DeepSeek, doncs, s'hi va. Si no contesta, es cau a
+    l'Space: val mes una traduccio fluixa que cap.
+    """
+    if {src_lang, tgt_lang} & NO_AMAZIGUES:
+        try:
+            diu = _tradueix_amb_deepseek(text, src_lang, tgt_lang)
+            if diu:
+                return diu
+            print("[TRANSLATE] el DeepSeek no ha contestat; vaig a l'Space")
+        except Exception as e:
+            print(f"[TRANSLATE] el DeepSeek ha fallat ({type(e).__name__}); vaig a l'Space")
+    return translate_with_hf(text, src_lang, tgt_lang)
+
+
 def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tachelhit/Central Atlas Tamazight") -> str:
     """
     Translate text using our Gradio Hugging Face Space.
@@ -2023,7 +2077,7 @@ async def translate_text_endpoint(request: TranslateRequest):
     tgt_code = LANGUAGE_CODE_MAP.get(request.target_lang, request.target_lang)
     print(f"[TRANSLATE ENDPOINT] Mapped codes: src_code='{src_code}', tgt_code='{tgt_code}'")
     try:
-        translation = await asyncio.to_thread(translate_with_hf, request.text, src_code, tgt_code)
+        translation = await asyncio.to_thread(tradueix, request.text, src_code, tgt_code)
         print(f"[TRANSLATE ENDPOINT] Result translation: '{translation}'")
         return TranslateResponse(translated_text=translation)
     except Exception as e:

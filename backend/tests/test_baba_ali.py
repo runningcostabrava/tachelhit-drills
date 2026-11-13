@@ -179,15 +179,30 @@ def test_el_desplacament_del_video_ve_de_la_taula_mesurada():
 def test_cada_pujada_de_la_taula_porta_les_seves_proves():
     """Un vídeo sense proves no hi pot ser: el visor diu a qui mira per què creu que és aquell.
 
-    N'hi ha de dues menes. La del SO és la de sempre. La de la IMATGE és per a les dues pujades
-    que YouTube serveix mudes: allà es compta quantes de les nostres marques cauen on canvia el
-    subtítol de la pantalla, i s'exigeix que el desplaçament bo en casi clarament més que el
-    millor de tots els altres possibles, i que algú hagi llegit la pantalla per comprovar-ho."""
+    N'hi ha de tres menes.
+
+    La del SO és la de sempre. La de la IMATGE és per a les dues pujades que YouTube serveix
+    mudes: allà es compta quantes de les nostres marques cauen on canvia el subtítol de la
+    pantalla, i s'exigeix que el desplaçament bo en casi clarament més que el millor de tots els
+    altres possibles, i que algú hagi llegit la pantalla per comprovar-ho.
+
+    I EL MATEIX FITXER, que no és una mesura: és que no n'hi ha hagut de fer cap. Les línies
+    d'aquell episodi s'han llegit de la imatge de la mateixa pujada, i el fitxer que es va
+    llegir ÉS el vídeo del canal, de manera que el desplaçament és 0 per construcció. El que se
+    li exigeix, doncs, no és que destaqui de res sinó que DIGUI per què no cal mesurar-ho i amb
+    quantes línies s'ha fet: si un dia algú hi posa un desplaçament que no sigui 0, aquesta
+    mena de prova ja no hi val."""
     for ep, p in baba_ali.pujades().items():
         assert p.get("video"), f"{ep} és a la taula sense vídeo"
         assert isinstance(p.get("desplacament"), (int, float)), ep
         proves = p.get("proves") or {}
-        assert proves.get("com") in ("so", "imatge"), f"{ep}: les proves no diuen de quina mena són"
+        assert proves.get("com") in ("so", "imatge", "el mateix fitxer"),             f"{ep}: les proves no diuen de quina mena són"
+        if proves["com"] == "el mateix fitxer":
+            assert p["desplacament"] == 0,                 f"{ep}: si el fitxer és el mateix vídeo, el desplaçament ha de ser 0"
+            assert proves.get("per_que"), f"{ep}: no diu per què no cal mesurar-ho"
+            assert proves.get("com_s_ha_llegit"), f"{ep}: no diu com s'han llegit les línies"
+            assert proves.get("linies_llegides", 0) > 0, f"{ep}: no diu quantes línies són"
+            continue
         assert proves["dispersio"] <= 1.0, f"{ep}: les proves no diuen el mateix segon"
         if proves["com"] == "so":
             assert proves.get("talls_dacord", 0) >= 3, \
