@@ -138,6 +138,36 @@ def main():
     sys.path.insert(0, os.path.abspath("."))
     from dotenv import load_dotenv
     load_dotenv(a.env) if a.env else load_dotenv()
+
+    # --- Quina base es toca, dit ABANS de fer res.
+    #
+    # El 13-11-2026 això va costar quatre intents. Sense dir-ho, el guió o bé petava amb un
+    # rastre de pila de SQLAlchemy —que no diu què fer— o, pitjor, corria contra el sqlite del
+    # disc i contestava «res a fer», que és una resposta tranquil·litzadora i falsa.
+    adreca = os.getenv("DATABASE_URL", "")
+    if not adreca:
+        sys.exit("No hi ha DATABASE_URL. Posa-la a backend/.env o davant de l'ordre.")
+    if adreca.startswith("sqlite"):
+        sys.exit("\n".join([
+            f"DATABASE_URL apunta a una base LOCAL ({adreca}).",
+            "Això reescriuria les adreces del teu disc, no les de producció, i et diria que",
+            "no hi ha res a fer.",
+            "",
+            "Posa a backend/.env la línia «External Database URL» del tauler de Render:",
+            "    DATABASE_URL=postgresql://...",
+            "i torna-hi. Quan acabis, torna-hi a posar sqlite:///drills.db."]))
+    if any(x in adreca for x in ("<", ">", "…")) or adreca.endswith("@"):
+        sys.exit("\n".join([
+            f"DATABASE_URL sembla un text d'exemple i no una adreça: {adreca}",
+            "",
+            "Ha de ser la línia sencera que dona el botó «External Database URL» del tauler",
+            "de Render, de la base tachelhit-drills-db. Comença per postgresql:// i porta una",
+            "contrasenya llarga al mig."]))
+    #: On s'escriurà, sense la contrasenya: qui executa això ha de poder veure d'un cop d'ull
+    #: que no s'ha equivocat de base.
+    on = adreca.split("@")[-1].split("/")[0] if "@" in adreca else "(?)"
+    print(f"base: {adreca.split('://')[0]} a {on}")
+
     import magatzem
     from models import Drill as DrillModel
     from main import SessionLocal
