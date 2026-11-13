@@ -114,6 +114,7 @@ PARTICULES = {
     "walaynni": "però",
     "walaynnit": "però",
     "iġ": "si (condicional)",
+    "ig": "si (condicional)",      #: el model escriu la ġ sense punt la meitat de les vegades
     "mk": "quan, com",
     "lliġ": "quan",
     "nna": "que (relatiu)",
@@ -322,14 +323,19 @@ def glossa(mot: str, al_diccionari: Callable[[str], List[str]],
             return es_nom(forma)
         return True
 
-    #: 1. la forma tal com sona
+    #: 1. la forma tal com sona, i la partícula si també ho és
     sig = al_diccionari(mot)
+    if mot in PARTICULES:
+        #: Dues o tres lletres casen amb qualsevol cosa, i el diccionari en té entrades: `ig`
+        #: («si» condicional) sortia glossat «Pistachio» amb tota la seguretat del món, i
+        #: `dad` (partícula verbal) sortia «pare». Quan totes dues lectures existeixen es
+        #: donen totes dues, la de la gramàtica primera, i la parella NO és una lectura
+        #: segura: qui la llegeixi ha de triar amb el context.
+        if sig:
+            return f"{PARTICULES[mot]} — o bé: {', '.join(sig[:2])}", "partícula o diccionari"
+        return PARTICULES[mot], "partícula"
     if sig:
         return ", ".join(sig[:3]), "diccionari"
-
-    #: 2. partícula? Va abans de les regles: `da` no és cap verb desfigurat.
-    if mot in PARTICULES:
-        return PARTICULES[mot], "partícula"
 
     #: 3. preposició amb el pronom enganxat
     p = _preposicio_amb_clitic(mot)

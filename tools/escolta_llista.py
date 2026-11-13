@@ -73,10 +73,15 @@ SYS = (
     "Contesta EXACTAMENT en dues linies:\n"
     "CATALA: <la frase, o «-» si no es pot dir res>\n"
     "CERTESA: segur | probable | no s'enten\n\n"
-    "«segur» nomes si les paraules amb `=` sostenen la frase sencera. Una frase que nomes "
-    "s'aguanta amb paraules de `≈` NO pot ser «segur»: com a molt «probable». «no s'enten» "
-    "si no en reconeix prou. No inventis una frase bonica per omplir: val mes dir que no "
-    "s'enten.")
+    "Les tres paraules volen dir aixo, i han de LLIGAR amb la linia de dalt:\n"
+    "  segur       les paraules amb `=` sostenen la frase sencera.\n"
+    "  probable    la frase es te dreta, pero s'aguanta amb paraules de `≈` o amb el "
+    "context. Aquesta es la resposta normal quan has escrit una frase.\n"
+    "  no s'enten  NO has escrit cap frase: a CATALA hi va «-».\n\n"
+    "Es a dir: si has escrit una frase, la certesa es «segur» o «probable», mai «no "
+    "s'enten»; i si has posat «no s'enten», a CATALA hi ha d'anar «-». No inventis una "
+    "frase bonica per omplir —val mes dir que no s'enten— pero tampoc no neguis una frase "
+    "que has pogut muntar.")
 
 MOTS = re.compile(r"[^\W\d_]+", re.UNICODE)
 
