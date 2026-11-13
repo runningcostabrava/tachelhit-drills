@@ -27,6 +27,7 @@ la demana rep un desviament cap a una adreça signada que dura una hora. Hi ha d
 import io
 import mimetypes
 import os
+import re
 
 import cloudinary
 import cloudinary.uploader
@@ -187,6 +188,29 @@ def puja(contingut, carpeta: str, nom: str, mena: str = "auto", extensio=None) -
 def clau_de_ladreca(adreca: str) -> str:
     """De `/mitjans/tachelhit/video/v.mp4` a `tachelhit/video/v.mp4`."""
     return adreca[len("/mitjans/"):] if adreca.startswith("/mitjans/") else adreca.lstrip("/")
+
+
+#: `.../upload/[transformacions/]v1793634203/tachelhit/audio/a.aac` -> el que ve despres de la
+#: versio. La versio es el numero que Cloudinary hi posa davant i que no forma part del nom.
+_CLOUDINARY = re.compile(r"/upload/(?:[^/]+/)*?v\d+/(.+)$")
+
+
+def clau_de_cloudinary(adreca: str):
+    """Quina clau de R2 li toca a una adreca de Cloudinary, o None si no n'es cap.
+
+    La migracio del #577 va pujar els fitxers a R2 **amb la mateixa ruta** que tenien a
+    Cloudinary, i aixo es el que permet casar-los sense cap taula pel mig. Viu aqui, i no en un
+    guio de tools/, perque aquest modul es l'unic lloc del programa que sap on viuen els fitxers:
+    la lliço del novembre de 2026 va ser que aquesta decisio no pot viure duplicada.
+
+    Es el pont entre el que la base de dades diu ENCARA (21.036 adreces de Cloudinary) i el que
+    el diposit te de debo. El 5 de desembre de 2026 Cloudinary esborra els fitxers.
+    """
+    adreca = (adreca or "").split("?", 1)[0]
+    if "res.cloudinary.com" not in adreca:
+        return None
+    m = _CLOUDINARY.search(adreca)
+    return m.group(1) if m else None
 
 
 def _esborra_r2(client, bust: str, clau: str) -> None:

@@ -35,6 +35,17 @@ services:
         sync: false
       - key: CHECK_SCHEMA
         sync: false
+      # Cloudflare R2 (#577). Sense aquestes quatre, `/mitjans/<ruta>` contesta 404 i les
+      # adreces reescrites no serveixen cap fitxer. `sync: false` vol dir que el valor es
+      # posa al tauler de Render i no viu al dipositori.
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        sync: false
     healthCheckPath: /health
     autoDeploy: true
 

@@ -167,3 +167,63 @@ def test_sense_claus_no_hi_ha_r2(monkeypatch):
         monkeypatch.delenv(k, raising=False)
 
     assert magatzem.a_r2() is False
+
+
+# ---------------------------------------------------------------------------------------------
+# El pont amb les 21.036 adreces que la base de dades diu ENCARA (#577).
+#
+# La migració va pujar els fitxers a R2 amb la mateixa ruta que tenien a Cloudinary, i aquesta
+# funció és l'única cosa que els casa. Si s'equivoca, la reescriptura del 5 de desembre
+# assenyala fitxers que no hi són, i la biblioteca emmudeix.
+
+def test_duna_adreca_de_cloudinary_en_surt_la_clau_del_bust():
+    assert magatzem.clau_de_cloudinary(
+        "https://res.cloudinary.com/du26ppvh0/video/upload/v1793634203/"
+        "tachelhit/audio/audio_15802_1793634203.aac"
+    ) == "tachelhit/audio/audio_15802_1793634203.aac"
+
+
+def test_la_versio_no_forma_part_del_nom():
+    """`v1793634203` és cosa de Cloudinary. Al bust no hi és, i si s'hi colés no casaria res."""
+    clau = magatzem.clau_de_cloudinary(
+        "https://res.cloudinary.com/du26ppvh0/image/upload/v1783336360/"
+        "tachelhit/images/img_514_1783336360.webp"
+    )
+    assert clau == "tachelhit/images/img_514_1783336360.webp"
+    assert not clau.startswith("v")
+
+
+def test_les_transformacions_del_mig_no_hi_entren():
+    """Cloudinary deixa posar transformacions entre `upload/` i la versió (`w_300,h_200/`).
+    El fitxer del bust és el d'origen, no el transformat."""
+    assert magatzem.clau_de_cloudinary(
+        "https://res.cloudinary.com/du26ppvh0/image/upload/w_300,h_200,c_fill/"
+        "v1783336360/tachelhit/images/img_514.webp"
+    ) == "tachelhit/images/img_514.webp"
+
+
+def test_el_que_no_es_de_cloudinary_no_es_toca():
+    """Les 1.615 imatges de Wikimedia i els 1.201 vídeos de YouTube es queden com estan, i una
+    adreça que ja és nostra tampoc no és de Cloudinary."""
+    for fora in [
+        "https://upload.wikimedia.org/wikipedia/commons/b/b5/Un_retrat.png",
+        "https://www.youtube.com/watch?v=zkvUblbTdws",
+        "/mitjans/tachelhit/audio/audio_1.mp3",
+        "/media/video/video_38_1770666204.webm",
+        "", None,
+    ]:
+        assert magatzem.clau_de_cloudinary(fora) is None, fora
+
+
+def test_una_adreca_de_cloudinary_sense_versio_no_sendevina():
+    """Val més None que una clau inventada: una clau inventada es reescriuria i no hi hauria
+    fitxer al darrere."""
+    assert magatzem.clau_de_cloudinary(
+        "https://res.cloudinary.com/du26ppvh0/video/upload/tachelhit/audio/a.mp3"
+    ) is None
+
+
+def test_el_que_ve_despres_de_la_interrogacio_no_hi_compta():
+    assert magatzem.clau_de_cloudinary(
+        "https://res.cloudinary.com/du26ppvh0/video/upload/v1/tachelhit/audio/a.mp3?_a=xyz"
+    ) == "tachelhit/audio/a.mp3"
