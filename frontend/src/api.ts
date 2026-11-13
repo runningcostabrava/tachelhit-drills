@@ -1033,7 +1033,17 @@ export interface BabaAliProvesImatge {
   desplacaments_possibles_s: number; sigmes: number;
   frases_comprovades_a_la_pantalla: number; exemple: string;
 }
-export type BabaAliProves = BabaAliProvesSo | BabaAliProvesImatge;
+/**
+ * L'episodi no s'ha hagut de casar amb res: les seves linies s'han llegit de la imatge
+ * d'aquesta mateixa pujada. El desplacament es 0 per construccio, no per mesura.
+ */
+export interface BabaAliProvesMateixFitxer {
+  com: 'el mateix fitxer';
+  per_que: string;
+  linies_llegides: number; de_segon: number; fins_segon: number;
+  com_s_ha_llegit: string; amb_dos_retalls_dacord: number;
+}
+export type BabaAliProves = BabaAliProvesSo | BabaAliProvesImatge | BabaAliProvesMateixFitxer;
 /** Un episodi a la llista: quantes linies en tenim i, si s'ha mesurat, quin video es. */
 export interface BabaAliEpisodi {
   episodi: string; linies: number; amb_so: number;

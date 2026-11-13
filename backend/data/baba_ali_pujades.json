@@ -193,6 +193,20 @@
     "segona_candidata": "18",
     "falsos_de_la_segona": 1.0
    }
+  },
+  "episodi-1": {
+   "video": "ihwiZk1WmJM",
+   "desplacament": 0,
+   "titol_pujada": "1-2",
+   "proves": {
+    "com": "el mateix fitxer",
+    "per_que": "Aquest episodi no s’ha hagut de casar amb res. Les seves línies no venen d’un retallador: s’han llegit de la imatge d’aquesta mateixa pujada, i el fitxer del disc (baba-ali-01-02.mp4, 3.118 s) ÉS la pujada ihwiZk1WmJM (3.118 s). Els segons ja són segons del vídeo: el desplaçament és 0 per construcció, no per mesura.",
+    "linies_llegides": 285,
+    "de_segon": 35,
+    "fins_segon": 1340,
+    "com_s_ha_llegit": "Un fotograma per segon, tres retalls de cadascun, i es queda el que dos retalls diuen igual. Mesurat sobre 15 línies llegides amb els ulls: 0,187 d’error amb una franja sola i 0,039 votant.",
+    "amb_dos_retalls_dacord": 201
+   }
   }
  },
  "sense_video": {

@@ -40,7 +40,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FaPlay, FaExclamationTriangle, FaYoutube, FaVolumeUp } from 'react-icons/fa';
 import { api, type BabaAliEpisodi, type BabaAliEpisodiData, type BabaAliLinia } from '../api';
 import { loadYouTubeApi } from '../utils/youtubeUtils';
-import { liniaAra } from '../services/liniaAra';
+import { avancadaDe, liniaAra } from '../services/liniaAra';
 
 const rellotge = (s: number) => {
   const m = Math.floor(Math.max(0, s) / 60);
@@ -210,7 +210,10 @@ export default function BabaAliViewer() {
   //: Quina línia es veu. La regla viu a `services/liniaAra` perquè es pugui provar: la va
   //: canviar una mesura i no un criteri, i val més que la pròxima vegada caigui una prova.
   //: `ajust` és el que qui mira hagi quadrat a mà (0 mentre no hi toqui ningú).
-  const ara = useMemo(() => liniaAra(linies, temps + ajust), [linies, temps, ajust]);
+  //: L'avançada depèn d'on surtin les marques de l'episodi: vegeu `avancadaDe`.
+  const ara = useMemo(() => liniaAra(linies, temps + ajust,
+                                     avancadaDe(dades?.comprovat?.com)),
+                      [linies, temps, ajust, dades?.comprovat?.com]);
 
   useEffect(() => {
     if (!seguir || ara < 0) return;
@@ -513,6 +516,14 @@ export default function BabaAliViewer() {
               mateix segon{proves.dispersio !== null && <> (±{proves.dispersio.toFixed(2)} s)</>},
               i que caiguin junts per atzar dins de {proves.minuts_de_la_pujada} minuts passa{' '}
               {proves.falsos_esperats.toExponential(0)} vegades.</>
+          )}
+          {proves?.com === 'el mateix fitxer' && (
+            <>Aquest episodi no s'ha hagut de casar amb cap vídeo: les seves{' '}
+              {proves.linies_llegides} línies s'han llegit de la imatge d'aquesta mateixa pujada
+              («{dades.titol_pujada}»), i el fitxer que es va llegir ÉS el vídeo del canal. Els
+              segons ja són segons del vídeo. {proves.com_s_ha_llegit}{' '}
+              {proves.amb_dos_retalls_dacord} línies tenen dos retalls d'acord a tots els seus
+              segons.</>
           )}
           {proves?.com === 'imatge' && (
             <>El vídeo és aquesta pujada («{dades.titol_pujada}») i l'episodi hi comença a{' '}

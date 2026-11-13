@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AVANCADA, liniaAra } from './liniaAra';
+import { AVANCADA, avancadaDe, liniaAra } from './liniaAra';
 
 /**
  * La regla de quina línia es veu, i per què s'encén abans de la marca.
@@ -73,5 +73,28 @@ describe('quina línia es veu', () => {
     expect(AVANCADA).toBe(3);
     expect(liniaAra([{ t: 100, fi: 104 }], 100 - AVANCADA)).toBe(0);
     expect(liniaAra([{ t: 100, fi: 104 }], 100 - AVANCADA - 0.5)).toBe(-1);
+  });
+});
+
+describe("d'on surten les marques", () => {
+  it("quan surten del so, la línia s'avança", () => {
+    expect(avancadaDe('so')).toBe(AVANCADA);
+    expect(avancadaDe('imatge')).toBe(AVANCADA);
+    expect(avancadaDe(null)).toBe(AVANCADA);
+    expect(avancadaDe(undefined)).toBe(AVANCADA);
+  });
+
+  it("quan ja són les del subtítol, no s'avança gens", () => {
+    // L'episodi 1: les línies s'han llegit de la imatge d'aquesta mateixa pujada, de manera
+    // que el seu segon JA és el segon en què el subtítol surt a la pantalla.
+    expect(avancadaDe('el mateix fitxer')).toBe(0);
+  });
+
+  it("amb avançada zero, la línia no s'encén abans d'hora", () => {
+    // El cas que es va veure a la pantalla: al segon 54 la imatge encara deia la frase del 53
+    // i la banda ja ensenyava la del 57.
+    const ep1 = [{ t: 48, fi: 53 }, { t: 53, fi: 57 }, { t: 57, fi: 59 }];
+    expect(liniaAra(ep1, 54, 0)).toBe(1);        // la que la pantalla ensenya
+    expect(liniaAra(ep1, 54, AVANCADA)).toBe(2); // el que feia abans: la següent
   });
 });

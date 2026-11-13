@@ -22,6 +22,17 @@
  * El final no cal tocar-lo: el servidor ja allarga cada línia fins que comença la següent
  * (`MAX_DURADA`, 6 s a `backend/baba_ali.py`).
  *
+ * ## I quan les marques JA són les del subtítol, l'avançada és zero
+ *
+ * L'episodi 1 no ve d'un retallador: les seves marques s'han llegit de la IMATGE de la pujada,
+ * o sigui que són exactament el segon en què el subtítol apareix. Avançar-les tres segons el
+ * fa sortir massa aviat — vist a la pantalla el 13-11-2026: al segon 54 del vídeo la imatge
+ * deia «بينما تمتهن أنت تجارة الحطب» i la banda ja ensenyava la frase següent.
+ *
+ * Qui ho sap és el servidor, que diu com s'ha casat cada episodi (`comprovat.com`): amb «el
+ * mateix fitxer» les marques són de la imatge i l'avançada és 0; amb «so» o «imatge» venen del
+ * retallador i cal avançar-les.
+ *
  * ## I el desplaçament NO està malament
  *
  * Abans de canviar això es va comprovar: vuit línies de l'episodi 2, escampades, i a totes
@@ -29,6 +40,15 @@
  * desplaçament és bo; el que fallava era l'encesa.
  */
 export const AVANCADA = 3;
+
+/**
+ * Quants segons s'avança la línia segons d'on surtin les marques de l'episodi.
+ *
+ * `com` és el `comprovat.com` que dona el servidor. «el mateix fitxer» vol dir que les línies
+ * s'han llegit de la imatge d'aquesta mateixa pujada: ja són el segon del subtítol.
+ */
+export const avancadaDe = (com: string | null | undefined): number =>
+  (com === 'el mateix fitxer' ? 0 : AVANCADA);
 
 /** El mínim que ha de tenir una línia per poder-hi buscar. */
 export interface LiniaAmbTemps {
@@ -42,14 +62,15 @@ export interface LiniaAmbTemps {
  * `linies` ha d'anar ordenada per `t`, que és com la serveix l'API. Es busca per bisecció: amb
  * 335 línies i cinc comptes per segon, recórrer-les totes cada vegada es nota al mòbil.
  */
-export function liniaAra(linies: readonly LiniaAmbTemps[], quan: number): number {
+export function liniaAra(linies: readonly LiniaAmbTemps[], quan: number,
+                         avancada: number = AVANCADA): number {
   if (!linies.length || quan < 0) return -1;
   let a = 0;
   let b = linies.length - 1;
   let trobada = -1;
   while (a <= b) {
     const m = (a + b) >> 1;
-    if (linies[m].t - AVANCADA <= quan) { trobada = m; a = m + 1; } else { b = m - 1; }
+    if (linies[m].t - avancada <= quan) { trobada = m; a = m + 1; } else { b = m - 1; }
   }
   if (trobada < 0) return -1;
   // El 0,4 és el que es triga a refrescar el rellotge: sense ell, la línia parpelleja al final.
