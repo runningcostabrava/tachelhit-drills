@@ -364,7 +364,13 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
             // El text del parlant no es toca mai: si ja n'hi ha, la lectura va a suggeriment i
             // ell es queda on és (#557, ADR 0003). La regla és compartida amb la graella.
-            const updated = { ...localDrill, ...onVaLaLectura(localDrill.text_tachelhit, safeText) };
+            //
+            // I els esborranys es prenen dels que ha tornat la lectura: aquí es desa el drill
+            // SENCER, i la còpia que té aquesta pantalla és d'abans que el servidor hi escrivís
+            // qui ha llegit i què ha dit (#575) —desar-la l'esborraria.
+            const esb = (res.data?.esborranys || '').trim();
+            const updated = { ...localDrill, ...onVaLaLectura(localDrill.text_tachelhit, safeText),
+                              ...(esb ? { esborranys: esb } : {}) };
             setLocalDrill(updated);
             triggerSave(updated);
             toast.success(queDirDeLaLectura(localDrill.text_tachelhit, safeText));

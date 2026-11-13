@@ -50,7 +50,7 @@ import ai_budget
 import dialect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, false as sa_false, func as sa_func
 from sqlalchemy.orm import sessionmaker, Session
@@ -2308,11 +2308,141 @@ def _page_bounds(limit: Optional[int], offset: Optional[int]):
     lim = DEFAULT_PAGE_LIMIT if limit is None else limit
     return max(0, offset or 0), max(1, min(lim, MAX_PAGE_LIMIT))
 
+#: Quantes files es demanen per volta quan es serveix el cataleg sencer (#566). Amb 200 files
+#: cada volta son uns 240 kB de JSON i el que la sessio arrossega es buida en acabar-la.
+LOT_DRILLS = 200
+
+
+def _filtra_drills(db: Session, tag: Optional[str], author: Optional[str],
+                   search: Optional[str], des_de):
+    """La consulta de `/drills/`, en un lloc.
+
+    Hi es perque el cataleg sencer es serveix a raigs (`_drills_a_raigs`) i aquella volta no pot
+    fer servir la sessio de la peticio: des del FastAPI 0.106, una dependencia amb `yield` es
+    tanca ABANS que el cos d'un `StreamingResponse` s'escrigui, o sigui que el generador necessita
+    la seva propia sessio i, per tant, tornar a muntar la consulta. Que la munti el mateix codi
+    es tota la gracia: si un dia s'hi afegeix un filtre, no se'n pot oblidar la meitat.
+
+    `des_de` ja ve convertit a datetime: el 400 d'un `since` escrit malament s'ha de donar abans
+    de comencar a escriure la resposta, no a mig raig.
+    """
+    query = db.query(DrillModel)
+
+    if tag:
+        # Simple substring match for tags (since they can be comma-separated)
+        query = query.filter(DrillModel.tag.ilike(f"%{tag}%"))
+
+    if author:
+        query = query.filter(DrillModel.author.ilike(f"%{author}%"))
+
+    if search and search.strip():
+        # Finding a sentence to put in a practice must not mean downloading the library:
+        # the search happens here, over both texts and the tag (issue #199).
+        from sqlalchemy import or_ as _or_search
+        needle = f"%{search.strip()}%"
+        query = query.filter(_or_search(DrillModel.text_catalan.ilike(needle),
+                                        DrillModel.text_tachelhit.ilike(needle),
+                                        DrillModel.tag.ilike(needle)))
+
+    if des_de is not None:
+        query = query.filter(
+            sa_func.coalesce(DrillModel.updated_at, DrillModel.date_created) >= des_de
+        )
+
+    return query
+
+
+def _un_drill(drill) -> Drill:
+    """Una fila com la dona l'API, i si no es pot validar, el rescat de sempre.
+
+    El rescat es d'abans: hi va haver files amb URL de mitjans que el validador no acceptava, i
+    perdre tota la pantalla per una fila es pitjor que ensenyar-la amb menys camps.
+    """
+    try:
+        return Drill.model_validate(drill)
+    except Exception as e:
+        print(f"[API] WARNING: Drill {drill.id} failed validation: {e}")
+        return Drill(**{
+            'id': drill.id,
+            'date_created': drill.date_created,
+            'tag': drill.tag,
+            'text_catalan': drill.text_catalan,
+            'text_tachelhit': drill.text_tachelhit,
+            'text_arabic': drill.text_arabic,
+            'audio_url': normalize_media_url(drill.audio_url) if drill.audio_url else None,
+            'audio_tts_url': normalize_media_url(drill.audio_tts_url) if drill.audio_tts_url else None,
+            'video_url': normalize_media_url(drill.video_url) if drill.video_url else None,
+            'image_url': normalize_media_url(drill.image_url) if drill.image_url else None,
+        })
+
+
+def _drills_a_raigs(tag: Optional[str], author: Optional[str], search: Optional[str],
+                    des_de) -> StreamingResponse:
+    """Tot el cataleg, sense tenir-lo mai sencer a la memoria (#566).
+
+    El 2-11-2026 produccio tornava 502 a TOT -`/health`, `/version`, una sola frase-: no anava
+    lenta, s'estava reiniciant. Quan va tornar, `/drills/` va servir **14,1 MB** de 12.195 frases
+    en una sola resposta, en una instancia de 512 MB. Catorze megues no son el problema; el
+    problema es que per fer-les calia tenir-ho tot dues vegades: els 12.195 objectes de
+    SQLAlchemy i el JSON sencer, fet a sobre. I cada cop que algu obria la pantalla de Frases,
+    hi tornava.
+
+    Aixo serveix la mateixa resposta, byte a byte, pero de 200 files en 200: cada volta es
+    serialitza i s'escriu, i despres es buida el que la sessio arrossega. La memoria es queda
+    plana en comptes de cre'ixer amb la biblioteca, que es l'altra meitat del problema: cada
+    lectura de maquina i cada traduccio que s'hi desa fan la resposta mes gran tota sola.
+
+    Qui demana `limit`/`offset` -el davant ho fa des del #489, de 500 en 500- no passa per aqui.
+    Aixo es per als clients d'abans, l'APK installat i qualsevol altre que demani el cataleg
+    sencer: val mes servir-los a poc a poc que no tombar el servidor per a tothom. I es serveix
+    SENCER a posta: retallar-ho a les primeres 500 i no dir res seria ensenyar mitja biblioteca
+    fent com si fos tota.
+    """
+    db = SessionLocal()
+    try:
+        total = _filtra_drills(db, tag, author, search, des_de).order_by(None).count()
+    except Exception:
+        db.close()
+        raise
+
+    def raigs():
+        # La sessio es tanca aqui, no al `finally` de fora: el cos s'escriu DESPRES que
+        # l'endpoint hagi tornat.
+        try:
+            yield "["
+            fetes = 0
+            primer = True
+            while True:
+                lot = (_filtra_drills(db, tag, author, search, des_de)
+                       .order_by(DrillModel.date_created.desc())
+                       .offset(fetes).limit(LOT_DRILLS).all())
+                if not lot:
+                    break
+                for d in lot:
+                    yield ("" if primer else ",") + _un_drill(d).model_dump_json(exclude_none=True)
+                    primer = False
+                fetes += len(lot)
+                # Sense aixo la sessio es queda totes les files que ha vist i la memoria torna a
+                # cre'ixer fila a fila, que es justament el que veniem a evitar.
+                db.expunge_all()
+                if len(lot) < LOT_DRILLS:
+                    break
+            yield "]"
+            print(f"[API] GET /drills/ (tag={tag}, author={author}, sencer) ha servit {fetes} frases "
+                  f"de {LOT_DRILLS} en {LOT_DRILLS}")
+        finally:
+            db.close()
+
+    return StreamingResponse(raigs(), media_type="application/json",
+                             headers={"X-Total-Count": str(total)})
+
+
 def _paginate(query, response: Response, limit: Optional[int], offset: Optional[int]):
     """Apply limit/offset to a query and set X-Total-Count (count BEFORE paging).
 
     Backwards compatibility: when neither limit nor offset is given, every row
-    is returned (the current web frontend loads all ~600 drills in one call).
+    is returned. `/drills/` ja no hi passa per aquest cami -- el cataleg sencer el
+    serveix `_drills_a_raigs` (#566) --, pero els altres llistats si, i son petits.
     When either is given, limit defaults to 100 and is capped at 500."""
     response.headers["X-Total-Count"] = str(query.order_by(None).count())
     bounds = _page_bounds(limit, offset)
@@ -2508,32 +2638,22 @@ def get_drills(response: Response, tag: Optional[str] = None, author: Optional[s
       instant; pair with GET /drills/tombstones?since= for deletions (P4.3).
     - `limit`/`offset` paginate (P4.2): limit defaults to 100 and is capped at
       500 **only when at least one of them is sent**. With neither, ALL rows
-      are returned, as the current frontend expects. `X-Total-Count` always
-      carries the unpaginated count.
+      are returned, as clients from before #489 expect -- but a raigs, de 200 en
+      200, sense tenir mai tot el cataleg a la memoria (#566). `X-Total-Count`
+      always carries the unpaginated count.
     """
     try:
-        query = db.query(DrillModel)
+        # El `since` es converteix aqui, abans de res: un 400 s'ha de poder donar amb la
+        # resposta encara sense comencar.
+        des_de = _parse_since(since) if since else None
 
-        if tag:
-            # Simple substring match for tags (since they can be comma-separated)
-            query = query.filter(DrillModel.tag.ilike(f"%{tag}%"))
+        # El cataleg sencer no es construeix de cop: es serveix a raigs, que es el que impedia
+        # que Render s'aixequés (#566). Els altres camins -per numeros, o paginat- son petits i
+        # es queden com eren.
+        if ids is None and _page_bounds(limit, offset) is None:
+            return _drills_a_raigs(tag, author, search, des_de)
 
-        if author:
-            query = query.filter(DrillModel.author.ilike(f"%{author}%"))
-
-        if search and search.strip():
-            # Finding a sentence to put in a practice must not mean downloading the library:
-            # the search happens here, over both texts and the tag (issue #199).
-            from sqlalchemy import or_ as _or_search
-            needle = f"%{search.strip()}%"
-            query = query.filter(_or_search(DrillModel.text_catalan.ilike(needle),
-                                            DrillModel.text_tachelhit.ilike(needle),
-                                            DrillModel.tag.ilike(needle)))
-
-        if since:
-            query = query.filter(
-                sa_func.coalesce(DrillModel.updated_at, DrillModel.date_created) >= _parse_since(since)
-            )
+        query = _filtra_drills(db, tag, author, search, des_de)
 
         if ids is not None:
             wanted = _parse_ids(ids)
@@ -2549,33 +2669,7 @@ def get_drills(response: Response, tag: Optional[str] = None, author: Optional[s
             drills = _paginate(query.order_by(DrillModel.date_created.desc()), response, limit, offset)
         print(f"[API] GET /drills/ (tag={tag}, author={author}, ids={ids}, since={since}, "
               f"limit={limit}, offset={offset}) returning {len(drills)} drills")
-        # Intentar serializar cada drill para detectar errores de validación Pydantic
-        serialized_drills = []
-        for drill in drills:
-            try:
-                # Usar el modelo Pydantic Drill para validar
-                drill_schema = Drill.from_orm(drill)
-                serialized_drills.append(drill_schema)
-            except Exception as e:
-                print(f"[API] WARNING: Drill {drill.id} failed validation: {e}")
-                # Si falla, intentar normalizar las URLs manualmente antes de serializar
-                # Crear un diccionario con los campos, aplicando normalize_media_url a las URLs
-                drill_dict = {
-                    'id': drill.id,
-                    'date_created': drill.date_created,
-                    'tag': drill.tag,
-                    'text_catalan': drill.text_catalan,
-                    'text_tachelhit': drill.text_tachelhit,
-                    'text_arabic': drill.text_arabic,
-                    'audio_url': normalize_media_url(drill.audio_url) if drill.audio_url else None,
-                    'audio_tts_url': normalize_media_url(drill.audio_tts_url) if drill.audio_tts_url else None,
-                    'video_url': normalize_media_url(drill.video_url) if drill.video_url else None,
-                    'image_url': normalize_media_url(drill.image_url) if drill.image_url else None,
-                }
-                # Crear el objeto Pydantic con el diccionario corregido
-                drill_schema = Drill(**drill_dict)
-                serialized_drills.append(drill_schema)
-        return serialized_drills
+        return [_un_drill(drill) for drill in drills]
     except HTTPException:
         raise
     except Exception as e:
@@ -9916,6 +10010,95 @@ def list_available_pairs(db: Session = Depends(get_db)):
         ) for drill in drills
     ]
 
+# El nom amb que signa cada lector. Son els que la biblioteca ja porta escrits -3.129 lectures
+# amb l'adaptador ric, 3.554 amb l'afinat vell, 206 amb el NeMo-, i es diuen igual A POSTA: la
+# pantalla de revisio compta ACORDS entre models, i dos noms per al mateix lector serien dos
+# testimonis alla on nomes n'hi ha un. Si l'Space canvia d'adaptador, aquestes constants canvien
+# amb ell (ADR 0009: al Space hi va l'adaptador de tot el corpus).
+LECTOR_GEMINI = "Gemini"
+LECTOR_NOSTRE = "MMS adaptador ric (shi_ric)"
+LECTOR_NEMO = "NeMo stt_zgh_fastconformer"
+
+
+def _desa_lectura_de_maquina(db: Session, drill_id: Optional[int], text: str, lector: str,
+                             cru: Optional[str] = None) -> Optional[str]:
+    """Desa als esborranys el que una maquina acaba de llegir d'una gravacio (#575).
+
+    Fins ara `/transcribe/` no deixava cap rastre: ni qui havia llegit, ni que havia dit, ni
+    quan. Mesurat el 9-11-2026 sobre les 12.202 frases, nomes 12 es podien relacionar amb una
+    lectura desada, i cap no portava l'empremta de qui l'havia escrita. Per aixo la pregunta del
+    #557 -quantes frases de produccio han rebut text de maquina al camp del parlant- no es podia
+    contestar: no es que la resposta fos zero, es que no hi havia on mirar.
+
+    Tres fronteres:
+
+    - **No toca cap camp de persona.** `text_tachelhit`, `text_tachelhit_latin` i `text_catalan`
+      no es llegeixen ni s'escriuen aqui (ADR 0003). Ni `text_tachelhit_suggested`: qui decideix
+      quina de les lectures ocupa la proposta es el davant, i aixo no canvia.
+    - **Un JSON que no s'enten no s'esborra.** Si el camp porta una cosa que no sabem llegir, es
+      deixa estar i es diu al registre. Perdre esborranys d'altri per fer lloc al nostre seria
+      pitjor que no desar res.
+    - **No fa caure la resposta.** Qui acaba de gravar ha de rebre la seva lectura encara que el
+      desat falli; per aixo el `rollback` i el `None`.
+
+    Una relectura del mateix lector SUBSTITUEIX la seva entrada -l'ultim que ha dit es el que
+    diu-, i no n'afegeix una segona: si no, un boto premut tres vegades semblaria tres
+    testimonis, i l'acord entre models es justament el que fa que valgui la pena mirar-ne una.
+
+    Torna el camp tal com ha quedat, per tornar-lo a qui ha cridat.
+    """
+    net = (text or "").strip()
+    if not drill_id or not net:
+        return None
+    try:
+        drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+        if drill is None:
+            return None
+        llista = []
+        anterior = (drill.esborranys or "").strip()
+        if anterior:
+            try:
+                llista = json.loads(anterior)
+            except Exception:
+                print(f"[LECTURA] els esborranys del drill {drill_id} no es poden llegir; "
+                      f"no hi escric i els deixo com estan")
+                return None
+            if not isinstance(llista, list):
+                print(f"[LECTURA] els esborranys del drill {drill_id} no son una llista; "
+                      f"no hi escric i els deixo com estan")
+                return None
+        nova = {"text": net, "model": lector, "acord": None,
+                # Quan. Es una clau nova: `revisa.esborranys_de` nomes mira text/model/acord/font,
+                # o sigui que aixo queda escrit sense canviar cap pantalla.
+                "quan": iso_z(datetime.now(timezone.utc))}
+        # El que la maquina ha SENTIT, quan no es el mateix que proposa. El que torna el NeMo
+        # passa pel glossari i despres per l'aparellament amb el corpus: pot acabar essent una
+        # frase NOSTRA que s'hi assembla, i aixo es una altra afirmacio. Totes dues queden
+        # escrites, perque qui decideix ha de poder veure si la proposta surt de la gravacio o
+        # de la semblanca amb una frase que ja teniem.
+        if cru and cru.strip() and cru.strip() != net:
+            nova["cru"] = cru.strip()
+        mateix = [i for i, e in enumerate(llista)
+                  if isinstance(e, dict) and (e.get("model") or "").strip() == lector]
+        if mateix:
+            llista[mateix[0]] = nova
+            for i in reversed(mateix[1:]):
+                llista.pop(i)
+        else:
+            llista.append(nova)
+        drill.esborranys = json.dumps(llista, ensure_ascii=False)
+        db.commit()
+        return drill.esborranys
+    except Exception as e:
+        print(f"[LECTURA] no s'ha pogut desar la lectura del drill {drill_id}: "
+              f"{type(e).__name__}: {e}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return None
+
+
 @app.post("/transcribe/", response_model=TranscribeResponse)
 async def transcribe_audio(
     request: TranscribeRequest,
@@ -9990,7 +10173,9 @@ async def transcribe_audio(
         if len(re.sub(r"[^\w]", "", latin or tif)) < 3:
             raise HTTPException(status_code=502, detail="No s'ha entès res de la gravació")
         reading = f"{latin} · {tif}" if latin and tif and latin != tif else (latin or tif)
-        return TranscribeResponse(rough_transcription=latin, corrected_transcription=reading, similarity_score=0.0)
+        return TranscribeResponse(rough_transcription=latin, corrected_transcription=reading, similarity_score=0.0,
+                                  esborranys=_desa_lectura_de_maquina(db, request.drill_id, reading,
+                                                                      LECTOR_GEMINI, cru=latin))
 
     # El segon de la fila: el NOSTRE model. Abans el servidor saltava d'aquí al NeMo, que és d'un
     # tercer i llegeix pitjor (0,448 contra 0,279, mesurat l'1-11 sobre gravacions nostres), i que
@@ -9998,7 +10183,9 @@ async def transcribe_audio(
     nostre = await asyncio.to_thread(_space_mms_text, audio_url)
     if len(re.sub(r"[^\w]", "", nostre)) >= 3:
         return TranscribeResponse(rough_transcription=nostre, corrected_transcription=nostre,
-                                  similarity_score=0.0)
+                                  similarity_score=0.0,
+                                  esborranys=_desa_lectura_de_maquina(db, request.drill_id, nostre,
+                                                                      LECTOR_NOSTRE))
 
     # Call HF Space
     asr_space_url = os.getenv("HUGGINGFACE_ASR_SPACE_URL", ASR_SPACE_DEFAULT)
@@ -10059,7 +10246,9 @@ async def transcribe_audio(
     return TranscribeResponse(
         rough_transcription=rough,
         corrected_transcription=corrected,
-        similarity_score=score
+        similarity_score=score,
+        esborranys=_desa_lectura_de_maquina(db, request.drill_id, corrected, LECTOR_NEMO,
+                                            cru=rough if isinstance(rough, str) else None),
     )
 
 class ASRService:
