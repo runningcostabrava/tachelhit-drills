@@ -311,6 +311,14 @@ class TranscribeResponse(BaseModel):
     rough_transcription: str
     corrected_transcription: str
     similarity_score: float
+    #: El camp dels esborranys de la frase TAL COM HA QUEDAT despres de desar-hi aquesta lectura
+    #: (#575), o `None` si no s'hi ha desat res (no venia `drill_id`, o el desat ha fallat).
+    #:
+    #: Hi es perque qui crida aquest endpoint escriu, tot seguit, un PUT a `/drills/{id}` amb
+    #: `esborranys` compost a partir de la copia que ja tenia. Aquella copia es d'ABANS d'aquesta
+    #: lectura, i desar-la esborraria el rastre que acabem d'escriure. Amb aixo, el davant hi pot
+    #: construir a sobre.
+    esborranys: Optional[str] = None
 
 class DrillPairInfo(BaseModel):
     id: int

@@ -183,14 +183,19 @@ const MAX_LECTURES = 3;
 async function lesLlegeix(pujat: { drillId: number; audioUrl: string; esPrincipal: boolean }[]) {
   let llegides = 0;
   for (const q of pujat.slice(0, MAX_LECTURES)) {
-    const r = await llegeixIAvisa(q.audioUrl);
+    // El número de la frase només s'hi passa quan aquesta presa ÉS la seva veu: el rastre que
+    // el servidor desa (#575) diu «això és el que s'ha llegit d'aquesta frase», i d'una presa
+    // que no és la seva seria fals.
+    const r = await llegeixIAvisa(q.audioUrl, q.esPrincipal ? q.drillId : undefined);
     if (!r.ok) continue;
     llegides += 1;
     // Es desa només quan aquesta presa és la veu de la targeta: si no,
     // `text_tachelhit_suggested` parlaria d'una altra gravació.
     if (!q.esPrincipal) continue;
     const cos: Record<string, unknown> = { text_tachelhit_suggested: r.text, quiet: true };
-    if (r.significat) cos.esborranys = esborranysAmb(null, r.text, r.significat);
+    // Es parteix del camp que ha tornat la lectura, que és qui porta el rastre de qui ha
+    // llegit. Abans es partia de `null`, que esborrava tot el que hi hagués.
+    if (r.significat) cos.esborranys = esborranysAmb(r.esborranys, r.text, r.significat);
     try {
       await fetch(`${API_BASE}/drills/${q.drillId}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cos),

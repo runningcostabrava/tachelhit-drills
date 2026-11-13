@@ -142,12 +142,15 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
   const laLlegeix = async (audioUrl: string, esPrincipal: boolean) => {
     setLlegint(true);
     try {
-      const r = await llegeixIAvisa(audioUrl);
+      // El número de la frase, només si aquesta presa és la seva veu: així el servidor hi desa
+      // qui ha llegit i què ha dit (#575), i no ho desa d'una presa que no és la seva.
+      const r = await llegeixIAvisa(audioUrl, esPrincipal ? drill.id : undefined);
       if (!r.ok) return;
       setLectura(r.text);
       if (!esPrincipal) return;
       const cos: Record<string, unknown> = { text_tachelhit_suggested: r.text, quiet: true };
-      if (r.significat) cos.esborranys = esborranysAmb(drill.esborranys, r.text, r.significat);
+      // La base és el camp que ha tornat la lectura; el que tenim aquí és d'abans (#575).
+      if (r.significat) cos.esborranys = esborranysAmb(r.esborranys ?? drill.esborranys, r.text, r.significat);
       try { await api.updateDrill(drill.id, cos); onSaved(); }
       catch { /* la lectura ja s'ha dit; desar-la pot esperar la repesca */ }
     } finally { setLlegint(false); }
