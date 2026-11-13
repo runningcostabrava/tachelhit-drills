@@ -345,7 +345,21 @@ def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tac
 # Config
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///drills.db")
+def adreca_de_la_base(url: str) -> str:
+    """L'adreça de la base, amb el nom del dialecte que SQLAlchemy entén.
+
+    El tauler de Render ensenya l'adreça com a `postgres://`, que és el nom antic. SQLAlchemy 2
+    ja no el coneix i contesta «Can't load plugin: sqlalchemy.dialects:postgres». Qui la copia
+    d'allà —que és el camí normal— es troba un mur que no diu què fer; en Pablo s'hi va trobar
+    el 13-11-2026 executant la reescriptura de les adreces a R2.
+
+    Es corregeix aquí i no a cada guió perquè tots passen per aquest fitxer.
+    """
+    vell = "postgres://"
+    return "postgresql://" + url[len(vell):] if url.startswith(vell) else url
+
+
+DATABASE_URL = adreca_de_la_base(os.getenv("DATABASE_URL", "sqlite:///drills.db"))
 # Usar el nuevo Space tachelhit-video-generator
 HUGGINGFACE_SPACE_URL = os.getenv("HUGGINGFACE_SPACE_URL")
 HUGGINGFACE_IMAGE_SPACE_URL = os.getenv("HUGGINGFACE_IMAGE_SPACE_URL", HUGGINGFACE_SPACE_URL)
