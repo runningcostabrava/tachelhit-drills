@@ -4,19 +4,23 @@ El que es prova aquí és el que es pot equivocar sense que es vegi: l'ordre de 
 duplicades de la biblioteca, el desplaçament del vídeo i —sobretot— que les esmenes del text
 es facin en servir i NO a la biblioteca (ADR 0003).
 """
+import json
+
 import baba_ali
 import main
 from models import Drill
 from test_api import client
 
 
-def _linia(ep, marca, ca, ar, so="https://res.cloudinary.com/x/a.mp3"):
+def _linia(ep, marca, ca, ar, so="https://res.cloudinary.com/x/a.mp3", am=None, lectures=None):
     db = main.SessionLocal()
     try:
         d = Drill(tag="baba-ali, forja, font externa",
                   source_playlist=f"Baba Ali · {ep}",
                   source_title=f"Baba Ali · {ep} · {marca}",
                   text_catalan=ca, text_arabic=ar, audio_url=so,
+                  text_tachelhit_suggested=am,
+                  esborranys=json.dumps(lectures, ensure_ascii=False) if lectures else None,
                   region="Souss (sèrie Baba Ali, SNRT)")
         db.add(d)
         db.commit()
@@ -208,6 +212,74 @@ def test_els_dos_episodis_muts_tenen_video_i_diuen_com_s_ha_sabut():
         assert ep not in baba_ali.sense_video(), f"{ep} ja no és dels que no tenen vídeo"
     assert "com_els_muts" in baba_ali.com_s_ha_mesurat(), \
         "la mesura ha d'explicar també com es casen les pujades mudes"
+
+
+def test_el_que_la_maquina_hi_sent_va_a_part_i_no_es_fa_passar_per_text_nostre():
+    """La lectura de l'ASR surt al visor, però com a lectura de màquina (#535).
+
+    El camp del parlant (`text_tachelhit`) segueix buit: ningú no ha dit que allò sigui el que
+    es diu. Això és ADR 0003 vist des del visor."""
+    a = _linia("episodi 83", "1:00", "Bon dia", "صباح الخير",
+               am="sbaḥlxir", lectures=[{"text": "sbaḥlxir", "model": "MMS afinat (shi)"}])
+    try:
+        v = client.get("/baba-ali/episodi-83").json()
+        l = v["linies"][0]
+        assert l["am"] == "sbaḥlxir"
+        assert l["am_models"] == 1
+        assert l["am_acord"] is False, "una sola lectura no és cap acord"
+        assert v["amb_veu_sentida"] == 1 and v["acords"] == 0
+
+        db = main.SessionLocal()
+        try:
+            desat = db.query(Drill).filter(Drill.id == a).first()
+            assert not desat.text_tachelhit, "el camp del parlant no s'ha omplert amb la màquina"
+        finally:
+            db.close()
+    finally:
+        _esborra(a)
+
+
+def test_dos_models_que_senten_el_mateix_van_marcats_i_els_espais_no_compten():
+    """L'acord és l'únic senyal que tenim: 50 línies de 2.727.
+
+    Els models tallen els mots on volen, i «ur ɣid illi» i «urɣidilli» són la mateixa lectura.
+    El que NO es plega és cap lletra: ɣ, ɛ, ḥ i les emfàtiques distingeixen paraules, i plegar-les
+    faria passar per acord el que no ho és."""
+    a = _linia("episodi 84", "1:00", "No hi és", "ليس هنا", am="ur ɣid illi",
+               lectures=[{"text": "ur ɣid illi", "model": "MMS afinat (shi)"},
+                         {"text": "urɣidilli", "model": "MMS adaptador ric (shi_ric)"}])
+    b = _linia("episodi 84", "2:00", "És aquí", "هو هنا", am="iga ɣid",
+               lectures=[{"text": "iga ɣid", "model": "MMS afinat (shi)"},
+                         {"text": "iga gid", "model": "MMS adaptador ric (shi_ric)"}])
+    try:
+        v = client.get("/baba-ali/episodi-84").json()
+        dacord, no = v["linies"][0], v["linies"][1]
+        assert dacord["am_acord"] is True, "els espais no fan dues lectures diferents"
+        assert no["am_acord"] is False, "ɣ i g no són la mateixa lletra"
+        assert v["acords"] == 1 and v["amb_veu_sentida"] == 2
+    finally:
+        _esborra(a, b)
+
+
+def test_una_linia_sense_lectura_de_maquina_no_s_inventa_res():
+    a = _linia("episodi 85", "1:00", "Res", "لا شيء")
+    try:
+        l = client.get("/baba-ali/episodi-85").json()["linies"][0]
+        assert l["am"] is None and l["am_models"] == 0 and l["am_acord"] is False
+    finally:
+        _esborra(a)
+
+
+def test_les_lectures_mal_desades_no_tomben_el_visor():
+    """`esborranys` és text lliure: si un dia hi ha un JSON trencat, el visor ha de servir igual."""
+    assert baba_ali.lectures(None) == []
+    assert baba_ali.lectures("no soc json") == []
+    assert baba_ali.lectures('{"text": "a"}') == [], "un objecte sol no és una llista de lectures"
+    assert baba_ali.lectures('[{"model": "x"}]') == [], "sense text no és una lectura"
+    #: dos cops el mateix model no és acord: és la mateixa veu dues vegades
+    dues = baba_ali.lectures('[{"text": "a", "model": "m"}, {"text": "a", "model": "m"}]')
+    assert len(dues) == 1 and baba_ali.hi_ha_acord(dues) is False
+    assert baba_ali.hi_ha_acord(baba_ali.lectures('[{"text": "  ", "model": "m"}]')) is False
 
 
 def test_l_esmena_no_toca_el_que_no_hi_surt():
