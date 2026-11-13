@@ -73,3 +73,97 @@ def test_sense_diposit_configurat_el_magatzem_ho_diu(monkeypatch):
     assert magatzem.disponible() is False
     monkeypatch.setenv("CLOUDINARY_CLOUD_NAME", "un-diposit")
     assert magatzem.disponible() is True
+
+
+
+
+# ---------------------------------------------------------------------------
+# R2 (#577): el segon dipòsit.
+#
+# Cap d'aquestes proves no substitueix res del mòdul. No és per elegància: les pujades de
+# l'aplicació passen en fils de fons —el TTS d'una frase acabada de crear, per exemple—, i
+# una prova que canviés `_r2` a tot el mòdul faria que una pujada d'una altra prova, caiguda
+# just en aquell moment, se n'anés al dipòsit de mentida. Això va tombar set proves d'altres
+# fitxers l'11-11-2026, i només amb cert ordre.
+#
+# Per això `clau_de` i `_puja_r2` estan separats de `puja`: es poden provar tal com són, amb
+# un client passat per paràmetre.
+# ---------------------------------------------------------------------------
+
+class _FalsR2:
+    """Un R2 de mentida que apunta què li demanen. No hi ha xarxa enlloc."""
+
+    def __init__(self):
+        self.desats = []
+        self.esborrats = []
+
+    def put_object(self, Bucket, Key, Body, ContentType):  # noqa: N803 (ho diu així boto3)
+        self.desats.append({"bust": Bucket, "clau": Key, "tipus": ContentType,
+                            "bytes": Body.read() if hasattr(Body, "read") else Body})
+
+    def delete_object(self, Bucket, Key):  # noqa: N803
+        self.esborrats.append((Bucket, Key))
+
+
+def test_la_clau_del_fitxer_porta_la_carpeta_i_lextensio():
+    clau = magatzem.clau_de(b"ID3uns bytes", "tachelhit/audio", "audio_7_123", "so")
+
+    assert clau == "tachelhit/audio/audio_7_123.mp3"
+
+
+@pytest.mark.parametrize("bytes_, espera", [
+    (b"\x89PNG\r\n\x1a\n...", ".png"),
+    (b"\xff\xd8\xff\xe0", ".jpg"),
+    (b"ID3\x04\x00", ".mp3"),
+    (b"OggS\x00\x02", ".ogg"),
+    (b"\x1a\x45\xdf\xa3\x01", ".webm"),
+    (b"\x00\x00\x00\x20ftypM4A ", ".m4a"),
+    (b"\x00\x00\x00\x18ftypmp42", ".mp4"),
+])
+def test_lextensio_surt_dels_bytes_quan_no_ens_la_diuen(bytes_, espera):
+    """Les imatges dibuixades i les gravacions del mòbil arriben sense nom de fitxer."""
+    assert magatzem.clau_de(bytes_, "c", "n", "auto") == "c/n" + espera
+
+
+def test_lextensio_que_ens_diuen_mana_per_damunt_dels_bytes():
+    """El mòbil ja l'ha validada; no cal que el magatzem endevini."""
+    assert magatzem.clau_de(b"xxxx no es res conegut", "c", "n", "so", "wav") == "c/n.wav"
+
+
+def test_lextensio_surt_del_cami_quan_ens_donen_un_fitxer():
+    assert magatzem.clau_de(r"C:\tmp\una cosa.WAV", "c", "n", "so") == "c/n.wav"
+
+
+def test_un_contingut_desconegut_cau_a_lextensio_de_la_seva_mena():
+    assert magatzem.clau_de(b"xxxx", "c", "n", "video") == "c/n.mp4"
+
+
+def test_el_tipus_que_arriba_al_diposit_surt_de_lextensio():
+    """Amb Cloudinary el so es deia «vídeo». Aquí el navegador rep el tipus de debò."""
+    fals = _FalsR2()
+
+    magatzem._puja_r2(fals, "un-bust", "tachelhit/audio/a.mp3", b"ID3x")
+
+    assert fals.desats == [{"bust": "un-bust", "clau": "tachelhit/audio/a.mp3",
+                            "tipus": "audio/mpeg", "bytes": b"ID3x"}]
+
+
+def test_de_ladreca_desada_sen_treu_la_clau_del_bust():
+    """El que guardem a la base de dades és `/mitjans/...`; el bust no en sap res d'això."""
+    assert magatzem.clau_de_ladreca("/mitjans/tachelhit/video/v_7_1.mp4") ==         "tachelhit/video/v_7_1.mp4"
+
+
+def test_esborrar_demana_la_clau_al_bust():
+    fals = _FalsR2()
+
+    magatzem._esborra_r2(fals, "un-bust", "tachelhit/video/v_7_1.mp4")
+
+    assert fals.esborrats == [("un-bust", "tachelhit/video/v_7_1.mp4")]
+
+
+def test_sense_claus_no_hi_ha_r2(monkeypatch):
+    """Si el servidor encara no les té posades, ha de seguir anant a Cloudinary."""
+    for k in ("R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"):
+        monkeypatch.delenv(k, raising=False)
+
+    assert magatzem.a_r2() is False
