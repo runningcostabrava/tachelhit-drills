@@ -70,3 +70,27 @@ jobs:
       - name: Compilació
         working-directory: frontend
         run: npm run build
+
+  web_proves:
+    name: Proves del web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instal·la les dependències
+        working-directory: frontend
+        run: npm ci
+
+      # A part de la compilació a posta (#574): «compila» i «fa el que ha de fer» són dues
+      # coses, i quan una falla val més saber quina. Les regles que es proven aquí són les que
+      # ja s'han trencat: on va la lectura de la màquina (#557) i què es desa sense connexió
+      # (#568).
+      - name: vitest
+        working-directory: frontend
+        run: npm test
