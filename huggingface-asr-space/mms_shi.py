@@ -128,3 +128,114 @@ def transcribe(path: str, max_secs: float) -> dict:
     c = round(float(math.exp(np.mean(np.log(np.clip(conf, 1e-6, 1.0))))), 3) if conf else None
     return {"text": text, "words": words, "confidence": c, "model": MODEL_ID, "alphabet": "latin-shi",
             "segments": [{"start": g[0]["start"], "end": g[-1]["end"], "text": " ".join(x["text"] for x in g)} for g in segs]}
+
+
+# ----------------------------------------------------------------------------------------------
+# The third reader: the same model, decoded with the lexicon in the loop (#601, H3)
+# ----------------------------------------------------------------------------------------------
+# Greedy decoding above picks, frame by frame, the letter that sounds best, with no idea whether
+# a word comes out: on the Tamazight For All lectures ~40 % of what it writes is not a word, and
+# an audit put ~16 of 31 bad translations down to an ASR string no dictionary can recover.
+# Beam search with a word list (pyctcdecode `unigrams`) biases the beam toward strings that ARE
+# words from the 30,881 dictionary forms + 77,412 conjugated forms we already have — no running
+# text corpus needed, which we do not have in this language. An optional KenLM (`lm_shi.arpa`)
+# is used if someone ships one next to this file.
+# The greedy route stays untouched: this is a new route, measured against human truth before
+# anyone depends on it. The first number that counts is CER against the Tamazight For All
+# human Tifinagh tracks (29 sung verses: greedy CER 0.307), then the narrated tales.
+UNIGRAMS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "unigrams_shi.txt")
+KENLM = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lm_shi.arpa")
+BEAM = 64
+_lm = {"decoder": None, "error": None, "unigrams": 0}
+
+
+def labels_from_vocab(vocab_by_id: dict, blank: int, space_token: str) -> list:
+    """pyctcdecode wants the labels in id order, with "" for the blank and " " for the delimiter."""
+    n = max(vocab_by_id) + 1
+    labels = [""] * n
+    #: pyctcdecode refuses duplicate labels, and the vocab has several tokens that must never be
+    #: written (<s>, </s>, <unk>): each gets its own private-use character, which no unigram
+    #: contains, so the beam can carry it but no word will ever match it.
+    privat = 0xE000
+    for i, tok in vocab_by_id.items():
+        if i == blank:
+            labels[i] = ""
+        elif tok == space_token:
+            labels[i] = " "
+        elif tok in ("<s>", "</s>", "<unk>", "<pad>") or len(tok) != 1:
+            labels[i] = chr(privat)
+            privat += 1
+        else:
+            labels[i] = tok
+    return labels
+
+
+def _build_decoder():
+    if _lm["decoder"] is not None or _lm["error"]:
+        return
+    try:
+        from pyctcdecode import build_ctcdecoder
+        proc = _state["proc"]
+        vocab = {v: k for k, v in proc.tokenizer.get_vocab().items()}
+        labels = labels_from_vocab(vocab, proc.tokenizer.pad_token_id, proc.tokenizer.word_delimiter_token)
+        unigrams = None
+        if os.path.exists(UNIGRAMS):
+            with open(UNIGRAMS, encoding="utf-8") as f:
+                unigrams = [l.strip() for l in f if l.strip()]
+        _lm["unigrams"] = len(unigrams or [])
+        _lm["decoder"] = build_ctcdecoder(labels, kenlm_model_path=KENLM if os.path.exists(KENLM) else None,
+                                          unigrams=unigrams)
+        print(f"[MMS+lm] decoder ready: {len(unigrams or [])} unigrams, kenlm={os.path.exists(KENLM)}")
+    except Exception as e:
+        _lm["error"] = str(e)
+        print(f"[MMS+lm] decoder failed: {e}")
+
+
+def status_lm() -> dict:
+    return {"ready": _lm["decoder"] is not None, "error": _lm["error"], "unigrams": _lm["unigrams"],
+            "kenlm": os.path.exists(KENLM)}
+
+
+def transcribe_lm(path: str, max_secs: float) -> dict:
+    proc, model = _state["proc"], _state["model"]
+    if model is None:
+        raise RuntimeError(_state["error"] or "MMS is still loading")
+    _build_decoder()
+    if _lm["decoder"] is None:
+        raise RuntimeError(_lm["error"] or "lexicon decoder not ready")
+    wav, _ = librosa.load(path, sr=SR, mono=True)
+    if len(wav) / SR > max_secs:
+        raise ValueError(f"audio longer than {max_secs:.0f} s")
+    words = []
+    w, s, off = int(WINDOW_S * SR), int(STRIDE_S * SR), 0
+    while True:
+        ent = proc(wav[off:off + w], sampling_rate=SR, return_tensors="pt")
+        with _lock, torch.no_grad():
+            logp = model(**ent).logits[0].log_softmax(-1).numpy()
+        beams = _lm["decoder"].decode_beams(logp, beam_width=BEAM)
+        ww = []
+        if beams:
+            # pyctcdecode: (text, last_lm_state, [(word, (frame_start, frame_end))...], logit_score, lm_score)
+            for word, (f0, f1) in beams[0][2]:
+                ww.append({"text": word, "start": round(off / SR + f0 * FRAME_S, 2),
+                           "end": round(off / SR + f1 * FRAME_S, 2)})
+        if words:
+            ww = [x for x in ww if x["start"] >= words[-1]["end"] - 0.05]
+        words += ww
+        if off + w >= len(wav):
+            break
+        off += s
+    text = " ".join(x["text"] for x in words).strip()
+    segs, cur = [], []
+    for x in words:
+        if cur and x["start"] - cur[-1]["end"] > PAUSE_S:
+            segs.append(cur)
+            cur = []
+        cur.append(x)
+    if cur:
+        segs.append(cur)
+    # No per-character confidence here: the beam's score is not comparable with the greedy
+    # route's number, and a number that is not comparable is worse than none.
+    return {"text": text, "words": words, "confidence": None, "model": MODEL_ID + "+lexicon-beam",
+            "alphabet": "latin-shi", "decoder": status_lm(),
+            "segments": [{"start": g[0]["start"], "end": g[-1]["end"], "text": " ".join(x["text"] for x in g)} for g in segs]}

@@ -57,6 +57,24 @@ PAUSA, SOROLL = 0.35, "-32dB"
 MINIM_MOT = 3            #: un tros d'una o dues lletres casa amb qualsevol cosa
 SPACE_DEFECTE = "https://josepabloucr-huggingface-asr-space.hf.space"
 
+
+def codi_que_corre():
+    """El commit del repositori que ha produït el fitxer, desat DINS del JSON.
+
+    L'auditoria del 14-11-2026 no va poder reconstruir la línia de base: els JSON eren de
+    les 10.10, tres commits eren posteriors, i la reconstrucció més propera donava glosses
+    diferents en 14 de 40 trossos. Un resultat sense el codi que l'ha fet no es pot tornar a
+    mesurar. També s'ha abaixat la temperatura del traductor a 0 pel mateix motiu: a 0,2 el
+    mateix tros donava una resposta bona en una passada i una de falsa a la següent, i la
+    casella «bo» d'una mostra de 40 es movia ±4 punts tota sola.
+    """
+    try:
+        return subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True,
+                              text=True, cwd=os.path.dirname(os.path.abspath(__file__))
+                              ).stdout.strip() or "?"
+    except Exception:
+        return "?"
+
 SYS = (
     "Et donen un tros del que un model de reconeixement de veu ha sentit en un video en "
     "amazic (taixelhit o tamazight de l'Atles). El text ve mal escrit: mots enganxats, "
@@ -84,6 +102,40 @@ SYS = (
     "que has pogut muntar.")
 
 MOTS = re.compile(r"[^\W\d_]+", re.UNICODE)
+
+#: La segona pregunta, la dels FETS. Neix de la mesura del 14-11-2026: amb el verb «ser»
+#: servit, els falsos van caure de 15 a 8 i els bons es van quedar a 9. Dels falsos que
+#: quedaven, el model n'era la causa en dos: va OMETRE un token glossat bé (#9) i va ESCRIURE
+#: UNA RELACIÓ oposada a la glossa (#19). Una frase permet totes dues coses. Aquesta sortida
+#: no: una paraula per token, un marc que descriu sense relacionar, la cita copiada, i la
+#: frase a part lligada token a token. `backend/fets.py` ho comprova en codi i poda el que no
+#: s'aguanta.
+SYS_FETS = (
+    "Et donen un tros del que un model de reconeixement de veu ha sentit en un video en "
+    "amazic, i el significat de les paraules que un diccionari hi reconeix (`=` fiable, "
+    "`≈` pot ser fals). NO saps amazic. No has de fer veure que si.\n\n"
+    "Contesta NOMES amb un objecte JSON, sense cap text al voltant, amb aquestes claus:\n"
+    "  \"interlineal\": una llista amb EXACTAMENT un element per cada token del tros, en el "
+    "mateix ordre: la paraula catalana d'aquell token, o \"?\" si no la saps. Mai en saltis "
+    "cap, mai n'afegeixis cap. Si un token es una paraula que el parlant ANOMENA (vegeu "
+    "\"cita\"), a la seva casella hi va el token mateix entre cometes: \"«imikk»\".\n"
+    "  \"tema\": un GRUP NOMINAL en catala que digui de que va el tros (mai una oracio, mai una "
+    "relacio), fet amb paraules que surtin de la interlineal; o \"?\".\n"
+    "  \"cita\": nomes si el missatge et dona CANDIDATS A CITA (els tokens que segueixen un "
+    "verb de dir): el candidat que el parlant anomena com a paraula —«en diuen X», «es diu X»—, "
+    "copiat tal com es. NO es cita un candidat que sigui qui parla o de qui es parla (una "
+    "gent, un pronom): en «da ttinin imaziġn», «imaziġn» son els que diuen, no la paraula "
+    "dita. Si no hi ha candidats o cap no es una paraula anomenada, null.\n"
+    "  \"frase\": el catala de corregut, nomes si el pots dir amb paraules que surten de la "
+    "interlineal; si dubtes, null. Un filtre la comprovara paraula per paraula.\n"
+    "  \"soste\" (opcional): si a la frase o al tema fas servir una paraula que no casa "
+    "literalment amb la casella d'on surt («amazigues» per la casella «amazic»), lliga-la: "
+    "{\"amazigues\": [3]}.\n\n"
+    "No et demanem si es pregunta o afirmacio, ni si es negatiu, ni qui hi surt: aixo es "
+    "calcula a partir de les particules i dels afixos, no cal que ho diguis.\n"
+    "Regla unica: tot el que entregues ha de sortir d'una casella de la interlineal. Una "
+    "paraula sense casella es una invencio, i es rebutjara."
+)
 
 
 # ------------------------------------------------------------------ el so
@@ -250,7 +302,7 @@ def que_vol_dir(deepseek, tema, tros, abans, despres, paraules):
     q += [f"  {p}" for p in paraules] or ["  (cap paraula reconeguda)"]
     try:
         r = deepseek.deepseek_generate(SYS, [{"role": "user", "text": "\n".join(q)}],
-                                       max_output_tokens=400, temperature=0.2)
+                                       max_output_tokens=400, temperature=0.0)
     except Exception as e:
         return f"(error: {type(e).__name__})", ""
     ca = cert = ""
@@ -261,6 +313,55 @@ def que_vol_dir(deepseek, tema, tros, abans, despres, paraules):
         elif l.upper().startswith("CERTESA:"):
             cert = l.split(":", 1)[1].strip().lower()
     return ca, cert
+
+
+def fets(deepseek, tema, tros, abans, despres, paraules):
+    """Els fets d'un tros, comprovats per `backend/fets.py`. Mai una frase sola.
+
+    Torna {"fets": {...} | None, "rebutjat": [motius]}. Si el model no entrega JSON o la
+    interlineal no fa la llargada dels tokens, `fets` és None i el motiu ho diu; si entrega
+    coses sense token, es poden i els motius diuen quines.
+    """
+    import fets as F
+    toks = F.tokens(tros)
+    q = [f"DE QUE VA EL VIDEO: {tema}", ""]
+    if abans:
+        q.append(f"el tros d'abans deia: {abans}")
+    if despres:
+        q.append(f"el tros de despres deia: {despres}")
+    q += ["", f"EL TROS ({len(toks)} tokens): {tros}",
+          "ELS TOKENS, NUMERATS: " + "  ".join(f"[{i}] {t}" for i, t in enumerate(toks))]
+    cands = F.candidats_a_cita(toks)
+    if cands:
+        q.append("CANDIDATS A CITA (segueixen un verb de dir): "
+                 + ", ".join(f"[{i}] {toks[i]}" for i in cands))
+    q += ["", "EL QUE EL DICCIONARI RECONEIX EN AQUEST TROS:"]
+    q += [f"  {p}" for p in paraules] or ["  (cap paraula reconeguda)"]
+    try:
+        r = deepseek.deepseek_generate(SYS_FETS, [{"role": "user", "text": "\n".join(q)}],
+                                       max_output_tokens=600, temperature=0.0)
+    except Exception as e:
+        return {"fets": None, "rebutjat": [f"error: {type(e).__name__}"]}
+    nets, motius = F.comprova(r, tros, es_verb=_es_verb(), es_gent=_es_gent())
+    return {"fets": nets, "rebutjat": motius}
+
+
+def _es_verb():
+    """`es_verb` del lèxic, si és carregat; si no, cap (i la persona es llegeix amb cautela)."""
+    try:
+        import lexicon
+        return eines_del_lexic(lexicon)[1]
+    except Exception:
+        return None
+
+
+#: Gentilicis i pronoms que mai no són una paraula anomenada: són qui parla o de qui es parla.
+_GENT = {"imaziġn", "imazighn", "amaziġ", "tamaziġt", "irgazn", "tmġarin", "mddn", "medden",
+         "iεrabn", "aεrab", "irumiyn", "nutni", "nutnti", "nkkni", "kunni", "ntta", "nttat"}
+
+
+def _es_gent():
+    return lambda w: w.lower() in _GENT
 
 
 # ------------------------------------------------------------------
@@ -292,13 +393,14 @@ def un_video(vid, titol, a, lexicon, deepseek, space, caps, cau):
         if not t["hi_sent"]:
             t["vol_dir"], t["certesa_traduccio"] = "", "no s'enten"
             continue
+        abans = dits[i - 1]["hi_sent"] if i else ""
+        despres = dits[i + 1]["hi_sent"] if i + 1 < len(dits) else ""
         t["vol_dir"], t["certesa_traduccio"] = que_vol_dir(
-            deepseek, titol, t["hi_sent"],
-            dits[i - 1]["hi_sent"] if i else "",
-            dits[i + 1]["hi_sent"] if i + 1 < len(dits) else "",
-            t["paraules"])
+            deepseek, titol, t["hi_sent"], abans, despres, t["paraules"])
+        #: i els fets, a part: la frase de dalt es la que es llegeix; aixo es el que es creu
+        t.update(fets(deepseek, titol, t["hi_sent"], abans, despres, t["paraules"]))
 
-    json.dump({"video": vid, "titol": titol, "emissions": dits},
+    json.dump({"video": vid, "titol": titol, "codi": codi_que_corre(), "emissions": dits},
               io.open(fora, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     bones = sum(1 for t in dits if t.get("certesa_traduccio") in ("segur", "probable"))
     certs = [t["certesa"] for t in dits if t["certesa"] is not None]

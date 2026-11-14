@@ -41,7 +41,7 @@ veredicte.
 | El model fet per a l'estàndard (`/transcribe`, zgh) llegirà millor que el nostre adaptador de taixelhit | més paraules reconegudes | 58 talls idèntics, tifinag transliterat: shi 62,9 % / 0,884; zgh 57,0 % / 0,613, i esmicola (616 mots contra 448) | **morta** |
 | Els subtítols automàtics del YouTube (`ar-orig`) donen una segona transcripció | text alineat | 38 paraules en 497 s, gairebé tot soroll | **morta** |
 | L'alfabet (`ġ`/`ε` de l'ASR contra `ɣ`/`ɛ` del lèxic) perd un mot de cada cinc | més troballes traduint lletres | el lèxic ja normalitza: 0 formes noves, −68 | **morta** |
-| Les paraules enganxades llargues són el problema | — | 1,7 % dels mots passen de 12 lletres | **morta** |
+| Les paraules enganxades llargues són el problema | — | 1,7 % dels mots passen de 12 lletres | **morta — però la vara era dolenta**: mesurava mots LLARGS, i el que destrueix paraules del diccionari són mots CURTS enganxats (`ayingratsnt` = `ay ingr atsnt`, que es menja `amzaray` «diferència»). Dels 8 falsos que queden després de la taula, 4 són cadenes d'ASR irrecuperables i 1 és això. Torna com a H6 |
 | Les repeticions són el problema | — | 1,1 % amb un grup de 3 repetit, i algunes són de debò | **morta** |
 | Buscar la forma sabuda més semblant a cada perduda | més glosses | `hmmu`→«voltor» (és un nom d'home), `nkkwni` «nosaltres»→`nkkin` «jo» | **morta: fabrica** |
 | Votar entre tres retalls de la mateixa imatge (Baba Ali) | menys error | 0,167, pitjor que el millor retall sol (0,100) | **morta** |
@@ -74,7 +74,33 @@ arribaven absents o com a nom («Juniper», «Obligation», «action de pleurer�
 bones; `maša` («però») 93 vegades «Seek, Search». *Predicció:* amb la taula
 `FORMES_GRAMATICALS` (paradigmes del manual del Peace Corps Marroc 2007 + diccionari
 d'Oulhaj), els «a mitges» baixen i els «bons» pugen en tornar a jutjar la mostra de 40.
-*Estat:* taula feta el 14-11; **pendent de la mesura de resultat** (re-judici de l'auditor).
+*Resultat (14-11, mateixa mostra de 40, llavor 1114, tres passades):*
+
+| | desat | taula nova (A) | taula nova, 2a crida (B) |
+|---|---|---|---|
+| bo | 9 | 10 | 9 |
+| a mitges | 16 | 13 | 14 |
+| **fals** | **15** | **8** | **8** |
+| s'absté | 0 | 9 | 9 |
+
+*Codi:* PR #604 fusionat a `main` el 14-11 (CI verda, proves del backend 4m44s).
+
+**Veredicte: H1 es reformula.** El verb absent no era el que es menjava el significat: era el
+que donava **permís per inventar-lo**. Donar-li el verb no afegeix comprensió (bo 9→10→9, i
+entre dues passades amb entrada idèntica 8 de 40 canvien de veredicte: la casella «bo» es mou
+±1 tota sola); **treu la llicència**: els falsos cauen de 15 a 8, i les dues passades donen
+8 i 8 —zero soroll en aquesta casella. Sobre el que es deixa veure, falsos del 37,5 % al
+25,8 %. Nou de 40 ara s'abstenen, cinc dels quals eren falsos. Una frase falsa és pitjor que
+un buit, o sigui que això val; però no és comprensió.
+
+Dos senyals d'aquesta mesura que manen el que ve: **(1)** amb entrada idèntica el model canvia
+8 veredictes de 40 → cap millora de ±1 no vol dir res, i cal una mostra més gran o més
+passades per dir res dels «bons». **(2)** al #19 la glossa va millorar («lligat») i el model va
+escriure l'**oposat** («és diferent de»): una glossa correcta no impedeix una lectura
+invertida. Dels 8 falsos que queden, les causes ja no són del glossador: al #9 `islman` =
+«peix» està glossat bé dues vegades i el model escriu igualment una generalitat plausible;
+quatre són cadenes de l'ASR irrecuperables; una és `amzaray` («diferència») enganxada per
+l'ASR.
 
 *La raó mecànica, trobada per l'auditor:* les 77.412 formes conjugades de l'IRCAM **no
 contenen ni una forma de `ili`, `g`, `ini` ni `iri`** — els quatre verbs més freqüents del
@@ -89,20 +115,213 @@ sinó l'ASR menjant-se una lletra, i van al normalitzador, no a la taula.
 en 16 de 92; aquells 16 són els fiables. *Predicció:* la precisió de l'acord és molt més alta
 que la de qualsevol dels dos sols. *Estat:* pendent de jutjar els 16.
 
+**H8 · A l'ASR, el que diuen dos lectors independents és bo; el que en diu un sol, no.**
+*Mesurat contra veritat humana (29 versos, 14-11):* paraules que diuen **tots dos** models
+(shi i zgh): **7 de 8 són a la veritat (88 %)**; paraules que només diu el nostre: **24 de 90
+(27 %)**. La predicció es confirma amb força. Però l'acord només cobreix **7 de 161 paraules
+de la veritat (4 %)**: amb el zgh de company, la precisió és alta i el rendiment és nul. *Segona prova (14-11): el mateix model sobre tres talls desplaçats (−0,3 s / 0 / +0,3 s),
+mateixos 29 versos, veritat humana:*
+
+| la paraula surt a | paraules | bones | precisió | cobreix la veritat |
+|---|---|---|---|---|
+| 3 lectures | 34 | 14 | **41 %** | 9 % |
+| 2 lectures | 38 | 13 | 34 % | 8 % |
+| 1 lectura | 93 | 7 | 8 % | 4 % |
+
+**Veredicte:** l'acord és un senyal de debò (41 % contra 8 % a les que només surten una
+vegada), però **el mateix model repeteix els seus errors a finestres diferents**: la precisió
+de l'acord cau del 88 % (dos models) al 41 % (un model, tres talls), i la cobertura no passa
+del 9 %. Els talls desplaçats NO són el segon lector que cal. I l'únic segon model que tenim
+(zgh) cobreix el 4 %. **Conseqüència:** els +40 punts de sostre que l'auditor situa a l'ASR
+no s'alliberen votant amb el que tenim; demanen un lector millor —descodificació amb el lèxic
+a dins (H3) o adaptació amb l'àudio del canal (H4). La millora (1) de l'auditor queda
+condicionada a tenir aquell lector.
+
 **H3 · Descodificar amb el lèxic a dins** (cerca en feix + llista de formes). Ataca el mur
-del graó 2. *Estat:* no començat; demana ruta nova al Space.
+del graó 2, i després d'H8 és **la via principal**: votar amb el que tenim no allibera els +40
+punts. *Estat (14-11):* codi fet, **no desplegat**. Ruta nova `/transcribe_mms_lm` al Space
+(`huggingface-asr-space/mms_shi.py`, `app.py`, `requirements.txt` amb `pyctcdecode==0.5.0`):
+el mateix MMS + adaptador, descodificat en feix (64) amb **182.054 unigrams** en l'alfabet del
+model (`tools/exporta_unigrams.py`: lèxic + taules a mà, c→š x→ḫ ɣ→ġ ɛ→ε ṛ→r); KenLM
+opcional si algú deixa `lm_shi.arpa` al costat. La ruta greedy no es toca. *Predicció:* CER
+més baix que el greedy (0,307) sobre els 29 versos cantats i sobre els contes narrats, i menys
+mots que no són paraules. *Risc:* el feix prefereix paraules corrents i es menja les rares
+(`timyuri`, `tinfas`): mesurar també el recall de les paraules de la veritat que NO són al
+lèxic. *Bloqueig:* el desplegament del Space el fa l'amo (compte de HF).
 
 **H4 · Adaptar l'ASR amb l'àudio del canal sense text** (preentrenament autosupervisat sobre
 les 440 peces del mateix parlant). *Estat:* catàleg del canal en marxa; demana GPU i decisió
 de llicència.
 
-**H5 · El canal té subtítols humans en alguns vídeos.** *Estat (14-11, 184 de 440 mirats):*
-**confirmada.** 11 vídeos amb àrab i anglès humans —10 cançons i 1 conte—, 27 minuts. I dos
+**H6 · El coll d'ampolla després de la taula és la segmentació de l'ASR i el vocabulari del
+camp.** Surt dels 8 falsos que queden: 4 cadenes irrecuperables, 1 paraula del diccionari
+destruïda per enganxament de mots curts (`ayingratsnt` → `amzaray` perdut), 2 per geminació
+o per nom absent del diccionari (`timyuri`, `tinfas`), i 1 (#9) on el model ignora una glossa
+bona dues vegades. *Predicció:* comptant els trossos amb una paraula del diccionari
+destruïda per enganxament (de qualsevol llargada, no només >12 lletres), la xifra serà molt
+més alta que l'1,7 % de la vara vella. *Mesura prevista:* sobre tot el corpus, mots
+desconeguts que es parteixen en 2–3 trossos de ≥3 lletres tots al diccionari (la lògica de
+`parteix()`), amb mostra jutjada a mà. *Mesurat (auditor, 14-11), amb control de fals positiu (lletres remenades, llavor 1114):*
+
+| vara | tokens | trossos | control remenat | lectura |
+|---|---|---|---|---|
+| estricta: paraula del diccionari ≥5 lletres + només peces de la classe tancada | 160 (2,1 %) | **146 de 1.088 (13,4 %)** | 1,2 % contra 4,8 % real (4:1) | **mínim segur** |
+| ampla: qualsevol partició taula/diccionari amb paraula plena ≥4 | 674 (8,7 %) | 459 (42,2 %) | 7,6 % contra 15,0 % | infla gairebé el doble |
+
+**Interval honest: del 13 % al ~25 % dels trossos** tenen una paraula del diccionari destruïda
+per una partícula o un clític d'una o dues lletres pegat al costat: `mnnawn` = `mnnaw`+`n`
+(13), `tawins` = `tawin`+`s` (6), `sawalf`, `tutlaytf`, `imdukald`, `taguriaġ`. Fan 6–8
+lletres; de tota la llista estricta només una arriba a 12. **La vara de «>12 lletres» (1,7 %)
+era correcta i parlava d'un altre fenomen.** Regla que en surt, i que val per a les tres vares
+d'avui (diccionari-reconeix, partidor ample, partidor estricte): **cap mesura basada a
+reconèixer mots no vol dir res sense el seu terra de lletres remenades al costat** — les tres
+en tenien un (~40 % per a «el diccionari reconeix») i les tres l'havien amagat.
+
+**On és el sostre (auditor, 14-11).** Dels 31 trossos no-bons de la mostra, què els limita de
+debò: **~16 l'ASR** (cadena irrecuperable per cap diccionari), **~9 el lèxic i la
+segmentació** (glosses perfectes ho arreglarien), **~6 el model** (tenia l'evidència i no la
+va fer servir, o canvia de veredicte sol). Amb glosses perfectes i format de frase, el sostre
+és **~18 de 40 (45 %)**. El glossador té ~9 trossos de marge (+22 punts); **l'ASR en té ~16
+(+40 punts)**. Conseqüència: la feina de diccionari que queda val la meitat que al matí, i la
+millora amb més sostre **ja no és de llengua sinó de senyal** —llegir el tall més d'una vegada
+i quedar-se el que coincideix (→ H2, H8).
+
+**H7 · El model prefereix una frase plausible a l'evidència.** #9: `islman` = «peix» glossat
+bé dues vegades i escriu «les paraules amazigues són poques»; #19: glossa correcta («lligat»)
+i escriu l'oposat. *Implicació:* cap millora de lèxic no ho arregla; cal canviar **què se li
+demana** (no una frase: una relació, una llista de termes, un resum amb el que no sap marcat).
+*La forma proposada (auditor):* #9 és possible perquè el model **pot ometre un token**; #19
+perquè **pot escriure una relació**. Treure-li els dos permisos: **(1) `interlineal`** — una
+llista tan llarga com els tokens de `hi_sent`, en el mateix ordre, amb la paraula catalana de
+cada token o `?`; comprovable en codi (`len == tokens` o es rebutja), no pot ometre ni
+inventar, i ensenya ON es trenca el tros. **(2) `marc`** — el tros descrit, no traduït: `tema`
+(un grup nominal, mai una oració), `mena` (afirmació / pregunta / ordre / citació),
+`polaritat` (afirmatiu / negatiu / restrictiu), `qui_hi_surt` (només persones que una forma
+verbal o un pronom sostinguin). **(3) `cita`** — la paraula amaziga que el parlant anomena, copiada d'un token i sense
+traduir (49 trossos; el #30 la destrueix sempre: «al sud diuen *imikk*» → «al sud en diuen una
+mica»). I **`soste`**, que lliga cada paraula plena del tema i de la frase als tokens d'on
+surt; el que no té token es poda abans de desar-se. *Decisió de l'amo (14-11): les dues
+coses* — els fets com a producte principal i la frase a part, passant el mateix filtre.
+*Estat:* implementat a `backend/fets.py` (comprovació en codi, 10 proves) i
+`tools/escolta_llista.fets()`; **mesura pendent** sobre la mostra fixa de 40, jutjada a
+cegues.
+
+**H5 · El canal té subtítols humans en alguns vídeos.** *Catàleg complet (14-11): 440
+vídeos, 45,0 h, 0 errors, cap llicència declarada.* **Confirmada i més gran del que semblava:
+56 vídeos amb subtítols humans de debò** (67 comptant `live_chat`, que no és subtítol), 262
+minuts: 42 amb àrab, 42 amb anglès, 1 francès. Per mena: 10 cançons, **~30 contes i sèries**
+(The Rivals 1–7, The Traveller 1–7, The Last Warrior 1–4, Red Rock, Shepherd Boy, Werewolf,
+Goat and Ogre, Hedgehog and Wolf, Wolf and Stork…), 2 introduccions a la llengua, 2 lliçons
+d'alfabet, 4 documentals traduïts. **Cap de les 31 classes** (les que escoltem) no en té.
+Pistes amb l'amazic escrit a mà, comprovades obrint-les: 3 `la` (tifinag), **5 `ak-*` que són
+amazic en tifinag** (The Traveller 1–5), **2 `la-*` que són amazic en llatí** (The Traveller
+1–2: «turft tumẓ aɣaṛas nns g wabuḍ n ill»), 1 `ti` (tifinag). `ar-454…` és àrab (darija) de
+les lliçons d'alfabet. **Total: ~9 vídeos amb l'amazic transcrit a mà, uns 20 minuts — i els
+de The Traveller són NARRATS, no cantats**: la primera veritat de referència en amazic
+estàndard parlat, molt més a prop de la veu del professor que les cançons. *Catàleg desat a*
+`Veus-tachelhit/_escoltats/veritat/cataleg_canal_complet.jsonl`. Detall de la primera passada
+(184 vídeos): 11 vídeos amb àrab i anglès humans —10 cançons i 1 conte—, 27 minuts. I dos
 d'ells (`X7_kAT8_J64`, `o21uxEQoczE`) duen una pista `la` que és **l'amazic transcrit en
 tifinag a mà, amb temps**: «ⴰⵎⵖⴰⵔ ⵏⵏⵖ ⵉⵣⵡⴰⵔ» ↔ «Our leader moved forward». Això és àudio ↔
 text amazic ↔ traducció, els tres humans i alineats: la primera **vara de veritat** que tenim
 per a l'ASR en amazic estàndard, i parelles de traducció de debò. Cantat, no parlat: mesura la
 llengua, no la veu del professor. Fitxers a `scratchpad/canal/subs_humans/`.
+
+## Com es mesura a partir d'ara (auditor, 14-11)
+
+La casella «bo» d'una passada sola de 40 trossos té una desviació de **±1,6 trossos = ±4
+punts**, gairebé tota de temperatura del model (0,2). Amb n=40 i una passada només un canvi
+de +15 punts era fiable: «bo 9→10» no volia dir res; «fals 15→8» (−22 punts) era
+inconfusible. **Disseny:** **aparellat sempre** (mateixa llavor,
+mateixos trossos: canviar-los afegeix ±6,7 punts de soroll de mostra a n=40); **jutjat a
+cegues** amb les dues columnes barrejades i **20 trossos duplicats plantats** per mesurar
+l'acord del jutge amb ell mateix —si baixa de ~90 %, cap número de la taula no val. El SHA
+del codi va dins de cada JSON de sortida (fet al 14-11), perquè la línia de base dels 40 no
+es va poder reconstruir. **La mostra fixa** (`mostra40.json`, llavor 1114), les tres
+passades jutjades (`repassa40.json`, `repassa40b.json`, `control40.json`) i els guions de
+mesura de l'auditor (`estricta.py`, `enganxades_curtes.py`, `quanta_mostra.py`, `audita*.py`)
+són a `C:\Users\josep\Veus-tachelhit\_escoltats\veritat\auditoria-2026-11-14\`. Tota mesura
+nova es fa sobre aquella mostra o sobre una de n=100 que la contingui.
+
+**Correcció (auditor, 14-11, tarda): `temperature=0` NO fa la canonada reproduïble.** Dues
+execucions a t=0, mateix prompt, mateixes glosses: `frase_t0` difereix en **21 de 40**
+trossos. La recomanació «amb t=0, n=100 i k=1 n'hi ha prou» queda retirada: **n=100 i k=2 com
+a mínim, tant a t=0 com a t=0,2**. I «zero de soroll a la casella dels falsos» era una
+sobreafirmació treta de dues mostres: dues passades de la mateixa columna donen 13 i 10
+falsos → **±3 per casella**. Els salts 15→8 (còpula) i 15→2 (format de fets) segueixen fora
+d'aquest soroll. El jutge, en canvi, és estable: 20/20 als duplicats i 79/79 a les frases
+repetides entre fulls.
+
+## El format de fets, mesurat a cegues (14-11, mostra de 40, glosses VELLES)
+
+| | bo | a mitges | fals | s'absté |
+|---|---|---|---|---|
+| frase vella (t=0,2) | 9 | 16 | **15** | 0 |
+| frase nova (t=0) | 8 | 20 | 10 | 2 |
+| **frase filtrada pels fets (v2)** | **4** | **9** | **2** | **25** |
+
+**Perd 5 frases bones i se'n treu 13 de falses: de 15 falses a 2** (i les dues són els #9 i
+#16 de sempre). Interlineal: 191 de 318 caselles plenes (60 %), **8 falses (4,5 %) i 6 de les
+8 són paraules que la taula de la còpula ja arregla** (aquest run portava les glosses velles).
+Marc: tot el que el model va omplir era cert (tema 13/13, mena 11/11, polaritat 8/8, qui
+9/9) i n'omplia un terç. El #9 porta `islman → peix` a la interlineal, que la frase ometia a
+totes dues temperatures: **el mecanisme funciona on havia de funcionar.**
+
+El que la mesura va manar canviar abans d'escalar als 1.468 trossos (fet el 14-11, v3):
+**(a)** el suport es comprova contra la interlineal, no contra un `soste` a part — de 7 podes,
+6 treien coses certes que el model tenia a la seva pròpia interlineal, i `soste` només mirat
+en rang deixava passar la frase falsa del #17 apuntant tot al token 0; **(b)** `mena`,
+`polaritat` i `qui_hi_surt` **es calculen en codi** de les partícules i dels afixos, no es
+demanen (el model n'omplia un terç i `ur` surt 104 vegades al corpus); **(c)** la `cita` només
+d'entre candidats que el codi assenyala (token darrere d'un verb de dir), marcada «X» a la
+interlineal i mai un token que designi gent — el #9 havia pres `imaziġn` («els amazics»,
+subjecte de «diuen») per la paraula anomenada i la citació falsa li havia entrat a la frase
+amb cometes; **(d)** una paraula que ÉS un token es sosté sola (el #30 perdia la frase per
+«imikk sense token»); **(e)** la llargada no eximeix de token («gos», «pou» passaven).
+
+## Les tres millores, per ordre de sostre (auditor, 14-11)
+
+1. **Llegir cada tall dues o tres vegades i quedar-se el que coincideix.** On hi ha +40
+   punts: ~16 dels 31 no-bons són ASR irrecuperable. Evidència: els mateixos 58 talls, el
+   mateix model, el mateix fitxer, i el text canvia en 46 de 58 (79 %) amb taxa agregada
+   idèntica. Mesura: reconeixement de les paraules acordades contra les discrepants; val si
+   ~85 % contra ~45 %. Risc: triple de crides, i quedar-se només les paraules fàcils. → H8.
+2. **Canviar què se li demana al model**: `interlineal` (una paraula o `?` per token, en
+   ordre, comprovat en codi), `marc` (tema com a grup nominal, mena, polaritat, qui hi
+   surt; cap camp admet relacions, per això cap no es pot invertir), `cita` (la paraula
+   amaziga citada, sense traduir: 49 trossos, el producte més valuós d'aquests vídeos), i
+   `sosté` lligant cada paraula plena al seu token. Avui: 394 frases, ~89 bones. Amb això:
+   ~250 marcs certs, ~49 cites, **cap frase llegible de corregut**. La pèrdua és real i
+   **s'ha de voler abans de fer-ho**: decisió de l'amo. → H7.
+3. **El lèxic del camp i dos bugs**: ~40 entrades del metallenguatge (`iḍris`, `tilawin`,
+   `tinfas`, `tafransist`, `tayunanit`…); l'encert superficial del diccionari talla les
+   regles (`wawal` → «run down» i mai `w`+`awal`); el guard de `MIN_ARREL` feia impartibles
+   `das`, `at`, `dak`, `dag` (fet al 14-11: la resta curta val si és a la taula a mà); i una
+   porta de varietat: els 3 vídeos amb certesa ASR mediana < 0,87 rendeixen 6,9 % de català
+   contra 38,3 % dels altres 20. Risc: un lèxic a mà que endevina, i un llindar tret de 23
+   vídeos. Marge: ~9 trossos de 40.
+
+**El que ja no val la pena:** res més al prompt del traductor amb el format de frase. El seu
+sostre, amb el verb servit i glosses perfectes, és ~18 de 40.
+
+## El que està malament de la feina feta (auditor, 14-11; es manté com a llista de deute)
+
+- La canonada no era reproduïble (temperatura 0,2) i la línia de base no es podia
+  reconstruir (sense SHA al JSON): tots dos arreglats el 14-11.
+- La vara del diccionari té un terra de fals positiu del ~40 %: remenant les lletres encara
+  «reconeix» el 39,5 %. «El 60 % de les paraules existeixen» no vol dir «són correctes».
+- «shi 62,9 % · zgh 57,0 %» no reprodueix (avui 70,1 % · 59,4 %); la conclusió aguanta.
+- `segur` no s'ha produït mai (0 de 394) i tres documents parlaven de l'escala com si en
+  tingués dos nivells. 283 violacions de la regla dura del prompt (text amb «no s'entén»)
+  tapades pel filtre `amb_ca`.
+- La premissa fundacional és massa forta: en 6 dels 9 encerts originals el català era
+  correcte **contra** la glossa. El títol àrab compra fluïdesa i paga amb veritat (#1).
+- El tall pels silencis està mesurat per a la certesa de l'ASR, no per a la sintaxi: 226 de
+  1.088 trossos fan <2 s; 74 toquen el màxim de 9 s.
+- El judici de l'auditor no va ser cec i el seu acord amb ell mateix no està mesurat.
+- `šku`, `ga`, `lan` són trossos de l'ASR, no paraules: feina d'un normalitzador, no de la
+  taula. `wawal`, `tlawin`: bug de la passa 1 (pendent). `amawal` («vocabulari»): lèxic del
+  camp (pendent).
 
 ## El que bloqueja
 
