@@ -108,19 +108,20 @@ def test_la_mena_surt_de_les_particules_i_dels_verbs_de_dir():
     assert fets.mena("illa waman".split()) == "afirmació"
 
 
-def test_les_persones_surten_dels_pronoms_i_dels_afixos_del_verb():
-    assert fets.qui_hi_surt("nkkin sawalḫ".split(), es_verb) == ["jo"]
-    assert fets.qui_hi_surt("nssn kra".split(), es_verb) == ["nosaltres"]
-    assert fets.qui_hi_surt("da ttinin imaziġn".split(), es_verb) == ["ells/elles"]
-    #: `imaziġn` acaba en -n i no és cap verb: cap persona en surt
-    assert fets.qui_hi_surt("imaziġn".split(), es_verb) == []
+def test_les_persones_surten_dels_pronoms_i_de_les_formes_de_la_taula():
+    #: Només pronoms explícits i formes verbals de la taula a mà. Endevinar per afix va donar
+    #: 8 falsos de 18 a la v6 («tu» en un tros sense verb, «nosaltres» per la preposició n).
+    assert fets.qui_hi_surt("nkkin sawalḫ".split()) == ["jo"]
+    assert fets.qui_hi_surt("da ttinin imaziġn".split()) == ["ells/elles"]
+    assert fets.qui_hi_surt("ng tamaziġt".split()) == ["nosaltres"]
+    #: cap afix: `nssufuġ` no és a la taula, `imaziġn` acaba en -n, `ntguriwin` comença per n-
+    assert fets.qui_hi_surt("nssufuġ imaziġn ntguriwin".split()) == []
 
 
-def test_sense_es_verb_no_es_llegeix_cap_afix():
-    #: la -n final pot ser plural d'un nom i la -ḫ final pot ser de l'arrel (`iffġ`): sense
-    #: saber si és verb, no es llegeix cap persona d'un afix (a la v3 això va donar 4 falsos)
-    assert fets.qui_hi_surt("ttinin".split()) == []
-    assert fets.qui_hi_surt("sawalḫ".split()) == []
+def test_es_verb_i_es_particula_sacepten_i_signoren():
+    #: els qui criden passen aquests arguments; el camp ja no se'n fia
+    assert fets.qui_hi_surt(["iffġ"], lambda f: True) == []
+    assert fets.qui_hi_surt(["taguriġ"], lambda f: True, lambda f: False) == []
 
 
 # ---------------------------------------------------------------------------- la cita
@@ -197,21 +198,11 @@ def test_el_tema_ha_de_ser_un_grup_nominal():
     assert fets.tema_es_grup_nominal("el paper del professor")[0]     # -er no és infinitiu aquí
 
 
-def test_la_g_final_nomes_es_primera_persona_si_treure_la_deixa_un_verb():
-    verbs = {"ffġ", "iffġ", "sawal", "ssufuġ", "nssufuġ"}
-    ev = lambda f: f in verbs
-    #: `iffġ`: la ġ és de l'arrel (ffġ, «sortir») i el mot sencer ja és verb → no és «jo»
-    assert fets.qui_hi_surt(["iffġ"], ev) == []
-    #: `nssufuġ`: el prefix n- mana sobre la ġ final → nosaltres
-    assert fets.qui_hi_surt(["nssufuġ"], ev) == ["nosaltres"]
-    #: `sawalġ`: treure la ġ deixa `sawal`, verb, i `sawalġ` no és al lèxic → jo
-    assert fets.qui_hi_surt(["sawalġ"], ev) == ["jo"]
-    #: `nnġ` és el possessiu «nostre»: una partícula no dona persona
-    assert fets.qui_hi_surt(["nnġ"], ev, es_particula=lambda w: w == "nnġ") == []
-
-
-def test_sense_es_verb_nomes_pronoms():
-    assert fets.qui_hi_surt(["sawalġ", "nutni"]) == ["ells/elles"]
+def test_una_frase_que_passa_porta_la_nota_de_procedencia():
+    f, _ = fets.comprova(resposta(), TROS)
+    assert f["frase_nota"] == "muntada a partir de glosses, no traducció"
+    f, _ = fets.comprova(resposta(frase=None), TROS)
+    assert "frase_nota" not in f
 
 
 # ------------------------------------------------------- la còpula, l'única relació possible

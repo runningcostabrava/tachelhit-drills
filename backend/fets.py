@@ -251,41 +251,40 @@ def mena(toks: List[str]) -> str:
     return "afirmació"
 
 
-def qui_hi_surt(toks: List[str], es_verb: Optional[Callable[[str], bool]] = None,
-                es_particula: Optional[Callable[[str], bool]] = None) -> List[str]:
-    """Les persones que un pronom o un afix del verb sostenen.
+#: Les formes verbals de la taula a mà que porten la persona escrita (paradigmes del manual
+#: del Peace Corps Marroc 2007, els mateixos de `morfologia.FORMES_GRAMATICALS`), i uns pocs
+#: verbs molt corrents amb el sufix inequívoc ja fet (`riġ` «vull», `sawalḫ` «parlo»).
+_FORMES_AMB_PERSONA = {
+    "giġ": "jo", "giḫ": "jo", "gix": "jo", "riġ": "jo", "riḫ": "jo", "lliġ": "jo", "lliḫ": "jo",
+    "sawalḫ": "jo", "sawalġ": "jo", "nniġ": "jo", "nniḫ": "jo", "skrġ": "jo", "skrḫ": "jo",
+    "tgit": "tu", "trit": "tu", "tgi": "tu",
+    "iga": "ell/ella", "tga": "ell/ella", "illa": "ell/ella", "tlla": "ell/ella", "ira": "ell/ella",
+    "tra": "ell/ella", "inna": "ell/ella", "tnna": "ell/ella", "ittini": "ell/ella",
+    "nga": "nosaltres", "ng": "nosaltres", "nra": "nosaltres", "nlla": "nosaltres",
+    "nsawal": "nosaltres", "nssn": "nosaltres",
+    "tgam": "vosaltres", "tram": "vosaltres", "tramt": "vosaltres",
+    "gan": "ells/elles", "gant": "ells/elles", "llan": "ells/elles", "llant": "ells/elles",
+    "ttinin": "ells/elles", "nnan": "ells/elles", "qqarn": "ells/elles",
+}
 
-    Sense `es_verb` només es llegeixen els pronoms: a la v3, llegir la `-ġ` final com a
-    primera persona sense comprovar res va donar 4 falsos de 16 —`iffġ` (arrel `ffġ`, la ġ és
-    de l'arrel), `nnġ` (possessiu «nostre»)— i al #5 va dir «jo» quan `nssufuġ` porta la `n-`
-    de nosaltres. Per això: el prefix mana sobre el sufix, el que queda sense l'afix ha de ser
-    un verb conegut, i d'una partícula o un possessiu de la taula no se'n llegeix persona.
+
+def qui_hi_surt(toks: List[str], *_ignorat, **_ignorat2) -> List[str]:
+    """Les persones que un pronom explícit o una forma verbal de la taula a mà sostenen.
+
+    Només això. La versió que endevinava la persona pels afixos va donar 5 falsos de 14 a la
+    v3 i, arreglada amb `es_verb`, **8 falsos de 18 a la v6**: deia «tu» en un tros sense cap
+    verb (#38), «nosaltres» per la `n` de la preposició `n` (#29), «jo» pel clític `aġ` (#31),
+    «ells» per la `-n` del plural d'un nom (#36) i per `ng` «som», que és justament la persona
+    contrària (#21). Els 10 certs sortien gairebé tots de pronoms explícits. Un camp al 44 % de
+    falsos és pitjor que no tenir-lo: es perd cobertura i es guanya un camp que es pot creure.
+    `es_verb` i `es_particula` s'accepten i s'ignoren, perquè els qui criden no canviïn.
     """
     fora = []
     for t in toks:
         n = _net(t)
-        if n in _PRONOMS:
-            fora.append(_PRONOMS[n])
-            continue
-        if es_particula and es_particula(n):
-            continue
-        if not es_verb:
-            continue
-        persona = None
-        if re.match(r"^n(?!n)\w{2,}$", n) and (es_verb(n) or es_verb(n[1:])
-                                                 or es_verb(n[1:].rstrip("ġḫ"))):
-            persona = "nosaltres"
-        elif re.match(r"^t\w{2,}t$", n) and (es_verb(n) or es_verb(n[1:-1])):
-            persona = "tu"
-        elif n.endswith(("ġ", "ḫ")) and len(n) >= 4 and (es_verb(n) or es_verb(n[:-1])) \
-                and not es_verb(n):
-            #: la ġ final és sufix només si TREURE-LA deixa un verb i el mot sencer no ho és
-            #: ja tot sol (`iffġ` és el verb `ffġ` amb la i- de tercera persona)
-            persona = "jo"
-        elif n.endswith("n") and len(n) >= 4 and (es_verb(n) or es_verb(n[:-1])):
-            persona = "ells/elles"
-        if persona:
-            fora.append(persona)
+        p = _PRONOMS.get(n) or _FORMES_AMB_PERSONA.get(n)
+        if p:
+            fora.append(p)
     vist, unics = set(), []
     for p in fora:
         if p not in vist:
@@ -389,10 +388,17 @@ def comprova(resposta: str, tros: str,
         #: invenció que hi havia abans—, però llegit en cru sembla una errata: es marca [?]
         frase = re.sub(r"(?<!\[)\?(?!\])", "[?]", frase) if " ?" in f" {frase}" else frase
 
-    return {
+    fets = {
         "interlineal": inter,
         "marc": {"tema": tema, "mena": mena(toks), "polaritat": polaritat(toks),
-                 "qui_hi_surt": qui_hi_surt(toks, es_verb, es_particula)},
+                 "qui_hi_surt": qui_hi_surt(toks)},
         "cita": cita,
         "frase": frase,
-    }, motius
+    }
+    if frase:
+        #: La frase no és una traducció: és muntada a partir de glosses, i el filtre només en
+        #: comprova la procedència. «Les sangsues diuen els amazics» (#9, v6) és impecable de
+        #: procedència i falsa, perquè la glossa `idġrn→sangsues` ho era. Qui la llegeixi ho
+        #: ha de saber: una de cada vuit és d'aquesta mena i el filtre no la pot veure.
+        fets["frase_nota"] = "muntada a partir de glosses, no traducció"
+    return fets, motius
