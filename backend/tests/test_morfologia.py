@@ -145,3 +145,48 @@ def test_les_segures_son_les_que_no_han_calgut_cap_regla():
         assert glossa(mot)[1] in morfologia.SEGURES
     for mot in ("wasif", "imaziġn", "nssn"):
         assert glossa(mot)[1] not in morfologia.SEGURES
+
+
+# --------------------------------------------- la partícula que l'ASR enganxa al davant
+def test_parteix_la_particula_enganxada_al_davant():
+    #: Les formes perdudes més freqüents de la llista de Tamazight For All no eren
+    #: vocabulari rar: eren paraules sabudes amb una partícula al davant.
+    diu, com = glossa("ntmaziġt")                  # n + tmaziġt, «de l'amazic»
+    assert "llengua amaziga" in diu and diu.startswith("de")
+    assert com == "partícula enganxada"
+    assert glossa("swasif")[0].startswith("amb")   # s + wasif, «al riu»
+    assert "riu" in glossa("swasif")[0]
+    assert "saber" in glossa("danssn")[0]          # da + n-ssn, «(que) sabem»
+
+
+def test_la_particula_enganxada_mai_no_es_segura():
+    #: Jutjant-ne quaranta a mà el 14-11-2026, una de cada tres era falsa. Qui la llegeixi
+    #: ho ha de poder saber.
+    assert glossa("ntmaziġt")[1] not in morfologia.SEGURES
+
+
+def test_no_es_parteix_el_que_ja_es_resol_sencer():
+    #: `tmaziġt` és annexió de `tamaziġt`, i `nssn` és el verb amb la persona. Si el
+    #: partidor hi arribés abans, `tmaziġt` sortiria com `ti`/`t` + una altra cosa.
+    assert glossa("tmaziġt")[1] == "annexió"
+    assert glossa("nssn")[1] == "verb"
+
+
+def test_nomes_es_parteix_pel_davant():
+    #: Tallar pel darrere és el que feia `musaġ` → «tisoreta» i `igddiġ` → «gos».
+    for cap, resta in morfologia._particula_al_davant("swasif"):
+        assert "swasif".startswith(cap)
+        assert cap in morfologia.PARTICULES
+
+
+def test_la_resta_mes_llarga_va_primera():
+    #: `sudġar` sortia com `sudġ + ar` («conduir un animal») en comptes de `s + udġar`,
+    #: «al lloc», perquè es provaven abans les partícules de dues lletres.
+    talls = morfologia._particula_al_davant("sudġar")
+    assert talls[0] == ("s", "udġar")
+
+
+def test_no_es_parteix_dues_vegades():
+    #: Dos talls seguits deixen una arrel de dues lletres, i amb dues lletres casa tot.
+    #: `dnasif` només es resoldria partint `d` i després `n`; ha de callar.
+    assert glossa("dnasif") is None
