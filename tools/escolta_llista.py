@@ -372,12 +372,24 @@ def _es_gent():
 _CATALA_TAULA = set()
 
 
+#: Les paraules catalanes conegudes, perquè la regla «casella igual a la glossa estrangera →
+#: ?» no mati català que s'escriu com el francès: `wamur → «part»` (IRCAM «part, lot») i
+#: `amẓẓyan → «petit»` («petit; jeune») són correctes en català i la regla sola les matava
+#: —2 de 33 caselles bones, el mateix ordre que el 5 % que volia arreglar. El fitxer surt del
+#: català del projecte mateix (`backend/data/catala_mots.txt`, una paraula per línia).
+_CATALA_MOTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "backend", "data",
+                            "catala_mots.txt")
+
+
 def _catala_de_la_taula():
-    """Les paraules catalanes de les taules a mà: una casella que les repeteixi és català, no
-    glossa estrangera copiada."""
+    """Les paraules catalanes que una casella pot repetir sense ser glossa estrangera copiada:
+    les de les taules a mà, i les del fitxer de català del projecte si hi és."""
     if not _CATALA_TAULA:
         for v in list(morfologia.PARTICULES.values()) + list(morfologia.FORMES_GRAMATICALS.values()):
             _CATALA_TAULA.update(w.lower() for w in re.findall(r"[^\W\d_]+", v))
+        if os.path.exists(_CATALA_MOTS):
+            with io.open(_CATALA_MOTS, encoding="utf-8") as f:
+                _CATALA_TAULA.update(l.strip().lower() for l in f if l.strip())
     return _CATALA_TAULA
 
 
