@@ -262,7 +262,9 @@ _FORMES_AMB_PERSONA = {
     "tgit": "tu", "trit": "tu", "tgi": "tu",
     "ttiniġ": "jo", "ttiniḫ": "jo",
     "iga": "ell/ella", "tga": "ell/ella", "illa": "ell/ella", "tlla": "ell/ella", "ira": "ell/ella",
-    "tra": "ell/ella", "tnna": "ell/ella", "ittini": "ell/ella",
+    #: `inna` torna: al #24 de la mostra era «va dir» i cert; és la forma de «dir» més corrent
+    #: després de `ttinin`, i quan vol dir «mare» la frase gairebé sempre porta un altre verb
+    "tra": "ell/ella", "inna": "ell/ella", "tnna": "ell/ella", "ittini": "ell/ella",
     "ttini": "ell/ella", "daittini": "ell/ella",
     "nga": "nosaltres", "ng": "nosaltres", "nra": "nosaltres", "nlla": "nosaltres",
     "nsawal": "nosaltres", "nssn": "nosaltres", "nttini": "nosaltres", "danttini": "nosaltres",
@@ -284,9 +286,13 @@ def qui_hi_surt(toks: List[str], *_ignorat, **_ignorat2) -> List[str]:
     `es_verb` i `es_particula` s'accepten i s'ignoren, perquè els qui criden no canviïn.
     """
     fora = []
-    for t in toks:
+    for k, t in enumerate(toks):
         n = _net(t)
         p = _PRONOMS.get(n) or _FORMES_AMB_PERSONA.get(n)
+        #: `tgi` darrere d'`ur` és «no és» (3sg), no «ets»: «ur tgi ġar iwaliwn» = «no és només
+        #: paraules». L'únic fals dels 17 de la v8 era aquest.
+        if n == "tgi" and k > 0 and _net(toks[k - 1]) in _NEGACIO:
+            p = "ell/ella"
         if p:
             fora.append(p)
     vist, unics = set(), []
@@ -300,7 +306,8 @@ def qui_hi_surt(toks: List[str], *_ignorat, **_ignorat2) -> List[str]:
 def comprova(resposta: str, tros: str,
              es_verb: Optional[Callable[[str], bool]] = None,
              es_gent: Optional[Callable[[str], bool]] = None,
-             es_particula: Optional[Callable[[str], bool]] = None
+             es_particula: Optional[Callable[[str], bool]] = None,
+             es_coneguda: Optional[Callable[[str], bool]] = None
              ) -> Tuple[Optional[dict], List[str]]:
     """(fets nets, motius de poda). Fets és None si la resposta no val com a conjunt.
 
@@ -362,6 +369,13 @@ def comprova(resposta: str, tros: str,
         idx = [i for i in candidats_a_cita(toks) if _net(toks[i]) == c]
         if not idx:
             motius.append(f"cita que no segueix cap verb de dir: {cita}")
+            cita = None
+        elif es_coneguda and not es_coneguda(c):
+            #: Contra la veritat humana, quatre «cites» eren tokens que l'ASR havia enganxat
+            #: («suššn» per `as uššn`, «ratninġ» per `ra tninɣ`): un token enganxat és
+            #: candidat com qualsevol altre. Una paraula que el mestre anomena, el lèxic la
+            #: coneix sencera (`imikk`, `manik`); un token enganxat, no.
+            motius.append(f"cita que el lèxic no reconeix sencera: {cita}")
             cita = None
         elif es_gent and es_gent(c):
             motius.append(f"cita que designa gent, no una paraula anomenada: {cita}")

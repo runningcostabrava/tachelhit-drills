@@ -345,7 +345,8 @@ def fets(deepseek, tema, tros, abans, despres, paraules):
     except Exception as e:
         return {"fets": None, "rebutjat": [f"error: {type(e).__name__}"]}
     nets, motius = F.comprova(r, tros, es_verb=_es_verb(), es_gent=_es_gent(),
-                              es_particula=lambda w: morfologia.clau_de_particula(w) is not None)
+                              es_particula=lambda w: morfologia.clau_de_particula(w) is not None,
+                              es_coneguda=_es_coneguda())
     return {"fets": nets, "rebutjat": motius}
 
 
@@ -365,6 +366,16 @@ _GENT = {"imaziġn", "imazighn", "amaziġ", "tamaziġt", "irgazn", "tmġarin", "
 
 def _es_gent():
     return lambda w: w.lower() in _GENT
+
+
+def _es_coneguda():
+    """La paraula, sencera, la coneix el lèxic o la taula a mà? Un token enganxat, no."""
+    try:
+        import lexicon
+        sig, ev, en = eines_del_lexic(lexicon)
+        return lambda w: morfologia.glossa(w, sig, ev, en, partir=False) is not None
+    except Exception:
+        return None
 
 
 # ------------------------------------------------------------------

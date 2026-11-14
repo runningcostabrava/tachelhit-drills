@@ -251,6 +251,30 @@ def test_una_casella_entre_cometes_que_no_es_la_cita_es_un_interrogant():
     assert any(("cometes" in m) or ("copiat" in m) for m in motius)
 
 
-def test_les_formes_ambigues_no_donen_persona():
-    #: `nniġ` és «o» o «vaig dir»; `inna` és «va dir» o «mare»: cap persona.
-    assert fets.qui_hi_surt("nniġ inna".split()) == []
+def test_nnig_no_dona_persona():
+    #: `nniġ` és «o» o «vaig dir»: cap persona. (`inna` sí: al #24 de la mostra era «va dir»
+    #: i cert, i quan vol dir «mare» la frase gairebé sempre porta un altre verb.)
+    assert fets.qui_hi_surt("nniġ kra".split()) == []
+
+
+def test_tgi_darrere_dur_es_tercera_persona():
+    #: «ur tgi ġar iwaliwn» = «no és només paraules»: l'únic fals dels 17 de la v8 deia «tu».
+    assert fets.qui_hi_surt("ur tgi ġar iwaliwn".split()) == ["ell/ella"]
+    assert fets.qui_hi_surt("tgi amaziġ".split()) == ["tu"]
+
+
+def test_inna_torna_a_donar_persona():
+    assert fets.qui_hi_surt("inna kra".split()) == ["ell/ella"]
+
+
+def test_una_cita_ha_de_ser_una_paraula_que_el_lexic_coneix_sencera():
+    #: «suššn» (per `as uššn`) i «ratninġ» (per `ra tninɣ`) eren tokens enganxats presos per
+    #: paraules anomenades. `imikk` i `manik`, les bones, el lèxic les coneix senceres.
+    tros = "da ttinin suššn"
+    base = {"interlineal": ["?", "diuen", "«suššn»"], "tema": "?", "cita": "suššn", "frase": None}
+    f, motius = fets.comprova(json.dumps(base), tros, es_coneguda=lambda w: w in {"imikk", "manik"})
+    assert f["cita"] is None and any("sencera" in m for m in motius)
+    tros = "da ttinin imikk"
+    base = {"interlineal": ["?", "diuen", "«imikk»"], "tema": "?", "cita": "imikk", "frase": None}
+    f, motius = fets.comprova(json.dumps(base), tros, es_coneguda=lambda w: w in {"imikk", "manik"})
+    assert f["cita"] == "imikk"
