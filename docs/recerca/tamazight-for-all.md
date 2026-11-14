@@ -142,6 +142,32 @@ llavor 2026, `mostra_cert40.json`, en judici). **La cita es retira com a «llest
 lèxic la coneix sencera. `qui_hi_surt` v8 verificat: 15 certs, 1 fals (`tgi` darrere d'`ur`,
 arreglat), 1 incert; `inna` torna. Les regles de la v10 s'apliquen als resultats dels 1.468 en
 codi, sense tornar a cridar el model.
+**El número final de la interlineal (auditor, caixa «cert» jutjada: 33 sí, 4 no, 3 incert de
+40):** la caixa «cert» no era neta —quatre caselles falses amb el mot exacte, dues de les quals
+eren francès de l'IRCAM copiat tal qual (`issuda → «souder»`, `tddit → «sangsue»`; v11: una
+casella que és la glossa estrangera copiada cau a «?»), i `imiq → «peu»` quan és «una mica, un
+moment» (obre desenes de versos), `yufa → «val més»` quan és «va trobar». Propagant les quatre
+caixes: **~73 % de caselles certes (70–78 %), ~19 % falses, ~8 % no adjudicables.** Una casella
+de cada cinc menteix, i qui ho llegeixi ho ha de saber; però la columna d'on sortíem al matí
+tenia un 37,5 % de frases falses senceres.
+
+**Les 49 frases dels contes contra la veritat humana (acord del jutge 10/10):** 9 bones (18 %),
+21 a mitges per FORAT (43 %), 16 a mitges per invenció (33 %), 3 falses (6 %) — **30 de 49 (61 %)
+no diuen res que no sigui cert**, i dues de les tres falses eren el bug de les cometes ja tancat
+(v9): **~2 % de frases falses sobre veritat humana**, contra el 37,5 % del matí. El tram «forat»
+és el dominant i és el bo («Però no sap un [?] seu»): perd informació i no n'afegeix cap de
+falsa. I al #33 la cita `awal` és correcta sobre veritat humana. Les invencions que queden
+(`ussan→dies` per «anys», `yaf→val més` per «trobar») són el sostre de l'ASR: un token errat
+d'una lletra que existeix com una altra paraula.
+
+**El risc més gros que queda, i no és de codi (auditor):** de les 49 frases, **8 diuen
+«vaixell» i totes surten d'una sola glossa, `turft → «vaixell»`, que ningú no ha pogut
+verificar**. Si és falsa, el 2 % passa al 18 % d'un sol cop. El patró generalitza: una glossa
+dolenta sobre una paraula freqüent enverina un vídeo sencer i cap mesura agregada no la veu.
+**Recomanació: les 20 paraules de contingut més freqüents dels 1.468 trossos, amb la glossa
+que el sistema els dona, validades una per una per en Pablo abans de publicar.** Mitja hora, i
+és l'únic lloc on un error es multiplica per centenars. → `mots_frequents.py`.
+
 *Escalat en marxa (14-11, codi 33ff8fe, `fets_tots.py`):* els fets sobre els 1.468 trossos dels
 25 vídeos, desats dins de cada JSON (`fets`, `rebutjat`, `fets_codi`), re-glossats amb el codi
 d'ara; la pàgina els mostra sota la frase amb l'avís del 76–92 %. Per tant: **4 de cada 10 caselles plenes glossen un
