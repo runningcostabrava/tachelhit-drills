@@ -87,8 +87,43 @@ l'ASR—, no veritat: amb WER 0,72 una casella pot ser una traducció impecable 
 l'ASR s'ha inventat. I **cap de les 31 classes no té subtítol humà**: els 1.468 trossos no es
 podran validar mai directament. L'única prova contra l'àudio és passar la canonada de fets pels
 226 versos narrats i mirar sobre quins tokens cauen les caselles (cert / substituït / inserit,
-per alineament amb la veritat). *Estat:* en marxa (`fets_veritat.py`). Avís d'abast: narració
-no és classe; el número no es trasllada sense dir-ho. També enterra del tot la vara «el
+per alineament amb la veritat). *Resultat (14-11, 226 versos, codi b2093c7):* 1.184 tokens de l'ASR, dels quals **462 (39 %)
+són exactament el mot de la veritat, 718 (61 %) en substitueixen un i 4 (0 %) són inserits**.
+De les **615 caselles plenes** de la interlineal, **364 (59 %) cauen sobre un token exacte, 250
+(41 %) sobre un token substituït i 1 sobre un inserit**. Cites: 1 sobre token exacte, 5 sobre
+substituït. Frases: 71 escrites, 49 passen, i cap no té casella plena sobre un token inserit.
+**El WER partit:** 1.602 mots de veritat, **58 errors de frontera (4 %) i 1.103 de debò
+(69 %)** — la meva matisació dels espais era falsa en magnitud: les fronteres són el 4 %, no la
+major part; el que diu el CER 0,21 és que les substitucions són mots *propers* (lletres gairebé
+bones), no que no hi hagi substitucions. De les 250 caselles sobre token substituït, la
+distància al mot de la veritat: **≤1 lletra 102 (41 %), 2 lletres 35 (14 %), més 113 (45 %,
+cota superior per l'aparellament groller de trams desiguals)**. Exemples reals: `if→ma :
+valer més`, `drs→illan : alinear`. **Terra de veritat de la interlineal, provisional: entre el
+59 % (exactes) i el ~76 % (exactes + ≤1 lletra) de les caselles plenes són sobre el mot bo; ~1
+de cada 5 glossa un mot que no es va dir.** *Reclassificat alineant per LLETRES* (l'alineament
+per mots té el punt cec del WER: un token enganxat no casa amb cap mot i surt substituït o
+inserit encara que la casella digui el que vol dir): de les 615 caselles plenes, **422 (69 %)
+sobre el mot bo, 122 (20 %) «frontera» (token que enganxa dos mots o mot repartit entre dos
+tokens: lletres bones, espais no), 62 (10 %) sobre un mot proper amb lletres diferents, 9 (1 %)
+sobre res**. Si les glosses de la caixa «frontera» coincideixen amb algun dels mots enganxats
+(a jutjar sobre una mostra), el terra puja a ~85–90 %; si no, es queda al 69 %.
+
+**El terra de veritat, jutjat (auditor, 40 caselles sobre token substituït, llavor 2026):**
+estricta (la glossa casa amb el mot aparellat) 35 %; **justa (casa amb un mot que el parlant
+sí que va dir al vers) 65 %** — 12 dels 17 «no» del tram llunyà eren desalineament, no error
+(`gignna→cel` amb la veritat `g ignna`). Projectat sobre les 615 caselles plenes: **~84 %
+certes, ~9 % genuïnament falses, ~7 % no adjudicables.** Les 9 falses: 4 del tram «≤1 lletra»
+on l'ASR erra una lletra i el mot resultant existeix com una altra cosa (`ittrgig→planar` per
+`ittrgigi` «tremolar»; `ubridn→sortir` per `ubrid` «camí»; `kkin→passar` per `nkkin` «jo») —
+**l'ASR fabrica un homògraf i la casella el tradueix amb aplom: contra això la taula no pot
+fer res, només l'acord entre dues lectures**— i `akku→perroquet/lloro` dues vegades (és `akkw`
+«tot»: variant d'ortografia afegida a `clau_de_particula`). Resum per al lector: **la
+interlineal és certa ~84 % de les vegades contra l'àudio; el 0,5 % intern era fidelitat a la
+glossa.** Per tant: **4 de cada 10 caselles plenes glossen un
+token que no és exactament el que es va dir**, i la pregunta que decideix —si la glossa
+d'aquell token proper coincideix igualment amb el sentit del mot dit— només la pot contestar
+un jutge sobre una mostra. Avís d'abast: narració no és classe; el número no es trasllada
+sense dir-ho. També enterra del tot la vara «el
 diccionari el reconeix» (70,1 % dels mots) contra un WER de 0,72: reconegut no vol dir
 correcte — amb la matisació que el WER compta cada espai mal posat com un mot errat (`ar
 saqquln` ↔ `arsaqqull`), i el CER de 0,21 diu que les lletres hi són molt més que els mots.
@@ -339,8 +374,37 @@ model posa el forat on abans posava la invenció**; no compta en contra i es mar
 11 podes de la v4, 10 eren flexió («pregunta»/`pregunto`, «verbs»/`verb`): la comparació per
 arrel les recupera. Tot això és a la **v6** (PR #606). *v6 (capçalera, codi 3479dd9):* frase **18 escrites, 2
 podades, 16 passen** (5 amb [?]); tema 22; cita 2; interlineal 187/318 amb el compte honest;
-`qui_hi_surt` omplert en 18; **6 podes en total (la v4 en tenia 11)**. Judici de la v6 pendent;
-és el que decideix si s'escala als 1.468 trossos. Límit conegut que no s'arregla: un tema pot dur un
+`qui_hi_surt` omplert en 18; **6 podes en total (la v4 en tenia 11)**.
+
+*Judici de la v6 (auditor, a cegues, parcial):* **frase v2 4/9/2 → v4 6/8/1 → v6 7/7/2**
+(16 entregades). La regla de la còpula ha matat una frase i cap de bona. Els dos falsos nous
+els ha deixat passar la comparació per arrel, i **el #9 és el sostre de tot el disseny**: «les
+sangsues diuen els amazics» és impecable de procedència —cada paraula surt d'una casella, i
+«sangsues» surt de `idġrn→sangsues`, còpia fidel d'una glossa del diccionari. **El filtre
+comprova d'on ve cada paraula; no pot comprovar que la glossa fos bona.** Amb WER 0,72 no és
+un cas rar. Balanç net v4→v6 a la frase: +1 bona, +1 falsa — l'arrel puja cobertura i error
+en la mateixa proporció. **Interlineal: 1 casella falsa de 187 (0,5 %)**, la millor xifra del
+dia (`dadd→aquest`, el membre equivocat de la parella); els tres forats de la v3 tancats (0
+tokens copiats, cometes falses fora). Podes: 6, 4 justes i 2 de l'arrel —«verbs» contra «verb»
+no casava perquè l'arrel es tallava sempre a cinc (arreglat a la v7: fins a cinc o fins a la
+més curta), i «surt» contra «sortir» (alternança vocàlica, pèrdua acceptada). Regressió de
+redacció al #4 («Què carta aprendrem de debat?»): el filtre no mira la sintaxi del català.
+**Temes: 21 de 22 certs i 22 de 22 grups nominals** (a la v3, 13 de 22): aquest camp està
+llest. **`qui_hi_surt`: ha empitjorat amb el pedaç dels afixos: 10 certs i 8 falsos de 18**
+(36 % → 44 %): «tu» en un tros sense cap verb, «nosaltres» per la `n` de la preposició, «jo»
+pel clític `aġ`, «ells» pel plural d'un nom i per `ng` «som». Els certs sortien de pronoms
+explícits. → **v8: només pronoms i formes verbals de la taula a mà; cap afix.** Un camp al
+44 % de falsos és pitjor que no tenir-lo.
+
+**Veredicte de l'auditor sobre passar als 1.468 trossos:** interlineal, cita, tema, mena i
+polaritat **sí**; `qui_hi_surt` **no** fins a restringir-lo (fet, v8); la frase **sí, amb
+marca** — «muntada a partir de glosses, no traducció» (fet, v8: `frase_nota`), perquè una de
+cada vuit és del tipus #9 i el filtre no la pot veure. **I abans d'arrencar: passar els fets
+pels 226 versos narrats** i mesurar la interlineal contra la veritat humana, perquè el «0,5 %
+de falses» vol dir *fidel a la glossa* i contra l'àudio serà una altra xifra que ningú no sap.
+El WER, d'ara endavant, partit en dues classes: errors de frontera (dos mots de la veritat
+enganxats en un token, o al revés) i errors de debò; CER 0,21 amb WER 0,72 diu que les lletres
+hi són i les fronteres no. Límit conegut que no s'arregla: un tema pot dur un
 genitiu fals («traducció de fons», #37); prohibir-los mataria «la conjugació dels verbs».
 
 ## Les tres millores, per ordre de sostre (auditor, 14-11)
