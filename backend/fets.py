@@ -258,13 +258,15 @@ _FORMES_AMB_PERSONA = {
     "giġ": "jo", "giḫ": "jo", "gix": "jo", "riġ": "jo", "riḫ": "jo", "lliġ": "jo", "lliḫ": "jo",
     "sawalḫ": "jo", "sawalġ": "jo", "nniġ": "jo", "nniḫ": "jo", "skrġ": "jo", "skrḫ": "jo",
     "tgit": "tu", "trit": "tu", "tgi": "tu",
+    "ttiniġ": "jo", "ttiniḫ": "jo",
     "iga": "ell/ella", "tga": "ell/ella", "illa": "ell/ella", "tlla": "ell/ella", "ira": "ell/ella",
     "tra": "ell/ella", "inna": "ell/ella", "tnna": "ell/ella", "ittini": "ell/ella",
+    "ttini": "ell/ella", "daittini": "ell/ella",
     "nga": "nosaltres", "ng": "nosaltres", "nra": "nosaltres", "nlla": "nosaltres",
-    "nsawal": "nosaltres", "nssn": "nosaltres",
+    "nsawal": "nosaltres", "nssn": "nosaltres", "nttini": "nosaltres", "danttini": "nosaltres",
     "tgam": "vosaltres", "tram": "vosaltres", "tramt": "vosaltres",
     "gan": "ells/elles", "gant": "ells/elles", "llan": "ells/elles", "llant": "ells/elles",
-    "ttinin": "ells/elles", "nnan": "ells/elles", "qqarn": "ells/elles",
+    "ttinin": "ells/elles", "dattinin": "ells/elles", "nnan": "ells/elles", "qqarn": "ells/elles",
 }
 
 
