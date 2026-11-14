@@ -66,6 +66,21 @@ alt sobretot per espais —`ar saqquln` ↔ `arsaqqull`—, que el CER compta co
 Dada que reforça H1: `illa ar ittrgigi` surt `illa ar ittrgig` (CER 0,06): la còpula l'ASR
 la sent bé; el que la perdia era el diccionari. Fitxers: `canal/veritat_cancons.json`.
 
+**I la mesura que compta més: amazic estàndard NARRAT, 226 versos de 8 contes** (The
+Traveller 1–5 via les pistes `ak-*`, més `o21uxEQoczE`, `oFVo66DStDc`, `tR-hRjd9O-k`), amb la
+lletra transcrita a mà en tifinag:
+
+| model | CER | WER |
+|---|---|---|
+| **shi** (MMS + el nostre adaptador) | **0,210** | 0,718 |
+| zgh | 0,435 | 0,884 |
+
+Estable entre vídeos (shi 0,18–0,24; zgh 0,35–0,51). Parlat va millor que cantat (0,307 →
+0,210), com s'esperava, i el nostre adaptador guanya el model d'estàndard per més del doble a
+tots vuit. El WER alt amb CER baix diu el de sempre: el que falla són els espais, no les
+lletres. **Aquest 0,210 és la línia de base contra la qual s'ha de mesurar el lector amb el
+lèxic a dins (H3) quan es desplegui.** Fitxers: `canal/veritat_parlat.json`.
+
 ## Hipòtesis vives
 
 **H1 · L'error dominant és que la glossa entrega els noms i es menja el verb.** Mesura de
@@ -291,6 +306,28 @@ passen**, interlineal 198/318 (62 %). Judici a cegues pendent. Observat: algunes
 copien el «?» de la casella («no ? només ?») —el forat és visible en comptes d'inventat—, i
 el #19 torna a relacionar amb «és»: la frase és l'únic camp on el model pot relacionar, i és
 el preu de tenir-la.
+
+*Judici de la v3 (auditor, a cegues, acord 20/20):* interlineal **189 caselles, 2 falses
+(1,1 %)** i les 6 de la còpula fora (`ġar→només`, `dad→?`, `maša→però`, `inna→va dir`); cita
+**2 de 2** (`imikk`, i `manik` = «els qui diuen *manik*», la citació dialectal del vídeo);
+tema 21 de 22 cert però **9 dels 22 no són grups nominals**; `mena` 12/12, `polaritat` 9/9
+(«restrictiu» ja s'usa); `qui_hi_surt` 16 amb **4 falsos**, tots del mateix bug (la `-ġ`
+final llegida com a 1sg quan és de l'arrel, `iffġ`, o un possessiu, `nnġ`). I **8 caselles
+eren el token copiat tal qual** (el #10, cinc de cinc) i comptaven com a plenes: el compte
+honest era 181. Quatre pedaços fets a la **v5** (PR #606): suport per arrel, token copiat → «?»
+i cometes només per a un candidat a cita, `-ġ` només amb verb conegut i prefix que mana,
+tema sense «?» ni infinitiu. *Judici de la v4 (auditor, a cegues, mateix full):* **la comparació que decidia, v2 (filtre
+`soste`) contra v4 (filtre contra la interlineal), 15 frases contra 15: 4/9/2 → 6/8/1.** El
+filtre nou guanya per totes dues bandes i el «si dubtes, null» no torna. Les invencions de la
+v2 han desaparegut una per una (#24 «la mare», #29 «són una llengua», #9 «imaziġn»). L'únic
+fals (#26) i l'única predicació inventada (#19) tenien una còpula a la frase sense cap casella
+de còpula; el #3, bo, la tenia (`tgi→no és`) → **regla de la còpula**, que deixa la columna a 0
+falsos de 14. El «?» dins la frase: 5 de 15 el porten, 1 bo / 4 a mitges / 0 falses — **el
+model posa el forat on abans posava la invenció**; no compta en contra i es marca [?]. De les
+11 podes de la v4, 10 eren flexió («pregunta»/`pregunto`, «verbs»/`verb`): la comparació per
+arrel les recupera. Tot això és a la **v6** (PR #606). Judici de la v6 pendent; és el que
+decideix si s'escala als 1.468 trossos. Límit conegut que no s'arregla: un tema pot dur un
+genitiu fals («traducció de fons», #37); prohibir-los mataria «la conjugació dels verbs».
 
 ## Les tres millores, per ordre de sostre (auditor, 14-11)
 
