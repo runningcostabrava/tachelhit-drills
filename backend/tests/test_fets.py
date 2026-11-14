@@ -212,3 +212,26 @@ def test_la_g_final_nomes_es_primera_persona_si_treure_la_deixa_un_verb():
 
 def test_sense_es_verb_nomes_pronoms():
     assert fets.qui_hi_surt(["sawalġ", "nutni"]) == ["ells/elles"]
+
+
+# ------------------------------------------------------- la còpula, l'única relació possible
+def test_una_copula_a_la_frase_val_nomes_si_una_casella_la_porta():
+    #: #3 de la v4: «No és només paraules» amb la casella `tgi→no és` → passa
+    tros = "ur tgi ġar iwaliwn"
+    f, motius = fets.comprova(json.dumps({
+        "interlineal": ["no", "no és", "només", "paraules"], "tema": "?",
+        "frase": "No és només paraules."}), tros)
+    assert f["frase"] == "No és només paraules." and not motius
+    #: #19: «és la nostra llengua» sense cap casella de còpula → cau, i es diu
+    f, motius = fets.comprova(json.dumps({
+        "interlineal": ["?", "llengua", "amaziga", "nostra"], "tema": "?",
+        "frase": "És la nostra llengua amaziga."}), "x tutlayt tamaziġt nnġ")
+    assert f["frase"] is None and any("còpula" in m for m in motius)
+
+
+def test_el_forat_dins_la_frase_es_marca_com_a_buit():
+    tros = "ur tgi ġar iwaliwn ur tgi ġar tguriwin"
+    f, _ = fets.comprova(json.dumps({
+        "interlineal": ["no", "no és", "només", "paraules", "no", "?", "només", "?"],
+        "tema": "?", "frase": "No és només paraules, no ? només ?"}), tros)
+    assert f["frase"] == "No és només paraules, no [?] només [?]"

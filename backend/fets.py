@@ -201,6 +201,15 @@ def tema_es_grup_nominal(tema: str) -> Tuple[bool, str]:
     return True, ""
 
 
+#: Les formes de la còpula en català, tal com surten a les caselles i a les frases.
+_COPULA = re.compile(r"\b(és|son|són|sóc|soc|som|ets|sou|era|eren|hi ha|no hi ha|no és|"
+                     r"està|estan|estem|esteu|existeix|existeixen)\b", re.I)
+
+
+def _te_copula(text: str) -> bool:
+    return bool(_COPULA.search(text or ""))
+
+
 def candidats_a_cita(toks: List[str]) -> List[int]:
     """Els índexs dels tokens que segueixen un verb de dir: el codi els assenyala, el model tria."""
     fora = []
@@ -355,6 +364,18 @@ def comprova(resposta: str, tros: str,
         if not ok:
             motius.append(f"frase amb paraules sense token: {', '.join(orfes)}")
             frase = None
+    if frase and _te_copula(frase) and not any(_te_copula(c) for c in inter):
+        #: La frase és l'únic camp on el model pot relacionar, i la còpula és la relació.
+        #: A la v4 les tres frases amb còpula eren: #3 «no és només paraules» amb la casella
+        #: `tgi→no és` (bona), #19 «és la nostra llengua de…» i #26 «l'estandardització no hi
+        #: és» sense cap casella de còpula —l'única frase falsa i l'única predicació inventada
+        #: de la v4. Una còpula a la frase val només si alguna casella la porta.
+        motius.append("frase amb una còpula que cap casella no sosté")
+        frase = None
+    if frase:
+        #: el «?» d'una casella copiat dins la frase és el forat fet visible —millor que la
+        #: invenció que hi havia abans—, però llegit en cru sembla una errata: es marca [?]
+        frase = re.sub(r"(?<!\[)\?(?!\])", "[?]", frase) if " ?" in f" {frase}" else frase
 
     return {
         "interlineal": inter,
