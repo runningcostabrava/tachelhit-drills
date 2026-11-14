@@ -174,9 +174,12 @@ PARTICULES = {
     "mad": "què, el que, qui",
     "man": "quin, quina",
     "nnit": "mateix (reforça el que s'ha dit)",
-    # `nniġ` és de dues menes i totes dues són corrents: la conjunció «o», i «vaig dir» del
-    # verb `ini`. No es pot triar sense el context, i per això es diuen totes dues.
-    "nniġ": "o, o bé — o bé: vaig dir (ini)",
+    # `nniġ` és de tres menes i totes tres són corrents: «vaig dir» del verb `ini`, la
+    # preposició `nnig` «damunt, sobre» (els subtítols humans del conte del vaixell: «inin
+    # nnig turft» = dalt del vaixell) i la conjunció `niġ` «o». L'ASR les escriu igual. No es
+    # pot triar sense el context, i per això es diuen totes tres.
+    "nniġ": "vaig dir (ini) — o bé: damunt, sobre (nnig) — o bé: o, o bé",
+    "nniḫ": "vaig dir (ini) — o bé: damunt, sobre (nnig) — o bé: o, o bé",
 }
 
 #: Les preposicions que porten el pronom enganxat: `dar`+`s` = «en poder d'ell» = «ell té».
@@ -499,6 +502,21 @@ FORMES_GRAMATICALS = {
     "inna": "va dir (ini) — o bé: mare",
     "dad": "partícula verbal (da+d) — o bé: aquest",
     "dadd": "partícula verbal (da+d) — o bé: aquest",
+    # El verb `ddu` («anar») en perfectiu no és a la taula de conjugació (només l'aorist
+    # `iddu`, `nddu`), i sense ell el diccionari s'inventava noms: `tddit` → «sangonera»
+    # (tiddit), `idda` → «aquí», `ddiġ` → «encara». Validació del 15-11-2026: les 16 `tddit`
+    # de la llista van darrere de `mani s` («on»), `ki` («quan») o `s» («cap a»).
+    "tddit": "vas anar, vas (ddu)",
+    "idda": "va anar (ell) (ddu)",
+    "tdda": "va anar (ella) (ddu)",
+    "ndda": "vam anar (ddu)",
+    "tddam": "vau anar (ddu)",
+    "ddan": "van anar (ddu)",
+    "ddant": "van anar (elles) (ddu)",
+    # `ddiġ` pot ser «vaig anar» o l'adverbi `diġ` («encara, altre cop») amb la d doblada
+    # per l'ASR; es diuen les dues.
+    "ddiġ": "vaig anar (ddu) — o bé: encara, altre cop (diġ)",
+    "ddiḫ": "vaig anar (ddu) — o bé: encara, altre cop (diġ)",
 }
 
 #: La taula està escrita amb l'ortografia del compendi (`acku`, `max`), i el model d'ASR

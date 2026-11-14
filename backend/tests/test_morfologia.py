@@ -263,6 +263,23 @@ def test_nnig_diu_les_dues_lectures():
     #: triar-ne una, i qui munti la frase ho veu.
     diu, _ = glossa("nniġ")
     assert "o, o bé" in diu and "vaig dir" in diu
+    #: i la tercera, la preposició `nnig` «damunt»: els subtítols humans del conte del vaixell
+    #: escriuen «inin nnig turft» (dalt del vaixell), i 20 de les 21 `nniġ` de la llista van
+    #: seguides d'un nom, no d'un pronom
+    assert "damunt" in diu
+
+
+def test_el_verb_anar_en_perfectiu_surt_de_la_taula():
+    #: Validació del 15-11-2026: sense `ddu` en perfectiu a cap taula, el diccionari glossava
+    #: `tddit` «sangonera» (tiddit) 16 vegades, `idda` «aquí» i `ddiġ` «encara». Les 16
+    #: `tddit` anaven darrere de «mani s» («on»): és «vas».
+    for forma, tros in (("tddit", "vas"), ("idda", "va anar"), ("ndda", "vam anar"),
+                        ("ddan", "van anar")):
+        diu, com = glossa(forma)
+        assert tros in diu, (forma, diu)
+        assert com.startswith("forma gramatical"), (forma, com)
+    diu, _ = glossa("ddiġ")
+    assert "vaig anar" in diu and "encara" in diu
 
 
 # -------------------------------------- el verb «ser», que el diccionari serveix com a nom

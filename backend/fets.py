@@ -260,6 +260,10 @@ _FORMES_AMB_PERSONA = {
     #: fora `nniġ`/`nniḫ` («o» o «vaig dir») i `inna` («va dir» o «mare»): dues lectures
     #: corrents, i una persona que pot ser falsa no val res en aquest camp
     "tgit": "tu", "trit": "tu", "tgi": "tu",
+    #: el verb `ddu` («anar») en perfectiu, afegit a la taula el 15-11-2026; `ddiġ` no hi és
+    #: perquè pot ser l'adverbi `diġ`
+    "tddit": "tu", "idda": "ell/ella", "tdda": "ell/ella", "ndda": "nosaltres",
+    "tddam": "vosaltres", "ddan": "ells/elles", "ddant": "ells/elles",
     "ttiniġ": "jo", "ttiniḫ": "jo",
     "iga": "ell/ella", "tga": "ell/ella", "illa": "ell/ella", "tlla": "ell/ella", "ira": "ell/ella",
     #: `inna` torna: al #24 de la mostra era «va dir» i cert; és la forma de «dir» més corrent
