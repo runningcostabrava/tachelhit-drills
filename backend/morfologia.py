@@ -292,9 +292,40 @@ SEGURES = ("diccionari", "partícula", "preposició amb pronom")
 MENA_DE_LA_REGLA = {"verb": "verb", "annexió": "nom", "plural": "nom", "plural i annexió": "nom"}
 
 
+def _particula_al_davant(mot: str) -> List[Tuple[str, str]]:
+    """Els talls <partícula> + <resta> possibles, el de la resta més llarga primer.
+
+    L'ASR enganxa la partícula a la paraula que ve darrere, i les formes perdudes més
+    freqüents de la llista de Tamazight For All són justament això —no vocabulari rar:
+
+        ma + tigan   «què són»       n + tmaziġt  «de l'amazic»    s + udġar  «al lloc»
+        da + ttinin  «(que) diuen»   is + awal    «que parla?»     n + twinst «de la frase»
+
+    El partidor general no les toca perquè demana tres lletres per tros, i té raó en
+    general: deixar partir per qualsevol lletra dona mentides. Les partícules, però, són una
+    llista tancada i escrita a mà, i partir per una d'aquelles no és endevinar.
+
+    **Només pel davant.** Tallar una lletra pel darrere i dir-ne clític converteix `musaġ`
+    en «tisoreta» i `igddiġ` en «gos» —la trampa que la reixa de mena va néixer per aturar—,
+    i a més la persona del verb ja la treu `_sense_verb`. La resta més llarga va primera
+    perquè és la que porta el significat: provant abans les partícules de dues lletres,
+    `sudġar` sortia `sudġ + ar` («conduir un animal») en comptes de `s + udġar`.
+    """
+    fora = []
+    for n in (1, 2):
+        if len(mot) <= n + MIN_ARREL - 1:
+            continue
+        cap, resta = mot[:n], mot[n:]
+        if cap in PARTICULES:
+            fora.append((cap, resta))
+    fora.sort(key=lambda x: -len(x[1]))
+    return fora
+
+
 def glossa(mot: str, al_diccionari: Callable[[str], List[str]],
            es_verb: Optional[Callable[[str], bool]] = None,
-           es_nom: Optional[Callable[[str], bool]] = None) -> Optional[Tuple[str, str]]:
+           es_nom: Optional[Callable[[str], bool]] = None,
+           partir: bool = True) -> Optional[Tuple[str, str]]:
     """Què vol dir `mot`, i com s'hi ha arribat. None si no se'n pot dir res.
 
     `al_diccionari(forma)` ha de tornar els significats d'aquella forma exacta, o una llista
@@ -351,6 +382,15 @@ def glossa(mot: str, al_diccionari: Callable[[str], List[str]],
         sig = al_diccionari(forma)
         if sig:
             return f"{', '.join(sig[:3])} ({forma})", com
+
+    #: 5. l'últim recurs: una partícula enganxada al davant d'una paraula que sí que se sap.
+    #: `partir=False` a la crida de dins perquè no es parteixi un tros ja partit: dos talls
+    #: seguits deixen una arrel de dues lletres i tornem a ser on no volíem.
+    if partir:
+        for cap, resta in _particula_al_davant(mot):
+            diu = glossa(resta, al_diccionari, es_verb, es_nom, partir=False)
+            if diu:
+                return f"{PARTICULES[cap]} + {diu[0]}", "partícula enganxada"
     return None
 
 
