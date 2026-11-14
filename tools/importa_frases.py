@@ -55,6 +55,13 @@ def main():
 
     frases = json.load(io.open(a.fitxer, encoding="utf-8"))
     print(f"{len(frases)} frases a {a.fitxer}")
+    #: Quina base es toca, dit abans de fer res i sense la contrasenya. Aquí no es barra el pas
+    #: —importar a una base local és una cosa que es fa per provar—, però cal saber on s'escriu:
+    #: el 13-11-2026, una passada contra el sqlite del disc va contestar «res a fer» i semblava
+    #: que la feina ja estigués feta.
+    adreca = os.getenv("DATABASE_URL", "sqlite:///drills.db")
+    on = adreca.split("@")[-1].split("/")[0] if "@" in adreca else adreca
+    print(f"base: {on}")
     print(f"dipòsit: {'R2' if magatzem.a_r2() else 'Cloudinary'}\n")
 
     db = SessionLocal()
