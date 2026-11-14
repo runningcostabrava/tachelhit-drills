@@ -130,7 +130,21 @@ d'enganxar; **(b)** enganxa dos mots i la casella no casa amb cap (`dawas→i` q
 el terra de la interlineal queda entre el **76 i el 92 %** de caselles que diuen un mot que el
 parlant va dir (n=40, ±8 punts). **Vistiplau de l'auditor a l'escalat**, amb la condició de
 publicar el 84 % al costat de l'avís (narració ≠ classe; les classes no es validaran mai) i de
-jutjar les 49 frases dels 226 versos contra la veritat, l'única mesura del producte que falta. Per tant: **4 de cada 10 caselles plenes glossen un
+jutjar les 49 frases dels 226 versos contra la veritat, l'única mesura del producte que falta.
+*Correccions del final del dia (v10):* **el «~84 %» es retira**: comptava les 364 caselles de
+token exacte com a totes certes sense haver-ho mesurat (la mateixa falta d'avui, aquesta vegada
+de l'auditor). El que aguanta: **de cada 100 caselles plenes, 69 cauen sobre el mot exacte, 20
+sobre un mot amb les lletres bones i les fronteres no, 10 sobre un mot proper, 1 sobre res; de
+les 31 que no cauen sobre l'exacte, la meitat anomena un mot dit i la meitat no → com a MÀXIM
+un 85 % de caselles certes**, i el número depèn de les 422 de la caixa «cert» (mostra de 40,
+llavor 2026, `mostra_cert40.json`, en judici). **La cita es retira com a «llesta»**: quatre
+«cites» dels contes eren tokens enganxats («suššn» per `as uššn`) —ara la cita només val si el
+lèxic la coneix sencera. `qui_hi_surt` v8 verificat: 15 certs, 1 fals (`tgi` darrere d'`ur`,
+arreglat), 1 incert; `inna` torna. Les regles de la v10 s'apliquen als resultats dels 1.468 en
+codi, sense tornar a cridar el model.
+*Escalat en marxa (14-11, codi 33ff8fe, `fets_tots.py`):* els fets sobre els 1.468 trossos dels
+25 vídeos, desats dins de cada JSON (`fets`, `rebutjat`, `fets_codi`), re-glossats amb el codi
+d'ara; la pàgina els mostra sota la frase amb l'avís del 76–92 %. Per tant: **4 de cada 10 caselles plenes glossen un
 token que no és exactament el que es va dir**, i la pregunta que decideix —si la glossa
 d'aquell token proper coincideix igualment amb el sentit del mot dit— només la pot contestar
 un jutge sobre una mostra. Avís d'abast: narració no és classe; el número no es trasllada
