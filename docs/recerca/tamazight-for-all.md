@@ -279,6 +279,19 @@ subjecte de «diuen») per la paraula anomenada i la citació falsa li havia ent
 amb cometes; **(d)** una paraula que ÉS un token es sosté sola (el #30 perdia la frase per
 «imikk sense token»); **(e)** la llargada no eximeix de token («gos», «pou» passaven).
 
+*v3 (14-11, glosses d'avui):* 40 acceptats, tema 22, cita 2, interlineal 189/318 — i **frase
+0 de 40, perquè el model no en va escriure cap**: amb «si dubtes, null» més «només amb paraules
+de la interlineal» s'absté sempre, i el producte «la frase a part» que l'amo va demanar queda
+buit. *v4:* redacció de la v2 per a la frase (escriu-la quan les caselles donin) amb el filtre
+nou contra la interlineal. La comparació que decideix: v2 (filtre `soste`: 15 passen, 2
+falses) contra v4 (filtre contra la interlineal). Si la v4 té menys falsos amb cobertura
+semblant, el filtre nou guanya; si en té més, torna el «si dubtes, null». *v4 (capçalera):*
+40 acceptats, tema 22, cita 2 (el #30 porta `imikk`), **frase 21 escrites / 6 podades / 15
+passen**, interlineal 198/318 (62 %). Judici a cegues pendent. Observat: algunes frases
+copien el «?» de la casella («no ? només ?») —el forat és visible en comptes d'inventat—, i
+el #19 torna a relacionar amb «és»: la frase és l'únic camp on el model pot relacionar, i és
+el preu de tenir-la.
+
 ## Les tres millores, per ordre de sostre (auditor, 14-11)
 
 1. **Llegir cada tall dues o tres vegades i quedar-se el que coincideix.** On hi ha +40
