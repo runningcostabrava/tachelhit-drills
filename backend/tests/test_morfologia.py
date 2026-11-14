@@ -1,0 +1,147 @@
+# -*- coding: utf-8 -*-
+"""El desfeidor de gramàtica: que trobi el que ha de trobar i que CALLI quan no ho sap.
+
+El perill d'aquest mòdul no és que no trobi res: és que trobi massa. Una regla que accepta
+qualsevol cosa dona significats falsos amb cara de bons, i això és pitjor que un buit —el
+13-11-2026, sense la reixa de mena, `wid` («els de») es llegia «cadena» i `inllan` (forma del
+verb ser) es llegia «henna». La meitat d'aquestes proves vigilen el silenci, no la troballa.
+
+No toquen el lèxic de debò: el diccionari és un diccionari de mentida de deu paraules, així
+les proves diuen sempre el mateix i no baixen 50.000 entrades a la CI.
+"""
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import morfologia  # noqa: E402
+
+#: forma → (significats, mena). Prou per a tots els casos d'aquest fitxer.
+DICCIONARI = {
+    "asif": (["riu"], "nom"),
+    "argaz": (["home"], "nom"),
+    "agafa": (["nord"], "nom"),
+    "tamaziġt": (["llengua amaziga"], "nom"),
+    "taguri": (["paraula"], "nom"),
+    "amaziġ": (["amazic"], "nom"),
+    "ssn": (["saber"], "verb"),
+    "ffġ": (["sortir"], "verb"),
+    "anlla": (["henna"], "nom"),
+    "id": (["cadena"], "nom"),
+}
+
+
+def _significats(forma):
+    return list(DICCIONARI.get(forma, ([], ""))[0])
+
+
+def _es_verb(forma):
+    return DICCIONARI.get(forma, ([], ""))[1] == "verb"
+
+
+def _es_nom(forma):
+    return DICCIONARI.get(forma, ([], ""))[1] == "nom"
+
+
+def glossa(mot):
+    return morfologia.glossa(mot, _significats, _es_verb, _es_nom)
+
+
+# ----------------------------------------------------------------- el que ha de trobar
+def test_la_forma_exacta_va_sense_regla():
+    diu, com = glossa("asif")
+    assert diu == "riu"
+    assert com == "diccionari"
+
+
+def test_desfa_lannexio_del_masculi():
+    #: `wasif` = w + asif; `urgaz` = u + (a)rgaz. Les dues són annexió, no dues paraules.
+    assert glossa("wasif")[0].startswith("riu")
+    assert glossa("urgaz")[0].startswith("home")
+    assert glossa("ugafa")[0].startswith("nord")
+    assert glossa("wasif")[1] == "annexió"
+
+
+def test_desfa_lannexio_del_femeni():
+    assert glossa("tmaziġt")[0].startswith("llengua amaziga")
+
+
+def test_desfa_el_plural():
+    assert glossa("imaziġn")[0].startswith("amazic")
+
+
+def test_el_plural_i_lannexio_es_componen():
+    #: tguriwin → (plural) tguri → (annexió) taguri. Cap regla sola no hi arriba.
+    diu, com = glossa("tguriwin")
+    assert diu.startswith("paraula")
+    assert "plural" in com
+
+
+def test_treu_els_afixos_de_persona():
+    assert glossa("nssn")[0].startswith("saber")      # n- : nosaltres
+    assert glossa("ttffġn")[0].startswith("sortir")   # tt- habitual, -n: ells
+
+
+def test_les_particules_no_surten_del_diccionari_sino_de_la_taula():
+    #: `lexicon._STOP` esborra `da`, `ur`, `ad`… a posta. Si no fossin aquí, no hi serien.
+    assert glossa("da") == ("partícula d'acció habitual", "partícula")
+    assert glossa("ur")[0] == "no (negació)"
+    assert glossa("nutni")[0] == "ells"
+
+
+def test_la_preposicio_amb_el_pronom_enganxat():
+    diu, com = glossa("dars")
+    assert "ell/ella" in diu
+    assert com == "preposició amb pronom"
+
+
+# ----------------------------------------------------------------- el que ha de CALLAR
+def test_no_diu_res_del_que_el_diccionari_no_confirma():
+    #: la regla pot proposar el que vulgui; si el diccionari no la coneix, no hi ha glossa
+    assert glossa("wzzzzz") is None
+    assert glossa("tkkkkkt") is None
+
+
+def test_un_afix_de_verb_no_es_treu_dun_nom():
+    #: `anllaġ` no és «jo henno»: `anlla` és un nom, i treure-li la -ġ de primera persona és
+    #: una lectura que no es pot fer. Sobre les paraules reals dels catorze vídeos, aquesta
+    #: reixa atura 71 formes, entre elles `musaġ` = «tisoreta» i `nislman` = «peix».
+    assert glossa("anllaġ") is None
+
+
+def test_una_regla_no_pot_acabar_en_particula():
+    #: `blan` → treure la -n → `bla` («sense») era una glossa que es donava, i és falsa:
+    #: una partícula no porta afixos de persona.
+    assert glossa("blan") is None
+
+
+def test_una_arrel_de_dues_lletres_no_val():
+    #: `tga` → `g`: qualsevol cosa casaria. MIN_ARREL ho barra.
+    assert morfologia.MIN_ARREL >= 3
+    for forma, _ in morfologia.candidates("tga"):
+        assert len(forma) >= 2
+
+
+def test_sense_la_reixa_de_mena_es_perd_precisio():
+    #: la prova que la reixa serveix: sense `es_verb`/`es_nom`, `anllaġ` agafa «henna»
+    fluix = morfologia.glossa("anllaġ", _significats)
+    assert fluix is not None and "henna" in fluix[0]
+    assert glossa("anllaġ") is None
+
+
+def test_una_regla_ben_aplicada_pot_caure_en_la_paraula_equivocada():
+    #: El límit del mètode, escrit perquè ningú no es pensi que està resolt: `inllan` és una
+    #: forma del verb «ser», però el plural de `anlla` («henna») seria exactament això, i
+    #: `anlla` és un nom de debò. La regla és correcta i el resultat és fals. L'única
+    #: defensa és que la glossa digui que ha calgut una regla.
+    diu, com = glossa("inllan")
+    assert "henna" in diu
+    assert com not in morfologia.SEGURES
+
+
+def test_les_segures_son_les_que_no_han_calgut_cap_regla():
+    assert set(morfologia.SEGURES) == {"diccionari", "partícula", "preposició amb pronom"}
+    for mot in ("asif", "da", "dars"):
+        assert glossa(mot)[1] in morfologia.SEGURES
+    for mot in ("wasif", "imaziġn", "nssn"):
+        assert glossa(mot)[1] not in morfologia.SEGURES
