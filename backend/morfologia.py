@@ -164,6 +164,19 @@ PARTICULES = {
     "imikk": "una mica",
     "bahra": "molt",
     "atig": "molt",
+    # Sortides del recompte de la llista de Tamazight For All (14-11-2026): paraules de
+    # funció freqüents que no hi eren, i que el diccionari glossava com si fossin mots plens
+    # —i, pitjor, marcades com a lectura SEGURA. `ġir` («només») sortia «Run, Caper, Hurry».
+    "ġir": "només, solament",
+    "ġar": "només, solament",
+    "akkw": "tot, tots, completament",
+    "waḫḫa": "tot i que, encara que — o, tot sol: d'acord, va bé",
+    "mad": "què, el que, qui",
+    "man": "quin, quina",
+    "nnit": "mateix (reforça el que s'ha dit)",
+    # `nniġ` és de dues menes i totes dues són corrents: la conjunció «o», i «vaig dir» del
+    # verb `ini`. No es pot triar sense el context, i per això es diuen totes dues.
+    "nniġ": "o, o bé — o bé: vaig dir (ini)",
 }
 
 #: Les preposicions que porten el pronom enganxat: `dar`+`s` = «en poder d'ell» = «ell té».
@@ -317,7 +330,7 @@ def _particula_al_davant(mot: str) -> List[Tuple[str, str]]:
         if len(mot) <= n + MIN_ARREL - 1:
             continue
         cap, resta = mot[:n], mot[n:]
-        if cap in PARTICULES:
+        if clau_de_particula(cap):
             fora.append((cap, resta))
     fora.sort(key=lambda x: -len(x[1]))
     return fora
@@ -357,17 +370,18 @@ def glossa(mot: str, al_diccionari: Callable[[str], List[str]],
 
     #: 1. la forma tal com sona, i la partícula si també ho és
     sig = al_diccionari(mot)
-    if mot in PARTICULES:
+    clau = clau_de_particula(mot)
+    if clau:
         #: Dues o tres lletres casen amb qualsevol cosa, i el diccionari en té entrades: `ig`
         #: («si» condicional) sortia glossat «Pistachio» amb tota la seguretat del món, i
         #: `dad` (partícula verbal) sortia «pare». Quan totes dues lectures existeixen es
         #: donen totes dues, la de la gramàtica primera, i la parella NO és una lectura
         #: segura: qui la llegeixi ha de triar amb el context.
         if sig:
-            return f"{PARTICULES[mot]} — o bé: {', '.join(sig[:2])}", "partícula o diccionari"
-        return PARTICULES[mot], "partícula"
+            return f"{PARTICULES[clau]} — o bé: {', '.join(sig[:2])}", "partícula o diccionari"
+        return PARTICULES[clau], "partícula"
     if sig:
-        return ", ".join(sig[:3]), "diccionari"
+        return ", ".join(sig[:4]), "diccionari"
 
     #: 3. preposició amb el pronom enganxat
     p = _preposicio_amb_clitic(mot)
@@ -382,7 +396,7 @@ def glossa(mot: str, al_diccionari: Callable[[str], List[str]],
             continue
         sig = al_diccionari(forma)
         if sig:
-            return f"{', '.join(sig[:3])} ({forma})", com
+            return f"{', '.join(sig[:4])} ({forma})", com
 
     #: 5. l'últim recurs: una partícula enganxada al davant d'una paraula que sí que se sap.
     #: `partir=False` a la crida de dins perquè no es parteixi un tros ja partit: dos talls
@@ -391,13 +405,35 @@ def glossa(mot: str, al_diccionari: Callable[[str], List[str]],
         for cap, resta in _particula_al_davant(mot):
             diu = glossa(resta, al_diccionari, es_verb, es_nom, partir=False)
             if diu:
-                return f"{PARTICULES[cap]} + {diu[0]}", "partícula enganxada"
+                return (f"{PARTICULES[clau_de_particula(cap)]} + {diu[0]}",
+                        "partícula enganxada")
     return None
 
 
 # --------------------------------------------------------------------------------------
 # El pont amb el lèxic del projecte
 # --------------------------------------------------------------------------------------
+
+#: La taula està escrita amb l'ortografia del compendi (`acku`, `max`), i el model d'ASR
+#: escriu `ašku`, `maḫ`: el seu adaptador es va afinar amb `c→š` i `x→ḫ`. El lèxic ja
+#: normalitza aquestes parelles, però la NOSTRA taula no ho feia, i `ašku` —la quarta
+#: paraula més freqüent de la llista, 52 aparicions— no hi casava: en comptes de «perquè»
+#: rebia «Because, because of, Since» del diccionari, marcat com a lectura SEGURA quan era
+#: sort. Es prova la forma tal com ve i les variants d'ortografia.
+_ORTOGRAFIA = (("š", "c"), ("c", "š"), ("ḫ", "x"), ("x", "ḫ"))
+
+
+def clau_de_particula(mot: str) -> Optional[str]:
+    """La clau amb què `mot` surt a la taula, o None. Prova les variants d'ortografia."""
+    if mot in PARTICULES:
+        return mot
+    for a, b in _ORTOGRAFIA:
+        if a in mot:
+            altra = mot.replace(a, b)
+            if altra in PARTICULES:
+                return altra
+    return None
+
 
 #: Prefixos de persona del verb. Un nom no en porta mai cap.
 _PERSONA_A_LEXEMPLE = ("t", "te", "n", "i", "y", "tt")
@@ -474,8 +510,17 @@ def amb_lexicon(lexicon):
             if x and x not in fora:
                 fora.append(x)
 
+        #: L'anglès es queda amb DUES places, no tres. Tenim dos diccionaris independents i
+        #: cap dels dos no guanya sempre: `awal` és «Chat, Deal, Term» en anglès i «parole,
+        #: langage» en francès (el francès té raó); `illan` és «Real, True, Actual» en anglès
+        #: i «millet» en francès (l'anglès té raó). Amb l'anglès ocupant les tres places i
+        #: `glossa` quedant-se'n tres, el francès NO arribava mai al model que escriu el
+        #: català, i això passava en 937 aparicions de la llista —el 41 % de les que tenen
+        #: glossa. Dues lectures independents valen més que tres del mateix lloc: quan
+        #: coincideixen («tutlayt» = Language, langue) és un senyal fort, i quan no, qui
+        #: munta la frase pot triar amb el context en comptes de rebre'n una a l'atzar.
         for e in (r.get("dictionary") or []):
-            for en in (e.get("english") or [])[:3]:
+            for en in (e.get("english") or [])[:2]:
                 posa(en)
         for e in (r.get("ircam") or []):
             posa((e.get("french") or "").split(";")[0].strip()[:40])

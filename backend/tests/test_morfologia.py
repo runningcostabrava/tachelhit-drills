@@ -227,3 +227,38 @@ def test_els_caps_massa_curts_o_amb_espai_no_compten():
 
 def test_sense_exemple_no_hi_ha_prova():
     assert not morfologia._lexemple_el_conjuga({"tashlhit": "sawal", "pos": "n."})
+
+
+# ------------------------------ la taula escrita a mà i l'ortografia que el model escriu
+def test_la_taula_casa_amb_lortografia_del_model():
+    #: La taula ve del compendi (`acku`) i l'adaptador de l'ASR es va afinar amb `c→š`, o
+    #: sigui que escriu `ašku`. És la quarta paraula més freqüent de la llista (52
+    #: aparicions) i no hi casava: rebia «Because, because of, Since» del diccionari,
+    #: marcat com a lectura SEGURA quan era sort.
+    assert morfologia.clau_de_particula("ašku") == "acku"
+    assert morfologia.clau_de_particula("maḫ") in ("maḫ", "max")
+    assert glossa("ašku")[0].startswith("perquè")
+
+
+def test_una_paraula_que_no_hi_es_no_sinventa_una_clau():
+    assert morfologia.clau_de_particula("tamaziġt") is None
+    assert morfologia.clau_de_particula("ššššš") is None
+
+
+def test_les_paraules_de_funcio_que_el_diccionari_glossava_malament():
+    #: `ġir` («només») sortia «Run, Caper, Hurry» i marcat com a SEGUR: la mena d'error
+    #: pitjor, confiat i fals.
+    for mot, tros in (("ġir", "només"), ("akkw", "tot"), ("mad", "què"),
+                      ("man", "quin"), ("waḫḫa", "tot i que")):
+        diu, _ = glossa(mot)
+        assert tros in diu, (mot, diu)
+
+
+def test_nnig_diu_les_dues_lectures():
+    #: Conjunció «o» i «vaig dir» del verb `ini`: totes dues corrents, i no es pot triar
+    #: sense context.
+    #: La taula ve escrita a mà, i per tant la FONT és fiable; el que no es pot decidir és
+    #: quina de les dues lectures toca. Per això les diu totes dues al text en comptes de
+    #: triar-ne una, i qui munti la frase ho veu.
+    diu, _ = glossa("nniġ")
+    assert "o, o bé" in diu and "vaig dir" in diu
