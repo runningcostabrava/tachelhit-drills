@@ -140,7 +140,8 @@ def test_una_regla_ben_aplicada_pot_caure_en_la_paraula_equivocada():
 
 
 def test_les_segures_son_les_que_no_han_calgut_cap_regla():
-    assert set(morfologia.SEGURES) == {"diccionari", "partícula", "preposició amb pronom"}
+    assert set(morfologia.SEGURES) == {"diccionari", "partícula", "forma gramatical",
+                                      "preposició amb pronom"}
     for mot in ("asif", "da", "dars"):
         assert glossa(mot)[1] in morfologia.SEGURES
     for mot in ("wasif", "imaziġn", "nssn"):
@@ -262,3 +263,36 @@ def test_nnig_diu_les_dues_lectures():
     #: triar-ne una, i qui munti la frase ho veu.
     diu, _ = glossa("nniġ")
     assert "o, o bé" in diu and "vaig dir" in diu
+
+
+# -------------------------------------- el verb «ser», que el diccionari serveix com a nom
+def test_el_verb_ser_surt_de_la_taula_i_no_del_diccionari():
+    #: 171 de les 220 aparicions de la còpula arribaven al traductor absents o com a nom:
+    #: `tga` «Juniper» (40), `illa` «Obligation, Case» (23), `tlla` «action de pleurer» (22).
+    #: Sense el verb, els noms arriben i el model s'inventa qui fa què.
+    for forma, tros in (("iga", "és"), ("tga", "és"), ("illa", "hi ha"), ("tlla", "hi ha"),
+                        ("llan", "hi ha"), ("igan", "que és"), ("illan", "que hi ha"),
+                        ("ira", "vol"), ("tram", "voleu"), ("riġ", "vull")):
+        diu, com = glossa(forma)
+        assert tros in diu, (forma, diu)
+        assert com.startswith("forma gramatical"), (forma, com)
+
+
+def test_la_forma_gramatical_tambe_casa_amb_lortografia_de_lasr():
+    #: `macc` («però») l'ASR l'escriu `mašš`; `giḫ` i `giġ` són la mateixa persona.
+    assert "però" in glossa("mašš")[0]
+    assert "però" in glossa("macc")[0]
+    assert "sóc" in glossa("giġ")[0]
+
+
+def test_una_forma_amb_dues_lectures_mai_no_es_segura():
+    #: `inna` és «va dir» (ini) i també «mare»: la taula ho diu tot dos, i cap no és segura.
+    diu, com = glossa("inna")
+    assert "va dir" in diu and "mare" in diu
+    assert com not in morfologia.SEGURES
+
+
+def test_la_negacio_del_verb_ser():
+    #: Darrere d'`ur` la `a` es torna `i`: `ur illi`, `ur tlli`, `ur llin`.
+    assert "no hi ha" in glossa("illi")[0]
+    assert "no hi ha" in glossa("llin")[0]

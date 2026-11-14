@@ -298,7 +298,7 @@ def candidates(mot: str) -> List[Tuple[str, str]]:
 #: dolentes** —`taqafa` (l'àrab «cultura») llegit «Guess», `wid` «els de» llegit «cadena»,
 #: `tla` i `tgi` (el verb ser) llegits «font» i «mena d'ahidús». Una de cada tres falla.
 #: Per això qui les faci servir les ha de donar com el que són: una possibilitat.
-SEGURES = ("diccionari", "partícula", "preposició amb pronom")
+SEGURES = ("diccionari", "partícula", "forma gramatical", "preposició amb pronom")
 
 #: Quina mena de paraula ha de ser l'arrel perquè la regla valgui. Treure un afix de persona
 #: d'una cosa que no és cap verb és com explicar «Barcelona» dient que «bar» és un local:
@@ -377,9 +377,13 @@ def glossa(mot: str, al_diccionari: Callable[[str], List[str]],
         #: `dad` (partícula verbal) sortia «pare». Quan totes dues lectures existeixen es
         #: donen totes dues, la de la gramàtica primera, i la parella NO és una lectura
         #: segura: qui la llegeixi ha de triar amb el context.
+        diu, mena = _TAULA[clau], _MENA_TAULA[clau]
         if sig:
-            return f"{PARTICULES[clau]} — o bé: {', '.join(sig[:2])}", "partícula o diccionari"
-        return PARTICULES[clau], "partícula"
+            return f"{diu} — o bé: {', '.join(sig[:2])}", f"{mena} o diccionari"
+        if " — o bé: " in diu:
+            #: la taula mateixa diu dues lectures (`inna`: «va dir» o «mare»); cap no és segura
+            return diu, f"{mena} o diccionari"
+        return diu, mena
     if sig:
         return ", ".join(sig[:4]), "diccionari"
 
@@ -405,7 +409,7 @@ def glossa(mot: str, al_diccionari: Callable[[str], List[str]],
         for cap, resta in _particula_al_davant(mot):
             diu = glossa(resta, al_diccionari, es_verb, es_nom, partir=False)
             if diu:
-                return (f"{PARTICULES[clau_de_particula(cap)]} + {diu[0]}",
+                return (f"{_TAULA[clau_de_particula(cap)]} + {diu[0]}",
                         "partícula enganxada")
     return None
 
@@ -413,6 +417,80 @@ def glossa(mot: str, al_diccionari: Callable[[str], List[str]],
 # --------------------------------------------------------------------------------------
 # El pont amb el lèxic del projecte
 # --------------------------------------------------------------------------------------
+
+#: ----------------------------------------------------------------------------------------
+#: LES FORMES QUE AGUANTEN LA FRASE, I QUE EL DICCIONARI SERVEIX MALAMENT
+#: ----------------------------------------------------------------------------------------
+#: D'on surt aquesta taula. Una auditoria de la llista de Tamazight For All (14-11-2026) va
+#: mesurar que **171 de les 220 aparicions del verb «ser» arriben al traductor absents o
+#: convertides en un nom**: `tga` sortia «Juniper» 40 vegades, `illa` «Obligation, Case» 23,
+#: `tlla` «action de pleurer» 22. Això explica per què les traduccions són «a mitges»: els
+#: noms hi arriben i el verb no, i el model s'ha d'inventar qui fa què.
+#:
+#: Per què una taula a mà i no una regla. El diccionari CONEIX aquestes paraules: `mac` hi
+#: consta «cependant, mais». El que passa és que les altres grafies de la mateixa paraula
+#: (`maša`, `macc`, `mašš`) cauen damunt d'homògrafs —«Seek, Search», «Only»— i la lectura
+#: bona perd. Contra un homògraf no hi ha tria automàtica que valgui: cal dir-ho.
+#:
+#: Cada forma ve d'una font escrita, no d'una endevinalla:
+#:   · els paradigmes de `g` (condició) i `ili` (existència/lloc), de `iri` (voler) i les
+#:     preposicions: manual de tamazight del Peace Corps Marroc (2007), que és de la
+#:     varietat d'aquests vídeos. Hi consta també que els adjectius manllevats de l'àrab
+#:     EXIGEIXEN `g` («iga muhim» = «és important»), i la negació amb `ur` canviant la `a`
+#:     en `i`: `ur illi`, `ur tlli`, `ur llin`, `ur llint`.
+#:   · `macc` com a conjunció: entrada `macc-micc-maccann`, pos=conj., del diccionari
+#:     d'Oulhaj que ja tenim al lèxic, i `mac` = «cependant, mais».
+#:   · `digs`/`gis`: el manual els fa servir en text corrent («is digs bit...» = «que hi ha
+#:     lavabo a dins?»).
+FORMES_GRAMATICALS = {
+    # El verb g: «ser» de condició i descripció, I TAMBÉ «fer». El conferenciant el fa servir
+    # amb tots dos sentits («ma t-iga?» = «què és?»; «ig» = fa), o sigui que cap lectura no
+    # pot dir només «és». Per què no hi ha `ga`: al corpus surt `ga tawins` en una lectura i
+    # `tga tawins` en l'altra del mateix tall — no és un lexema, és l'ASR menjant-se la
+    # primera lletra, i això es tracta al normalitzador, no al diccionari.
+    "giġ": "sóc, faig", "giḫ": "sóc, faig", "gix": "sóc, faig",
+    "tgit": "ets, fas",
+    #: `tgi` és sobretot el negatiu darrere d'`ur` («ur tgi ġar iwaliwn» = «no són només
+    #: paraules»), i també «ets»: dues lectures, totes dues corrents.
+    "tgi": "no és, no fa (darrere d'ur) — o bé: ets",
+    "iga": "és, fa (ell)",
+    #: tercera persona femenina i segona persona es confonen en algunes varietats
+    "tga": "és, fa (ella) — o bé: ets, fas",
+    "nga": "som, fem", "ng": "som, fem",
+    "tgam": "sou, feu", "gan": "són, fan", "gant": "són, fan (elles)",
+    "igan": "que és, que fa; que són",
+    # El verb ili: ser, existir, haver-hi. Sense `lan`: és `llan` amb una sola ela, feina
+    # del normalitzador.
+    "illa": "hi ha, és (ell)", "tlla": "hi ha, és (ella)",
+    #: en tamazight de l'Atles `lla` és també la marca de progressiu («està fent»), i aquest
+    #: home parla estàndard de l'Atles: les dues lectures són corrents
+    "lla": "hi ha, és — o bé: marca de progressiu (està …-nt)",
+    "llan": "hi ha, són", "llant": "hi ha, són (elles)", "nlla": "som, hi som",
+    "illan": "que hi ha, que són",
+    "lliġ": "era, hi era", "lliḫ": "era, hi era",
+    # les mateixes, en negatiu darrere d'`ur` (la `a` es torna `i`)
+    "illi": "no hi ha, no és", "tlli": "no hi ha, no és",
+    "llin": "no hi ha, no són", "llint": "no hi ha, no són (elles)",
+    # voler: iri, que porta forma de passat amb sentit de present
+    "riġ": "vull", "riḫ": "vull", "trit": "vols",
+    "ira": "vol", "tra": "vol (ella)",
+    "nra": "volem", "tram": "voleu", "tramt": "voleu (vosaltres)",
+    # «però», la peça que porta l'estructura lògica de la frase
+    #: l'ASR escriu `maša` i `mašša`, que amb la `š→c` són `maca` i `macca`: hi han de ser
+    #: totes, perquè la primera versió d'aquesta taula només duia `macc` i de 93 aparicions
+    #: de «però» en trobava 1.
+    "macc": "però", "mac": "però", "maca": "però", "macca": "però",
+    "maccan": "però", "maccann": "però",
+    "micc": "però, a fi que",
+    # preposicions i el pronom enganxat que el manual fa servir en text corrent
+    "sg": "de, des de", "zg": "de, des de",
+    "gis": "dins d'allò, hi", "digs": "dins d'allò, hi",
+    "dat": "davant de", "agnsu": "dins",
+    # dues lectures corrents totes dues, i no es pot triar sense context
+    "inna": "va dir (ini) — o bé: mare",
+    "dad": "partícula verbal (da+d) — o bé: aquest",
+    "dadd": "partícula verbal (da+d) — o bé: aquest",
+}
 
 #: La taula està escrita amb l'ortografia del compendi (`acku`, `max`), i el model d'ASR
 #: escriu `ašku`, `maḫ`: el seu adaptador es va afinar amb `c→š` i `x→ḫ`. El lèxic ja
@@ -422,15 +500,23 @@ def glossa(mot: str, al_diccionari: Callable[[str], List[str]],
 #: sort. Es prova la forma tal com ve i les variants d'ortografia.
 _ORTOGRAFIA = (("š", "c"), ("c", "š"), ("ḫ", "x"), ("x", "ḫ"))
 
+#: Les dues taules escrites a mà, en un sol lloc per consultar-les. La mena es guarda a part
+#: perquè la glossa pugui dir la veritat: `iga` no és cap partícula, és una forma del verb
+#: «ser», i dir-ne «partícula» seria mentir sobre com s'hi ha arribat.
+_TAULA = dict(PARTICULES)
+_TAULA.update(FORMES_GRAMATICALS)
+_MENA_TAULA = {k: "partícula" for k in PARTICULES}
+_MENA_TAULA.update({k: "forma gramatical" for k in FORMES_GRAMATICALS})
+
 
 def clau_de_particula(mot: str) -> Optional[str]:
-    """La clau amb què `mot` surt a la taula, o None. Prova les variants d'ortografia."""
-    if mot in PARTICULES:
+    """La clau amb què `mot` surt a les taules a mà, o None. Prova l'ortografia de l'ASR."""
+    if mot in _TAULA:
         return mot
     for a, b in _ORTOGRAFIA:
         if a in mot:
             altra = mot.replace(a, b)
-            if altra in PARTICULES:
+            if altra in _TAULA:
                 return altra
     return None
 
