@@ -256,11 +256,13 @@ def mena(toks: List[str]) -> str:
 #: verbs molt corrents amb el sufix inequívoc ja fet (`riġ` «vull», `sawalḫ` «parlo»).
 _FORMES_AMB_PERSONA = {
     "giġ": "jo", "giḫ": "jo", "gix": "jo", "riġ": "jo", "riḫ": "jo", "lliġ": "jo", "lliḫ": "jo",
-    "sawalḫ": "jo", "sawalġ": "jo", "nniġ": "jo", "nniḫ": "jo", "skrġ": "jo", "skrḫ": "jo",
+    "sawalḫ": "jo", "sawalġ": "jo", "skrġ": "jo", "skrḫ": "jo",
+    #: fora `nniġ`/`nniḫ` («o» o «vaig dir») i `inna` («va dir» o «mare»): dues lectures
+    #: corrents, i una persona que pot ser falsa no val res en aquest camp
     "tgit": "tu", "trit": "tu", "tgi": "tu",
     "ttiniġ": "jo", "ttiniḫ": "jo",
     "iga": "ell/ella", "tga": "ell/ella", "illa": "ell/ella", "tlla": "ell/ella", "ira": "ell/ella",
-    "tra": "ell/ella", "inna": "ell/ella", "tnna": "ell/ella", "ittini": "ell/ella",
+    "tra": "ell/ella", "tnna": "ell/ella", "ittini": "ell/ella",
     "ttini": "ell/ella", "daittini": "ell/ella",
     "nga": "nosaltres", "ng": "nosaltres", "nra": "nosaltres", "nlla": "nosaltres",
     "nsawal": "nosaltres", "nssn": "nosaltres", "nttini": "nosaltres", "danttini": "nosaltres",
@@ -369,6 +371,13 @@ def comprova(resposta: str, tros: str,
             cita = None
         else:
             cita = toks[idx[0]]
+    #: Una casella «token» que no és LA cita no és cap glossa: és el token copiat amb cometes.
+    #: Contra la veritat humana en van sortir quatre («suššn», «maksmman»…) comptades com a
+    #: plenes. Es queden a «?».
+    for i, cel in enumerate(inter):
+        if cel.startswith("«") and (cita is None or _net(cel) != _net(cita)):
+            inter[i] = "?"
+            motius.append(f"casella entre cometes que no és la cita: {cel}")
 
     frase = d.get("frase")
     frase = str(frase).strip() or None if frase is not None else None

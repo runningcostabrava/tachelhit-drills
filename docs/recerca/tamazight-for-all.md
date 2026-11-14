@@ -119,7 +119,18 @@ on l'ASR erra una lletra i el mot resultant existeix com una altra cosa (`ittrgi
 fer res, només l'acord entre dues lectures**— i `akku→perroquet/lloro` dues vegades (és `akkw`
 «tot»: variant d'ortografia afegida a `clau_de_particula`). Resum per al lector: **la
 interlineal és certa ~84 % de les vegades contra l'àudio; el 0,5 % intern era fidelitat a la
-glossa.** Per tant: **4 de cada 10 caselles plenes glossen un
+glossa.** *La caixa «frontera», jutjada (40, llavor fixa): 20 sí, 18 no, 2 incert* — la meitat
+de les caselles sobre token enganxat sí que anomenen un dels mots enganxats (`kran→alguna` sobre
+`kra n`, `fllas→sobre` sobre `f llas`); l'altra meitat no, i es reparteix en tres classes: **(a)
+l'ASR ESQUARTERA un mot i el glossador glossa el tros com si fos una paraula** (`if` ⊂ `nnif` →
+«valer més»; `agġ` ⊂ `ttinagx` → «banús»), un error que no havíem vist i que és diferent
+d'enganxar; **(b)** enganxa dos mots i la casella no casa amb cap (`dawas→i` quan `ddaw` és
+«sota»; `nniġ→o` quan la veritat diu `tnnix` «vaig dir»: el membre equivocat de la parella);
+**(c)** quatre caselles eren el token entre cometes sense ser la cita (bug: ara «?»). Amb això
+el terra de la interlineal queda entre el **76 i el 92 %** de caselles que diuen un mot que el
+parlant va dir (n=40, ±8 punts). **Vistiplau de l'auditor a l'escalat**, amb la condició de
+publicar el 84 % al costat de l'avís (narració ≠ classe; les classes no es validaran mai) i de
+jutjar les 49 frases dels 226 versos contra la veritat, l'única mesura del producte que falta. Per tant: **4 de cada 10 caselles plenes glossen un
 token que no és exactament el que es va dir**, i la pregunta que decideix —si la glossa
 d'aquell token proper coincideix igualment amb el sentit del mot dit— només la pot contestar
 un jutge sobre una mostra. Avís d'abast: narració no és classe; el número no es trasllada
@@ -395,6 +406,12 @@ llest. **`qui_hi_surt`: ha empitjorat amb el pedaç dels afixos: 10 certs i 8 fa
 pel clític `aġ`, «ells» pel plural d'un nom i per `ng` «som». Els certs sortien de pronoms
 explícits. → **v8: només pronoms i formes verbals de la taula a mà; cap afix.** Un camp al
 44 % de falsos és pitjor que no tenir-lo.
+
+*v8 (codi 3323cce):* tema 22, cita 2, frase 18 passen, interlineal 188/318; `qui_hi_surt`
+**17 omplerts** només de pronoms i formes de la taula (la predicció de l'auditor era ~11–14 amb
+0 falsos; les correccions predites hi són: #21 nosaltres per `ng`, #36 ell/ella per `illa`,
+#22 vosaltres per `tram`). Verificació dels 17 contra la veritat: pendent; dubtes propis a
+`nniġ` («o» / «vaig dir») i `inna` («va dir» / «mare»).
 
 **Veredicte de l'auditor sobre passar als 1.468 trossos:** interlineal, cita, tema, mena i
 polaritat **sí**; `qui_hi_surt` **no** fins a restringir-lo (fet, v8); la frase **sí, amb

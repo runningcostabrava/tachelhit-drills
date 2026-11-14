@@ -237,3 +237,20 @@ def test_larrel_casa_singular_i_plural_de_quatre_lletres():
     #: i l'alternança vocàlica NO casa: «surt» contra «sortir» és una pèrdua acceptada
     assert not fets._mateixa_arrel("surt", "sortir")
     assert fets._mateixa_arrel("escriptura", "escriure")
+
+
+def test_una_casella_entre_cometes_que_no_es_la_cita_es_un_interrogant():
+    #: Contra la veritat humana en van sortir quatre («suššn», «maksmman»…) comptades com a
+    #: plenes: eren el token copiat amb cometes, no cap glossa.
+    f, motius = fets.comprova(json.dumps({
+        "interlineal": ["?", "«suššn»", "diuen", "«imikk»"], "tema": "?",
+        "cita": "imikk", "frase": None}), "yan suššn ttinin imikk")
+    assert f["interlineal"][1] == "?" and f["interlineal"][3] == "«imikk»"
+    #: cau per la regla del token copiat (les cometes es treuen en comparar) o per la de les
+    #: cometes que no són la cita: el que compta és que no quedi com a casella plena
+    assert any(("cometes" in m) or ("copiat" in m) for m in motius)
+
+
+def test_les_formes_ambigues_no_donen_persona():
+    #: `nniġ` és «o» o «vaig dir»; `inna` és «va dir» o «mare»: cap persona.
+    assert fets.qui_hi_surt("nniġ inna".split()) == []
