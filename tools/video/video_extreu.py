@@ -223,21 +223,39 @@ def main():
     #: la marca per posicio. El que si la delata es que **diu sempre el mateix**: aqui
     #: `ⵃⴰⴼⵢⴹⴰ ⴱⵏⴽⴰⵀⵢⴰ` surt a 8 dels 32 moments. Un subtitol que es repetis tant seria,
     #: igualment, una careta o un titol, i tampoc no es una frase nova per a la biblioteca.
-    comptes = {}
+    #: La marca no es repeteix IGUAL: l'OCR la llegeix cada cop una mica diferent
+    #: (`ⵃⴰⴼⵢⴹⴰⴱⵏⴽⴰⵀⵢⴰ`, `ⵃⴰⴼⵢⴹⴰⴱⵏⴽⴰⵀⵢ`, `ⴰⴼⵢⴹⴰⴱⵏⴽⴰⵀⵢⴰ`...) i comparar el text exacte en
+    #: deixava passar variants que quedaven enganxades al davant de frases bones i els
+    #: enfonsaven l'acord amb l'ASR. Es compara per semblanca: dues lectures que coincideixen en
+    #: tres quartes parts de les lletres son la mateixa marca.
+    import difflib
+    claus = []
     for p in fora:
         for l in p["linies"]:
             k = nomes_tifinag(l["dit"])
             if k:
-                comptes[k] = comptes.get(k, 0) + 1
+                claus.append(k)
+    grups = []                                   # [representant, membres]
+    for k in claus:
+        for g in grups:
+            if difflib.SequenceMatcher(None, k, g[0]).ratio() >= 0.75:
+                g[1].append(k)
+                break
+        else:
+            grups.append([k, [k]])
     repetida = max(3, int(0.2 * max(1, len(fora))))
-    marques = {k for k, n in comptes.items() if n >= repetida}
+    marques = [g for g in grups if len(g[1]) >= repetida]
     if marques:
         print("\nfora per repetir-se a %d moments o mes (marca d'aigua o careta):" % repetida)
-        for k in sorted(marques, key=lambda z: -comptes[z]):
-            print("  %2d cops  %s" % (comptes[k], k[:52]))
+        for g in sorted(marques, key=lambda z: -len(z[1])):
+            print("  %2d cops  %s  (%d variants)" % (len(g[1]), g[0][:44], len(set(g[1]))))
+
+    def es_marca(k):
+        return any(difflib.SequenceMatcher(None, k, g[0]).ratio() >= 0.75 for g in marques)
+
     net = []
     for p in fora:
-        ll = [l for l in p["linies"] if nomes_tifinag(l["dit"]) not in marques]
+        ll = [l for l in p["linies"] if not es_marca(nomes_tifinag(l["dit"]))]
         if not ll:
             continue
         p["linies"] = ll
