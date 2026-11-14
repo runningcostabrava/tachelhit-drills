@@ -114,6 +114,26 @@ def _net(w: str) -> str:
     return w.lower().strip("«»\"'.,;:!?()")
 
 
+_ACCENTS = str.maketrans("àáèéíïòóúüç", "aaeeiioouuc")
+
+
+def _arrel(w: str) -> str:
+    """Els cinc primers caràcters, en minúscules i sense accents: la comparació per arrel.
+
+    Comparar per cadena podava «amaziga» contra la casella «amazic», «escriptura» contra
+    «escriure» i «estàndard» contra «estandardització»: 4 de les 5 podes del tema a la v3 eren
+    això. Amb cinc caràcters el risc («carta»/«cartell») queda petit, i el cost d'un fals
+    positiu és baix: deixa passar una paraula que la interlineal gairebé sosté.
+    """
+    return w.lower().translate(_ACCENTS)[:5]
+
+
+def _sense_diacritics(w: str) -> str:
+    import unicodedata
+    return "".join(c for c in unicodedata.normalize("NFD", w.lower())
+                   if unicodedata.category(c) != "Mn")
+
+
 def _paraules_plenes(text: str) -> List[str]:
     return [m for m in (x.lower() for x in re.findall(r"[^\W\d_]+", text or ""))
             if len(m) >= 2 and m not in _BUIDES]
@@ -159,8 +179,26 @@ def _cobertes(inter: List[str], toks: List[str], soste: dict) -> set:
 
 
 def _sostingut(text: str, cobertes: set) -> Tuple[bool, List[str]]:
-    orfes = [p for p in _paraules_plenes(text) if p not in cobertes]
+    arrels = {_arrel(c) for c in cobertes if len(c) >= 4}
+    orfes = [p for p in _paraules_plenes(text)
+             if p not in cobertes and not (len(p) >= 4 and _arrel(p) in arrels)]
     return (not orfes), orfes
+
+
+#: Un tema és un grup nominal. Dues glosses enganxades («afegir el nostre», «què entrar a ?»)
+#: són certes i inservibles com a tema: 9 dels 22 temes de la v3. Es rebutja el tema amb un
+#: «?» a dins o amb un infinitiu. La detecció de l'infinitiu és una heurística de terminació
+#: i perd algun nom («paper» no, perquè demana cinc lletres i -er no hi és; «cantar» sí).
+_INFINITIU = re.compile(r"^\w{3,}(ar|ir|dre|tre|ure|ndre)$")
+
+
+def tema_es_grup_nominal(tema: str) -> Tuple[bool, str]:
+    if "?" in tema:
+        return False, "tema amb un «?» a dins"
+    for w in re.findall(r"[^\W\d_]+", tema.lower()):
+        if len(w) >= 5 and w not in _BUIDES and _INFINITIU.match(w):
+            return False, f"tema amb un infinitiu: {w}"
+    return True, ""
 
 
 def candidats_a_cita(toks: List[str]) -> List[int]:
@@ -192,21 +230,41 @@ def mena(toks: List[str]) -> str:
     return "afirmació"
 
 
-def qui_hi_surt(toks: List[str], es_verb: Optional[Callable[[str], bool]] = None) -> List[str]:
-    """Les persones que un pronom o un afix del verb sostenen. Sense `es_verb`, només pronoms
-    i els afixos inequívocs (`-ḫ`/`-ġ` de primera persona)."""
+def qui_hi_surt(toks: List[str], es_verb: Optional[Callable[[str], bool]] = None,
+                es_particula: Optional[Callable[[str], bool]] = None) -> List[str]:
+    """Les persones que un pronom o un afix del verb sostenen.
+
+    Sense `es_verb` només es llegeixen els pronoms: a la v3, llegir la `-ġ` final com a
+    primera persona sense comprovar res va donar 4 falsos de 16 —`iffġ` (arrel `ffġ`, la ġ és
+    de l'arrel), `nnġ` (possessiu «nostre»)— i al #5 va dir «jo» quan `nssufuġ` porta la `n-`
+    de nosaltres. Per això: el prefix mana sobre el sufix, el que queda sense l'afix ha de ser
+    un verb conegut, i d'una partícula o un possessiu de la taula no se'n llegeix persona.
+    """
     fora = []
     for t in toks:
         n = _net(t)
         if n in _PRONOMS:
             fora.append(_PRONOMS[n])
             continue
-        for patro, persona in _PERSONA_VERB:
-            if patro.match(n):
-                arrel_verbal = es_verb(n) if es_verb else (persona == "jo")
-                if arrel_verbal:
-                    fora.append(persona)
-                break
+        if es_particula and es_particula(n):
+            continue
+        if not es_verb:
+            continue
+        persona = None
+        if re.match(r"^n(?!n)\w{2,}$", n) and (es_verb(n) or es_verb(n[1:])
+                                                 or es_verb(n[1:].rstrip("ġḫ"))):
+            persona = "nosaltres"
+        elif re.match(r"^t\w{2,}t$", n) and (es_verb(n) or es_verb(n[1:-1])):
+            persona = "tu"
+        elif n.endswith(("ġ", "ḫ")) and len(n) >= 4 and (es_verb(n) or es_verb(n[:-1])) \
+                and not es_verb(n):
+            #: la ġ final és sufix només si TREURE-LA deixa un verb i el mot sencer no ho és
+            #: ja tot sol (`iffġ` és el verb `ffġ` amb la i- de tercera persona)
+            persona = "jo"
+        elif n.endswith("n") and len(n) >= 4 and (es_verb(n) or es_verb(n[:-1])):
+            persona = "ells/elles"
+        if persona:
+            fora.append(persona)
     vist, unics = set(), []
     for p in fora:
         if p not in vist:
@@ -217,7 +275,9 @@ def qui_hi_surt(toks: List[str], es_verb: Optional[Callable[[str], bool]] = None
 
 def comprova(resposta: str, tros: str,
              es_verb: Optional[Callable[[str], bool]] = None,
-             es_gent: Optional[Callable[[str], bool]] = None) -> Tuple[Optional[dict], List[str]]:
+             es_gent: Optional[Callable[[str], bool]] = None,
+             es_particula: Optional[Callable[[str], bool]] = None
+             ) -> Tuple[Optional[dict], List[str]]:
     """(fets nets, motius de poda). Fets és None si la resposta no val com a conjunt.
 
     Es rebutja TOT només per dues raons: no és JSON, o la interlineal no fa la llargada dels
@@ -239,6 +299,19 @@ def comprova(resposta: str, tros: str,
         return None, [f"interlineal de {len(inter) if isinstance(inter, list) else '?'} "
                       f"elements per {n} tokens"]
     inter = [str(x).strip() or "?" for x in inter]
+    #: Una casella que és el token copiat tal qual no diu res: a la v3, el #10 en tenia cinc
+    #: de cinc (`is→is`, `da→da`, `gis→gis`…) i comptava com a ple. Un «?» és honest; el token
+    #: copiat és un «?» disfressat. I les cometes només valen per a un candidat a cita: una
+    #: casella «amazic» en un tros on `tamaziġt` és l'objecte i no s'anomena, també és «?».
+    cands = set(candidats_a_cita(toks))
+    copiades = 0
+    for i, (cel, tok) in enumerate(zip(inter, toks)):
+        nu = _sense_diacritics(_net(cel))
+        if nu and nu == _sense_diacritics(_net(tok)) and not (i in cands and cel.startswith("«")):
+            inter[i] = "?"
+            copiades += 1
+    if copiades:
+        motius.append(f"caselles amb el token copiat tal qual: {copiades}")
 
     soste = d.get("soste") if isinstance(d.get("soste"), dict) else {}
     cobertes = _cobertes(inter, toks, soste)
@@ -249,6 +322,11 @@ def comprova(resposta: str, tros: str,
         ok, orfes = _sostingut(tema, cobertes)
         if not ok:
             motius.append(f"tema sense token: {', '.join(orfes)}")
+            tema = "?"
+    if tema != "?":
+        ok, motiu = tema_es_grup_nominal(tema)
+        if not ok:
+            motius.append(motiu)
             tema = "?"
 
     #: la cita: només d'entre els candidats que el codi assenyala, marcada a la interlineal
@@ -281,7 +359,7 @@ def comprova(resposta: str, tros: str,
     return {
         "interlineal": inter,
         "marc": {"tema": tema, "mena": mena(toks), "polaritat": polaritat(toks),
-                 "qui_hi_surt": qui_hi_surt(toks, es_verb)},
+                 "qui_hi_surt": qui_hi_surt(toks, es_verb, es_particula)},
         "cita": cita,
         "frase": frase,
     }, motius

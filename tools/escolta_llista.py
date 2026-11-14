@@ -344,7 +344,8 @@ def fets(deepseek, tema, tros, abans, despres, paraules):
                                        max_output_tokens=600, temperature=0.0)
     except Exception as e:
         return {"fets": None, "rebutjat": [f"error: {type(e).__name__}"]}
-    nets, motius = F.comprova(r, tros, es_verb=_es_verb(), es_gent=_es_gent())
+    nets, motius = F.comprova(r, tros, es_verb=_es_verb(), es_gent=_es_gent(),
+                              es_particula=lambda w: morfologia.clau_de_particula(w) is not None)
     return {"fets": nets, "rebutjat": motius}
 
 

@@ -116,10 +116,11 @@ def test_les_persones_surten_dels_pronoms_i_dels_afixos_del_verb():
     assert fets.qui_hi_surt("imaziġn".split(), es_verb) == []
 
 
-def test_sense_es_verb_nomes_els_afixos_inequivocs():
-    #: la -n final pot ser plural d'un nom: sense saber si és verb, no es llegeix
+def test_sense_es_verb_no_es_llegeix_cap_afix():
+    #: la -n final pot ser plural d'un nom i la -ḫ final pot ser de l'arrel (`iffġ`): sense
+    #: saber si és verb, no es llegeix cap persona d'un afix (a la v3 això va donar 4 falsos)
     assert fets.qui_hi_surt("ttinin".split()) == []
-    assert fets.qui_hi_surt("sawalḫ".split()) == ["jo"]
+    assert fets.qui_hi_surt("sawalḫ".split()) == []
 
 
 # ---------------------------------------------------------------------------- la cita
@@ -154,3 +155,60 @@ def test_el_json_pot_venir_entre_cometes_de_bloc():
 def test_el_que_no_es_json_es_rebutja_i_es_diu():
     f, motius = fets.comprova("CATALA: Les paraules del peix.\nCERTESA: probable", TROS)
     assert f is None and motius == ["la resposta no és JSON"]
+
+
+# ------------------------------------------------ els quatre pedaços del judici de la v3
+def test_el_suport_compara_per_arrel():
+    #: «amaziga» contra la casella «amazic»; «escriptura» contra «escriure»: 4 de les 5 podes
+    #: del tema a la v3 eren això.
+    f, motius = fets.comprova(resposta(tema="la llengua amaziga",
+                                       interlineal=["paraules", "peix", "és", "amazic"],
+                                       soste={}), "tagurin islman tga tamaziġt")
+    assert f["marc"]["tema"] == "?" and any("llengua" in m for m in motius)   # «llengua» no hi és
+    f, motius = fets.comprova(resposta(tema="paraules amazigues", soste={}), TROS)
+    assert f["marc"]["tema"] == "paraules amazigues" and not motius
+
+
+def test_una_casella_amb_el_token_copiat_es_un_interrogant():
+    #: El #10 de la v3: cinc caselles de cinc eren el token copiat i comptaven com a plenes.
+    f, motius = fets.comprova(json.dumps({
+        "interlineal": ["is", "da", "gis", "ittara", "kra"], "tema": "?", "frase": None}),
+        "is da gis ittara kra")
+    assert f["interlineal"] == ["?"] * 5
+    assert any("copiat" in m for m in motius)
+
+
+def test_les_cometes_nomes_valen_per_a_un_candidat_a_cita():
+    #: `tamaziġt` entre cometes quan és l'objecte («fer amazic») i no s'anomena: també «?».
+    f, _ = fets.comprova(json.dumps({"interlineal": ["fer", "«tamaziġt»"], "tema": "?",
+                                     "frase": None}), "skr tamaziġt")
+    assert f["interlineal"][1] == "?"
+    #: però «imikk» darrere d'un verb de dir es queda
+    f, _ = fets.comprova(json.dumps({"interlineal": ["diuen", "«imikk»"], "tema": "?",
+                                     "cita": "imikk", "frase": None}), "ttinin imikk")
+    assert f["interlineal"][1] == "«imikk»" and f["cita"] == "imikk"
+
+
+def test_el_tema_ha_de_ser_un_grup_nominal():
+    for tema, tros in (("què entrar a ?", "tema amb un «?»"), ("afegir el nostre", "infinitiu")):
+        ok, motiu = fets.tema_es_grup_nominal(tema)
+        assert not ok and tros.split()[0] in motiu
+    assert fets.tema_es_grup_nominal("la conjugació dels verbs")[0]
+    assert fets.tema_es_grup_nominal("el paper del professor")[0]     # -er no és infinitiu aquí
+
+
+def test_la_g_final_nomes_es_primera_persona_si_treure_la_deixa_un_verb():
+    verbs = {"ffġ", "iffġ", "sawal", "ssufuġ", "nssufuġ"}
+    ev = lambda f: f in verbs
+    #: `iffġ`: la ġ és de l'arrel (ffġ, «sortir») i el mot sencer ja és verb → no és «jo»
+    assert fets.qui_hi_surt(["iffġ"], ev) == []
+    #: `nssufuġ`: el prefix n- mana sobre la ġ final → nosaltres
+    assert fets.qui_hi_surt(["nssufuġ"], ev) == ["nosaltres"]
+    #: `sawalġ`: treure la ġ deixa `sawal`, verb, i `sawalġ` no és al lèxic → jo
+    assert fets.qui_hi_surt(["sawalġ"], ev) == ["jo"]
+    #: `nnġ` és el possessiu «nostre»: una partícula no dona persona
+    assert fets.qui_hi_surt(["nnġ"], ev, es_particula=lambda w: w == "nnġ") == []
+
+
+def test_sense_es_verb_nomes_pronoms():
+    assert fets.qui_hi_surt(["sawalġ", "nutni"]) == ["ells/elles"]
