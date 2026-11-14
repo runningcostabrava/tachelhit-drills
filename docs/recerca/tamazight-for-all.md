@@ -541,6 +541,24 @@ mínim una de cada parella és falsa; `turft` n'era l'exemple). Això és d'en P
 digui «bé / no: vol dir… / no ho sé» a cadascuna, el risc d'una glossa freqüent falsa no té
 número.
 
+**Validació de les 25 (15-11).** En Pablo no les pot validar («no hablo la lengua
+perfectamente»; «mi objetivo era que tu poguessis desifrar la llengua»). Les he validat amb
+tres proves independents de la canonada, per ordre de força: **H** subtítol humà en amazic amb
+el subtítol humà anglès del mateix instant (contes `4Y4FcUHUeU4`, `9TdhtZkmUTo`); **A**
+autoglossa del parlant (diu la paraula àrab o anglesa al costat de l'amaziga: «lmuεjam
+amawal», «tutlayt tanawayt standard language», «tarjma… asuġl»); **D+C** diccionari de
+referència més context de totes les aparicions. Resultat: **22 bé, 1 a mitges, 1 falsa**
+(taula amb la prova de cadascuna a `tamazight-for-all-mots-frequents.md`). La falsa és
+`tddit` → «sangonera»: és «vas» del verb `ddu`, i el forat és **tota la família**: la taula
+de conjugació només té l'aorist d'«anar», i el diccionari omplia el buit amb noms (`idda` →
+«aquí», `ddiġ` → «encara»). La «a mitges» és `nniġ`: els subtítols humans mostren la
+preposició `nnig` «damunt» («inin nnig turft» = dalt del vaixell), que la taula no tenia, i
+20 de 21 aparicions van seguides d'un nom. Arreglat a la taula a mà (perfectiu de `ddu`,
+tres lectures de `nniġ`) i a les caselles desades (42 tocades, sense model). De passada, H
+confirma `turft` = «vaixell»: la glossa «carro» era la falsa. **Lliçó de mètode:** les
+glosses falses no van soles; quan una forma verbal surt glossada com a nom, cal mirar tot
+el paradigma del verb. Pista següent: les 113 formes amb glosses contradictòries.
+
 ## El que bloqueja
 
 - **Deu minuts transcrits per un parlant.** Sense això tota mesura és indirecta. Serien

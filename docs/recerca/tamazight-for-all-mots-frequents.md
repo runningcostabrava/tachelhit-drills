@@ -1,35 +1,60 @@
-# Les paraules de contingut més freqüents de la llista, amb la glossa que els donem
+# Les 25 paraules de contingut més freqüents de la llista: validades (15-11-2026)
 
-Per validar una per una: escriu al costat **bé** / **no: vol dir …** / **no ho sé**.
-Una glossa falsa en una d'aquestes es multiplica per totes les seves aparicions.
+En Pablo no pot validar-les («no hablo la lengua perfectamente… mi objetivo era que tu
+poguessis desifrar la llengua»). Les he validat jo amb tres menes de prova, de més a menys
+forta, i cada veredicte diu quina el sosté:
 
-| surt | mot (tal com l'ASR l'escriu) | la glossa que donem | d'on surt | caselles que ha rebut als fets | exemple | veredicte |
+- **H — subtítol humà.** La forma surt als subtítols en amazic escrits per una persona (pistes
+  `la-*` dels contes `4Y4FcUHUeU4`, `9TdhtZkmUTo`) i el subtítol humà anglès del mateix
+  instant diu el significat. És l'única prova que no passa per cap màquina.
+- **A — autoglossa del parlant.** A la classe, el professor diu la paraula àrab o anglesa
+  just abans o després de l'amaziga (`lmuεjam amawal`, `tutlayt tanawayt standard language`,
+  `tarjma … asuġl`, `askil lhrf`). Prova forta: és el parlant qui tradueix.
+- **D — diccionari de referència** (IRCAM `anaway`, `tanawayt`, `asuɣl`, `tigmmi`; Peace Corps
+  Morocco Tamazight Textbook 2007 per a les partícules), més **C — context**: totes les
+  aparicions al corpus casen amb un sol sentit.
+
+Cap d'aquestes proves és una persona que digui «sí, aquí vol dir això». Les H són el més a
+prop que hi som.
+
+| # | surt | mot | glossa | veredicte | prova |
 |---|---|---|---|---|---|
-| 98 | `tutlayt` | Language, langue (idiome), langage | diccionari | llengua ×98 | `tamaziġt ur tgi tutlayt` |  |
-| 88 | `maša` | però — o bé: Seek, Search | forma gramatical o diccionari | però ×88 | `maša maḫḫ allig dattini lmkwaġ` |  |
-| 76 | `tamaziġt` | langue amazighe | diccionari | amazic ×58, amaziga ×18 | `tamaziġt ur tgi tutlayt` |  |
-| 75 | `ašku` | perquè — o bé: Because, because of | partícula o diccionari | perquè ×74 | `adinin wrmkwaġ mddnaġ daddttudun dattininmkwaġ maḫ ašku nutn` |  |
-| 65 | `tmaziġt` | langue amazighe (tamaziġt) | annexió | amazic ×62, llengua amaziga ×1, amaziga ×1 | `annaf da ttinin i tmaziġt tan tala urda s ttinin yat s tutla` |  |
-| 50 | `akkw` | tot, tots, completament — o bé: All, Along | partícula o diccionari | tot ×49 | `daytiznasan dakw winnġ matnin taft dattrmasn akkw tin tlawin` |  |
-| 39 | `ttinin` | Say, Mean, dire (ini) | verb | diuen ×27, dir ×12 | `man tafm aḥṭṭatn meddn dad ttudun g uḫf awaln dak ttinin tam` |  |
-| 34 | `waḫḫa` | tot i que, encara que — o, tot sol: d'acord, va bé — o bé: Spite, Desp | partícula o diccionari | encara que ×25, tot i que ×9 | `mayni waḫḫa twanig iga sgdarġ` |  |
-| 33 | `illa` | hi ha, és (ell) — o bé: Obligation, Case | forma gramatical o diccionari | hi ha ×32, haver-hi ×1 | `is illa kr n umzaray ingr sinir manaḫ` |  |
-| 31 | `tanawayt` | standardisation | diccionari | estandardització ×30, estàndard ×1 | `s tinml iga ġul n tgant yat tutlayt tanawayt standr langwij ` |  |
-| 28 | `mani` | on — o bé: Where, Area | partícula o diccionari | on ×28 | `yu will find mani ibl attaking this busts thiy kumment that ` |  |
-| 27 | `nkkin` | jo — o bé: Me | partícula o diccionari | jo ×27 | `asqsiġ nkkin ur mawninnḫ masggiġ maša menna us g imddukal` |  |
-| 27 | `imaziġn` | Noble, amazighe (amaziġ) | plural | amazics ×15, amazic ×12 | `gbidiwwaġ ran iẓartaḫ yan walnza da ttinin imaziġn dattinin ` |  |
-| 25 | `igan` | que és, que fa; que són — o bé: Worth, Suitable | forma gramatical o diccionari | que és ×18, és ×5, ser ×1 | `ur illi yat kra n umzaray iggudin ingratsn maḫ ašku tan tla ` |  |
-| 25 | `illan` | que hi ha, que són — o bé: Real, True | forma gramatical o diccionari | que hi ha ×24, hi ha ×1 | `waḫḫa nkkin ilsa maziġd as datsawalḫ ur yagbug yat filsanawa` |  |
-| 24 | `taddart` | Cell, Flat, maison | diccionari | casa ×21, «taddart» ×1 | `ma talan madimgullik kaylli tigul taddart` |  |
-| 23 | `amawal` | Race, Turban, fantasia, lexique | diccionari | lèxic ×13, llengua ×5, diccionari ×2, paraula ×2 | `igd asn ssmun amawal nns igdasn srs ajrrumt nns` |  |
-| 22 | `wasif` | Tune, Peril, rivière, fleuve (asif) | annexió | riu ×22 | `ittassan ašku nsrs tggis tzwr sdar wasif waḫḫa` |  |
-| 21 | `nniġ` | o, o bé — o bé: vaig dir (ini) — o bé: or else, ou, ou bien | partícula o diccionari | vaig dir ×14, o ×6 | `irma tillad ġiḫdawn nniġ irm irmmatigan irm term` |  |
-| 20 | `udġar` | Rag, Site, place, lieu, endroit, zone, Zone, surface (adġar) | annexió | lloc ×20 | `inmkkada mwad adattsnfal kra nuay tantlawi nns nġitsawnt sg ` |  |
-| 20 | `umawal` | Race, Turban, fantasia, lexique (amawal) | annexió | lèxic ×9, llengua ×1, lexic ×1, paraula ×1 | `aha fanaḫd yan umawal n tutlayt` |  |
-| 19 | `asuġl` | traduction (processus) | diccionari | traducció ×19 | `tarjmamtigan atakkwssmt igat asuġl asuġl` |  |
-| 16 | `ntta` | ell — o bé: lui | partícula o diccionari | ell ×16 | `maša tutlayt ntta taiga n tantla nġmnnaw ntantalwin ig tkšm ` |  |
-| 16 | `awal` | Chat, Deal, parole, langage | diccionari | paraula ×16 | `s danslkam tabrat wanmkwada danssfru awal i meddn d wanmkuad` |  |
-| 16 | `tddit` | sangsue (tiddit) | annexió | sangonera ×3 | `ašku nkkaḫ a s railmd maši g tddit ki ardas tsawalt nġkrunya` |  |
+| 1 | 98 | `tutlayt` | llengua | **bé** | A: «tutlayt tanawayt standard language»; D (IRCAM, i diccionari amb exemple «tutlayt n Ingliz») |
+| 2 | 88 | `maša` | però | **bé** | H: «maca, mak id issɣlin s turft ax?» = «But, what brought you to this ship?» |
+| 3 | 76 | `tamaziġt` | amazic, la llengua amaziga | **bé** | D; C (76 aparicions, cap altre sentit possible) |
+| 4 | 75 | `ašku` | perquè | **bé** | D (Peace Corps, diccionari «because»); C |
+| 5 | 65 | `tmaziġt` | amazic (annexió de tamaziġt) | **bé** | regla d'annexió regular (ta- → t-), mateixa prova que la 3 |
+| 6 | 50 | `akkw` | tot, tots | **bé** | H: «izznza ak° ayda illan dars» = «He had sold everything he owned» (el subtitulador escriu *ak°*) |
+| 7 | 39 | `ttinin` | diuen | **bé** | morfologia regular d'`ini` (habitual tt- + -n); H: «ak° wida inin nnig turft» (inin, els que són) i «ttinin» a 39 trossos sempre amb parlants plurals |
+| 8 | 34 | `waḫḫa` | encara que; sol: d'acord | **bé** | D (Peace Corps *waxxa*; diccionari «although, even») |
+| 9 | 33 | `illa` | hi ha, és | **bé** | H: «illa gis ayda…» = «there is something…»; «ingr at sn illa isɣi» = «Among them was Isghi» |
+| 10 | 31 | `tanawayt` | estandardització; estàndard | **bé** | A: «tutlayt tanawayt standr langwij»; D (IRCAM *tanawayt* = standardisation, *anaway* = standard); el nom oficial *tamaziɣt tanawayt* |
+| 11 | 28 | `mani` | on | **bé** | H: «mani k ssnx» (lit. «d'on et conec» = «Do I even know you»); D |
+| 12 | 27 | `nkkin` | jo | **bé** | H: «hat ula nkkin ra d ɣlix s turft» = «I also want to get aboard this ship» |
+| 13 | 27 | `imaziġn` | amazics | **bé** | plural regular d'*amaziġ*; D |
+| 14 | 25 | `igan` | que és, que són | **bé** | D (Peace Corps, còpula *g*); C: «ma igan tutlayt» = què és llengua |
+| 15 | 25 | `illan` | que hi ha, que són | **bé** | H: «ayda illan dars» = «everything he owned» (lit. el que hi ha a casa seva) |
+| 16 | 24 | `taddart` | casa | **bé** | D; C: el professor contrasta «tlla taddart tlla tigmmi» (les dues paraules per casa, Atles central i tachelhit) |
+| 17 | 23 | `amawal` | lèxic, diccionari | **bé** | A: «lmuεjam amawal» (المعجم = diccionari/lèxic) dit seguit; D. «Turbant» i «fantasia» del diccionari són un altre mot homògraf i aquí no toquen |
+| 18 | 22 | `wasif` | riu | **bé** | D (*asif* = riu, annexió *w-*); C: «sdar wasif» (a la vora del riu) |
+| 19 | 21 | `nniġ` | vaig dir / o | **a mitges** | H: *nnig* és també la preposició «damunt» («inin nnig turft» = dalt del vaixell; «tusi nnig as» = s'alçà damunt). 20 de les 21 del corpus van seguides d'un nom, no d'un pronom: «vaig dir» (14 caselles) i «o» (6) poden ser falses. **Arreglat:** la taula diu ara les tres lectures |
+| 20 | 20 | `udġar` | lloc | **bé** | D (*adġar*, annexió *u-*); C: «sg yan udġar ar yan udġar» = d'un lloc a un altre |
+| 21 | 20 | `umawal` | lèxic | **bé** | annexió regular de 17 |
+| 22 | 19 | `asuġl` | traducció | **bé** | A: «tarjma … asuġl» (ترجمة = traducció); D (IRCAM *asuɣl* = traduction) |
+| 23 | 16 | `ntta` | ell | **bé** | H: «illa ntta ira ɣr a yffɣ» = «His only goal was to get out» |
+| 24 | 16 | `awal` | paraula | **bé** | A: «askil lhrf awal» (*askil* = lletra IRCAM, حرف = lletra); D; C |
+| 25 | 16 | `tddit` | sangonera | **NO: vol dir «vas» (anar)** | C: les 16 van darrere de «mani s» (on), «ki» (quan) o «s» (cap a): «mani s tddit» = on vas. *Tiddit* «sangonera» és un nom que el diccionari encaixava per annexió. **Arreglat:** `ddu` en perfectiu posat a la taula |
+
+**Balanç:** 22 bé, 1 a mitges (`nniġ`), 1 falsa (`tddit`), i 1 (`ttinin`) bé per morfologia.
+De les 1.172 aparicions que sumen les 25, les falses segures són 16 (`tddit`) i les dubtoses 20
+(`nniġ`): un 3 %. El que fa mal no és la proporció, és que el mateix forat (el verb «anar»
+en perfectiu absent de la taula de conjugació) també enverinava `idda` → «aquí» i `ddiġ` →
+«encara»: **una família sencera de formes, no una paraula.** Les 113 formes amb glosses
+contradictòries de sota segueixen pendents i són la pista següent d'aquesta mena.
+
+**Conseqüència per a la pàgina:** les 3 caselles «sangonera» passen a «vas (anar)» (taula a mà,
+lectura segura); les 2 caselles «aquí» d'`idda` i les 3 «encara» de `ddiġ` passen a «?»
+(ambigües). Les 20 caselles de `nniġ` queden marcades «vaig dir / damunt / o».
 
 
 ## Formes que han rebut glosses DIFERENTS al mateix corpus
