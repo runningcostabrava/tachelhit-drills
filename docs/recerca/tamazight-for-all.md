@@ -138,7 +138,16 @@ a dins (H3) o adaptació amb l'àudio del canal (H4). La millora (1) de l'audito
 condicionada a tenir aquell lector.
 
 **H3 · Descodificar amb el lèxic a dins** (cerca en feix + llista de formes). Ataca el mur
-del graó 2. *Estat:* no començat; demana ruta nova al Space.
+del graó 2, i després d'H8 és **la via principal**: votar amb el que tenim no allibera els +40
+punts. *Estat (14-11):* codi fet, **no desplegat**. Ruta nova `/transcribe_mms_lm` al Space
+(`huggingface-asr-space/mms_shi.py`, `app.py`, `requirements.txt` amb `pyctcdecode==0.5.0`):
+el mateix MMS + adaptador, descodificat en feix (64) amb **182.054 unigrams** en l'alfabet del
+model (`tools/exporta_unigrams.py`: lèxic + taules a mà, c→š x→ḫ ɣ→ġ ɛ→ε ṛ→r); KenLM
+opcional si algú deixa `lm_shi.arpa` al costat. La ruta greedy no es toca. *Predicció:* CER
+més baix que el greedy (0,307) sobre els 29 versos cantats i sobre els contes narrats, i menys
+mots que no són paraules. *Risc:* el feix prefereix paraules corrents i es menja les rares
+(`timyuri`, `tinfas`): mesurar també el recall de les paraules de la veritat que NO són al
+lèxic. *Bloqueig:* el desplegament del Space el fa l'amo (compte de HF).
 
 **H4 · Adaptar l'ASR amb l'àudio del canal sense text** (preentrenament autosupervisat sobre
 les 440 peces del mateix parlant). *Estat:* catàleg del canal en marxa; demana GPU i decisió
