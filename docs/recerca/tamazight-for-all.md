@@ -164,8 +164,16 @@ d'una lletra que existeix com una altra paraula.
 «vaixell» i totes surten d'una sola glossa, `turft → «vaixell»`, que ningú no ha pogut
 verificar**. Si és falsa, el 2 % passa al 18 % d'un sol cop. El patró generalitza: una glossa
 dolenta sobre una paraula freqüent enverina un vídeo sencer i cap mesura agregada no la veu.
-**Recomanació: les 20 paraules de contingut més freqüents dels 1.468 trossos, amb la glossa
-que el sistema els dona, validades una per una per en Pablo abans de publicar.** Mitja hora, i
+**El risc ja no és sospita: a la caixa «cert» `turft` surt glossat «carro», i a les 49 frases
+«vaixell» — la mateixa paraula, dues glosses, dins del mateix fitxer; com a mínim una és falsa.**
+El sistema no té una lectura estable de la paraula de contingut més freqüent dels contes, i cap
+mesura agregada ho ensenya. **Condició abans de publicar: les 20 paraules de contingut més
+freqüents dels 1.468 trossos, amb TOTES les glosses que han rebut, validades una per una per en
+Pablo**, i un informe automàtic de les formes que reben glosses diferents al mateix corpus
+(`mots_frequents.py` ho treu). **Correcció de la v11 (auditor):** la regla «casella igual a la
+glossa estrangera → ?» matava català que s'escriu com el francès (`wamur → «part»`, `amẓẓyan →
+«petit»`, 2 de 33 caselles bones); ara només dispara si la casella no és català conegut
+(`backend/data/catala_mots.txt`, 6.562 paraules del `text_catalan` dels 12.202 drills). Mitja hora, i
 és l'únic lloc on un error es multiplica per centenars. → `mots_frequents.py`.
 
 *Escalat en marxa (14-11, codi 33ff8fe, `fets_tots.py`):* els fets sobre els 1.468 trossos dels
