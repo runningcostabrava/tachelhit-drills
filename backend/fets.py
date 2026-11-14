@@ -114,6 +114,26 @@ def _net(w: str) -> str:
     return w.lower().strip("«»\"'.,;:!?()")
 
 
+_ACCENTS = str.maketrans("àáèéíïòóúüç", "aaeeiioouuc")
+
+
+def _arrel(w: str) -> str:
+    """Els cinc primers caràcters, en minúscules i sense accents: la comparació per arrel.
+
+    Comparar per cadena podava «amaziga» contra la casella «amazic», «escriptura» contra
+    «escriure» i «estàndard» contra «estandardització»: 4 de les 5 podes del tema a la v3 eren
+    això. Amb cinc caràcters el risc («carta»/«cartell») queda petit, i el cost d'un fals
+    positiu és baix: deixa passar una paraula que la interlineal gairebé sosté.
+    """
+    return w.lower().translate(_ACCENTS)[:5]
+
+
+def _sense_diacritics(w: str) -> str:
+    import unicodedata
+    return "".join(c for c in unicodedata.normalize("NFD", w.lower())
+                   if unicodedata.category(c) != "Mn")
+
+
 def _paraules_plenes(text: str) -> List[str]:
     return [m for m in (x.lower() for x in re.findall(r"[^\W\d_]+", text or ""))
             if len(m) >= 2 and m not in _BUIDES]
@@ -158,9 +178,48 @@ def _cobertes(inter: List[str], toks: List[str], soste: dict) -> set:
     return fora
 
 
+def _mateixa_arrel(a: str, b: str) -> bool:
+    """Casen si comparteixen els primers caràcters, fins a cinc o fins a la més curta.
+
+    Tallar sempre a cinc feia que «verbs» (*verbs*) no casés amb «verb» (*verb*): totes les
+    parelles singular/plural de quatre lletres es perdien (poda injusta del #36 a la v6). El
+    que no casa mai, i s'accepta com a pèrdua dita, és l'alternança vocàlica del català
+    («surt»/«sortir», «vull»/«voler»): una poda de més, no una falsedat de menys.
+    """
+    n = min(5, len(a), len(b))
+    return n >= 4 and a.lower().translate(_ACCENTS)[:n] == b.lower().translate(_ACCENTS)[:n]
+
+
 def _sostingut(text: str, cobertes: set) -> Tuple[bool, List[str]]:
-    orfes = [p for p in _paraules_plenes(text) if p not in cobertes]
+    llargues = [c for c in cobertes if len(c) >= 4]
+    orfes = [p for p in _paraules_plenes(text)
+             if p not in cobertes and not any(_mateixa_arrel(p, c) for c in llargues)]
     return (not orfes), orfes
+
+
+#: Un tema és un grup nominal. Dues glosses enganxades («afegir el nostre», «què entrar a ?»)
+#: són certes i inservibles com a tema: 9 dels 22 temes de la v3. Es rebutja el tema amb un
+#: «?» a dins o amb un infinitiu. La detecció de l'infinitiu és una heurística de terminació
+#: i perd algun nom («paper» no, perquè demana cinc lletres i -er no hi és; «cantar» sí).
+_INFINITIU = re.compile(r"^\w{3,}(ar|ir|dre|tre|ure|ndre)$")
+
+
+def tema_es_grup_nominal(tema: str) -> Tuple[bool, str]:
+    if "?" in tema:
+        return False, "tema amb un «?» a dins"
+    for w in re.findall(r"[^\W\d_]+", tema.lower()):
+        if len(w) >= 5 and w not in _BUIDES and _INFINITIU.match(w):
+            return False, f"tema amb un infinitiu: {w}"
+    return True, ""
+
+
+#: Les formes de la còpula en català, tal com surten a les caselles i a les frases.
+_COPULA = re.compile(r"\b(és|son|són|sóc|soc|som|ets|sou|era|eren|hi ha|no hi ha|no és|"
+                     r"està|estan|estem|esteu|existeix|existeixen)\b", re.I)
+
+
+def _te_copula(text: str) -> bool:
+    return bool(_COPULA.search(text or ""))
 
 
 def candidats_a_cita(toks: List[str]) -> List[int]:
@@ -192,21 +251,50 @@ def mena(toks: List[str]) -> str:
     return "afirmació"
 
 
-def qui_hi_surt(toks: List[str], es_verb: Optional[Callable[[str], bool]] = None) -> List[str]:
-    """Les persones que un pronom o un afix del verb sostenen. Sense `es_verb`, només pronoms
-    i els afixos inequívocs (`-ḫ`/`-ġ` de primera persona)."""
+#: Les formes verbals de la taula a mà que porten la persona escrita (paradigmes del manual
+#: del Peace Corps Marroc 2007, els mateixos de `morfologia.FORMES_GRAMATICALS`), i uns pocs
+#: verbs molt corrents amb el sufix inequívoc ja fet (`riġ` «vull», `sawalḫ` «parlo»).
+_FORMES_AMB_PERSONA = {
+    "giġ": "jo", "giḫ": "jo", "gix": "jo", "riġ": "jo", "riḫ": "jo", "lliġ": "jo", "lliḫ": "jo",
+    "sawalḫ": "jo", "sawalġ": "jo", "skrġ": "jo", "skrḫ": "jo",
+    #: fora `nniġ`/`nniḫ` («o» o «vaig dir») i `inna` («va dir» o «mare»): dues lectures
+    #: corrents, i una persona que pot ser falsa no val res en aquest camp
+    "tgit": "tu", "trit": "tu", "tgi": "tu",
+    "ttiniġ": "jo", "ttiniḫ": "jo",
+    "iga": "ell/ella", "tga": "ell/ella", "illa": "ell/ella", "tlla": "ell/ella", "ira": "ell/ella",
+    #: `inna` torna: al #24 de la mostra era «va dir» i cert; és la forma de «dir» més corrent
+    #: després de `ttinin`, i quan vol dir «mare» la frase gairebé sempre porta un altre verb
+    "tra": "ell/ella", "inna": "ell/ella", "tnna": "ell/ella", "ittini": "ell/ella",
+    "ttini": "ell/ella", "daittini": "ell/ella",
+    "nga": "nosaltres", "ng": "nosaltres", "nra": "nosaltres", "nlla": "nosaltres",
+    "nsawal": "nosaltres", "nssn": "nosaltres", "nttini": "nosaltres", "danttini": "nosaltres",
+    "tgam": "vosaltres", "tram": "vosaltres", "tramt": "vosaltres",
+    "gan": "ells/elles", "gant": "ells/elles", "llan": "ells/elles", "llant": "ells/elles",
+    "ttinin": "ells/elles", "dattinin": "ells/elles", "nnan": "ells/elles", "qqarn": "ells/elles",
+}
+
+
+def qui_hi_surt(toks: List[str], *_ignorat, **_ignorat2) -> List[str]:
+    """Les persones que un pronom explícit o una forma verbal de la taula a mà sostenen.
+
+    Només això. La versió que endevinava la persona pels afixos va donar 5 falsos de 14 a la
+    v3 i, arreglada amb `es_verb`, **8 falsos de 18 a la v6**: deia «tu» en un tros sense cap
+    verb (#38), «nosaltres» per la `n` de la preposició `n` (#29), «jo» pel clític `aġ` (#31),
+    «ells» per la `-n` del plural d'un nom (#36) i per `ng` «som», que és justament la persona
+    contrària (#21). Els 10 certs sortien gairebé tots de pronoms explícits. Un camp al 44 % de
+    falsos és pitjor que no tenir-lo: es perd cobertura i es guanya un camp que es pot creure.
+    `es_verb` i `es_particula` s'accepten i s'ignoren, perquè els qui criden no canviïn.
+    """
     fora = []
-    for t in toks:
+    for k, t in enumerate(toks):
         n = _net(t)
-        if n in _PRONOMS:
-            fora.append(_PRONOMS[n])
-            continue
-        for patro, persona in _PERSONA_VERB:
-            if patro.match(n):
-                arrel_verbal = es_verb(n) if es_verb else (persona == "jo")
-                if arrel_verbal:
-                    fora.append(persona)
-                break
+        p = _PRONOMS.get(n) or _FORMES_AMB_PERSONA.get(n)
+        #: `tgi` darrere d'`ur` és «no és» (3sg), no «ets»: «ur tgi ġar iwaliwn» = «no és només
+        #: paraules». L'únic fals dels 17 de la v8 era aquest.
+        if n == "tgi" and k > 0 and _net(toks[k - 1]) in _NEGACIO:
+            p = "ell/ella"
+        if p:
+            fora.append(p)
     vist, unics = set(), []
     for p in fora:
         if p not in vist:
@@ -217,7 +305,12 @@ def qui_hi_surt(toks: List[str], es_verb: Optional[Callable[[str], bool]] = None
 
 def comprova(resposta: str, tros: str,
              es_verb: Optional[Callable[[str], bool]] = None,
-             es_gent: Optional[Callable[[str], bool]] = None) -> Tuple[Optional[dict], List[str]]:
+             es_gent: Optional[Callable[[str], bool]] = None,
+             es_particula: Optional[Callable[[str], bool]] = None,
+             es_coneguda: Optional[Callable[[str], bool]] = None,
+             glosses: Optional[List[str]] = None,
+             catala_permes: Optional[set] = None
+             ) -> Tuple[Optional[dict], List[str]]:
     """(fets nets, motius de poda). Fets és None si la resposta no val com a conjunt.
 
     Es rebutja TOT només per dues raons: no és JSON, o la interlineal no fa la llargada dels
@@ -239,6 +332,38 @@ def comprova(resposta: str, tros: str,
         return None, [f"interlineal de {len(inter) if isinstance(inter, list) else '?'} "
                       f"elements per {n} tokens"]
     inter = [str(x).strip() or "?" for x in inter]
+    #: Una casella que és el token copiat tal qual no diu res: a la v3, el #10 en tenia cinc
+    #: de cinc (`is→is`, `da→da`, `gis→gis`…) i comptava com a ple. Un «?» és honest; el token
+    #: copiat és un «?» disfressat. I les cometes només valen per a un candidat a cita: una
+    #: casella «amazic» en un tros on `tamaziġt` és l'objecte i no s'anomena, també és «?».
+    cands = set(candidats_a_cita(toks))
+    copiades = 0
+    for i, (cel, tok) in enumerate(zip(inter, toks)):
+        nu = _sense_diacritics(_net(cel))
+        if nu and nu == _sense_diacritics(_net(tok)) and not (i in cands and cel.startswith("«")):
+            inter[i] = "?"
+            copiades += 1
+    if copiades:
+        motius.append(f"caselles amb el token copiat tal qual: {copiades}")
+    #: Una casella que és la glossa estrangera copiada tal qual no és català: contra la
+    #: veritat humana, `issuda → «souder»` i `tddit → «sangsue»` eren el francès de l'IRCAM
+    #: sense traduir, dues de les quatre falses sobre token exacte (~5 % de les caselles). Es
+    #: mira si la casella és una paraula del text de les glosses que NO sigui català de la
+    #: taula a mà (les lectures de la taula —«perquè», «només»— sí que poden coincidir).
+    if glosses:
+        estrangeres = set()
+        for g in glosses:
+            cos = g.split(" = ", 1)[-1].split(" ≈ ", 1)[-1]
+            estrangeres.update(w.lower() for w in re.findall(r"[^\W\d_]+", cos))
+        if catala_permes:
+            estrangeres -= {w.lower() for w in catala_permes}
+        crues = 0
+        for i, cel in enumerate(inter):
+            if cel != "?" and _net(cel) in estrangeres and len(_net(cel)) >= 4:
+                inter[i] = "?"
+                crues += 1
+        if crues:
+            motius.append(f"caselles que són la glossa estrangera copiada: {crues}")
 
     soste = d.get("soste") if isinstance(d.get("soste"), dict) else {}
     cobertes = _cobertes(inter, toks, soste)
@@ -249,6 +374,11 @@ def comprova(resposta: str, tros: str,
         ok, orfes = _sostingut(tema, cobertes)
         if not ok:
             motius.append(f"tema sense token: {', '.join(orfes)}")
+            tema = "?"
+    if tema != "?":
+        ok, motiu = tema_es_grup_nominal(tema)
+        if not ok:
+            motius.append(motiu)
             tema = "?"
 
     #: la cita: només d'entre els candidats que el codi assenyala, marcada a la interlineal
@@ -261,6 +391,13 @@ def comprova(resposta: str, tros: str,
         if not idx:
             motius.append(f"cita que no segueix cap verb de dir: {cita}")
             cita = None
+        elif es_coneguda and not es_coneguda(c):
+            #: Contra la veritat humana, quatre «cites» eren tokens que l'ASR havia enganxat
+            #: («suššn» per `as uššn`, «ratninġ» per `ra tninɣ`): un token enganxat és
+            #: candidat com qualsevol altre. Una paraula que el mestre anomena, el lèxic la
+            #: coneix sencera (`imikk`, `manik`); un token enganxat, no.
+            motius.append(f"cita que el lèxic no reconeix sencera: {cita}")
+            cita = None
         elif es_gent and es_gent(c):
             motius.append(f"cita que designa gent, no una paraula anomenada: {cita}")
             cita = None
@@ -269,6 +406,13 @@ def comprova(resposta: str, tros: str,
             cita = None
         else:
             cita = toks[idx[0]]
+    #: Una casella «token» que no és LA cita no és cap glossa: és el token copiat amb cometes.
+    #: Contra la veritat humana en van sortir quatre («suššn», «maksmman»…) comptades com a
+    #: plenes. Es queden a «?».
+    for i, cel in enumerate(inter):
+        if cel.startswith("«") and (cita is None or _net(cel) != _net(cita)):
+            inter[i] = "?"
+            motius.append(f"casella entre cometes que no és la cita: {cel}")
 
     frase = d.get("frase")
     frase = str(frase).strip() or None if frase is not None else None
@@ -277,11 +421,30 @@ def comprova(resposta: str, tros: str,
         if not ok:
             motius.append(f"frase amb paraules sense token: {', '.join(orfes)}")
             frase = None
+    if frase and _te_copula(frase) and not any(_te_copula(c) for c in inter):
+        #: La frase és l'únic camp on el model pot relacionar, i la còpula és la relació.
+        #: A la v4 les tres frases amb còpula eren: #3 «no és només paraules» amb la casella
+        #: `tgi→no és` (bona), #19 «és la nostra llengua de…» i #26 «l'estandardització no hi
+        #: és» sense cap casella de còpula —l'única frase falsa i l'única predicació inventada
+        #: de la v4. Una còpula a la frase val només si alguna casella la porta.
+        motius.append("frase amb una còpula que cap casella no sosté")
+        frase = None
+    if frase:
+        #: el «?» d'una casella copiat dins la frase és el forat fet visible —millor que la
+        #: invenció que hi havia abans—, però llegit en cru sembla una errata: es marca [?]
+        frase = re.sub(r"(?<!\[)\?(?!\])", "[?]", frase) if " ?" in f" {frase}" else frase
 
-    return {
+    fets = {
         "interlineal": inter,
         "marc": {"tema": tema, "mena": mena(toks), "polaritat": polaritat(toks),
-                 "qui_hi_surt": qui_hi_surt(toks, es_verb)},
+                 "qui_hi_surt": qui_hi_surt(toks)},
         "cita": cita,
         "frase": frase,
-    }, motius
+    }
+    if frase:
+        #: La frase no és una traducció: és muntada a partir de glosses, i el filtre només en
+        #: comprova la procedència. «Les sangsues diuen els amazics» (#9, v6) és impecable de
+        #: procedència i falsa, perquè la glossa `idġrn→sangsues` ho era. Qui la llegeixi ho
+        #: ha de saber: una de cada vuit és d'aquesta mena i el filtre no la pot veure.
+        fets["frase_nota"] = "muntada a partir de glosses, no traducció"
+    return fets, motius

@@ -108,18 +108,20 @@ def test_la_mena_surt_de_les_particules_i_dels_verbs_de_dir():
     assert fets.mena("illa waman".split()) == "afirmació"
 
 
-def test_les_persones_surten_dels_pronoms_i_dels_afixos_del_verb():
-    assert fets.qui_hi_surt("nkkin sawalḫ".split(), es_verb) == ["jo"]
-    assert fets.qui_hi_surt("nssn kra".split(), es_verb) == ["nosaltres"]
-    assert fets.qui_hi_surt("da ttinin imaziġn".split(), es_verb) == ["ells/elles"]
-    #: `imaziġn` acaba en -n i no és cap verb: cap persona en surt
-    assert fets.qui_hi_surt("imaziġn".split(), es_verb) == []
+def test_les_persones_surten_dels_pronoms_i_de_les_formes_de_la_taula():
+    #: Només pronoms explícits i formes verbals de la taula a mà. Endevinar per afix va donar
+    #: 8 falsos de 18 a la v6 («tu» en un tros sense verb, «nosaltres» per la preposició n).
+    assert fets.qui_hi_surt("nkkin sawalḫ".split()) == ["jo"]
+    assert fets.qui_hi_surt("da ttinin imaziġn".split()) == ["ells/elles"]
+    assert fets.qui_hi_surt("ng tamaziġt".split()) == ["nosaltres"]
+    #: cap afix: `nssufuġ` no és a la taula, `imaziġn` acaba en -n, `ntguriwin` comença per n-
+    assert fets.qui_hi_surt("nssufuġ imaziġn ntguriwin".split()) == []
 
 
-def test_sense_es_verb_nomes_els_afixos_inequivocs():
-    #: la -n final pot ser plural d'un nom: sense saber si és verb, no es llegeix
-    assert fets.qui_hi_surt("ttinin".split()) == []
-    assert fets.qui_hi_surt("sawalḫ".split()) == ["jo"]
+def test_es_verb_i_es_particula_sacepten_i_signoren():
+    #: els qui criden passen aquests arguments; el camp ja no se'n fia
+    assert fets.qui_hi_surt(["iffġ"], lambda f: True) == []
+    assert fets.qui_hi_surt(["taguriġ"], lambda f: True, lambda f: False) == []
 
 
 # ---------------------------------------------------------------------------- la cita
@@ -154,3 +156,137 @@ def test_el_json_pot_venir_entre_cometes_de_bloc():
 def test_el_que_no_es_json_es_rebutja_i_es_diu():
     f, motius = fets.comprova("CATALA: Les paraules del peix.\nCERTESA: probable", TROS)
     assert f is None and motius == ["la resposta no és JSON"]
+
+
+# ------------------------------------------------ els quatre pedaços del judici de la v3
+def test_el_suport_compara_per_arrel():
+    #: «amaziga» contra la casella «amazic»; «escriptura» contra «escriure»: 4 de les 5 podes
+    #: del tema a la v3 eren això.
+    f, motius = fets.comprova(resposta(tema="la llengua amaziga",
+                                       interlineal=["paraules", "peix", "és", "amazic"],
+                                       soste={}), "tagurin islman tga tamaziġt")
+    assert f["marc"]["tema"] == "?" and any("llengua" in m for m in motius)   # «llengua» no hi és
+    f, motius = fets.comprova(resposta(tema="paraules amazigues", soste={}), TROS)
+    assert f["marc"]["tema"] == "paraules amazigues" and not motius
+
+
+def test_una_casella_amb_el_token_copiat_es_un_interrogant():
+    #: El #10 de la v3: cinc caselles de cinc eren el token copiat i comptaven com a plenes.
+    f, motius = fets.comprova(json.dumps({
+        "interlineal": ["is", "da", "gis", "ittara", "kra"], "tema": "?", "frase": None}),
+        "is da gis ittara kra")
+    assert f["interlineal"] == ["?"] * 5
+    assert any("copiat" in m for m in motius)
+
+
+def test_les_cometes_nomes_valen_per_a_un_candidat_a_cita():
+    #: `tamaziġt` entre cometes quan és l'objecte («fer amazic») i no s'anomena: també «?».
+    f, _ = fets.comprova(json.dumps({"interlineal": ["fer", "«tamaziġt»"], "tema": "?",
+                                     "frase": None}), "skr tamaziġt")
+    assert f["interlineal"][1] == "?"
+    #: però «imikk» darrere d'un verb de dir es queda
+    f, _ = fets.comprova(json.dumps({"interlineal": ["diuen", "«imikk»"], "tema": "?",
+                                     "cita": "imikk", "frase": None}), "ttinin imikk")
+    assert f["interlineal"][1] == "«imikk»" and f["cita"] == "imikk"
+
+
+def test_el_tema_ha_de_ser_un_grup_nominal():
+    for tema, tros in (("què entrar a ?", "tema amb un «?»"), ("afegir el nostre", "infinitiu")):
+        ok, motiu = fets.tema_es_grup_nominal(tema)
+        assert not ok and tros.split()[0] in motiu
+    assert fets.tema_es_grup_nominal("la conjugació dels verbs")[0]
+    assert fets.tema_es_grup_nominal("el paper del professor")[0]     # -er no és infinitiu aquí
+
+
+def test_una_frase_que_passa_porta_la_nota_de_procedencia():
+    f, _ = fets.comprova(resposta(), TROS)
+    assert f["frase_nota"] == "muntada a partir de glosses, no traducció"
+    f, _ = fets.comprova(resposta(frase=None), TROS)
+    assert "frase_nota" not in f
+
+
+# ------------------------------------------------------- la còpula, l'única relació possible
+def test_una_copula_a_la_frase_val_nomes_si_una_casella_la_porta():
+    #: #3 de la v4: «No és només paraules» amb la casella `tgi→no és` → passa
+    tros = "ur tgi ġar iwaliwn"
+    f, motius = fets.comprova(json.dumps({
+        "interlineal": ["no", "no és", "només", "paraules"], "tema": "?",
+        "frase": "No és només paraules."}), tros)
+    assert f["frase"] == "No és només paraules." and not motius
+    #: #19: «és la nostra llengua» sense cap casella de còpula → cau, i es diu
+    f, motius = fets.comprova(json.dumps({
+        "interlineal": ["?", "llengua", "amaziga", "nostra"], "tema": "?",
+        "frase": "És la nostra llengua amaziga."}), "x tutlayt tamaziġt nnġ")
+    assert f["frase"] is None and any("còpula" in m for m in motius)
+
+
+def test_el_forat_dins_la_frase_es_marca_com_a_buit():
+    tros = "ur tgi ġar iwaliwn ur tgi ġar tguriwin"
+    f, _ = fets.comprova(json.dumps({
+        "interlineal": ["no", "no és", "només", "paraules", "no", "?", "només", "?"],
+        "tema": "?", "frase": "No és només paraules, no ? només ?"}), tros)
+    assert f["frase"] == "No és només paraules, no [?] només [?]"
+
+
+def test_larrel_casa_singular_i_plural_de_quatre_lletres():
+    #: «verbs» contra la casella «verb» (#36 de la v6): tallar sempre a cinc els separava.
+    f, motius = fets.comprova(json.dumps({
+        "interlineal": ["?", "verb", "amazic"], "tema": "els verbs amazics", "frase": None}),
+        "n imyagn tmaziġt")
+    assert f["marc"]["tema"] == "els verbs amazics" and not motius
+    #: i l'alternança vocàlica NO casa: «surt» contra «sortir» és una pèrdua acceptada
+    assert not fets._mateixa_arrel("surt", "sortir")
+    assert fets._mateixa_arrel("escriptura", "escriure")
+
+
+def test_una_casella_entre_cometes_que_no_es_la_cita_es_un_interrogant():
+    #: Contra la veritat humana en van sortir quatre («suššn», «maksmman»…) comptades com a
+    #: plenes: eren el token copiat amb cometes, no cap glossa.
+    f, motius = fets.comprova(json.dumps({
+        "interlineal": ["?", "«suššn»", "diuen", "«imikk»"], "tema": "?",
+        "cita": "imikk", "frase": None}), "yan suššn ttinin imikk")
+    assert f["interlineal"][1] == "?" and f["interlineal"][3] == "«imikk»"
+    #: cau per la regla del token copiat (les cometes es treuen en comparar) o per la de les
+    #: cometes que no són la cita: el que compta és que no quedi com a casella plena
+    assert any(("cometes" in m) or ("copiat" in m) for m in motius)
+
+
+def test_nnig_no_dona_persona():
+    #: `nniġ` és «o» o «vaig dir»: cap persona. (`inna` sí: al #24 de la mostra era «va dir»
+    #: i cert, i quan vol dir «mare» la frase gairebé sempre porta un altre verb.)
+    assert fets.qui_hi_surt("nniġ kra".split()) == []
+
+
+def test_tgi_darrere_dur_es_tercera_persona():
+    #: «ur tgi ġar iwaliwn» = «no és només paraules»: l'únic fals dels 17 de la v8 deia «tu».
+    assert fets.qui_hi_surt("ur tgi ġar iwaliwn".split()) == ["ell/ella"]
+    assert fets.qui_hi_surt("tgi amaziġ".split()) == ["tu"]
+
+
+def test_inna_torna_a_donar_persona():
+    assert fets.qui_hi_surt("inna kra".split()) == ["ell/ella"]
+
+
+def test_una_cita_ha_de_ser_una_paraula_que_el_lexic_coneix_sencera():
+    #: «suššn» (per `as uššn`) i «ratninġ» (per `ra tninɣ`) eren tokens enganxats presos per
+    #: paraules anomenades. `imikk` i `manik`, les bones, el lèxic les coneix senceres.
+    tros = "da ttinin suššn"
+    base = {"interlineal": ["?", "diuen", "«suššn»"], "tema": "?", "cita": "suššn", "frase": None}
+    f, motius = fets.comprova(json.dumps(base), tros, es_coneguda=lambda w: w in {"imikk", "manik"})
+    assert f["cita"] is None and any("sencera" in m for m in motius)
+    tros = "da ttinin imikk"
+    base = {"interlineal": ["?", "diuen", "«imikk»"], "tema": "?", "cita": "imikk", "frase": None}
+    f, motius = fets.comprova(json.dumps(base), tros, es_coneguda=lambda w: w in {"imikk", "manik"})
+    assert f["cita"] == "imikk"
+
+
+def test_una_casella_que_es_la_glossa_estrangera_copiada_es_un_interrogant():
+    #: `issuda → «souder»`, `tddit → «sangsue»`: francès de l'IRCAM sense traduir, dues de les
+    #: quatre falses sobre token exacte contra la veritat humana.
+    f, motius = fets.comprova(json.dumps({
+        "interlineal": ["souder", "només", "peix"], "tema": "?", "frase": None}),
+        "issuda ġar islman",
+        glosses=["issuda = souder, joindre", "ġar = només, solament", "islman = Fish, poisson"],
+        catala_permes={"només", "solament"})
+    assert f["interlineal"] == ["?", "només", "peix"]
+    assert any("estrangera" in m for m in motius)

@@ -313,3 +313,9 @@ def test_un_mot_curt_no_es_parteix_cap_al_diccionari():
     #: Una resta de dues lletres casa amb qualsevol entrada del diccionari: només val la
     #: taula. `did` no és `d`+`id` («cadena»), per molt que `id` sigui al diccionari fals.
     assert glossa("did") is None
+
+
+def test_la_labialitzada_de_lasr_casa_amb_la_taula():
+    #: `akkw` («tot») l'ASR l'escriu `akku`; contra la veritat humana sortia «perroquet».
+    assert morfologia.clau_de_particula("akku") == "akkw"
+    assert glossa("akku")[0].startswith("tot")

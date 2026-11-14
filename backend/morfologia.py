@@ -507,7 +507,12 @@ FORMES_GRAMATICALS = {
 #: paraula més freqüent de la llista, 52 aparicions— no hi casava: en comptes de «perquè»
 #: rebia «Because, because of, Since» del diccionari, marcat com a lectura SEGURA quan era
 #: sort. Es prova la forma tal com ve i les variants d'ortografia.
-_ORTOGRAFIA = (("š", "c"), ("c", "š"), ("ḫ", "x"), ("x", "ḫ"))
+#: I la labialitzada: la taula escriu `akkw` («tot») i l'ASR escriu `akku`. Contra la veritat
+#: humana dels contes narrats (14-11), `akku` sortia glossat «perroquet» i «lloro» —dues
+#: vegades, dues glosses diferents, totes dues falses— perquè no casava amb la taula i caia al
+#: diccionari.
+_ORTOGRAFIA = (("š", "c"), ("c", "š"), ("ḫ", "x"), ("x", "ḫ"), ("kku", "kkw"), ("kkw", "kku"),
+               ("gu", "gw"), ("gw", "gu"))
 
 #: Les dues taules escrites a mà, en un sol lloc per consultar-les. La mena es guarda a part
 #: perquè la glossa pugui dir la veritat: `iga` no és cap partícula, és una forma del verb

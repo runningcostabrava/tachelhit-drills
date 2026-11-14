@@ -126,8 +126,10 @@ SYS_FETS = (
     "copiat tal com es. NO es cita un candidat que sigui qui parla o de qui es parla (una "
     "gent, un pronom): en «da ttinin imaziġn», «imaziġn» son els que diuen, no la paraula "
     "dita. Si no hi ha candidats o cap no es una paraula anomenada, null.\n"
-    "  \"frase\": el catala de corregut, nomes si el pots dir amb paraules que surten de la "
-    "interlineal; si dubtes, null. Un filtre la comprovara paraula per paraula.\n"
+    "  \"frase\": el catala de corregut, fet amb les paraules de la interlineal. ESCRIU-LA "
+    "sempre que les caselles plenes donin per a una frase: un filtre la comprovara paraula "
+    "per paraula contra la interlineal i la treura si una no s'aguanta, o sigui que no cal "
+    "que t'abstinguis per prudencia. Null nomes si no pots dir res.\n"
     "  \"soste\" (opcional): si a la frase o al tema fas servir una paraula que no casa "
     "literalment amb la casella d'on surt («amazigues» per la casella «amazic»), lliga-la: "
     "{\"amazigues\": [3]}.\n\n"
@@ -342,7 +344,10 @@ def fets(deepseek, tema, tros, abans, despres, paraules):
                                        max_output_tokens=600, temperature=0.0)
     except Exception as e:
         return {"fets": None, "rebutjat": [f"error: {type(e).__name__}"]}
-    nets, motius = F.comprova(r, tros, es_verb=_es_verb(), es_gent=_es_gent())
+    nets, motius = F.comprova(r, tros, es_verb=_es_verb(), es_gent=_es_gent(),
+                              es_particula=lambda w: morfologia.clau_de_particula(w) is not None,
+                              es_coneguda=_es_coneguda(), glosses=paraules,
+                              catala_permes=_catala_de_la_taula())
     return {"fets": nets, "rebutjat": motius}
 
 
@@ -362,6 +367,40 @@ _GENT = {"imaziġn", "imazighn", "amaziġ", "tamaziġt", "irgazn", "tmġarin", "
 
 def _es_gent():
     return lambda w: w.lower() in _GENT
+
+
+_CATALA_TAULA = set()
+
+
+#: Les paraules catalanes conegudes, perquè la regla «casella igual a la glossa estrangera →
+#: ?» no mati català que s'escriu com el francès: `wamur → «part»` (IRCAM «part, lot») i
+#: `amẓẓyan → «petit»` («petit; jeune») són correctes en català i la regla sola les matava
+#: —2 de 33 caselles bones, el mateix ordre que el 5 % que volia arreglar. El fitxer surt del
+#: català del projecte mateix (`backend/data/catala_mots.txt`, una paraula per línia).
+_CATALA_MOTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "backend", "data",
+                            "catala_mots.txt")
+
+
+def _catala_de_la_taula():
+    """Les paraules catalanes que una casella pot repetir sense ser glossa estrangera copiada:
+    les de les taules a mà, i les del fitxer de català del projecte si hi és."""
+    if not _CATALA_TAULA:
+        for v in list(morfologia.PARTICULES.values()) + list(morfologia.FORMES_GRAMATICALS.values()):
+            _CATALA_TAULA.update(w.lower() for w in re.findall(r"[^\W\d_]+", v))
+        if os.path.exists(_CATALA_MOTS):
+            with io.open(_CATALA_MOTS, encoding="utf-8") as f:
+                _CATALA_TAULA.update(l.strip().lower() for l in f if l.strip())
+    return _CATALA_TAULA
+
+
+def _es_coneguda():
+    """La paraula, sencera, la coneix el lèxic o la taula a mà? Un token enganxat, no."""
+    try:
+        import lexicon
+        sig, ev, en = eines_del_lexic(lexicon)
+        return lambda w: morfologia.glossa(w, sig, ev, en, partir=False) is not None
+    except Exception:
+        return None
 
 
 # ------------------------------------------------------------------
