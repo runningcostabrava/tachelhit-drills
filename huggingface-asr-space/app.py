@@ -195,8 +195,9 @@ mms_shi.start()   # the second reader loads in the background; NeMo's routes ans
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "model": MODEL_ID, "routes": ["/transcribe", "/align", "/transcribe_mms"],
-            "mms": mms_shi.status()}
+    return {"status": "ok", "model": MODEL_ID,
+            "routes": ["/transcribe", "/align", "/transcribe_mms", "/transcribe_mms_lm"],
+            "mms": mms_shi.status(), "mms_lm": mms_shi.status_lm()}
 
 
 async def _save_upload(upload: UploadFile) -> str:
@@ -256,6 +257,29 @@ async def transcribe_mms(audio_file: UploadFile = File(...)):
         raise HTTPException(status_code=413, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"MMS failed: {e}")
+    finally:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+
+@app.post("/transcribe_mms_lm")
+async def transcribe_mms_lm(audio_file: UploadFile = File(...)):
+    """The same MMS reader, decoded by beam search with the lexicon's word list (#601, H3).
+
+    A new route on purpose: /transcribe_mms stays greedy until this one is measured against
+    human truth. Same shape; `confidence` is null because the beam score is not comparable.
+    """
+    if not mms_shi.status()["ready"]:
+        raise HTTPException(status_code=503, detail=mms_shi.status()["error"] or "MMS is still loading")
+    path = await _save_upload(audio_file)
+    try:
+        return mms_shi.transcribe_lm(path, MAX_SECS)
+    except ValueError as e:
+        raise HTTPException(status_code=413, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"MMS+lexicon failed: {e}")
     finally:
         try:
             os.remove(path)

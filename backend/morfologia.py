@@ -327,11 +327,19 @@ def _particula_al_davant(mot: str) -> List[Tuple[str, str]]:
     """
     fora = []
     for n in (1, 2):
-        if len(mot) <= n + MIN_ARREL - 1:
+        if len(mot) <= n:
             continue
         cap, resta = mot[:n], mot[n:]
-        if clau_de_particula(cap):
-            fora.append((cap, resta))
+        if not clau_de_particula(cap):
+            continue
+        #: Una resta de menys de tres lletres casa amb qualsevol entrada del diccionari, i
+        #: per això el guard vell no deixava partir mai `das`, `dak`, `dag`: però aquests
+        #: eren els mots sense glossa més freqüents del corpus (16, 6, 7 aparicions) i es
+        #: parteixen bé perquè la resta és a la taula escrita a mà (`d`+`as` «i + li»). La
+        #: resta curta val només si és a la taula; les llargues, com abans.
+        if len(resta) < MIN_ARREL and not clau_de_particula(resta):
+            continue
+        fora.append((cap, resta))
     fora.sort(key=lambda x: -len(x[1]))
     return fora
 
@@ -485,6 +493,7 @@ FORMES_GRAMATICALS = {
     # preposicions i el pronom enganxat que el manual fa servir en text corrent
     "sg": "de, des de", "zg": "de, des de",
     "gis": "dins d'allò, hi", "digs": "dins d'allò, hi",
+    "gisn": "dins d'ells, hi", "gisnt": "dins d'elles, hi",
     "dat": "davant de", "agnsu": "dins",
     # dues lectures corrents totes dues, i no es pot triar sense context
     "inna": "va dir (ini) — o bé: mare",

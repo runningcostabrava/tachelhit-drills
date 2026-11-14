@@ -296,3 +296,20 @@ def test_la_negacio_del_verb_ser():
     #: Darrere d'`ur` la `a` es torna `i`: `ur illi`, `ur tlli`, `ur llin`.
     assert "no hi ha" in glossa("illi")[0]
     assert "no hi ha" in glossa("llin")[0]
+
+
+# ------------------------------------ els mots curts, que el guard vell no deixava partir
+def test_un_mot_curt_es_parteix_si_la_resta_es_a_la_taula():
+    #: `das` (16 aparicions), `dak` (6), `dag` (7) eren els mots sense glossa més freqüents
+    #: del corpus: el guard de MIN_ARREL no deixava partir res de 2-3 lletres. Es parteixen
+    #: bé perquè la resta és a la taula a mà, no al diccionari.
+    #: `da`+`s` («habitual + amb») també és un tall vàlid; mana la resta més llarga.
+    assert morfologia._particula_al_davant("das")[0] == ("d", "as")
+    diu, com = glossa("das")
+    assert com == "partícula enganxada" and "li" in diu
+
+
+def test_un_mot_curt_no_es_parteix_cap_al_diccionari():
+    #: Una resta de dues lletres casa amb qualsevol entrada del diccionari: només val la
+    #: taula. `did` no és `d`+`id` («cadena»), per molt que `id` sigui al diccionari fals.
+    assert glossa("did") is None
