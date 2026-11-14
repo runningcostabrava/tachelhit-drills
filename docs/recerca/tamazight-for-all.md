@@ -232,8 +232,7 @@ llengua, no la veu del professor. Fitxers a `scratchpad/canal/subs_humans/`.
 La casella «bo» d'una passada sola de 40 trossos té una desviació de **±1,6 trossos = ±4
 punts**, gairebé tota de temperatura del model (0,2). Amb n=40 i una passada només un canvi
 de +15 punts era fiable: «bo 9→10» no volia dir res; «fals 15→8» (−22 punts) era
-inconfusible. **Disseny:** `temperature=0` (fet al 14-11: el soroll del model desapareix i
-n=100 amb una passada resol +5 punts amb 100 crides); **aparellat sempre** (mateixa llavor,
+inconfusible. **Disseny:** **aparellat sempre** (mateixa llavor,
 mateixos trossos: canviar-los afegeix ±6,7 punts de soroll de mostra a n=40); **jutjat a
 cegues** amb les dues columnes barrejades i **20 trossos duplicats plantats** per mesurar
 l'acord del jutge amb ell mateix —si baixa de ~90 %, cap número de la taula no val. El SHA
@@ -243,6 +242,42 @@ passades jutjades (`repassa40.json`, `repassa40b.json`, `control40.json`) i els 
 mesura de l'auditor (`estricta.py`, `enganxades_curtes.py`, `quanta_mostra.py`, `audita*.py`)
 són a `C:\Users\josep\Veus-tachelhit\_escoltats\veritat\auditoria-2026-11-14\`. Tota mesura
 nova es fa sobre aquella mostra o sobre una de n=100 que la contingui.
+
+**Correcció (auditor, 14-11, tarda): `temperature=0` NO fa la canonada reproduïble.** Dues
+execucions a t=0, mateix prompt, mateixes glosses: `frase_t0` difereix en **21 de 40**
+trossos. La recomanació «amb t=0, n=100 i k=1 n'hi ha prou» queda retirada: **n=100 i k=2 com
+a mínim, tant a t=0 com a t=0,2**. I «zero de soroll a la casella dels falsos» era una
+sobreafirmació treta de dues mostres: dues passades de la mateixa columna donen 13 i 10
+falsos → **±3 per casella**. Els salts 15→8 (còpula) i 15→2 (format de fets) segueixen fora
+d'aquest soroll. El jutge, en canvi, és estable: 20/20 als duplicats i 79/79 a les frases
+repetides entre fulls.
+
+## El format de fets, mesurat a cegues (14-11, mostra de 40, glosses VELLES)
+
+| | bo | a mitges | fals | s'absté |
+|---|---|---|---|---|
+| frase vella (t=0,2) | 9 | 16 | **15** | 0 |
+| frase nova (t=0) | 8 | 20 | 10 | 2 |
+| **frase filtrada pels fets (v2)** | **4** | **9** | **2** | **25** |
+
+**Perd 5 frases bones i se'n treu 13 de falses: de 15 falses a 2** (i les dues són els #9 i
+#16 de sempre). Interlineal: 191 de 318 caselles plenes (60 %), **8 falses (4,5 %) i 6 de les
+8 són paraules que la taula de la còpula ja arregla** (aquest run portava les glosses velles).
+Marc: tot el que el model va omplir era cert (tema 13/13, mena 11/11, polaritat 8/8, qui
+9/9) i n'omplia un terç. El #9 porta `islman → peix` a la interlineal, que la frase ometia a
+totes dues temperatures: **el mecanisme funciona on havia de funcionar.**
+
+El que la mesura va manar canviar abans d'escalar als 1.468 trossos (fet el 14-11, v3):
+**(a)** el suport es comprova contra la interlineal, no contra un `soste` a part — de 7 podes,
+6 treien coses certes que el model tenia a la seva pròpia interlineal, i `soste` només mirat
+en rang deixava passar la frase falsa del #17 apuntant tot al token 0; **(b)** `mena`,
+`polaritat` i `qui_hi_surt` **es calculen en codi** de les partícules i dels afixos, no es
+demanen (el model n'omplia un terç i `ur` surt 104 vegades al corpus); **(c)** la `cita` només
+d'entre candidats que el codi assenyala (token darrere d'un verb de dir), marcada «X» a la
+interlineal i mai un token que designi gent — el #9 havia pres `imaziġn` («els amazics»,
+subjecte de «diuen») per la paraula anomenada i la citació falsa li havia entrat a la frase
+amb cometes; **(d)** una paraula que ÉS un token es sosté sola (el #30 perdia la frase per
+«imikk sense token»); **(e)** la llargada no eximeix de token («gos», «pou» passaven).
 
 ## Les tres millores, per ordre de sostre (auditor, 14-11)
 

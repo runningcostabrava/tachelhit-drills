@@ -117,27 +117,24 @@ SYS_FETS = (
     "Contesta NOMES amb un objecte JSON, sense cap text al voltant, amb aquestes claus:\n"
     "  \"interlineal\": una llista amb EXACTAMENT un element per cada token del tros, en el "
     "mateix ordre: la paraula catalana d'aquell token, o \"?\" si no la saps. Mai en saltis "
-    "cap, mai n'afegeixis cap.\n"
-    "  \"marc\": {\"tema\": un GRUP NOMINAL en catala (mai una oracio, mai una relacio) o "
-    "\"?\"; \"mena\": \"afirmació\" | \"pregunta\" | \"ordre\" | \"citació\" | \"?\"; "
-    "\"polaritat\": \"afirmatiu\" | \"negatiu\" | \"restrictiu\" | \"?\"; \"qui_hi_surt\": "
-    "llista entre \"jo\", \"tu\", \"ell/ella\", \"nosaltres\", \"vosaltres\", \"ells/elles\", "
-    "NOMES si una forma verbal o un pronom del tros ho sosté}.\n"
-    "  \"cita\": si el parlant ANOMENA una paraula amaziga —darrere de «da ttinin», «ar "
-    "ttinin», «qqarn», «ism nns», «en diuen», «es diu»—, aquella paraula COPIADA TAL COM ES al "
-    "tros, sense traduir; si no, null. Exemple: en «da ttinin imikk» la cita es \"imikk\", i a "
-    "la interlineal aquell token NO es tradueix: s'hi escriu \"«imikk»\". Una classe de "
-    "lingüistica esta plena de cites: busca-les.\n"
-    "  \"frase\": el catala de corregut. ESCRIU-LA sempre que les paraules plenes que fas "
-    "servir surtin dels tokens; un filtre la comprovara paraula per paraula i la treura si "
-    "una no s'aguanta, o sigui que no cal que t'abstinguis per prudencia: nomes null si no "
-    "pots dir res.\n"
-    "  \"soste\": un objecte que lliga CADA paraula plena del tema i de la frase (en "
-    "minuscules, tal com l'has escrita) amb la llista d'indexos (des de 0) dels tokens d'on "
-    "surt; i per a cada persona de qui_hi_surt, la clau \"qui:<persona>\" amb els indexos "
-    "del verb o pronom que la sosté. El que no puguis lligar a cap token, NO l'escriguis.\n\n"
-    "Regla unica: tot el que entregues ha de sortir d'un token. Una paraula sense token es "
-    "una invencio, i es rebutjara."
+    "cap, mai n'afegeixis cap. Si un token es una paraula que el parlant ANOMENA (vegeu "
+    "\"cita\"), a la seva casella hi va el token mateix entre cometes: \"«imikk»\".\n"
+    "  \"tema\": un GRUP NOMINAL en catala que digui de que va el tros (mai una oracio, mai una "
+    "relacio), fet amb paraules que surtin de la interlineal; o \"?\".\n"
+    "  \"cita\": nomes si el missatge et dona CANDIDATS A CITA (els tokens que segueixen un "
+    "verb de dir): el candidat que el parlant anomena com a paraula —«en diuen X», «es diu X»—, "
+    "copiat tal com es. NO es cita un candidat que sigui qui parla o de qui es parla (una "
+    "gent, un pronom): en «da ttinin imaziġn», «imaziġn» son els que diuen, no la paraula "
+    "dita. Si no hi ha candidats o cap no es una paraula anomenada, null.\n"
+    "  \"frase\": el catala de corregut, nomes si el pots dir amb paraules que surten de la "
+    "interlineal; si dubtes, null. Un filtre la comprovara paraula per paraula.\n"
+    "  \"soste\" (opcional): si a la frase o al tema fas servir una paraula que no casa "
+    "literalment amb la casella d'on surt («amazigues» per la casella «amazic»), lliga-la: "
+    "{\"amazigues\": [3]}.\n\n"
+    "No et demanem si es pregunta o afirmacio, ni si es negatiu, ni qui hi surt: aixo es "
+    "calcula a partir de les particules i dels afixos, no cal que ho diguis.\n"
+    "Regla unica: tot el que entregues ha de sortir d'una casella de la interlineal. Una "
+    "paraula sense casella es una invencio, i es rebutjara."
 )
 
 
@@ -333,16 +330,38 @@ def fets(deepseek, tema, tros, abans, despres, paraules):
     if despres:
         q.append(f"el tros de despres deia: {despres}")
     q += ["", f"EL TROS ({len(toks)} tokens): {tros}",
-          "ELS TOKENS, NUMERATS: " + "  ".join(f"[{i}] {t}" for i, t in enumerate(toks)), "",
-          "EL QUE EL DICCIONARI RECONEIX EN AQUEST TROS:"]
+          "ELS TOKENS, NUMERATS: " + "  ".join(f"[{i}] {t}" for i, t in enumerate(toks))]
+    cands = F.candidats_a_cita(toks)
+    if cands:
+        q.append("CANDIDATS A CITA (segueixen un verb de dir): "
+                 + ", ".join(f"[{i}] {toks[i]}" for i in cands))
+    q += ["", "EL QUE EL DICCIONARI RECONEIX EN AQUEST TROS:"]
     q += [f"  {p}" for p in paraules] or ["  (cap paraula reconeguda)"]
     try:
         r = deepseek.deepseek_generate(SYS_FETS, [{"role": "user", "text": "\n".join(q)}],
-                                       max_output_tokens=700, temperature=0.0)
+                                       max_output_tokens=600, temperature=0.0)
     except Exception as e:
         return {"fets": None, "rebutjat": [f"error: {type(e).__name__}"]}
-    nets, motius = F.comprova(r, tros)
+    nets, motius = F.comprova(r, tros, es_verb=_es_verb(), es_gent=_es_gent())
     return {"fets": nets, "rebutjat": motius}
+
+
+def _es_verb():
+    """`es_verb` del lèxic, si és carregat; si no, cap (i la persona es llegeix amb cautela)."""
+    try:
+        import lexicon
+        return eines_del_lexic(lexicon)[1]
+    except Exception:
+        return None
+
+
+#: Gentilicis i pronoms que mai no són una paraula anomenada: són qui parla o de qui es parla.
+_GENT = {"imaziġn", "imazighn", "amaziġ", "tamaziġt", "irgazn", "tmġarin", "mddn", "medden",
+         "iεrabn", "aεrab", "irumiyn", "nutni", "nutnti", "nkkni", "kunni", "ntta", "nttat"}
+
+
+def _es_gent():
+    return lambda w: w.lower() in _GENT
 
 
 # ------------------------------------------------------------------
