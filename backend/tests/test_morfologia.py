@@ -190,3 +190,40 @@ def test_no_es_parteix_dues_vegades():
     #: Dos talls seguits deixen una arrel de dues lletres, i amb dues lletres casa tot.
     #: `dnasif` només es resoldria partint `d` i després `n`; ha de callar.
     assert glossa("dnasif") is None
+
+
+# ------------------------------- el `pos` del diccionari s'equivoca, i l'exemple el delata
+def test_lexemple_amb_prefix_de_persona_fa_verb():
+    #: `sawal` («parlar») consta al diccionari amb `pos: "n."` i la glossa «Tick», però el
+    #: seu propi exemple diu `ar ukan tesawal tin tizi`: `tesawal` porta el prefix `te-` de
+    #: persona, i un nom no en porta mai.
+    assert morfologia._lexemple_el_conjuga(
+        {"tashlhit": "sawal", "pos": "n.", "example": "ar ukan tesawal tin tizi"})
+    assert morfologia._lexemple_el_conjuga(
+        {"tashlhit": "shuṛṛu", "pos": "n.", "example": "ar ishuṛṛu uɣwyul"})
+
+
+def test_el_mot_sol_a_lexemple_no_prova_res():
+    #: Que el mot surti al seu exemple és normal i no diu de quina mena és.
+    assert not morfologia._lexemple_el_conjuga(
+        {"tashlhit": "argaz", "pos": "n.", "example": "argaz anna iga ibba"})
+
+
+def test_no_es_busca_el_mot_a_dins_de_laltre():
+    #: Buscant el mot sense vora de paraula, `kra tidrekt` casava amb la partícula `ra` i
+    #: sortien 709 falsos positius en comptes de 128 troballes.
+    assert not morfologia._lexemple_el_conjuga(
+        {"tashlhit": "tidrekt", "pos": "n.", "example": "ur dar-s kra tidrekt!"})
+
+
+def test_els_caps_massa_curts_o_amb_espai_no_compten():
+    #: Amb dues lletres casa qualsevol cosa, i una entrada que és una frase sencera
+    #: («igan uhum») no té prefix de persona que valgui.
+    assert not morfologia._lexemple_el_conjuga(
+        {"tashlhit": "id", "pos": "n.", "example": "tid nnes"})
+    assert not morfologia._lexemple_el_conjuga(
+        {"tashlhit": "igan uhum", "pos": "adj.", "example": "taɣawsa igan uhum ad iga"})
+
+
+def test_sense_exemple_no_hi_ha_prova():
+    assert not morfologia._lexemple_el_conjuga({"tashlhit": "sawal", "pos": "n."})

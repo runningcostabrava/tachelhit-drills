@@ -41,6 +41,7 @@ l'única part d'aquest fitxer que no surt d'una consulta, i per això va separad
 
 Prové del compendi d'amazic.cat i de la gramàtica d'El Mountassir que ja és al projecte.
 """
+import re
 from typing import Callable, List, Optional, Tuple
 
 #: Partícules, pronoms i preposicions: classe tancada, escrita a mà. Mai una endevinalla:
@@ -398,6 +399,35 @@ def glossa(mot: str, al_diccionari: Callable[[str], List[str]],
 # El pont amb el lèxic del projecte
 # --------------------------------------------------------------------------------------
 
+#: Prefixos de persona del verb. Un nom no en porta mai cap.
+_PERSONA_A_LEXEMPLE = ("t", "te", "n", "i", "y", "tt")
+
+
+def _lexemple_el_conjuga(entrada: dict) -> bool:
+    """L'exemple de l'entrada duu el seu propi mot amb un prefix de persona?
+
+    El `pos` del diccionari s'equivoca, i de manera sistemàtica: quan l'anglès té un nom i un
+    verb amb la mateixa forma, hi va el nom. `sawal` («parlar») hi consta `pos: "n."` amb la
+    glossa «Tick», i `shuṛṛu` («bramar») hi consta «Bray» —però l'exemple de la MATEIXA
+    entrada diu `ar ishuṛṛu uɣwyul`, «el ruc brama». El prefix de persona és la prova: un nom
+    no en porta.
+
+    Això importa perquè la reixa de mena del #599 llegeix `pos`, i per tant hereta els seus
+    errors: `sawalḫ` («parlo») no es resolia i acabava mal partit com `s + awalḫ`.
+
+    Afecta 128 entrades de les 16.072 sense «v.» al pos. Poques, però netes: jutjant-ne
+    quinze a l'atzar el 14-11-2026, catorze eren verbs i la quinzena un participi d'arrel
+    verbal. Es demana la vora de paraula sencera, perquè buscar el mot a dins de l'exemple
+    casava `kra tidrekt` amb la partícula `ra` i donava 709 falsos positius.
+    """
+    cap = (entrada.get("tashlhit") or "").strip().lower()
+    exemple = (entrada.get("example") or "").lower()
+    if len(cap) < 3 or " " in cap or not exemple:
+        return False
+    return any(re.search(r"\b" + re.escape(p + cap) + r"\b", exemple)
+               for p in _PERSONA_A_LEXEMPLE)
+
+
 def _mena(registre: dict) -> set:
     """De quina mena és una paraula, segons el que en diuen les dues fonts."""
     menes = set()
@@ -409,6 +439,8 @@ def _mena(registre: dict) -> set:
             menes.add("verb")
         if "n." in pos:
             menes.add("nom")
+        if _lexemple_el_conjuga(e):
+            menes.add("verb")
     for e in (registre.get("ircam") or []):
         gram = (e.get("grammar") or "").lower()
         if "verbe" in gram:
