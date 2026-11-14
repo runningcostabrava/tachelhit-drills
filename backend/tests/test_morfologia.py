@@ -140,7 +140,8 @@ def test_una_regla_ben_aplicada_pot_caure_en_la_paraula_equivocada():
 
 
 def test_les_segures_son_les_que_no_han_calgut_cap_regla():
-    assert set(morfologia.SEGURES) == {"diccionari", "partícula", "preposició amb pronom"}
+    assert set(morfologia.SEGURES) == {"diccionari", "partícula", "forma gramatical",
+                                      "preposició amb pronom"}
     for mot in ("asif", "da", "dars"):
         assert glossa(mot)[1] in morfologia.SEGURES
     for mot in ("wasif", "imaziġn", "nssn"):
@@ -190,3 +191,108 @@ def test_no_es_parteix_dues_vegades():
     #: Dos talls seguits deixen una arrel de dues lletres, i amb dues lletres casa tot.
     #: `dnasif` només es resoldria partint `d` i després `n`; ha de callar.
     assert glossa("dnasif") is None
+
+
+# ------------------------------- el `pos` del diccionari s'equivoca, i l'exemple el delata
+def test_lexemple_amb_prefix_de_persona_fa_verb():
+    #: `sawal` («parlar») consta al diccionari amb `pos: "n."` i la glossa «Tick», però el
+    #: seu propi exemple diu `ar ukan tesawal tin tizi`: `tesawal` porta el prefix `te-` de
+    #: persona, i un nom no en porta mai.
+    assert morfologia._lexemple_el_conjuga(
+        {"tashlhit": "sawal", "pos": "n.", "example": "ar ukan tesawal tin tizi"})
+    assert morfologia._lexemple_el_conjuga(
+        {"tashlhit": "shuṛṛu", "pos": "n.", "example": "ar ishuṛṛu uɣwyul"})
+
+
+def test_el_mot_sol_a_lexemple_no_prova_res():
+    #: Que el mot surti al seu exemple és normal i no diu de quina mena és.
+    assert not morfologia._lexemple_el_conjuga(
+        {"tashlhit": "argaz", "pos": "n.", "example": "argaz anna iga ibba"})
+
+
+def test_no_es_busca_el_mot_a_dins_de_laltre():
+    #: Buscant el mot sense vora de paraula, `kra tidrekt` casava amb la partícula `ra` i
+    #: sortien 709 falsos positius en comptes de 128 troballes.
+    assert not morfologia._lexemple_el_conjuga(
+        {"tashlhit": "tidrekt", "pos": "n.", "example": "ur dar-s kra tidrekt!"})
+
+
+def test_els_caps_massa_curts_o_amb_espai_no_compten():
+    #: Amb dues lletres casa qualsevol cosa, i una entrada que és una frase sencera
+    #: («igan uhum») no té prefix de persona que valgui.
+    assert not morfologia._lexemple_el_conjuga(
+        {"tashlhit": "id", "pos": "n.", "example": "tid nnes"})
+    assert not morfologia._lexemple_el_conjuga(
+        {"tashlhit": "igan uhum", "pos": "adj.", "example": "taɣawsa igan uhum ad iga"})
+
+
+def test_sense_exemple_no_hi_ha_prova():
+    assert not morfologia._lexemple_el_conjuga({"tashlhit": "sawal", "pos": "n."})
+
+
+# ------------------------------ la taula escrita a mà i l'ortografia que el model escriu
+def test_la_taula_casa_amb_lortografia_del_model():
+    #: La taula ve del compendi (`acku`) i l'adaptador de l'ASR es va afinar amb `c→š`, o
+    #: sigui que escriu `ašku`. És la quarta paraula més freqüent de la llista (52
+    #: aparicions) i no hi casava: rebia «Because, because of, Since» del diccionari,
+    #: marcat com a lectura SEGURA quan era sort.
+    assert morfologia.clau_de_particula("ašku") == "acku"
+    assert morfologia.clau_de_particula("maḫ") in ("maḫ", "max")
+    assert glossa("ašku")[0].startswith("perquè")
+
+
+def test_una_paraula_que_no_hi_es_no_sinventa_una_clau():
+    assert morfologia.clau_de_particula("tamaziġt") is None
+    assert morfologia.clau_de_particula("ššššš") is None
+
+
+def test_les_paraules_de_funcio_que_el_diccionari_glossava_malament():
+    #: `ġir` («només») sortia «Run, Caper, Hurry» i marcat com a SEGUR: la mena d'error
+    #: pitjor, confiat i fals.
+    for mot, tros in (("ġir", "només"), ("akkw", "tot"), ("mad", "què"),
+                      ("man", "quin"), ("waḫḫa", "tot i que")):
+        diu, _ = glossa(mot)
+        assert tros in diu, (mot, diu)
+
+
+def test_nnig_diu_les_dues_lectures():
+    #: Conjunció «o» i «vaig dir» del verb `ini`: totes dues corrents, i no es pot triar
+    #: sense context.
+    #: La taula ve escrita a mà, i per tant la FONT és fiable; el que no es pot decidir és
+    #: quina de les dues lectures toca. Per això les diu totes dues al text en comptes de
+    #: triar-ne una, i qui munti la frase ho veu.
+    diu, _ = glossa("nniġ")
+    assert "o, o bé" in diu and "vaig dir" in diu
+
+
+# -------------------------------------- el verb «ser», que el diccionari serveix com a nom
+def test_el_verb_ser_surt_de_la_taula_i_no_del_diccionari():
+    #: 171 de les 220 aparicions de la còpula arribaven al traductor absents o com a nom:
+    #: `tga` «Juniper» (40), `illa` «Obligation, Case» (23), `tlla` «action de pleurer» (22).
+    #: Sense el verb, els noms arriben i el model s'inventa qui fa què.
+    for forma, tros in (("iga", "és"), ("tga", "és"), ("illa", "hi ha"), ("tlla", "hi ha"),
+                        ("llan", "hi ha"), ("igan", "que és"), ("illan", "que hi ha"),
+                        ("ira", "vol"), ("tram", "voleu"), ("riġ", "vull")):
+        diu, com = glossa(forma)
+        assert tros in diu, (forma, diu)
+        assert com.startswith("forma gramatical"), (forma, com)
+
+
+def test_la_forma_gramatical_tambe_casa_amb_lortografia_de_lasr():
+    #: `macc` («però») l'ASR l'escriu `mašš`; `giḫ` i `giġ` són la mateixa persona.
+    assert "però" in glossa("mašš")[0]
+    assert "però" in glossa("macc")[0]
+    assert "sóc" in glossa("giġ")[0]
+
+
+def test_una_forma_amb_dues_lectures_mai_no_es_segura():
+    #: `inna` és «va dir» (ini) i també «mare»: la taula ho diu tot dos, i cap no és segura.
+    diu, com = glossa("inna")
+    assert "va dir" in diu and "mare" in diu
+    assert com not in morfologia.SEGURES
+
+
+def test_la_negacio_del_verb_ser():
+    #: Darrere d'`ur` la `a` es torna `i`: `ur illi`, `ur tlli`, `ur llin`.
+    assert "no hi ha" in glossa("illi")[0]
+    assert "no hi ha" in glossa("llin")[0]
