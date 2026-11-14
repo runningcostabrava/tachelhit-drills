@@ -307,7 +307,9 @@ def comprova(resposta: str, tros: str,
              es_verb: Optional[Callable[[str], bool]] = None,
              es_gent: Optional[Callable[[str], bool]] = None,
              es_particula: Optional[Callable[[str], bool]] = None,
-             es_coneguda: Optional[Callable[[str], bool]] = None
+             es_coneguda: Optional[Callable[[str], bool]] = None,
+             glosses: Optional[List[str]] = None,
+             catala_permes: Optional[set] = None
              ) -> Tuple[Optional[dict], List[str]]:
     """(fets nets, motius de poda). Fets és None si la resposta no val com a conjunt.
 
@@ -343,6 +345,25 @@ def comprova(resposta: str, tros: str,
             copiades += 1
     if copiades:
         motius.append(f"caselles amb el token copiat tal qual: {copiades}")
+    #: Una casella que és la glossa estrangera copiada tal qual no és català: contra la
+    #: veritat humana, `issuda → «souder»` i `tddit → «sangsue»` eren el francès de l'IRCAM
+    #: sense traduir, dues de les quatre falses sobre token exacte (~5 % de les caselles). Es
+    #: mira si la casella és una paraula del text de les glosses que NO sigui català de la
+    #: taula a mà (les lectures de la taula —«perquè», «només»— sí que poden coincidir).
+    if glosses:
+        estrangeres = set()
+        for g in glosses:
+            cos = g.split(" = ", 1)[-1].split(" ≈ ", 1)[-1]
+            estrangeres.update(w.lower() for w in re.findall(r"[^\W\d_]+", cos))
+        if catala_permes:
+            estrangeres -= {w.lower() for w in catala_permes}
+        crues = 0
+        for i, cel in enumerate(inter):
+            if cel != "?" and _net(cel) in estrangeres and len(_net(cel)) >= 4:
+                inter[i] = "?"
+                crues += 1
+        if crues:
+            motius.append(f"caselles que són la glossa estrangera copiada: {crues}")
 
     soste = d.get("soste") if isinstance(d.get("soste"), dict) else {}
     cobertes = _cobertes(inter, toks, soste)

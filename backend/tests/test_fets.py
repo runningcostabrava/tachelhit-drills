@@ -278,3 +278,15 @@ def test_una_cita_ha_de_ser_una_paraula_que_el_lexic_coneix_sencera():
     base = {"interlineal": ["?", "diuen", "«imikk»"], "tema": "?", "cita": "imikk", "frase": None}
     f, motius = fets.comprova(json.dumps(base), tros, es_coneguda=lambda w: w in {"imikk", "manik"})
     assert f["cita"] == "imikk"
+
+
+def test_una_casella_que_es_la_glossa_estrangera_copiada_es_un_interrogant():
+    #: `issuda → «souder»`, `tddit → «sangsue»`: francès de l'IRCAM sense traduir, dues de les
+    #: quatre falses sobre token exacte contra la veritat humana.
+    f, motius = fets.comprova(json.dumps({
+        "interlineal": ["souder", "només", "peix"], "tema": "?", "frase": None}),
+        "issuda ġar islman",
+        glosses=["issuda = souder, joindre", "ġar = només, solament", "islman = Fish, poisson"],
+        catala_permes={"només", "solament"})
+    assert f["interlineal"] == ["?", "només", "peix"]
+    assert any("estrangera" in m for m in motius)

@@ -346,7 +346,8 @@ def fets(deepseek, tema, tros, abans, despres, paraules):
         return {"fets": None, "rebutjat": [f"error: {type(e).__name__}"]}
     nets, motius = F.comprova(r, tros, es_verb=_es_verb(), es_gent=_es_gent(),
                               es_particula=lambda w: morfologia.clau_de_particula(w) is not None,
-                              es_coneguda=_es_coneguda())
+                              es_coneguda=_es_coneguda(), glosses=paraules,
+                              catala_permes=_catala_de_la_taula())
     return {"fets": nets, "rebutjat": motius}
 
 
@@ -366,6 +367,18 @@ _GENT = {"imaziġn", "imazighn", "amaziġ", "tamaziġt", "irgazn", "tmġarin", "
 
 def _es_gent():
     return lambda w: w.lower() in _GENT
+
+
+_CATALA_TAULA = set()
+
+
+def _catala_de_la_taula():
+    """Les paraules catalanes de les taules a mà: una casella que les repeteixi és català, no
+    glossa estrangera copiada."""
+    if not _CATALA_TAULA:
+        for v in list(morfologia.PARTICULES.values()) + list(morfologia.FORMES_GRAMATICALS.values()):
+            _CATALA_TAULA.update(w.lower() for w in re.findall(r"[^\W\d_]+", v))
+    return _CATALA_TAULA
 
 
 def _es_coneguda():
