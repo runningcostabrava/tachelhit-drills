@@ -235,3 +235,14 @@ def test_el_forat_dins_la_frase_es_marca_com_a_buit():
         "interlineal": ["no", "no és", "només", "paraules", "no", "?", "només", "?"],
         "tema": "?", "frase": "No és només paraules, no ? només ?"}), tros)
     assert f["frase"] == "No és només paraules, no [?] només [?]"
+
+
+def test_larrel_casa_singular_i_plural_de_quatre_lletres():
+    #: «verbs» contra la casella «verb» (#36 de la v6): tallar sempre a cinc els separava.
+    f, motius = fets.comprova(json.dumps({
+        "interlineal": ["?", "verb", "amazic"], "tema": "els verbs amazics", "frase": None}),
+        "n imyagn tmaziġt")
+    assert f["marc"]["tema"] == "els verbs amazics" and not motius
+    #: i l'alternança vocàlica NO casa: «surt» contra «sortir» és una pèrdua acceptada
+    assert not fets._mateixa_arrel("surt", "sortir")
+    assert fets._mateixa_arrel("escriptura", "escriure")

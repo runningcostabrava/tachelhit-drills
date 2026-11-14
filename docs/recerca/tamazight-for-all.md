@@ -81,6 +81,18 @@ tots vuit. El WER alt amb CER baix diu el de sempre: el que falla són els espai
 lletres. **Aquest 0,210 és la línia de base contra la qual s'ha de mesurar el lector amb el
 lèxic a dins (H3) quan es desplegui.** Fitxers: `canal/veritat_parlat.json`.
 
+**El que aquesta veritat acota (auditor, 14-11).** Tot el que s'ha jutjat sobre els 40 trossos
+de les classes és **consistència interna** —la casella és fidel a la glossa i a la cadena de
+l'ASR—, no veritat: amb WER 0,72 una casella pot ser una traducció impecable d'un token que
+l'ASR s'ha inventat. I **cap de les 31 classes no té subtítol humà**: els 1.468 trossos no es
+podran validar mai directament. L'única prova contra l'àudio és passar la canonada de fets pels
+226 versos narrats i mirar sobre quins tokens cauen les caselles (cert / substituït / inserit,
+per alineament amb la veritat). *Estat:* en marxa (`fets_veritat.py`). Avís d'abast: narració
+no és classe; el número no es trasllada sense dir-ho. També enterra del tot la vara «el
+diccionari el reconeix» (70,1 % dels mots) contra un WER de 0,72: reconegut no vol dir
+correcte — amb la matisació que el WER compta cada espai mal posat com un mot errat (`ar
+saqquln` ↔ `arsaqqull`), i el CER de 0,21 diu que les lletres hi són molt més que els mots.
+
 ## Hipòtesis vives
 
 **H1 · L'error dominant és que la glossa entrega els noms i es menja el verb.** Mesura de
@@ -325,8 +337,10 @@ de còpula; el #3, bo, la tenia (`tgi→no és`) → **regla de la còpula**, qu
 falsos de 14. El «?» dins la frase: 5 de 15 el porten, 1 bo / 4 a mitges / 0 falses — **el
 model posa el forat on abans posava la invenció**; no compta en contra i es marca [?]. De les
 11 podes de la v4, 10 eren flexió («pregunta»/`pregunto`, «verbs»/`verb`): la comparació per
-arrel les recupera. Tot això és a la **v6** (PR #606). Judici de la v6 pendent; és el que
-decideix si s'escala als 1.468 trossos. Límit conegut que no s'arregla: un tema pot dur un
+arrel les recupera. Tot això és a la **v6** (PR #606). *v6 (capçalera, codi 3479dd9):* frase **18 escrites, 2
+podades, 16 passen** (5 amb [?]); tema 22; cita 2; interlineal 187/318 amb el compte honest;
+`qui_hi_surt` omplert en 18; **6 podes en total (la v4 en tenia 11)**. Judici de la v6 pendent;
+és el que decideix si s'escala als 1.468 trossos. Límit conegut que no s'arregla: un tema pot dur un
 genitiu fals («traducció de fons», #37); prohibir-los mataria «la conjugació dels verbs».
 
 ## Les tres millores, per ordre de sostre (auditor, 14-11)

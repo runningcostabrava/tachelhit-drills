@@ -178,10 +178,22 @@ def _cobertes(inter: List[str], toks: List[str], soste: dict) -> set:
     return fora
 
 
+def _mateixa_arrel(a: str, b: str) -> bool:
+    """Casen si comparteixen els primers caràcters, fins a cinc o fins a la més curta.
+
+    Tallar sempre a cinc feia que «verbs» (*verbs*) no casés amb «verb» (*verb*): totes les
+    parelles singular/plural de quatre lletres es perdien (poda injusta del #36 a la v6). El
+    que no casa mai, i s'accepta com a pèrdua dita, és l'alternança vocàlica del català
+    («surt»/«sortir», «vull»/«voler»): una poda de més, no una falsedat de menys.
+    """
+    n = min(5, len(a), len(b))
+    return n >= 4 and a.lower().translate(_ACCENTS)[:n] == b.lower().translate(_ACCENTS)[:n]
+
+
 def _sostingut(text: str, cobertes: set) -> Tuple[bool, List[str]]:
-    arrels = {_arrel(c) for c in cobertes if len(c) >= 4}
+    llargues = [c for c in cobertes if len(c) >= 4]
     orfes = [p for p in _paraules_plenes(text)
-             if p not in cobertes and not (len(p) >= 4 and _arrel(p) in arrels)]
+             if p not in cobertes and not any(_mateixa_arrel(p, c) for c in llargues)]
     return (not orfes), orfes
 
 
