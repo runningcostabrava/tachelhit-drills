@@ -1,6 +1,12 @@
-# Lector per plantilles del tifinag imprès — vídeo ZlG8Bp_rwKc (aslmdtv, «ⵜⵓⵍⵍⵉⵙⵜ: ⴰⵎⵓⵛⵛ ⴰⴱⵕⴱⴰⵛ»)
+# Lector per plantilles del tifinag imprès (#622, #457) — primera prova: el conte del gat d'aslmdtv
 
-Tot és en aquesta carpeta. Cap model, cap servei extern: numpy + PIL + scipy.ndimage i els ulls.
+Fet el 15-11-2026 per un agent sobre el vídeo `ZlG8Bp_rwKc` (aslmdtv, «ⵜⵓⵍⵍⵉⵙⵜ: ⴰⵎⵓⵛⵛ ⴰⴱⵕⴱⴰⵛ»).
+Cap model, cap servei extern: numpy + PIL + scipy.ndimage i els ulls. El codi és a
+`tools/ocr_tifinag/` i es fa córrer dins d'una carpeta de treball que tingui el vídeo:
+`fotogrames.py` → `glifs.py` → etiquetar `grups_full.png` a `etiquetes.json` → `transcriu.py`.
+Les dades (fotogrames, línies, grups, transcripció) són a
+`C:\Users\josep\Veus-tachelhit\_escoltats\aslmdtv\ocr_ZlG8Bp_rwKc\`. Material de tercers: es
+llegeix i es mesura; res a la biblioteca sense permís.
 
 ## Què s'ha fet i amb quins números
 

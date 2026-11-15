@@ -18,7 +18,8 @@ import sys
 
 os.environ.setdefault("LEXICON_WARMUP", "0")
 AQUI = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, r"C:\Users\josep\app2\tachelhit-drills.worktrees\mirar\backend")
+#: el transliterador del projecte: tools/ocr_tifinag/ → tools/ → arrel → backend/
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(AQUI)), "backend"))
 try:
     from transliteration import to_forms
 except Exception as e:  # pragma: no cover
