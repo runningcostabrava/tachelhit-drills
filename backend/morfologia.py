@@ -105,6 +105,7 @@ PARTICULES = {
     "zund": "com",
     "f": "sobre, per",
     "ddaw": "sota",
+    "did": "amb",
     "ingr": "entre",
     "ar_prep": "fins a",
     "bla": "sense",
@@ -169,6 +170,24 @@ PARTICULES = {
     # —i, pitjor, marcades com a lectura SEGURA. `ġir` («només») sortia «Run, Caper, Hurry».
     "ġir": "només, solament",
     "ġar": "només, solament",
+    # Dels subtítols humans dels contes de Tamazight For All (15-11-2026): formes que el
+    # diccionari glossava com a nom o verb i que un parlant tradueix d'una altra manera.
+    # `ġr`: «ɣr ar isaqqul g ill» = he was just looking at the sea; «hat ɣr ayax a dari» =
+    # that's all I have. El diccionari deia «appeler, chez».
+    "ġr": "només — o bé: cap a, a",
+    # `hat`: presentatiu, «hat talkm tafukt» = it's almost noon; «hat ula nkkin» = I also…
+    "hat": "mira que, vet aquí (presentatiu)",
+    # `ta` darrere d'`ur`: «ur ta ssinx» = I don't know yet; «ur ta issn» = still doesn't know
+    "ta": "encara (ur ta = encara no) — o bé: aquesta",
+    # `ayda`: «izznza ak° ayda illan dars» = he had sold everything he owned. «Terra» era fals.
+    "ayda": "béns, coses, el que (algú) té",
+    # `kiy`: «azul kiy» = you (there)
+    "kiy": "tu",
+    # `mas` = ma + s: «mas ra tɣlit?» = where are you going?; «mas issuda» = where he's going.
+    # El diccionari deia «Mister».
+    "mas": "cap a on, amb què (ma + s)",
+    # `awa`: «is awa ar flli tṣṣat?» = are you mocking me? (partícula de discurs)
+    "awa": "doncs, vinga (partícula de discurs)",
     "akkw": "tot, tots, completament",
     "waḫḫa": "tot i que, encara que — o, tot sol: d'acord, va bé",
     "mad": "què, el que, qui",
@@ -183,12 +202,13 @@ PARTICULES = {
 }
 
 #: Les preposicions que porten el pronom enganxat: `dar`+`s` = «en poder d'ell» = «ell té».
-PREPOSICIONS_AMB_CLITIC = ("dar", "ġur", "ġ", "s", "f", "ddaw", "ingr", "zund")
+PREPOSICIONS_AMB_CLITIC = ("dar", "ġur", "ġ", "s", "f", "ddaw", "ingr", "zund", "did")
 #: Els pronoms que s'hi enganxen, i què volen dir en aquesta posició. Van dels més llargs als
 #: més curts, perquè `darnsn` no es talli a `dar`+`n`.
 CLITICS = {
     "nsnt": "elles", "nsn": "ells", "unt": "vosaltres (femení)", "un": "vosaltres",
     "nġ": "nosaltres", "nḫ": "nosaltres", "snt": "elles", "sn": "ells",
+    "awn": "vosaltres",     # `didawn` = amb vosaltres; sortia «i, amb + Place»
     "i": "mi", "k": "tu (masculí)", "m": "tu (femení)", "s": "ell/ella",
     "ġ": "nosaltres", "ḫ": "nosaltres",
 }
@@ -517,6 +537,26 @@ FORMES_GRAMATICALS = {
     # per l'ASR; es diuen les dues.
     "ddiġ": "vaig anar (ddu) — o bé: encara, altre cop (diġ)",
     "ddiḫ": "vaig anar (ddu) — o bé: encara, altre cop (diġ)",
+    # Verbs corrents que el diccionari encaixava en un altre lema, trobats als subtítols humans
+    # dels contes (15-11-2026): `yufa` «ur yufa mlid as ɣr turft» = he found only the ship
+    # (af, trobar; el diccionari deia «valoir mieux»); `iffġ` «a yffɣ sg tiɣṛmt» = to get out of
+    # the city (ffġ, sortir; deia «valoir mieux»); `ssinḫ` «ur ta ssinx» = I don't know yet
+    # (ssn, saber; deia «de là»); `tusi` «tlla tusi nnig as inmuddan» = it was full of travellers
+    # (asi, portar/dur; deia «gémination»).
+    "yufa": "va trobar (af)",
+    "tufa": "va trobar (ella) (af)",
+    "ufiġ": "vaig trobar (af)",
+    "ufiḫ": "vaig trobar (af)",
+    "ufan": "van trobar (af)",
+    "iffġ": "surt, va sortir (ffġ)",
+    "tffġ": "surt, va sortir (ella) (ffġ)",
+    "ffġn": "surten, van sortir (ffġ)",
+    "ssnġ": "sé (ssn)",
+    "ssnḫ": "sé (ssn)",
+    "ssinġ": "sé (ssn)",
+    "ssinḫ": "sé (ssn)",
+    "tusi": "porta, duu (asi)",
+    "yusi": "porta, duu (asi)",
 }
 
 #: La taula està escrita amb l'ortografia del compendi (`acku`, `max`), i el model d'ASR

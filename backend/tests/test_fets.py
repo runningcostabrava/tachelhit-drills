@@ -120,7 +120,8 @@ def test_les_persones_surten_dels_pronoms_i_de_les_formes_de_la_taula():
 
 def test_es_verb_i_es_particula_sacepten_i_signoren():
     #: els qui criden passen aquests arguments; el camp ja no se'n fia
-    assert fets.qui_hi_surt(["iffġ"], lambda f: True) == []
+    #: `ikšm` («entra») no és a la taula a mà: el prefix i- sol no dóna persona
+    assert fets.qui_hi_surt(["ikšm"], lambda f: True) == []
     assert fets.qui_hi_surt(["taguriġ"], lambda f: True, lambda f: False) == []
 
 
