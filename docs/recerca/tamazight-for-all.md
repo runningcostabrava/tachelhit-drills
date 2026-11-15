@@ -775,6 +775,49 @@ canonada **omple un 55 % més de caselles i escriu un 60 % més de frases** sens
 trobi més falsedat, molt per sobre del soroll de ±3 de la no-reproduïbilitat. La veritat per
 casella segueix sent la dels 226 versos narrats.
 
+## La tarda del 15-11: catàleg únic, llibre de registre, coneixement del professor, dues fonts més
+
+**Catàleg únic (`tools/lm/cataleg_unic.py`, `tamazight-for-all-cataleg-unic.md`):** 566 peces
+(440 vídeos + 96 shorts + 30 directes), 95 h. La llengua parlada no es pot treure de la densitat
+de rètols (els directes en tenen pocs, i l'ASR de YouTube escriu brossa davant de l'amazic): el
+senyal bo és la **proporció de mots de funció del dàrija** al transcrit automàtic més els mots per
+minut, calibrat amb 21 controls coneguts (contes amb veritat, Stamazight, directes «bالدارجة»):
+**21/21**. Resultat: **247 peces en dàrija (77 h)**, **175 en amazic (10,5 h; 40 amb subtítols
+humans, 1,9 h)**, 23 mixtes, 67 curtes, 54 sense transcrit. Veu amaziga neta per a H4: 10,5 h.
+
+**Llibre de registre (`tamazight-for-all-llibre-de-registre.md`):** una fila per peça amb el que
+té (subtítols humans i llengües, transcrit automàtic, llengua) i el que n'hem tret (escoltada,
+amb lèxic, transcrita per al corpus paral·lel, minada, veritat humana). És la comprovació «vídeo
+per vídeo» que en Pablo demanava, escrita.
+
+**El coneixement del professor (`tamazight-for-all-coneixement-darija.md`, 1.134 ítems):** cada
+paraula, afix, regla o expressió que explica en dàrija, amb el significat que dóna i **l'enllaç al
+segon del vídeo on ho diu (98 % lligats)**: la parella veu–transcripció–traducció. Per vídeo i
+mena; els directes de lèxic (animals, adjectius, derivació) són els més rics.
+
+**amazic.cat com a quarta font (`tools/lm/amazic_cat.py`; en Pablo: «pots utilitzar el diccionari
+de amazic.cat»).** La cerca `?post_type=encyclopedia&s=<forma>` torna els lemes catalans on la
+forma apareix; 656 formes consultades (lèxic validat, 25 freqüents, induïdes, minades), una
+petició cada 1,5 s. **512 no hi són** (són grafies de l'ASR o formes conjugades, no lemes), 25
+coincideixen, 113 «a revisar» (el nostre aparellador francès↔català és curt), 6 només allà. El
+que importa és el que confirma en català: `ayda` → béns (CLḤ), `nnif` → després / més enllà,
+`immut` → «se li ha mort el cor», `tutlayt` → llengua (ling.), `turft` → vehicle (avió, camió:
+«turft n yignna»). Taula: `tamazight-for-all-amazic-cat-vs-lexic.md`.
+
+**ⵡⵉⴽⵉⵎⴰⵡⴰⵍ, el Viccionari zgh, cinquena font i la primera LLIURE (CC BY-SA; en Pablo va donar
+l'enllaç).** Bolcat oficial: 1.033 entrades en tifinag, **612 amb traduccions** (fr 599, en 498,
+ar 601, es 145, ca 31), 991 amb definició en amazic, 448 amb morfologia (plural, **estat
+d'annexió** en 244) i 202 amb arrel. `tools/lm/wikimawal.py` → `backend/data/wikimawal_zgh.json`
+(atribució dins). Contra el nostre lèxic (`tamazight-for-all-wikimawal-vs-lexic.md`): de 600
+entrades amb en/fr, **369 coincideixen, 130 a revisar, 101 no les teníem** (candidates lliures).
+I la primera mesura de la regla d'annexió contra dades alienes: **recupera la forma lliure en 213
+de 222 parelles (96 %)**; dels 235 plurals del Viccionari només 70 són al lèxic: 165 plurals
+lliures per afegir. Com que és lliure, el pas següent és incorporar-lo (lèxic, plurals, i les
+definicions en amazic al model de llengua), amb atribució.
+
+**H4, el recompte (`tools/lm/pseudo_tfa.py`):** vegeu el punt 3 del programa: amb el filtre
+d'acord entre dues lectures queden 6,7 min; sense, 56 min de transcripció provisional.
+
 ## El programa (en Pablo, 15-11: «examina tots els vídeos del canal i, com un lingüista que
 ## investiga una llengua perduda, desxifra-la; ensenya el model a transcriure millor i a traduir»)
 
@@ -792,7 +835,16 @@ casella segueix sent la dels 226 versos narrats.
 3. **El lector (H4):** l'única palanca que queda és afinar l'adaptador amb veu d'aquest canal.
    Sense transcripcions humanes, la via de camp: transcripció provisional del millor lector
    (feix + lèxic), filtrada pel que les altres fonts avalen, re-entrenament, i mesura contra els
-   226 versos; s'itera només si el CER baixa. Primer experiment: les 3,5 h dels 58 contes.
+   226 versos; s'itera només si el CER baixa. *Primer recompte (15-11, `tools/lm/pseudo_tfa.py`,
+   49 contes sense els 8 de la veritat):* 1.739 enunciats de la lectura amb lèxic; 651 massa
+   curts; dels 1.088 restants, el filtre d'acord amb la lectura greedy (≥ 60 % de paraules
+   iguals) en deixa **149, 6,7 minuts**; amb acord ≥ 40 %, 344 (17,6 min); sense filtre d'acord,
+   1.040 (55,6 min), el 95 % dins del lèxic. És a dir: el que les dues lectures del mateix
+   model avalen són set minuts, i la resta és el model escoltant-se a si mateix. Un
+   experiment honest és possible (56 min de transcripció provisional + repetició del corpus
+   propi, mesura als 226 versos) però el prior és que no mogui res; el que mouria el lector
+   són **transcripcions humanes**: les tres pistes en tifinag a mà (10 min) com a llavor, o
+   demanar-les a l'autor.
 4. **La traducció:** la canonada de fets amb el lèxic validat i les regles del professor; mesura
    sempre la mateixa (mostra de 40 a cegues, i els 226 versos quan hi ha veritat).
 
