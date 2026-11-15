@@ -665,7 +665,43 @@ avala la taula a mà), 11 nous, 28 «contradiu» (els mateixos de l'anglès: `id
 «Déu», `knnumi` أنتم 0,86 «vosaltres», `isaqqul` staring/يحدق, `umsfri` interpreter/مترجم,
 `wanig` looks/يبدو «sembla que»; les cinc entren a `LEXIC_VALIDAT`, més `tanirt` (nom propi,
 0,89) i el clític `ak` (`didak` = amb tu: صفك). Taules:
-`tamazight-for-all-induccio-58-arab*.md`, `…-h3-vs-lexic.md`.
+`tamazight-for-all-induccio-58-arab*.md`, `…-h3-vs-lexic.md`. Al catàleg només hi ha una
+pista humana en francès (115 s) i tres `en-US`: l'anglès i l'àrab són tot el que hi ha.
+
+**H10 · Un lector millor sense entrenar: Omnilingual ASR (Meta, 1.600 llengües).** Al
+benchmark MTNRA (tachelhit d'estudi) omniASR-LLM-7B feia CER 0,27, el millor dels vint
+sistemes. Prova sobre els mateixos 241 versos (kernel `tfa-h10-omnilingual`). *Fets de
+l'entorn (15-11), perquè ningú no hi torni a caure:* (1) `pip install omnilingual-asr` falla a
+Kaggle: fairseq2 no té roda per al Python 3.13, ni amb el torch 2.11+cu130 de la imatge ni
+baixant a torch 2.9+cu128 (`ResolutionImpossible` a l'índex `fair.pkg.atmeta.com`); (2) els CTC
+exportats a ONNX (sherpa-onnx, 300M i 1B int8, CPU, 149 s i 391 s) no admeten condició de
+llengua i escriuen l'amazic dels contes **en lletres àrabs** («بابا ميدلمنيف إلخ» per «baba
+baba ma yllan nnif ill ax»): inservibles contra una veritat llatina, i una lliçó: sense dir-li
+la llengua, el model sent darija; (3) v4: un Python 3.12 a part dins del kernel (uv) amb torch
+2.9 + fairseq2, per córrer els LLM 1B i 3B condicionats a `shi_Latn` i `tzm_Latn`. Vuit
+versions del kernel fins que va córrer: la combinació que funciona és **Python 3.12 (uv) +
+torch 2.8.0+cu128 + fairseq2==0.6 (índex `pt2.8.0/cu128`) + omnilingual-asr 0.2.0 +
+numpy<2 + pyarrow==20.0.0**; omnilingual-asr exigeix fairseq2 ≤ 0.6 i pyarrow ≥ 20, i el 26
+vol numpy 2. *Resultat (mateixos 226 versos narrats, mateix `h3_puntua.py`;
+`tamazight-for-all-h10-taula.md`):*
+
+| lector | CER | CER plegat | WER | versos en lletres àrabs |
+|---|---|---|---|---|
+| **el nostre MMS afinat, greedy** | **0,206** | **0,182** | **0,714** | 0 |
+| omniASR-LLM-1B `shi_Latn` | 0,359 | 0,344 | 0,846 | 28 / 241 |
+| omniASR-LLM-3B `shi_Latn` | 0,580 | 0,571 | 0,910 | 107 / 241 |
+| omniASR-LLM-1B/3B `tzm_Latn` | 0,85–0,88 | | ~1,0 | 205–214 / 241 |
+
+`tzm_Latn` no és al mapa del model («lang not in mapping»: de les varietats amazigues només
+hi ha `shi_Latn`, `kab_Latn`, `rif_Latn/Arab`, `taq_Latn`), i aleshores escriu en àrab. Fins i
+tot condicionat a `shi_Latn`, el 3B cau a l'àrab a 107 versos de 241, i l'1B a 28. Sobre el
+que escriu en llatí, l'1B és raonable («illa kis ay‐dawr jjin zritit» per «illa gis ayda ur
+djjin tẓṛi tiṭ») però lluny del nostre. **Veredicte: H10 morta tal com està.** El nostre
+adaptador, afinat amb el corpus propi, guanya de molt un model general de 1.600 llengües
+sense afinar; la via per a un lector millor no és canviar de model, és **afinar-ne un amb
+més àudio d'aquesta parla** (H4), i Omnilingual (Apache-2.0, amb adaptació prevista) és un
+candidat de base tan bo com MMS, no un substitut. Quedar-se'n: els models generals senten
+darija quan no se'ls diu la llengua, i a vegades també quan se'ls diu.
 
 ## El que bloqueja
 
