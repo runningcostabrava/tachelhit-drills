@@ -393,3 +393,14 @@ def test_el_creuament_de_dues_fonts_independents_entra_al_lexic_validat():
         diu, com = glossa(forma)
         assert tros in diu and " — o bé: " not in diu, (forma, diu)
         assert com == "lèxic validat", (forma, com)
+
+
+def test_ax_es_un_dictic_rere_un_nom_i_ens_rere_un_verb():
+    #: #398, 15-11-2026: 20 aparicions als contes de TFA amb pista humana i anglès humà, totes
+    #: darrere d'un nom o d'un díctic i traduïdes com a determinant («ill ax» this sea, «dinn ax»
+    #: there, «ikru ann ax» that lamb); «ens» només darrere d'un verb. La glossa ha de dir les dues
+    #: lectures amb la seva condició, i no ha de dir mai «també».
+    for forma in ("ax", "aġ", "aḫ"):
+        diu, com = glossa(forma)
+        assert "díctic" in diu and "ens" in diu and "també" not in diu, (forma, diu)
+        assert com == "partícula", (forma, com)
