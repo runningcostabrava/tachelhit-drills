@@ -28,13 +28,23 @@ rutes = set()
 for f in sorted(glob.glob(os.path.join(carpeta, "mesura", "*.json"))):
     d = json.load(io.open(f, encoding="utf-8"))
     rutes |= set(d.get("puntuacio") or {})
+    for v in d["versos"]:
+        #: els rètols de pantalla de l'entrada i dels crèdits («civilització», «història», «la meva
+        #: ciutat») són a la pista però ningú no els diu: veritat d'1-2 mots i els lectors no hi
+        #: senten res. Es queden al corpus com a «rètol» i no compten com a parla.
+        lect = [v.get(r) for r in ("transcribe_mms", "transcribe_mms_lm") if v.get(r) is not None]
+        if len(v["veritat"].split()) <= 2 and lect and all(len(x.split()) <= 1 for x in lect):
+            v["mena"] = "rètol"
     tots += d["versos"]
     p = d.get("puntuacio") or {}
-    files.append((d["video"], len(d["versos"]), sum(v["a"] - v["de"] for v in d["versos"]) / 60, p))
+    parlats = [v for v in d["versos"] if v["mena"] == "parlat"]
+    p = {r: h3_puntua.puntua(parlats, r, "parlat", plegat=False) for r in p}
+    files.append((d["video"], len(parlats), sum(v["a"] - v["de"] for v in parlats) / 60, p))
 rutes = sorted(rutes)
 with io.open(os.path.join(carpeta, "resum.md"), "w", encoding="utf-8") as g:
-    g.write(f"# Vídeos amb pista amaziga humana: el nostre lector contra la pista ({len(files)} vídeos, {len(tots)} rètols, "
-            f"{sum(x[2] for x in files):.1f} min de rètol)\n\n")
+    n_retol = sum(1 for v in tots if v["mena"] == "rètol")
+    g.write(f"# Vídeos amb pista amaziga humana: el nostre lector contra la pista ({len(files)} vídeos, "
+            f"{len(tots) - n_retol} rètols parlats, {sum(x[2] for x in files):.1f} min; {n_retol} rètols de pantalla exclosos)\n\n")
     g.write("| vídeo | títol | rètols | min | " + " | ".join(f"CER {r} | WER {r}" for r in rutes) + " |\n")
     g.write("|---|---|---|---|" + "---|---|" * len(rutes) + "\n")
     for vid, n, m, p in files:
@@ -47,7 +57,7 @@ with io.open(os.path.join(carpeta, "resum.md"), "w", encoding="utf-8") as g:
         if p:
             g.write(f"| `{r}` | {p['n']} | {p['cer']:.3f} | {p['wer']:.3f} | {p['wer_frontera']:.3f} | {q['cer']:.3f} |\n")
             print(r, p, "plegat", round(q["cer"], 3))
-json.dump([{k: v for k, v in x.items() if k in ("video", "n", "de", "a", "tifinag", "veritat", "en", "ar", "fr", "en-US")} for x in tots],
+json.dump([{k: v for k, v in x.items() if k in ("video", "n", "de", "a", "mena", "tifinag", "veritat", "en", "ar", "fr", "en-US")} for x in tots],
           io.open(os.path.join(carpeta, "veritat_zouhir.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=0)
 print(len(files), "vídeos ·", len(tots), "rètols · amb en/ar/fr:",
       sum(1 for x in tots if x.get("en") and x.get("ar") and x.get("fr")), "· desat resum.md i veritat_zouhir.json")
