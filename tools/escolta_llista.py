@@ -193,10 +193,16 @@ def emissions(wav):
 
 
 # ------------------------------------------------------------------ el model
-def sent(cami, space, caps):
+#: Les dues rutes del mateix lector al Space: greedy (la de sempre) i el feix amb el lèxic a
+#: dins (#601, H3: WER 0,71 → 0,64 i CER 0,207 → 0,198 sobre 226 versos amb veritat humana,
+#: 15-11-2026). La segona no torna certesa: la puntuació del feix no és comparable.
+RUTES = ("/transcribe_mms", "/transcribe_mms_lm")
+
+
+def sent(cami, space, caps, ruta=RUTES[0]):
     import requests
     with io.open(cami, "rb") as f:
-        r = requests.post(space + "/transcribe_mms",
+        r = requests.post(space + ruta,
                           files={"audio_file": ("c.wav", f.read(), "audio/wav")},
                           headers=caps, timeout=300)
     if r.status_code != 200:
@@ -404,7 +410,7 @@ def _es_coneguda():
 
 
 # ------------------------------------------------------------------
-def un_video(vid, titol, a, lexicon, deepseek, space, caps, cau):
+def un_video(vid, titol, a, lexicon, deepseek, space, caps, cau, ruta=RUTES[0]):
     fora = os.path.join(a, f"{vid}.json")
     if os.path.exists(fora):
         print(f"  {vid}: ja fet")
@@ -423,7 +429,7 @@ def un_video(vid, titol, a, lexicon, deepseek, space, caps, cau):
         tall = os.path.join(a, f"_t{i:04d}.wav")
         subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-ss", str(de), "-to", str(fi),
                         "-i", wav, "-y", tall], check=True)
-        text, cert = sent(tall, space, caps)
+        text, cert = sent(tall, space, caps, ruta)
         os.remove(tall)
         dits.append({"de": round(de, 2), "a": round(fi, 2), "hi_sent": text, "certesa": cert,
                      "paraules": glossa(lexicon, text, cau)})
@@ -439,7 +445,7 @@ def un_video(vid, titol, a, lexicon, deepseek, space, caps, cau):
         #: i els fets, a part: la frase de dalt es la que es llegeix; aixo es el que es creu
         t.update(fets(deepseek, titol, t["hi_sent"], abans, despres, t["paraules"]))
 
-    json.dump({"video": vid, "titol": titol, "codi": codi_que_corre(), "emissions": dits},
+    json.dump({"video": vid, "titol": titol, "codi": codi_que_corre(), "lector": ruta, "emissions": dits},
               io.open(fora, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     bones = sum(1 for t in dits if t.get("certesa_traduccio") in ("segur", "probable"))
     certs = [t["certesa"] for t in dits if t["certesa"] is not None]
@@ -456,6 +462,8 @@ def main():
     p.add_argument("--a", default="escoltats", help="on es desen els JSON")
     p.add_argument("--env", help="d'on surten les claus, si no s'executa des de backend/")
     p.add_argument("--space", default=os.getenv("ASR_SPACE", SPACE_DEFECTE))
+    p.add_argument("--ruta", default=RUTES[0], choices=RUTES,
+                   help="greedy (per omissió) o el feix amb el lèxic a dins (/transcribe_mms_lm)")
     o = p.parse_args()
 
     sys.path.insert(0, os.path.abspath("."))
@@ -481,7 +489,7 @@ def main():
 
     cau = {}
     for vid, titol in videos:
-        un_video(vid, titol, o.a, lexicon, deepseek_client, o.space, caps, cau)
+        un_video(vid, titol, o.a, lexicon, deepseek_client, o.space, caps, cau, o.ruta)
     print(f"\nfet. Els JSON són a {o.a}")
     return 0
 
