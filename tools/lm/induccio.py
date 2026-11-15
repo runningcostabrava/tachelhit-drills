@@ -11,7 +11,7 @@ NO és una glossa: és un candidat amb un número, que es compara amb el diccion
 Els subtítols humans tradueixen el sentit, no paraula per paraula, i l'ASR talla malament: el
 senyal és feble i cal freqüència. Per això el mínim de rètols per token és 4.
 
-ÚS: induccio.py <parells.jsonl> <sortida.md> [mínim de rètols=4]
+ÚS: induccio.py <parells.jsonl> <sortida.md> [mínim de rètols=4] [en|ar]
 """
 import collections
 import io
@@ -32,15 +32,46 @@ def mots(t):
     return [w for w in re.findall(r"[a-z']+", t.lower()) if len(w) > 2 and w not in STOP_EN]
 
 
+#: Àrab: 16 vídeos només tenen subtítol àrab, i als 42 que en tenen dos l'àrab és la llengua
+#: del subtitulador (més literal que l'anglès). Es treuen les vocals curtes i la xadda, i els
+#: prefixos enganxats més corrents (ال، و، ف، ب، ل، ك), perquè «الملك» i «ملك» siguin el mateix.
+STOP_AR = set("""في من على إلى الى عن مع هذا هذه ذلك تلك هو هي هم أنا انا أنت انت نحن ما لا لم لن لماذا كيف أين اين
+متى من هل قد كان كانت يكون أن ان إن إذا اذا ثم و أو او بل لكن لكن حتى كل بعض غير قال قالت يقول له لها لهم لي لك
+لنا ماذا الذي التي الذين شيء شيئا هنا هناك الآن الان يا أيها ايها نعم كلا ليس ليست عند عندما بعد قبل بين فوق تحت
+أمام امام وراء خلف حول دون منذ كذلك أيضا ايضا جدا فقط إنه انه إنها انها أنه انه هكذا ذا تم""".split())
+TASHKIL = re.compile(r"[ؐ-ًؚ-ٰٟۖ-ۭـ]")
+
+
+def arabitza(w):
+    w = TASHKIL.sub("", w)
+    for a, b in (("أ", "ا"), ("إ", "ا"), ("آ", "ا"), ("ى", "ي"), ("ة", "ه")):
+        w = w.replace(a, b)
+    for pref in ("وال", "فال", "بال", "كال", "لل", "ال", "و", "ف", "ب", "ل"):
+        if w.startswith(pref) and len(w) - len(pref) >= 3:
+            w = w[len(pref):]
+            break
+    return w
+
+
+def mots_ar(t):
+    fora = []
+    for w in re.findall(r"[؀-ۿ]+", t or ""):
+        n = arabitza(w)
+        if len(n) >= 3 and n not in STOP_AR and TASHKIL.sub("", w) not in STOP_AR:
+            fora.append(n)
+    return fora
+
+
 if __name__ == "__main__":
     parells = [json.loads(l) for l in io.open(sys.argv[1], encoding="utf-8") if l.strip()]
     minim = int(sys.argv[3]) if len(sys.argv) > 3 else 4
+    llengua = sys.argv[4] if len(sys.argv) > 4 else "en"
     c_am, c_en, c_junts = collections.Counter(), collections.Counter(), collections.Counter()
     for p in parells:
-        if not p.get("en"):
+        if not p.get(llengua):
             continue
         am = set(w.lower() for w in p["asr"].split() if len(w) >= 3)
-        en = set(mots(p["en"]))
+        en = set(mots(p["en"])) if llengua == "en" else set(mots_ar(p["ar"]))
         c_am.update(am)
         c_en.update(en)
         for a in am:
@@ -61,9 +92,10 @@ if __name__ == "__main__":
             files.append((na, a, cands[:3]))
     files.sort(key=lambda x: -x[0])
     with io.open(sys.argv[2], "w", encoding="utf-8") as g:
-        g.write(f"# Glosses induïdes del corpus paral·lel ({len(parells)} rètols, mínim {minim} rètols per token)\n\n")
-        g.write("Candidats, no glosses: Dice ≥ 0,25 entre el token de l'ASR i un mot anglès del mateix rètol.\n\n")
-        g.write("| rètols | token ASR | candidats anglesos (Dice, rètols junts) |\n|---|---|---|\n")
+        nom_ll = "anglès" if llengua == "en" else "àrab"
+        g.write(f"# Glosses induïdes del corpus paral·lel ({len(parells)} rètols, mínim {minim} rètols per token, {nom_ll})\n\n")
+        g.write(f"Candidats, no glosses: Dice ≥ 0,25 entre el token de l'ASR i un mot {nom_ll} del mateix rètol.\n\n")
+        g.write(f"| rètols | token ASR | candidats ({nom_ll}) (Dice, rètols junts) |\n|---|---|---|\n")
         for na, a, cands in files:
             g.write(f"| {na} | `{a}` | " + "; ".join(f"**{e}** ({d:.2f}, {nj})" for d, nj, e in cands) + " |\n")
     print(f"{len(files)} tokens amb candidat → {sys.argv[2]}")

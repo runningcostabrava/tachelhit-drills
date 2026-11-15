@@ -209,6 +209,7 @@ CLITICS = {
     "nsnt": "elles", "nsn": "ells", "unt": "vosaltres (femení)", "un": "vosaltres",
     "nġ": "nosaltres", "nḫ": "nosaltres", "snt": "elles", "sn": "ells",
     "awn": "vosaltres",     # `didawn` = amb vosaltres; sortia «i, amb + Place»
+    "ak": "tu (masculí)",   # `didak` = amb tu: صفك / جانبك («al teu costat») 0,44 als rètols àrabs
     "i": "mi", "k": "tu (masculí)", "m": "tu (femení)", "s": "ell/ella",
     "ġ": "nosaltres", "ḫ": "nosaltres",
 }
@@ -592,6 +593,13 @@ LEXIC_VALIDAT = {
     "iggig": "Iggig (nom propi)",                   # iggig 0,37 · 12; el diccionari: «thunder, myth»
     "uskay": "Oskay (nom propi)",                   # oskay 0,55 · 11
     "ahlliw": "Ahlliw (nom propi)",                 # ahlliw 0,71 · 6
+    "tanirt": "Tanirt (nom propi)",                 # تانيرت 0,89 · 12
+    # Doble evidència: l'anglès I l'àrab del mateix corpus apunten al mateix sentit
+    "rbbi": "Déu, el Senyor",                       # lord 0,57 · الله 0,55 · 5-6 rètols
+    "knnumi": "vosaltres",                          # أنتم 0,86 · 4 rètols (pronom emfàtic 2a pl.)
+    "isaqqul": "mira fixament, mirava (saqql)",     # staring 0,33 · يحدق 0,40 · 6-8
+    "umsfri": "intèrpret, traductor (amsfru)",      # interpreter 0,44 · مترجم 0,32 · 5
+    "wanig": "sembla que, com si (wan ig)",         # looks 0,40 · يبدو 0,40 · 8
 }
 
 #: Les taules escrites a mà, en un sol lloc per consultar-les. La mena es guarda a part
