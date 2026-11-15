@@ -141,7 +141,7 @@ def test_una_regla_ben_aplicada_pot_caure_en_la_paraula_equivocada():
 
 def test_les_segures_son_les_que_no_han_calgut_cap_regla():
     assert set(morfologia.SEGURES) == {"diccionari", "partícula", "forma gramatical",
-                                      "preposició amb pronom"}
+                                      "preposició amb pronom", "lèxic validat"}
     for mot in ("asif", "da", "dars"):
         assert glossa(mot)[1] in morfologia.SEGURES
     for mot in ("wasif", "imaziġn", "nssn"):
@@ -280,6 +280,18 @@ def test_el_verb_anar_en_perfectiu_surt_de_la_taula():
         assert com.startswith("forma gramatical"), (forma, com)
     diu, _ = glossa("ddiġ")
     assert "vaig anar" in diu and "encara" in diu
+
+
+def test_el_lexic_validat_pels_subtitols_guanya_al_diccionari_sense_alternativa():
+    #: H9 (15-11-2026): als rètols humans dels 58 vídeos, `immut` coapareix amb «dead» (Dice
+    #: 0,67, 7 rètols) i el diccionari deia «urge»; `irgzn` amb «men» (0,68, 22) i no hi era;
+    #: `isġi` és l'heroi dels contes i el diccionari el traduïa («vautour»). El diccionari ha
+    #: perdut: no se'l torna a oferir amb «o bé».
+    for forma, tros in (("immut", "va morir"), ("irgzn", "homes"), ("wawal", "paraula"),
+                        ("nnif", "més enllà"), ("isġi", "nom propi")):
+        diu, com = glossa(forma)
+        assert tros in diu and " — o bé: " not in diu, (forma, diu)
+        assert com == "lèxic validat" and com in morfologia.SEGURES, (forma, com)
 
 
 def test_el_que_diuen_els_subtitols_humans_mana_sobre_el_diccionari():

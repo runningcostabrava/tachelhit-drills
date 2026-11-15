@@ -321,7 +321,7 @@ def candidates(mot: str) -> List[Tuple[str, str]]:
 #: dolentes** —`taqafa` (l'àrab «cultura») llegit «Guess», `wid` «els de» llegit «cadena»,
 #: `tla` i `tgi` (el verb ser) llegits «font» i «mena d'ahidús». Una de cada tres falla.
 #: Per això qui les faci servir les ha de donar com el que són: una possibilitat.
-SEGURES = ("diccionari", "partícula", "forma gramatical", "preposició amb pronom")
+SEGURES = ("diccionari", "partícula", "forma gramatical", "preposició amb pronom", "lèxic validat")
 
 #: Quina mena de paraula ha de ser l'arrel perquè la regla valgui. Treure un afix de persona
 #: d'una cosa que no és cap verb és com explicar «Barcelona» dient que «bar» és un local:
@@ -409,6 +409,9 @@ def glossa(mot: str, al_diccionari: Callable[[str], List[str]],
         #: donen totes dues, la de la gramàtica primera, i la parella NO és una lectura
         #: segura: qui la llegeixi ha de triar amb el context.
         diu, mena = _TAULA[clau], _MENA_TAULA[clau]
+        if mena == "lèxic validat":
+            #: aquí el diccionari ha perdut contra el parlant: no se'l torna a oferir
+            return diu, mena
         if sig:
             return f"{diu} — o bé: {', '.join(sig[:2])}", f"{mena} o diccionari"
         if " — o bé: " in diu:
@@ -572,13 +575,34 @@ FORMES_GRAMATICALS = {
 _ORTOGRAFIA = (("š", "c"), ("c", "š"), ("ḫ", "x"), ("x", "ḫ"), ("kku", "kkw"), ("kkw", "kku"),
                ("gu", "gw"), ("gw", "gu"))
 
-#: Les dues taules escrites a mà, en un sol lloc per consultar-les. La mena es guarda a part
+#: Lèxic VALIDAT per subtítols humans (H9, 15-11-2026): per a cada forma, el mot anglès que
+#: coapareix amb ella als rètols dels 58 vídeos de Tamazight For All amb traducció humana, més
+#: del que l'atzar faria (Dice sobre rètols; `tools/lm/induccio.py`). Només hi entra el que té
+#: Dice alt I prou rètols, i el que el diccionari deia s'apunta al costat: aquí el diccionari
+#: PERD contra el parlant. Un nom propi també hi va: el diccionari traduïa «Isghi» per «vautour»,
+#: que és el que el nom vol dir, però un nom no es glossa.
+LEXIC_VALIDAT = {
+    "irgzn": "homes (irgazn)",                      # men 0,68 · 22 rètols; el lèxic no el tenia
+    "immut": "va morir, és mort (mmt)",             # dead 0,67 · 7; el diccionari: «urge»
+    "nnif": "més enllà de, darrere de",             # beyond 0,50 · 6; el diccionari: «before»
+    "iḫf": "cap; «iḫf nns» = ell mateix",           # himself 0,33 · 13; el diccionari: «boîte, boss»
+    "wawal": "paraula (w + awal, annexió)",         # word 0,36 · 7; el diccionari: «run down»
+    "isġi": "Isghi (nom propi, l'heroi dels contes)",   # isghi 0,56 · 15; el diccionari: «vautour»
+    "massn": "Massn (nom propi)",                   # massn 0,75 · 17; el diccionari: «savoir»
+    "iggig": "Iggig (nom propi)",                   # iggig 0,37 · 12; el diccionari: «thunder, myth»
+    "uskay": "Oskay (nom propi)",                   # oskay 0,55 · 11
+    "ahlliw": "Ahlliw (nom propi)",                 # ahlliw 0,71 · 6
+}
+
+#: Les taules escrites a mà, en un sol lloc per consultar-les. La mena es guarda a part
 #: perquè la glossa pugui dir la veritat: `iga` no és cap partícula, és una forma del verb
 #: «ser», i dir-ne «partícula» seria mentir sobre com s'hi ha arribat.
 _TAULA = dict(PARTICULES)
 _TAULA.update(FORMES_GRAMATICALS)
+_TAULA.update(LEXIC_VALIDAT)
 _MENA_TAULA = {k: "partícula" for k in PARTICULES}
 _MENA_TAULA.update({k: "forma gramatical" for k in FORMES_GRAMATICALS})
+_MENA_TAULA.update({k: "lèxic validat" for k in LEXIC_VALIDAT})
 
 
 def clau_de_particula(mot: str) -> Optional[str]:
