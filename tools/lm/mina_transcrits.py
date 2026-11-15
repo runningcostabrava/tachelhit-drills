@@ -76,14 +76,26 @@ if __name__ == "__main__":
             text = text_del_vtt(cami)
             if len(text.split()) < 60:
                 continue
-            q = f"TÍTOL DEL VÍDEO: {titols.get(vid, '')}\n\nTRANSCRIPCIÓ:\n{text[:14000]}"
-            try:
-                r = DS.deepseek_generate(SYS, [{"role": "user", "text": q}], max_output_tokens=4000,
-                                         temperature=0.0, timeout=180)
-                m = re.search(r"\[.*\]", r or "", flags=re.S)
-                items = json.loads(m.group(0)) if m else []
-            except Exception as e:
-                items, r = [], f"(error {type(e).__name__}: {str(e)[:80]})"
+            #: els directes duren hores: es minen a trossos de ~12.000 caràcters, tallats per espai
+            trossos, i = [], 0
+            while i < len(text):
+                j = min(len(text), i + 12000)
+                if j < len(text):
+                    j = text.rfind(" ", i, j) or j
+                trossos.append(text[i:j])
+                i = j
+            items, r = [], ""
+            for k, tros in enumerate(trossos):
+                q = f"TÍTOL DEL VÍDEO: {titols.get(vid, '')}\n\nTRANSCRIPCIÓ (part {k + 1} de {len(trossos)}):\n{tros}"
+                try:
+                    r = DS.deepseek_generate(SYS, [{"role": "user", "text": q}], max_output_tokens=4000,
+                                             temperature=0.0, timeout=180)
+                    m = re.search(r"\[.*\]", r or "", flags=re.S)
+                    for it in (json.loads(m.group(0)) if m else []):
+                        it["part"] = k + 1
+                        items.append(it)
+                except Exception as e:
+                    r = f"(error {type(e).__name__}: {str(e)[:80]})"
             g.write(json.dumps({"video": vid, "titol": titols.get(vid, ""), "paraules_transcrit": len(text.split()),
                                 "items": items, "cru": None if items else (r or "")[:300]}, ensure_ascii=False) + "\n")
             g.flush()
