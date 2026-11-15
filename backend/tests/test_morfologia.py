@@ -282,6 +282,22 @@ def test_el_verb_anar_en_perfectiu_surt_de_la_taula():
     assert "vaig anar" in diu and "encara" in diu
 
 
+def test_el_que_diuen_els_subtitols_humans_mana_sobre_el_diccionari():
+    #: 15-11-2026: als contes amb subtítols humans en amazic i anglès, el diccionari deia
+    #: `ġr` «appeler, chez» (el parlant: «only»), `ayda` «Land» («everything he owned»),
+    #: `yufa` «valoir mieux» («he found»), `iffġ` «valoir mieux» («get out»), `mas` «Mister»
+    #: («where to»), `tusi` «gémination» («was full of»), `ssinḫ` «de là» («I don't know»).
+    for forma, tros in (("ġr", "només"), ("hat", "vet aquí"), ("ayda", "béns"), ("kiy", "tu"),
+                        ("mas", "cap a on"), ("yufa", "va trobar"), ("iffġ", "surt"),
+                        ("ssinḫ", "sé"), ("tusi", "porta"), ("ta", "encara")):
+        diu, com = glossa(forma)
+        assert tros in diu, (forma, diu)
+        assert com.startswith(("partícula", "forma gramatical")), (forma, com)
+    #: `didawn` = did + awn: «amb vosaltres», no «i, amb + Place»
+    diu, com = glossa("didawn")
+    assert "vosaltres" in diu, (diu, com)
+
+
 # -------------------------------------- el verb «ser», que el diccionari serveix com a nom
 def test_el_verb_ser_surt_de_la_taula_i_no_del_diccionari():
     #: 171 de les 220 aparicions de la còpula arribaven al traductor absents o com a nom:
@@ -328,8 +344,9 @@ def test_un_mot_curt_es_parteix_si_la_resta_es_a_la_taula():
 
 def test_un_mot_curt_no_es_parteix_cap_al_diccionari():
     #: Una resta de dues lletres casa amb qualsevol entrada del diccionari: només val la
-    #: taula. `did` no és `d`+`id` («cadena»), per molt que `id` sigui al diccionari fals.
-    assert glossa("did") is None
+    #: taula. `did` no és `d`+`id` («cadena»), per molt que `id` sigui al diccionari fals:
+    #: des del 15-11-2026 és a la taula («amb»), i d'allà ha de sortir, no del diccionari.
+    assert glossa("did") == ("amb", "partícula")
 
 
 def test_la_labialitzada_de_lasr_casa_amb_la_taula():

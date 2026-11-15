@@ -264,6 +264,11 @@ _FORMES_AMB_PERSONA = {
     #: perquè pot ser l'adverbi `diġ`
     "tddit": "tu", "idda": "ell/ella", "tdda": "ell/ella", "ndda": "nosaltres",
     "tddam": "vosaltres", "ddan": "ells/elles", "ddant": "ells/elles",
+    #: trobats als subtítols humans dels contes (15-11-2026)
+    "yufa": "ell/ella", "tufa": "ell/ella", "ufiġ": "jo", "ufiḫ": "jo", "ufan": "ells/elles",
+    "iffġ": "ell/ella", "tffġ": "ell/ella", "ffġn": "ells/elles",
+    "ssnġ": "jo", "ssnḫ": "jo", "ssinġ": "jo", "ssinḫ": "jo", "tusi": "ell/ella", "yusi": "ell/ella",
+    "kiy": "tu",
     "ttiniġ": "jo", "ttiniḫ": "jo",
     "iga": "ell/ella", "tga": "ell/ella", "illa": "ell/ella", "tlla": "ell/ella", "ira": "ell/ella",
     #: `inna` torna: al #24 de la mostra era «va dir» i cert; és la forma de «dir» més corrent
