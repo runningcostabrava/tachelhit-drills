@@ -602,6 +602,29 @@ LEXIC_VALIDAT = {
     "wanig": "sembla que, com si (wan ig)",         # looks 0,40 · يبدو 0,40 · 8
 }
 
+#: El glossari de termes lingüístics que l'autor del canal publica al seu web
+#: (`data/lexic_validat_web_tfa.json`, 15-11-2026): el metallenguatge de les classes, que el
+#: diccionari general glossava amb paraules de la vida corrent (`azɣr` «onguent» per «arrel
+#: morfològica», `aḍfiṛ` «roba vella» per «sufix», `asnaway` partit en «li + proceed» per
+#: «estandardització»). És l'autor mateix qui dóna el terme amb la traducció: la font més forta
+#: que tenim per a aquestes paraules. Només hi entren els termes d'un sol token.
+def _lexic_validat_del_web() -> dict:
+    import json
+    import os
+    cami = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "lexic_validat_web_tfa.json")
+    if not os.path.exists(cami):
+        return {}
+    try:
+        with open(cami, encoding="utf-8") as fh:
+            termes = json.load(fh).get("termes") or {}
+    except (OSError, ValueError):
+        return {}
+    return {k: f"{v['ca']} (terme lingüístic)" for k, v in termes.items()
+            if " " not in k and k not in LEXIC_VALIDAT and k not in PARTICULES and k not in FORMES_GRAMATICALS}
+
+
+LEXIC_VALIDAT.update(_lexic_validat_del_web())
+
 #: Les taules escrites a mà, en un sol lloc per consultar-les. La mena es guarda a part
 #: perquè la glossa pugui dir la veritat: `iga` no és cap partícula, és una forma del verb
 #: «ser», i dir-ne «partícula» seria mentir sobre com s'hi ha arribat.

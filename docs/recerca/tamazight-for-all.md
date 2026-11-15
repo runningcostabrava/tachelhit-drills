@@ -703,6 +703,50 @@ més àudio d'aquesta parla** (H4), i Omnilingual (Apache-2.0, amb adaptació pr
 candidat de base tan bo com MMS, no un substitut. Quedar-se'n: els models generals senten
 darija quan no se'ls diu la llengua, i a vegades també quan se'ls diu.
 
+## El que no havia mirat (15-11, tarda; en Pablo: «la pàgina i les seves seccions no ens donen
+## info útil? are you sure you check all videos in the channel?»)
+
+Tenia raó en tot. Tres forats del meu catàleg i una font nova:
+
+1. **El catàleg de 440 vídeos era només la pestanya «Vídeos».** El canal té a més **93 shorts**
+   i **33 directes (48 h)** que no hi eren. Llistats a `canal/shorts.psv`, `canal/streams.psv`.
+2. **Els subtítols automàtics no eren brossa a tot arreu.** Ho eren als vídeos parlats en
+   amazic (38 paraules en 497 s). Però **203 vídeos (8,3 h) tenen ≥ 40 paraules per minut**: el
+   professor hi parla en **dàrija** explicant l'amazic, i el transcrit és text de debò. Baixats
+   (`canal/subs_auto/`, 182 amb pista `ar-orig`). `tools/lm/mina_transcrits.py` (DeepSeek, t=0)
+   en treu cada paraula o regla amaziga que el professor explica, amb el significat que ell
+   dóna i la frase on ho diu: **autoglossa a escala**. Prova sobre la sèrie «Stamazight»:
+   `da` partícula d'imperfectiu/habitual, `sawlɣ` «parlo» (arrel swl + -ɣ), `yan`/`yat` article
+   indefinit m./f. (i d'origen numeral), `arba` → `warba` en estat d'annexió, `imzzyan` «petit»,
+   `tzrit` «vas veure» amb `t-…-t` de 2a persona. Els vídeos d'opinió i d'història donen 0
+   ítems, com ha de ser. Pendent: minar els 182 i comparar amb el lèxic (com la inducció).
+3. **El web `tamazightforall.com`** (un Blogger amb tot en línia; «tots els drets reservats, ús
+   personal no comercial»): cursos A1–B1 amb 11 diàlegs per llengua en tifinag + llatí +
+   traducció (ar/en/es), ~45 mots de vocabulari, un **glossari de 59 termes lingüístics**
+   (tifinag, arrel, definició en amazic, en/es/ar), 79 mots de funció, 12 preposicions, 11
+   pronoms, 13 famílies de «primeres paraules» amb textos curts, contes («Isufa n Tnẓeẓt») i un
+   analitzador morfosintàctic. Extret amb `tools/web_tfa/treu_dades.py`. **Contra el nostre
+   lèxic** (`web_vs_lexic.md`): 36 coincideixen, **24 contradiuen** (tot el metallenguatge de
+   les classes: `azɣr` «onguent» per «arrel morfològica», `aḍfiṛ` «roba vella» per «sufix»,
+   `amsil` «couvre-joint» per «morfema», `agwmmay` per «alfabet», `asnaway` partit en «li +
+   proceed» per «estandardització»), 24 no les teníem (`tasntalant`, `afrimsli`, `azwr`…).
+   **Fet:** els 59 termes entren com a `backend/data/lexic_validat_web_tfa.json` i es carreguen a
+   `LEXIC_VALIDAT` (43 d'un sol token; els de dos tokens esperen un tractament d'expressions).
+   El web és un instrument de validació; res del seu text entra a la biblioteca.
+
+## Desplegat el 15-11 (ordre d'en Pablo: «fes-ho tu, treballa amb Chrome»)
+
+- **Space:** sis fitxers pujats des del navegador (`mms_shi.py`, `app.py`, `requirements.txt`,
+  `arpa_lm.py`, `unigrams_shi.txt`, `lm_shi.arpa`); `/transcribe_mms_lm` en viu amb el lèxic
+  carregat (182.081 formes). Al tall de prova, greedy «baba maydlannif illaġillaġawi», feix amb
+  lèxic «baba mayl nnif illa ila wi».
+- **Clau filtrada:** el remot local del Space sense token; el token «tachelhit» esborrat a HF.
+- **R2:** reescriptura feta a producció (21.036 adreces, 0 sense fitxer; `updated_at` tocat);
+  política CORS al bucket i PR #614 perquè la memòria cau fora de línia torni a desar mitjans.
+- **La canonada amb el lector nou:** `escolta_llista.py --ruta /transcribe_mms_lm` (PR #613);
+  els 25 vídeos s'estan tornant a escoltar a `escoltats_lm/` (vídeos de la mostra de 40
+  primer) per jutjar abans/després a cegues amb `abans_despres40.py`.
+
 ## El que bloqueja
 
 - **Deu minuts transcrits per un parlant.** Sense això tota mesura és indirecta. Serien
