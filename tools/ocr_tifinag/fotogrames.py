@@ -71,6 +71,9 @@ def components_de_text(a):
     Torna llista de (y0, y1, x0, x1, npix) i l'etiquetatge."""
     verm = mascara_vermella(a)
     blanc = mascara_blanca(a)
+    # l'halo gris/rosat de 1 px al voltant del text no és paper ni és text: no compta a l'anell
+    # (una barra ⵏ de 2 px d'ample té més halo que cos i queia sota el 85 % de blanc)
+    verm_halo = ndimage.binary_dilation(verm, structure=np.ones((3, 3)))
     lab, n = ndimage.label(verm, structure=np.ones((3, 3)))
     if n == 0:
         return [], lab
@@ -98,7 +101,7 @@ def components_de_text(a):
         sub = a[Y0:Y1, X0:X1]
         # a l'anell hi pot haver altres glifs (vermells o negres): no compten.
         # La resta ha de ser paper blanc; si és color de dibuix, el component és de la il·lustració.
-        altres = verm[Y0:Y1, X0:X1][anell] | (sub.max(axis=2) < 120)[anell]
+        altres = verm_halo[Y0:Y1, X0:X1][anell] | (sub.max(axis=2) < 120)[anell]
         b = blanc[Y0:Y1, X0:X1][anell][~altres]
         if len(b) < 10 or b.mean() < 0.85:
             continue

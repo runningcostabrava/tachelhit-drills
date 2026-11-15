@@ -145,3 +145,60 @@ Estimació honesta de l'encert global: ≥ 99,5 % dels glifs (2 errors coneguts;
 color), `paraules.py` (paraules senceres per grup o per text), `context.py` (on surt un grup),
 `full_linies.py` (fulls de contacte dels trams), `referencia*.py` (alfabet IRCAM amb Ebrima),
 `sonda*.py` (histogrames de color que van destapar l'halo). Les imatges de revisió són a `fulls/`.
+
+## Segon i tercer vídeo (`llegeix.py`, plantilles del primer)
+
+`llegeix.py <vídeo>` fa la cadena sencera i classifica cada glif per **plantilla més propera**
+(`plantilles.npz`, correlació sobre la imatge 32×32). Dues passades: la primera amb les plantilles
+del vídeo 1 (llindar 0,80), la segona amb **plantilles adaptades** = mitjana dels glifs acceptats a
+la primera (mateixa lletra, altra mida i gruix). Cada fila de cada pàgina se segmenta en fins a 12
+trams i es queda **la versió amb més glifs acceptats** (animacions d'entrada, subratllat damunt les
+lletres, transicions). Els glifs rebutjats van a `nous_<vídeo>.png` (+ `nous_<vídeo>.json`) i
+`afegeix_plantilla.py <vídeo> <nouNN> <lletra>` els incorpora a les plantilles.
+
+| | MTDbi14_5cU («ⵜⵉⵔⴰⵔⵜ ⵏ ⵜⵉⵖⵉⵍⵜ», nivell 3) | ihZ5sVr482o («ⴰⵎⵓⴷⴷⵓ ⵏ ⵟⴰⵕⵉⵇ», nivell 1) |
+|---|---|---|
+| Durada / fotogrames | 627 s / 1.253 | 563 s / 1.125 |
+| Font | la mateixa, caixa alta 12-13 px (vídeo 1: 16) | la mateixa, caixa alta 17-21 px; portada i crèdits en una altra |
+| Mode | **vermell**: la pàgina surt negra i les línies es tornen vermelles en llegir-les (línia a línia, no lletra a lletra); subratllat vermell sota la paraula llegida | **negre**: text negre fix, subratllat vermell mòbil; 8 files llegides 6-7 vegades |
+| Trams / pàgines reals | 615 / 19 | 247 / 20 |
+| Glifs classificats (tots els trams) | 18.056 | 7.067 |
+| Glifs a les versions triades | 4.450 | 1.547 |
+| **Acceptats per les plantilles** (llindar 0,85) | **4.406 (99,0 %)** | **1.473 (95,2 %)** |
+| a 0,80 / 0,90 | 99,1 % / 97,6 % | 96,6 % / 94,1 % |
+| Glifs nous (grups) | 44 (14): trossos de lletra, punts minúsculs, «!» enganxat a una cometa, brossa d'imatge. **Cap lletra nova** | 74 (42): **ⵄ** (10 exemplars, lletra nova), portada/crèdits en una altra font, 4 glifs d'un dibuix de gos, trossos |
+| Files finals / glifs únics / nous | 51 / 2.079 / 11 | 50 / 921 / 38 |
+| Lletres distintes al text | 26 | 24 (amb ⵄ, 6 cops) |
+| **Comprovació a ull** (5 files, llavor 1114) | **235/242** | **96/101** |
+| ⵯ ⵄ ⵅ ⵚ | cap | **ⵄ sí** (ⵄⵣⵣⴰⵏ, *ɛzzan*); ⵯ ⵅ ⵚ cap |
+
+**Llindar:** 0,85. A 0,80 l'acceptació gairebé no puja i hi entren trossos i brossa; a 0,90 es
+perden 2-3 punts de lletres bones (sobretot ⵔ ⵙ ⴰ en lletra petita). Sense la segona passada
+adaptada, a 0,85 només s'acceptava el 86 % (vídeo 2) i el 84 % (vídeo 3).
+
+**Els 7 errors del vídeo 2 (de 242):** 4 signes de puntuació no detectats («!» «,» «;» de 1-2 px
+en lletra de 13 px), 1 punt sortit com □, ⵉⵏⵏⴰ→ⵉⵜⵏⴰ (ⵏ+subratllat llegit ⵜ), ⴽⵢⵢ→ⵍⵢⵢ (cometa
+d'obertura enganxada a la ⴽ, que no té plantilla composta). **Els 5 del vídeo 3 (de 101):** una ⵏ
+rebutjada (ⵡⴰⵏ→ⵡⴰ□, 3 cops al text) i 4 □ d'un dibuix dins la columna de text. Cap lletra
+llegida com una altra lletra, llevat del cas de la cometa.
+
+**Què ha calgut canviar en el camí (i per què):**
+1. El subratllat vermell toca les lletres: s'esborren les tirades horitzontals ≥ 20 px **del nucli**
+   (fer-ho sobre l'halo esborrava traços de lletres veïnes: 4.527 → 4.184 glifs).
+2. Lletra petita: el nucli vermell passa a `g<115,b<115` perquè els arcs prims de ⵔ ⵙ ⴰ no es
+   partissin en «( )». Una regla de «fusió de meitats» es va provar i **es va treure**: ajuntava ⵏⵏ
+   en una ⵍ (`--repara=1` la torna a activar; no la facis servir).
+3. La **millor versió de cada fila** entre 12 trams: és el que ha fet passar el vídeo 2 del 92 % al
+   99 %; les files a mig escriure (animació) i les subratllades perden sempre.
+4. Mode per presència de vermell (≥ 25 % dels fotogrames), no per recompte de glifs: el vídeo 2 té
+   pàgines negres abans de llegir-les.
+5. L'anell de «paper blanc» ignora ara l'halo d'1 px al voltant del text: una ⵏ de 2 px d'ample
+   queia sota el 85 % de blanc (ⵢⴰ ⵡⴰⵙⵙ sense la ⵏ en totes les repeticions). Això és a
+   `fotogrames.py` i afecta també el vídeo 1, que **no s'ha tornat a passar** (els resultats del
+   primer informe són amb el criteri antic).
+6. Files que són un tros d'una altra de la mateixa pàgina, o amb < 3 lletres, fora.
+
+**Pendent:** detector de dibuix dins la columna de text (el gos), plantilles compostes «cometa +
+ⴽ/ⵙ/ⵜ…» o millor separar la cometa abans de classificar, puntuació d'1-2 px en lletra de 13 px, i
+el títol/crèdits en una altra font (ara surten com □ i es descarten sols). Els textos són en
+tamazight de l'Atles central com el primer (*ɛzzan dri imudar*, *skkur*, *tiɣilt*).
