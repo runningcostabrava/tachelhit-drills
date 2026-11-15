@@ -1,0 +1,509 @@
+{
+ "_nota": "Etiquetes posades mirant grups/grupNN.png (mosaics), referencia_gran.png (alfabet IRCAM amb la font Ebrima) i paraules senceres del fotograma (paraules.py). 'glif' és el que escriu el transcriptor; 'segur' = la forma és inequívoca i surt en paraules conegudes. Els signes petits (MARCA) es resolen per posició a la fila: a dalt = cometa, a baix = coma o punt segons l'alçada. ⵏ amb forma de dues peces (barra + punt sota) = '!'.",
+ "g00": {
+  "glif": "ⵜ",
+  "nom": "yat",
+  "segur": true,
+  "n": 435
+ },
+ "g01": {
+  "glif": "ⴰ",
+  "nom": "ya",
+  "segur": true,
+  "n": 432
+ },
+ "g02": {
+  "glif": "ⵉ",
+  "nom": "yi",
+  "segur": true,
+  "n": 315
+ },
+ "g03": {
+  "glif": "ⵏ",
+  "nom": "yan",
+  "segur": true,
+  "n": 249,
+  "nota": "si té dues peces (barra + punt a sota) és '!'"
+ },
+ "g04": {
+  "glif": "ⵓ",
+  "nom": "yu",
+  "segur": true,
+  "n": 220,
+  "nota": "dos anellets buits; els dos punts plens (:) són g26"
+ },
+ "g05": {
+  "glif": "ⵙ",
+  "nom": "yas",
+  "segur": true,
+  "n": 176
+ },
+ "g06": {
+  "glif": "ⴷ",
+  "nom": "yad",
+  "segur": true,
+  "n": 163
+ },
+ "g07": {
+  "glif": "ⴳ",
+  "nom": "yag",
+  "segur": true,
+  "n": 135,
+  "nota": "rellotge de sorra amb barres a dalt i a baix; ⵓⵔⴳⴰⵣ, ⵍⵍⵉⴳ"
+ },
+ "g08": {
+  "glif": "ⵎ",
+  "nom": "yam",
+  "segur": true,
+  "n": 110,
+  "nota": "C quadrada; ⴰⵎⵓⵛⵛ, ⵉⵎⴽⵍⵉ"
+ },
+ "g09": {
+  "glif": "ⵛ",
+  "nom": "yac",
+  "segur": true,
+  "n": 100,
+  "nota": "C rodona amb ganxos; ⴰⵎⵓⵛⵛ"
+ },
+ "g10": {
+  "glif": "ⵕ",
+  "nom": "yarr",
+  "segur": true,
+  "n": 92,
+  "nota": "Q; ⴰⴱⵕⴱⴰⵛ (el títol). No és ⵇ (ⵇ és g29)"
+ },
+ "g11": {
+  "glif": "ⵔ",
+  "nom": "yar",
+  "segur": true,
+  "n": 89
+ },
+ "g12": {
+  "glif": "ⴼ",
+  "nom": "yaf",
+  "segur": true,
+  "n": 87,
+  "nota": "ⵢⵓⴼⵉ, ⵢⵓⴼⴰ, ⴰⴼⵔⵉⵡⵏ"
+ },
+ "g13": {
+  "glif": "ⴹ",
+  "nom": "yadd",
+  "segur": true,
+  "n": 82,
+  "nota": "E plana (IRCAM). La ṭ (ⵟ) duu un signe dins: g21"
+ },
+ "g14": {
+  "glif": "ⵍ",
+  "nom": "yal",
+  "segur": true,
+  "n": 82,
+  "nota": "en aquesta font les dues barres van unides per una diagonal (И); ⵍⵍⵉⴳ, ⴰⵢⵍⵍⵉⴳ"
+ },
+ "g15": {
+  "glif": "ⵖ",
+  "nom": "yaɣ",
+  "segur": true,
+  "n": 76
+ },
+ "g16": {
+  "glif": "ⴱ",
+  "nom": "yab",
+  "segur": true,
+  "n": 71,
+  "nota": "ⴰⴱⵕⴱⴰⵛ, ⵉⴱⴱⵉ"
+ },
+ "g17": {
+  "glif": "ⴽ",
+  "nom": "yak",
+  "segur": true,
+  "n": 66,
+  "nota": "ⵉⵎⴽⵍⵉ, ⵜⴽⴽⴰ, ⵏⵏⴽ"
+ },
+ "g18": {
+  "glif": "ⵣ",
+  "nom": "yaz",
+  "segur": true,
+  "n": 53,
+  "nota": "ⵓⵔⴳⴰⵣ, ⵉⵔⵣⵣⵓ"
+ },
+ "g19": {
+  "glif": "MARCA",
+  "nom": "coma o cometa",
+  "segur": true,
+  "n": 48,
+  "nota": "resolt per posició vertical: a dalt = cometa, a baix = coma"
+ },
+ "g20": {
+  "glif": "ⵢ",
+  "nom": "yay",
+  "segur": true,
+  "n": 42,
+  "nota": "ⵢⴰⵏ, ⵢⵓⴼⵉ"
+ },
+ "g21": {
+  "glif": "ⵟ",
+  "nom": "yatt",
+  "segur": true,
+  "n": 41,
+  "nota": "E amb un signe dins (IRCAM); ⵜⴰⵎⵟⵟⵓⴹⵜ"
+ },
+ "g22": {
+  "glif": "ⵡ",
+  "nom": "yaw",
+  "segur": true,
+  "n": 38,
+  "nota": "ⵡⴰⵙⵙ, ⴰⵡⴷ"
+ },
+ "g23": {
+  "glif": "ⵊ",
+  "nom": "yaj",
+  "segur": false,
+  "dubte": [
+   "ⵊ"
+  ],
+  "n": 37,
+  "nota": "I amb serifs: és la forma IRCAM de ⵊ i quadra amb ⵓⵊⴹⵉⴹ (ocell, en tamazight), però surt també en ⵉⵊⵊⵉⵊ i ⵓⴳⵍⵉⴷⵊ, que no reconec; cap altra lletra té aquesta forma"
+ },
+ "g24": {
+  "glif": "MARCA",
+  "nom": "coma o cometa",
+  "segur": true,
+  "n": 33
+ },
+ "g25": {
+  "glif": "MARCA",
+  "nom": "punt o cometa",
+  "segur": true,
+  "n": 33,
+  "nota": "quadradet; a baix = punt final, a dalt = mitja cometa"
+ },
+ "g26": {
+  "glif": ":",
+  "nom": "dos punts",
+  "segur": true,
+  "n": 30,
+  "nota": "dos punts plens, més petits que ⵓ; 12 cops és paraula sola"
+ },
+ "g27": {
+  "glif": "ⵡ",
+  "nom": "yaw",
+  "segur": true,
+  "n": 28,
+  "nota": "variant una mica més ampla de g22"
+ },
+ "g28": {
+  "glif": "ⵏ",
+  "nom": "yan",
+  "segur": true,
+  "n": 27,
+  "nota": "barres lleugerament inclinades; amb dues peces és '!'"
+ },
+ "g29": {
+  "glif": "ⵇ",
+  "nom": "yaq",
+  "segur": true,
+  "n": 22,
+  "nota": "ⵉⵙⵇⵙⴰ"
+ },
+ "g30": {
+  "glif": "ⴻ",
+  "nom": "yey",
+  "segur": true,
+  "n": 18,
+  "nota": "tres punts verticals, el del mig petit; ⵜⴻⵜⵜ"
+ },
+ "g31": {
+  "glif": "ⵥ",
+  "nom": "yazz",
+  "segur": true,
+  "n": 14,
+  "nota": "ⵣ amb barra; ⵢⴰⵎⵥ"
+ },
+ "g32": {
+  "glif": "ⵉ",
+  "nom": "yi",
+  "segur": true,
+  "n": 10,
+  "nota": "variant (files amb alçada estimada diferent)"
+ },
+ "g33": {
+  "glif": "?",
+  "nom": "interrogant",
+  "segur": true,
+  "n": 8
+ },
+ "g34": {
+  "glif": "?",
+  "nom": "interrogant",
+  "segur": true,
+  "n": 6
+ },
+ "g35": {
+  "glif": "ⴻ",
+  "nom": "yey",
+  "segur": true,
+  "n": 6,
+  "nota": "ⵜⴻⵜⵜ"
+ },
+ "g36": {
+  "glif": "ⴱ",
+  "nom": "yab",
+  "segur": true,
+  "n": 6,
+  "nota": "ⴰⴱⵕⴱⴰⵛ"
+ },
+ "g37": {
+  "glif": "ⵃ",
+  "nom": "yaḥ",
+  "segur": true,
+  "n": 5
+ },
+ "g38": {
+  "glif": "ⵢ",
+  "nom": "yay",
+  "segur": true,
+  "n": 4
+ },
+ "g39": {
+  "glif": "ⵊ",
+  "nom": "yaj",
+  "segur": false,
+  "dubte": [
+   "ⵊ"
+  ],
+  "n": 4,
+  "nota": "com g23"
+ },
+ "g40": {
+  "glif": "ⵙ",
+  "nom": "yas",
+  "segur": true,
+  "n": 4
+ },
+ "g41": {
+  "glif": "MARCA",
+  "nom": "punt",
+  "segur": true,
+  "n": 3
+ },
+ "g42": {
+  "glif": "\"ⵓ",
+  "nom": "cometa + yu",
+  "segur": true,
+  "n": 3,
+  "nota": "la cometa d'obertura se solapa amb la ⵓ i surten com un sol glif: \"ⵓⵔ"
+ },
+ "g43": {
+  "glif": "ⵔ",
+  "nom": "yar",
+  "segur": true,
+  "n": 3
+ },
+ "g44": {
+  "glif": "ⴹ",
+  "nom": "yadd",
+  "segur": true,
+  "n": 3
+ },
+ "g45": {
+  "glif": "ⵜ",
+  "nom": "yat",
+  "segur": true,
+  "n": 3,
+  "nota": "ⵜ amb el traç doblat pel vídeo"
+ },
+ "g46": {
+  "glif": "ⴳ",
+  "nom": "yag",
+  "segur": true,
+  "n": 3
+ },
+ "g47": {
+  "glif": "ⵊ",
+  "nom": "yaj",
+  "segur": false,
+  "dubte": [
+   "ⵊ"
+  ],
+  "n": 2,
+  "nota": "com g23"
+ },
+ "g48": {
+  "glif": "ⴳ",
+  "nom": "yag",
+  "segur": true,
+  "n": 2
+ },
+ "g49": {
+  "glif": "MARCA",
+  "nom": "mitja cometa",
+  "segur": true,
+  "n": 2
+ },
+ "g50": {
+  "glif": "ⴱ",
+  "nom": "yab",
+  "segur": true,
+  "n": 2
+ },
+ "g51": {
+  "glif": "ⵕ",
+  "nom": "yarr",
+  "segur": true,
+  "n": 2
+ },
+ "g52": {
+  "glif": "ⵟ",
+  "nom": "yatt o yadd",
+  "segur": false,
+  "dubte": [
+   "ⵟ",
+   "ⴹ"
+  ],
+  "n": 2,
+  "nota": "grup barrejat: un exemplar duu el signe dins (ⵟ) i l'altre és una E plana (ⴹ); el de la pàgina 8 (ⵜⵎⵟⵟⵓⵟⵜ) segurament és ⴹ"
+ },
+ "g53": {
+  "glif": "ⵓ",
+  "nom": "yu",
+  "segur": true,
+  "n": 2,
+  "nota": "ⴰⵎⵓⵛⵛ"
+ },
+ "g54": {
+  "glif": "ⵕ",
+  "nom": "yarr",
+  "segur": true,
+  "n": 2
+ },
+ "g55": {
+  "glif": "ⵉ",
+  "nom": "yi",
+  "segur": true,
+  "n": 2
+ },
+ "g56": {
+  "glif": "\"ⵎ",
+  "nom": "cometa + yam",
+  "segur": true,
+  "n": 1,
+  "nota": "cometa d'obertura enganxada: \"ⵎⴰⵏⵉ"
+ },
+ "g57": {
+  "glif": "\"ⵍ",
+  "nom": "cometa + yal",
+  "segur": true,
+  "n": 1
+ },
+ "g58": {
+  "glif": "ⴷ",
+  "nom": "yad (meitat esquerra)",
+  "segur": true,
+  "n": 1,
+  "nota": "una ⴷ partida en dos components; g59 n'és l'altra meitat"
+ },
+ "g59": {
+  "glif": "",
+  "nom": "yad (meitat dreta, ja escrita a g58)",
+  "segur": true,
+  "n": 1
+ },
+ "g60": {
+  "glif": "ⵇ",
+  "nom": "yaq",
+  "segur": true,
+  "n": 1
+ },
+ "g61": {
+  "glif": "ⵊ",
+  "nom": "yaj",
+  "segur": false,
+  "dubte": [
+   "ⵊ"
+  ],
+  "n": 1,
+  "nota": "com g23"
+ },
+ "g62": {
+  "glif": "\"ⵎ",
+  "nom": "cometa + yam",
+  "segur": true,
+  "n": 1
+ },
+ "g63": {
+  "glif": "ⴱ",
+  "nom": "yab",
+  "segur": true,
+  "n": 1
+ },
+ "g64": {
+  "glif": "ⵜ",
+  "nom": "yat",
+  "segur": true,
+  "n": 1
+ },
+ "g65": {
+  "glif": "ⵜ",
+  "nom": "yat",
+  "segur": true,
+  "n": 1
+ },
+ "g66": {
+  "glif": "ⴰ",
+  "nom": "ya",
+  "segur": true,
+  "n": 1,
+  "nota": "ⴰⴼⵔⵉⵡⵏ"
+ },
+ "g67": {
+  "glif": "MARCA",
+  "nom": "punt",
+  "segur": true,
+  "n": 1
+ },
+ "g68": {
+  "glif": "ⵔ",
+  "nom": "yar",
+  "segur": true,
+  "n": 1
+ },
+ "g69": {
+  "glif": "ⵣ",
+  "nom": "yaz",
+  "segur": true,
+  "n": 1
+ },
+ "g70": {
+  "glif": "ⵀ",
+  "nom": "yah",
+  "segur": true,
+  "n": 1,
+  "nota": "cercle amb barra vertical (IRCAM)"
+ },
+ "g71": {
+  "glif": "ⴰ",
+  "nom": "ya (meitat)",
+  "segur": true,
+  "n": 1,
+  "nota": "una ⴰ partida; g72 n'és l'altra meitat"
+ },
+ "g72": {
+  "glif": "",
+  "nom": "ya (altra meitat, ja escrita a g71)",
+  "segur": true,
+  "n": 1
+ },
+ "g73": {
+  "glif": "ⵉ",
+  "nom": "yi",
+  "segur": true,
+  "n": 1
+ },
+ "g74": {
+  "glif": "ⵙ",
+  "nom": "yas",
+  "segur": true,
+  "n": 1
+ },
+ "_no_vistos": "Lletres de l'alfabet que no apareixen en cap grup: ⵄ ⵅ ⵚ ⴳⵯ ⴽⵯ ⵯ. Els 33 glifs de la llista del lector hi són tots menys aquests."
+}
