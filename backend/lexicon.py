@@ -32,7 +32,8 @@ DGLAI_REPO = "Tamazight-NLP/ircam-dglai"
 DGLAI_FILE = "dglai_clean (1).json"
 ATTRIBUTION = ("Diccionari anglès–taixelhit de Lahcen Oulhaj (tots els drets de l'autor); "
                "conjugacions del Manuel de conjugaison de l'amazighe, IRCAM 2012 (CC BY-NC 4.0); "
-               "Dictionnaire Général de la Langue Amazighe Informatisé, IRCAM (CC BY-NC 4.0)")
+               "Dictionnaire Général de la Langue Amazighe Informatisé, IRCAM (CC BY-NC 4.0); "
+               "ⵡⵉⴽⵉⵎⴰⵡⴰⵍ, el Viccionari en amazic estàndard, els seus col·laboradors (CC BY-SA 4.0)")
 
 _lock = threading.Lock()
 _state = {"loaded": False, "loading": False, "error": None, "dict_forms": 0, "conj_forms": 0, "verbs": 0, "dglai_forms": 0}
@@ -44,6 +45,12 @@ _conj_loose: Dict[str, List[dict]] = {}
 _verb_meta: Dict[str, dict] = {}
 _dglai_strict: Dict[str, List[dict]] = {}
 _dglai_loose: Dict[str, List[dict]] = {}
+#: ⵡⵉⴽⵉⵎⴰⵡⴰⵍ, el Viccionari en amazic estàndard (zgh.wiktionary.org), CC BY-SA 4.0: la cinquena
+#: butaca i la primera lliure. Ve del fitxer local `data/wikimawal_zgh.json` (tools/lm/wikimawal.py
+#: el fa del bolcat oficial), amb traduccions en/fr/ar, categoria, plural i estat d'annexió.
+_wm_strict: Dict[str, List[dict]] = {}
+_wm_loose: Dict[str, List[dict]] = {}
+WIKIMAWAL_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "wikimawal_zgh.json")
 
 _WORD = re.compile(r"[^\W\d_]+(?:[-'’][^\W\d_]+)*", re.UNICODE)
 _STOP = {"d", "n", "s", "a", "i", "u", "ad", "ar", "ur", "da", "is", "ma", "mi", "g", "f"}
@@ -155,6 +162,28 @@ def load(force: bool = False) -> bool:
                         _add(gs, gl, sk, lk, e, 6)
             except Exception as e:  # dataset missing or renamed: Oulhaj + conjugations still serve
                 print(f"[LEXICON] DGLAI not available: {e}")
+            # Wikimawal (local, free): lemma, plural and annexed-state forms all point at the entry
+            ws: Dict[str, List[dict]] = {}
+            wl: Dict[str, List[dict]] = {}
+            try:
+                if os.path.exists(WIKIMAWAL_FILE):
+                    with open(WIKIMAWAL_FILE, encoding="utf-8") as fh:
+                        for ent in json.load(fh).get("entrades") or []:
+                            tr = ent.get("traduccions") or {}
+                            morf = ent.get("morfologia") or {}
+                            e = {"tifinagh": ent.get("tifinag") or "", "latin": ent.get("llati") or "",
+                                 "english": list(tr.get("en") or []), "french": list(tr.get("fr") or []),
+                                 "arabic": list(tr.get("ar") or []), "category": ent.get("categoria") or "",
+                                 "plural": morf.get("ⴰⵎⴰⴳⵓⵜ") or "", "annexed": morf.get("ⴰⴷⴷⴰⴷ ⴰⵎⴰⵔⵓⵣ") or "",
+                                 "root": morf.get("arrel") or "", "definition": (ent.get("definicions") or [""])[0],
+                                 "source": "wikimawal-zgh (CC BY-SA 4.0)"}
+                            if not (e["english"] or e["french"] or e["arabic"]):
+                                continue
+                            for form in {e["tifinagh"], e["latin"], e["plural"], e["annexed"]} - {""}:
+                                sk, lk = _keys(form)
+                                _add(ws, wl, sk, lk, e, 4)
+            except Exception as e:
+                print(f"[LEXICON] Wikimawal not available: {e}")
             _dict_strict.clear(); _dict_strict.update(ds)
             _dict_loose.clear(); _dict_loose.update(dl)
             _conj_strict.clear(); _conj_strict.update(cs)
@@ -162,8 +191,12 @@ def load(force: bool = False) -> bool:
             _verb_meta.clear(); _verb_meta.update(meta)
             _dglai_strict.clear(); _dglai_strict.update(gs)
             _dglai_loose.clear(); _dglai_loose.update(gl)
-            _state.update({"loaded": True, "error": None, "dict_forms": len(ds), "conj_forms": len(cs), "verbs": len(meta), "dglai_forms": len(gs)})
-            print(f"[LEXICON] ready: {len(ds)} dictionary forms, {len(cs)} conjugated forms, {len(meta)} verbs, {len(gs)} DGLAI forms")
+            _wm_strict.clear(); _wm_strict.update(ws)
+            _wm_loose.clear(); _wm_loose.update(wl)
+            _state.update({"loaded": True, "error": None, "dict_forms": len(ds), "conj_forms": len(cs), "verbs": len(meta),
+                           "dglai_forms": len(gs), "wikimawal_forms": len(ws)})
+            print(f"[LEXICON] ready: {len(ds)} dictionary forms, {len(cs)} conjugated forms, {len(meta)} verbs, {len(gs)} DGLAI forms, "
+                  f"{len(ws)} Wikimawal forms")
             return True
         except Exception as e:  # offline, HF down, …: the tutor simply works without it
             _state.update({"error": str(e)[:200]})
@@ -195,14 +228,17 @@ def lookup(text: Optional[str], max_words: int = 12) -> List[dict]:
         d = _dict_strict.get(sk) or []
         c = _conj_strict.get(sk) or []
         g = _dglai_strict.get(sk) or []
+        wm = _wm_strict.get(sk) or []
         verb = _verb_meta.get(sk)
-        exact = bool(d or c or verb or g)
+        exact = bool(d or c or verb or g or wm)
         if not exact:
             d = _dict_loose.get(lk) or []
             c = _conj_loose.get(lk) or []
             g = _dglai_loose.get(lk) or []
-        if d or c or verb or g:
-            out.append({"word": w, "key": sk, "exact": exact, "dictionary": d[:4], "conjugation": c[:3], "verb": verb, "ircam": g[:3]})
+            wm = _wm_loose.get(lk) or []
+        if d or c or verb or g or wm:
+            out.append({"word": w, "key": sk, "exact": exact, "dictionary": d[:4], "conjugation": c[:3], "verb": verb, "ircam": g[:3],
+                        "wikimawal": wm[:3]})
         if len(out) >= max_words:
             break
     return out

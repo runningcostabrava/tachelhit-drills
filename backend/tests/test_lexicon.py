@@ -56,3 +56,16 @@ def test_endpoint_and_drill_context_carry_the_grounding(tmp_path, monkeypatch):
     finally:
         db.close()
     assert "DICCIONARI I CONJUGACIONS" in ctx and "[Oulhaj]" in ctx
+
+
+def test_wikimawal_is_the_fifth_source_and_indexes_plural_and_annexed_forms(tmp_path, monkeypatch):
+    #: ⵡⵉⴽⵉⵎⴰⵡⴰⵍ (zgh.wiktionary, CC BY-SA) ve d'un fitxer local, no de HF: amb el mateix fixture
+    #: de sempre hi ha de ser. `abagug` («ram, bélier») no és a cap altra font; `tutlayin` és el
+    #: plural de `tutlayt` i ha de dur al lema.
+    _fixture(tmp_path, monkeypatch)
+    assert lexicon.status().get("wikimawal_forms", 0) > 500
+    hits = lexicon.lookup("abagug")
+    assert hits and hits[0]["wikimawal"] and "ram" in hits[0]["wikimawal"][0]["english"]
+    assert hits[0]["wikimawal"][0]["source"].startswith("wikimawal")
+    hits = lexicon.lookup("tutlayin")
+    assert hits and any(e["latin"] == "tutlayt" for e in hits[0]["wikimawal"])

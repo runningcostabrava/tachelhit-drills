@@ -696,6 +696,12 @@ def _mena(registre: dict) -> set:
             menes.add("verb")
         if "nom" in gram:
             menes.add("nom")
+    for e in (registre.get("wikimawal") or []):
+        cat = (e.get("category") or "").lower()
+        if cat == "verb":
+            menes.add("verb")
+        if cat in ("nom", "nom propi"):
+            menes.add("nom")
     return menes
 
 
@@ -744,6 +750,14 @@ def amb_lexicon(lexicon):
         v = r.get("verb")
         if v:
             posa((v.get("french") or "").split(";")[0].strip())
+        #: el Viccionari zgh (lliure): el francès i l'anglès, una plaça cada un, i si la forma
+        #: és el plural o l'estat d'annexió d'un lema, es diu de quin
+        for e in (r.get("wikimawal") or []):
+            cua = ""
+            if e.get("latin") and forma.lower() != e["latin"].lower():
+                cua = f" ({e['latin']})"
+            for x in (e.get("french") or [])[:1] + (e.get("english") or [])[:1]:
+                posa(x.strip()[:40] + cua)
         return fora
 
     return (significats,
