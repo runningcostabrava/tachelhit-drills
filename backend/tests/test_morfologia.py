@@ -381,3 +381,15 @@ def test_la_labialitzada_de_lasr_casa_amb_la_taula():
     #: `akkw` («tot») l'ASR l'escriu `akku`; contra la veritat humana sortia «perroquet».
     assert morfologia.clau_de_particula("akku") == "akkw"
     assert glossa("akku")[0].startswith("tot")
+
+
+def test_el_creuament_de_dues_fonts_independents_entra_al_lexic_validat():
+    #: 15-11-2026 (vespre): `tools/lm/creuament.py` → `data/lexic_validat_creuament.json`. Una
+    #: glossa hi entra quan dues fonts independents coincideixen (els subtítols en/ar del mateix
+    #: subtitulador compten com UNA). La majoria confirmen el diccionari; tres el corregeixen:
+    #: `tiġrmt` «forteresse» → ciutat (subtítols + amazic.cat), `izlan` «poem» → cançons
+    #: (professor en dàrija + amazic.cat). I totes porten la mena «lèxic validat».
+    for forma, tros in (("tiġrmt", "ciutat"), ("izlan", "cançons"), ("knni", "vosaltres"), ("mlmi", "quan")):
+        diu, com = glossa(forma)
+        assert tros in diu and " — o bé: " not in diu, (forma, diu)
+        assert com == "lèxic validat", (forma, com)
