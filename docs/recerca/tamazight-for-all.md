@@ -559,6 +559,81 @@ confirma `turft` = «vaixell»: la glossa «carro» era la falsa. **Lliçó de m
 glosses falses no van soles; quan una forma verbal surt glossada com a nom, cal mirar tot
 el paradigma del verb. Pista següent: les 113 formes amb glosses contradictòries.
 
+## El 15-11: validar sense parlant, l'H3 que no s'havia provat mai, i el corpus paral·lel
+
+**Validar les 25 paraules sense parlant.** En Pablo no pot («no hablo la lengua perfectamente…
+mi objetivo era que tu poguessis desifrar la llengua»). Tres proves independents de la canonada,
+per ordre de força: **H** subtítol humà en amazic + subtítol humà anglès del mateix instant (8
+contes, pistes `la-*`); **A** autoglossa del parlant (el professor diu el mot àrab o anglès al
+costat de l'amazic); **D+C** diccionari de referència + totes les aparicions. 22 bé, 1 a mitges
+(`nniġ`: també la preposició `nnig` «damunt»), 1 falsa (`tddit` «sangonera» → «vas», verb `ddu`
+sense perfectiu a cap taula; mateix forat a `idda` → «aquí», `ddiġ` → «encara»). PR #607.
+
+**El que els subtítols humans contradiuen del diccionari (PR següent).** Mirant les 30 formes
+més corrents dels contes contra el subtítol anglès: `ġr` «només» (el diccionari: «appeler, chez»),
+`ayda` «béns» («Land»), `yufa` «va trobar» («valoir mieux»), `iffġ` «surt» («valoir mieux»),
+`mas` «cap a on» («Mister»), `tusi` «porta» («gémination»), `ssinḫ` «sé» («de là»), `hat`
+(presentatiu, absent), `ta` (`ur ta` = encara no), `kiy` «tu», `awa`, `did`+pronom. Posades a
+la taula a mà. **Mesurat tornant a córrer els fets sobre els 226 versos amb veritat
+(`compara_taula_15-11.md`):** 19 caselles sobre tokens tocats, **12 canvien i cap empitjora**
+(`ayda` terra→béns, `yufa` valer més→va trobar, `kiy` ?→tu, `hat` ?→vet aquí; `mas`
+Mister→«?», que és millor que una mentida); les caixes globals no es mouen (tokens idèntics;
+caselles plenes 615→598, dins del soroll de la no-reproduïbilitat). El patró es repeteix: les
+glosses falses no van soles, van per paradigmes (`ddu`, `af`, `ffġ`) que la taula de
+conjugació no té.
+
+**H3 no s'havia provat mai.** Comprovat al codi font de pyctcdecode (15-11): sense un model
+KenLM, `unigrams` només es valida contra l'alfabet i es llença; la ruta `/transcribe_mms_lm`
+del Space, tal com està, és un feix SENSE lèxic. I `kenlm` no compila al Python 3.13 de Kaggle
+ni és al Docker del Space. Solució: `arpa_lm.py`, un lector d'ARPA (unigrames + bigrames amb
+recaiguda) en Python pur amb la interfície de KenLM (`Model`, `State`, `BaseScore`,
+`BeginSentenceWrite`), que es posa a `pyctcdecode.language_model.kenlm`. Dos ARPA escrits a mà
+(`scratchpad/lm/fes_arpa.py`): `lexic.arpa` (unigrames: 182.073 formes del lèxic i les taules,
+en l'alfabet del model) i `corpus_bi.arpa` (bigrames de 6.300 frases de la biblioteca, descompte
+absolut interpolat, sense cap frase dels 8 vídeos de prova). Prova sintètica: amb alpha 0,6 el
+feix ja esborra lletres d'una paraula fora del lèxic → la reixa comença a 0,15 i una variant
+castiga menys el desconegut (unk −5). Kernel `tfa-h3-el-lexic-al-feix` (dataset privat
+`tfa-veritat-h3`): greedy reproduït a Kaggle (241 versos, 53 s; CER 0,207 contra el 0,206
+desat: la línia de base es reconstrueix).
+
+*Resultat de l'H3 (226 versos narrats, veritat humana, mateix `net`+`dist` del 0,21; «plegat»
+= x/ḫ, ɣ/ġ, c/š comptats iguals):*
+
+| descodificació | CER | CER plegat | WER | WER plegat |
+|---|---|---|---|---|
+| greedy (el de sempre) | 0,207 | 0,183 | 0,712 | 0,665 |
+| feix sense lèxic | 0,201 | 0,177 | 0,682 | 0,636 |
+| feix + lèxic (unigrames) α 0,15 β 1 | 0,200 | 0,176 | 0,646 | 0,593 |
+| **feix + bigrames del corpus α 0,15 β 1** | **0,198** | **0,174** | **0,640** | **0,584** |
+| feix + lèxic α 0,6 | 0,241 | 0,218 | 0,785 | 0,752 |
+
+Aparellat contra greedy, bootstrap 2.000 (llavor 1114): WER **−0,081 [−0,113, −0,049]**, 106
+versos milloren, 43 empitjoren; CER −0,009 [−0,017, −0,001]. Cantats (n=15): CER 0,234 →
+0,198, WER 0,728 → 0,602. **Veredicte: H3 és real i petita.** Set punts de WER i mig de CER;
+el feix sol ja en dóna tres; els bigrames del corpus afegeixen poc sobre els unigrames (0,640
+contra 0,646): l'ordre de paraules de la biblioteca no diu gaire res dels contes. Amb α ≥ 0,3
+el lèxic fa mal: esborra lletres de les paraules que no té. **Els +40 punts que l'auditor situava
+a l'ASR no s'alliberen posant el lèxic al feix**: el coll és el model acústic, i només
+l'adaptació amb àudio del canal (H4) o un model millor hi pot arribar. El que sí que val: el
+WER 0,64 és el nou punt de partida de la glossa, i la ruta del Space ha de dur aquest ARPA i
+aquests pesos (α 0,15, β 1,0) per ser el que diu que és.
+
+**H9 · Induir glosses del corpus paral·lel (nova, viva).** 58 vídeos del canal tenen subtítols
+humans (42 en anglès i àrab, la resta només àrab): àudio amazic ↔ traducció humana per rètol.
+Amb l'ASR alineat als rètols, per a cada token amazic es busca el mot anglès que hi coapareix
+més del que l'atzar faria (Dice sobre rètols). És el raonament que va confirmar `turft` =
+«ship» a mà, fet per a tots els tokens alhora. *Prova amb els 8 vídeos de la veritat (148
+rètols, `canal/induccio.py`, `induccio_vs_diccionari.py`):* 17 tokens amb candidat; **4
+confirmen el diccionari** (`turft` ship 0,52, `tafukt` sun, `tamazirt` country 0,86, `tasarut`
+key 0,75), **3 són lèxic que no tenim** (`irgzn` men 1,00, `amqqryan` captain), 1 és un nom
+propi (`isġi`, l'heroi: el diccionari diu «vautour», que és el que vol dir el nom), i la resta
+són partícules (`yan`, `nns`, `mad`) que coapareixen amb tot: soroll esperat, s'han d'excloure
+per la taula a mà. *Predicció:* amb els 58 vídeos (~3.000 rètols) sortiran centenars de
+candidats; els «confirmats» avalen glosses sense cap persona nostra, els «nous» són el lèxic
+del camp, i els «contradiu» amb Dice alt són glosses del diccionari a revisar. Àudio dels 58
+baixat (289 MB, dataset privat `tfa-humans-audio`), kernel `tfa-58-transcriu` en marxa.
+Material de tercers: res no entra a la biblioteca; és un instrument de validació.
+
 ## El que bloqueja
 
 - **Deu minuts transcrits per un parlant.** Sense això tota mesura és indirecta. Serien

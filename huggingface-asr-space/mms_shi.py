@@ -146,6 +146,12 @@ def transcribe(path: str, max_secs: float) -> dict:
 UNIGRAMS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "unigrams_shi.txt")
 KENLM = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lm_shi.arpa")
 BEAM = 64
+# Measured 15-11-2026 on 226 narrated verses with human truth (Kaggle, same model): greedy WER
+# 0.712 → beam + this ARPA at alpha 0.15 / beta 1.0: 0.640 (paired bootstrap −0.081, CI
+# [−0.113, −0.049]); CER 0.207 → 0.198. Alpha ≥ 0.3 is WORSE than greedy (it erases letters of
+# words the lexicon lacks). Without an ARPA, pyctcdecode ignores `unigrams` entirely: this route
+# was a plain beam search until the ARPA shipped.
+LM_ALPHA, LM_BETA = 0.15, 1.0
 _lm = {"decoder": None, "error": None, "unigrams": 0}
 
 
@@ -174,6 +180,16 @@ def _build_decoder():
     if _lm["decoder"] is not None or _lm["error"]:
         return
     try:
+        # KenLM is not in this image (and does not build on recent Pythons): `arpa_lm.py` reads
+        # the ARPA in pure Python with KenLM's interface, and pyctcdecode is pointed at it.
+        try:
+            import kenlm  # noqa: F401
+        except ImportError:
+            import arpa_lm
+            import pyctcdecode.language_model as _plm
+            import pyctcdecode.decoder as _pdec
+            _plm.kenlm = arpa_lm
+            _pdec.kenlm = arpa_lm
         from pyctcdecode import build_ctcdecoder
         proc = _state["proc"]
         vocab = {v: k for k, v in proc.tokenizer.get_vocab().items()}
@@ -184,7 +200,7 @@ def _build_decoder():
                 unigrams = [l.strip() for l in f if l.strip()]
         _lm["unigrams"] = len(unigrams or [])
         _lm["decoder"] = build_ctcdecoder(labels, kenlm_model_path=KENLM if os.path.exists(KENLM) else None,
-                                          unigrams=unigrams)
+                                          unigrams=unigrams, alpha=LM_ALPHA, beta=LM_BETA)
         print(f"[MMS+lm] decoder ready: {len(unigrams or [])} unigrams, kenlm={os.path.exists(KENLM)}")
     except Exception as e:
         _lm["error"] = str(e)
