@@ -848,6 +848,31 @@ d'acord entre dues lectures queden 6,7 min; sense, 56 min de transcripció provi
 4. **La traducció:** la canonada de fets amb el lèxic validat i les regles del professor; mesura
    sempre la mateixa (mostra de 40 a cegues, i els 226 versos quan hi ha veritat).
 
+## El creuament de fonts, en codi (15-11, vespre; punt 2 del programa)
+
+`tools/lm/creuament.py`: per a cada forma amb ≥ 2 fonts externes de mena diferent, el model
+(DeepSeek, t = 0) rep el material de cada font i ha de dir si dues coincideixen en el significat
+i quin és, en català. Fonts: subtítols humans (en + ar, **comptats com una**: els va escriure la
+mateixa persona), web de l'autor, professor en dàrija, amazic.cat, ⵡⵉⴽⵉⵎⴰⵡⴰⵍ. El nostre lèxic
+no compta com a font; només es diu si coincideix o contradiu.
+
+| | formes |
+|---|---|
+| jutjades | 120 |
+| amb dues fonts realment independents | 101 |
+| acord de dues fonts | **53** (50 confirmen el diccionari; 3 el corregeixen: `tiġrmt` ciutat, `issufġ` disparar [sentit en context], `izlan` cançons) |
+| sense acord, el diccionari coincideix amb una | 11 |
+| sense acord, contradicció amb el diccionari | 9 (`azir`, `mzi`, `uššn` llop/xacal…: a mirar) |
+| sense acord, res a dir | 28 |
+
+Les 53 entren a `LEXIC_VALIDAT` per `backend/data/lexic_validat_creuament.json` (mateix
+carregador que el glossari del web), amb les fonts a cada entrada: la glossa de l'interlineal
+diu «lèxic validat» i cita d'on ve. El que es guanya no és tant el significat (50 ja el teníem)
+com la **procedència**: el filtre de fets comprova procedència, no veritat.
+
+Límit: 120 formes són les que tenien ≥ 2 fonts; la majoria de les 525 minades i les 236 del web
+en tenen una sola. Per fer-ne créixer el nombre calen fonts noves per forma, no més model.
+
 ## El que bloqueja
 
 - **Deu minuts transcrits per un parlant.** Sense això tota mesura és indirecta. Serien
