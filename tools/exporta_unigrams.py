@@ -52,6 +52,7 @@ def main(sortida: str) -> int:
                     formes.add(k)
     formes.update(morfologia.PARTICULES)
     formes.update(morfologia.FORMES_GRAMATICALS)
+    formes.update(morfologia.LEXIC_VALIDAT)      # 15-11: el que els subtítols humans han validat
     fora = set()
     for f in formes:
         for tros in re.split(r"[\s\-]+", f):
