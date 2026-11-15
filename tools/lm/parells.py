@@ -71,7 +71,12 @@ if __name__ == "__main__":
     n = buits = 0
     with io.open(fora, "w", encoding="utf-8") as g:
         for vid, paraules in sorted(asr.items()):
-            en = cues(os.path.join(subs, vid + ".en.vtt")) if os.path.exists(os.path.join(subs, vid + ".en.vtt")) else []
+            #: tres vídeos duen la pista anglesa com a `en-US`
+            en = []
+            for ext in (".en.vtt", ".en-US.vtt"):
+                if os.path.exists(os.path.join(subs, vid + ext)):
+                    en = cues(os.path.join(subs, vid + ext))
+                    break
             ar = cues(os.path.join(subs, vid + ".ar.vtt")) if os.path.exists(os.path.join(subs, vid + ".ar.vtt")) else []
             base = en or ar
             for de, a, t in base:
