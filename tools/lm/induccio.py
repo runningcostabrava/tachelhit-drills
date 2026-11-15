@@ -11,7 +11,7 @@ NO és una glossa: és un candidat amb un número, que es compara amb el diccion
 Els subtítols humans tradueixen el sentit, no paraula per paraula, i l'ASR talla malament: el
 senyal és feble i cal freqüència. Per això el mínim de rètols per token és 4.
 
-ÚS: induccio.py <parells.jsonl> <sortida.md> [mínim de rètols=4] [en|ar]
+ÚS: induccio.py <parells.jsonl> <sortida.md> [mínim de rètols=4] [en|ar|fr]
 """
 import collections
 import io
@@ -62,6 +62,21 @@ def mots_ar(t):
     return fora
 
 
+#: Francès (els 25 vídeos de Zouhir amb tres traduccions, #620): mots de contingut, sense els
+#: articles, les preposicions i els verbs auxiliars més corrents; els elidits (l', d', qu') es parteixen.
+STOP_FR = set("""le la les un une des du de d l au aux et ou mais donc or ni car que qui quoi dont où ce cet cette ces
+il elle ils elles on nous vous je tu me te se lui leur y en ne pas plus jamais rien personne est sont était étaient
+été être a ont avait avaient avoir fait font faire dit disent va vont aller peut peuvent très bien aussi comme
+pour par avec sans sous sur dans entre vers chez depuis pendant avant après puis alors ainsi tout tous toute toutes
+son sa ses mon ma mes ton ta tes notre nos votre vos leurs là ici oui non si même autre autres quand car afin
+celui celle ceux celles cela ça c s n m t j qu lorsque chaque quelque quelques peu beaucoup encore déjà toujours""".split())
+
+
+def mots_fr(t):
+    t = (t or "").lower().replace("’", "'")
+    return [w for w in re.findall(r"[a-zàâäçéèêëîïôöùûüÿœ]+", t.replace("'", " ")) if len(w) > 2 and w not in STOP_FR]
+
+
 if __name__ == "__main__":
     parells = [json.loads(l) for l in io.open(sys.argv[1], encoding="utf-8") if l.strip()]
     minim = int(sys.argv[3]) if len(sys.argv) > 3 else 4
@@ -71,7 +86,7 @@ if __name__ == "__main__":
         if not p.get(llengua):
             continue
         am = set(w.lower() for w in p["asr"].split() if len(w) >= 3)
-        en = set(mots(p["en"])) if llengua == "en" else set(mots_ar(p["ar"]))
+        en = set(mots(p["en"])) if llengua == "en" else set(mots_fr(p["fr"])) if llengua == "fr" else set(mots_ar(p["ar"]))
         c_am.update(am)
         c_en.update(en)
         for a in am:
@@ -92,7 +107,7 @@ if __name__ == "__main__":
             files.append((na, a, cands[:3]))
     files.sort(key=lambda x: -x[0])
     with io.open(sys.argv[2], "w", encoding="utf-8") as g:
-        nom_ll = "anglès" if llengua == "en" else "àrab"
+        nom_ll = {"en": "anglès", "fr": "francès"}.get(llengua, "àrab")
         g.write(f"# Glosses induïdes del corpus paral·lel ({len(parells)} rètols, mínim {minim} rètols per token, {nom_ll})\n\n")
         g.write(f"Candidats, no glosses: Dice ≥ 0,25 entre el token de l'ASR i un mot {nom_ll} del mateix rètol.\n\n")
         g.write(f"| rètols | token ASR | candidats ({nom_ll}) (Dice, rètols junts) |\n|---|---|---|\n")
