@@ -775,6 +775,27 @@ canonada **omple un 55 % més de caselles i escriu un 60 % més de frases** sens
 trobi més falsedat, molt per sobre del soroll de ±3 de la no-reproduïbilitat. La veritat per
 casella segueix sent la dels 226 versos narrats.
 
+## El programa (en Pablo, 15-11: «examina tots els vídeos del canal i, com un lingüista que
+## investiga una llengua perduda, desxifra-la; ensenya el model a transcriure millor i a traduir»)
+
+1. **Catàleg únic del canal:** vídeos + shorts + directes + llistes (≈566 peces), cada una
+   amb llengua parlada (amazic / dàrija / mixta: densitat del transcrit automàtic + certesa de
+   l'ASR) i mena (classe, conte, cançó, opinió, directe). Avui: 440 + 93 + 33 llistats; falta
+   fondre'ls i classificar-los.
+2. **Creuament automàtic de fonts** per a cada forma: subtítols humans (inducció en/ar), web de
+   l'autor (glossari, diàlegs, vocabulari), explicacions en dàrija (1.134 ítems) i IRCAM. Una
+   glossa entra a `LEXIC_VALIDAT` quan dues fonts independents hi coincideixen; una
+   contradicció forta amb el diccionari s'apunta. Avui s'ha fet a mà per a 76 entrades; el que
+   ve és fer-ho en codi per a les 525 formes minades i les 236 files del web, i el mateix per a
+   les **regles** (annexió, articles `yan/yat`, afixos de persona, `da` imperfectiu), que ara
+   surten de la boca del professor i que la canonada ja aplica en part.
+3. **El lector (H4):** l'única palanca que queda és afinar l'adaptador amb veu d'aquest canal.
+   Sense transcripcions humanes, la via de camp: transcripció provisional del millor lector
+   (feix + lèxic), filtrada pel que les altres fonts avalen, re-entrenament, i mesura contra els
+   226 versos; s'itera només si el CER baixa. Primer experiment: les 3,5 h dels 58 contes.
+4. **La traducció:** la canonada de fets amb el lèxic validat i les regles del professor; mesura
+   sempre la mateixa (mostra de 40 a cegues, i els 226 versos quan hi ha veritat).
+
 ## El que bloqueja
 
 - **Deu minuts transcrits per un parlant.** Sense això tota mesura és indirecta. Serien
