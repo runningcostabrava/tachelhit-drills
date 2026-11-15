@@ -719,7 +719,15 @@ Tenia raó en tot. Tres forats del meu catàleg i una font nova:
    `da` partícula d'imperfectiu/habitual, `sawlɣ` «parlo» (arrel swl + -ɣ), `yan`/`yat` article
    indefinit m./f. (i d'origen numeral), `arba` → `warba` en estat d'annexió, `imzzyan` «petit»,
    `tzrit` «vas veure» amb `t-…-t` de 2a persona. Els vídeos d'opinió i d'història donen 0
-   ítems, com ha de ser. Pendent: minar els 182 i comparar amb el lèxic (com la inducció).
+   ítems, com ha de ser. *Fet el mateix dia:* **107 vídeos minats** (77 de la pestanya de
+   vídeos amb transcrit dens + 30 directes, que són els més rics: «meu lèxic dels animals» 69
+   ítems, «diversitat del lèxic (1)» 98, «la derivació» 88, «masculí i femení» 66) →
+   **1.134 ítems**, 525 formes llatines diferents i 512 ítems només en lletres àrabs. Contra el
+   lèxic (`tamazight-for-all-darija-vs-lexic.md`): 45 coincideixen, **195 no les tenim**, 285
+   «a revisar» (l'aparellador català↔francès/anglès és curt: molts són coincidències que no
+   veu). Són candidats amb procedència (vídeo, frase del professor), no glosses: dues capes de
+   soroll (l'ASR de YouTube i l'extracció del model). El que en surt segur: el camp semàntic de
+   cada directe (animals, adjectius, derivació, fonètica) i les regles gramaticals explicades.
 3. **El web `tamazightforall.com`** (un Blogger amb tot en línia; «tots els drets reservats, ús
    personal no comercial»): cursos A1–B1 amb 11 diàlegs per llengua en tifinag + llatí +
    traducció (ar/en/es), ~45 mots de vocabulari, un **glossari de 59 termes lingüístics**
@@ -744,8 +752,28 @@ Tenia raó en tot. Tres forats del meu catàleg i una font nova:
 - **R2:** reescriptura feta a producció (21.036 adreces, 0 sense fitxer; `updated_at` tocat);
   política CORS al bucket i PR #614 perquè la memòria cau fora de línia torni a desar mitjans.
 - **La canonada amb el lector nou:** `escolta_llista.py --ruta /transcribe_mms_lm` (PR #613);
-  els 25 vídeos s'estan tornant a escoltar a `escoltats_lm/` (vídeos de la mostra de 40
-  primer) per jutjar abans/després a cegues amb `abans_despres40.py`.
+  els 25 vídeos tornats a escoltar a `escoltats_lm/` (vídeos de la mostra de 40 primer).
+
+**Abans/després a cegues sobre la mostra fixa de 40 (15-11, `abans_despres40.py` +
+`ab40_resultat.py`; jutge independent, 96 fitxes amb 16 duplicats plantats, acord del jutge
+amb ell mateix 16/16 en caselles i 16/16 en frases):**
+
+| | abans (greedy, taules 14-11) | després (feix + lèxic, taules 15-11) |
+|---|---|---|
+| tokens de l'ASR | 318 | 371 |
+| caselles plenes | 179 | 277 |
+| caselles falses (segons el jutge) | 0 | 4 (1,4 %) |
+| caselles bones | 179 | **273** |
+| frases bo / a mitges / fals / cap | 12 / 3 / 0 / 25 | **19** / 2 / 0 / 19 |
+| temes bons / falsos | 21 / 1 | 25 / 1 |
+
+El text de l'ASR canvia a 38 dels 40 trossos (el feix separa paraules: 371 tokens contra 318).
+**Lectura honesta:** és consistència interna (casella ↔ token + glosses), no veritat contra
+parlant; el jutge és indulgent (0 falses a la versió vella, quan contra la veritat humana la
+interlineal en té ~19 %). El que la mesura sí que diu: amb el lector nou i el lèxic validat la
+canonada **omple un 55 % més de caselles i escriu un 60 % més de frases** sense que el jutge hi
+trobi més falsedat, molt per sobre del soroll de ±3 de la no-reproduïbilitat. La veritat per
+casella segueix sent la dels 226 versos narrats.
 
 ## El que bloqueja
 
