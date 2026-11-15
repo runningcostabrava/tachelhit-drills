@@ -848,6 +848,27 @@ d'acord entre dues lectures queden 6,7 min; sense, 56 min de transcripció provi
 4. **La traducció:** la canonada de fets amb el lèxic validat i les regles del professor; mesura
    sempre la mateixa (mostra de 40 a cegues, i els 226 versos quan hi ha veritat).
 
+## H3, segona volta (15-11, nit; Kaggle sense GPU, 241 versos): ⵡⵉⴽⵉⵎⴰⵡⴰⵍ al model de llengua no mou res
+
+Mateix nucli, mateixos versos, el corpus de bigrames de la biblioteca sol (`corpus_bi`) contra el
+que hi afegeix les 990 frases del Viccionari zgh (`corpus_bi_wm`), a quatre pesos:
+
+| descodificació (parlat, n = 226) | CER | WER |
+|---|---|---|
+| greedy | 0,207 | 0,712 |
+| feix sol | 0,201 | 0,682 |
+| corpus_bi α 0,15 β 1,0 (el desplegat) | 0,198 | 0,640 |
+| corpus_bi α 0,1 β 1,0 | 0,194 | 0,628 |
+| corpus_bi_wm α 0,15 β 1,0 | 0,197 | 0,638 |
+| corpus_bi_wm α 0,1 β 1,0 | 0,193 | 0,628 |
+| α 0,2 (els dos) | 0,206-0,207 | 0,657-0,660 |
+
+Lectura: el text del Viccionari **no canvia res** (diferències de 0,001: és el mateix lector),
+i α 0,1 guanya a α 0,15 per 0,004 de CER i 0,012 de WER, per sota del marge que la bootstrap
+del matí va donar (±0,03 de WER). **No es toca el Space per això.** La decisió del pes la
+prendrà el test gran de Zouhir (#620, ~1.000 rètols), on una diferència de 0,01 sí que es pot
+veure. Als 15 versos cantats passa el contrari (α 0,2 millor): massa pocs per dir res.
+
 ## El creuament de fonts, en codi (15-11, vespre; punt 2 del programa)
 
 `tools/lm/creuament.py`: per a cada forma amb ≥ 2 fonts externes de mena diferent, el model
