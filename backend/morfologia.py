@@ -608,10 +608,10 @@ LEXIC_VALIDAT = {
 #: morfològica», `aḍfiṛ` «roba vella» per «sufix», `asnaway` partit en «li + proceed» per
 #: «estandardització»). És l'autor mateix qui dóna el terme amb la traducció: la font més forta
 #: que tenim per a aquestes paraules. Només hi entren els termes d'un sol token.
-def _lexic_validat_del_web() -> dict:
+def _lexic_validat_de(fitxer: str, sufix: str = "") -> dict:
     import json
     import os
-    cami = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "lexic_validat_web_tfa.json")
+    cami = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", fitxer)
     if not os.path.exists(cami):
         return {}
     try:
@@ -619,11 +619,20 @@ def _lexic_validat_del_web() -> dict:
             termes = json.load(fh).get("termes") or {}
     except (OSError, ValueError):
         return {}
-    return {k: f"{v['ca']} (terme lingüístic)" for k, v in termes.items()
-            if " " not in k and k not in LEXIC_VALIDAT and k not in PARTICULES and k not in FORMES_GRAMATICALS}
+    return {k: f"{v['ca']}{sufix}" for k, v in termes.items()
+            if " " not in k and v.get("ca") and k not in LEXIC_VALIDAT and k not in PARTICULES and k not in FORMES_GRAMATICALS}
+
+
+def _lexic_validat_del_web() -> dict:
+    return _lexic_validat_de("lexic_validat_web_tfa.json", " (terme lingüístic)")
 
 
 LEXIC_VALIDAT.update(_lexic_validat_del_web())
+#: El creuament automàtic de fonts (`tools/lm/creuament.py`, `data/lexic_validat_creuament.json`):
+#: una glossa hi entra quan DUES fonts independents coincideixen (els subtítols humans en anglès i
+#: en àrab del mateix subtitulador compten com una). Cada entrada porta les fonts; la majoria
+#: confirmen el diccionari, i tres el corregeixen (`tiġrmt` ciutat, `izlan` cançons…).
+LEXIC_VALIDAT.update(_lexic_validat_de("lexic_validat_creuament.json"))
 
 #: Les taules escrites a mà, en un sol lloc per consultar-les. La mena es guarda a part
 #: perquè la glossa pugui dir la veritat: `iga` no és cap partícula, és una forma del verb
