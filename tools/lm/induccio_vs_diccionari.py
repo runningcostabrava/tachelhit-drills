@@ -63,6 +63,35 @@ def arrel(w):
     return re.sub(r"(ies|es|s|ed|ing|ly)$", "", w)[:5]
 
 
+AR_TASHKIL = re.compile(r"[ؐ-ًؚ-ٰٟۖ-ۭـ]")
+
+
+def arabitza(w):
+    w = AR_TASHKIL.sub("", w).strip("،,؟?.:;!")
+    for a, b in (("أ", "ا"), ("إ", "ا"), ("آ", "ا"), ("ى", "ي"), ("ة", "ه")):
+        w = w.replace(a, b)
+    for pref in ("وال", "فال", "بال", "كال", "لل", "ال", "و", "ف", "ب", "ل"):
+        if w.startswith(pref) and len(w) - len(pref) >= 3:
+            w = w[len(pref):]
+            break
+    #: sufixos de possessiu i de plural: «يده» (la seva mà) i «يد» (mà) són la mateixa paraula
+    for suf in ("هما", "هم", "ها", "كم", "نا", "ون", "ين", "ات", "ه", "ك", "ي"):
+        if w.endswith(suf) and len(w) - len(suf) >= 3:
+            w = w[:-len(suf)]
+            break
+    return w
+
+
+def glosses_ar(tok):
+    """Les paraules àrabs que l'IRCAM i les conjugacions donen per a `tok` (normalitzades)."""
+    fora = set()
+    for r in lexicon.lookup(tok) or []:
+        for c in (r.get("ircam") or []) + (r.get("conjugation") or []):
+            for w in re.findall(r"[؀-ۿ]+", c.get("arabic") or ""):
+                fora.add(arabitza(w))
+    return fora
+
+
 def glosses_en(tok, sig, ev, en):
     """Totes les paraules angleses (i les catalanes de la taula, traduïdes) que el lèxic dóna."""
     fora = set()
@@ -93,12 +122,28 @@ if __name__ == "__main__":
             continue
         n, tok, cands = int(m.group(1)), m.group(2), m.group(3)
         cand = [(c, float(d)) for c, d in re.findall(r"\*\*([^*]+)\*\* \(([\d.]+),", cands)]
-        gl, te_glossa = glosses_en(tok, sig, ev, en)
-        caixa = "nou" if not gl else "contradiu"
-        for c, d in cand:
-            if c in gl or any(arrel(c) == arrel(x) for x in gl if len(x) > 3):
-                caixa = "confirmat"
-                break
+        es_ar = bool(cand) and bool(re.search(r"[؀-ۿ]", cand[0][0]))
+        if es_ar:
+            #: candidats àrabs: contra les glosses àrabs de l'IRCAM, per forma normalitzada
+            gl = glosses_ar(tok)
+            te_glossa = morfologia.glossa(tok, sig, ev, en) is not None
+            if not gl and te_glossa:
+                gl = {"·"}        # la taula a mà en diu alguna cosa, però no en àrab: «contradiu» no val
+            caixa = "nou" if not gl else "contradiu"
+            for c, d in cand:
+                ca = arabitza(c)
+                if ca in gl or any(ca[:3] == x[:3] for x in gl if len(x) >= 3 and len(ca) >= 3):
+                    caixa = "confirmat"
+                    break
+            if caixa == "contradiu" and gl == {"·"}:
+                caixa = "sense àrab al lèxic"
+        else:
+            gl, te_glossa = glosses_en(tok, sig, ev, en)
+            caixa = "nou" if not gl else "contradiu"
+            for c, d in cand:
+                if c in gl or any(arrel(c) == arrel(x) for x in gl if len(x) > 3):
+                    caixa = "confirmat"
+                    break
         #: un candidat que és el mateix token (o quasi) escrit a l'anglès és un NOM PROPI que el
         #: subtitulador deixa tal qual: `isġi` → «Isghi». El diccionari que el tradueix («vautour»)
         #: no s'equivoca de paraula, s'equivoca de categoria: un nom no es glossa.
@@ -111,7 +156,7 @@ if __name__ == "__main__":
                 "partícula", "forma gramatical", "preposició amb pronom"):
             caixa = "funció"
         files.append((caixa, n, tok, cand, sorted(gl)[:6]))
-    ordre = {"contradiu": 0, "nou": 1, "nom propi": 2, "confirmat": 3, "funció": 4}
+    ordre = {"contradiu": 0, "nou": 1, "nom propi": 2, "confirmat": 3, "funció": 4, "sense àrab al lèxic": 5}
     files.sort(key=lambda x: (ordre[x[0]], -x[1]))
     with io.open(sys.argv[2], "w", encoding="utf-8") as g:
         g.write("# Candidats induïts contra el lèxic\n\n| caixa | rètols | token | candidats (Dice) | el lèxic diu |\n|---|---|---|---|---|\n")

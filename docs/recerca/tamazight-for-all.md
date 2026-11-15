@@ -646,9 +646,26 @@ diccionari amb senyal fort**: `immut` dead 0,67 (el diccionari: «urge»), `nnif
 («before»), `wawal` word («run down», el bug conegut), `iḫf` himself 0,33·13 («boîte, boss»).
 **Conseqüència en codi:** capa `LEXIC_VALIDAT` a `morfologia.py` (mena «lèxic validat», entre
 les SEGURES): 10 entrades amb Dice i rètols al costat, on el diccionari perd sense «o bé». La
-mesura que ho jutja és la de sempre: els 226 versos amb veritat. Pendent: córrer el mateix
-amb la descodificació H3 (kernel v2) i veure si el corpus paral·lel dóna més candidats o
-millors; i estendre la inducció a l'àrab (16 vídeos només tenen àrab).
+mesura que ho jutja és la de sempre: els 226 versos amb veritat.
+
+*La inducció amb la descodificació H3 (kernel v2, mateixos 58 vídeos):* el feix amb lèxic
+omple més rètols (1.826 contra 1.684; 99 sense text contra 241) i dóna més tokens amb candidat
+(144 contra 83) i més confirmats (32 contra 27), però **molts més «contradiu» (92 contra 39)**:
+confirmats sobre confirmats+contradiu, greedy 41 %, lèxic 26 %. El feix amb lèxic empeny cap a
+paraules del lèxic també quan s'equivoca, i aquelles coapareixen amb l'anglès equivocat. Per
+induir glosses, greedy és més net per candidat i el lèxic en troba més: fer servir tots dos i
+quedar-se el que coincideix.
+
+*La inducció amb l'àrab (mateixos rètols; `induccio.py … ar`, contra les glosses àrabs de
+l'IRCAM):* 81 tokens amb candidat; **13 confirmats** (`tudrt` حياة vida 0,67, `akal` أرض terra,
+`ifis` ضبع hiena, `ignna` سماء cel, `tafryant` عصابة colla, `amġar` شيخ, i **`waḫḫa` رغم**, que
+avala la taula a mà), 11 nous, 28 «contradiu» (els mateixos de l'anglès: `idda` «هنا» quan
+és «va anar», `iḫf` «رأس» quan el rètol diu «نفسه», ell mateix) i 29 sense àrab al lèxic.
+**Doble evidència** (anglès i àrab del mateix corpus al mateix sentit): `rbbi` lord/الله
+«Déu», `knnumi` أنتم 0,86 «vosaltres», `isaqqul` staring/يحدق, `umsfri` interpreter/مترجم,
+`wanig` looks/يبدو «sembla que»; les cinc entren a `LEXIC_VALIDAT`, més `tanirt` (nom propi,
+0,89) i el clític `ak` (`didak` = amb tu: صفك). Taules:
+`tamazight-for-all-induccio-58-arab*.md`, `…-h3-vs-lexic.md`.
 
 ## El que bloqueja
 

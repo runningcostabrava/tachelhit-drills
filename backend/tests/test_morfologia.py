@@ -288,10 +288,14 @@ def test_el_lexic_validat_pels_subtitols_guanya_al_diccionari_sense_alternativa(
     #: `isġi` és l'heroi dels contes i el diccionari el traduïa («vautour»). El diccionari ha
     #: perdut: no se'l torna a oferir amb «o bé».
     for forma, tros in (("immut", "va morir"), ("irgzn", "homes"), ("wawal", "paraula"),
-                        ("nnif", "més enllà"), ("isġi", "nom propi")):
+                        ("nnif", "més enllà"), ("isġi", "nom propi"),
+                        #: doble evidència, anglès i àrab: «lord» i «الله», «أنتم» 0,86
+                        ("rbbi", "Déu"), ("knnumi", "vosaltres"), ("umsfri", "intèrpret")):
         diu, com = glossa(forma)
         assert tros in diu and " — o bé: " not in diu, (forma, diu)
         assert com == "lèxic validat" and com in morfologia.SEGURES, (forma, com)
+    #: `didak` = did + ak («amb tu»): als rètols àrabs, «al teu costat» (صفك, جانبك)
+    assert "tu" in glossa("didak")[0]
 
 
 def test_el_que_diuen_els_subtitols_humans_mana_sobre_el_diccionari():
