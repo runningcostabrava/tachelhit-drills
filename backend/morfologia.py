@@ -149,8 +149,12 @@ PARTICULES = {
     "ak": "et (masculí)",
     "am": "et (femení)",
     "as": "li",
-    "aġ": "ens",
-    "aḫ": "ens",
+    #: #398 (15-11-2026): als 8 contes de Tamazight For All amb pista humana i anglès humà, «ax»
+    #: surt 20 vegades i SEMPRE darrere d'un nom o d'un díctic («ill ax» = aquest mar, «tuft ax» =
+    #: aquest vaixell, «dinn ax» = allà, «ikru ann ax» = aquell xai): és el díctic de proximitat
+    #: discursiva de l'Atles, no «ens» ni «també». «Ens» només darrere d'un verb («fk aɣ» dona'ns).
+    "aġ": "rere un nom o ann/dinn/winn: díctic «aquest/aquell … (de què parlem)»; rere un verb: ens",
+    "aḫ": "rere un nom o ann/dinn/winn: díctic «aquest/aquell … (de què parlem)»; rere un verb: ens",
     "awn": "us",
     "asn": "els",
     "asnt": "els (femení)",
