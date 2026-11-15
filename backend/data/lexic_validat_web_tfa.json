@@ -1,0 +1,536 @@
+{
+ "_font": "Glossari de termes lingüístics de tamazightforall.com (Naceur Jabouja Ulmer), llegit el 15-11-2026; terminologia de l'IRCAM. Ús: validació de glosses; el web diu «tots els drets reservats, ús personal no comercial». Català posat per nosaltres a partir de l'anglès i el castellà de l'autor.",
+ "termes": {
+  "aṛṭṭal": {
+   "ca": "manlleu",
+   "en": "Borrowing",
+   "es": "Préstamo Lingüístico",
+   "ar": "الاقتراض اللغوي",
+   "tifinag": "ⴰⵕⵟⵟⴰⵍ",
+   "arrel": "√ⵕⵟⵍ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "asnfl agrawal": {
+   "ca": "alternança de codi",
+   "en": "Code-Switching",
+   "es": "Alternancia de Código",
+   "ar": "التناوب اللغوي",
+   "tifinag": "ⴰⵙⵏⴼⵍ ⴰⴳⵔⴰⵡⴰⵍ",
+   "arrel": "√[ⵙ]ⵏⴼⵍ + √ⴳⵔ + √ⵡⵍ",
+   "mena": "ⵓⴷⴷⵉⵙ ⴰⵙⵎⴰⵡⴰⵏ"
+  },
+  "tuṣkiwt iɣubban": {
+   "ca": "estructura profunda",
+   "en": "Deep Structure",
+   "es": "Estructura Profunda",
+   "ar": "البنية العميقة",
+   "tifinag": "ⵜⵓⵚⴽⵉⵡⵜ ⵉⵖⵓⴱⴱⴰⵏ",
+   "arrel": "√ⵚⴽⵡ + √ⵖⴱⴱ",
+   "mena": "ⵓⴷⴷⵉⵙ ⴰⵙⵎⴰⵡⴰⵏ"
+  },
+  "tantala": {
+   "ca": "dialecte",
+   "en": "Dialect",
+   "es": "Dialecto",
+   "ar": "اللهجة",
+   "tifinag": "ⵜⴰⵏⵜⴰⵍⴰ",
+   "arrel": "√ⵜⵍ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "awttu antalan": {
+   "ca": "frontera dialectal",
+   "en": "Dialect Boundary",
+   "es": "Frontera Dialectal",
+   "ar": "الحدود اللهجية",
+   "tifinag": "ⴰⵡⵜⵜⵓ ⴰⵏⵜⴰⵍⴰⵏ",
+   "arrel": "√ⵡⵜⵜ + √ⵜⵍ",
+   "mena": "ⵓⴷⴷⵉⵙ ⴰⵙⵎⴰⵡⴰⵏ"
+  },
+  "asddi antalan": {
+   "ca": "contínuum dialectal",
+   "en": "Dialect Continuum",
+   "es": "Continuo Dialectal",
+   "ar": "المتصل اللهجي",
+   "tifinag": "ⴰⵙⴷⴷⵉ ⴰⵏⵜⴰⵍⴰⵏ",
+   "arrel": "√ⵙⴷ + √ⵜⵍ",
+   "mena": "ⵓⴷⴷⵉⵙ ⴰⵙⵎⴰⵡⴰⵏ"
+  },
+  "tasntalant": {
+   "ca": "dialectologia",
+   "en": "Dialectology",
+   "es": "Dialectología",
+   "ar": "علم اللهجات",
+   "tifinag": "ⵜⴰⵙⵏⵜⴰⵍⴰⵏⵜ",
+   "arrel": "√ⵙⵙⵏ + √ⵜⵍ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "tasinilsant": {
+   "ca": "diglòssia",
+   "en": "Diglossia",
+   "es": "Diglosia",
+   "ar": "الازدواجية اللغوية",
+   "tifinag": "ⵜⴰⵙⵉⵏⵉⵍⵙⴰⵏⵜ",
+   "arrel": "√ⵙⵉⵏ + √ⵉⵍⵙ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "tantala tanafllat": {
+   "ca": "varietat alta (H)",
+   "en": "High (H) Variety",
+   "es": "Variedad Alta (H)",
+   "ar": "اللغة العليا",
+   "tifinag": "ⵜⴰⵏⵜⴰⵍⴰ ⵜⴰⵏⴰⴼⵍⵍⴰⵜ",
+   "arrel": "√ⵜⵍ + √ⴼⵍⵍ",
+   "mena": "ⵓⴷⴷⵉⵙ ⴰⵙⵎⴰⵡⴰⵏ"
+  },
+  "azrig antalan": {
+   "ca": "isoglossa",
+   "en": "Isogloss",
+   "es": "Isoglosa",
+   "ar": "إيزوغلوس",
+   "tifinag": "ⴰⵣⵔⵉⴳ ⴰⵏⵜⴰⵍⴰⵏ",
+   "arrel": "√ⵣⵔⴳ + √ⵜⵍ",
+   "mena": "ⵓⴷⴷⵉⵙ ⴰⵙⵎⴰⵡⴰⵏ"
+  },
+  "tantala tanaddawt": {
+   "ca": "varietat baixa (L)",
+   "en": "Low (L) Variety",
+   "es": "Variedad Baja (L)",
+   "ar": "اللغة الدنيا",
+   "tifinag": "ⵜⴰⵏⵜⴰⵍⴰ ⵜⴰⵏⴰⴷⴷⴰⵡⵜ",
+   "arrel": "√ⵜⵍ + √ⴷⴰⵡ",
+   "mena": "ⵓⴷⴷⵉⵙ ⴰⵙⵎⴰⵡⴰⵏ"
+  },
+  "anramas amyaɣ": {
+   "ca": "intel·ligibilitat mútua",
+   "en": "Mutual Intelligibility",
+   "es": "Inteligibilidad Mutua",
+   "ar": "الفهم المتبادل",
+   "tifinag": "ⴰⵏⵔⴰⵎⴰⵙ ⴰⵎⵢⴰⵖ",
+   "arrel": "√ⵔⵎⵙ + √ⵎⵢⵖ",
+   "mena": "ⵓⴷⴷⵉⵙ ⴰⵙⵎⴰⵡⴰⵏ"
+  },
+  "addur iffrn": {
+   "ca": "prestigi encobert",
+   "en": "Covert Prestige",
+   "es": "Prestigio Encubierto",
+   "ar": "الحظوة الخفية",
+   "tifinag": "ⴰⴷⴷⵓⵔ ⵉⴼⴼⵔⵏ",
+   "arrel": "√ⴷⴷⵔ + √ⴼⴼⵔ",
+   "mena": "ⵓⴷⴷⵉⵙ ⴰⵙⵎⴰⵡⴰⵏ"
+  },
+  "addur ifawn": {
+   "ca": "prestigi manifest",
+   "en": "Overt Prestige",
+   "es": "Prestigio Manifiesto",
+   "ar": "الحظوة الظاهرة",
+   "tifinag": "ⴰⴷⴷⵓⵔ ⵉⴼⴰⵡⵏ",
+   "arrel": "√ⴷⴷⵔ + √ⴼⵡ",
+   "mena": "ⵓⴷⴷⵉⵙ ⴰⵙⵎⴰⵡⴰⵏ"
+  },
+  "tasnmunilst": {
+   "ca": "sociolingüística",
+   "en": "Sociolinguistics",
+   "es": "Sociolingüística",
+   "ar": "اللسانيات الاجتماعية",
+   "tifinag": "ⵜⴰⵙⵏⵎⵓⵏⵉⵍⵙⵜ",
+   "arrel": "√ⵙⵙⵏ + √ⵎⵓⵏ + √ⵉⵍⵙ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "asnaway": {
+   "ca": "estandardització",
+   "en": "Standardization",
+   "es": "Estandarización",
+   "ar": "المعيرة",
+   "tifinag": "ⴰⵙⵏⴰⵡⴰⵢ",
+   "arrel": "√[ⵙ]ⵏⵡⵢ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "iḍiṣ n tddawutlayt": {
+   "ca": "influència del substrat",
+   "en": "Substratum Influence",
+   "es": "Influencia del Sustrato",
+   "ar": "تأثير لغة الأساس",
+   "tifinag": "ⵉⴹⵉⵚ ⵏ ⵜⴷⴷⴰⵡⵓⵜⵍⴰⵢⵜ",
+   "arrel": "√ⴹⴹⵚ + √ⴷⵡ + √ⵜⵍ",
+   "mena": "ⵓⴷⴷⵉⵙ ⴰⵙⵎⴰⵡⴰⵏ"
+  },
+  "tasnilst": {
+   "ca": "lingüística",
+   "en": "Linguistics",
+   "es": "Lingüística",
+   "ar": "اللسانيات",
+   "tifinag": "ⵜⴰⵙⵏⵉⵍⵙⵜ",
+   "arrel": "√ⵙⵙⵏ + √ⵉⵍⵙ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "tasnmslit": {
+   "ca": "fonologia",
+   "en": "Phonology",
+   "es": "Fonología",
+   "ar": "الصواتة",
+   "tifinag": "ⵜⴰⵙⵏⵎⵙⵍⵉⵜ",
+   "arrel": "√ⵙⵙⵏ + √ⵙⵍⵍ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "timsislit": {
+   "ca": "fonètica",
+   "en": "Phonetics",
+   "es": "Fonética",
+   "ar": "الصوتيات",
+   "tifinag": "ⵜⵉⵎⵙⵉⵙⵍⵉⵜ",
+   "arrel": "√ⵙⵍⵍ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "afrimsli": {
+   "ca": "fonema",
+   "en": "Phoneme",
+   "es": "Fonema",
+   "ar": "الفونيم",
+   "tifinag": "ⴰⴼⵔⵉⵎⵙⵍⵉ",
+   "arrel": "√ⴼⵔⴷ + √ⵙⵍⵍ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "aknimsli": {
+   "ca": "al·lòfon",
+   "en": "Allophone",
+   "es": "Alófono",
+   "ar": "الألوفون",
+   "tifinag": "ⴰⴽⵏⵉⵎⵙⵍⵉ",
+   "arrel": "√ⴽⵏⵡ + √ⵙⵍⵍ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "asifsus": {
+   "ca": "espirantització",
+   "en": "Spirantization",
+   "es": "Espirantización",
+   "ar": "الترقيق / التفشي",
+   "tifinag": "ⴰⵙⵉⴼⵙⵓⵙ",
+   "arrel": "√[ⵙ]ⴼⵙⴻⵙ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "tasddast": {
+   "ca": "sintaxi",
+   "en": "Syntax",
+   "es": "Sintaxis",
+   "ar": "التركيب (النحو)",
+   "tifinag": "ⵜⴰⵙⴷⴷⴰⵙⵜ",
+   "arrel": "√[ⵙ]ⴷⴷⵙ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "tajṛṛumt": {
+   "ca": "gramàtica",
+   "en": "Grammar",
+   "es": "Gramática",
+   "ar": "القواعد",
+   "tifinag": "ⵜⴰⵊⵕⵕⵓⵎⵜ",
+   "arrel": "√ⵊⵕⵎ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "azɣr": {
+   "ca": "arrel morfològica",
+   "en": "Morphological Root",
+   "es": "Raíz Morfológica",
+   "ar": "الجذر الصرفي",
+   "tifinag": "ⴰⵣⵖⵔ",
+   "arrel": "√ⵣⵖⵔ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "usliɣ": {
+   "ca": "afix",
+   "en": "Affix",
+   "es": "Afijo",
+   "ar": "الزائدة (الصرفية)",
+   "tifinag": "ⵓⵙⵍⵉⵖ",
+   "arrel": "√[ⵙ]ⵍⵖ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "tasnalɣa": {
+   "ca": "morfologia",
+   "en": "Morphology",
+   "es": "Morfología",
+   "ar": "علم الصرف",
+   "tifinag": "ⵜⴰⵙⵏⴰⵍⵖⴰ",
+   "arrel": "√ⵙⵙⵏ + √ⵍⵖ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "tasnamkt": {
+   "ca": "semàntica",
+   "en": "Semantics",
+   "es": "Semántica",
+   "ar": "علم الدلالة",
+   "tifinag": "ⵜⴰⵙⵏⴰⵎⴽⵜ",
+   "arrel": "√ⵙⵙⵏ + √ⵎⴽ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "tasnmawalt": {
+   "ca": "lexicologia",
+   "en": "Lexicology",
+   "es": "Lexicología",
+   "ar": "علم المعاجم",
+   "tifinag": "ⵜⴰⵙⵏⵎⴰⵡⴰⵍⵜ",
+   "arrel": "√ⵙⵙⵏ + √ⵡⵍ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "tafirt": {
+   "ca": "síl·laba",
+   "en": "Syllable",
+   "es": "Sílaba",
+   "ar": "المقطع اللفظي",
+   "tifinag": "ⵜⴰⴼⵉⵔⵜ",
+   "arrel": "√ⴼⵔ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "targalt": {
+   "ca": "consonant",
+   "en": "Consonant",
+   "es": "Consonante",
+   "ar": "حرف صامت",
+   "tifinag": "ⵜⴰⵔⴳⴰⵍⵜ",
+   "arrel": "√ⵔⴳⵍ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "aɣri": {
+   "ca": "vocal",
+   "en": "Vowel",
+   "es": "Vocal",
+   "ar": "حرف صائت / حركة",
+   "tifinag": "ⴰⵖⵔⵉ",
+   "arrel": "√ⵖⵔ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "azwr": {
+   "ca": "prefix",
+   "en": "Prefix",
+   "es": "Prefijo",
+   "ar": "سابقة",
+   "tifinag": "ⴰⵣⵡⵔ",
+   "arrel": "√ⵣⵡⵔ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "aḍfiṛ": {
+   "ca": "sufix",
+   "en": "Suffix",
+   "es": "Sufijo",
+   "ar": "لاحقة",
+   "tifinag": "ⴰⴹⴼⵉⵕ",
+   "arrel": "√ⴹⴼⵕ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "amyag": {
+   "ca": "verb",
+   "en": "Verb",
+   "es": "Verbo",
+   "ar": "فعل",
+   "tifinag": "ⴰⵎⵢⴰⴳ",
+   "arrel": "√ⵎⵢⴳ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "ism": {
+   "ca": "nom",
+   "en": "Noun",
+   "es": "Sustantivo",
+   "ar": "اسم",
+   "tifinag": "ⵉⵙⵎ",
+   "arrel": "√ⵙⵎ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "amqqim": {
+   "ca": "pronom",
+   "en": "Pronoun",
+   "es": "Pronombre",
+   "ar": "ضمير",
+   "tifinag": "ⴰⵎⵇⵇⵉⵎ",
+   "arrel": "√ⵇⵇⵎ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "afris": {
+   "ca": "adjectiu",
+   "en": "Adjective",
+   "es": "Adjetivo",
+   "ar": "نعت / صفة",
+   "tifinag": "ⴰⴼⵔⵉⵙ",
+   "arrel": "√ⴼⵔⵙ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "tanzɣt": {
+   "ca": "preposició",
+   "en": "Preposition",
+   "es": "Preposición",
+   "ar": "حرف جر",
+   "tifinag": "ⵜⴰⵏⵣⵖⵜ",
+   "arrel": "√ⵏⵣⵖ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "tawinst": {
+   "ca": "frase",
+   "en": "Sentence",
+   "es": "Oración",
+   "ar": "جملة",
+   "tifinag": "ⵜⴰⵡⵉⵏⵙⵜ",
+   "arrel": "√ⵡⵏⵙ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "asnulfu": {
+   "ca": "neologisme",
+   "en": "Neologism",
+   "es": "Neologismo",
+   "ar": "توليد لغوي",
+   "tifinag": "ⴰⵙⵏⵓⵍⴼⵓ",
+   "arrel": "√ⵏⵍⴼ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "taguri": {
+   "ca": "paraula",
+   "en": "Word",
+   "es": "Palabra",
+   "ar": "كلمة",
+   "tifinag": "ⵜⴰⴳⵓⵔⵉ",
+   "arrel": "√ⴳⵔ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "addur": {
+   "ca": "prestigi",
+   "en": "Prestige",
+   "es": "Prestigio",
+   "ar": "الهيبة اللغوية / المكانة",
+   "tifinag": "ⴰⴷⴷⵓⵔ",
+   "arrel": "√ⴷ ⵔ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "amsil": {
+   "ca": "morfema",
+   "en": "Morpheme",
+   "es": "Morfema",
+   "ar": "المورفيم (الوحدة الصرفية)",
+   "tifinag": "ⴰⵎⵙⵉⵍ",
+   "arrel": "√ⵎ ⵙ ⵍ",
+   "mena": "ⵉⵙⵎ (ⴰⵎⴰⵢ)"
+  },
+  "takniwt": {
+   "ca": "sinonímia",
+   "en": "Synonymy",
+   "es": "Sinonimia",
+   "ar": "الترادف",
+   "tifinag": "ⵜⴰⴽⵏⵉⵡⵜ",
+   "arrel": "√ⴽ ⵏ ⵡ",
+   "mena": "ⵉⵙⵎ (ⵓⵏⵜⵉ)"
+  },
+  "tasnamnaḍt": {
+   "ca": "pragmàtica",
+   "en": "Pragmatics",
+   "es": "Pragmática",
+   "ar": "التداوليات",
+   "tifinag": "ⵜⴰⵙⵏⴰⵎⵏⴰⴹⵜ",
+   "arrel": "√ⵙ ⵏ + √ⵎ ⵏ ⴹ",
+   "mena": "ⵉⵙⵎ (ⵓⵏⵜⵉ)"
+  },
+  "asnfl anamkan": {
+   "ca": "extensió semàntica",
+   "en": "Semantic Extension",
+   "es": "Extensión Semántica",
+   "ar": "الامتداد الدلالي",
+   "tifinag": "ⴰⵙⵏⴼⵍ ⴰⵏⴰⵎⴽⴰⵏ",
+   "arrel": "√ⴼ ⵍ + √ⵎ ⴽ",
+   "mena": "ⵓⴷⴷⵉⵙ ⴰⵙⵎⴰⵡⴰⵏ"
+  },
+  "asnmarra": {
+   "ca": "sistema d'escriptura",
+   "en": "Writing System",
+   "es": "Sistema de escritura",
+   "ar": "نظام الكتابة والإملاء",
+   "tifinag": "ⴰⵙⵏⵎⴰⵔⵔⴰ",
+   "arrel": "√ⵔ ⵉ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "agwmmay": {
+   "ca": "alfabet",
+   "en": "Alphabet",
+   "es": "Alfabeto",
+   "ar": "الأبجدية",
+   "tifinag": "ⴰⴳⵯⵎⵎⴰⵢ",
+   "arrel": "√ⴳ ⵎ ⵢ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "askkil": {
+   "ca": "grafema, lletra",
+   "en": "Grapheme / Letter",
+   "es": "Grafema / Letra",
+   "ar": "الحرف / الغرافيم",
+   "tifinag": "ⴰⵙⴽⴽⵉⵍ",
+   "arrel": "√ⵙ ⴽ ⵍ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "aslgn n tirra": {
+   "ca": "codificació ortogràfica",
+   "en": "Orthographic Codification",
+   "es": "Codificación Ortográfica",
+   "ar": "التقنين الإملائي",
+   "tifinag": "ⴰⵙⵍⴳⵏ ⵏ ⵜⵉⵔⵔⴰ",
+   "arrel": "√ⵍ ⴳ ⵏ + √ⵔ ⵉ",
+   "mena": "ⵓⴷⴷⵉⵙ ⴰⵙⵎⴰⵡⴰⵏ"
+  },
+  "tasnazɣrt": {
+   "ca": "etimologia",
+   "en": "Etymology",
+   "es": "Etimología",
+   "ar": "علم التأصيل",
+   "tifinag": "ⵜⴰⵙⵏⴰⵣⵖⵔⵜ",
+   "arrel": "√ⵙ ⵏ + √ⵣ ⵖ ⵔ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "tawsit n tutlayin": {
+   "ca": "família lingüística",
+   "en": "Language Family",
+   "es": "Familia de Lenguas",
+   "ar": "العائلة اللغوية",
+   "tifinag": "ⵜⴰⵡⵙⵉⵜ ⵏ ⵜⵓⵜⵍⴰⵢⵉⵏ",
+   "arrel": "√ⵡ ⵙ + √ⵜ ⵍ",
+   "mena": "ⵓⴷⴷⵉⵙ ⴰⵙⵎⴰⵡⴰⵏ"
+  },
+  "tutlayt tamzwarut": {
+   "ca": "protollengua",
+   "en": "Proto-language",
+   "es": "Protolengua",
+   "ar": "اللغة الأم (البدئية)",
+   "tifinag": "ⵜⵓⵜⵍⴰⵢⵜ ⵜⴰⵎⵣⵡⴰⵔⵓⵜ",
+   "arrel": "√ⵣ ⵡ ⵔ",
+   "mena": "ⵓⴷⴷⵉⵙ ⴰⵙⵎⴰⵡⴰⵏ"
+  },
+  "tasnilsnast": {
+   "ca": "lingüística aplicada",
+   "en": "Applied Linguistics",
+   "es": "Lingüística Aplicada",
+   "ar": "اللسانيات التطبيقية",
+   "tifinag": "ⵜⴰⵙⵏⵉⵍⵙⵏⴰⵙⵜ",
+   "arrel": "√ⵙ ⵏ + √ⵉ ⵍ ⵙ + √ⵙ ⵏ ⵙ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "amaẓ n tutlayt": {
+   "ca": "adquisició del llenguatge",
+   "en": "Language Acquisition",
+   "es": "Adquisición del Lenguaje",
+   "ar": "اكتساب اللغة",
+   "tifinag": "ⴰⵎⴰⵥ ⵏ ⵜⵓⵜⵍⴰⵢⵜ",
+   "arrel": "√ⵎ ⵥ + √ⵜ ⵍ",
+   "mena": "ⵓⴷⴷⵉⵙ ⴰⵙⵎⴰⵡⴰⵏ"
+  },
+  "asuɣl": {
+   "ca": "traducció",
+   "en": "Translation",
+   "es": "Traducción",
+   "ar": "الترجمة",
+   "tifinag": "ⴰⵙⵓⵖⵍ",
+   "arrel": "√ⵙ ⵖ ⵍ",
+   "mena": "ⵉⵙⵎ"
+  },
+  "tasgmawt": {
+   "ca": "pedagogia",
+   "en": "Pedagogy",
+   "es": "Pedagogía",
+   "ar": "البيداغوجيا (علم التدريس)",
+   "tifinag": "ⵜⴰⵙⴳⵎⴰⵡⵜ",
+   "arrel": "√ⴳ ⵎ",
+   "mena": "ⵉⵙⵎ"
+  }
+ }
+}

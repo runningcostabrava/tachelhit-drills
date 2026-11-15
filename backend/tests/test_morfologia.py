@@ -298,6 +298,18 @@ def test_el_lexic_validat_pels_subtitols_guanya_al_diccionari_sense_alternativa(
     assert "tu" in glossa("didak")[0]
 
 
+def test_els_termes_linguistics_del_web_de_lautor_guanyen_al_diccionari():
+    #: 15-11-2026: el glossari de tamazightforall.com (l'autor de les classes) dóna el
+    #: metallenguatge que el diccionari general glossava amb mots de la vida corrent:
+    #: `azɣr` «onguent» (és «arrel morfològica»), `aḍfiṛ` «roba vella» («sufix»),
+    #: `asnaway` «li + proceed» («estandardització»); i en té que no teníem (`tasntalant`).
+    for forma, tros in (("azɣr", "arrel"), ("aḍfiṛ", "sufix"), ("asnaway", "estandarditzaci"),
+                        ("tasntalant", "dialectologia"), ("afrimsli", "fonema"), ("timsislit", "fonètica")):
+        diu, com = glossa(forma)
+        assert tros in diu and "terme lingüístic" in diu, (forma, diu)
+        assert com == "lèxic validat", (forma, com)
+
+
 def test_el_que_diuen_els_subtitols_humans_mana_sobre_el_diccionari():
     #: 15-11-2026: als contes amb subtítols humans en amazic i anglès, el diccionari deia
     #: `ġr` «appeler, chez» (el parlant: «only»), `ayda` «Land» («everything he owned»),
