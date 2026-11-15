@@ -61,4 +61,6 @@ hi guanya el mateix. Errors: ɣ→ġ (plec de sempre), talls de paraula (`gumzw 
 
 ## Resultats sobre tot el corpus
 
+**H4 (afinament amb aquesta veritat):** vegeu la secció «H4, la primera vegada que l'acústica es mou» a `tamazight-for-all.md`: TFA-226 CER 0,187 → 0,171 (IC 95 % [−0,022, −0,009]), Zouhir fora 0,268 → 0,197, Alcorà fora 0,510 → 0,473.
+
 *(s'omple quan acaba la mesura dels 33 vídeos; `tools/lm/zouhir_resum.py` → `resum.md`)*
