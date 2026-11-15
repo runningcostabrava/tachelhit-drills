@@ -145,3 +145,18 @@ Estimació honesta de l'encert global: ≥ 99,5 % dels glifs (2 errors coneguts;
 color), `paraules.py` (paraules senceres per grup o per text), `context.py` (on surt un grup),
 `full_linies.py` (fulls de contacte dels trams), `referencia*.py` (alfabet IRCAM amb Ebrima),
 `sonda*.py` (histogrames de color que van destapar l'halo). Les imatges de revisió són a `fulls/`.
+
+## El nostre lector d'ASR sobre el text llegit (15-11, nit)
+
+Amb la transcripció per plantilles del conte del gat com a veritat (`tools/lm/zouhir_mesura.py`,
+pista `tif` = files amb temps del karaoke; pista `pag` = pàgines senceres):
+
+| unitat | n | CER greedy | CER feix + lèxic | WER feix |
+|---|---|---|---|---|
+| fila (temps del karaoke) | 140 | 0,384 | 0,373 | 0,763 |
+| **pàgina** (temps fiables, −0,5 s / +1,5 s) | 20 | **0,276** | 0,304 | 0,699 |
+
+Els temps del karaoke van per darrere de la veu i tallen les files: la mesura bona és la de
+pàgina. Nivell de Zouhir (0,22-0,33) en una varietat mai vista pel model. El lèxic al feix
+tampoc no hi ajuda (com a Zouhir): el pes es revisa amb el test gran. Per a H4 cal tallar per
+fila amb l'alineador del Space, no amb el karaoke.
