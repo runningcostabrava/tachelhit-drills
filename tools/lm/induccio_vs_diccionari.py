@@ -28,11 +28,39 @@ CAT_EN = {"vaixell": "ship", "casa": "house", "riu": "river", "lloc": "place", "
           "jo": "i", "tu": "you", "ell": "he", "sol": "sun", "clau": "key", "home": "man",
           "homes": "men", "país": "country", "terra": "land", "capità": "captain", "mar": "sea",
           "nit": "night", "dia": "day", "aigua": "water", "pare": "father", "mare": "mother",
-          "fill": "son", "filla": "daughter", "només": "only", "de sobte": "suddenly"}
+          "fill": "son", "filla": "daughter", "només": "only", "de sobte": "suddenly",
+          "anar": "go", "trobar": "find", "sortir": "out", "dir": "say", "saber": "know",
+          "hi ha": "there", "rei": "king", "ciutat": "city", "damunt": "above"}
+
+
+#: el lèxic parla francès (IRCAM, conjugacions) i la inducció anglès: sinònims per arrel
+FR_EN = {"chef": "chief", "roi": "king", "monarque": "king", "envoy": "messenger", "savoir": "know",
+         "connaître": "know", "rester": "stay", "demeurer": "remain", "asseoir": "sit",
+         "mourir": "die", "mort": "dead", "lever": "stand", "regarder": "look", "ville": "city",
+         "village": "village", "maison": "house", "homme": "man", "femme": "woman", "enfant": "child",
+         "fils": "son", "fille": "daughter", "père": "father", "mère": "mother", "frère": "brother",
+         "sœur": "sister", "mer": "sea", "eau": "water", "nuit": "night", "jour": "day", "soleil": "sun",
+         "terre": "land", "pays": "country", "chemin": "road", "porte": "door", "parole": "word",
+         "dire": "say", "voir": "see", "aller": "go", "venir": "come", "donner": "give", "prendre": "take",
+         "trouver": "find", "manger": "eat", "boire": "drink", "dormir": "sleep", "entendre": "hear",
+         "écouter": "listen", "parler": "speak", "pleurer": "cry", "rire": "laugh", "peur": "fear",
+         "tête": "head", "main": "hand", "cœur": "heart", "œil": "eye", "yeux": "eyes", "bateau": "ship",
+         "cheval": "horse", "chien": "dog", "oiseau": "bird", "vautour": "vulture", "argent": "money",
+         "clé": "key", "tout": "all", "grand": "big", "petit": "small", "vieux": "old", "seul": "alone"}
+
+
+#: irregulars anglesos que la poda de sufixos no veu
+EN_BASE = {"went": "go", "gone": "go", "stood": "stand", "sat": "sit", "dead": "die", "died": "die",
+           "said": "say", "saw": "see", "found": "find", "took": "take", "gave": "give", "came": "come",
+           "men": "man", "women": "woman", "children": "child", "eyes": "eye", "everything": "all",
+           "everyone": "all", "dark": "darkness", "obscurité": "darkness", "debout": "stand",
+           "obscur": "darkness"}
 
 
 def arrel(w):
-    return re.sub(r"(ies|es|s|ed|ing|ly)$", "", w.lower())[:5]
+    w = FR_EN.get(w.lower(), w.lower())
+    w = EN_BASE.get(w, w)
+    return re.sub(r"(ies|es|s|ed|ing|ly)$", "", w)[:5]
 
 
 def glosses_en(tok, sig, ev, en):
@@ -71,8 +99,19 @@ if __name__ == "__main__":
             if c in gl or any(arrel(c) == arrel(x) for x in gl if len(x) > 3):
                 caixa = "confirmat"
                 break
+        #: un candidat que és el mateix token (o quasi) escrit a l'anglès és un NOM PROPI que el
+        #: subtitulador deixa tal qual: `isġi` → «Isghi». El diccionari que el tradueix («vautour»)
+        #: no s'equivoca de paraula, s'equivoca de categoria: un nom no es glossa.
+        tok_pla = re.sub(r"[^a-z]", "", tok.lower().replace("ġ", "gh").replace("ḫ", "kh").replace("š", "sh"))
+        if caixa != "confirmat" and any(re.sub(r"[^a-z]", "", c.lower()).rstrip("s") == tok_pla for c, d in cand):
+            caixa = "nom propi"
+        #: partícules, pronoms i còpules de la taula a mà coapareixen amb tot: el que diguin
+        #: d'elles no és una glossa, és soroll, i es marca a part
+        elif caixa == "contradiu" and te_glossa and (morfologia.glossa(tok, sig, ev, en) or ("", ""))[1] in (
+                "partícula", "forma gramatical", "preposició amb pronom"):
+            caixa = "funció"
         files.append((caixa, n, tok, cand, sorted(gl)[:6]))
-    ordre = {"contradiu": 0, "nou": 1, "confirmat": 2}
+    ordre = {"contradiu": 0, "nou": 1, "nom propi": 2, "confirmat": 3, "funció": 4}
     files.sort(key=lambda x: (ordre[x[0]], -x[1]))
     with io.open(sys.argv[2], "w", encoding="utf-8") as g:
         g.write("# Candidats induïts contra el lèxic\n\n| caixa | rètols | token | candidats (Dice) | el lèxic diu |\n|---|---|---|---|---|\n")

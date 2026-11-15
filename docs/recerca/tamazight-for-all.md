@@ -634,6 +634,22 @@ del camp, i els «contradiu» amb Dice alt són glosses del diccionari a revisar
 baixat (289 MB, dataset privat `tfa-humans-audio`), kernel `tfa-58-transcriu` en marxa.
 Material de tercers: res no entra a la biblioteca; és un instrument de validació.
 
+*Resultat a escala (15-11, greedy, 58 vídeos, 7,6 min de GPU):* **1.684 rètols** amb text ASR
+(241 sense), 83 tokens amb candidat (mínim 4 rètols, Dice ≥ 0,25). Contra el lèxic
+(`tamazight-for-all-induccio-58-vs-lexic.md`): **19 confirmats** (`turft`, `tiġrmt` city,
+`umġar` chief, `umazan` messenger, `imġarn` leaders, `agadir` wall, `afus` hand, `uġaras` path,
+`agllid` king, `tasarut`, `tafukt`, `tamazirt`, `tutlayt`…), **14 nous** (`irgzn` men 0,68·22,
+`rbbi` lord, `umsfri` interpreter, `isaqqul` staring…), **4 noms propis** que el diccionari
+traduïa (`isġi` «vautour», `massn` «savoir», `iggig` «thunder»; `ahlliw`), 5 de funció, i 41
+«contradiu», la majoria soroll de partícules i de l'ASR, però **quatre són errors del
+diccionari amb senyal fort**: `immut` dead 0,67 (el diccionari: «urge»), `nnif` beyond 0,50
+(«before»), `wawal` word («run down», el bug conegut), `iḫf` himself 0,33·13 («boîte, boss»).
+**Conseqüència en codi:** capa `LEXIC_VALIDAT` a `morfologia.py` (mena «lèxic validat», entre
+les SEGURES): 10 entrades amb Dice i rètols al costat, on el diccionari perd sense «o bé». La
+mesura que ho jutja és la de sempre: els 226 versos amb veritat. Pendent: córrer el mateix
+amb la descodificació H3 (kernel v2) i veure si el corpus paral·lel dóna més candidats o
+millors; i estendre la inducció a l'àrab (16 vídeos només tenen àrab).
+
 ## El que bloqueja
 
 - **Deu minuts transcrits per un parlant.** Sense això tota mesura és indirecta. Serien
