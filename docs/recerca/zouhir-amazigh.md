@@ -149,7 +149,11 @@ BerberFreeQuranEducation, aslmdtv, Tamazight For All): sí a catalogar-ho tot i 
 model; passen a formar part del projecte (`docs/PERMISOS.md`, 16-11). Amb això l'adaptador H4b
 puja al Space `josepabloucr/huggingface-asr-space` com `adaptador_shi_zouhir_b.pt` (commit
 `7aa40d8`; `mms_shi.py` l'apunta; `adaptador_shi_ric.pt` es queda al repositori per poder tornar
-enrere). Comprovació en viu: vegeu més avall.
+enrere). **Comprovat en viu** (`/health` diu `adaptador_shi_zouhir_b`; `comprova_viu.py`, 6 rètols de
+RzG-vYOY2L8 fora de l'entrenament per `/transcribe_mms`): el Space escriu el mateix que el nucli H4b
+«després» en 5 de 6 (el sisè només difereix en una fitxa final); CER d'aquests 6: 0,283 abans → 0,230
+viu (0,237 al nucli). La mesura completa pel Space no es fa: el Space de CPU triga **uns 60 s per rètol**
+amb aquest model i 134 crides el bloquejarien dues hores als usuaris; la mesura gran és la del nucli.
 
 El que ve: el mateix nucli amb les **8 h pròpies** (#452) + aquests 1.308 rètols, i mesurar si la
 nostra parla (Halima, Driss, Baba Ali) hi guanya el que hi guanya el taixelhit dels contes.
