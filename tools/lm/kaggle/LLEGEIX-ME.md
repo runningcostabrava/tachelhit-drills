@@ -22,3 +22,5 @@ en grafia cabilenca i amb temps desplaçats (canal de l'Alcorà). `tools/lm/zouh
 marca a `veritat_zouhir.json` (`mena`: «àrab», «altra grafia», «rètol»). `h4b_afina_shi_net.py`
 (nucli `h4b-afina-shi-net`) és H4 amb aquest filtre fet dins del nucli i l'Alcorà fora amb tres
 vídeos nets.
+
+| `prepara_parelles.py` → `nllb_afina_propi.py` → `baixa_sortides.py` → `avalua_a_casa.py` | `nllb-afina-propi` (dataset privat `nllb-parelles-propies`) | H-MT1 (16-11): afinar el NLLB de Tamazight-NLP amb 4.609 parelles pròpies netes (fuita per text treta); català directe 0,454 → 0,571 sobre les 60, +0,147 al test-dins de 200; el pont per l'anglès no es mou |

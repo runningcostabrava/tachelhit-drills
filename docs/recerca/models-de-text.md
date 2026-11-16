@@ -280,3 +280,30 @@ si no hi és o no contesta, català directe al final. Comprovat en viu pel camí
 les 10 frases de la prova anterior: **chrF 0,705** (el pont: 0,524), 1 s per frase; 616 proves verdes.
 El Gemini no s'usa per a res massiu (l'àrab de TutlAit el fa Qwen de franc): es guarda per a l'amazic,
 que és on és únic, i el comptador d'`ai_budget` hi posa sostre.
+
+## H-MT1: el NLLB afinat amb les parelles pròpies (16-11, nit; peó `nllb-afina`, nucli `nllb-afina-propi`)
+
+4.910 parelles del catàleg amb amazic i català confirmats (fora: català de màquina no confirmat
+1.807, Auto Capture 121, correccions 91, curs sintètic 81, irlandès 8, duplicats 332); 200 de test-dins
+(llavor 1114), 4.609 de train net. **Fuita trobada:** excloure les 60 de la mostra per `id` no bastava,
+el catàleg repeteix frases sota ids diferents (12 de les 60 i 8 de les 200 eren a train); la v1 es va
+descartar i la v2 treu la fuita per text normalitzat. Fonts del train: Beni Mellal 2.158, MTNRA 619,
+Common Voice 499, Mètode CD 335, IRCAM 218, Driss 205, Mètode llibre 175, Aït Mraw 96, Halima 72…
+3.221 files passades del llatí al tifinag amb `to_forms`. Ritme 3e-5, 3 èpoques (1e-5 queda per sota).
+
+| camí | grup | abans | després | Δ | IC 95 % |
+|---|---|---|---|---|---|
+| **català directe** (`tzm_Tfng` → `cat_Latn`) | 60 frases | 0,454 | **0,571** | **+0,117** | [+0,071, +0,169] |
+| català directe | shi (30) | 0,494 | 0,554 | +0,059 | [+0,010, +0,111] |
+| català directe | Beni Mellal (30) | 0,414 | 0,589 | +0,175 | [+0,097, +0,264] |
+| català directe | test-dins (200) | 0,278 | 0,425 | +0,147 | [+0,118, +0,178] |
+| pont (→ anglès + DeepSeek) | 60 frases | 0,527 | 0,554 | +0,027 | [−0,009, +0,067] |
+
+El que se'n treu: (1) **viva en català directe**: el model afinat (0,571) passa el pont del matí (0,521)
+i iguala `gemini-2.5-flash` sense raonar; és nostre, gratuït i corre en CPU. El pont i DeepSeek deixen
+de caldre com a segona opció. (2) El pont no es mou perquè no s'ha entrenat cap a l'anglès. (3) A ull:
+català més net i les fórmules de l'Anki apreses; no arregla la persona del verb (*ɣrwn* «teniu» →
+«tinc»); empitjora en mots sols de l'IRCAM. (4) Després: més èpoques o 5e-5 (la pèrdua de dev encara
+baixava), treure el vocabulari del train, i el 1.3B amb LoRA. Pesos afinats (fp16, 1,2 GB) a la sortida
+del nucli; informe i sortides a `Veus-tachelhit\_escoltats\models\nllb_afina\`. Amb la declaració de
+permisos del 16-11 es pot desplegar al Space propi com a caiguda darrere el Gemini.
