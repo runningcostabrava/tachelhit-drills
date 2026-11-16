@@ -522,6 +522,8 @@ gemini_client.set_meter(ai_meter)
 # a la mateixa factura i sota el mateix sostre.
 import deepseek_client as _deepseek_client
 _deepseek_client.set_meter(ai_meter)
+import qwen_client as _qwen_client
+_qwen_client.set_meter(ai_meter)   # el segon auditor (Model Studio) també passa pel comptador
 
 # ---------------------------------------------------------------------------
 # Auto-capture guard (P5.2): ASR on English or music sometimes yields English

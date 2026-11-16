@@ -50,7 +50,9 @@ FEINES: List[Dict] = [
         "regla": "Una traducció de màquina no és mai el text d'un parlant: va a «suggerit».",
         "qui": [
             {"nom": "DeepSeek", "mena": "deepseek", "paper": "primer"},
-            {"nom": "Gemini", "mena": "gemini", "paper": "segon"},
+            {"nom": "Qwen (Model Studio)", "mena": "qwen",
+             "paper": "segon auditor: una altra casa, altres dades; només compta el que diuen tots dos"},
+            {"nom": "Gemini", "mena": "gemini", "paper": "tercer"},
         ],
     },
     {
@@ -72,7 +74,8 @@ FEINES: List[Dict] = [
         "regla": "Una lliçó escrita per una màquina la pot corregir qualsevol, i la correcció mana.",
         "qui": [
             {"nom": "DeepSeek", "mena": "deepseek", "paper": "primer"},
-            {"nom": "Gemini", "mena": "gemini", "paper": "segon"},
+            {"nom": "Qwen (Model Studio)", "mena": "qwen", "paper": "segon"},
+            {"nom": "Gemini", "mena": "gemini", "paper": "tercer"},
         ],
     },
     {
@@ -118,7 +121,7 @@ _DE_SPACE = {"up": "viu", "waking": "despertant", "down": "aturat",
 
 
 def _estat_proveidor(p: Dict, spaces: Dict, gemini_ok: bool, gemini_clau: bool,
-                     deepseek_clau: bool) -> Dict:
+                     deepseek_clau: bool, qwen_clau: bool = False) -> Dict:
     mena = p.get("mena")
     if mena == "persona":
         return {"estat": "persona"}
@@ -142,11 +145,14 @@ def _estat_proveidor(p: Dict, spaces: Dict, gemini_ok: bool, gemini_clau: bool,
         return {"estat": "amb_clau" if gemini_ok else "sense_pressupost"}
     if mena == "deepseek":
         return {"estat": "amb_clau" if deepseek_clau else "sense_clau"}
+    if mena == "qwen":
+        return {"estat": "amb_clau" if qwen_clau else "sense_clau"}
     return {"estat": "no_configurat"}
 
 
 def quina_feina_fa_qui(spaces: Optional[Dict] = None, gemini_ok: bool = False,
-                       gemini_clau: bool = False, deepseek_clau: Optional[bool] = None) -> Dict:
+                       gemini_clau: bool = False, deepseek_clau: Optional[bool] = None,
+                       qwen_clau: Optional[bool] = None) -> Dict:
     """La taula sencera amb l'estat d'ara.
 
     `spaces` és el que torna `/health/spaces`; si no es dona, els Spaces surten com a
@@ -154,11 +160,13 @@ def quina_feina_fa_qui(spaces: Optional[Dict] = None, gemini_ok: bool = False,
     """
     if deepseek_clau is None:
         deepseek_clau = bool(os.getenv("DEEPSEEK_API_KEY"))
+    if qwen_clau is None:
+        qwen_clau = bool(os.getenv("DASHSCOPE_API_KEY")) and bool(os.getenv("DASHSCOPE_BASE_URL"))
     feines = []
     for f in FEINES:
         qui = []
         for p in f["qui"]:
-            estat = _estat_proveidor(p, spaces or {}, gemini_ok, gemini_clau, bool(deepseek_clau))
+            estat = _estat_proveidor(p, spaces or {}, gemini_ok, gemini_clau, bool(deepseek_clau), bool(qwen_clau))
             qui.append({**{k: v for k, v in p.items() if k != "clau"}, **estat,
                         "diu": ESTATS.get(estat["estat"], estat["estat"])})
         # Una feina està aturada quan cap dels seus no contesta. Dir-ho és la regla 5: cap

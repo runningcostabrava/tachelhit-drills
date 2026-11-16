@@ -70,6 +70,53 @@ Mostra a ull (veritat → chat amb fonts → v4-pro amb fonts):
    d'àudio (transcriure clips curts, CER 0,19 el 17-10, i resumir una faula sentint-la), i això
    avui ho fa millor el nostre Space.
 
-Pendent: la mateixa taula amb Qwen (Model Studio nou) i, si en Pablo obre un projecte gratuït a
-AI Studio, amb Gemini; i la prova de 10 dibuixos de targeta amb Qwen-Image contra els de Gemini.
 Resultats sencers: `Veus-tachelhit\_escoltats\models\compara_resultat.json`.
+
+## Els Qwen, amb el compte nou de Model Studio (16-11, migdia; `tools/lm/compara_models_qwen.py`)
+
+En Pablo obre un compte nou d'Alibaba Cloud (internacional, Singapur) i activa Model Studio: **70
+models amb un milió de fitxes gratuïtes cada un, 91 dies**. Dues trampes trobades pel camí: la clau
+nova (`sk-ws-…`) només funciona pel **punt d'accés de l'espai de treball** que surt al diàleg de la
+clau (`DASHSCOPE_BASE_URL` a `backend/.env`), no pel genèric `dashscope-intl`; i la màquina d'en
+Pablo té una **variable de sistema** `DASHSCOPE_API_KEY` del compte vell que `load_dotenv` no
+sobreescriu si no se li diu (`override=True`). Les mateixes 60 frases, mateixes fonts, mateixa
+regla; als Qwen se'ls apaga el raonament (`enable_thinking=False`) llevat d'una fila:
+
+| model | raona | fonts | buits | chrF (60) | `v4-pro` sobre les mateixes | `flash` | `chat` | latència | fitxes de sortida (60) |
+|---|---|---|---|---|---|---|---|---|---|
+| `qwen4-max` | no | sense | 0 | 0,409 | 0,582 | 0,449 | 0,303 | 3,6 s | 3.298 |
+| `qwen4-max` | no | amb | 0 | 0,443 | 0,592 | 0,478 | 0,347 | 3,6 s | 781 |
+| **`qwen3.8-max`** | no | sense | 0 | **0,471** | 0,582 | 0,449 | 0,303 | **1,9 s** | 632 |
+| **`qwen3.8-max`** | no | amb | 0 | **0,473** | 0,592 | 0,478 | 0,347 | 2,0 s | 693 |
+| `qwen3.8-flash` | no | sense | 0 | 0,286 | | | | 1,7 s | 686 |
+| `qwen3.8-flash` | no | amb | 0 | 0,339 | | | | 1,6 s | 615 |
+| `qwen3.8-27b` | no | sense | 0 | 0,161 | | | | 1,7 s | 672 |
+| `qwen3.8-27b` | no | amb | 0 | 0,240 | | | | 1,8 s | 940 |
+| `qwen4-max` | **sí** | sense | 1 | **0,496** (0,487 amb el buit) | 0,582 | 0,449 | 0,306 | 23,7 s | 102.123 |
+| `qwen4-max` | sí | amb | 1 | 0,481 | 0,592 | 0,481 | 0,344 | 12,2 s | 65.089 |
+| `deepseek-v4.1-flash` (per Alibaba) | sí | sense | 11 | 0,449 contestades | 0,617 | 0,467 | 0,321 | 12,9 s | 191.946 |
+| `deepseek-v4.1-flash` (per Alibaba) | sí | amb | 6 | 0,461 contestades | 0,603 | 0,484 | 0,349 | 14,4 s | 178.559 |
+
+(Les columnes `v4-pro`, `flash` i `chat` són els DeepSeek d'abans sobre les mateixes frases
+contestades, perquè es pugui comparar fila a fila.)
+
+**El que se'n treu.**
+
+1. **`qwen3.8-max` sense raonar és el segon auditor que buscàvem**: chrF 0,47, cap resposta buida,
+   2 segons per frase, i de franc fins al milió de fitxes. Fa el mateix que `deepseek-flash` quan
+   aquest contesta (0,45-0,48) sense el problema dels buits, i millor que `deepseek-chat` (0,30-0,35).
+2. **El millor traductor segueix sent `deepseek-v4-pro` quan contesta** (0,58-0,62 sobre les mateixes
+   frases), i el segon `qwen4-max` raonant (0,50, 1 buit de 60, 12-24 s). Per al que mana, un o
+   l'altre; per als lots, `qwen3.8-max` i `deepseek-flash`.
+3. **Les fonts del diccionari ajuden els petits i gairebé gens els grans**: `qwen3.8-flash` +0,05,
+   `qwen3.8-27b` +0,08, `qwen4-max` sense raonar +0,03; `qwen3.8-max` +0,002 i `qwen4-max` raonant
+   −0,015. Els grans ja saben el que diu el diccionari de l'IRCAM; el que els falta no hi és.
+4. `qwen3.8-27b` (0,16-0,24) i `qwen3.8-flash` (0,29-0,34) no serveixen per a l'amazic: val només per
+   a feines de català o d'àrab.
+5. **Independència**: Qwen i DeepSeek són cases diferents amb dades diferents; quan coincideixen en
+   una traducció d'amazic, la coincidència val. És la regla de «dos auditors i només l'acord» amb
+   dos auditors de debò per primera vegada des que Gemini va caure.
+
+El que ve: `backend/qwen_client.py` amb la mateixa forma que `deepseek_client` i Qwen com a segon a
+`serveis.py`; provar `qwen3.8-omni` sentint l'àudio en dàrija de TFA; 10 dibuixos de targeta amb
+`qwen-image-3.0`. Resultats sencers: `Veus-tachelhit\_escoltats\models\compara_qwen_resultat.json`.
