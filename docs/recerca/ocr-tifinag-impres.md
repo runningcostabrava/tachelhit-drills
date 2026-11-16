@@ -250,6 +250,37 @@ diàlegs sortien buits); files de brossa fora (< 3 lletres o < 60 % de glifs acc
 corpus); ⵯ. Errors que queden: «:» de rèplica llegit com a cometa, puntuació d'1-2 px, files
 captades a mig animar-se, rètols en una altra font (□ i es descarten).
 
-Queden 50 vídeos (9 lectura, 1 conte, 3 diàleg, 5 cançó, 9 reforç, 13 altres, 10 lletres),
-uns 5 min per tanda de 5 més la revisió a ull. Material de tercers (#622): el corpus es cataloga
-(`Veus-tachelhit\_escoltats\aslmdtv\ocr\`), res a la biblioteca ni al model sense permís.
+Material de tercers (#622): el corpus es cataloga (`Veus-tachelhit\_escoltats\aslmdtv\ocr\`), res
+a la biblioteca ni al model sense permís.
+
+### El canal sencer (16-11, migdia): 63 vídeos, 1.034 files, 5.215 paraules
+
+Lot acabat: els 63 vídeos amb títol en tifinag, cap baixada fallida, uns 30-70 s per vídeo. La
+taula completa és a `tools/ocr_tifinag/lot_estat.json` (per vídeo: mena, mode, pàgines, glifs,
+acceptats, files, a ull i nota) i al `INFORME.md` de la carpeta durable.
+
+**Corpus `corpus_aslmdtv.json`: 1.034 files de 46 vídeos, 5.215 paraules, 20.962 glifs, 30 lletres
+distintes**; 225 files duen algun □. Rares: ⵯ 131, ⵀ 50, ⵃ 25, ⵄ 6. **ⵅ i ⵚ no apareixen en cap
+vídeo del canal**, ni als de lletres que les anuncien al títol (hi surten soltes amb dibuix, no en
+text): el llibre escolar no les fa servir en el text corrent.
+
+**On és el text de debò**: 17 vídeos amb ≥ 5 files i ≥ 85 % de glifs acceptats, que sumen la
+quasi totalitat del corpus: els tres primers (conte del gat 140, 51, 48), el conte ⴰⵡⵍⴽ ⴰⵎⴰⵔⵉⵔ
+(106), dues lectures amb el mateix text (92/84), vuit lectures més (10-44 files cadascuna) i la
+cançó ⴱⵓⵙⴰⵍⵎ (55 files, 98 % acceptats). A ull, en aquests 17: **1.312 de 1.374 glifs, 95,5 %**.
+
+**La resta del canal no és text**: 20 vídeos de lletres soltes, números i exercicis amb dibuix
+(0-2 files), 3 classes de didàctica en àrab, i 9 fora de l'abast del lector per la forma, no per
+la llengua: quatre fonts que no coneix (contorn rosa `5g8RjeTJioY`, contorn vermell `K4XK3GB7_kI`,
+rodona manuscrita `ID_xZaneDyo`, graella infantil `HtAC0IZGq2c`), diapositives de pal sec
+(`-Gqm1vfnCzg`), bafarades de color (`Eunlkgrf6oU`: el text no seu sobre blanc i l'anell el
+descarta), lletra gegant sobre pauta (`3x9jKLeDfBo`) i caixes d'exercici en lletra prima
+(`ZhQgHYUECDs`). Errors recurrents per a la propera iteració: «:» i «1)» d'inici de rèplica
+llegits com a cometa, ⵀ→ⵙ, ⵕ→ⵙ, la ⴰ petita perduda sobre fons de color, puntuació d'1-2 px,
+files captades a mig animar-se.
+
+**Què val això.** És el primer text imprès en tifinag de l'Atles central que tenim llegit amb la
+seva veu al costat (el karaoke en diu els temps, encara que vagin per darrere de la parla). Serveix
+de tercera veritat per al lector quan s'alineï amb el Space, i de text real per al lèxic i el
+glossador. El canal queda **tancat com a font**: el que hi havia per llegir, llegit. Pendent de
+l'amo: permís de l'autor abans que res d'això entreni el model servit o entri a la biblioteca.
