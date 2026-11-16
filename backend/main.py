@@ -203,6 +203,14 @@ AMAZIGUES = {"Tachelhit/Central Atlas Tamazight", "Tachelhit/Central Atlas Tamaz
              "Standard Moroccan Tamazight"}
 
 
+#: L'Space propi, que des del 16-11-2026 serveix el NLLB afinat amb les parelles del projecte.
+SPACE_AFINAT = "josepabloucr/Finetuned-Quantized-NLLB"
+
+
+def _space_es_l_afinat() -> bool:
+    return SPACE_AFINAT in (HUGGINGFACE_TRANSLATION_SPACE_URL or "")
+
+
 def _font_amaziga_per_l_space(src_lang: str) -> str:
     return src_lang if src_lang.endswith("(Latin)") else "Standard Moroccan Tamazight"
 
@@ -256,6 +264,16 @@ def _amazic_a_catala(text: str, src_lang: str) -> str:
     if ca:
         return ca
     font = _font_amaziga_per_l_space(src_lang)
+    if _space_es_l_afinat():
+        # El 16-11-2026 el nostre Space serveix el NLLB afinat amb les parelles propies (H-MT1): en
+        # catala directe fa 0,57 sobre les 60 frases, i el pont per l'angles no hi afegeix res (0,55,
+        # n.s.) i costa una crida de DeepSeek. Amb el model base (l'Space de Tamazight-NLP) es al reves.
+        try:
+            ca = translate_with_hf(text, font, "Catalan")
+            if ca and ca.strip() and ca.strip() != text.strip():
+                return ca
+        except Exception as e:
+            print(f"[TRANSLATE] l'Space afinat no ha donat catala ({type(e).__name__}); vaig al pont")
     try:
         en = translate_with_hf(text, font, "English")
     except Exception as e:
