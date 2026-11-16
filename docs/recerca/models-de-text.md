@@ -146,3 +146,31 @@ d'adob, oliveres), però posa te de menta i tagín a TOTS els dibuixos perquè l
 caldria dir-los «quan l'escena ho demani» més fort o treure'ls. (5) Encerta el significat a les
 concretes (afilat, barber, hort, flor, esperar) i falla a les abstractes igual que FLUX («tot el
 temps» → quatre vinyetes; «Jo he vist» → algú que s'assenyala els ulls).
+
+## Dos auditors de debò sobre les 1.643 traduccions pendents (16-11, tarda; `tools/lm/auditors_traduccions/`)
+
+Les frases d'MTNRA (959) i Common Voice (684) que el 31-10 van quedar amb l'etiqueta
+`traduit-per-maquina`, passades per `qwen3.8-max` i `deepseek-chat` com a auditors independents
+(mateix encàrrec, diccionari i conjugació de cada paraula, la llista d'errors sistemàtics de la màquina,
+temperatura 0; `TRIA: <text>` / `FORA` / `NO-HO-SE`). 3.286 crides, 17 minuts, 5,3 M fitxes d'entrada
+(Qwen gratis; DeepSeek ≈ 0,75 $). Resum sencer i veredictes a
+`Veus-tachelhit\_escoltats\traduccions\auditors\resum.md`.
+
+| auditor | TRIA | FORA | NO-HO-SE |
+|---|---|---|---|
+| `qwen3.8-max` | 659 | 188 | 796 |
+| `deepseek-chat` | 351 | 122 | 1.170 |
+
+Acord (la regla del 31-10): **186 confirmades** (116 amb el text de la màquina tal qual, 70 amb el
+mateix retoc pels dos: «bossa» → «tabaquera» per *aqmqum*, «veloç» → «intel·ligent» per *unẓiẓ*,
+«conill» → «mufló» per *udad*), **31 descartades** pels dos (`tam` → «Ocho», `agri` → «Granota»,
+*ubrray ixcnn* «ocell molt bonic» que és «ferida dolenta»), 108 amb tots dos TRIA però text
+diferent (66 amb chrF ≥ 0,7: mateix sentit, altres paraules; no entren) i 1.318 sense acord, la
+majoria perquè el DeepSeek diu NO-HO-SE (71 % de les seves respostes).
+
+El que se'n treu: (1) l'acord és del **13 %**, contra el ~50 % dels dos auditors Claude del 31-10:
+els models de màquina són molt més prudents amb el diccionari a la mà, i el DeepSeek sobretot. Val com a
+tercer filtre barat, no com a substitut. (2) Els 70 retocs coincidents són tots de la llista d'errors
+sistemàtics: el que els dos saben és el que se'ls ha dit. (3) Els 108 «TRIA però diferent» demanarien
+una regla de sentit (no de text) o un tercer que triï: feina per a una altra passada. (4) Cap escriptura:
+`canvis.json` (217) s'aplica només amb `aplica.py --escriu` a mà del propietari.
