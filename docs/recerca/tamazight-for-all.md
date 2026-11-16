@@ -869,6 +869,40 @@ del matí va donar (±0,03 de WER). **No es toca el Space per això.** La decisi
 prendrà el test gran de Zouhir (#620, ~1.000 rètols), on una diferència de 0,01 sí que es pot
 veure. Als 15 versos cantats passa el contrari (α 0,2 millor): massa pocs per dir res.
 
+## H4, la primera vegada que l'acústica es mou (15-11, nit; Kaggle T4, `tools/lm/kaggle/h4_afina_shi_amb_zouhir.py`)
+
+Fins avui el registre deia que l'única palanca que quedava era afinar l'adaptador amb transcripció
+humana, i que no en teníem. El canal Zouhir Amazigh (#620) n'ha donat 113 minuts. Recepta de
+l'`afina-mms-ric-tot` del 30-10 (només els adaptadors, cap congelat, gradient no reentrant,
+objectiu ric), partint de l'adaptador que serveix avui (`adaptador_shi_ric.pt`), 4 èpoques a 1e-4,
+**1.563 rètols** de Zouhir i l'Alcorà (fora: 4 vídeos de Zouhir, 3 de l'Alcorà, el cantat, els
+rètols de pantalla). Mateixos talls i mateixa regla abans i després:
+
+| test | n | CER ric abans | després | diferència (bootstrap IC 95 %) | milloren / empitjoren |
+|---|---|---|---|---|---|
+| **TFA, 226 versos** (taixelhit dels contes, el test de sempre) | 226 | 0,187 | **0,171** | **−0,016 [−0,022, −0,009]** | 114 / 45 |
+| Zouhir, 4 vídeos fora | 121 | 0,268 | **0,197** | −0,071 [−0,081, −0,062] | 103 / 5 |
+| Alcorà, 3 vídeos fora | 167 | 0,510 | 0,473 | −0,036 [−0,064, −0,010] | 68 / 58 |
+
+Per lletra, a TFA: ḍ 17→28 de 38, ṣ 12→23 de 24, ḥ 9→14 de 16; ġ 93→88 de 97 (l'únic retrocés).
+És la **primera millora significativa del model acústic sobre el taixelhit dels contes** des que
+mesurem (H3 movia el descodificador, no el model), i ve d'amazic estàndard narrat d'un altre
+parlant: la veritat humana, encara que sigui d'una altra varietat, ensenya més que la lectura
+provisional del model mateix (el prior del punt 3 del programa era que no mouria res; s'ha mogut).
+
+Límits: una sola llavor; l'escala ric del nucli no és la de `h3_puntua` (0,187 aquí és el 0,207
+d'allà); i **l'adaptador està entrenat amb material de tercers: no es desplega sense permís dels
+autors** (decisió d'en Pablo). L'adaptador és a `Veus-tachelhit\_escoltats\zouhir\kernels\adaptador_shi_zouhir.pt`.
+El que ve: el mateix nucli amb les 8 h pròpies (#452) + Zouhir, i l'OCR d'aslmdtv com a tercera font
+de veritat quan tingui temps fiables.
+
+**Afegit el 16-11:** la mesura completa del canal de l'Alcorà (`zouhir-amazigh.md`, «Resultats
+sobre tot el corpus») mostra que un 13 % dels rètols d'entrenament eren brossa (18 mixtos amb
+àrab retallat, 32 en grafia cabilenca amb lletres esborrades, 194 de tres vídeos amb els temps
+desplaçats) i que dos dels tres vídeos «Alcorà fora» en són: la fila de l'Alcorà no vol dir res;
+les de TFA i Zouhir es mantenen (veritat neta). **H4b** = el mateix nucli només amb rètols nets
+(`tools/lm/kaggle/h4b_afina_shi_net.py`).
+
 ## El creuament de fonts, en codi (15-11, vespre; punt 2 del programa)
 
 `tools/lm/creuament.py`: per a cada forma amb ≥ 2 fonts externes de mena diferent, el model

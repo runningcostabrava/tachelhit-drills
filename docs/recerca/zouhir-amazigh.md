@@ -59,6 +59,61 @@ hi guanya el mateix. Errors: ɣ→ġ (plec de sempre), talls de paraula (`gumzw 
 3. **Inducció de glosses amb tres llengües** (en + ar + fr del mateix rètol: dues fonts de franc
    per la regla del creuament) i **lèxic culte** cap a `LEXIC_VALIDAT` amb procedència.
 
-## Resultats sobre tot el corpus
+## Resultats sobre tot el corpus (16-11; nucli `zouhir-lector-contra-pista-humana`, CPU, 2 h)
 
-*(s'omple quan acaba la mesura dels 33 vídeos; `tools/lm/zouhir_resum.py` → `resum.md`)*
+El mateix lector de sempre (`mms-1b-all` + `adaptador_shi_ric.pt`, el que serveix al Space) sobre
+els **2.164 rètols** dels 50 vídeos, tallats del so a ±0,1 s, descodificat de quatre maneres
+(`tools/lm/kaggle/zouhir_lector_contra_pista.py`); el CER/WER a casa amb `h3_puntua` via
+`zouhir_de_kaggle.py` + `zouhir_resum.py` → `resum.md`. S'exclouen 50 rètols de pantalla, 144 en
+lletres àrabs i 43 en altra grafia (vegeu més avall): queden **1.927 rètols parlats**.
+
+**Zouhir Amazigh (33 vídeos, 1.128 rètols, 68 min):**
+
+| lector | CER | WER | CER plegat |
+|---|---|---|---|
+| greedy | 0,297 | 0,842 | 0,272 |
+| feix sol (64) | **0,293** | **0,823** | 0,269 |
+| feix + bigrames biblioteca α 0,1 | 0,294 | 0,833 | 0,270 |
+| feix + bigrames α 0,15 (el del Space) | 0,295 | 0,826 | 0,271 |
+
+Greedy → feix: −0,004 [−0,005, −0,003] (bootstrap 1114, 329 milloren / 192 empitjoren): real
+i petit. Greedy → feix amb lèxic: −0,003 [−0,006, +0,001]: **el model de llengua de la
+biblioteca no fa res aquí**, ni a α 0,1 ni a 0,15. És el que s'esperava: els bigrames són del
+taixelhit dels contes i Zouhir parla d'ADN, bitcoin i ozó en amazic estàndard. El pes del Space
+(α 0,15) es queda com és: a TFA ajuda el WER i aquí no fa mal. Millors vídeos (feix): El Niño
+0,215, agricultura 0,223, Alzheimer 0,224, cabilencs 0,228; pitjors: les «meva ciutat» (Fes 0,37,
+Rabat 0,41, Laayoune 0,44: noms propis i música), patrimoni 0,43 i el cantat 0,50. El Space
+(`transcribe_mms`, 690 rètols de 18 vídeos) dóna 0,308: el mateix model, dins del soroll.
+
+**BerberFreeQuranEducation (17 vídeos, 799 rètols nets, 34 min): CER 0,57, WER 0,97.** Molt
+pitjor, i no només per l'oïda. Mirat rètol a rètol, la pista «af» d'aquest canal és tres coses
+alhora:
+
+| què hi ha a la pista | rètols | exemple |
+|---|---|---|
+| amazic en tifinag estàndard, ben alineat (ROl7INibBdg, G_VEuI0veIk, f3bUnaPrGYY…) | ~600 | `ar tlmadm attirim ingratun` → lector `ar ttlmad mad tirin ingratun` |
+| **amazic en lletres àrabs** (tot C6IB4oLQRt8, 80; trossos a 4SwUf6I419o, G_VEuI0veIk) + versos de l'Alcorà en àrab | 144 | `أدور إغال كرا` → lector `adur iġal krag`: la veu és taixelhit i el lector l'encerta; la veritat no es pot comparar |
+| cabilenc o rifeny amb lletres fora de l'IRCAM (ⵝ ⴺ ⵒ: UdGldeTMLSc, part d'1NypFO7bIvA) | 43 | `axxam`, `ulaš` |
+| **temps desplaçats** un o dos rètols respecte del so (DPJrHx2meXE 88, QiR0qrnYV0g, stQPF2-LrB4) | ~190 | el lector diu al rètol 11,2 s el text del rètol 6,8 s |
+
+Sense els desplaçats i el cabilenc, els 613 rètols que queden donen CER 0,477: predicació amb
+diversos parlants, cites en àrab enmig de la frase i ritme de sermó. Aquest canal val com a
+veritat **només després de netejar-lo**: fora l'àrab (el transliterador no llegeix grafia àrab;
+`to_forms` deixa l'àrab tal qual, i per això el CER d'aquells rètols passava d'1), fora les
+altres varietats, i cada vídeo amb els temps comprovats.
+
+**Conseqüència per a H4.** El nucli del 15-11 va entrenar amb tot el canal menys 3 vídeos.
+Reproduint el seu filtre sobre `veritat_zouhir.json` (`simula_filtre_h4.py`, surt exactament
+1.683 = 1.563 + 120 de dev): la `rica()` del nucli **buidava** els rètols només en àrab (no van
+entrar), però van entrar **18 rètols mixtos** amb l'àrab retallat (`ṛbbi (عز و جل) ur tn isɣaws` →
+`rbbi ur tn isġaws`), **32 en grafia cabilenca** amb les lletres ⵝ ⴺ esborrades (`ayⵝadduwn` →
+`ayadduwn`) i **194 dels tres vídeos desplaçats** (text d'un altre moment del so): 222 de 1.683,
+un **13 %** de brossa. Dos dels tres vídeos «fora» de l'Alcorà (1NypFO7bIvA, 4SwUf6I419o) són
+dels contaminats, així que el 0,510 → 0,473 d'«Alcorà fora» no vol dir gaire. La millora de
+TFA-226 (0,187 → 0,171) i de Zouhir fora (0,268 → 0,197) es va mesurar sobre veritat neta i es
+manté. **H4b** (`tools/lm/kaggle/h4b_afina_shi_net.py`): el mateix nucli amb els rètols nets,
+fora DPJrHx2meXE/QiR0qrnYV0g/stQPF2-LrB4, i l'Alcorà fora amb tres vídeos nets (ROl7INibBdg,
+f3bUnaPrGYY, 4YoU1icL8zY).
+
+**El corpus:** `veritat_zouhir.json` (2.164 rètols: so, temps, tifinag, llatí, en/ar/fr, mena,
+canal); 947 amb les tres traduccions. És l'entrada d'`induccio.py` amb `[en|ar|fr]` i d'H4b.
