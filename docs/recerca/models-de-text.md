@@ -174,3 +174,83 @@ tercer filtre barat, no com a substitut. (2) Els 70 retocs coincidents són tots
 sistemàtics: el que els dos saben és el que se'ls ha dit. (3) Els 108 «TRIA però diferent» demanarien
 una regla de sentit (no de text) o un tercer que triï: feina per a una altra passada. (4) Cap escriptura:
 `canvis.json` (217) s'aplica només amb `aplica.py --escriu` a mà del propietari.
+
+## Traductors web amb «tamazight» (16-11, tarda; peó `mt-web`)
+
+Nou serveis mirats sobre les mateixes 60 frases. Només dos tenen cap llengua amaziga: **Google
+Translate** («Tamazight» `ber-Latn`, «Tamazight (Tifinagh)» `ber`, des del juny de 2024; API pública
+`translate.googleapis.com/translate_a/single?client=gtx` sense clau) i **Glosbe Translate** (motor
+NLLB-200, `tzm`, només web). Microsoft/Bing, DeepL, Yandex, Lingvanex i Apertium: cap. L'IRCAM no té
+traductor automàtic (té el DGLAi i les eines TALAM: corrector, conjugador, transliterador, i un OCR
+amazic públic a `tal.ircam.ma/ocr/`, només per navegador); amazic.cat és diccionari.
+
+| servei | entrada | chrF (60) | shi | Beni Mellal | buits |
+|---|---|---|---|---|---|
+| Google Translate | tifinag `ber` | **0,428** | 0,401 | 0,455 | 0 |
+| Google Translate | llatí `ber-Latn` | 0,402 | 0,415 | 0,390 | 0 |
+| Google tifinag → en → ca (`deepseek-chat`) | tifinag | 0,427 | | | 0 |
+| Glosbe (NLLB, `tzm`) | tifinag | 0,193 (0,297 contestades) | | | 21 (HTTP 500) |
+| *ref.* `deepseek-chat` / `qwen3.8-max` / `deepseek-v4-pro` | | 0,303 / 0,471 / 0,58 quan contesta | | | |
+
+El que se'n treu: (1) Google és un esborrany gratuït i instantani que sempre contesta, entre DeepSeek
+Chat i Qwen Max; clava les curtes freqüents («No parlo àrab», «On és la dona?») i quan no sap una
+paraula la deixa en llatí o s'inventa un nom (Jesús, Mubarak). Val com a veu independent barata al
+costat dels auditors, no com a font. (2) Envieu-li tifinag: el llatí de l'Anki (γ grega, guions) el
+bloqueja. (3) Glosbe/NLLB no val. Informe i crus: `Veus-tachelhit\_escoltats\models\web\`.
+
+## El tercer auditor, i el parell sobre Baba Ali (16-11, vespre)
+
+**Tercer auditor** (`qwen4-max` raonant, `audita_tercer.py`), només sobre les frases d'MTNRA i Common
+Voice que els dos primers no van tancar (649: un TRIA o un FORA contra un NO-HO-SE, un TRIA contra un
+FORA, o dos TRIA diferents), amb la regla «dos de tres amb el mateix text»: 290 TRIA, 48 FORA, 137
+NO-HO-SE sobre les primeres 475; 17 s per frase. Resultat final de les 1.643: **341 confirmades**
+(186 pel parell + 155 pel tercer: 80 amb el text de la màquina, 75 retocades igual) i **135
+descartades** (31 pel parell + 104 pel tercer), 1.167 queden com a proposta. A ull, els descartats
+són els «[?]» de la màquina i les frases sense sentit («e, beb, geg» → «On, on, on»); els retocs
+del tercer casen amb el diccionari (*taẓuṛi* art, no història; *addur* honor, no regal). Acord
+total: 29 % (abans del tercer, 13 %).
+
+**Baba Ali** (`audita_arab.py`, 3.621 rèpliques amb subtítol àrab d'OCR i català de màquina, sense
+text amazic): aquí els dos models sí que saben la llengua d'origen. Qwen TRIA 3.609 / FORA 2 /
+NO-HO-SE 8; DeepSeek 3.517 / 59 / 45. Parell: **2.165 confirmades** (1.700 iguals que la màquina,
+465 amb el mateix retoc: «bresca» → «mel», «clar com l'aigua» → «clar i evident»), 109 sense acord
+i 1.347 on tots dos diuen TRIA però retoquen diferent (el tercer les està mirant). La taxa de FORA
+tan baixa diu també que l'àrab de l'OCR és bo. Costos: Qwen gratis; DeepSeek ≈ 0,45 $.
+
+**Baba Ali, amb el tercer** (16-11, nit): el tercer auditor sobre les 1.769 obertes (TRIA diferents,
+TRIA/NO-HO-SE, TRIA/FORA) va tancar-ne 855: total **3.018 confirmades** de 3.621 (1.700 iguals que la
+màquina pel parell + 568 pel tercer; 465 + 285 amb el mateix retoc), 2 descartades, 578 amb tres TRIA
+tots diferents (mateix sentit, tres redaccions: no entren) i 23 sense acord. El 83 % de les rèpliques
+de Baba Ali queden amb el català confirmat per dos auditors independents contra l'àrab.
+
+## Traductors dedicats a l'amazic (16-11, nit; peó `mt-hf-github`, informe a `Veus-tachelhit\_escoltats\models\hf\`)
+
+Cercats 629 models i ~300 datasets d'amazic a HuggingFace, més GitHub, OPUS, Tatoeba i FLORES+. De
+traducció executable només hi ha NLLB (base i els afinats de Tamazight-NLP i ayymen), MADLAD-400 i
+Google Translate; cap traductor de l'IRCAM ni universitari és públic. Les mateixes 60 frases:
+
+| sistema | entrada | chrF | shi | Beni Mellal |
+|---|---|---|---|---|
+| **NLLB afinat de Tamazight-NLP (el del nostre Space), `tzm_Tfng` → anglès, + `deepseek-chat` en→ca** | tifinag | **0,521** | 0,548 | 0,494 |
+| ídem amb `taq_Tfng` → anglès + DeepSeek | tifinag | 0,497 | 0,536 | 0,457 |
+| ídem `tzm_Tfng` → català directe | tifinag | 0,447 | 0,493 | 0,402 |
+| ídem `taq_Tfng` → català directe (**= com estava el backend**) | tifinag | 0,424 | 0,444 | 0,405 |
+| Google Translate `ber` → ca | tifinag | 0,428 | 0,401 | 0,455 |
+| NLLB-200 600M base `tzm_Tfng` → ca | tifinag | 0,330 | | |
+| ayymen només-SEED → en + DeepSeek | tifinag | 0,286 | | |
+| MADLAD-400 3B | tifinag / llatí | 0,179 / 0,099 | | |
+| *ref.* `qwen3.8-max` / `deepseek-chat` | | 0,471 / 0,303 | | |
+
+Contaminació comprovada: només 4 de les 60 frases són al Tatoeba de Tamazight-NLP (cap amb anglès):
+l'avantatge és real. El que fa bo l'afinat són les dades (Tatoeba, diccionaris, Anki, Weblate): el
+model «només SEED» del mateix autor fa 0,286.
+
+**Endollat al backend el mateix vespre** (`tradueix` → `_amazic_a_catala`): l'amazic → català passa
+ara per l'Space amb la fitxa `tzm_Tfng` demanant anglès, i DeepSeek (o Qwen) passa l'anglès al
+català; si cap dels dos contesta, català directe amb `tzm_Tfng`. Comprovat en viu sobre 10 de les 60
+frases pel camí sencer del backend: chrF 0,524, ~3 s per frase (`tests/test_pont_angles.py`). Segueix
+sent un esborrany per a `*_suggested`, no una traducció per publicar; el pas següent és afinar aquest
+NLLB amb les nostres parelles confirmades (1.456 + 341 d'MTNRA/CV) i mesurar-ho a cegues aquí mateix.
+Corpus per afinar: Tatoeba shi 836 / zgh 159, OPUS shi-en (Bíblia 15.856, Tatoeba 2.171), FLORES+
+(`zgh_Tfng`, `taq_*`; no hi ha `tzm_Tfng`), `Tamazight-NLP/English-Tashlhit-Dictionary` (50.204
+traduccions, llicència «other»: mirar-la abans).

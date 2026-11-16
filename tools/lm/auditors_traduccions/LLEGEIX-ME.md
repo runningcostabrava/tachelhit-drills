@@ -22,3 +22,13 @@ Carpeta de dades (primer argument; per defecte `Veus-tachelhit\_escoltats\traduc
 del repositori. Claus: `DASHSCOPE_API_KEY` + `DASHSCOPE_BASE_URL` a `backend/.env`, `DEEPSEEK_API_KEY`
 al `.env` del projecte veí. Resultat de la passada del 16-11-2026 a `resum.md` de la carpeta de dades i
 a `docs/recerca/models-de-text.md`.
+
+## Afegits del 16-11 a la tarda
+
+- `audita_arab.py`: el mateix parell sobre les frases que tenen subtítol àrab i català de màquina però
+  cap text amazic (Baba Ali, #493): l'auditor jutja el català contra l'àrab. Carpeta per defecte
+  `…\traduccions\auditors_baba_ali`.
+- `audita_tercer.py`: tercer auditor, `qwen4-max` raonant, NOMÉS per a les frases que els dos primers
+  no van tancar (veredictes diferents, o dos TRIA amb text diferent). `resum.py` llavors aplica «dos
+  de tres amb el mateix text». Detecta sol si la carpeta és la d'amazic o la d'àrab.
+- `audita.py` porta `TERCER` i `PENSEN` (els models que raonen van amb sostre de 8.000 fitxes).

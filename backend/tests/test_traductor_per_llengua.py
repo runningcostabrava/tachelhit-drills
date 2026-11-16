@@ -34,6 +34,9 @@ def test_l_amazic_va_a_l_space(monkeypatch):
     cridat = []
     monkeypatch.setattr(main, "translate_with_hf", lambda t, s, g: f"[space] {t}")
     monkeypatch.setattr(main, "_tradueix_amb_deepseek", _apunta(cridat))
+    #: el pont per l'angles (test_pont_angles.py) es tanca aqui perque el que es prova es
+    #: QUI tradueix l'amazic: l'Space, i no el traductor general
+    monkeypatch.setattr(main, "_angles_a_catala", lambda en: "")
     assert main.tradueix("bonjorn", "Catalan",
                          "Tachelhit/Central Atlas Tamazight") == "[space] bonjorn"
     assert main.tradueix("azul", "Standard Moroccan Tamazight", "Catalan") == "[space] azul"
