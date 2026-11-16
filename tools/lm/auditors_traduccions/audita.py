@@ -16,6 +16,9 @@ QKEY, QBASE = os.environ["DASHSCOPE_API_KEY"].strip(), os.environ["DASHSCOPE_BAS
 DKEY, DBASE = os.environ["DEEPSEEK_API_KEY"].strip(), "https://api.deepseek.com/v1"
 
 AUDITORS = {"qwen": ("qwen3.8-max", QBASE, QKEY), "deepseek": ("deepseek-chat", DBASE, DKEY)}
+#: El tercer, per desempatar quan els dos primers no es posen d'acord: raona (i per aixo te mes sostre).
+TERCER = {"qwen4": ("qwen4-max", QBASE, QKEY)}
+PENSEN = {"qwen4-max"}
 
 ERRORS = ("tihirit=cotxe (no samarreta), tasrɣint=àrab, tifrxin=noies (no ocells), taddart=casa (no poble), "
           "udad=mufló (no conill), tamsulaft=càmera, aftas=platja, asimwas=divendres, alaway=tren, "
@@ -64,11 +67,11 @@ def prompt(x):
 
 
 def crida(nom, text):
-    model, base, key = AUDITORS[nom]
+    model, base, key = {**AUDITORS, **TERCER}[nom]
     body = {"model": model, "messages": [{"role": "system", "content": SISTEMA}, {"role": "user", "content": text}],
-            "max_tokens": 400, "temperature": 0}
+            "max_tokens": 8000 if model in PENSEN else 400, "temperature": 0}
     if model.startswith("qwen"):
-        body["enable_thinking"] = False
+        body["enable_thinking"] = model in PENSEN
     t0 = time.time()
     for intent in range(4):
         try:
