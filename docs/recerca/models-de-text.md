@@ -120,3 +120,29 @@ contestades, perquè es pugui comparar fila a fila.)
 El que ve: `backend/qwen_client.py` amb la mateixa forma que `deepseek_client` i Qwen com a segon a
 `serveis.py`; provar `qwen3.8-omni` sentint l'àudio en dàrija de TFA; 10 dibuixos de targeta amb
 `qwen-image-3.0`. Resultats sencers: `Veus-tachelhit\_escoltats\models\compara_qwen_resultat.json`.
+
+## `qwen-image-3.0` per a les targetes (16-11, tarda)
+
+Deu targetes que ja tenen il·lustració a producció (#199 «Aigua calenta», #458 «Flor», #228 «Afilat»,
+#138 «Barbero», #230 «tot el temps», #175 «la entens?», #160 «De res», #177 «Esperam», #205 «Hort»,
+#235 «Jo he vist»), redibuixades amb `qwen-image-3.0` pel punt d'accés natiu de Model Studio
+(`/api/v1/services/aigc/multimodal-generation/generation`; el compatible d'OpenAI no el coneix), amb
+l'estil i el pas d'escena d'`illustrate.py` (l'escena la posa `qwen3.8-max`). Quatre passades, 8-11 s
+per dibuix, quota gratuïta. Fulls de contacte i registre a `Veus-tachelhit\_escoltats\models\imatges\`.
+
+| passada | prompt | dibuixos amb lletres |
+|---|---|---|
+| 1 | el d'`illustrate.py` tal qual (estil + «The sentence: «…»») | **10 de 10**: escriu la frase catalana al dibuix, en lletres grans |
+| 2 | estil + només l'escena en anglès, sense la frase | 3 de 10 (lletres inventades) |
+| 3 | com la 2 + `negative_prompt` amb «text, letters, words…» | 5 de 10 (pitjor) |
+| 4 | com la 2 sense la frase «Absolutely no text…» de l'estil | 9 de 10 |
+
+El que se'n treu: és un model de cartell, li agrada escriure. (1) Mai la frase al prompt: la pinta.
+(2) La prohibició de text de l'estil ajuda (de 9 a 3) i el `negative_prompt` no. (3) Amb la
+configuració bona (passada 2) en surten netes 7 de 10: per fer-lo servir cal un comprovador de text
+(`qwen3-vl-plus`: «hi ha lletres?») i tornar a dibuixar les que en portin; amb 2.000 imatges gratuïtes
+hi ha marge. (4) Les escenes són més riques i més marroquines que les actuals de FLUX (gent, cases
+d'adob, oliveres), però posa te de menta i tagín a TOTS els dibuixos perquè l'estil els anomena:
+caldria dir-los «quan l'escena ho demani» més fort o treure'ls. (5) Encerta el significat a les
+concretes (afilat, barber, hort, flor, esperar) i falla a les abstractes igual que FLUX («tot el
+temps» → quatre vinyetes; «Jo he vist» → algú que s'assenyala els ulls).
