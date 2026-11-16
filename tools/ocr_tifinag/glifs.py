@@ -25,7 +25,14 @@ from PIL import Image, ImageDraw, ImageFont
 from scipy import ndimage
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
-LLINDAR = float(sys.argv[1]) if len(sys.argv) > 1 else 0.88
+def _llindar_arg():
+    try:
+        return float(sys.argv[1]) if len(sys.argv) > 1 and __name__ == "__main__" else 0.90
+    except ValueError:
+        return 0.90
+
+
+LLINDAR = _llindar_arg()
 MIDA = 32
 ALCADA_NORM = 24
 
@@ -55,6 +62,9 @@ def trams_finals(L):
             k -= 1
         finals.append(ts[k])
     return finals
+
+
+REPARA = False  # llegeix.py ho activa: tanca forats d'1 px del nucli dins l'halo (anells partits en lletra petita)
 
 
 def segmenta_fila(niv, fila, caixa):
@@ -89,6 +99,23 @@ def segmenta_fila(niv, fila, caixa):
                 u["ids"] += c["ids"]
                 continue
         fusionats.append(dict(c))
+    if REPARA and len(fusionats) > 1:
+        # anells partits en dues meitats «( )» (lletra petita): dos trossos veïns (buit <= 1 px)
+        # que junts no passen de l'alçada de la fila s'ajunten
+        alt_fila = max(1, y1 - y0)
+        tornats = [fusionats[0]]
+        for c in fusionats[1:]:
+            u = tornats[-1]
+            buit = c["x0"] - u["x1"]
+            estrets = max(u["x1"] - u["x0"], c["x1"] - c["x0"]) <= 0.45 * alt_fila
+            alts = min(u["y1"] - u["y0"], c["y1"] - c["y0"]) >= 0.6 * alt_fila
+            if buit <= 2 and estrets and alts and (max(u["x1"], c["x1"]) - min(u["x0"], c["x0"])) <= 0.95 * alt_fila:
+                u["x0"], u["x1"] = min(u["x0"], c["x0"]), max(u["x1"], c["x1"])
+                u["y0"], u["y1"] = min(u["y0"], c["y0"]), max(u["y1"], c["y1"])
+                u["ids"] += c["ids"]
+            else:
+                tornats.append(c)
+        fusionats = tornats
     glifs = []
     for c in fusionats:
         # caixa amb 1 px de marge per a l'halo

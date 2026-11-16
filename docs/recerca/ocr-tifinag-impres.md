@@ -217,3 +217,39 @@ Els temps del karaoke van per darrere de la veu i tallen les files: la mesura bo
 pàgina. Nivell de Zouhir (0,22-0,33) en una varietat mai vista pel model. El lèxic al feix
 tampoc no hi ajuda (com a Zouhir): el pes es revisa amb el test gran. Per a H4 cal tallar per
 fila amb l'alineador del Space, no amb el karaoke.
+
+## El lot del canal (16-11, matí; `lot.py`, `corpus.py`)
+
+`lot.py [quants]` fa el canal d'un vídeo en un: baixa (yt-dlp, client android), `llegeix.py`,
+`comprova.py` sobre 3 files (llavor 1114), apunta els números a `lot_estat.json` i esborra el mp4
+i els fotogrames. `corpus.py` ajunta totes les transcripcions a `corpus_aslmdtv.json` i regenera
+la taula a l'informe. Dels 63 vídeos amb títol en tifinag, 13 llegits (els 3 primers + 10 del lot):
+
+| vídeo | mode | pàg. | glifs triats | acceptats | files | a ull | notes |
+|---|---|---|---|---|---|---|---|
+| o5xWviSCRF8 | vermell | 29 | 177 | 94,9 % | 9 | 14/15 | lletres soltes ⵜ ⵎ ⴳ |
+| 7ZWFXQNmNME | vermell | 22 | 321 | 95,3 % | 28 | 21/21 | |
+| OTwsywhExOA | vermell | 51 | 295 | 89,5 % | 16 | 10/19 → les ⴽⵯ bé amb la regla nova | **ⵯ, lletra nova** (16) |
+| ZX8o-g4yHwk | negre | 8 | 766 | 95,8 % | 40 | 72/73 | |
+| z6L6zGYmkkU | vermell | 16 | 44 | 72,7 % | 4 | 10/12 | escriure ⵍ ⵡ soltes: gairebé sense text |
+| EA2PwuXroPw | negre | 41 | 3.096 | 69,1 % | 103 | 33/35 | diàleg bo; el 69 % són 60 s de rètols sobre dibuix (filtrats) |
+| 4_2DUAo9aGQ | negre | 38 | 3.281 | 72,1 % | 99 | 37/42 | mateix text que l'anterior |
+| -SVf_yOmRb8 | negre | 23 | 1.009 | 91,5 % | 45 | 65/65 | a la 1a passada sortia buit (rètols vermells del dibuix) |
+| QFQqZdiMIFE | vermell | 7 | 694 | 87,5 % | 15 | 82/96 | títol en lletra ombrejada (5/14) |
+| AH-2VjGwmHo | vermell | 10 | 206 | 96,6 % | 7 | 18/19 | una coma que era el cursor |
+
+**Corpus: 571 files de 13 vídeos, 2.921 paraules, 11.706 glifs, 30 lletres distintes**, 101 files
+amb algun □ (camps: vídeo, títol, mena, pàgina, fila, de, a, tifinag, llatí, dubtes). Els vídeos
+amb text de pàgina van del 91 al 97 % de glifs acceptats i de 65/65 a 72/73 a ull; els que baixen
+del 90 % ho fan per brossa de dibuixos, títols ombrejats o requadres, no per una font diferent.
+
+**ⵯ (labialització)** apareix en dues formes: signe petit alçat rere ⴳ/ⴽ i doble tick; plantilla
+(56 exemplars) més regla de posició. ⵄ ja hi era; **ⵅ i ⵚ no han aparegut encara** en 13 vídeos.
+Tres correccions del camí: mode negre si el vermell no hi és tant com el negre (abans tres
+diàlegs sortien buits); files de brossa fora (< 3 lletres o < 60 % de glifs acceptats, també al
+corpus); ⵯ. Errors que queden: «:» de rèplica llegit com a cometa, puntuació d'1-2 px, files
+captades a mig animar-se, rètols en una altra font (□ i es descarten).
+
+Queden 50 vídeos (9 lectura, 1 conte, 3 diàleg, 5 cançó, 9 reforç, 13 altres, 10 lletres),
+uns 5 min per tanda de 5 més la revisió a ull. Material de tercers (#622): el corpus es cataloga
+(`Veus-tachelhit\_escoltats\aslmdtv\ocr\`), res a la biblioteca ni al model sense permís.
