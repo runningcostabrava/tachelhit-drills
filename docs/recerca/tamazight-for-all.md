@@ -892,9 +892,15 @@ provisional del model mateix (el prior del punt 3 del programa era que no mouria
 
 Límits: una sola llavor; l'escala ric del nucli no és la de `h3_puntua` (0,187 aquí és el 0,207
 d'allà); i **l'adaptador està entrenat amb material de tercers: no es desplega sense permís dels
-autors** (decisió d'en Pablo). L'adaptador és a `Veus-tachelhit\_escoltats\zouhir\kernelsdaptador_shi_zouhir.pt`.
+autors** (decisió d'en Pablo). L'adaptador és a `Veus-tachelhit\_escoltats\zouhir\kernels\adaptador_shi_zouhir.pt`.
 El que ve: el mateix nucli amb les 8 h pròpies (#452) + Zouhir, i l'OCR d'aslmdtv com a tercera font
 de veritat quan tingui temps fiables.
+
+**Afegit el 16-11:** la mesura completa del canal de l'Alcorà (`zouhir-amazigh.md`, «Resultats
+sobre tot el corpus») mostra que un 15 % dels 1.563 rètols d'entrenament eren brossa (veritat en
+lletres àrabs, grafia cabilenca o temps desplaçats) i que dos dels tres vídeos «Alcorà fora» en
+són: la fila de l'Alcorà no vol dir res; les de TFA i Zouhir es mantenen (veritat neta). **H4b** =
+el mateix nucli només amb `mena == "parlat"` de `veritat_zouhir.json`.
 
 ## El creuament de fonts, en codi (15-11, vespre; punt 2 del programa)
 
