@@ -76,3 +76,6 @@ feina/
 # mesures i vídeos baixats del Baba Ali (no van al repositori)
 tools/baba_ali/video/
 tools/baba_ali/_canvis/
+
+# claus SSH (ECS i semblants): mai al repositori
+*.pem

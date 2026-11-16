@@ -21,7 +21,8 @@ def dist(a, b):
 def carrega(p):
     per = {}
     for x in json.load(io.open(p, encoding="utf-8")):
-        per.setdefault((x["prova"], x["video"], round(x["de"], 2)), {})[x["model"]] = x
+        de = round(x["de"], 2) if isinstance(x["de"], (int, float)) else str(x["de"])
+        per.setdefault((x["prova"], x["video"], de), {})[x["model"]] = x
     return per
 
 

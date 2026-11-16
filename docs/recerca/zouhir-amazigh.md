@@ -157,3 +157,32 @@ amb aquest model i 134 crides el bloquejarien dues hores als usuaris; la mesura 
 
 El que ve: el mateix nucli amb les **8 h pròpies** (#452) + aquests 1.308 rètols, i mesurar si la
 nostra parla (Halima, Driss, Baba Ali) hi guanya el que hi guanya el taixelhit dels contes.
+
+### H5: les veus pròpies + Zouhir, partint d'H4b (16-11, tarda; Kaggle T4, 53 min d'entrenament)
+
+Nucli `h5-afina-shi-propi-mes-zouhir` (`tools/lm/kaggle/h5_afina_shi_propi_mes_zouhir.py`): es parteix
+de l'adaptador H4b i s'hi afegeix el corpus propi (`corpus_v4`: 3.950 parelles de train de la
+biblioteca rescatada, Beni Mellal, MTNRA, el CD del Mètode, Halima i Driss) més 1.368 rètols nets de
+Zouhir i l'Alcorà; 3 èpoques a 1e-4; sis tests, mateixos talls i mateixa regla abans → després
+(bootstrap 1114):
+
+| test | n | H4b (abans) | **H5** | Δ [IC 95 %] | milloren / empitjoren |
+|---|---|---|---|---|---|
+| test-dins (targetes noves de Beni Mellal, la mateixa veu que entrena) | 150 | 0,233 | **0,196** | −0,036 [−0,048, −0,024] | 75 / 21 |
+| **test-fora** (fonts senceres mai sentides: la nostra parla) | 101 | 0,274 | 0,279 | +0,005 [−0,009, +0,025] | 26 / 26 |
+| cv-zgh-test (256 clips nets de Common Voice) | 256 | 0,146 | 0,140 | −0,006 [−0,012, −0,001] | 80 / 54 |
+| **TFA-226** (el test de sempre) | 226 | 0,169 | 0,170 | +0,001 [−0,004, +0,006] | 61 / 68 |
+| Zouhir, 4 vídeos fora | 121 | 0,200 | 0,194 | −0,006 [−0,012, −0,001] | 40 / 29 |
+| Alcorà net fora | 180 | 0,332 | 0,328 | −0,005 [−0,012, +0,002] | 52 / 38 |
+
+**Lectura.** El corpus propi ensenya **la veu que ja hi és** (Beni Mellal: −0,036, clar) i gairebé res
+més: a la nostra parla mai sentida (test-fora) no es mou, a TFA no es mou, i a Common Voice i Zouhir
+baixa una engruna (−0,006, just significatiu). No és una sorpresa mirant el corpus: el 92 % són
+reculls de fora amb una veu per font, i la part de debò nostra (Halima, Driss, Aït Mraw) són 464
+parelles. **No es desplega**: el que serveix (TFA, la parla nova) no hi guanya, i H4b es queda. El
+que sí que diu H5: la recepta no empitjora res quan s'hi barreja material heterogeni, i el guany
+sobre Beni Mellal val per a l'app on les targetes de Beni Mellal són 2.068 drills.
+
+El que mouria la nostra parla, dit amb aquests números al davant: més veu **transcrita** d'Halima i
+de Driss (ara 388 parelles) i de la gent d'Aït Mraw, no més reculls. L'adaptador és a
+`Veus-tachelhit\_escoltats\zouhir\kernels\adaptador_shi_h5.pt`.
