@@ -174,3 +174,26 @@ tercer filtre barat, no com a substitut. (2) Els 70 retocs coincidents són tots
 sistemàtics: el que els dos saben és el que se'ls ha dit. (3) Els 108 «TRIA però diferent» demanarien
 una regla de sentit (no de text) o un tercer que triï: feina per a una altra passada. (4) Cap escriptura:
 `canvis.json` (217) s'aplica només amb `aplica.py --escriu` a mà del propietari.
+
+## Traductors web amb «tamazight» (16-11, tarda; peó `mt-web`)
+
+Nou serveis mirats sobre les mateixes 60 frases. Només dos tenen cap llengua amaziga: **Google
+Translate** («Tamazight» `ber-Latn`, «Tamazight (Tifinagh)» `ber`, des del juny de 2024; API pública
+`translate.googleapis.com/translate_a/single?client=gtx` sense clau) i **Glosbe Translate** (motor
+NLLB-200, `tzm`, només web). Microsoft/Bing, DeepL, Yandex, Lingvanex i Apertium: cap. L'IRCAM no té
+traductor automàtic (té el DGLAi i les eines TALAM: corrector, conjugador, transliterador, i un OCR
+amazic públic a `tal.ircam.ma/ocr/`, només per navegador); amazic.cat és diccionari.
+
+| servei | entrada | chrF (60) | shi | Beni Mellal | buits |
+|---|---|---|---|---|---|
+| Google Translate | tifinag `ber` | **0,428** | 0,401 | 0,455 | 0 |
+| Google Translate | llatí `ber-Latn` | 0,402 | 0,415 | 0,390 | 0 |
+| Google tifinag → en → ca (`deepseek-chat`) | tifinag | 0,427 | | | 0 |
+| Glosbe (NLLB, `tzm`) | tifinag | 0,193 (0,297 contestades) | | | 21 (HTTP 500) |
+| *ref.* `deepseek-chat` / `qwen3.8-max` / `deepseek-v4-pro` | | 0,303 / 0,471 / 0,58 quan contesta | | | |
+
+El que se'n treu: (1) Google és un esborrany gratuït i instantani que sempre contesta, entre DeepSeek
+Chat i Qwen Max; clava les curtes freqüents («No parlo àrab», «On és la dona?») i quan no sap una
+paraula la deixa en llatí o s'inventa un nom (Jesús, Mubarak). Val com a veu independent barata al
+costat dels auditors, no com a font. (2) Envieu-li tifinag: el llatí de l'Anki (γ grega, guions) el
+bloqueja. (3) Glosbe/NLLB no val. Informe i crus: `Veus-tachelhit\_escoltats\models\web\`.
