@@ -254,3 +254,29 @@ NLLB amb les nostres parelles confirmades (1.456 + 341 d'MTNRA/CV) i mesurar-ho 
 Corpus per afinar: Tatoeba shi 836 / zgh 159, OPUS shi-en (Bíblia 15.856, Tatoeba 2.171), FLORES+
 (`zgh_Tfng`, `taq_*`; no hi ha `tzm_Tfng`), `Tamazight-NLP/English-Tashlhit-Dictionary` (50.204
 traduccions, llicència «other»: mirar-la abans).
+
+## El Gemini, amb 5 € de crèdit (16-11, nit; `Veus-tachelhit\_escoltats\models\compara_gemini.py`)
+
+En Pablo hi posa 5 € i es mesura amb compte (raonament al mínim, sostre de fitxes; 150.000 fitxes en
+total, uns cèntims). Les mateixes 60 frases, chrF contra el parlant:
+
+| model | fonts del diccionari | chrF | shi | Beni Mellal | buits | temps |
+|---|---|---|---|---|---|---|
+| `gemini-3.1-pro-preview` (raonament baix) | amb | 0,609 (*cota inferior*: de vegades contesta amb notes i la primera línia no és la traducció) | 0,580 | 0,637 | 0 | 5,6 s |
+| **`gemini-3.8-flash`** (raonament mínim) | amb | **0,602** | 0,531 | 0,673 | 0 | 6,0 s |
+| `gemini-3.8-flash` | sense | 0,594 | 0,536 | 0,652 | 0 | 5,9 s |
+| `gemini-2.5-flash` (sense raonar) | amb | 0,571 | 0,574 | 0,569 | 0 | 1,2 s |
+| *ref.* NLLB afinat + pont per l'anglès / `qwen3.8-max` / Google `ber` | | 0,521 / 0,471 / 0,428 | | | | |
+
+El que se'n treu: (1) **el Gemini és el millor traductor d'amazic que tenim**, 0,57-0,61 sense cap buit,
+per sobre del pont (0,52) i de tots els altres; el diccionari ja no li aporta res (+0,008). (2) Les
+versions 3.8 guanyen a Beni Mellal (0,65-0,67) i la 2.5 al taixelhit (0,57), curiós i a mirar.
+(3) Segueix sent un esborrany: «tres fills» → «tres mosques», «cap d'any» → «Eid»; a `*_suggested` i
+prou. (4) Cost: menys d'un cèntim per frase; amb 5 € hi ha uns 20.000 esborranys d'amazic.
+
+**Endollat al backend** (`_esborrany_amb_gemini`, dins `_amazic_a_catala`): el Gemini primer (el model
+de `GEMINI_MODEL`, `gemini-2.5-flash` sense raonar per defecte), el pont NLLB → anglès → DeepSeek/Qwen
+si no hi és o no contesta, català directe al final. Comprovat en viu pel camí sencer del backend sobre
+les 10 frases de la prova anterior: **chrF 0,705** (el pont: 0,524), 1 s per frase; 616 proves verdes.
+El Gemini no s'usa per a res massiu (l'àrab de TutlAit el fa Qwen de franc): es guarda per a l'amazic,
+que és on és únic, i el comptador d'`ai_budget` hi posa sostre.
