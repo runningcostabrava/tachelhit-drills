@@ -318,3 +318,24 @@ les 60, «Standard Moroccan Tamazight» → «Catalan»: **0,448 → 0,568** (sh
 --enrere` (còpia de l'`app.py` anterior a `Veus-tachelhit\_escoltats\models\nllb_afina\desplegament\`).
 Perquè producció el faci servir cal que `HUGGINGFACE_TRANSLATION_SPACE_URL` a Render apunti a aquest
 Space (ara apunta al de Tamazight-NLP, que és el model base).
+
+## La capa gratuïta de Groq (16-11, nit; `Veus-tachelhit\_escoltats\models\compara_groq.py`)
+
+Clau `GROQ_API_KEY` a `backend/.env` (en Pablo, 16-11). Les mateixes 60 frases, raonament baix,
+temperatura 0; resultats a `compara_groq_resultat.json`:
+
+| model | fonts del diccionari | buits | chrF (60, buit = 0) | chrF contestades | shi | Beni Mellal | latència |
+|---|---|---|---|---|---|---|---|
+| `openai/gpt-oss-120b` | sense | 4 | 0,138 | 0,148 | 0,124 | 0,152 | 0,9 s |
+| `openai/gpt-oss-120b` | amb | 0 | 0,258 | 0,258 | 0,242 | 0,273 | 1,2 s |
+| `qwen/qwen3.8-27b` | amb | **19** | 0,235 | 0,344 | 0,227 | 0,243 | 49 s |
+| *ref.* Gemini 2.5 Flash / NLLB afinat / `qwen3.8-max` | | | 0,571 / 0,571 / 0,471 | | | | |
+
+El que se'n treu: (1) **Groq no serveix per a l'amazic**: el millor, `gpt-oss-120b` amb diccionari,
+fa 0,26, la meitat del Gemini i del NLLB afinat; sense diccionari no entén res (0,14). (2) El
+`qwen3.8-27b` de Groq es queda en blanc 19 vegades de 60 i tarda 49 s (el raonament s'allarga i
+s'esgota el sostre), com el mateix model a Model Studio (0,24) i a OVH (0,22): el model és el límit,
+no el proveïdor. (3) El diccionari al prompt ajuda els models que no saben la llengua (+0,12) i no
+aporta res als que la saben (Gemini +0,008): és un apòsit, no una solució. (4) On sí que pot servir
+Groq: anglès → català ràpid i gratuït al pont, o com a auditor d'àrab/dàrija si Qwen i DeepSeek
+s'acaben. 121.000 fitxes gastades, de franc.
