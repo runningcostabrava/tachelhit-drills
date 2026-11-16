@@ -124,7 +124,9 @@ def tria_mode(fot, noms):
             if F.files_de_text(comps):
                 amb[mode] += 1
     print(f"fotogrames de mostra amb text: {amb} de {len(mostra)}")
-    return "vermell" if amb["vermell"] >= 0.25 * len(mostra) else "negre"
+    # vermell si hi és en >= 25 % dels fotogrames I almenys tant com el negre (un vídeo de diàlegs
+    # amb text negre i quatre rètols vermells sobre el dibuix és negre)
+    return "vermell" if amb["vermell"] >= 0.25 * len(mostra) and amb["vermell"] >= 0.9 * amb["negre"] else "negre"
 
 
 # ---------- fotogrames → trams ----------
@@ -328,8 +330,35 @@ def mosaic_nous(glifs, teles, vid):
 
 
 # ---------- transcripció ----------
+def es_alcat(g):
+    """Glif petit (< 0,55 de la caixa alta) que seu a la part de dalt de la fila: el signe ⵯ
+    (labialització) que va enganxat a ⴳ/ⴽ; la ⴰ, de la mateixa mida, seu al mig."""
+    fy0, fy1 = g["fila_caixa"][1], g["fila_caixa"][3]
+    h = max(1, fy1 - fy0)
+    top = (g["caixa_fotograma"][1] - fy0) / h
+    bot = (g["caixa_fotograma"][3] - fy0) / h
+    return g["h_rel"] < 0.55 and top < 0.3 and bot < 0.62 and g["posicio"] > 0
+
+
 def transcriu(glifs, sortida, subr, etiquetes, vid, mode):
-    noms = etiquetes + ["□"]
+    noms = etiquetes + ["□", ""] + ([] if "ⵯ" in etiquetes else ["ⵯ"])
+    n_w = 0
+    per_fila = {}
+    for g in glifs:
+        per_fila.setdefault((g["linia"], g["fila"]), []).append(g)
+    for gs in per_fila.values():
+        gs.sort(key=lambda g: g["posicio"])
+        for k, g in enumerate(gs):
+            abans = gs[k - 1] if k > 0 and gs[k - 1]["paraula"] == g["paraula"] else None
+            rere_gk = abans is not None and abans["etiqueta"] in ("ⴳ", "ⴽ")
+            # signe petit i alçat: ⵯ si segueix ⴳ/ⴽ (sigui quina sigui l'etiqueta: ⴰ, cometa, □),
+            # o si té forma de ⴰ/ⵓ/punt i penja de dalt
+            if es_alcat(g) and (rere_gk or g["etiqueta"] in ("ⴰ", "□", "ⵓ", ".")):
+                g["etiqueta"] = "ⵯ"; n_w += 1
+            elif es_alcat(g) and abans is not None and abans["etiqueta"] == "ⵯ":
+                g["etiqueta"] = ""  # segona peça del mateix signe (ⵯ dibuixat com ˮ)
+    if n_w:
+        print(f"  {n_w} glifs petits alçats llegits com a ⵯ (per posició)")
     idx = {e: i for i, e in enumerate(noms)}
     etiq = {f"g{i:02d}": {"glif": e, "segur": True} for i, e in enumerate(noms)}
     for g in glifs:
@@ -380,9 +409,10 @@ def transcriu(glifs, sortida, subr, etiquetes, vid, mode):
                 # tros d'una altra fila (per davant o per darrere: el subratllat esborrat o l'animació)
                 if len(ta) >= 3 and (ta[:len(ta) - 2] in tb or ta[2:] in tb):
                     fora.add(i)
-    # files amb menys de 3 lletres tifinag (brossa d'imatge, puntuació sola, trossos)
+    # files amb menys de 3 lletres tifinag (sense comptar ⵯ) o amb menys del 60 % de glifs
+    # acceptats: brossa d'imatge, rètols d'una altra font, puntuació sola, trossos
     for i, r in enumerate(res):
-        if len(nucli_text(r["tifinag"])) < 3:
+        if len(nucli_text(r["tifinag"]).replace("ⵯ", "")) < 3 or (r["n_glifs"] - r["n_nous"]) < 0.6 * r["n_glifs"]:
             fora.add(i)
     res = [r for i, r in enumerate(res) if i not in fora]
     print(f"  files incompletes descartades: {len(fora)}")
@@ -438,7 +468,15 @@ def main():
     n_grups_nous = mosaic_nous(glifs, teles, vid)
     res = transcriu(glifs, sortida, subr, etiquetes, vid, mode)
     json.dump(glifs, open(os.path.join(AQUI, f"glifs_{vid}.json"), "w", encoding="utf-8"), ensure_ascii=False)
-    np.save(os.path.join(AQUI, f"teles_{vid}.npy"), np.stack(teles))
+    # només les imatges dels glifs nous (les de tots els trams pesen desenes de MB per vídeo)
+    nous_n = [g["n"] for g in glifs if g["etiqueta"] in ("□", "ⵯ")]
+    cand_w = [g["n"] for g in glifs if g["etiqueta"] == "ⵯ"]
+    if cand_w:
+        nj = os.path.join(AQUI, f"nous_{vid}.json")
+        d = json.load(open(nj, encoding="utf-8")); d["candidats_w"] = cand_w
+        json.dump(d, open(nj, "w", encoding="utf-8"))
+    np.savez_compressed(os.path.join(AQUI, f"nous_{vid}.npz"), n=np.array(nous_n, dtype=np.int64),
+                        teles=np.stack([teles[i] for i in nous_n]) if nous_n else np.zeros((0, 32, 32), np.float32))
     nous = sum(1 for g in glifs if g["etiqueta"] == "□")
     print(f"{len(res)} files, {len(glifs)} glifs, {nous} nous en {n_grups_nous} grups -> transcripcio_{vid}.json, conte_{vid}.txt, nous_{vid}.png")
     print("subratllats detectats en", len(subr), "fotogrames")

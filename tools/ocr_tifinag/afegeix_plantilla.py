@@ -4,10 +4,13 @@ import json, os, sys, numpy as np
 AQUI = os.path.dirname(os.path.abspath(__file__))
 vid, nou, etiqueta = sys.argv[1], sys.argv[2], sys.argv[3]
 idx = json.load(open(os.path.join(AQUI, f"nous_{vid}.json"), encoding="utf-8"))[nou]
-T = np.load(os.path.join(AQUI, f"teles_{vid}.npy"))
+z0 = np.load(os.path.join(AQUI, f"nous_{vid}.npz"))
+pos = {int(n): i for i, n in enumerate(z0["n"])}
+T = {n: z0["teles"][i] for n, i in pos.items()}
+idx = [i for i in idx if i in T]
 z = np.load(os.path.join(AQUI, "plantilles.npz"), allow_pickle=True)
 ets = [str(e) for e in z["etiquetes"]]; ims = list(z["imatges"])
-nova = T[idx].mean(axis=0)
+nova = np.mean([T[i] for i in idx], axis=0)
 if etiqueta in ets:
     j = ets.index(etiqueta); ims[j] = (ims[j] + nova) / 2
 else:
