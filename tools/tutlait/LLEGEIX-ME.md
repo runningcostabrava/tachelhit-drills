@@ -21,3 +21,11 @@ lector com a proposta. El català surt de l'àrab per màquina i el jutgen dos a
 `variety` tzm o shi, `region` «Atles Central (corpus TutlAit)» o «Souss (corpus TutlAit)», `license`
 CC BY 4.0, `source_url` del dataset, i l'àrab a `text_arabic`. El que el lector digui de la veu anirà
 a `text_tachelhit_suggested` més endavant (la màquina de Singapur, quan acabi aslmdtv).
+
+**L'ensopegada del 16-11:** `treu_dades.py` reiniciava el comptador a cada parquet i el «train» en té
+tres: 1.375 identificadors repetits (2.812 talls), el segon tall de cada parella sense so propi, i les
+traduccions i els veredictes barrejats per identificador. Ara el comptador és per split. `repara_ids.py`
+va renombrar-ho tot sense perdre la feina dels identificadors únics (10.328 traduccions i 20.656
+veredictes conservats; 2.761 talls tornats a traduir i auditar), i `comprova_so.py` compara el so de
+cada tall amb el del parquet byte a byte i el torna a escriure si falta o no coincideix (en va trobar
+15). **Abans de `carrega.py --escriu`, `comprova_so.py` ha de dir 0 que falten i 0 diferents.**

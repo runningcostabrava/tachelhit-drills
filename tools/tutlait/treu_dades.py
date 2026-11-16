@@ -24,22 +24,24 @@ con = duckdb.connect()
 fitxers = sorted(glob.glob(os.path.join(CARPETA, "hf", "data", "*.parquet")))
 n = 0
 comptes = {}
+# El comptador és per split, no per fitxer: el «train» ve en tres parquets i amb un comptador per
+# fitxer els identificadors es repetien (1.375 repetits el 16-11-2026; repara_ids.py ho va arreglar).
+comptador = {}
 with io.open(os.path.join(CARPETA, "metadades.jsonl"), "w", encoding="utf-8") as out:
     for f in fitxers:
         split = os.path.basename(f).split("-")[0]
         cur = con.execute("SELECT text, accent, speaker_id, gender, verified, duration, audio.path, audio.bytes FROM read_parquet(?)", [f])
-        i = 0
         while True:
             files = cur.fetchmany(200)
             if not files:
                 break
             for text, accent, spk, gen, ver, dur, path, so in files:
-                i += 1
                 comptes[accent] = comptes.get(accent, 0) + 1
                 if accent not in VARIETAT:
                     continue
+                comptador[split] = comptador.get(split, 0) + 1
                 ext = os.path.splitext(path or "")[1].lower() or ".flac"
-                ident = f"tl_{split}_{i:05d}_{spk}"
+                ident = f"tl_{split}_{comptador[split]:05d}_{spk}"
                 desti = os.path.join(CARPETA, "audio", ident + ext)
                 if not os.path.exists(desti):
                     io.open(desti, "wb").write(bytes(so))
@@ -49,5 +51,5 @@ with io.open(os.path.join(CARPETA, "metadades.jsonl"), "w", encoding="utf-8") as
                                       "duration": round(float(dur or 0), 2), "audio": desti, "path_original": path,
                                       "ja_a_produccio": ((text or "").strip(), spk) in ja}, ensure_ascii=False) + "\n")
                 n += 1
-        print(f, i, "files", flush=True)
+        print(f, comptador, "files", flush=True)
 print("talls escrits", n, "accents", comptes)
