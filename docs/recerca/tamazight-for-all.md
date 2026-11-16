@@ -897,10 +897,11 @@ El que ve: el mateix nucli amb les 8 h pròpies (#452) + Zouhir, i l'OCR d'aslmd
 de veritat quan tingui temps fiables.
 
 **Afegit el 16-11:** la mesura completa del canal de l'Alcorà (`zouhir-amazigh.md`, «Resultats
-sobre tot el corpus») mostra que un 15 % dels 1.563 rètols d'entrenament eren brossa (veritat en
-lletres àrabs, grafia cabilenca o temps desplaçats) i que dos dels tres vídeos «Alcorà fora» en
-són: la fila de l'Alcorà no vol dir res; les de TFA i Zouhir es mantenen (veritat neta). **H4b** =
-el mateix nucli només amb `mena == "parlat"` de `veritat_zouhir.json`.
+sobre tot el corpus») mostra que un 13 % dels rètols d'entrenament eren brossa (18 mixtos amb
+àrab retallat, 32 en grafia cabilenca amb lletres esborrades, 194 de tres vídeos amb els temps
+desplaçats) i que dos dels tres vídeos «Alcorà fora» en són: la fila de l'Alcorà no vol dir res;
+les de TFA i Zouhir es mantenen (veritat neta). **H4b** = el mateix nucli només amb rètols nets
+(`tools/lm/kaggle/h4b_afina_shi_net.py`).
 
 ## El creuament de fonts, en codi (15-11, vespre; punt 2 del programa)
 

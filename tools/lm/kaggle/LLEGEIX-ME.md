@@ -15,5 +15,6 @@ material de tercers NO es desplega sense permís dels autors.
 
 Avís (16-11): `cues.json` del dataset `zouhir-veritat` porta rètols amb veritat en lletres àrabs,
 en grafia cabilenca i amb temps desplaçats (canal de l'Alcorà). `tools/lm/zouhir_resum.py` els
-marca a `veritat_zouhir.json` (`mena`: «àrab», «altra grafia», «rètol»); el proper H4 ha de
-quedar-se només amb `mena == "parlat"` i deixar fora DPJrHx2meXE, QiR0qrnYV0g i stQPF2-LrB4.
+marca a `veritat_zouhir.json` (`mena`: «àrab», «altra grafia», «rètol»). `h4b_afina_shi_net.py`
+(nucli `h4b-afina-shi-net`) és H4 amb aquest filtre fet dins del nucli i l'Alcorà fora amb tres
+vídeos nets.

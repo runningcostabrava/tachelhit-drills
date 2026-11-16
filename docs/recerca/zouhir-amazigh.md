@@ -102,14 +102,18 @@ veritat **només després de netejar-lo**: fora l'àrab (el transliterador no ll
 `to_forms` deixa l'àrab tal qual, i per això el CER d'aquells rètols passava d'1), fora les
 altres varietats, i cada vídeo amb els temps comprovats.
 
-**Conseqüència per a H4.** El nucli del 15-11 va entrenar amb tot el canal menys 3 vídeos: entre
-els seus 1.563 rètols hi havia **~120 amb veritat en lletres àrabs, ~33 en grafia cabilenca i ~86
-desplaçats** (DPJrHx2meXE), un 15 % de brossa. Dos dels tres vídeos «fora» de l'Alcorà
-(1NypFO7bIvA, 4SwUf6I419o) són dels contaminats, així que el 0,510 → 0,473 d'«Alcorà fora» no
-vol dir gaire. La millora de TFA-226 (0,187 → 0,171) i de Zouhir fora (0,268 → 0,197) es van
-mesurar sobre veritat neta i es mantenen. **H4b**: el mateix nucli amb `mena == "parlat"` i sense
-DPJrHx2meXE/QiR0qrnYV0g/stQPF2-LrB4: menys rètols i probablement més guany. `zouhir_resum.py`
-ja marca la mena a `veritat_zouhir.json`; el nucli l'ha de llegir.
+**Conseqüència per a H4.** El nucli del 15-11 va entrenar amb tot el canal menys 3 vídeos.
+Reproduint el seu filtre sobre `veritat_zouhir.json` (`simula_filtre_h4.py`, surt exactament
+1.683 = 1.563 + 120 de dev): la `rica()` del nucli **buidava** els rètols només en àrab (no van
+entrar), però van entrar **18 rètols mixtos** amb l'àrab retallat (`ṛbbi (عز و جل) ur tn isɣaws` →
+`rbbi ur tn isġaws`), **32 en grafia cabilenca** amb les lletres ⵝ ⴺ esborrades (`ayⵝadduwn` →
+`ayadduwn`) i **194 dels tres vídeos desplaçats** (text d'un altre moment del so): 222 de 1.683,
+un **13 %** de brossa. Dos dels tres vídeos «fora» de l'Alcorà (1NypFO7bIvA, 4SwUf6I419o) són
+dels contaminats, així que el 0,510 → 0,473 d'«Alcorà fora» no vol dir gaire. La millora de
+TFA-226 (0,187 → 0,171) i de Zouhir fora (0,268 → 0,197) es va mesurar sobre veritat neta i es
+manté. **H4b** (`tools/lm/kaggle/h4b_afina_shi_net.py`): el mateix nucli amb els rètols nets,
+fora DPJrHx2meXE/QiR0qrnYV0g/stQPF2-LrB4, i l'Alcorà fora amb tres vídeos nets (ROl7INibBdg,
+f3bUnaPrGYY, 4YoU1icL8zY).
 
 **El corpus:** `veritat_zouhir.json` (2.164 rètols: so, temps, tifinag, llatí, en/ar/fr, mena,
 canal); 947 amb les tres traduccions. És l'entrada d'`induccio.py` amb `[en|ar|fr]` i d'H4b.
