@@ -319,6 +319,40 @@ les 60, «Standard Moroccan Tamazight» → «Catalan»: **0,448 → 0,568** (sh
 Perquè producció el faci servir cal que `HUGGINGFACE_TRANSLATION_SPACE_URL` a Render apunti a aquest
 Space (ara apunta al de Tamazight-NLP, que és el model base).
 
+**H-MT1 v3** (16-11, nit, segona tanda; peó `nllb-afina`, nucli `nllb-afina-propi` v3, guions
+`tools/lm/kaggle/prepara_parelles_v3.py`, `nllb_afina_propi_v3.py`, `compara_v3_v2.py`). Tres canvis
+respecte de la v2, amb el **mateix test-dins de 200** i les mateixes 60: (1) fora del train el vocabulari
+sol (una paraula amaziga o catalana: 822; glosses múltiples amb «/» o «;»: 442; tot l'IRCAM tamawalt:
+218); (2) dins les **302 parelles MTNRA/Common Voice confirmades pels dos auditors de màquina** del
+16-11 (de les 341 de `canvis.json`: 35 eren vocabulari i 4 són a la mostra), amb el català dels
+auditors; (3) ritme 5e-5, 5 èpoques i es queda el checkpoint amb millor pèrdua de dev (la 4a: 2,12 →
+1,91 → 1,85 → **1,819** → 1,819). Fuita per text normalitzat treta abans de llançar (62 files; 0 fuites
+comprovades). Train: 3.399 parelles (Beni Mellal 1.368, MTNRA 674, Common Voice 575, Mètode CD 303,
+Driss 134…), 1.293 en tifinag d'origen i 2.106 passades del llatí. El nucli converteix el millor
+checkpoint a CTranslate2 int8 i el mesura també.
+
+| camí | grup | abans | v2 | **v3** | Δ v2 → v3 | IC 95 % | Δ abans → v3 | IC 95 % |
+|---|---|---|---|---|---|---|---|---|
+| **català directe** | **60 frases** | 0,454 | 0,571 | **0,618** | **+0,047** | [+0,018, +0,080] | +0,164 | [+0,113, +0,219] |
+| català directe | shi (30) | 0,494 | 0,554 | 0,587 | +0,033 | [+0,003, +0,064] | +0,092 | [+0,032, +0,150] |
+| català directe | Beni Mellal (30) | 0,414 | 0,589 | 0,649 | +0,061 | [+0,005, +0,125] | +0,236 | [+0,159, +0,318] |
+| **català directe** | **test-dins (200)** | 0,278 | 0,425 | **0,453** | **+0,028** | [+0,009, +0,048] | +0,175 | [+0,142, +0,210] |
+| pont (→ anglès + DeepSeek) | 60 frases | 0,527 | 0,554 | 0,587 | +0,034 | [−0,005, +0,075] | +0,061 | [+0,015, +0,110] |
+| pont | test-dins (200) | 0,307 | 0,392 | 0,409 | +0,017 | [−0,002, +0,036] | +0,102 | [+0,076, +0,129] |
+| català directe, **ct2 int8** | 60 frases / test-dins | | | 0,623 / 0,454 | int8 − fp16: +0,005 [−0,007, +0,019] / +0,000 [−0,008, +0,009] | | | |
+
+El que se'n treu: (1) **la v3 guanya la v2 amb l'IC fora del zero** en català directe, sobre les 60
+(+0,047) i sobre les 200 (+0,028), i a tots dos grups; sobre el pont la diferència no arriba a
+significativa. (2) Per font al test-dins (abans → v2 → v3): Beni Mellal 0,16 → 0,30 → 0,32, MTNRA
+0,52 → 0,70 → 0,73, Mètode CD 0,28 → 0,58 → 0,73, Driss 0,11 → 0,24 → 0,32; Common Voice i el Mètode
+del llibre baixen una mica (0,63 → 0,62; 0,51 → 0,48). (3) La 5a època encara puja les 60 (0,626)
+però no el test-dins (0,449 contra 0,453): la pèrdua de dev tria bé. (4) La conversió a int8 no
+perd res (Δ dins de ±0,01). (5) A ull: guanya en fórmules i preguntes («Per què has dit així?», «Que
+Déu et porti la salut») i perd en algun pronom («Vosaltres sou russos» → «Vosaltres i els russos»).
+L'int8 és a punt a `Veus-tachelhit\_escoltats\models\nllb_afina\v3\ct2_int8\` (i els pesos fp16 a
+`v3\model_afinat\`); comprovat en local a la CPU: chrF 0,629 sobre les 60, 43 de 60 sortides idèntiques
+a les del nucli, 0,7 s per frase. **No s'ha tocat el Space**: el que serveix segueix sent la v2.
+
 ## La capa gratuïta de Groq (16-11, nit; `Veus-tachelhit\_escoltats\models\compara_groq.py`)
 
 Clau `GROQ_API_KEY` a `backend/.env` (en Pablo, 16-11). Les mateixes 60 frases, raonament baix,

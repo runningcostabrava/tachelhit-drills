@@ -98,6 +98,10 @@ print("proves:", collections.Counter(k[0] for k in per))
 # pont només per a «abans» i per a l'última època de cada ritme (són els que compten); la resta, català directe
 EPOQUES = res_nucli["config"]["epoques"]
 amb_pont = ["abans"] + [m for m in models if m.endswith(f"-ep{EPOQUES}")]
+# v3: els models es diuen ep1..ep5, millor, millor-ct2int8; es pot dir quins porten pont amb --pont a,b,c
+for a in sys.argv:
+    if a.startswith("--pont="):
+        amb_pont = [m for m in a[len("--pont="):].split(",") if m in models]
 if not SENSE_PONT:
     textos = sorted({s["en"] for s in sortides if s["model"] in amb_pont})
     pendents = [t for t in textos if not cau.get(t)]
@@ -156,6 +160,9 @@ print("\n".join(linies))
 # els exemples: 10 de la mostra de 60 (5 shi + 5 Beni Mellal), amb el millor «després» pel test-dins del nucli
 millor = res_nucli["config"].get("millor_ritme_per_test200")
 m_final = f"{millor}-ep{EPOQUES}" if millor else [m for m in models if m != "abans"][-1]
+for a in sys.argv:
+    if a.startswith("--exemples="):
+        m_final = a[len("--exemples="):]
 ex = []
 m60 = [k for k in per if k[0] == "mostra60"]
 rnd = random.Random(1114)
