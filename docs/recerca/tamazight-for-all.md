@@ -904,8 +904,9 @@ les de TFA i Zouhir es mantenen (veritat neta). **H4b** = el mateix nucli només
 (`tools/lm/kaggle/h4b_afina_shi_net.py`), 1.308 rètols: TFA-226 0,187 → **0,169** (−0,018
 [−0,024, −0,012]), Zouhir fora 0,268 → 0,200, Alcorà net fora 0,362 → 0,332. H4 i H4b són
 indistingibles (TFA +0,002 [−0,001, +0,006]): la brossa no feia mal, i la millora queda
-**replicada** amb dos conjunts d'entrenament diferents. L'adaptador de referència (no desplegat)
-és el d'H4b. Detall a `zouhir-amazigh.md`.
+**replicada** amb dos conjunts d'entrenament diferents. L'adaptador de referència és el d'H4b, i
+**des del 16-11 al migdia és el que serveix al Space**: en Pablo ha obtingut el permís dels autors
+per telèfon (`docs/PERMISOS.md`). Detall a `zouhir-amazigh.md`.
 
 ## El creuament de fonts, en codi (15-11, vespre; punt 2 del programa)
 

@@ -142,7 +142,14 @@ també hi ajuda (−0,029 amb interval sencer per sota de zero), cosa que la fil
 podia dir. Conclusió: la millora d'H4 és sòlida i no depèn de la brossa; el model aguanta un 13 %
 d'etiquetes dolentes sense notar-ho. **L'adaptador de referència passa a ser el d'H4b**
 (`Veus-tachelhit\_escoltats\zouhir\kernels\adaptador_shi_zouhir_b.pt`: entrenat només amb veritat
-neta, mateix resultat), **sense desplegar-lo**: material de tercers, permís dels autors pendent.
+neta, mateix resultat).
+
+**Desplegat el 16-11 al migdia.** En Pablo ha parlat per telèfon amb els autors (Zouhir Amazigh,
+BerberFreeQuranEducation, aslmdtv, Tamazight For All): sí a catalogar-ho tot i a afinar-hi el
+model; passen a formar part del projecte (`docs/PERMISOS.md`, 16-11). Amb això l'adaptador H4b
+puja al Space `josepabloucr/huggingface-asr-space` com `adaptador_shi_zouhir_b.pt` (commit
+`7aa40d8`; `mms_shi.py` l'apunta; `adaptador_shi_ric.pt` es queda al repositori per poder tornar
+enrere). Comprovació en viu: vegeu més avall.
 
 El que ve: el mateix nucli amb les **8 h pròpies** (#452) + aquests 1.308 rètols, i mesurar si la
 nostra parla (Halima, Driss, Baba Ali) hi guanya el que hi guanya el taixelhit dels contes.

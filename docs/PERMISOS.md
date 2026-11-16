@@ -19,6 +19,20 @@ permisos i el text per demanar-los.
 | *Rajae Marzouki fg* (Figuig) | els contes: el text cremat als vídeos, la seva veu i la traducció a l'àrab | **sí** | 28-10-2026 |
 | *Hafida Benkahia* | els contes: el text cremat als vídeos i la seva veu | **sí** | 28-10-2026 |
 | *MTNRA / Amazigh-IA* — les 1.801 frases de taixelhit | fer-les servir per a més que mesurar: entrenar-hi | **sí** | 28-10-2026 |
+| *Zouhir Amazigh* (YouTube) | la pista en tifinag dels seus vídeos amb la seva veu: catalogar-la, mesurar-hi el lector i **afinar-hi el model que serveix** | **sí** | 16-11-2026 |
+| *BerberFreeQuranEducation* (YouTube) | la pista en tifinag dels vídeos de predicació amb la veu dels parlants: igual que Zouhir | **sí** (segons el propietari, dins de «totes les fonts»; l'adaptador desplegat en porta veu) | 16-11-2026 |
+| *aslmdtv* (YouTube) — el llibre escolar «ⴰⴱⵔⵉⴷ ⵏ ⵓⵎⵓⵔⵙ» | el text imprès dels vídeos, llegit per plantilles, amb la veu que el llegeix | **sí** | 16-11-2026 |
+| *Tamazight For All* | a més del permís del 26-10: catalogar-ho tot i afinar-hi el model | **sí** | 16-11-2026 |
+
+**Els sís del 16-11-2026 els dona el propietari**, que ha parlat per telèfon amb cada una de
+les fonts dels canals treballats als issues #503, #620 i #622: diu que totes treballen sense
+ànim de lucre pel mateix fi, que estan molt interessades en el projecte i que **passen a
+formar-ne part**, i que el web encara no és públic (només ells i ell en tenen l'adreça). Amb
+això, el 16-11 es desplega al Space l'adaptador `shi` afinat amb la veritat humana de Zouhir
+Amazigh i BerberFreeQuranEducation (H4b), que fins llavors es guardava sense desplegar. Com els
+altres, queda escrit amb la data i la seva base. Convé, quan es pugui, tenir-ne una línia per
+escrit de cada autor (un missatge n'hi ha prou), i el dia que entrin com a col·laboradors, el seu
+nom a `CREDITS.md` al costat de la seva obra.
 
 **Els sís del 28-10-2026 també els dona el propietari**, que informa d'una reunió a casa seva
 amb les persones implicades —els dos canals de contes, els col·laboradors i la gent del MTNRA—

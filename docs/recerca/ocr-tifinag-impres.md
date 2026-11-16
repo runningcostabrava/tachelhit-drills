@@ -282,5 +282,6 @@ files captades a mig animar-se.
 **Què val això.** És el primer text imprès en tifinag de l'Atles central que tenim llegit amb la
 seva veu al costat (el karaoke en diu els temps, encara que vagin per darrere de la parla). Serveix
 de tercera veritat per al lector quan s'alineï amb el Space, i de text real per al lèxic i el
-glossador. El canal queda **tancat com a font**: el que hi havia per llegir, llegit. Pendent de
-l'amo: permís de l'autor abans que res d'això entreni el model servit o entri a la biblioteca.
+glossador. El canal queda **tancat com a font**: el que hi havia per llegir, llegit. El permís de
+l'autor el va obtenir en Pablo per telèfon el 16-11 (`docs/PERMISOS.md`): el corpus pot entrenar
+i mesurar; el text segueix sent de l'autor i no entra a la biblioteca com a frase nostra.
