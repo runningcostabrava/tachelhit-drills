@@ -1,0 +1,362 @@
+[
+ {
+  "id": "GUR4292t81M",
+  "durada": 535,
+  "titol": "ⵜⵓⵍⵍⵉⵙⵜ ⵜⴰⵎⵙⵍⴰⵢⵜ: ⴰⵡⵍⴽ  ⴰⵎⴰⵔⵉⵔ",
+  "mena": "conte"
+ },
+ {
+  "id": "-Gqm1vfnCzg",
+  "durada": 898,
+  "titol": "الحلقة 3 ديداكتيك الامازيغية / التعبير  ⴰⵎⵙⴰⵡⴰⴹ/المنهاج الجديد",
+  "mena": "dialeg"
+ },
+ {
+  "id": "Eunlkgrf6oU",
+  "durada": 391,
+  "titol": "ⴰⵎⵙⴰⵡⴰⴹ 1, ⴰⵙⵡⵉⵔ 1, ⴰⴷⵍⵉⵙ : ⴰⴱⵔⵉⴷ ⵏ ⵓⵎⵓⵔⵙ",
+  "mena": "dialeg"
+ },
+ {
+  "id": "JMCl0OO61QM",
+  "durada": 41,
+  "titol": "ⴰⵎⵙⴰⵡⴰⵍ ⴳⵣⵣⵓⵍⵏ ⵏ ⵜⵙⵓⴳⵔⵜ 7 ⴰⵙⵡⵉⵔ 2",
+  "mena": "dialeg"
+ },
+ {
+  "id": "o5xWviSCRF8",
+  "durada": 499,
+  "titol": "ⵜⵉⵖⵔⵉ ⴷ ⵜⴰⵔⴰⵢⵜ ⵏ ⵉⵙⴽⴽⵉⵍⵏ ⵜ, ⵎ, ⴳ, ⵜⴰⵙⵓⴳⵔ 2, ⴰⵙⵡⵉⵔ 1ⴰⴱⵔⵉⴷ ⵏ ⵓⵎⵓⵔⵙ",
+  "mena": "lectura"
+ },
+ {
+  "id": "7ZWFXQNmNME",
+  "durada": 430,
+  "titol": "ⵜⵉⵖⵔⵉ  ⵏ ⵓⴹⵕⵉⵚ \" ⵖ ⵓⴳⴰⴷⴰⵣ\" ⴰⵙⵡⵉⵔ 2, ⵜⴰⵙⵓⴳⵔⵜ 3",
+  "mena": "lectura"
+ },
+ {
+  "id": "OTwsywhExOA",
+  "durada": 420,
+  "titol": "ⵜⵉⵖⵔⵉ ⴷ  ⵜⴰⵔⴰⵢⵜ ⵏ ⵉⵙⴽⴽⵉⵍⵏ ⴽⵯ, ⴳⵯ, ⵖ حروف ⵖ, ⴳⵯ, ⴽⵯقراءة وخطا",
+  "mena": "lectura"
+ },
+ {
+  "id": "ZX8o-g4yHwk",
+  "durada": 414,
+  "titol": "ⵜⵉⵖⵔⵉ ⵏ ⵓⴹⵕⵉⵚ : ⴰⵥⵕⵓ ⵏ ⵓⴷⵔⴰⵔ ⵏ ⴷⵔⵏ, ⴰⵙⵡⵉⵔ 2",
+  "mena": "lectura"
+ },
+ {
+  "id": "z6L6zGYmkkU",
+  "durada": 411,
+  "titol": "ⵜⵉⵖⵔⵉ ⴷ ⵜⵉⵔⵔⴰ ⵏ ⵉⵙⴽⴽⵉⵍⵏ ⵍ, ⵡ ⴰⵙⵡⵉⵔ ⴰⵎⵣⵡⴰⵔⵓ ⴰⴷⵍⵉⵙ ⴰⴱⵔⵉⴷ ⵏ ⵓⵎⵓⵔⵙ",
+  "mena": "lectura"
+ },
+ {
+  "id": "EA2PwuXroPw",
+  "durada": 388,
+  "titol": "ⴰⵙⵡⵉⵔ 2 ⵜⴰⴳⵣⵣⵓⵎⵜ 7, ⵜⵉⵖⵔⵉ : ⴰⴷ ⵏⴱⴱⵉ ⴰⴱⵔⵉⴷ",
+  "mena": "lectura"
+ },
+ {
+  "id": "4_2DUAo9aGQ",
+  "durada": 388,
+  "titol": "ⵜⵉⵖⵔⵉ : ⴰⴷ  ⵏⴱⴱⵉ   ⴰⴱⵔⵉⴷ",
+  "mena": "lectura"
+ },
+ {
+  "id": "-SVf_yOmRb8",
+  "durada": 382,
+  "titol": "ⵜⵉⵖⵔⵉ  ⴰⵙⵡⵉⵔ 2",
+  "mena": "lectura"
+ },
+ {
+  "id": "QFQqZdiMIFE",
+  "durada": 353,
+  "titol": "ⵜⵉⵖⵔⵉ ⴰⵙⵡⵉⵔ 1 :ⴰⴼⵓⵍⴽⵉ ⵏ ⵜⴰⴳⴰⵏⵜ     نص القراءة المستوى الاول الوحدة 7",
+  "mena": "lectura"
+ },
+ {
+  "id": "AH-2VjGwmHo",
+  "durada": 344,
+  "titol": "ⵜⵉⵖⵔⵉ ⴰⵙⵡⵉⵔ 2: ⵜⴰⵖⴱⴰⵍⵓⵜ ⵏ ⵡⴰⵍⵎⴰⵙ",
+  "mena": "lectura"
+ },
+ {
+  "id": "8JgHEd7f6E8",
+  "durada": 334,
+  "titol": "ⵜⵉⵖⵔⵉ  :  ⵜⴰⵡⴰⵔⴳⵉⵜ ⵏ ⵢⵉⴷⵉⵔ, ⴰⵙⵡⵔ 2",
+  "mena": "lectura"
+ },
+ {
+  "id": "e_GdtuhGJGk",
+  "durada": 332,
+  "titol": "ⵜⵉⵖⵔⵉ ⵏ ⵓⴹⵕⵉⵚ :ⵜⵓⵔⵜⵉⵜ ⵏ ⵜⵉⵏⵎⵍ ⴰⵙⵡⵉⵔ 2, ⵜⴰⵙⵓⴳⵔⵜ 2",
+  "mena": "lectura"
+ },
+ {
+  "id": "6aLGojDcpKg",
+  "durada": 318,
+  "titol": "ⵜⵉⵖⵔⵉ ⵏ ⵓⴹⵕⵉⵙ : ⴳ ⵜⵉⵏⵣⵓⵍⵉⵏ ⴰⵙⵡⵉⵔ ⵡⵉⵙⵙ ⵙⵉⵏ",
+  "mena": "lectura"
+ },
+ {
+  "id": "rafxNjTzW8Y",
+  "durada": 286,
+  "titol": "ⵜⵉⵖⵔⵉ ⵏ ⵓⴹⵕⵉⵚ ⴰⵙⵡⵉⵔ 3 : ⵜⵉⵙⵍⵉⵜ ⵏ ⵓⵏⵥⴰⵕ",
+  "mena": "lectura"
+ },
+ {
+  "id": "4lNHVDmhKoM",
+  "durada": 284,
+  "titol": "ⵜⵉⵖⵔⵉ, ⴰⵙⵡⵉⵔ 2, ⵜⴰⴳⵣⵣⵓⵎⵜ2 ⴰⴹⵕⵉⵚ:ⴰⵎⵡⴰⵏ",
+  "mena": "lectura"
+ },
+ {
+  "id": "SM3yYL80hw8",
+  "durada": 227,
+  "titol": "ⵜⵉⵖⵔⵉ ⴷ ⵜⵉⵔⵔⴰ, ⴰⵙⵡⵉⵔ1",
+  "mena": "lectura"
+ },
+ {
+  "id": "wALd_rPLMmY",
+  "durada": 181,
+  "titol": "ⵜⵉⵖⵔⵉ ⴰⵙⵡⵉⵔ 1, ⵜⴰⵡⵙⵉⵙⵏⵜ   القراءة الوحدة السابعة",
+  "mena": "lectura"
+ },
+ {
+  "id": "qZbcdc-wKfk",
+  "durada": 148,
+  "titol": "ⵜⵉⵖⵔⵉ 1, ⵜⴰⵙⵓⴳⵔⵜ 5",
+  "mena": "lectura"
+ },
+ {
+  "id": "tfmF8a1qghk",
+  "durada": 147,
+  "titol": "ⵜⵉⵖⵔⵉ. ⴰⵙⵡⵉⵔ1. ⵜⴰⵙⵓⴳⵔⵜ 5",
+  "mena": "lectura"
+ },
+ {
+  "id": "5g8RjeTJioY",
+  "durada": 597,
+  "titol": "ⵜⴰⵏⴰⵍⵉⵜ 3, ⴰⵙⵡⵉⵔ 2 : ⵜⴰⴳⵣⵣⵓⵎⵜ 5 ⴷ 6",
+  "mena": "reforç_unitat"
+ },
+ {
+  "id": "ZhQgHYUECDs",
+  "durada": 565,
+  "titol": "ⵜⴰⵏⴰⵍⵉⵜ ⵏ ⵜⵙⵓⴳⵔⵜ 5 ⴷ 6  دعم الوحدة 5و6 المستوى الاول",
+  "mena": "reforç_unitat"
+ },
+ {
+  "id": "ygfN0q9Htvs",
+  "durada": 532,
+  "titol": "ⵜⴰⵏⴰⵍⵉⵜ ⴷ ⵜⵢⴰⴼⵓⵜ ⵜⴰⵙⵓⴳⵔⵜ 5 ⴷ 6",
+  "mena": "reforç_unitat"
+ },
+ {
+  "id": "K4XK3GB7_kI",
+  "durada": 524,
+  "titol": "ⵜⴰⵏⴰⵍⵉⵜ ⴰⵙⵡⵉⵔ 2, ⵜⴰⴳⵣⵣⵓⵎⵜ 5 ⴷ 6",
+  "mena": "reforç_unitat"
+ },
+ {
+  "id": "MBPFyd1eKcc",
+  "durada": 520,
+  "titol": "ⵜⴰⵏⴰⵍⵉⵜ3, ⵜⴰⵙⵓⴳⵔⵜ 5 ⴷ 6  ⴰⵙⵡⵉⵔ 1",
+  "mena": "reforç_unitat"
+ },
+ {
+  "id": "VgC5U9VNLfc",
+  "durada": 494,
+  "titol": "ⵜⴰⵏⴰⵍⵉⵜ 2, ⴰⵙⵡⵉⵔ 2: ⵜⴰⴳⵣⵣⵓⵎⵜ 5ⴷ6",
+  "mena": "reforç_unitat"
+ },
+ {
+  "id": "3x9jKLeDfBo",
+  "durada": 421,
+  "titol": "ⵜⴰⵎⴰⵡⵍⵜ ⵉⵏⵓ ⵜⴰⵙⵓⴳⵔⵜ 7 ⴰⵙⵡⵉⵔ 1",
+  "mena": "reforç_unitat"
+ },
+ {
+  "id": "l91e-Z1SQJc",
+  "durada": 377,
+  "titol": "ⵜⴰⵏⴰⵍⵉⵜ2 _ⴰⵙⵡⵉⵔ 1 _ⵜⴰⵙⵓⴳⵔⵜ 5 ⴷ 6",
+  "mena": "reforç_unitat"
+ },
+ {
+  "id": "i3ENYbMiadM",
+  "durada": 339,
+  "titol": "ⵜⴰⵏⴰⵍⵉⵜ ⵏ ⵓⵙⵡⵉⵔ ⴰⵎⵣⵡⴰⵔⵓ, ⵜⴰⵙⵓⴳⵔⵜ 5 ⴷ 6",
+  "mena": "reforç_unitat"
+ },
+ {
+  "id": "wYnkT6RF5s0",
+  "durada": 825,
+  "titol": "ديداكتيك المستوى الاول حسب المنهاج الجديدⵜⴰⴷⵉⴷⴰⴽⵜⵉⴽⵜ ⵏ ⵓⵙⵡⵉⵔ 1",
+  "mena": "altres"
+ },
+ {
+  "id": "Q9EbUg0Y3KI",
+  "durada": 549,
+  "titol": "ⵜⴰⵢⴰⴷⵓⵣⵜ, ⴰⵙⵡⵉⵔ 2, ⵜⴰⴳⵣⵣⵓⵎⵜ 7",
+  "mena": "altres"
+ },
+ {
+  "id": "jH-hBNzplqE",
+  "durada": 533,
+  "titol": "ديداكتيك _امازيغية _المستوى_ حلقة 2 _ ⴰⴱⵔⵉⴷ ⵏ ⵓⵎⵔⵙ_ⵜⴰⵙⴷⴷⵉⵜ 2",
+  "mena": "altres"
+ },
+ {
+  "id": "zAHenHXGY9U",
+  "durada": 430,
+  "titol": "ⵜⵉⵔⵔⴰ2",
+  "mena": "altres"
+ },
+ {
+  "id": "LbdVmV-ude4",
+  "durada": 402,
+  "titol": "ⵜⵉⵔⵎⵜ 1 ⵏ ⵜⵉⵔⵔⴰ, ⴰⵙⵡⵉⵔ 1, ⴰⴷⵍⵉⵙ ⴰⴱⵔⵉⴷ ⵏ ⵓⵎⵓⵔⵙ",
+  "mena": "altres"
+ },
+ {
+  "id": "N4jVf2EIoF8",
+  "durada": 379,
+  "titol": "Iskkiln** 2 ** , ⵜ_ ⵎ_ ⵡ _ ⵍ _ ⴳ",
+  "mena": "altres"
+ },
+ {
+  "id": "ID_xZaneDyo",
+  "durada": 368,
+  "titol": "ⵉⴽⵯⵍⴰⵏ , الالوان",
+  "mena": "altres"
+ },
+ {
+  "id": "qDYXEWfT9tY",
+  "durada": 340,
+  "titol": "ⵜⵉⵔⵎⵜ ⵏ ⵜⵖⵔⵉ 1 ⴷ 2 ⴰⵙⵡⵉⵔ 1",
+  "mena": "altres"
+ },
+ {
+  "id": "28SBbpiytjM",
+  "durada": 336,
+  "titol": "ⵉⴳⵔ ⵏ ⵜⵓⵏⵏⵓⵏⵜ, ⴰⵙⵡⵉⵔ ⴰⵎⵣⵡⴰⵔⵓ ⵜⴰⴳⵣⵣⵓⵎⵜ 6",
+  "mena": "altres"
+ },
+ {
+  "id": "HtAC0IZGq2c",
+  "durada": 313,
+  "titol": "ⵜⴰⵔⴰⵜⵙⴰ ⵏ ⵜⴳⵓⵔⵉⵡⵉⵏ ⴰⵙⵡⵉⵔ 1   شبكة الكلمات للاطفال",
+  "mena": "altres"
+ },
+ {
+  "id": "uENrgC3-weY",
+  "durada": 211,
+  "titol": "ⴰⵎⵙⴰⵡⴹ, ⴰⵙⵡⵉⵔ1",
+  "mena": "altres"
+ },
+ {
+  "id": "3uz8YGdDix0",
+  "durada": 138,
+  "titol": "ⴰⵙⵏⴼⵍⵓⵍ ⵉⵏⵓ ⵖ ⵓⵣⵎⵣ ⵏ ⴽⵓⵔⵓⵏⴰ",
+  "mena": "altres"
+ },
+ {
+  "id": "WS0g1Q7h4UQ",
+  "durada": 12,
+  "titol": "ⴰⵙⴳⴳⵯⴰⵙ  ⵏⵏⵓ  ⵉⵖⵓⴷⴰⵏ 2972",
+  "mena": "altres"
+ },
+ {
+  "id": "a7JAFFIFc5Q",
+  "durada": 467,
+  "titol": "ⵜⵉⵣⵍⵉⵜ, ⴱⵓⵙⴰⵍⵎ, ⴰⵙⵡⵉⵔ 2  ⵜⴰⴳⵣⵣⵓⵎⵜ 8",
+  "mena": "canço_poesia"
+ },
+ {
+  "id": "Auj17uMdHyw",
+  "durada": 320,
+  "titol": "ⴰⵡⵔⴰⵔ ⵉ ⵜⴰⵣⵣⴰⵏⵉⵏ",
+  "mena": "canço_poesia"
+ },
+ {
+  "id": "IPT9Y650oLM",
+  "durada": 270,
+  "titol": "ⴰⵡⵔⴰⵔ, ⴰⵙⵡⵉⵔ ⴰⵎⵣⵡⴰⵔⵓ",
+  "mena": "canço_poesia"
+ },
+ {
+  "id": "rWNPreSn790",
+  "durada": 204,
+  "titol": "ⴰⵡⵔⴰⵔ 4, ⵜⴰⵔⴰⵜⵙⴰ  ⵏ  ⵜⴳⵓⵔⵉⵡⵉⵏ",
+  "mena": "canço_poesia"
+ },
+ {
+  "id": "-D0PFKx6jgI",
+  "durada": 107,
+  "titol": "ⵜⴰⵎⴷⵢⴰⵣⵜ ⵙ ⵜⵎⵍⴷⴰ ⵏ ⵡⴰⵙⵙ ⴰⵎⴰⴹⵍⴰⵏ ⵏ ⵜⵎⵖⴰⵔⵜ",
+  "mena": "canço_poesia"
+ },
+ {
+  "id": "dtuV01a7LpI",
+  "durada": 654,
+  "titol": "ⵉⵙⴽⴽⵉⵍⵏ  : ⵇ_ ⴽ_ⴽⵯ_ⴳⵯ_ⵖ _ ⵃ",
+  "mena": "lletres_numeros_colors"
+ },
+ {
+  "id": "qlm9oRR4Bhg",
+  "durada": 495,
+  "titol": "ⵜⴰⵔⴰⵢⵜ ⵏ  ⵉⵙⴽⴽⵉⵍⵏ \"ⵏ\" \"ⴷ\" ⴰⵙⵡⵉⵔ ⴰⵎⵣⵡⴰⵔⵓ.",
+  "mena": "lletres_numeros_colors"
+ },
+ {
+  "id": "lR1hA6yxYZc",
+  "durada": 403,
+  "titol": "ⴰⴷ ⵍⵎⴷⵖ ⵉⵙⴽⴽⵉⵍⵏ ⴼ, ⵟ, ⵔ",
+  "mena": "lletres_numeros_colors"
+ },
+ {
+  "id": "uZZCfFctTp8",
+  "durada": 364,
+  "titol": "ⵉⵙⴽⴽⵉⵍⵏ  ⵜⴰⵙⴷⴷⵉⵜ 4 : ⴹ_ ⵙ _ ⴱ",
+  "mena": "lletres_numeros_colors"
+ },
+ {
+  "id": "DMvZR3JlSzw",
+  "durada": 358,
+  "titol": "ⵉⵣⵡⵍⵏ  ⴷ ⵉⵍⵓⵖⵎⴰالارقام وبعض التمارين",
+  "mena": "lletres_numeros_colors"
+ },
+ {
+  "id": "C98S4XWgPvQ",
+  "durada": 315,
+  "titol": "ⵉⵙⴽⴽⵉⵍⵏ :ⵥ, ⵕ, ⵚ, تعلم هذه الحروف مع الصوائت",
+  "mena": "lletres_numeros_colors"
+ },
+ {
+  "id": "u-zOunzmzt8",
+  "durada": 244,
+  "titol": "ⵜⵉⵔⵔⴰ ⴷ ⵜⵖⵔⵉ ⵏ ⵉⵙⴽⴽⵉⵍⵏ ⴰ_ⵓ_ⵉ_ⵏ_ⴷ",
+  "mena": "lletres_numeros_colors"
+ },
+ {
+  "id": "8Zwql5m04xo",
+  "durada": 158,
+  "titol": "ⵉⵙⴽⴽⵉⵍⵏ : ⴰ, ⵓ, ⵉ, ⵏ, ⴷ, ⵜ, ⵎ",
+  "mena": "lletres_numeros_colors"
+ },
+ {
+  "id": "ORmIMf8YF1k",
+  "durada": 158,
+  "titol": "ⵙⴰ ⵏ ⵉⵙⴽⴽⵉⵍⵏ ⵏ ⵜⴼⵉⵏⴰⵖ. ⴰ, ⵓ, ⵉ, ⵏ, ⴷ, ⵜ, ⵎ",
+  "mena": "lletres_numeros_colors"
+ },
+ {
+  "id": "9Fc4hiygFD0",
+  "durada": 156,
+  "titol": "ⵉⵣⵡⵍⵏ الارقام  1......20",
+  "mena": "lletres_numeros_colors"
+ }
+]

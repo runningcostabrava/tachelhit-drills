@@ -460,6 +460,13 @@ def main():
     REPARA = opts.get("repara", "0") == "1"
     mode, sortida, subr, fot = trams_del_video(video, vid, mode)
     glifs, teles, finals = segmenta(sortida, vid)
+    if not glifs:
+        print("cap glif llegible: no hi ha text de pàgina en aquest vídeo")
+        json.dump([], open(os.path.join(AQUI, f"transcripcio_{vid}.json"), "w", encoding="utf-8"))
+        open(os.path.join(AQUI, f"conte_{vid}.txt"), "w", encoding="utf-8").write(f"# {vid}  sense text llegible\n")
+        json.dump({}, open(os.path.join(AQUI, f"nous_{vid}.json"), "w", encoding="utf-8"))
+        print(f"0 files, 0 glifs, 0 nous en 0 grups -> transcripcio_{vid}.json")
+        return
     etiquetes = classifica(glifs, teles, llindar)
     glifs = tria_millor_versio(glifs)
     conf = np.array([g["conf"] for g in glifs])
