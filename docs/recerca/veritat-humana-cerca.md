@@ -34,3 +34,20 @@ de Wikitongues) o d'**OCR del text cremat** (2.000-3.000 línies possibles, cant
 espontànies). (2) Els autors que ja col·laboren (Zouhir, TFA, aslmdtv) poden exportar més `.srt`:
 cada 1.000 rètols nets val més que qualsevol model nou. Tot és material de tercers: catalogat, res a
 la biblioteca ni al model sense permís.
+
+## CoTaSS: l'extracte públic contra el nostre lector (16-11, nit)
+
+El CoTaSS (Corpus of Tashlhiyt Semi-spontaneous Speech, Universitat de Colònia; Bruggeman i Roettger
+2017, grup de Martine Grice) són 10 converses de «tasca del mapa» entre parlants d'Agadir, 39 minuts,
+transcrites, glossades i traduïdes a l'anglès línia a línia. Les transcripcions (TextGrids i text) es
+baixen lliurement; el so es demana per correu amb un acord d'ús signat. L'adreça del web
+(`cotasscorpus@gmail.com`) rebota: s'ha escrit als autors (Roettger, avui a Oslo; Grice, a Colònia).
+Fitxers a `Veus-tachelhit\_escoltats\cotass\`.
+
+L'extracte públic (29 s de la conversa 1m_2m, estèreo, 18 frases del TextGrid) passat pel Space amb
+H4b, canal a canal i quedant-se el millor: **CER 0,80** (`cotass_mostra.json`). Res a veure amb el
+0,17 de TFA ni el 0,20 de Zouhir. Les frases són curtes («iyyih», «aẓlmaḍ», «tama n»), amb
+encavalcaments, vacil·lacions («[eeh]»), i el lector hi treu brossa o res. El que diu: **el nostre
+lector sap parla llegida i subtitulada, no conversa espontània**; el CoTaSS és just la prova que no
+teníem, i quan arribin els 39 minuts és el primer test net de parla espontània. Nota: la referència
+porta guions de clític (`t-ggiz-t`) i anotacions entre claudàtors que es treuen abans de comparar.
