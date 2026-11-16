@@ -229,9 +229,32 @@ def _angles_a_catala(text: str) -> str:
     return ""
 
 
+def _esborrany_amb_gemini(text: str) -> str:
+    """El Gemini traduint amazic directament: el millor esborrany que tenim (16-11-2026, 60 frases:
+    gemini-2.5-flash sense raonar 0,571, gemini-3.8-flash 0,60, contra 0,52 del pont i 0,47 del Qwen).
+    Torna "" si no hi ha Gemini o no contesta: qui crida ha de poder caure al pont."""
+    import gemini_client
+    if not gemini_client.gemini_available():
+        return ""
+    sistema = ("Ets un traductor d'amazic (taixelhit i tamazight de l'Atles central, en tifinag o en lletres "
+               "llatines) al catala. Torna NOMES la traduccio al catala, en una sola linia, sense cometes ni "
+               "comentaris. Si una paraula no la saps, tradueix el que puguis i no inventis.")
+    try:
+        r = gemini_client.gemini_generate(sistema, [{"role": "user", "text": f"Frase: {text}\n\nTraduccio al catala:"}],
+                                          max_output_tokens=300, temperature=0)
+    except Exception as e:
+        print(f"[TRANSLATE] el Gemini no ha donat l'esborrany ({type(e).__name__}); vaig al pont")
+        return ""
+    linies = [x.strip() for x in (r or "").splitlines() if x.strip()]
+    return linies[0] if linies else ""
+
+
 def _amazic_a_catala(text: str, src_lang: str) -> str:
-    """Amazic → catala pel pont de l'angles; si el pont falla, catala directe de l'Space (que amb
-    la font tzm_Tfng ja va una mica millor que abans)."""
+    """Amazic → catala: el Gemini primer; si no hi es, el pont de l'angles; si el pont falla, catala
+    directe de l'Space (que amb la font tzm_Tfng ja va una mica millor que abans)."""
+    ca = _esborrany_amb_gemini(text)
+    if ca:
+        return ca
     font = _font_amaziga_per_l_space(src_lang)
     try:
         en = translate_with_hf(text, font, "English")

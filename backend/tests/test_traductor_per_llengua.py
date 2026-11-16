@@ -37,6 +37,7 @@ def test_l_amazic_va_a_l_space(monkeypatch):
     #: el pont per l'angles (test_pont_angles.py) es tanca aqui perque el que es prova es
     #: QUI tradueix l'amazic: l'Space, i no el traductor general
     monkeypatch.setattr(main, "_angles_a_catala", lambda en: "")
+    monkeypatch.setattr(main, "_esborrany_amb_gemini", lambda t: "")
     assert main.tradueix("bonjorn", "Catalan",
                          "Tachelhit/Central Atlas Tamazight") == "[space] bonjorn"
     assert main.tradueix("azul", "Standard Moroccan Tamazight", "Catalan") == "[space] azul"

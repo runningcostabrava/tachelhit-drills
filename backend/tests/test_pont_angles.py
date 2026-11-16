@@ -7,6 +7,13 @@ demana anglès amb tzm_Tfng i un model de text passa l'anglès al català. Això
 traductor: prova QUIN CAMÍ es fa i que, si el pont cau, es torna al català directe.
 """
 import main
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _sense_gemini(monkeypatch):
+    """El Gemini va primer (test_el_gemini_va_primer); aqui es tanca per provar el pont sol."""
+    monkeypatch.setattr(main, "_esborrany_amb_gemini", lambda t: "")
 
 
 def _space_que_apunta(on):
@@ -68,3 +75,27 @@ def test_sense_cap_model_de_text_no_es_queda_penjat(monkeypatch):
     monkeypatch.setattr(deepseek_client, "deepseek_available", lambda: False)
     monkeypatch.setattr(qwen_client, "qwen_available", lambda: False)
     assert main._angles_a_catala("God gave abundance this year.") == ""
+
+
+def test_el_gemini_va_primer(monkeypatch):
+    """Mesurat el 16-11-2026: el Gemini traduint directe (0,57-0,60) guanya el pont (0,52)."""
+    cridat = []
+    monkeypatch.setattr(main, "_esborrany_amb_gemini", lambda t: f"[gemini] {t}")
+    monkeypatch.setattr(main, "translate_with_hf", _space_que_apunta(cridat))
+    assert main.tradueix("azul", "Tachelhit/Central Atlas Tamazight", "Catalan") == "[gemini] azul"
+    assert cridat == [], "amb el Gemini contestant, l'Space no s'havia de cridar"
+
+
+def test_sense_gemini_es_cau_al_pont(monkeypatch):
+    cridat = []
+    monkeypatch.setattr(main, "_esborrany_amb_gemini", lambda t: "")
+    monkeypatch.setattr(main, "translate_with_hf", _space_que_apunta(cridat))
+    monkeypatch.setattr(main, "_angles_a_catala", lambda en: "[ca]")
+    assert main.tradueix("azul", "Tachelhit/Central Atlas Tamazight", "Catalan") == "[ca]"
+    assert cridat == [("Standard Moroccan Tamazight", "English")]
+
+
+def test_sense_clau_de_gemini_no_es_queda_penjat(monkeypatch):
+    import gemini_client
+    monkeypatch.setattr(gemini_client, "gemini_available", lambda: False)
+    assert main._esborrany_amb_gemini("azul") == ""
