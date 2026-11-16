@@ -197,3 +197,22 @@ Chat i Qwen Max; clava les curtes freqüents («No parlo àrab», «On és la do
 paraula la deixa en llatí o s'inventa un nom (Jesús, Mubarak). Val com a veu independent barata al
 costat dels auditors, no com a font. (2) Envieu-li tifinag: el llatí de l'Anki (γ grega, guions) el
 bloqueja. (3) Glosbe/NLLB no val. Informe i crus: `Veus-tachelhit\_escoltats\models\web\`.
+
+## El tercer auditor, i el parell sobre Baba Ali (16-11, vespre)
+
+**Tercer auditor** (`qwen4-max` raonant, `audita_tercer.py`), només sobre les frases d'MTNRA i Common
+Voice que els dos primers no van tancar (649: un TRIA o un FORA contra un NO-HO-SE, un TRIA contra un
+FORA, o dos TRIA diferents), amb la regla «dos de tres amb el mateix text»: 290 TRIA, 48 FORA, 137
+NO-HO-SE sobre les primeres 475; 17 s per frase. Resultat final de les 1.643: **341 confirmades**
+(186 pel parell + 155 pel tercer: 80 amb el text de la màquina, 75 retocades igual) i **135
+descartades** (31 pel parell + 104 pel tercer), 1.167 queden com a proposta. A ull, els descartats
+són els «[?]» de la màquina i les frases sense sentit («e, beb, geg» → «On, on, on»); els retocs
+del tercer casen amb el diccionari (*taẓuṛi* art, no història; *addur* honor, no regal). Acord
+total: 29 % (abans del tercer, 13 %).
+
+**Baba Ali** (`audita_arab.py`, 3.621 rèpliques amb subtítol àrab d'OCR i català de màquina, sense
+text amazic): aquí els dos models sí que saben la llengua d'origen. Qwen TRIA 3.609 / FORA 2 /
+NO-HO-SE 8; DeepSeek 3.517 / 59 / 45. Parell: **2.165 confirmades** (1.700 iguals que la màquina,
+465 amb el mateix retoc: «bresca» → «mel», «clar com l'aigua» → «clar i evident»), 109 sense acord
+i 1.347 on tots dos diuen TRIA però retoquen diferent (el tercer les està mirant). La taxa de FORA
+tan baixa diu també que l'àrab de l'OCR és bo. Costos: Qwen gratis; DeepSeek ≈ 0,45 $.
