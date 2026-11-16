@@ -176,3 +176,13 @@ gawr, ɣama, ɣʷi, hul, ḥbu, xsi, imi, jjawn, krz, kʷti, ls, mun, ngi, qqan,
 amtcu, ttu, ṭṭf, wwarg, aydi, zri, ẓri, ɛmmi— i del llibre en tenim permís (§2b de
 [CREDITS.md](CREDITS.md)). Gravar-les resol a més una cosa que ja sabem que falta: de les 338
 paraules soles que tenim gravades, **cap** no porta ḍ, ḥ, ɛ, ṛ, ɣ, ṣ, ṭ, ẓ ni kʷ (#302).
+
+## Declaració general del propietari (16-11-2026)
+
+En Pablo, propietari del projecte, declara el 16-11-2026 (i ho repeteix diverses vegades aquell dia)
+que **tot el material que hi ha a la biblioteca té permís d'ús**: ha parlat amb totes les fonts, són
+projectes sense ànim de lucre com aquest, i els autors han passat a formar part del projecte. A partir
+d'aquesta data, cap guió no exclou material de la biblioteca per raó de permís; les úniques
+exclusions són de **qualitat** (text de màquina no confirmat, talls sense veu, etc.). El que segueix
+valent: el crèdit a cada font tal com consta a `docs/CREDITS.md`, i la recomanació de tenir una línia
+escrita de cada autor quan sigui possible.
