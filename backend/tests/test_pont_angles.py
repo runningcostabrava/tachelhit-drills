@@ -14,6 +14,8 @@ import pytest
 def _sense_gemini(monkeypatch):
     """El Gemini va primer (test_el_gemini_va_primer); aqui es tanca per provar el pont sol."""
     monkeypatch.setattr(main, "_esborrany_amb_gemini", lambda t: "")
+    #: i l'Space del model base: amb el nostre (afinat) el cami es el catala directe (proves a sota)
+    monkeypatch.setattr(main, "HUGGINGFACE_TRANSLATION_SPACE_URL", "https://huggingface.co/spaces/Tamazight-NLP/Finetuned-Quantized-NLLB")
 
 
 def _space_que_apunta(on):
@@ -99,3 +101,24 @@ def test_sense_clau_de_gemini_no_es_queda_penjat(monkeypatch):
     import gemini_client
     monkeypatch.setattr(gemini_client, "gemini_available", lambda: False)
     assert main._esborrany_amb_gemini("azul") == ""
+
+
+def test_amb_l_space_afinat_va_el_catala_directe(monkeypatch):
+    """Des del 16-11-2026 el nostre Space serveix el NLLB afinat (0,57 directe): amb ell configurat,
+    després del Gemini va el català directe i el pont no es crida."""
+    cridat = []
+    monkeypatch.setattr(main, "HUGGINGFACE_TRANSLATION_SPACE_URL", "https://huggingface.co/spaces/" + main.SPACE_AFINAT)
+    monkeypatch.setattr(main, "translate_with_hf", _space_que_apunta(cridat))
+    monkeypatch.setattr(main, "_angles_a_catala", lambda en: "mai")
+    assert main.tradueix("azul", "Tachelhit/Central Atlas Tamazight", "Catalan") == \
+        "[space Standard Moroccan Tamazight->Catalan] azul"
+    assert cridat == [("Standard Moroccan Tamazight", "Catalan")]
+
+
+def test_amb_l_space_del_model_base_va_el_pont(monkeypatch):
+    cridat = []
+    monkeypatch.setattr(main, "HUGGINGFACE_TRANSLATION_SPACE_URL", "https://huggingface.co/spaces/Tamazight-NLP/Finetuned-Quantized-NLLB")
+    monkeypatch.setattr(main, "translate_with_hf", _space_que_apunta(cridat))
+    monkeypatch.setattr(main, "_angles_a_catala", lambda en: "[ca]")
+    assert main.tradueix("azul", "Tachelhit/Central Atlas Tamazight", "Catalan") == "[ca]"
+    assert cridat == [("Standard Moroccan Tamazight", "English")]

@@ -307,3 +307,14 @@ català més net i les fórmules de l'Anki apreses; no arregla la persona del ve
 baixava), treure el vocabulari del train, i el 1.3B amb LoRA. Pesos afinats (fp16, 1,2 GB) a la sortida
 del nucli; informe i sortides a `Veus-tachelhit\_escoltats\models\nllb_afina\`. Amb la declaració de
 permisos del 16-11 es pot desplegar al Space propi com a caiguda darrere el Gemini.
+
+**Desplegat** (16-11, 22:00; peó `nllb-desplega`): el model afinat d'H-MT1, convertit a CTranslate2
+int8 (663 MB; en local 44 de 60 sortides idèntiques al nucli, chrF 0,569 contra 0,571 en fp16), és al
+repositori privat `josepabloucr/nllb-600m-tamazight-catala-ct2-int8` (README en català, llicència
+CC BY-NC 4.0 del NLLB) i serveix al Space `josepabloucr/Finetuned-Quantized-NLLB` (commit `ae916f0`;
+només ha canviat `MODEL_ID` i el token; mateixa API i mateixos noms de llengua). Mesura en viu sobre
+les 60, «Standard Moroccan Tamazight» → «Catalan»: **0,448 → 0,568** (shi 0,493 → 0,557, Beni Mellal
+0,403 → 0,579), cap buit. El camí cap a l'anglès segueix viu. Per tornar enrere: `actualitza_space.py
+--enrere` (còpia de l'`app.py` anterior a `Veus-tachelhit\_escoltats\models\nllb_afina\desplegament\`).
+Perquè producció el faci servir cal que `HUGGINGFACE_TRANSLATION_SPACE_URL` a Render apunti a aquest
+Space (ara apunta al de Tamazight-NLP, que és el model base).
