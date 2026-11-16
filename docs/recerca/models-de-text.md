@@ -353,6 +353,18 @@ L'int8 és a punt a `Veus-tachelhit\_escoltats\models\nllb_afina\v3\ct2_int8\` (
 `v3\model_afinat\`); comprovat en local a la CPU: chrF 0,629 sobre les 60, 43 de 60 sortides idèntiques
 a les del nucli, 0,7 s per frase. **No s'ha tocat el Space**: el que serveix segueix sent la v2.
 
+**Desplegada la v3** (17-11, 00:30; peó `nllb-desplega`): els pesos int8 de la v3 són a `main` del mateix
+repositori privat `josepabloucr/nllb-600m-tamazight-catala-ct2-int8` (revisió `3dc54fb7`; la v2 queda
+referenciable a la revisió `2d39082f`; el commit `f116a4a6` d'entremig només va canviar el README, els
+pesos hi són encara de la v2). L'`app.py` del Space no fixa cap revisió, de manera que no s'ha tocat:
+un reinici de fàbrica (5 min) li ha fet baixar la v3. Mesura en viu sobre les 60, «Standard Moroccan
+Tamazight» → «Catalan», mateix guió que la v2: **0,568 → 0,623** (shi 0,557 → 0,595, Beni Mellal
+0,579 → 0,650; amb els paràmetres que envia el backend, 0,621), cap buit, cap sortida en blanc; el camí
+cap a l'anglès segueix viu («I do not speak Arabic.»). Per tornar a la v2:
+`Veus-tachelhit\_escoltats\models\nllb_afina\desplegament\torna_a_v2.py` (torna a posar a `main` els
+fitxers de la revisió v2 com a commit nou i reinicia el Space de fàbrica); les mesures en viu de cada
+versió són a la mateixa carpeta (`viu_abans.json`, `viu_despres.json`, `viu_v3.json`).
+
 ## La capa gratuïta de Groq (16-11, nit; `Veus-tachelhit\_escoltats\models\compara_groq.py`)
 
 Clau `GROQ_API_KEY` a `backend/.env` (en Pablo, 16-11). Les mateixes 60 frases, raonament baix,
