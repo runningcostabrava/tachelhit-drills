@@ -901,7 +901,11 @@ sobre tot el corpus») mostra que un 13 % dels rètols d'entrenament eren brossa
 àrab retallat, 32 en grafia cabilenca amb lletres esborrades, 194 de tres vídeos amb els temps
 desplaçats) i que dos dels tres vídeos «Alcorà fora» en són: la fila de l'Alcorà no vol dir res;
 les de TFA i Zouhir es mantenen (veritat neta). **H4b** = el mateix nucli només amb rètols nets
-(`tools/lm/kaggle/h4b_afina_shi_net.py`).
+(`tools/lm/kaggle/h4b_afina_shi_net.py`), 1.308 rètols: TFA-226 0,187 → **0,169** (−0,018
+[−0,024, −0,012]), Zouhir fora 0,268 → 0,200, Alcorà net fora 0,362 → 0,332. H4 i H4b són
+indistingibles (TFA +0,002 [−0,001, +0,006]): la brossa no feia mal, i la millora queda
+**replicada** amb dos conjunts d'entrenament diferents. L'adaptador de referència (no desplegat)
+és el d'H4b. Detall a `zouhir-amazigh.md`.
 
 ## El creuament de fonts, en codi (15-11, vespre; punt 2 del programa)
 

@@ -117,3 +117,32 @@ f3bUnaPrGYY, 4YoU1icL8zY).
 
 **El corpus:** `veritat_zouhir.json` (2.164 rètols: so, temps, tifinag, llatí, en/ar/fr, mena,
 canal); 947 amb les tres traduccions. És l'entrada d'`induccio.py` amb `[en|ar|fr]` i d'H4b.
+
+### H4b: el mateix afinament amb la veritat neta (16-11, matí; Kaggle T4, 16 min)
+
+Nucli `h4b-afina-shi-net` (`tools/lm/kaggle/h4b_afina_shi_net.py`): 1.803 rètols nets de 2.164
+(fora àrab, altra grafia i els tres vídeos desplaçats), **1.308 d'entrenament** (71 min) contra els
+1.563 d'H4; mateixa recepta; Alcorà fora = tres vídeos nets. Mateixos talls i regla, abans → després
+(CER ric del nucli; bootstrap 1114, IC 95 %; `bootstrap_h4.py`):
+
+| test | n | H4 (15-11) | **H4b** | Δ H4b | H4b contra H4 |
+|---|---|---|---|---|---|
+| TFA, 226 versos | 226 | 0,187 → 0,171 | 0,187 → **0,169** | −0,018 [−0,024, −0,012]; 106 / 45 | +0,002 [−0,001, +0,006] |
+| Zouhir, 4 vídeos fora | 121 | 0,268 → 0,197 | 0,268 → **0,200** | −0,067 [−0,077, −0,058]; 100 / 6 | −0,004 [−0,008, +0,001] |
+| Alcorà fora (3 vídeos nets) | 180 | (no comparable) | 0,362 → **0,332** | −0,029 [−0,046, −0,014]; 78 / 47 | — |
+
+Lletres a TFA: ḍ 17 → 30 de 38, ṣ 12 → 22 de 24, ḥ 9 → 14 de 16, ġ 93 → 87 de 97 (el mateix
+retrocés que a H4).
+
+**Lectura.** Netejar el 13 % de brossa no ha canviat res: H4 i H4b són **indistingibles** sobre
+TFA i sobre Zouhir fora (els dos intervals creuen el zero). El que sí que dóna H4b és la
+**rèplica**: dues passades amb conjunts d'entrenament diferents (1.563 i 1.308 rètols) donen la
+mateixa millora sobre el taixelhit dels contes (0,187 → 0,17), i amb l'Alcorà net es veu que
+també hi ajuda (−0,029 amb interval sencer per sota de zero), cosa que la fila bruta d'H4 no
+podia dir. Conclusió: la millora d'H4 és sòlida i no depèn de la brossa; el model aguanta un 13 %
+d'etiquetes dolentes sense notar-ho. **L'adaptador de referència passa a ser el d'H4b**
+(`Veus-tachelhit\_escoltats\zouhir\kernels\adaptador_shi_zouhir_b.pt`: entrenat només amb veritat
+neta, mateix resultat), **sense desplegar-lo**: material de tercers, permís dels autors pendent.
+
+El que ve: el mateix nucli amb les **8 h pròpies** (#452) + aquests 1.308 rètols, i mesurar si la
+nostra parla (Halima, Driss, Baba Ali) hi guanya el que hi guanya el taixelhit dels contes.
