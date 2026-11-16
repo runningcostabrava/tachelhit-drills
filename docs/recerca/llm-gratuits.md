@@ -88,9 +88,23 @@ empitjorar.
 
 ## 5. Mesura dels que van sense clau (OVH i Kilo), sobre les 60 frases de sempre
 
-*(en curs: `Veus-tachelhit\_escoltats\models\llmfree\sense_clau_resultat.json`; la taula s'afegeix
-quan acabi; referències: deepseek-chat 0,303, Google ber 0,428, qwen3.8-max 0,471, deepseek-v4-pro
-0,58 quan contesta)*
+Amazic → català, mateix encàrrec i mateixa chrF que `compara.py`; 93 minuts per a 300 crides, perquè
+OVH deixa 2 per minut i model. Crus a `Veus-tachelhit\_escoltats\models\llmfree\sense_clau_resultat.json`.
+
+| proveïdor | model | buits o errors | chrF (60, buit = 0) | chrF contestades | latència mediana |
+|---|---|---|---|---|---|
+| OVH | `Qwen3.5-397B-A17B` | **54** | 0,071 | 0,710 (6 frases) | 58 s |
+| OVH | `gpt-oss-120b` | 0 | 0,156 | 0,156 | 4 s |
+| OVH | `Qwen3.8-27B` | 0 | 0,216 | 0,216 | 17 s |
+| Kilo | `nvidia/nemotron-3-ultra-550b-a55b:free` | 11 | 0,279 | 0,342 | 23 s |
+| Kilo | `kilo-auto/free` | **52** | 0,027 | 0,206 | 30 s |
+| *ref.* `deepseek-chat` / Google `ber` / `qwen3.8-max` / NLLB afinat + pont | | 0 | 0,303 / 0,428 / 0,471 / **0,521** | | 1-3 s |
+
+El que se'n treu: **cap dels que van sense clau serveix per a l'amazic, i la meitat ni contesta.** El
+Qwen 397B es menja el sostre raonant (54 buits) i, quan contesta, és el millor de tots (0,71 sobre 6
+frases: massa poques per creure-s'ho); el gpt-oss-120b contesta sempre i malament (0,16); el Nemotron
+550B, 0,34 quan contesta. Per a feines en català, anglès o àrab aquests punts d'accés poden valer com
+a reserva; per a l'amazic, no, i amb 2 crides per minut no valen per a cap lot.
 
 ## 6. El que se'n treu
 
