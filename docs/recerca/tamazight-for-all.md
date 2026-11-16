@@ -906,7 +906,10 @@ les de TFA i Zouhir es mantenen (veritat neta). **H4b** = el mateix nucli només
 indistingibles (TFA +0,002 [−0,001, +0,006]): la brossa no feia mal, i la millora queda
 **replicada** amb dos conjunts d'entrenament diferents. L'adaptador de referència és el d'H4b, i
 **des del 16-11 al migdia és el que serveix al Space**: en Pablo ha obtingut el permís dels autors
-per telèfon (`docs/PERMISOS.md`). Detall a `zouhir-amazigh.md`.
+per telèfon (`docs/PERMISOS.md`). Detall a `zouhir-amazigh.md`. **H5** (16-11, tarda: H4b + el
+corpus propi de 3.950 parelles + Zouhir) no mou TFA-226 (0,169 → 0,170) ni la nostra parla mai
+sentida (test-fora 0,274 → 0,279); només Beni Mellal, la veu que ja entrena (0,233 → 0,196). No es
+desplega. El corpus propi és un 92 % reculls de fora: el que falta és veu transcrita d'Halima i Driss.
 
 ## El creuament de fonts, en codi (15-11, vespre; punt 2 del programa)
 
