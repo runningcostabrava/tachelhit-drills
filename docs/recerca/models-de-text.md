@@ -216,3 +216,9 @@ NO-HO-SE 8; DeepSeek 3.517 / 59 / 45. Parell: **2.165 confirmades** (1.700 igual
 465 amb el mateix retoc: «bresca» → «mel», «clar com l'aigua» → «clar i evident»), 109 sense acord
 i 1.347 on tots dos diuen TRIA però retoquen diferent (el tercer les està mirant). La taxa de FORA
 tan baixa diu també que l'àrab de l'OCR és bo. Costos: Qwen gratis; DeepSeek ≈ 0,45 $.
+
+**Baba Ali, amb el tercer** (16-11, nit): el tercer auditor sobre les 1.769 obertes (TRIA diferents,
+TRIA/NO-HO-SE, TRIA/FORA) va tancar-ne 855: total **3.018 confirmades** de 3.621 (1.700 iguals que la
+màquina pel parell + 568 pel tercer; 465 + 285 amb el mateix retoc), 2 descartades, 578 amb tres TRIA
+tots diferents (mateix sentit, tres redaccions: no entren) i 23 sense acord. El 83 % de les rèpliques
+de Baba Ali queden amb el català confirmat per dos auditors independents contra l'àrab.
