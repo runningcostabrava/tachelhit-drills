@@ -193,6 +193,58 @@ LANGUAGE_CODE_MAP = {
 #: fora d'aqui no s'hi pot confiar.
 NO_AMAZIGUES = {"Modern Standard Arabic", "English", "French", "Spanish"}
 
+#: Els noms amb que l'Space coneix l'amazic. El 16-11-2026 (docs/recerca/models-de-text.md, peo
+#: mt-hf-github, 60 frases contra el catala del parlant) es va mesurar que el mateix NLLB afinat
+#: de l'Space tradueix millor l'amazic si (1) se li diu que la font es «Standard Moroccan
+#: Tamazight» (tzm_Tfng, la fitxa amb que es va afinar) i no «Tachelhit…» (taq_Tfng), i (2) se li
+#: demana ANGLES i un model de text passa l'angles al catala: chrF 0,521 contra 0,424 del cami
+#: directe tal com estava. Des del llati, la fitxa tzm_Latn no existeix i es queda taq_Latn.
+AMAZIGUES = {"Tachelhit/Central Atlas Tamazight", "Tachelhit/Central Atlas Tamazight (Latin)",
+             "Standard Moroccan Tamazight"}
+
+
+def _font_amaziga_per_l_space(src_lang: str) -> str:
+    return src_lang if src_lang.endswith("(Latin)") else "Standard Moroccan Tamazight"
+
+
+def _angles_a_catala(text: str) -> str:
+    """L'ultim tram del pont: angles (sortit del NLLB) → catala, amb DeepSeek o, si no hi es,
+    Qwen. Torna "" si cap dels dos contesta: qui crida ha de poder caure al catala directe."""
+    sistema = ("Ets un traductor d'angles a catala. El text angles es la traduccio automatica d'una "
+               "frase amaziga (taixelhit o tamazight de l'Atles central) i pot ser una mica tosc. Torna "
+               "NOMES la traduccio al catala, en una sola linia, natural i correcta, sense cometes ni "
+               "comentaris. Deixa els noms propis tal com son. No afegeixis res que no hi sigui.")
+    for nom in ("deepseek_client", "qwen_client"):
+        try:
+            client = __import__(nom)
+            if not getattr(client, nom.split("_")[0] + "_available")():
+                continue
+            r = getattr(client, nom.split("_")[0] + "_generate")(sistema, [{"role": "user", "text": text}],
+                                                                  max_output_tokens=300, temperature=0.2)
+            linies = [x.strip() for x in (r or "").splitlines() if x.strip()]
+            if linies:
+                return linies[0]
+        except Exception as e:
+            print(f"[TRANSLATE] {nom} no ha pogut passar l'angles al catala ({type(e).__name__})")
+    return ""
+
+
+def _amazic_a_catala(text: str, src_lang: str) -> str:
+    """Amazic → catala pel pont de l'angles; si el pont falla, catala directe de l'Space (que amb
+    la font tzm_Tfng ja va una mica millor que abans)."""
+    font = _font_amaziga_per_l_space(src_lang)
+    try:
+        en = translate_with_hf(text, font, "English")
+    except Exception as e:
+        print(f"[TRANSLATE] l'Space no ha donat l'angles ({type(e).__name__}); vaig al catala directe")
+        en = ""
+    if en and en.strip() and en.strip() != text.strip():
+        ca = _angles_a_catala(en)
+        if ca:
+            return ca
+        print("[TRANSLATE] cap model ha passat l'angles al catala; vaig al catala directe")
+    return translate_with_hf(text, font, "Catalan")
+
 
 def _tradueix_amb_deepseek(text: str, src_lang: str, tgt_lang: str) -> str:
     """Una traduccio d'un model general, per a les llengues que l'Space no sap.
@@ -240,6 +292,8 @@ def tradueix(text: str, src_lang: str, tgt_lang: str) -> str:
             print("[TRANSLATE] el DeepSeek no ha contestat; vaig a l'Space")
         except Exception as e:
             print(f"[TRANSLATE] el DeepSeek ha fallat ({type(e).__name__}); vaig a l'Space")
+    if src_lang in AMAZIGUES and tgt_lang == "Catalan":
+        return _amazic_a_catala(text, src_lang)
     return translate_with_hf(text, src_lang, tgt_lang)
 
 

@@ -222,3 +222,35 @@ TRIA/NO-HO-SE, TRIA/FORA) va tancar-ne 855: total **3.018 confirmades** de 3.621
 màquina pel parell + 568 pel tercer; 465 + 285 amb el mateix retoc), 2 descartades, 578 amb tres TRIA
 tots diferents (mateix sentit, tres redaccions: no entren) i 23 sense acord. El 83 % de les rèpliques
 de Baba Ali queden amb el català confirmat per dos auditors independents contra l'àrab.
+
+## Traductors dedicats a l'amazic (16-11, nit; peó `mt-hf-github`, informe a `Veus-tachelhit\_escoltats\models\hf\`)
+
+Cercats 629 models i ~300 datasets d'amazic a HuggingFace, més GitHub, OPUS, Tatoeba i FLORES+. De
+traducció executable només hi ha NLLB (base i els afinats de Tamazight-NLP i ayymen), MADLAD-400 i
+Google Translate; cap traductor de l'IRCAM ni universitari és públic. Les mateixes 60 frases:
+
+| sistema | entrada | chrF | shi | Beni Mellal |
+|---|---|---|---|---|
+| **NLLB afinat de Tamazight-NLP (el del nostre Space), `tzm_Tfng` → anglès, + `deepseek-chat` en→ca** | tifinag | **0,521** | 0,548 | 0,494 |
+| ídem amb `taq_Tfng` → anglès + DeepSeek | tifinag | 0,497 | 0,536 | 0,457 |
+| ídem `tzm_Tfng` → català directe | tifinag | 0,447 | 0,493 | 0,402 |
+| ídem `taq_Tfng` → català directe (**= com estava el backend**) | tifinag | 0,424 | 0,444 | 0,405 |
+| Google Translate `ber` → ca | tifinag | 0,428 | 0,401 | 0,455 |
+| NLLB-200 600M base `tzm_Tfng` → ca | tifinag | 0,330 | | |
+| ayymen només-SEED → en + DeepSeek | tifinag | 0,286 | | |
+| MADLAD-400 3B | tifinag / llatí | 0,179 / 0,099 | | |
+| *ref.* `qwen3.8-max` / `deepseek-chat` | | 0,471 / 0,303 | | |
+
+Contaminació comprovada: només 4 de les 60 frases són al Tatoeba de Tamazight-NLP (cap amb anglès):
+l'avantatge és real. El que fa bo l'afinat són les dades (Tatoeba, diccionaris, Anki, Weblate): el
+model «només SEED» del mateix autor fa 0,286.
+
+**Endollat al backend el mateix vespre** (`tradueix` → `_amazic_a_catala`): l'amazic → català passa
+ara per l'Space amb la fitxa `tzm_Tfng` demanant anglès, i DeepSeek (o Qwen) passa l'anglès al
+català; si cap dels dos contesta, català directe amb `tzm_Tfng`. Comprovat en viu sobre 10 de les 60
+frases pel camí sencer del backend: chrF 0,524, ~3 s per frase (`tests/test_pont_angles.py`). Segueix
+sent un esborrany per a `*_suggested`, no una traducció per publicar; el pas següent és afinar aquest
+NLLB amb les nostres parelles confirmades (1.456 + 341 d'MTNRA/CV) i mesurar-ho a cegues aquí mateix.
+Corpus per afinar: Tatoeba shi 836 / zgh 159, OPUS shi-en (Bíblia 15.856, Tatoeba 2.171), FLORES+
+(`zgh_Tfng`, `taq_*`; no hi ha `tzm_Tfng`), `Tamazight-NLP/English-Tashlhit-Dictionary` (50.204
+traduccions, llicència «other»: mirar-la abans).
