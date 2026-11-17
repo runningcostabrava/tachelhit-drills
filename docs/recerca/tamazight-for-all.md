@@ -999,6 +999,81 @@ exemples (202), cap que en sigui el nom. Les dues fonts del mateix autor no se s
 1.562.746 dins / 55.051 fora (Model Studio, dins i una mica més enllà del milió gratuït del model).
 Permís: Tamazight For All, catalogar-ho tot (`docs/PERMISOS.md`, 16-11). Res a la biblioteca.
 
+## Les 283 «contradiccions» del lèxic, mirades una a una (17-11; #601)
+
+**D'on surten les glosses que no són en català.** No d'un fitxer derivat: el lèxic del backend
+(`backend/lexicon.py`) és la unió de quatre fonts tal com són: el diccionari anglès–taixelhit
+d'Oulhaj (`Tamazight-NLP/English-Tashlhit-Dictionary`, glosses en anglès), les conjugacions de
+l'IRCAM (`ircam-conjugations`, francès), el DGLAI de l'IRCAM (`ircam-dglai`, francès i àrab) i
+ⵡⵉⴽⵉⵎⴰⵡⴰⵍ (`data/wikimawal_zgh.json`, en/fr/ar: el fitxer el genera `tools/lm/wikimawal.py` del
+bolcat oficial, però les traduccions són les del Viccionari, no nostres). Cap glossa no ve de cap
+subtítol. En català només hi ha la taula de partícules de `morfologia._TAULA` (escrita a mà) i el
+`LEXIC_VALIDAT` (web de l'autor + creuament de fonts). Tot això és text de font: **no es toca**.
+El que era curt era l'aparellador de `tools/lm/mina_vs_lexic.py`: una taula de 80 sinònims
+català→fr/en (`CA_SIN`), i tot el que no hi era sortia «contradiu» (`imi` «boca» ↔ «bouche»).
+
+**L'arreglada: un jutge darrere l'aparellador (`mina_vs_lexic.py --jutge`).** Cada «contradiu»
+de l'aparellador va a DeepSeek (t = 0) amb el que diu el professor (català, àrab, frase) i la
+nostra glossa amb com s'hi ha arribat, i el classifica: (a) mateix sentit, només canvia la llengua;
+(b) mateix sentit dit diferent; (c) contradicció real; (d) l'ítem del professor és dolent (no és un
+significat). Veredictes a `<sortida>.jutge.jsonl`, reaprofitats. Sobre les 283 dels ítems
+confirmats (`tamazight-for-all-darija-confirmat-vs-lexic.md`, 172.703 fitxes dins / 7.844 fora):
+
+| classe | formes |
+|---|---|
+| (a) mateix sentit, altra llengua | 39 |
+| (b) mateix sentit dit diferent | 38 |
+| (c) contradicció real segons el jutge | 190 |
+| (d) ítem del professor dolent | 16 |
+
+Les 283 es converteixen en 77 coincidències, 16 ítems dolents i 190 contradiccions; el lèxic no
+canvia cap glossa de llengua perquè no se'n toca cap. Les caixes finals sobre els 1.130 TRIA:
+coincideix 52 + 39 + 38 = **129**, contradiu **190**, ítem dolent 16, no la tenim 169, sense forma
+llatina 499.
+
+**Les 190 «c», partides per l'etiqueta de la glossa i per paraules clau de l'ítem («conjugació»,
+«prefix», «variant», «exemple», «nom propi»…):**
+
+| | el lèxic hi arriba per entrada de diccionari | el lèxic hi arriba per una regla ([verb], [annexió], [plural], [partícula enganxada]) |
+|---|---|---|
+| l'ítem és un significat | **91** | 36 |
+| l'ítem és una descripció gramatical («conjugació de mzi», «prefix…», «variant de…», «nom propi») | 42 | 21 |
+
+El jutge és massa generós amb la c: els 63 ítems-descripció són (d) de debò, i els 57 que arriben
+per una regla són lectures que la nostra morfologia s'ha inventat sobre una forma que el
+diccionari no té (`imzzyan` «petit» llegit com a plural de «serp», `titrit` «estrelleta» com a
+partícula + verb): un soroll nostre, ja conegut, no una contradicció entre fonts. Dels 91 que
+queden, llegits un a un: uns 5 són (a)/(b) mal jutjats (`sl` «sentir» ↔ «entendre, écouter»;
+`tfu` «va sortir» ↔ «poindre (jour)»; `ifr` «ala» ↔ «Leaf, Eyelash»; `ayt` «gent de la casa» ↔
+«gens de»); **la meitat llarga són la forma llatina de l'ítem (posada per la màquina a partir de
+l'àrab) que cau sobre una entrada veïna**: `awar` «paraula» (és *awal*; `awar` és «lleó»), `adf`
+«neu» (*adfl*; `adf` «entrar»), `akl` «terra» (*akal*), `tammt` «mel» (*tammnt*), `aɣras` «camí»
+(*aɣaras*), `asman` «peix» (*islman*), `zell` «corre» (*azzl*), `ni`/`ntnin`/`num` pronoms
+(*nkki*, *nitni*, *kunni*), `arz`/`zer` sense el punt (*rẕ*, *ẕr*). I en queden una vintena que
+són contradiccions de debò, sovint dialectals (el professor és de l'Atles i parla del Rif):
+
+| forma | el professor | el lèxic |
+|---|---|---|
+| `afrux` | cria d'animal, pollet (Rif) | noi, nen (Souss) |
+| `rzem` | obrir (Rif; contrari de `qqen`) | ser impotent, invàlid |
+| `amkraz` | arada | agricultor [lèxic validat, del creuament] |
+| `tawla` | calor | febre |
+| `iɣir` | paret | espatlla; penya-segat |
+| `agrud` | l'ogre que espanta els nens | perdiu jove, petit d'un animal |
+| `aqlal` | capgròs, de cap gros | tamborí |
+| `afar` | papallona | herba, gram |
+| `akbus` | guix («no té cap altre significat») | estómac |
+| `azmur` | Azemmour, ciutat costanera | oli, olivera (d'on ve el topònim) |
+
+**Lectura.** De 283 «contradiccions», entre 20 i 30 ho són; la resta és, per ordre, la llengua de
+la glossa (77), la forma llatina de la màquina que cau en un veí (~45), ítems que no són
+significats (63 + 16) i lectures de la nostra morfologia (57). Dues conseqüències: (1) la forma
+llatina dels ítems minats és la peça fluixa, no el significat: abans de comparar res més amb el
+lèxic cal transliterar l'àrab del transcrit amb el diccionari al davant, no deixar-ho al model;
+(2) `amkraz` «arada» contra el «agricultor» del lèxic validat és la primera esquerda al creuament
+de fonts del 15-11: a mirar amb el vídeo (`SbDcCW3FI4c`, on surten `amkraz` «arada» i `tayrza`
+«temps de llaurar»; les xifres «~45» i «entre 20 i 30» són una lectura a ull, no un recompte).
+
 ## El que bloqueja
 
 - **Deu minuts transcrits per un parlant.** Sense això tota mesura és indirecta. Serien
