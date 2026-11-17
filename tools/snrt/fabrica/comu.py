@@ -30,6 +30,40 @@ VERSIO = "fabrica-2026-11-17"
 BANDA_720 = (576, 660)     # la franja que es desa un cop per segon (les dues línies)
 TIFINAG_720 = (580, 614)   # la línia del tifinag dins el fotograma (crop=1280:34:0:580)
 ARAB_720 = (612, 656)      # la línia de l'àrab dins el fotograma (crop=1280:44:0:612)
+
+
+def aplica_geometria(g):
+    """Una sèrie amb una altra disposició de les línies (p. ex. l'àrab a dalt i el tifinag a sota, #601): canvia les tres franges d'aquest procés.
+    g = {"BANDA_720": (y0, y1), "TIFINAG_720": (y0, y1), "ARAB_720": (y0, y1)}. Les etapes 02 i 05 la carreguen de `geometria.json` del capítol."""
+    global BANDA_720, TIFINAG_720, ARAB_720
+    BANDA_720, TIFINAG_720, ARAB_720 = tuple(g["BANDA_720"]), tuple(g["TIFINAG_720"]), tuple(g["ARAB_720"])
+
+
+def geometria_de_linies(tif_720, arab_720):
+    """De les y (escala 720p) del cos del tifinag i de la línia d'àrab a les tres franges: el retall del tifinag comença 8 px per sobre del cos i fa 34 px
+    (com a la geometria per defecte, 588 → 580–614), el de l'àrab 3 px per sobre i 4 per sota, i la franja guardada les cobreix totes dues amb 4 px de marge."""
+    t0 = int(round(tif_720[0])) - 8
+    tif = (t0, t0 + 34)
+    ara = (int(round(arab_720[0])) - 3, int(round(arab_720[1])) + 4)
+    banda = (min(tif[0], ara[0]) - 4, max(tif[1], ara[1]) + 4)
+    return {"BANDA_720": banda, "TIFINAG_720": tif, "ARAB_720": ara}
+
+
+def desa_geometria(carpeta, g):
+    with io.open(os.path.join(carpeta, "geometria.json"), "w", encoding="utf-8") as f:
+        json.dump({k: list(v) for k, v in g.items()}, f)
+
+
+def carrega_geometria(carpeta):
+    """Si el capítol té `geometria.json` (disposició no estàndard), l'aplica. Torna True si n'hi havia."""
+    p = os.path.join(carpeta, "geometria.json")
+    if not os.path.exists(p):
+        return False
+    with io.open(p, encoding="utf-8") as f:
+        aplica_geometria(json.load(f))
+    return True
+
+
 S_ASSEMBLEN = 0.75         # dues lectures del mateix subtítol no surten mai lletra per lletra iguals
 MARGE_TALL = 0.25          # segons a cada banda del tall de so (§4, 03)
 
