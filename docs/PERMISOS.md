@@ -186,3 +186,24 @@ d'aquesta data, cap guió no exclou material de la biblioteca per raó de permí
 exclusions són de **qualitat** (text de màquina no confirmat, talls sense veu, etc.). El que segueix
 valent: el crèdit a cada font tal com consta a `docs/CREDITS.md`, i la recomanació de tenir una línia
 escrita de cada autor quan sigui possible.
+
+## SNRT · Tamazight TV (17-11-2026)
+
+En Pablo va parlar el 17-11-2026 amb el director lingüístic de la SNRT, que ho va passar al cap de la
+secció amaziga. La resposta, el mateix dia: **endavant amb els canals de YouTube de la cadena i amb
+`snrtlive.ma/fr/tamazight` com a font per a la investigació**; que fem servir els vídeos **per
+millorar el diccionari-traductor i el transcriptor de veu**; que **no republiquem el contingut**; i
+que **ara no ens poden passar els subtítols en SRT**.
+
+Com s'aplica:
+
+- **Sí:** baixar capítols del canal de YouTube i del replay, llegir-ne els subtítols cremats (tifinag
+  i àrab), tallar el so per rèplica, i fer-ho servir per entrenar i avaluar el traductor amazic →
+  català i el transcriptor (ASR), i per al lèxic. Tot a `Veus-tachelhit\_escoltats\tamazight_tv\`.
+- **No:** cap rèplica (so ni text) a la biblioteca pública ni a cap drill de producció; cap
+  redistribució de vídeo, àudio o subtítols; el conjunt de dades que en surti no es publica (el
+  dataset de còpia d'HF és privat i s'hi queda).
+- **Crèdit:** «Tamazight TV (SNRT)» als informes de recerca i a la fitxa dels models entrenats amb
+  aquest material.
+- **Pendent:** tenir-ho en un correu (qui autoritza, abast, data); tornar a demanar els SRT més
+  endavant, perquè estalviarien l'OCR del tifinag.
