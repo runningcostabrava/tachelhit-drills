@@ -66,8 +66,17 @@ sencera. Llista plana del 17-11 a `Veus-tachelhit\_escoltats\tamazight_tv_videos
 
 ## Decisió
 
-Catalogada. Si en Pablo vol tirar endavant: (1) demanar permís a la SNRT; (2) mentrestant, una
-prova sobre UN capítol d'«Illy» amb la cadena que ja tenim, només per mesurar, sense carregar res.
+~~Catalogada. Si en Pablo vol tirar endavant: (1) demanar permís a la SNRT; (2) mentrestant, una
+prova sobre UN capítol d'«Illy» amb la cadena que ja tenim, només per mesurar, sense carregar res.~~
+
+**17-11-2026, resposta de la SNRT** (vegeu `docs/PERMISOS.md`): endavant amb els canals de YouTube
+i `snrtlive.ma/fr/tamazight` **com a font de recerca**, per millorar el diccionari-traductor i el
+transcriptor de veu; **no republicar el contingut**; de moment no poden passar els subtítols en SRT.
+El que això canvia: les rèpliques de Tamazight TV **no entren a la biblioteca pública** (ni so ni
+text: seria republicar), però **sí al train** del traductor (tifinag/àrab → català) i de l'ASR (so +
+text), i als tests. El material es guarda a `Veus-tachelhit\_escoltats\tamazight_tv\`, fora de l'app,
+i cap `audio_url` ni frase seva es puja a producció. El crèdit a la SNRT va als informes i als models
+que en surtin.
 Relacionat: `tamazight-for-all.md`, `models-de-text.md` (Baba Ali), memòria «YouTube no té més
 veritat humana amaziga» (que cal matisar: pistes no, text cremat sí).
 
