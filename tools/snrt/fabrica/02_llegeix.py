@@ -96,11 +96,29 @@ def linies_de_text(gris):
     return n
 
 
+def decideix_ordre(carpeta, video, ample, alt, durada, log):
+    """#601: quina línia és tifinag i quina àrab, pel tipus de caràcter i no per la posició (hi ha sèries amb l'àrab a dalt). Si l'ordre és invertit, les franges
+    d'aquest capítol es calculen amb la geometria detectada i es desa `geometria.json` (la 05 la fa servir). Si no es pot decidir, OrdreIndecis atura l'etapa."""
+    import ordre_linies
+    if comu.carrega_geometria(carpeta):
+        comu.diu(log, "ordre de les línies: geometria.json del capítol (ja decidida)")
+        return "invertit"
+    r = ordre_linies.ordre_del_video(video, ample, alt, durada, log=lambda m: comu.diu(log, m))
+    if r["ordre"] == "invertit":
+        g = comu.geometria_de_linies(r["geometria"]["tifinag_720"], r["geometria"]["arab_720"])
+        comu.aplica_geometria(g)
+        comu.desa_geometria(carpeta, g)
+        comu.diu(log, f"AVÍS: l'àrab és a dalt i el tifinag a sota: geometria del capítol {g}")
+    return r["ordre"]
+
+
 def comprova_geometria(video, ample, alt, durada, log):
     """§4: 10 fotogrames repartits; en ≥ 3 hi ha d'haver text blanc a la línia del tifinag i a la de l'àrab."""
     s = comu.escala(alt)
-    tif = (round(584 * s), round(612 * s))
-    ara = (round(613 * s), round(656 * s))
+    # Les franges de cada línia, derivades de la geometria vigent (les per defecte donen 584–612, 613–656 i «sobre» 540–580; en una sèrie amb l'ordre invertit, les detectades)
+    tif = (round((comu.TIFINAG_720[0] + 4) * s), round((comu.TIFINAG_720[1] - 2) * s))
+    ara = (round((comu.ARAB_720[0] + 1) * s), round(comu.ARAB_720[1] * s))
+    sobre = (round((comu.BANDA_720[0] - 36) * s), round((comu.BANDA_720[0] + 4) * s))
     bones = 0
     for k in range(1, 11):
         t = durada * k / 11
@@ -114,7 +132,7 @@ def comprova_geometria(video, ample, alt, durada, log):
         te_tif = prof[tif[0]:tif[1]].max() >= 8 if tif[1] <= len(prof) else False
         te_ara = prof[ara[0]:ara[1]].max() >= 8 if ara[1] <= len(prof) else False
         # i que la franja de SOBRE el tifinag sigui buida: si hi ha text més amunt, no és la geometria coneguda
-        buit_sobre = prof[round(540 * s):round(580 * s)].max() < 8
+        buit_sobre = prof[sobre[0]:sobre[1]].max() < 8
         if te_tif and te_ara and buit_sobre:
             bones += 1
     comu.diu(log, f"geometria: {bones} de 10 fotogrames amb les dues línies on toca")
@@ -399,7 +417,8 @@ def main():
         ample, alt, durada = comu.mida_video(video)
         comu.diu(log, f"== {ETAPA} {comu.ara()} {slug} {os.path.basename(video)} {ample}x{alt} {durada:.0f} s")
         comu.estat_desa(carpeta, slug=slug, video=os.path.basename(video), ample=ample, alt=alt, durada=round(durada, 1))
-        comptes = {"franges": treu_franges(video, carpeta, ample, alt, durada, log)}
+        comptes = {"ordre_linies": decideix_ordre(carpeta, video, ample, alt, durada, log)}
+        comptes["franges"] = treu_franges(video, carpeta, ample, alt, durada, log)
         comptes["geometria_ok"] = comprova_geometria(video, ample, alt, durada, log)
         if comptes["geometria_ok"] < 3:
             raise RuntimeError(f"geometria: només {comptes['geometria_ok']} de 10 fotogrames amb les dues línies on toca")
