@@ -26,7 +26,11 @@ BAND_H, BAND_W, BODY_TOP = 51, 1920, 14      # the 1080p band is rows 870..921; 
 
 def draw_band(text, bg=(120, 90, 80), seed=0):
     """A 1080p Tifinagh band: glyph templates with 4 px between letters, 16 px between words, centred at x=964."""
-    P = PL.plantilles()
+    P = dict(PL.plantilles())
+    z = np.load(PL.XIFRES_NPZ, allow_pickle=True)
+    for d, m, real in zip(z["digit"], z["mask"], z["real"]):     # real SNRT digits (8, 0 from «Illy»; 2, 0, 6 from the interview), 4 px above the body
+        if real and str(d) not in P:
+            P[str(d)] = (m.astype(bool), -4)
     rng = np.random.default_rng(seed)
     base = np.zeros((BAND_H, BAND_W, 3), np.float32) + np.array(bg, np.float32)
     base += rng.normal(0, 6, (BAND_H, BAND_W, 1))
@@ -90,9 +94,10 @@ def test_light_background_reflection_is_not_text():
 
 
 def test_digits_are_read_as_digits():
-    """Digits are not in the IRCAM font; they come from sans-serif templates 33 px tall (illy01_0283 reads « ... 80 ... »)."""
-    out = LT.llegeix_bandes([draw_band("ⵜⵎⵉ 80 ⵙ")], log=lambda s: None)[0]
-    assert "80" in out["tifinag"].replace(" ", "")
+    """Digits are not in the IRCAM font and sit at different heights in different videos: they are matched by shape against real SNRT glyphs.
+    In-sample by construction (the templates come from these very glyphs): it guards the plumbing, not the generalisation. 1 3 4 5 7 9 are unverified."""
+    out = LT.llegeix_bandes([draw_band("ⵜⵎⵉ 2026 ⵙ")], log=lambda s: None)[0]
+    assert "2026" in out["tifinag"]          # one number, no spaces inside
 
 
 def test_segmenta_compat_for_the_clock():
