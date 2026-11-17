@@ -24,6 +24,7 @@ sys.path.insert(0, OCR)
 import glifs as G  # noqa: E402
 
 PLANTILLES = os.path.join(OCR, "plantilles.npz")
+NOM = "plantilles-aslmdtv"   # el valor de tifinag_lector a cada fila (§3.3)
 LLINDAR_1A = 0.80
 LLINDAR = 0.85
 COMPOSTOS = {'"ⵍ': "ⵍ", '"ⵎ': "ⵎ", '"ⵓ': "ⵓ"}   # les cometes compostes d'aslmdtv no hi són als subtítols
