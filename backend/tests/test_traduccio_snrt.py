@@ -117,6 +117,35 @@ def test_limit_de_cost_atura_l_etapa_i_reprèn(etapa04, tmp_path, monkeypatch):
     assert all(f.get("catala_estat") == "confirmat" for f in files)
 
 
+def test_el_primer_auditor_rota_a_un_altre_qwen(etapa04, tmp_path, monkeypatch):
+    m, crides = etapa04
+    # qwen3.8-max ja és a 800.000: la fila va al següent de la cascada (qwen4-max), amb el seu comptador
+    json.dump({"fitxes": {"qwen3.8-max": 800_000}}, open(os.path.join(str(tmp_path), "_costos.json"), "w"))
+    orig = comu.xat
+    monkeypatch.setattr(comu, "xat", lambda model, msgs, **k: orig("qwen3.8-max" if model == "qwen4-max" else model, msgs, **k))
+    car = _capitol(tmp_path, [_fila(1, "ar-ok")])
+    files = _executa(m, car, monkeypatch)
+    assert files[0]["model_a"] == "qwen4-max" and files[0]["catala_estat"] == "confirmat"
+    costos = json.load(open(os.path.join(str(tmp_path), "_costos.json"), encoding="utf-8"))["fitxes"]
+    assert costos["qwen3.8-max"] == 800_000 and costos["qwen4-max"] == 100      # el comptador de cada model és propi
+
+
+def test_sense_cap_qwen_acord_deepseek_gemini_nomes_amb_confianca_alta(etapa04, tmp_path, monkeypatch):
+    m, crides = etapa04
+    json.dump({"fitxes": {q: 800_000 for q in m.MODELS_A}}, open(os.path.join(str(tmp_path), "_costos.json"), "w"))
+    monkeypatch.setattr(comu, "chrf", lambda h, r, *a, **k: 1.0 if h == r else 0.0)
+    # DeepSeek i Gemini diuen el mateix per a ar-ok; per a ar-dub, coses diferents
+    monkeypatch.setattr(m, "gemini", lambda model, msgs, intents=4: (crides.append((model, msgs[-1]["content"])) or ("bé" if "ar-ok" in msgs[-1]["content"] else "G", {"total_tokens": 50})))
+    car = _capitol(tmp_path, [_fila(1, "ar-ok", arab_conf=0.95), _fila(2, "ar-ok", arab_conf=0.7), _fila(3, "ar-dub", arab_conf=0.9)])
+    per_id = {f["id"]: f for f in _executa(m, car, monkeypatch)}
+    assert per_id["c_0001"]["catala_estat"] == "confirmat" and per_id["c_0001"]["via"] == "deepseek+gemini" and per_id["c_0001"]["model_a"] is None
+    assert "catala_estat" not in per_id["c_0002"]                                   # confiança < 0,8: no es tradueix sense Qwen
+    assert per_id["c_0003"]["catala_estat"] == "descartat"                          # DeepSeek i Gemini no coincideixen
+    assert not any(c[0].startswith("qwen") for c in crides)                         # cap crida a Qwen
+    comptes = comu.estat_llegeix(car)["04_tradueix"]["comptes"]
+    assert comptes["saltades_sense_qwen_confianca_baixa"] == 1 and comptes["qwen_actual"] is None
+
+
 def test_pressupost_cost_i_limits(tmp_path, monkeypatch):
     m = _carrega("04_tradueix")
     p = m.Pressupost(str(tmp_path / "c.json"))
