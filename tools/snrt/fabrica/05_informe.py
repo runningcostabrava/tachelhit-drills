@@ -45,7 +45,11 @@ def paraules(t):
     return len((t or "").split())
 
 
-def apta_traductor(f):
+def apta_traductor(f, dubtos_ok=False):
+    """`arab_dubtos` (lector d'àrab propi: lectures que discrepen o poca confiança) NO és apta per al traductor; per a l'ASR sí
+    (dubtos_ok=True): decisió del director del 18-11-2026, només afegeix una condició, no toca cap llindar."""
+    if f.get("arab_dubtos") and not dubtos_ok:
+        return False
     return (not f.get("credits") and (f.get("tifinag_conf") or 0) >= 0.85 and (f.get("tifinag_dubtosos") or 0) <= 2
             and ((f.get("arab_acord") or 0) >= 0.5 or (f.get("arab_lectures") == 1 and f.get("arab")))
             and f.get("catala_estat") in ("confirmat", "tercer") and 2 <= paraules(f.get("tifinag")) <= 30)
@@ -71,7 +75,9 @@ def numeros(files, est):
         "tifinag_dubtosos": sum(f.get("tifinag_dubtosos") or 0 for f in D), "tifinag_amb_text": sum(1 for f in D if f.get("tifinag")),
         "chrf_ab_mitja": mitj(ab), "catala_estats": {e: sum(1 for f in D if f.get("catala_estat") == e) for e in ("confirmat", "tercer", "descartat")},
         "chrf_tif_ar_mitja": mitj(ta), "chrf_tif_ar_sobre_0_5": sum(1 for c in ta if c >= 0.5), "chrf_tif_ar_n": len(ta),
-        "aptes_traductor": len(aptes), "aptes_asr_durada": sum(1 for f in aptes if f["durada"] >= 0.8), "aptes_asr": None,
+        "aptes_traductor": len(aptes), "aptes_asr_durada": sum(1 for f in D if apta_traductor(f, True) and f["durada"] >= 0.8), "aptes_asr": None,
+        "arab_dubtoses": sum(1 for f in D if f.get("arab_dubtos")),
+        "aptes_so_tifinag": sum(1 for f in D if (f.get("tifinag_conf") or 0) >= 0.85 and (f.get("tifinag_dubtosos") or 0) <= 2 and 2 <= paraules(f.get("tifinag")) <= 30),
         "capitol_apte": (len(aptes) / max(1, len(D))) >= 0.6,
         "fitxes_visio": c02.get("fitxes_visio"), "crides_visio": c02.get("crides_visio"), "metode_arab": c02.get("metode"),
         "fotogrames_arab_usats": c02.get("fotogrames_llegits"), "fitxes_visio_equivalents": (c02.get("fotogrames_llegits") or 0) * 172,
