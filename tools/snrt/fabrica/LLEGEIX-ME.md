@@ -99,12 +99,13 @@ hora de vídeo, la meitat a l'API de visió (6 fils).
 
 ## El lector de tifinag és una funció
 
-`lector_tifinag.llegeix_bandes(imatges)` rep les bandes de tot el capítol (perquè la segona passada adapta les
-plantilles al vídeo) i torna, per a cada una, `{"tifinag", "glifs", "n_glifs", "n_dubtosos", "conf_mitjana",
-"conf_min"}`; `lector_tifinag.NOM` és el que va a `tifinag_lector`. Avui és el lector per plantilles d'aslmdtv (la
-lletra de la SNRT és la mateixa família IRCAM): a 1080p, 18 de 20 rèpliques exactes a «Illy»; a 720p (20 px), 5 de 18
-a l'entrevista (ⵎ→ⴹ, ⴱ→ⵔ, ⴷ→ⵯ). Per això 01 baixa també el 1080p quan n'hi ha. Quan hi hagi el lector sintètic
-(§6.3), es canvia aquest mòdul i prou.
+`lector_tifinag.llegeix_bandes(imatges)` rep les bandes de tot el capítol i torna, per a cada una, `{"tifinag", "glifs",
+"n_glifs", "n_dubtosos", "conf_mitjana", "conf_min"}`; `lector_tifinag.NOM` (`plantilles-segmentador-v1`) és el que va a
+`tifinag_lector`. Avui és el segmentador nou + classificador de plantilles de Tifinaghe-Ircam i xifres (`tifinag_segmenta.py`,
+`tifinag_plantilles.py` i `tifinag_plantilles.npz`; res entrenat): CER 0,0051 sobre les 52 línies de «Illy» transcrites a mà
+(`prova_lector_tifinag.py <carpeta_tipografia>` ho reprodueix), 0,0073 amb les mateixes línies baixades a 720p (simulat; el 720p real
+encara no s'ha mesurat). 01 segueix baixant el 1080p quan n'hi ha. `conf` és `min(1, IoU/0,75)` perquè els llindars de §5 (0,85)
+segueixin volent dir «dubtós»; no és una probabilitat. El lector per plantilles d'aslmdtv (`tools/ocr_tifinag/`) ja no s'hi crida.
 
 ## D'on ve
 
