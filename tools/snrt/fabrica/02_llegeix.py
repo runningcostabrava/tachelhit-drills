@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Etapa 02: del vídeo a les rèpliques llegides (àrab i tifinag), seguint §4 de l'especificació.
 
-  python -X utf8 02_llegeix.py <carpeta_del_capitol> [--fils 6] [--fins SEGON] [--sense-tifinag] [--un-per-segon]
+  python -X utf8 02_llegeix.py <carpeta_del_capitol> [--fils 6] [--fins SEGON] [--sense-tifinag] [--un-per-segon] [--lector-arab visio|propi]
 
 1. `franges/NNNNN.png`: la franja de les dues línies, un fotograma per segon (el fotograma k és l'instant k−0,5).
 2. **Comprovació de la geometria** amb 10 fotogrames: cal veure la línia del tifinag a y 588–608 i la de l'àrab a
@@ -12,6 +12,10 @@
    caràcters) o dona error. Les franges idèntiques a l'anterior se salten. Les lectures es desen per segon a
    `lectures.jsonl` i es reutilitzen (reprendre = no tornar a pagar). Els trams veïns que diuen el mateix s'ajunten.
    `--un-per-segon` és el mètode antic (totes les franges, vot entre fotogrames): el de la prova d'«Illy».
+   `--lector-arab propi` (#601, §6.3): l'àrab es llegeix amb el CRNN propi (`lector_arab.py`), SENSE cap crida de visió, sobre un fotograma
+   de 1080p (o 720p pujat, no mesurat) retallat a x 110–1560 (fora el logotip): dos fotogrames per tram (el del mig i un quart), i la rèplica
+   porta `arab_lector` = «crnn-v4», `arab_conf` (mínima probabilitat dels símbols) i `arab_dubtos` (cert si les dues lectures discrepen, n'hi ha
+   una de buida, el text és molt curt o `conf` < 0,60). Les lectures es desen a `lectures_crnn.jsonl` per segon i es reprenen. Candidat: no substitueix el visió.
 4. El tifinag es llegeix al fotograma del mig de cada rèplica amb `lector_tifinag.llegeix_bandes` (per plantilles
    d'aslmdtv mentre no hi hagi el sintètic), sobre `video_1080.mp4` si hi és.
 5. `credits`: més de 3 línies de text al fotograma, o text idèntic repetit més de 20 s en total (capçalera, rodolí).
@@ -295,6 +299,67 @@ def llegeix_trams(carpeta, trams, alt, igual, fils, log):
     return fora, {"crides_visio": L.noves, "fitxes_visio": L.fitxes_noves, "fotogrames_llegits": len(set(migs))}
 
 
+# ---------- l'àrab amb el lector propi (sense visió) ----------
+LECTURES_PROPI = "lectures_crnn.jsonl"
+
+
+def instants_del_tram(t):
+    """Dos fotogrames per tram: el del mig i el d'un quart (si el tram té ≥ 2 segons). Surten segons de l'etapa (instant = segon − 0,5)."""
+    mig = t[len(t) // 2]
+    quart = t[len(t) // 4] if len(t) >= 2 else mig
+    if quart == mig and len(t) >= 2:
+        quart = t[-1] if mig != t[-1] else t[0]
+    return [mig] if quart == mig else [mig, quart]
+
+
+def fotograma_banda(video, seg, alt, y0_720, lector_arab):
+    """La banda d'àrab del fotograma de l'instant seg−0,5, pel tub, en PIL (retall del `lector_arab`)."""
+    out = subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{max(0.0, seg - 0.5):.2f}", "-i", video, "-frames:v", "1", "-vf",
+                          lector_arab.retall_ffmpeg(alt, y0_720), "-f", "image2pipe", "-vcodec", "png", "-"], capture_output=True).stdout
+    return Image.open(io.BytesIO(out)).convert("RGB") if out else None
+
+
+def llegeix_trams_propi(carpeta, trams, video_arab, alt, fils, log):
+    """Un fotograma d'àrab per tram (dos si el tram dura ≥ 2 s) llegit amb el CRNN propi, sense cap crida de visió. Torna rèpliques abans d'ajuntar."""
+    import lector_arab
+    p = os.path.join(carpeta, LECTURES_PROPI)
+    fets = {x["segon"]: x for x in comu.jsonl_llegeix(p) if not x.get("error")}
+    pany = threading.Lock()
+    punts = {s for t in trams for s in instants_del_tram(t)}
+    pendents = sorted(s for s in punts if s not in fets)
+    comu.diu(log, f"àrab (lector propi {lector_arab.NOM}): {len(trams)} trams, {len(pendents)} fotogrames a llegir (la resta ja llegits)")
+    out = io.open(p, "a", encoding="utf-8")
+    lector_arab.carrega()   # un cop, abans dels fils
+
+    def un(seg):
+        t0 = time.time()
+        try:
+            im = fotograma_banda(video_arab, seg, alt, comu.ARAB_720[0], lector_arab)
+            if im is None:
+                raise RuntimeError("ffmpeg no ha tret el fotograma")
+            r = lector_arab.llegeix_arab(im)
+            fila = {"segon": seg, "cru": r["arab"], "diu": comu.nomes_arab(r["arab"]), "conf": round(r["conf"], 4),
+                    "conf_mitjana": round(r["conf_mitjana"], 4), "lector": lector_arab.NOM, "alt_video": alt, "s": round(time.time() - t0, 2)}
+        except Exception as e:
+            fila = {"segon": seg, "cru": "", "diu": "", "conf": 0.0, "error": str(e)[:160], "lector": lector_arab.NOM}
+        with pany:
+            out.write(json.dumps(fila, ensure_ascii=False) + "\n"); out.flush()
+            if not fila.get("error"):
+                fets[seg] = fila
+        return fila
+
+    with ThreadPoolExecutor(max_workers=max(1, min(fils, 4))) as ex:
+        list(ex.map(un, pendents))
+    fora = []
+    for t in trams:
+        lect = [{"arab": fets[s]["diu"], "conf": fets[s]["conf"]} if s in fets else {"arab": "", "conf": 0.0} for s in instants_del_tram(t)]
+        diu, conf, dubtos, n, dacord = lector_arab.decideix(lect)
+        if not diu:
+            continue
+        fora.append({"t_ini": t[0] - 1, "t_fi": t[-1], "arab": diu, "arab_lectures": n, "arab_dacord": dacord, "arab_conf": round(conf, 4), "arab_dubtos": dubtos})
+    return fora, {"crides_visio": 0, "fitxes_visio": 0, "fotogrames_llegits": len(punts), "fotogrames_nous": len(pendents), "lector_arab": lector_arab.NOM}
+
+
 def llegeix_un_per_segon(carpeta, segons, alt, igual, fils, log):
     """El mètode de la prova d'«Illy»: totes les franges, vot entre fotogrames (car: 1 fotograma per segon)."""
     L = Lectures(carpeta, alt)
@@ -339,6 +404,9 @@ def ajunta(repliques):
         if fora and comu.s_assemblen(fora[-1]["arab"], r["arab"]) and r["t_ini"] - fora[-1]["t_fi"] <= 1:
             u = fora[-1]
             u["t_fi"] = max(u["t_fi"], r["t_fi"]); u["arab_lectures"] += r["arab_lectures"]; u["arab_dacord"] += r["arab_dacord"]
+            if "arab_dubtos" in r:   # lector propi: la rèplica ajuntada és dubtosa si ho era algun tram, i en conserva la pitjor confiança
+                u["arab_dubtos"] = bool(u.get("arab_dubtos")) or r["arab_dubtos"]
+                u["arab_conf"] = min(u["arab_conf"], r["arab_conf"])
             if len(r["arab"]) > len(u["arab"]):
                 u["arab"] = r["arab"]
         else:
@@ -403,6 +471,8 @@ def main():
     ap.add_argument("--fins", type=int, default=0, help="només fins a aquest segon (per provar)")
     ap.add_argument("--sense-tifinag", action="store_true")
     ap.add_argument("--un-per-segon", action="store_true", help="el mètode antic: totes les franges amb vot (car)")
+    ap.add_argument("--lector-arab", choices=["visio", "propi"], default=os.environ.get("TD_LECTOR_ARAB", "visio"),
+                    help="visio (qwen3-vl-plus, gasta quota) o propi (CRNN, sense visió; candidat: marca arab_dubtos)")
     a = ap.parse_args()
     comu.carrega_env()
     carpeta = os.path.abspath(a.carpeta)
@@ -427,7 +497,20 @@ def main():
             segons = [s for s in segons if s <= a.fins]
         igual = iguals_a_l_anterior(carpeta, segons, alt)
         comptes["franges_identiques"] = sum(igual.values())
-        if a.un_per_segon:
+        if a.lector_arab == "propi":
+            if a.un_per_segon:
+                raise RuntimeError("--lector-arab propi no es combina amb --un-per-segon (el lector propi llegeix 2 fotogrames per tram)")
+            v1080 = comu.video_de(carpeta, 1080)
+            if not v1080:
+                comu.diu(log, "AVÍS: no hi ha video_1080.mp4: l'àrab es llegeix de 720p pujat a 1450×64 (el lector només s'ha mesurat a 1080p)")
+            va = v1080 or video
+            ha = comu.mida_video(va)[1]
+            trams = trams_del_tifinag(carpeta, segons, alt, log)
+            comptes["trams"] = len(trams)
+            crues, c = llegeix_trams_propi(carpeta, trams, va, ha, a.fils, log)
+            comptes["metode"] = "rellotge del tifinag, 2 fotogrames per tram, lector propi (sense visió)"
+            comptes["alt_arab"] = ha
+        elif a.un_per_segon:
             crues, c = llegeix_un_per_segon(carpeta, segons, alt, igual, a.fils, log)
             comptes["metode"] = "1 fotograma per segon"
         else:
@@ -439,8 +522,12 @@ def main():
         repliques = ajunta(crues)
         for k, r in enumerate(repliques):
             r["k"] = k; r["id"] = f"{slug}_{k:04d}"; r["slug"] = slug; r["durada"] = r["t_fi"] - r["t_ini"]
-            r["arab_acord"] = round(r["arab_dacord"] / max(1, r["arab_lectures"]), 3); r["arab_lector"] = LECTOR_ARAB
-        comu.diu(log, f"àrab: {len(repliques)} rèpliques, {comptes['crides_visio']} crides noves, {comptes['fitxes_visio']} fitxes noves")
+            r["arab_acord"] = round(r["arab_dacord"] / max(1, r["arab_lectures"]), 3)
+            r["arab_lector"] = comptes["lector_arab"] if a.lector_arab == "propi" else LECTOR_ARAB
+        if a.lector_arab == "propi":
+            comptes["arab_dubtoses"] = sum(1 for r in repliques if r.get("arab_dubtos"))
+        comu.diu(log, f"àrab: {len(repliques)} rèpliques, {comptes['crides_visio']} crides noves, {comptes['fitxes_visio']} fitxes noves"
+                 + (f", {comptes['arab_dubtoses']} dubtoses" if a.lector_arab == "propi" else ""))
         if a.sense_tifinag:
             for r in repliques:
                 r.update(tifinag="", tifinag_conf=None, tifinag_dubtosos=0, tifinag_glifs=0, tifinag_lector=None, linies_text=0)

@@ -54,7 +54,7 @@ M'Gouna o Azilal–Aït Bougmez; 2 = Alt Atles / Beni Mellal; 3 = altres), `esta
 `id`, `slug`, `k`, `t_ini`, `t_fi` (segons dins del vídeo, amb el marge de 0,25 s ja aplicat als
 talls però NO aquí), `durada`, `arab` (text llegit, sense tashkil), `arab_lectures` (quants fotogrames
 s'han llegit), `arab_acord` (fracció d'acord entre lectures; 1,0 si només n'hi ha una),
-`arab_lector` («qwen3-vl-plus» | «propi-v1» | …), `tifinag`, `tifinag_conf` (confiança mitjana per
+`arab_lector` («qwen3-vl-plus» | «crnn-v4» | …), `arab_conf` i `arab_dubtos` (només amb el lector propi: probabilitat mínima de la lectura i marca de revisió), `tifinag`, `tifinag_conf` (confiança mitjana per
 glif), `tifinag_dubtosos` (glifs sota 0,85), `tifinag_lector` («plantilles-aslmdtv» | «sintetic-v1» |
 …), `credits` (true si és capçalera o crèdits: fora de tot), `catala_a` i `catala_b` (àrab → català
 pels dos models, amb `model_a`, `model_b`), `chrf_ab`, `catala` (el definitiu: `catala_a` si
