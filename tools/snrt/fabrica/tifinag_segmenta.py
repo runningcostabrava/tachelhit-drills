@@ -63,13 +63,15 @@ def _dist_diagonal(fosc):
     return out
 
 
-def mascara_lletra(rgb):
+def mascara_lletra(rgb, llindar_blanc=None, llindar_fosc=None, relatiu=None):
     """Blanc i entre dues vores fosques. Retorna (mascara, blanc, fosc)."""
     a = rgb.astype(np.int16)
     mn, mx = a.min(axis=2), a.max(axis=2)
-    blanc = (mn > LLINDAR_BLANC) & ((mx - mn) < 55)
-    fosc = mx < LLINDAR_FOSC
-    if FOSC_RELATIU:   # vora poc contrastada sobre fons clar: fosca respecte del blanc veí (≥ 55 sota el màxim local 9x9)
+    lb = LLINDAR_BLANC if llindar_blanc is None else llindar_blanc
+    lf = LLINDAR_FOSC if llindar_fosc is None else llindar_fosc
+    blanc = (mn > lb) & ((mx - mn) < 55)
+    fosc = mx < lf
+    if (FOSC_RELATIU if relatiu is None else relatiu):   # vora poc contrastada sobre fons clar: fosca respecte del blanc veí (≥ 55 sota el màxim local 9x9)
         fosc |= (mx < ndimage.maximum_filter(mn, size=9) - FOSC_DELTA) & (mx < 215)
     ok = np.zeros(blanc.shape, bool)
     for eix in (1, 0):
@@ -431,3 +433,37 @@ def afegeix_marques_w(r, punts, min_px=5):
             nous.append({"caixa": caixa, "area": n, "ids": [], "tipus": "ⵯ", "mask": np.ones((caixa[3] - caixa[1], caixa[2] - caixa[0]), bool), "virtual": True})
             nous_p.append([(1.0, "ⵯ"), (0.0, "")])
     return nous, nous_p
+
+
+def refina_local(r, g, pad=5):
+    """Llindar LOCAL de fons per glif (en lloc del global per franja): al voltant del glif es mesuren el blanc i el fosc d'allà (p95 del mínim RGB dels píxels blancs-grisos,
+    p5 del màxim) i es repeteix la prova «blanc entre dues vores fosques» amb llindars a 62 % / 40 % entre els dos. Serveix quan el fons canvia de fosc a clar a mig mot
+    (el llindar global talla un braç de la creu). Torna un dict de glif nou (caixa, màscara) amb els components que cauen dins la caixa vella, o None."""
+    from scipy import ndimage as ndi
+    rgb = r["rgb"]; H, W = rgb.shape[:2]
+    x0, y0, x1, y1 = g["caixa"]
+    a0, b0, a1, b1 = max(0, x0 - pad), max(0, y0 - pad), min(W, x1 + pad), min(H, y1 + pad)
+    crop = rgb[b0:b1, a0:a1]
+    a = crop.astype(np.int16); mn, mx = a.min(axis=2), a.max(axis=2)
+    gris = (mx - mn) < 60
+    if gris.sum() < 20:
+        return None
+    blanc_ref = np.percentile(mn[gris], 95); fosc_ref = np.percentile(mx, 5)
+    if blanc_ref - fosc_ref < 70:
+        return None
+    lb = fosc_ref + 0.62 * (blanc_ref - fosc_ref); lf = fosc_ref + 0.40 * (blanc_ref - fosc_ref)
+    m2, _, _ = mascara_lletra(crop, lb, lf, relatiu=False)
+    lab, n = ndi.label(ndi.binary_dilation(m2, structure=np.ones((3, 3))), structure=np.ones((3, 3)))
+    lab = np.where(m2, lab, 0)
+    if n == 0:
+        return None
+    cx0, cx1, cy0, cy1 = x0 - a0, x1 - a0, y0 - b0, y1 - b0
+    ids = [i for i in range(1, n + 1) if ((lab == i)[cy0:cy1, cx0:cx1]).sum() >= 8]
+    if not ids:
+        return None
+    mk = np.isin(lab, ids)
+    ys, xs = np.nonzero(mk)
+    if (xs.max() - xs.min() + 1) > AMPLE_MAX or (ys.max() - ys.min() + 1) > 36:
+        return None
+    caixa = [a0 + int(xs.min()), b0 + int(ys.min()), a0 + int(xs.max()) + 1, b0 + int(ys.max()) + 1]
+    return dict(g, caixa=caixa, mask=mk[ys.min():ys.max() + 1, xs.min():xs.max() + 1], area=int(mk.sum()), refinat_local=True)

@@ -29,6 +29,7 @@ import tifinag_segmenta as SEG  # noqa: E402
 NOM = "plantilles-segmentador-v1"   # el valor de tifinag_lector a cada fila (§3.3)
 LLINDAR = 0.85                      # com a §3.3: glif dubtós = conf sota 0,85
 K_CONF = 0.75
+LLINDAR_LOCAL = 0.66                # IoU sota el qual es prova el refinament local de la màscara
 GAP_ESPAI = 10                      # px entre caixes (a l'escala de 1080p) per posar un espai: 4 dins el mot, 16 entre mots
 GAP_DARRERE_W = 15                  # darrere ⵯ (dues marques fines: la caixa és més estreta que la cel·la)
 GAP_DAVANT_INTERROGANT = 5          # el «?» va precedit d'espai (a les 52 línies de veritat, sempre)
@@ -96,6 +97,15 @@ def llegeix_banda(a):
         return buit
     cos_top = r["cos"][0]
     punts = [PL.classifica(g["mask"], g["caixa"][1] - cos_top) for g in r["glifs"]]
+    # Llindar LOCAL de fons: un glif de lletra amb IoU baix (< LLINDAR_LOCAL) es torna a binaritzar amb el blanc i el fosc d'allà mateix (el fons pot canviar
+    # de fosc a clar a mig mot) i es queda la màscara nova si millora l'IoU en ≥ 0,05. Les xifres (≥ 30 px d'alt) es comparen per forma i no es refinen.
+    for i, (g, p) in enumerate(zip(r["glifs"], punts)):
+        if p[0][0] < LLINDAR_LOCAL and g["tipus"] == "cos" and (g["caixa"][3] - g["caixa"][1]) < 30:
+            g2 = SEG.refina_local(r, g)
+            if g2 is not None:
+                p2 = PL.classifica(g2["mask"], g2["caixa"][1] - cos_top)
+                if p2[0][0] >= p[0][0] + 0.05:
+                    r["glifs"][i], punts[i] = g2, p2
     r["glifs"], punts = SEG.afegeix_marques_w(r, punts)   # el ⵯ (dues marques de 1-2 px) que la màscara fina perd darrere ⴳ/ⴽ
     text, glifs = _text(r, punts)
     confs = [g["conf"] for g in glifs]
