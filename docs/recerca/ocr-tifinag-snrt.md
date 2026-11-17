@@ -18,7 +18,7 @@ llegeix; el que no toca queda com a bo). «Net» vol dir que ningú no ha afinat
 
 | conjunt | què és | mesura | estat |
 |---|---|---|---|
-| 100 línies | entrevista a 1080p, a l'atzar, sense crèdits | **CER 0,0009**, 99 de 100 perfectes | net; lector d'abans de les darreres millores |
+| 100 línies | entrevista a 1080p, a l'atzar, sense crèdits | **CER 0,0009**, 99 de 100 perfectes | net; lector d'abans de les darreres millores. Amb el lector actual: 0,0016 (5 errors, 97/100): els dos errors nous són un ⵯ que ara es troba darrere «ⴰⴽⴽ» i que la veritat de les 100 no porta (en Pablo va dir a la línia 271 de les 50 que hi és) |
 | 50 línies | entrevista, ids congelats abans de mirar res | **≈ 0,0019 en lletres** (2 errors de 1.071), 37 de 41 línies perfectes. Les quatre amb error: un ⵃ llegit en lloc de ⴷ, un ⵯ perdut i les dues línies de «2026» (el mateix error de xifres) | net en el moment de mesurar |
 | 40 discrepàncies | «Illy»: línies on el lector antic i el nou diferien | 32 de 40 perfectes (CER 0,0234, 25 errors de 1.069) | no net: triades per ser difícils |
 | 52 línies de veritat | «Illy», transcrites a mà | CER 0,0051 (7 errors de 1.370), 46 de 52 perfectes | **afinat aquí**: no és una mesura neta |
@@ -62,6 +62,11 @@ d'importància:
   és dominada per la diferència de l'anella, no pel punt o la barra.
 - Partir per buits d'1–2 px parteix lletres bones (una ⵥ en dues).
 - Substituir el fons fora dels glifs per un color pla (per al CRNN).
+- Classificar les anelles ⵔ/ⵙ/ⵀ per topologia (forats i components: ⵙ = un forat i un punt dins; ⵀ = dos forats): a les quatre bases congelades (52, 15, 100 i 40) empitjora
+  52 (7 → 8 errors) i 100 (5 → 6) i no millora cap: la ⵙ de les 40 discrepàncies no era un problema de topologia.
+- Variants d'escala de ±3,5 % de les plantilles: la base de 40 millora d'1 error, la de 100 passa de 5 a 7 i el lector va tres vegades més lent.
+- Acceptat: llindar de fons LOCAL per glif (el blanc i el fosc del voltant, només per a lletres amb IoU < 0,66, mai per a xifres): cap de les quatre bases empitjora i la de 40
+  passa de 23 a 22 errors.
 
 ## El que no se sap
 
