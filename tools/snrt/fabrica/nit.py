@@ -39,13 +39,16 @@ def fitxa(cap):
     te_1080 = any("1080" in q for q in (cap.get("qualitats_replay") or []))
     return {"slug": slug, "url": url, "font": font, "mena": cap.get("mena") or ("entrevista" if "tadfi" in (cap.get("programa") or "") else "desconeguda"),
             "prioritat": cap.get("prioritat") or 9, "titol": cap.get("titol", ""), "te_1080": te_1080,
-            "youtube": f"https://www.youtube.com/watch?v={cap['youtube_id']}" if cap.get("youtube_id") else None}
+            "youtube": f"https://www.youtube.com/watch?v={cap['youtube_id']}" if cap.get("youtube_id") else None,
+            "forja": f"https://forja.ma/player/{cap['slug_forja']}?lang=ar" if cap.get("slug_forja") else None, "programa": cap.get("programa")}
 
 
 def baixa(f, carpeta, log, amb_1080=True):
     """01: video.mp4 (720p amb so) i, si el replay en té, video_1080.mp4 per al tifinag. Replay des d'on sigui; YouTube només
     des del PC (l'ECS té la IP bloquejada): si el replay falla i hi ha YouTube, es prova."""
     os.makedirs(carpeta, exist_ok=True)
+    if f.get("forja") and os.environ.get("TD_REPLAY_FORJA", "1") == "1":   # el replay directe de forja.ma (va bé des de l'ECS) i mai YouTube (IP bloquejada)
+        f = dict(f, font="replay", url=f["forja"], youtube=None)
 
     def replay(qualitat, nom):
         cmd = [comu.PY, "-X", "utf8", BAIXA_REPLAY, f["url"], "--carpeta", carpeta, "--qualitat", str(qualitat)]
@@ -92,8 +95,12 @@ def baixa(f, carpeta, log, amb_1080=True):
 
 
 def corre(carpeta, a, log):
+    refer = False   # si una etapa s'ha refet, les següents també es repassen (són reprenibles per id: només fan el que falta)
     for etapa in ETAPES:
-        if not a.refes and comu.etapa_feta(carpeta, etapa):
+        feta = comu.etapa_feta(carpeta, etapa)
+        if feta and etapa == "02_llegeix" and comu.estat_llegeix(carpeta).get(etapa, {}).get("comptes", {}).get("sense_arab"):
+            feta = False   # feta sense àrab (tanda --sense-arab del 17-11-2026): ara cal llegir-lo
+        if not a.refes and feta and not refer:
             comu.diu(log, f"   {etapa}: ja feta"); continue
         cmd = [comu.PY, "-X", "utf8", os.path.join(comu.AQUI, etapa + ".py"), carpeta]
         if etapa == "02_llegeix":
@@ -104,6 +111,7 @@ def corre(carpeta, a, log):
         if r.returncode != 0:
             err = comu.estat_llegeix(carpeta).get(etapa, {}).get("error") or f"codi {r.returncode}"
             return False, f"{etapa}: {err}"
+        refer = True
     return True, ""
 
 
