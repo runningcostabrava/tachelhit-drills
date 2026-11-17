@@ -936,6 +936,69 @@ com la **procedència**: el filtre de fets comprova procedència, no veritat.
 Límit: 120 formes són les que tenien ≥ 2 fonts; la majoria de les 525 minades i les 236 del web
 en tenen una sola. Per fer-ne créixer el nombre calen fonts noves per forma, no més model.
 
+## La nit del 16-11: tot el dàrija minat, i un segon model que ho audita (#601)
+
+**Minat complet.** Els 162 vídeos en dàrija que faltaven (29 h: 110 d'opinió, 35 classes, 16
+contes, 1 cançó; dàrija = ≥ 20 mots/min i ≥ 20 % de mots de funció al transcrit automàtic, segons
+el catàleg únic) passats per `tools/lm/mina_transcrits.py` (DeepSeek `deepseek-chat`, t = 0, ara
+amb `--nomes/--ja/--fils` i pas automàtic a `qwen3.8-max` si DeepSeek es queda sense quota: no va
+caldre, 0 errors). Resultat: **812 ítems nous** (63 vídeos amb 0, com toca: opinió i història);
+els més rics són les entrevistes llargues (Dr. Abdellah El Haloui 39, Senhaja de Srair 33). Total
+del canal: **269 vídeos minats, 1.945 ítems, 1.905 lligats al segon del vídeo (98 %)**
+(`tamazight-for-all-coneixement-darija.md`; llibre de registre al dia: 269 «M»).
+
+**Auditoria per un segon model (`tools/lm/audita_coneixement.py`).** Cada ítem va a un model
+independent del que l'ha extret (tot és DeepSeek → audita `qwen3.8-max`, t = 0, sense pensar) amb
+la frase `on` i **±15 s del vtt** al voltant (els rètols de YouTube són rodants i duren ~3 s: ±2
+rètols serien ±3 s de paraula i el significat sovint queda fora; amb ±2 rètols la primera prova
+donava 5 NO-HO-SE de 6, amb ±15 s 9 TRIA, 2 NO-HO-SE, 1 FORA sobre els mateixos). Veredicte en una
+línia: TRIA (el professor diu exactament això) / FORA (no ho diu o ho diu diferent) / NO-HO-SE.
+
+| | ítems | TRIA | FORA | NO-HO-SE |
+|---|---|---|---|---|
+| tot | 1.945 | **1.130 (58 %)** | 453 (23 %) | 362 (19 %) |
+| minat del 15-11 | 1.134 | 632 (56 %) | 269 | 233 |
+| minat del 16-11 | 811 | 498 (61 %) | 184 | 129 |
+| paraula | 1.628 | 960 | 366 | 302 |
+| expressió | 199 | 101 | 60 | 38 |
+| regla | 68 | 40 | 16 | 12 |
+| afix | 50 | 29 | 11 | 10 |
+| amb forma llatina | 1.120 | 688 (61 %) | 215 | 217 |
+| sense forma llatina | 825 | 442 (54 %) | 238 | 145 |
+
+Veredictes a `canal/coneixement_auditat.jsonl` (clau `video:idx`, el que diu l'auditor i les
+fitxes); **els 1.130 TRIA, de 147 vídeos, a `tamazight-for-all-coneixement-darija-confirmat.md`**.
+El que l'auditor treu (mostra a ull): la forma àrab és un tros de paraula o una altra paraula
+(«النط» per اضنت «ahir»; «تممت» per تمنت «mel»), l'ítem gira el que el professor diu («ارز = home»
+quan ell diu que és justament l'error), barreja la forma amaziga amb l'equivalent en dàrija
+(«منين انت»), o el plural/femení no és el que ell diu. El que deixa passar no és net: entre els
+TRIA hi ha ítems sense significat («exemple de variació fonètica») i algun on el motiu de l'auditor
+no s'aguanta. **Lectura:** un TRIA és «dos models llegeixen el mateix al transcrit automàtic»,
+no veritat; segueixen sent candidats amb procedència, i les dues capes de soroll (l'ASR de YouTube
+i l'extracció) hi són.
+
+**Contra el nostre lèxic (`mina_vs_lexic.py`, mateix aparellador curt català↔francès/anglès):**
+
+| | formes llatines | coincideix | contradiu | no la tenim | sense llatí |
+|---|---|---|---|---|---|
+| tots els 1.946 ítems (`tamazight-for-all-darija-vs-lexic.md`) | 785 | 69 | 419 | 297 | 909 |
+| només els 1.130 TRIA (`…-darija-confirmat-vs-lexic.md`) | 504 | 52 | 283 | 169 | 499 |
+
+«Contradiu» és sobretot l'aparellador (`imi` «boca» contra «bouche» surt com a contradicció;
+`aḥidus` «dansa» contra «danse collective» també): són coincidències que no veu, a revisar a mà,
+no errors del professor. El que compta: **169 formes confirmades per dos models que el lèxic no
+té** (candidats a entrar, amb vídeo i segon).
+
+**Contra el glossari de 59 termes del web de l'autor (`tools/lm/confirmats_vs_web.py`):** cap
+forma en comú, ni entre els 1.130 TRIA ni entre els 1.946. El glossari és metallenguatge de
+l'IRCAM (`amqqim` «pronom», `afris` «adjectiu», `agwmmay` «alfabet») i a classe el professor
+ensenya els pronoms, els adjectius i l'alfabet, no els termes: 26 termes tenen ítems que en són
+exemples (202), cap que en sigui el nom. Les dues fonts del mateix autor no se solapen; se sumen.
+
+**Cost:** minat DeepSeek 491.214 fitxes dins / 89.978 fora (uns 0,25 $); auditoria qwen3.8-max
+1.562.746 dins / 55.051 fora (Model Studio, dins i una mica més enllà del milió gratuït del model).
+Permís: Tamazight For All, catalogar-ho tot (`docs/PERMISOS.md`, 16-11). Res a la biblioteca.
+
 ## El que bloqueja
 
 - **Deu minuts transcrits per un parlant.** Sense això tota mesura és indirecta. Serien
