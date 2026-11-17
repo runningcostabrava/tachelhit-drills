@@ -1640,3 +1640,1639 @@ Cada línia: el que diu (transcrit automàtic, lletres àrabs), la forma llatina
 - **بوبر** — tallar el coneixement, és a dir la saviesa [157:03](https://www.youtube.com/watch?v=yQJjXlGhtB8&t=9423s)
 - **ابر** — coneixement [156:58](https://www.youtube.com/watch?v=yQJjXlGhtB8&t=9418s)
 - **ببر** — tallar el coneixement [157:07](https://www.youtube.com/watch?v=yQJjXlGhtB8&t=9427s)
+
+## علاش الحيوانات كايهضرو فالحجايات المغربية الامازيغية؟ — `-BNbiWWEUAo` (6 ítems)
+
+
+**expressió**
+
+- **تمازيغتنسميو** — en amazic en dèiem (l'ocell de la mesquita) [3:23](https://www.youtube.com/watch?v=-BNbiWWEUAo&t=203s)
+
+**paraula**
+
+- **تمازيغت** *tamaziɣt* — la llengua amaziga [0:27](https://www.youtube.com/watch?v=-BNbiWWEUAo&t=27s)
+- **ازول** *azul* — hola / benvingut [0:27](https://www.youtube.com/watch?v=-BNbiWWEUAo&t=27s)
+- **موكا** — el mussol (ocell de mal averany) [2:13](https://www.youtube.com/watch?v=-BNbiWWEUAo&t=133s)
+- **التوكت** — el mussol (forma femenina) [2:19](https://www.youtube.com/watch?v=-BNbiWWEUAo&t=139s)
+- **الغول** *ɣul* — l'ogre (criatura malvada i ximple dels contes) [10:19](https://www.youtube.com/watch?v=-BNbiWWEUAo&t=619s)
+
+## اللغة الأمازيغية لغة أقزدير أفرفار!! — `-l71ZyGwhow` (7 ítems)
+
+
+**expressió**
+
+- **ابو قال** — expressió no amaziga (darija) [5:38](https://www.youtube.com/watch?v=-l71ZyGwhow&t=338s)
+- **اكر واسدال** — expressió per a 'Copa del Món' [5:43](https://www.youtube.com/watch?v=-l71ZyGwhow&t=343s)
+
+**paraula**
+
+- **اقزير** — mot que no és amazic, no es diu en amazic [4:56](https://www.youtube.com/watch?v=-l71ZyGwhow&t=296s)
+- **افرفار** — vol dir 'avió', però no és amazic [5:05](https://www.youtube.com/watch?v=-l71ZyGwhow&t=305s)
+- **ايلال** *ilal* — ocell / au [5:22](https://www.youtube.com/watch?v=-l71ZyGwhow&t=322s)
+- **تلالت** *tlalt* — femení: 'la que vola', l'avió [5:25](https://www.youtube.com/watch?v=-l71ZyGwhow&t=325s)
+- **اض** — vol dir 'món' [5:47](https://www.youtube.com/watch?v=-l71ZyGwhow&t=347s)
+
+## عادات وتقاليد أهل بزو في الاحتفال برأس السنة الأمازيغية — `-wN3seLchzk` (7 ítems)
+
+
+**expressió**
+
+- **تماز ازول ان ناز** — fórmula de salutació en amazic [2:01](https://www.youtube.com/watch?v=-wN3seLchzk&t=121s)
+- **ايض النير** *iḍ n yennayer* — cap d'any amazic [0:31](https://www.youtube.com/watch?v=-wN3seLchzk&t=31s)
+- **اليون الجيون** — vol dir 'ja estic tip/a' [8:25](https://www.youtube.com/watch?v=-wN3seLchzk&t=505s)
+- **اسون امينان اسون امين انمار اسون امينز** — fórmula final de bon desig d'any nou [15:15](https://www.youtube.com/watch?v=-wN3seLchzk&t=915s)
+
+**paraula**
+
+- **ازول** *azul* — salutació en amazic [0:21](https://www.youtube.com/watch?v=-wN3seLchzk&t=21s)
+- **تماز الاطلس الكبير الاوسط** *tamazight* — el tamazight de l'Alt Atles central [0:42](https://www.youtube.com/watch?v=-wN3seLchzk&t=42s)
+- **الفتات** — nom amazic del tred bizwi (plat de Nayer) [7:17](https://www.youtube.com/watch?v=-wN3seLchzk&t=437s)
+
+## رأي معارض لتدريس وتعميم اللغة الأمازيغية — `0Hq7y68UbpM` (11 ítems)
+
+
+**paraula**
+
+- **امازيغي** *amaziɣi* — amazic (poble originari del nord d'Àfrica) [4:10](https://www.youtube.com/watch?v=0Hq7y68UbpM&t=250s)
+- **الشاويه** — tribu amaziga (Chaouia) [4:24](https://www.youtube.com/watch?v=0Hq7y68UbpM&t=264s)
+- **المزاب** — tribu amaziga (Mozab) [4:26](https://www.youtube.com/watch?v=0Hq7y68UbpM&t=266s)
+- **دكاله** — nom local amazic (Dukkala) [5:03](https://www.youtube.com/watch?v=0Hq7y68UbpM&t=303s)
+- **الزناتيه** *znata* — tribu amaziga (Zenata) [4:29](https://www.youtube.com/watch?v=0Hq7y68UbpM&t=269s)
+- **زناته** *znata* — branca amaziga (Zenata) [5:38](https://www.youtube.com/watch?v=0Hq7y68UbpM&t=338s)
+- **صنهاجه** *ṣanhaja* — branca amaziga (Sanhaja) [5:38](https://www.youtube.com/watch?v=0Hq7y68UbpM&t=338s)
+- **ايزنا** *izna* — grup amazic del sud del Marroc [5:45](https://www.youtube.com/watch?v=0Hq7y68UbpM&t=345s)
+- **تريفيت** *tarifit* — rifeny (variant amaziga del Rif) [6:27](https://www.youtube.com/watch?v=0Hq7y68UbpM&t=387s)
+- **تشلحيت** *tacelḥit* — taixelhit (variant amaziga del Sus) [6:39](https://www.youtube.com/watch?v=0Hq7y68UbpM&t=399s)
+- **تيفيناغ** *tifinaɣ* — alfabet tifinag [10:56](https://www.youtube.com/watch?v=0Hq7y68UbpM&t=656s)
+
+## تمازيغت صنهاجة السراير وتمازيغت أطلس الكبير الأوسط — `06XlcXCQQDI` (14 ítems)
+
+
+**expressió**
+
+- **إيبي غراس** — tallar el camí [4:06](https://www.youtube.com/watch?v=06XlcXCQQDI&t=246s)
+
+**paraula**
+
+- **إزغوران** — les venes (pronunciació de Ketama, amb canvi fonètic) [0:17](https://www.youtube.com/watch?v=06XlcXCQQDI&t=17s)
+- **إزورن** — forma majoritària amaziga de 'venes' [0:39](https://www.youtube.com/watch?v=06XlcXCQQDI&t=39s)
+- **إزغران** — les venes (forma original) [0:47](https://www.youtube.com/watch?v=06XlcXCQQDI&t=47s)
+- **أضار** — una altra paraula amb el so ɣ [1:23](https://www.youtube.com/watch?v=06XlcXCQQDI&t=83s)
+- **إضغدان** — forma de Ketama corresponent a aḍuḍan [1:35](https://www.youtube.com/watch?v=06XlcXCQQDI&t=95s)
+- **إغصان** — els ossos [2:13](https://www.youtube.com/watch?v=06XlcXCQQDI&t=133s)
+- **فارسن** — un dels tres termes per 'dent' en sanhaja [2:51](https://www.youtube.com/watch?v=06XlcXCQQDI&t=171s)
+- **فيغماس** — un dels tres termes per 'dent' en sanhaja [2:58](https://www.youtube.com/watch?v=06XlcXCQQDI&t=178s)
+- **إيسانن** — terme per 'dent', també usat en ghomara [3:03](https://www.youtube.com/watch?v=06XlcXCQQDI&t=183s)
+- **أوغبان** — les dents [3:53](https://www.youtube.com/watch?v=06XlcXCQQDI&t=233s)
+- **إيغوبي** — mossec (en la seva variant) [3:56](https://www.youtube.com/watch?v=06XlcXCQQDI&t=236s)
+- **إيبي** — en el sud val 'mossec'; en la seva variant, 'tallar' [3:59](https://www.youtube.com/watch?v=06XlcXCQQDI&t=239s)
+- **إيغبان** — els ullals (a Souss); en la seva variant, les dents en general [5:14](https://www.youtube.com/watch?v=06XlcXCQQDI&t=314s)
+
+## حوار مع ناطقة بتمازيغت ٱيت وراين — `0fhFPvVhVZ8` (10 ítems)
+
+
+**afix**
+
+- **لغ** *lɣ* — a / en (preposició, variant zenet) [4:37](https://www.youtube.com/watch?v=0fhFPvVhVZ8&t=277s)
+
+**expressió**
+
+- **سورخ** — com es diu [4:09](https://www.youtube.com/watch?v=0fhFPvVhVZ8&t=249s)
+
+**paraula**
+
+- **ازول** *azul* — hola / salutació
+- **ارياز** *aryaz* — home [5:31](https://www.youtube.com/watch?v=0fhFPvVhVZ8&t=331s)
+- **ارجاز** *arjaz* — home (variant amb j) [5:42](https://www.youtube.com/watch?v=0fhFPvVhVZ8&t=342s)
+- **ارز** *arez* — home (variant sense y) [5:54](https://www.youtube.com/watch?v=0fhFPvVhVZ8&t=354s)
+- **سول** *sul* — dir [4:16](https://www.youtube.com/watch?v=0fhFPvVhVZ8&t=256s)
+- **سخ** *sx* — dir (variant) [4:19](https://www.youtube.com/watch?v=0fhFPvVhVZ8&t=259s)
+- **سلح** *slḥ* — dir (altra variant) [4:19](https://www.youtube.com/watch?v=0fhFPvVhVZ8&t=259s)
+- **النظر** *nnaẓur* — Nador (amb canvi de r) [7:18](https://www.youtube.com/watch?v=0fhFPvVhVZ8&t=438s)
+
+## مساهمات أبناء الجالية المغربية في الخارج في النهوض باللغة والثقافة الأمازيغية — `1buvZRbieu0` (3 ítems)
+
+
+**paraula**
+
+- **تمازيغت** *tamaziɣt* — la llengua amaziga [7:24](https://www.youtube.com/watch?v=1buvZRbieu0&t=444s)
+- **تريفيت** *tarifit* — la variant rifenya [7:36](https://www.youtube.com/watch?v=1buvZRbieu0&t=456s)
+- **تارفيت** *tarifit* — la variant rifenya [9:22](https://www.youtube.com/watch?v=1buvZRbieu0&t=562s)
+
+## جمالية الاشتقاق في اللغة الأمازيغية — `1kRzIv2lFJY` (10 ítems)
+
+
+**regla**
+
+- **انتل** — variant amb n intercanviable entre dialectes [3:40](https://www.youtube.com/watch?v=1kRzIv2lFJY&t=220s)
+
+**afix**
+
+- **اس** — prefix que forma el passiu/impersonal [0:55](https://www.youtube.com/watch?v=1kRzIv2lFJY&t=55s)
+
+**paraula**
+
+- **امثل** — amagar-se, amagar [0:44](https://www.youtube.com/watch?v=1kRzIv2lFJY&t=44s)
+- **اس مثل** — forma passiva de 'amagar-se' [1:12](https://www.youtube.com/watch?v=1kRzIv2lFJY&t=72s)
+- **امدل** — boira; cobrir la visió [2:43](https://www.youtube.com/watch?v=1kRzIv2lFJY&t=163s)
+- **ايدل** — cobrir, tapar [2:30](https://www.youtube.com/watch?v=1kRzIv2lFJY&t=150s)
+- **امض** — enterrar (variant dialectal) [3:23](https://www.youtube.com/watch?v=1kRzIv2lFJY&t=203s)
+- **اضل** — sepulcre; enterrar [4:09](https://www.youtube.com/watch?v=1kRzIv2lFJY&t=249s)
+- **اسمل** — nom; tomba; enterrar [4:09](https://www.youtube.com/watch?v=1kRzIv2lFJY&t=249s)
+- **امل** — mot compartit amb l'egipci antic (mocador) [4:53](https://www.youtube.com/watch?v=1kRzIv2lFJY&t=293s)
+
+## بعض مفاتيح تحليل الطوبونيميا المجالية الأمازيغية مع الأستاذ سي الطيب أمكرود — `3Q5Qe-NxbUk` (7 ítems)
+
+
+**regla**
+
+- **اض** *aḍ* — so emàtic ḍ que sovint esdevé ṭ [2:31](https://www.youtube.com/watch?v=3Q5Qe-NxbUk&t=151s)
+
+**paraula**
+
+- **تارودنت** *Tarudant* — terme toponímic recollit al diccionari de Ben Tuner [1:12](https://www.youtube.com/watch?v=3Q5Qe-NxbUk&t=72s)
+- **اطي** *aṭi* — exemple de pas de ḍ a ṭ [2:34](https://www.youtube.com/watch?v=3Q5Qe-NxbUk&t=154s)
+- **افض** *afḍ* — exemple de ḍ en posició de ṭ [2:34](https://www.youtube.com/watch?v=3Q5Qe-NxbUk&t=154s)
+- **اطوط** *aṭuṭ* — exemple de pas de ḍ a ṭ [2:34](https://www.youtube.com/watch?v=3Q5Qe-NxbUk&t=154s)
+- **اريش** *ariš* — pedra (en amazic) [6:18](https://www.youtube.com/watch?v=3Q5Qe-NxbUk&t=378s)
+- **الريش** — ariš amb article àrab al- [6:15](https://www.youtube.com/watch?v=3Q5Qe-NxbUk&t=375s)
+
+## واش اللغة الأمازيغية المعيارية قصات التغيرات الصوتية المحلية فاللهجات؟ — `6KN7VKZt1Uw` (6 ítems)
+
+
+**regla**
+
+- **الكاف** *k* — al Mzab la k es pronuncia com a š [0:12](https://www.youtube.com/watch?v=6KN7VKZt1Uw&t=12s)
+- **اللام** *l* — al Rif la l es pronuncia com a r en alguns llocs [0:18](https://www.youtube.com/watch?v=6KN7VKZt1Uw&t=18s)
+- **تا** *ta* — a Xauia la ta es converteix en ha [0:29](https://www.youtube.com/watch?v=6KN7VKZt1Uw&t=29s)
+
+**paraula**
+
+- **إيسلمان** *iselman* — escrivim amb lam perquè la lam és l'origen [1:35](https://www.youtube.com/watch?v=6KN7VKZt1Uw&t=95s)
+- **إيسرمان** *iserɣan* — en la pronúncia pots dir-la amb r (com al Rif) [1:39](https://www.youtube.com/watch?v=6KN7VKZt1Uw&t=99s)
+- **أكان** *akan* — s'escriu amb kaf (k) en la grafia [1:46](https://www.youtube.com/watch?v=6KN7VKZt1Uw&t=106s)
+
+## واش ممكن نقريو العلوم باللغة الأمازيغية؟ — `6fSb2b8nzSM` (9 ítems)
+
+
+**afix**
+
+- **تسن** — prefix que significa 'ciència de' [6:32](https://www.youtube.com/watch?v=6fSb2b8nzSM&t=392s)
+- **ان** — prefix de relació/pertinença [9:05](https://www.youtube.com/watch?v=6fSb2b8nzSM&t=545s)
+
+**expressió**
+
+- **تما السانين تنف جانين** — ciències humanes [9:18](https://www.youtube.com/watch?v=6fSb2b8nzSM&t=558s)
+
+**paraula**
+
+- **ابيور** — epidèmia [6:08](https://www.youtube.com/watch?v=6fSb2b8nzSM&t=368s)
+- **تسن بيورت** — epidemiologia [6:23](https://www.youtube.com/watch?v=6fSb2b8nzSM&t=383s)
+- **تمس** — ciència (derivat d'esn 'saber') [7:19](https://www.youtube.com/watch?v=6fSb2b8nzSM&t=439s)
+- **اسن** — saber, conèixer (verb) [7:38](https://www.youtube.com/watch?v=6fSb2b8nzSM&t=458s)
+- **امسان** — el qui sap, savi (nom d'agent) [7:55](https://www.youtube.com/watch?v=6fSb2b8nzSM&t=475s)
+- **افغان** — ésser humà [8:54](https://www.youtube.com/watch?v=6fSb2b8nzSM&t=534s)
+
+## الرد على تطواني يدعي أن مدينة تطوان رومانية!!! — `7TuuTSoiRlc` (5 ítems)
+
+
+**regla**
+
+- **تبدا بالت ت** — les paraules amazigues comencen amb t- [4:20](https://www.youtube.com/watch?v=7TuuTSoiRlc&t=260s)
+
+**paraula**
+
+- **تطوان** *Tiṭṭawin* — els ulls (plural) [0:24](https://www.youtube.com/watch?v=7TuuTSoiRlc&t=24s)
+- **طيط** *ṭiṭ* — ull (singular) [0:32](https://www.youtube.com/watch?v=7TuuTSoiRlc&t=32s)
+- **تطاون** *ṭiṭṭawin* — els ulls (plural) [0:36](https://www.youtube.com/watch?v=7TuuTSoiRlc&t=36s)
+- **تمده** *tamda* — llac o aiguamoll [4:27](https://www.youtube.com/watch?v=7TuuTSoiRlc&t=267s)
+
+## اللغة الأمازيغية لغة جامعة واحدة من المحيط الأطلسي إلى واحات سيوا — `7MhbrxsgMX4` (7 ítems)
+
+
+**paraula**
+
+- **تريفيت** *Tarifit* — tarifit, la llengua del nord [0:33](https://www.youtube.com/watch?v=7MhbrxsgMX4&t=33s)
+- **تشلحيت** *Tacelḥit* — taixelhit, una altra variant [2:40](https://www.youtube.com/watch?v=7MhbrxsgMX4&t=160s)
+- **اخف** *axf* — axf (cap), entesa per tots [1:23](https://www.youtube.com/watch?v=7MhbrxsgMX4&t=83s)
+- **اسد** *asd* — exemple de variació lèxica (lleó) [1:33](https://www.youtube.com/watch?v=7MhbrxsgMX4&t=93s)
+- **احواش** *aḥwac* — aḥwac, estil de cant del sud [3:52](https://www.youtube.com/watch?v=7MhbrxsgMX4&t=232s)
+- **احيدوس** *aḥidus* — aḥidus, estil de cant propi [3:52](https://www.youtube.com/watch?v=7MhbrxsgMX4&t=232s)
+- **الركاده** — un altre estil de cant [3:54](https://www.youtube.com/watch?v=7MhbrxsgMX4&t=234s)
+
+## فراسكم بلي غير الناطقين رالأمازيغية أسرع فتعلم اللغة الأمازيغية؟ — `7YRY0AR_4Jg` (1 ítems)
+
+
+**paraula**
+
+- **اغروم** *aɣrum* — exemple de mot que canvia segons la zona dialectal [5:13](https://www.youtube.com/watch?v=7YRY0AR_4Jg&t=313s)
+
+## واش أبجدية تيفيناغ "عائق" قدام التلاميذ باش يتعلمو اللغة الأمازيغية؟ — `8otKouOavjo` (2 ítems)
+
+
+**regla**
+
+- **تيفيناغ** *tifinaɣ* — regla: les lletres no canvien de forma segons la posició [3:06](https://www.youtube.com/watch?v=8otKouOavjo&t=186s)
+
+**paraula**
+
+- **تيفيناغ** *tifinaɣ* — l'alfabet amazic (tifinag)
+
+## رمزية اللون الأحمر عند المغاربة الأمازيغ — `8zCZGwle5vs` (2 ítems)
+
+
+**paraula**
+
+- **افلوس** *afullus* — el gall [3:17](https://www.youtube.com/watch?v=8zCZGwle5vs&t=197s)
+- **اقم** *aqm* — vermell [3:17](https://www.youtube.com/watch?v=8zCZGwle5vs&t=197s)
+
+## تحديات إدماج اللغة الأمازيغية في العالم الرقمي — `9Mald39IR0I` (2 ítems)
+
+
+**paraula**
+
+- **تيفيناغ** *tifinaɣ* — l'alfabet tifinag [1:15](https://www.youtube.com/watch?v=9Mald39IR0I&t=75s)
+- **تمازيغت** *tamaziɣt* — la llengua amaziga [2:06](https://www.youtube.com/watch?v=9Mald39IR0I&t=126s)
+
+## تصنيف ديال اللهجات الأمازيغية فالمغرب ... واش فعلا عندنا غير ثلاثة ديال اللهجات؟ — `Az7eAcvIK8k` (3 ítems)
+
+
+**paraula**
+
+- **تمازيغت** *tamaziɣt* — la llengua amaziga [0:51](https://www.youtube.com/watch?v=Az7eAcvIK8k&t=51s)
+- **تشلحيت** *tacelḥit* — el taixelhit [1:35](https://www.youtube.com/watch?v=Az7eAcvIK8k&t=95s)
+- **تزييت** *tazayt* — el nom que vosaltres doneu a la zona de Zian [2:33](https://www.youtube.com/watch?v=Az7eAcvIK8k&t=153s)
+
+## ها الفرق بين تريفيت وباقي المتغيرات الأمازيغية — `ADBDn_8bNv4` (16 ítems)
+
+
+**expressió**
+
+- **مامش** *mamc* — com estàs (variant del Nador) [4:35](https://www.youtube.com/watch?v=ADBDn_8bNv4&t=275s)
+- **م كتيت** — variant del sud [4:48](https://www.youtube.com/watch?v=ADBDn_8bNv4&t=288s)
+- **ماينز** — no tenim [5:59](https://www.youtube.com/watch?v=ADBDn_8bNv4&t=359s)
+- **زكزك** — on ets [6:09](https://www.youtube.com/watch?v=ADBDn_8bNv4&t=369s)
+- **بتفي** — on ets (variant) [6:14](https://www.youtube.com/watch?v=ADBDn_8bNv4&t=374s)
+
+**paraula**
+
+- **اغار** *aɣar* — vaig comprar [0:52](https://www.youtube.com/watch?v=ADBDn_8bNv4&t=52s)
+- **امان** *aman* — aigua [0:52](https://www.youtube.com/watch?v=ADBDn_8bNv4&t=52s)
+- **اغو** *aɣu* — llet [3:41](https://www.youtube.com/watch?v=ADBDn_8bNv4&t=221s)
+- **اشفا** *acfa* — llet [3:50](https://www.youtube.com/watch?v=ADBDn_8bNv4&t=230s)
+- **اكفي** *akfi* — llet (variant) [3:52](https://www.youtube.com/watch?v=ADBDn_8bNv4&t=232s)
+- **اغي** *aɣi* — llet [3:55](https://www.youtube.com/watch?v=ADBDn_8bNv4&t=235s)
+- **اجيف** *ajif* — puja / pujar [4:11](https://www.youtube.com/watch?v=ADBDn_8bNv4&t=251s)
+- **ازدي** *azdi* — exemple de variant de pronúncia
+- **ازف** *azf* — variant de pronúncia [4:32](https://www.youtube.com/watch?v=ADBDn_8bNv4&t=272s)
+- **مخ** *mux* — variant d'Al Hoceima [4:43](https://www.youtube.com/watch?v=ADBDn_8bNv4&t=283s)
+- **تمازيغت** *tamaziɣt* — la llengua amaziga [7:06](https://www.youtube.com/watch?v=ADBDn_8bNv4&t=426s)
+
+## كيفاش كانصاوبو معجم؟ - صناعة المعجم — `BIcoSfgJibs` (2 ítems)
+
+
+**paraula**
+
+- **ايزم** *izem* — guineu [9:21](https://www.youtube.com/watch?v=BIcoSfgJibs&t=561s)
+- **اركاز** *argaz* — home [6:38](https://www.youtube.com/watch?v=BIcoSfgJibs&t=398s)
+
+## واش كاتفهمو الأمازيغية ديال ليبيا؟ — `Bc4j7FW3E0s` (21 ítems)
+
+
+**expressió**
+
+- **ادرار نفوس** *adrar n Fus* — muntanya de Nafusa [0:30](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=30s)
+- **ددر ازز** *adrar azggʷaɣ* — la muntanya verda [0:33](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=33s)
+- **ادفز افوس** — expressió entesa per tothom [2:01](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=121s)
+- **راونين نس انزين** — la pluja cau a la platja [2:41](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=161s)
+- **انزوي زغل** — el temps és clar [3:10](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=190s)
+
+**paraula**
+
+- **افلف** — el significat d'això [0:19](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=19s)
+- **ادف** *adfel* — la neu [0:19](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=19s)
+- **يتز** — baixar, caure [0:19](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=19s)
+- **اف** — partícula (sobre/a) [0:25](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=25s)
+- **ابرور** *abror* — la neu (gel) [0:53](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=53s)
+- **تزوين** — cauen (sobre les muntanyes) [0:53](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=53s)
+- **تبروري** *tibruri* — la neu cau [1:05](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=65s)
+- **مراوين** — sembla 'platja' (segons el professor) [1:11](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=71s)
+- **افتاس** *aftas* — la platja [1:15](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=75s)
+- **انزار** *anzar* — la pluja [2:20](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=140s)
+- **تنزروفت** *tanezruft* — el desert [3:00](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=180s)
+- **اواز** *awaz* — el sol [3:27](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=207s)
+- **ازال** — molt [3:35](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=215s)
+- **كوزال** — el sol fa calor [3:40](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=220s)
+- **انزوي** *anẓwi* — el temps (clima) [3:42](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=222s)
+- **كوادو** — es mou el vent [3:47](https://www.youtube.com/watch?v=Bc4j7FW3E0s&t=227s)
+
+## تعلم اللغة الأمازيغية | صيغة الأفعال السببية — `BfEnpIgVVwo` (16 ítems)
+
+
+**regla**
+
+- **كزيف** — la forma causativa [1:36](https://www.youtube.com/watch?v=BfEnpIgVVwo&t=96s)
+- **ازدي** *azdi* — forma causativa amb s+z que esdevé z [4:49](https://www.youtube.com/watch?v=BfEnpIgVVwo&t=289s)
+- **الصيغه السببيه** — la forma causativa: fer que algú faci una acció [5:29](https://www.youtube.com/watch?v=BfEnpIgVVwo&t=329s)
+
+**expressió**
+
+- **كشم سوا** — vaig fer entrar (a algú) a dins de casa [2:54](https://www.youtube.com/watch?v=BfEnpIgVVwo&t=174s)
+- **يسو تغر** — va menjar (algú) la fusta / va fer servir la fusta [3:39](https://www.youtube.com/watch?v=BfEnpIgVVwo&t=219s)
+
+**paraula**
+
+- **السواي** *asway* — anar-hi (a peu), caminar de pressa [1:50](https://www.youtube.com/watch?v=BfEnpIgVVwo&t=110s)
+- **السدو** *asdu* — caminar, anar de pressa [1:30](https://www.youtube.com/watch?v=BfEnpIgVVwo&t=90s)
+- **اكشم** *akšem* — entrar [2:45](https://www.youtube.com/watch?v=BfEnpIgVVwo&t=165s)
+- **شمخت** — hi vaig fer entrar alguna cosa [3:06](https://www.youtube.com/watch?v=BfEnpIgVVwo&t=186s)
+- **اغروم** *aɣrum* — pa [3:31](https://www.youtube.com/watch?v=BfEnpIgVVwo&t=211s)
+- **سو** *su* — beure [4:00](https://www.youtube.com/watch?v=BfEnpIgVVwo&t=240s)
+- **سوخ** *sux* — abeurar, fer beure [4:03](https://www.youtube.com/watch?v=BfEnpIgVVwo&t=243s)
+- **السوي** *aswi* — ruixar, escampar a terra [4:13](https://www.youtube.com/watch?v=BfEnpIgVVwo&t=253s)
+- **السيخ** *asix* — vaig anar a abeurar / vaig fer beure [4:19](https://www.youtube.com/watch?v=BfEnpIgVVwo&t=259s)
+- **زدي** *zdi* — enganxar, apegar una cosa [4:35](https://www.youtube.com/watch?v=BfEnpIgVVwo&t=275s)
+- **اسدي** *asdi* — fer que una cosa quedi enganxada [4:52](https://www.youtube.com/watch?v=BfEnpIgVVwo&t=292s)
+
+## محاضرة مع الدكتور عبد الله الحلوي بعنوان: منهجية قراءة النقوش الأمازيغية القديمة — `9sEu-YNgsDI` (25 ítems)
+
+
+**regla**
+
+- **التان** — marcador de femení: comença i acaba en t [67:39](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=4059s)
+
+**expressió**
+
+- **هيش هي مملكات** — «el rei gran»; article definit en púnic [18:35](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=1115s)
+- **بناس** — expressió usada a les inscripcions, significat encara desconegut [97:33](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=5853s)
+
+**paraula**
+
+- **ما سنسن** — paraula del text púnic que es correspon amb una de l'amazic [16:40](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=1000s)
+- **اكليد** *agellid* — rei [19:09](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=1149s)
+- **تيفيناغ** *tifinaɣ* — escriptura amaziga (tifinag) [20:16](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=1216s)
+- **ات** — filla [66:16](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=3976s)
+- **تفو** — va sortir / vaig sortir [67:51](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=4071s)
+- **تفرنا** — exemple de subjecte femení [68:06](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=4086s)
+- **بوا** — fill de (en els epitafis) [80:22](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=4822s)
+- **كلسك** — amortallar, embalsamar [83:23](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=5003s)
+- **انشوف** — rentar-se, rentar [83:27](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=5007s)
+- **انبيب** — portar (el difunt a la tomba) [83:46](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=5026s)
+- **اكرد** — volar, marxar [83:59](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=5039s)
+- **اجبو** — abandonar el lloc [84:04](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=5044s)
+- **ايو** — viatjar, marxar [84:09](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=5049s)
+- **كلكد** — ens ha precedit, els que van abans [84:30](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=5070s)
+- **مسو** — perdre la vista [86:40](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=5200s)
+- **ايغو** — l'hem perdut [90:07](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=5407s)
+- **ادفو** — paraula recurrent als inscripcions antigues (adfu) [92:44](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=5564s)
+- **امكسن** — el seu (d'ells) [96:43](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=5803s)
+- **ازلس** — just, equitatiu [96:48](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=5808s)
+- **ابسن** — torxa, portador de torxa [96:33](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=5793s)
+- **اكبز** — guix (pedra calcària) [117:41](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=7061s)
+- **ازل** *azul* — salutació (azul), salut per als vianants [119:56](https://www.youtube.com/watch?v=9sEu-YNgsDI&t=7196s)
+
+## واش خاص نتخلاو على اللهجات باش نهضرو باللغة الأمازيغية المعيارية؟ 🤔🤔 — `CE65DdFBiJc` (10 ítems)
+
+
+**expressió**
+
+- **ارى يدو** — forma no estàndard per reduir la pronunciació [2:29](https://www.youtube.com/watch?v=CE65DdFBiJc&t=149s)
+- **ارى ادو** — forma estàndard escrita [3:09](https://www.youtube.com/watch?v=CE65DdFBiJc&t=189s)
+
+**paraula**
+
+- **ارزد** — mot usat a la seva regió (vs. arكز en altres) [1:00](https://www.youtube.com/watch?v=CE65DdFBiJc&t=60s)
+- **اركز** — variant regional equivalent a ارزد [1:00](https://www.youtube.com/watch?v=CE65DdFBiJc&t=60s)
+- **امقران** *amqqran* — gran, molt gran (augmentatiu) [1:31](https://www.youtube.com/watch?v=CE65DdFBiJc&t=91s)
+- **ام قريان** — el qui és gran [1:48](https://www.youtube.com/watch?v=CE65DdFBiJc&t=108s)
+- **امزيان** *amẓyan* — petit (oposat a amqqran) [1:41](https://www.youtube.com/watch?v=CE65DdFBiJc&t=101s)
+- **ام قرا** — variant de amqqran [2:12](https://www.youtube.com/watch?v=CE65DdFBiJc&t=132s)
+- **ام قور** — una altra variant [2:15](https://www.youtube.com/watch?v=CE65DdFBiJc&t=135s)
+- **اغلم** *aɣl̥em* — vermell (senyal)
+
+## خرافات حول اللغة الأمازيغية المعيارية المغربية — `CoG5tV5IeFY` (6 ítems)
+
+
+**expressió**
+
+- **اطلس تمازيغت** *aṭlas tamaziɣt* — dialectes de l'Atles Mitjà [7:54](https://www.youtube.com/watch?v=CoG5tV5IeFY&t=474s)
+
+**paraula**
+
+- **ازول** *azul* — benvingut [0:21](https://www.youtube.com/watch?v=CoG5tV5IeFY&t=21s)
+- **السد** — forma comuna usada per la majoria dels amazics [8:56](https://www.youtube.com/watch?v=CoG5tV5IeFY&t=536s)
+- **اسخ** — forma local dialectal, no present a l'estàndard [9:04](https://www.youtube.com/watch?v=CoG5tV5IeFY&t=544s)
+- **اسغ** — variant propera, no adoptada a l'estàndard [9:07](https://www.youtube.com/watch?v=CoG5tV5IeFY&t=547s)
+- **اساد** — forma amb el demostratiu -ad, adoptada a l'estàndard [9:26](https://www.youtube.com/watch?v=CoG5tV5IeFY&t=566s)
+
+## تعلم الأمازيغية بالدارجة - جمل من التواصل اليومي فتمازيغت — `CwkLcBBMSrg` (11 ítems)
+
+
+**expressió**
+
+- **ريخ يتفانت نوغروم** *riɣ ytfant n uɣrum* — vull un pa [1:14](https://www.youtube.com/watch?v=CwkLcBBMSrg&t=74s)
+- **ريخصنا التفانين** *riɣ sna tfantin* — vull dos pans
+- **في سنات تفانين** *f sinat tfantin* — dóna'm dos pans [2:31](https://www.youtube.com/watch?v=CwkLcBBMSrg&t=151s)
+- **السماني فيلم** — on vas [2:48](https://www.youtube.com/watch?v=CwkLcBBMSrg&t=168s)
+- **ريخ الدوخ صدمنات** *riɣ dduɣ s Dmnat* — vull anar a Dmnat [3:17](https://www.youtube.com/watch?v=CwkLcBBMSrg&t=197s)
+- **مانيست السديت** — d'on ets [3:27](https://www.youtube.com/watch?v=CwkLcBBMSrg&t=207s)
+- **ولا سكماني** — d'on ets [3:45](https://www.youtube.com/watch?v=CwkLcBBMSrg&t=225s)
+
+**paraula**
+
+- **ريخ** *riɣ* — vull [1:32](https://www.youtube.com/watch?v=CwkLcBBMSrg&t=92s)
+- **يتفانت** *ytfant* — un pa [1:32](https://www.youtube.com/watch?v=CwkLcBBMSrg&t=92s)
+- **نوغروم** *n uɣrum* — de pa [1:14](https://www.youtube.com/watch?v=CwkLcBBMSrg&t=74s)
+- **سرسيدي** *srsidi* — deixa'm aquí [6:04](https://www.youtube.com/watch?v=CwkLcBBMSrg&t=364s)
+
+## الاقتراض الداخلي بين متغيرات اللغة الأمازيغية — `DtYj4dbkgM4` (4 ítems)
+
+
+**paraula**
+
+- **ط** *ṭ* — singular d'ull [0:06](https://www.youtube.com/watch?v=DtYj4dbkgM4&t=6s)
+- **طوين** *ṭwin* — plural d'ull [0:21](https://www.youtube.com/watch?v=DtYj4dbkgM4&t=21s)
+- **تطاوين** *tṭawin* — plural d'ull (però ja no es fa servir) [0:30](https://www.youtube.com/watch?v=DtYj4dbkgM4&t=30s)
+- **تلين** *tlin* — el plural nou, format sobre 'tilt' (ull) [0:35](https://www.youtube.com/watch?v=DtYj4dbkgM4&t=35s)
+
+## تعلم اللغة الأمازيغية | واش عندنا الأزمنة فاللغة الأمازيغية 🤔🤔 — `EVnE8WFgNuo` (14 ítems)
+
+
+**regla**
+
+- **لي مود ليز اسبي** — aspecte del verb: si l'acció és contínua, acabada o aturada [0:13](https://www.youtube.com/watch?v=EVnE8WFgNuo&t=13s)
+- **الزمن في اللغه الامازيغيه تتحدد لنا من سياق ديال الجمله** — el temps en amazic es determina pel context de la frase [0:24](https://www.youtube.com/watch?v=EVnE8WFgNuo&t=24s)
+
+**afix**
+
+- **رسغ** — marca de la primera persona (jo) [2:06](https://www.youtube.com/watch?v=EVnE8WFgNuo&t=126s)
+- **نك** — marca de primera persona (jo), que no es diu [2:04](https://www.youtube.com/watch?v=EVnE8WFgNuo&t=124s)
+- **ترمس** — marca de segona persona (tu) [2:21](https://www.youtube.com/watch?v=EVnE8WFgNuo&t=141s)
+
+**paraula**
+
+- **رمس** — entendre [0:49](https://www.youtube.com/watch?v=EVnE8WFgNuo&t=49s)
+- **ترمست** — conjugació: tu entens [0:56](https://www.youtube.com/watch?v=EVnE8WFgNuo&t=56s)
+- **يرمس** — conjugació: ell entén [1:05](https://www.youtube.com/watch?v=EVnE8WFgNuo&t=65s)
+- **نرمس** — conjugació: jo entenc [1:10](https://www.youtube.com/watch?v=EVnE8WFgNuo&t=70s)
+- **ترمس** — conjugació: tu (fem.) entens [1:10](https://www.youtube.com/watch?v=EVnE8WFgNuo&t=70s)
+- **رمسن** — conjugació: ells entenen [1:15](https://www.youtube.com/watch?v=EVnE8WFgNuo&t=75s)
+- **رمسس** — conjugació: vosaltres (fem.) enteneu [1:15](https://www.youtube.com/watch?v=EVnE8WFgNuo&t=75s)
+- **ترمس** — conjugació: ella entén [1:15](https://www.youtube.com/watch?v=EVnE8WFgNuo&t=75s)
+- **ترمس** — conjugació: vosaltres enteneu [1:21](https://www.youtube.com/watch?v=EVnE8WFgNuo&t=81s)
+
+## تطوير اللغة الأمازيغية والبحث المصطلحي الأمازيغي مع الدكتور سي عبد الله الحلوي — `G_32v2DFkms` (1 ítems)
+
+
+**paraula**
+
+- **تنميرت** *tanemmirt* — gràcies [6:07](https://www.youtube.com/watch?v=G_32v2DFkms&t=367s)
+
+## واش فعلا قصاو شي حروف فاللغة الأمازيغية المعيارية الفصحى ؟ — `G8JwQ22ZYGQ` (14 ítems)
+
+
+**regla**
+
+- **الفونيم** — fonema: unitat que canvia el significat [3:31](https://www.youtube.com/watch?v=G8JwQ22ZYGQ&t=211s)
+- **الالوفون** — al·lòfon: només canvia la pronúncia [4:01](https://www.youtube.com/watch?v=G8JwQ22ZYGQ&t=241s)
+- **التفخيم** — emfatització: sovint contextual [3:42](https://www.youtube.com/watch?v=G8JwQ22ZYGQ&t=222s)
+- **التوافر** — criteri de freqüència i funció [4:38](https://www.youtube.com/watch?v=G8JwQ22ZYGQ&t=278s)
+- **التبسيط** — principi de simplificació per a l'aprenent [7:15](https://www.youtube.com/watch?v=G8JwQ22ZYGQ&t=435s)
+
+**paraula**
+
+- **اغراب** *aɣrab* — exemple del so ɣ [2:46](https://www.youtube.com/watch?v=G8JwQ22ZYGQ&t=166s)
+- **اغبان** *aɣban* — dent (exemple del so ɣ) [2:53](https://www.youtube.com/watch?v=G8JwQ22ZYGQ&t=173s)
+- **اخساس** *axsas* — exemple del so x [3:03](https://www.youtube.com/watch?v=G8JwQ22ZYGQ&t=183s)
+- **اقراب** *aqrab* — exemple del so q [3:00](https://www.youtube.com/watch?v=G8JwQ22ZYGQ&t=180s)
+- **ايزي** *izi* — exemple: el so ẓ canvia el significat [4:25](https://www.youtube.com/watch?v=G8JwQ22ZYGQ&t=265s)
+- **ايزيد** *iziḍ* — exemple contrast amb izi [4:25](https://www.youtube.com/watch?v=G8JwQ22ZYGQ&t=265s)
+- **ازري** *azri* — exemple del so ẓ [4:32](https://www.youtube.com/watch?v=G8JwQ22ZYGQ&t=272s)
+- **اكال** *akal* — exemple: el so canvia només la pronúncia [7:00](https://www.youtube.com/watch?v=G8JwQ22ZYGQ&t=420s)
+- **اشال** *acal* — exemple: variant de pronúncia [7:00](https://www.youtube.com/watch?v=G8JwQ22ZYGQ&t=420s)
+
+## واش اللغة #الأمازيغية #المعيارية #المغربية لغة مخبرية مصطنعة؟ — `JHaBKRGPuss` (1 ítems)
+
+
+**paraula**
+
+- **تماز** *tamaz* — branca de l'amazic de l'Atles [4:53](https://www.youtube.com/watch?v=JHaBKRGPuss&t=293s)
+
+## تعلم حروف تيفيناغ الأمازيغية بكل سهولة — `HYbz6YICrgg` (11 ítems)
+
+
+**regla**
+
+- **الم / شفا** — signe gràfic (no és so) per distingir lletres idèntiques [3:06](https://www.youtube.com/watch?v=HYbz6YICrgg&t=186s)
+- **الشده** — la geminació es marca duplicant la lletra [4:55](https://www.youtube.com/watch?v=HYbz6YICrgg&t=295s)
+- **حروف العله** — tres vocals: a, u, i; no hi ha vocal llarga [6:48](https://www.youtube.com/watch?v=HYbz6YICrgg&t=408s)
+- **الحروف ماكيتغيروش** — les lletres no canvien de forma segons la posició [7:12](https://www.youtube.com/watch?v=HYbz6YICrgg&t=432s)
+
+**paraula**
+
+- **اركاز** *argaz* — home (exemple de paraula) [0:52](https://www.youtube.com/watch?v=HYbz6YICrgg&t=52s)
+- **تمطوت** *tamṭṭut* — dona (exemple de paraula) [0:56](https://www.youtube.com/watch?v=HYbz6YICrgg&t=56s)
+- **تممت** *tammemt* — mel [3:13](https://www.youtube.com/watch?v=HYbz6YICrgg&t=193s)
+- **تنزست** *tanẓẓist* — saviesa / proverbi [4:12](https://www.youtube.com/watch?v=HYbz6YICrgg&t=252s)
+- **اسكواس** *asggʷas* — any [5:56](https://www.youtube.com/watch?v=HYbz6YICrgg&t=356s)
+- **امداكل** *tamddaklt* — amiga [5:52](https://www.youtube.com/watch?v=HYbz6YICrgg&t=352s)
+- **تنميرتن** *tanemmirt* — gràcies [7:41](https://www.youtube.com/watch?v=HYbz6YICrgg&t=461s)
+
+## كيفاش تعرفت على المتغيرات الأمازيغية الأخرى؟ — `Ka5EYm0rt7E` (5 ítems)
+
+
+**paraula**
+
+- **تميت** *tamettut* — dona (mot per 'dona' al seu parlar) [6:35](https://www.youtube.com/watch?v=Ka5EYm0rt7E&t=395s)
+- **تموات** *tamɣart* — variant per 'dona' [6:40](https://www.youtube.com/watch?v=Ka5EYm0rt7E&t=400s)
+- **تافوس** *tafus* — mot que ells no diuen; 'tafus' ( mà ) [6:35](https://www.youtube.com/watch?v=Ka5EYm0rt7E&t=395s)
+- **ت فوناس** *tfunast* — equivalent de 'dona' en un altre variant [6:49](https://www.youtube.com/watch?v=Ka5EYm0rt7E&t=409s)
+- **تمازيرت** *tamazirt* — el país / la seva regió (entorn familiar i tribal) [5:00](https://www.youtube.com/watch?v=Ka5EYm0rt7E&t=300s)
+
+## كيفاش تخلي ولادك ولا خوتك الصغار يهضرو باللغة الأمازيغية؟ — `LfJAGlVsKlY` (4 ítems)
+
+
+**expressió**
+
+- **اسنين اسسن امين** *asnun asssen amin* — formula de bon any amazic [11:07](https://www.youtube.com/watch?v=LfJAGlVsKlY&t=667s)
+
+**paraula**
+
+- **تيفيناغ** *tifinaɣ* — l'alfabet tifinag [0:28](https://www.youtube.com/watch?v=LfJAGlVsKlY&t=28s)
+- **ازول** *azul* — salutació: 'azul' (hola) [0:24](https://www.youtube.com/watch?v=LfJAGlVsKlY&t=24s)
+- **النير** *nayr* — Nayr, festa amaziga (cap d'any) [8:56](https://www.youtube.com/watch?v=LfJAGlVsKlY&t=536s)
+
+## رسالة مهمة إلى الناطقين بالمتغيرات الأمازيغية ⚠️⚠️ — `N-2G0syHUMQ` (3 ítems)
+
+
+**paraula**
+
+- **ارزد** — mot que hi ha a l'amazic estàndard però que ells no diuen [3:32](https://www.youtube.com/watch?v=N-2G0syHUMQ&t=212s)
+- **اركز** — forma que ells diuen en lloc de 'arzd' [3:38](https://www.youtube.com/watch?v=N-2G0syHUMQ&t=218s)
+- **ارياز** *aryaz* — home (forma d'una altra variant, equivalent a 'argaz') [5:11](https://www.youtube.com/watch?v=N-2G0syHUMQ&t=311s)
+
+## ٱشمن أمازيغية كايقرّيو فالمدارس المغربية ؟؟ — `NJ706WUwiAI` (4 ítems)
+
+
+**regla**
+
+- **الث الذ الظ** — sons (θ, ð, ẓ…) que es treuen del text estàndard [4:39](https://www.youtube.com/watch?v=NJ706WUwiAI&t=279s)
+- **النح النش النخ** — formes que es canvien per ɣ [5:34](https://www.youtube.com/watch?v=NJ706WUwiAI&t=334s)
+
+**paraula**
+
+- **تريفيت** *tarifit* — varietat amaziga del nord (rifeny) [3:44](https://www.youtube.com/watch?v=NJ706WUwiAI&t=224s)
+- **الغا** *ɣ* — la ɣ, so original segons els especialistes [5:20](https://www.youtube.com/watch?v=NJ706WUwiAI&t=320s)
+
+## خلاصة الأهداف المسجلة على بني قشبل في تحدي الدارجة المغربية — `Ojcr0P4ji_8` (4 ítems)
+
+
+**regla**
+
+- **الاختلافات في الفونيتيك** — les diferències entre dialectes amazics són fonètiques, no de sintaxi [1:43](https://www.youtube.com/watch?v=Ojcr0P4ji_8&t=103s)
+
+**expressió**
+
+- **فغ نكي ديلي** — exemple de construcció amaziga que es manté igual entre regions [5:25](https://www.youtube.com/watch?v=Ojcr0P4ji_8&t=325s)
+- **عندك وت عندي** — exemple de diferència lèxica entre el rifeny i el tamazight del centre [3:30](https://www.youtube.com/watch?v=Ojcr0P4ji_8&t=210s)
+
+**paraula**
+
+- **التركيب** — la sintaxi amaziga, que es manté igual i cal adaptar per fer-se entendre [3:49](https://www.youtube.com/watch?v=Ojcr0P4ji_8&t=229s)
+
+## دور أدوات الذكاء الاصطناعي في تحليل الخطاب الأمازيغوفوبي ( الجزء 1 ) — `RVDtaUl_zZs` (1 ítems)
+
+
+## علاش الأمازيغ ما كانوش كايكتبو بلوغتهم الأمازيغية؟ — `RWXucDWGs5g` (1 ítems)
+
+
+**paraula**
+
+- **تيفيناغ** *tifinaɣ* — l'alfabet propi amazic [2:01](https://www.youtube.com/watch?v=RWXucDWGs5g&t=121s)
+
+## واش كاتعرفو بالضبط شنو كاتعني اللغة الأم؟ — `SBxECuG6omY` (3 ítems)
+
+
+**paraula**
+
+- **أمود** *amud* — aprenentatge [6:24](https://www.youtube.com/watch?v=SBxECuG6omY&t=384s)
+- **أماز** *amaz* — presa, adquisició [6:26](https://www.youtube.com/watch?v=SBxECuG6omY&t=386s)
+- **تنميرت** *tanemmirt* — gràcies
+
+## واش بصح ريافة مكايفهموش أمازيغية وسط وجنوب المغرب؟ — `QiLweE9yBMo` (15 ítems)
+
+
+**regla**
+
+- **التغيرات صوتيه** — canvis fonètics entre dialectes que expliquen la incomprensió [3:32](https://www.youtube.com/watch?v=QiLweE9yBMo&t=212s)
+
+**expressió**
+
+- **ف زج فغ** — sortir de casa ahir a la nit [0:28](https://www.youtube.com/watch?v=QiLweE9yBMo&t=28s)
+
+**paraula**
+
+- **تماز** *tamaz* — nom que el professor dóna a la llengua que parla l'altre [0:17](https://www.youtube.com/watch?v=QiLweE9yBMo&t=17s)
+- **ريفيت** *rifit* — nom alternatiu (rifit) que segons el professor no s'usa [0:21](https://www.youtube.com/watch?v=QiLweE9yBMo&t=21s)
+- **كز** — paraula que equival a 'ahir' (l'altra diada) [0:46](https://www.youtube.com/watch?v=QiLweE9yBMo&t=46s)
+- **اضنت** — paraula que vol dir 'ahir' [0:51](https://www.youtube.com/watch?v=QiLweE9yBMo&t=51s)
+- **اسنت** — paraula que vol dir 'ahir' [0:55](https://www.youtube.com/watch?v=QiLweE9yBMo&t=55s)
+- **النط** — paraula que vol dir 'ahir' [0:57](https://www.youtube.com/watch?v=QiLweE9yBMo&t=57s)
+- **ايض** — paraula que vol dir 'ahir' [0:55](https://www.youtube.com/watch?v=QiLweE9yBMo&t=55s)
+- **دارت** — paraula per 'casa' poc usada a la seva zona [1:32](https://www.youtube.com/watch?v=QiLweE9yBMo&t=92s)
+- **جك** — paraula per 'casa' a la seva variant [1:36](https://www.youtube.com/watch?v=QiLweE9yBMo&t=96s)
+- **الليي** — paraula que diuen ells on l'altre diu 'ايجي' [1:49](https://www.youtube.com/watch?v=QiLweE9yBMo&t=109s)
+- **اولي** — paraula que diuen ells on l'altre diu 'اجي' [2:16](https://www.youtube.com/watch?v=QiLweE9yBMo&t=136s)
+- **اسلمان** — paraula per 'peix' [2:33](https://www.youtube.com/watch?v=QiLweE9yBMo&t=153s)
+- **لكرمان** — paraula per 'peix' a l'altra variant [2:36](https://www.youtube.com/watch?v=QiLweE9yBMo&t=156s)
+
+## واش الدارجة المغربية ممكن تولي لغة معيارية؟ — `UAjEud04dlk` (1 ítems)
+
+
+**paraula**
+
+- **تمازيغت** *tamaziɣt* — la llengua amaziga [0:27](https://www.youtube.com/watch?v=UAjEud04dlk&t=27s)
+
+## واش عمركم سمعتو باللهجة الغمارية الأمازيغية المهددة بالانقراض — `TpnF4iLV_bs` (2 ítems)
+
+
+**paraula**
+
+- **تمازيغت** *tamaziɣt* — la llengua amaziga [0:24](https://www.youtube.com/watch?v=TpnF4iLV_bs&t=24s)
+- **تشلحيت** *taclḥit* — el taixelhit (amazic del Sus) [13:23](https://www.youtube.com/watch?v=TpnF4iLV_bs&t=803s)
+
+## حكاية الكلب والديك والثعلب باللغة الأمازيغية والدارجة المغربية — `TRs6yUi5Zno` (7 ítems)
+
+
+**paraula**
+
+- **ايدي** *aydi* — gos [0:12](https://www.youtube.com/watch?v=TRs6yUi5Zno&t=12s)
+- **افلوس** *afullus* — gall / pollastre [0:17](https://www.youtube.com/watch?v=TRs6yUi5Zno&t=17s)
+- **احلي** — guineu [0:26](https://www.youtube.com/watch?v=TRs6yUi5Zno&t=26s)
+- **اشيش** — polllet / cria del gall [4:31](https://www.youtube.com/watch?v=TRs6yUi5Zno&t=271s)
+- **اغن** — cova / cau [6:14](https://www.youtube.com/watch?v=TRs6yUi5Zno&t=374s)
+- **ارسكو** — cantar el gall [6:43](https://www.youtube.com/watch?v=TRs6yUi5Zno&t=403s)
+- **امدوكال** *amddukkal* — serem amics [7:30](https://www.youtube.com/watch?v=TRs6yUi5Zno&t=450s)
+
+## جواب الأستاذ أحمد عصيد حول سؤالي حول اسباب الهجوم على اللغة الأمازيغية وحرف تيفيناغ — `UkX4Ipju-D8` (7 ítems)
+
+
+**paraula**
+
+- **تيفيناغ** *tifinaɣ* — l'alfabet amazic tifinag [0:39](https://www.youtube.com/watch?v=UkX4Ipju-D8&t=39s)
+- **تماز** *tamaz* — una de les llengües/varietats amazigues esmentades [5:58](https://www.youtube.com/watch?v=UkX4Ipju-D8&t=358s)
+- **سوسيت** *susit* — varietat amaziga (tašlḥit) [6:02](https://www.youtube.com/watch?v=UkX4Ipju-D8&t=362s)
+- **تارفيت** *tarifit* — varietat amaziga del Rif [6:02](https://www.youtube.com/watch?v=UkX4Ipju-D8&t=362s)
+- **تمازيغت** *tamaziɣt* — la llengua amaziga [19:00](https://www.youtube.com/watch?v=UkX4Ipju-D8&t=1140s)
+- **تيفيناغ** *tifinaɣ* — l'alfabet original de l'amazic, símbol identitari i el més fàcil per escriure'l [22:33](https://www.youtube.com/watch?v=UkX4Ipju-D8&t=1353s)
+- **تيفينا** *tifinaɣ* — l'alfabet amazic, que es pot aprendre fàcilment [21:56](https://www.youtube.com/watch?v=UkX4Ipju-D8&t=1316s)
+
+## تعلم الأمازيغية بالدارجة -  كيفاش طرح الأسئلة فتمازيغت؟ — `Uv4uauZqvQc` (9 ítems)
+
+
+**expressió**
+
+- **مشتهيقه** — quant costa (pregunta de preu) [3:27](https://www.youtube.com/watch?v=Uv4uauZqvQc&t=207s)
+- **ما نسر رتدوا** — quan vindrà el taxi [5:07](https://www.youtube.com/watch?v=Uv4uauZqvQc&t=307s)
+- **سماني السوداء طاكسيا** — on va aquest taxi [5:52](https://www.youtube.com/watch?v=Uv4uauZqvQc&t=352s)
+- **مشتسردنيخ** — quant costa que hi pugi (taxi) [7:14](https://www.youtube.com/watch?v=Uv4uauZqvQc&t=434s)
+
+**paraula**
+
+- **ماني** *mani* — on (interrogatiu) [1:54](https://www.youtube.com/watch?v=Uv4uauZqvQc&t=114s)
+- **لا** *la* — hi ha (locatiu) [2:02](https://www.youtube.com/watch?v=Uv4uauZqvQc&t=122s)
+- **البوسطه** *lbusta* — correu / oficina de correus [2:40](https://www.youtube.com/watch?v=Uv4uauZqvQc&t=160s)
+- **توبي** — ésser/estar (verb) [3:46](https://www.youtube.com/watch?v=Uv4uauZqvQc&t=226s)
+- **مشتى** — quant (preu) [7:00](https://www.youtube.com/watch?v=Uv4uauZqvQc&t=420s)
+
+## هل الماء جمع أم مفرد في اللغة الأمازيغية؟ — `X87uefV5iHw` (6 ítems)
+
+
+**paraula**
+
+- **امان** *aman* — aigua (tractada com a plural) [0:34](https://www.youtube.com/watch?v=X87uefV5iHw&t=34s)
+- **هزو** — verb conjugat amb un altre pronom [0:52](https://www.youtube.com/watch?v=X87uefV5iHw&t=52s)
+- **اكلت** — forma conjugada del verb [0:52](https://www.youtube.com/watch?v=X87uefV5iHw&t=52s)
+- **هز ال** — conjugació del verb [1:02](https://www.youtube.com/watch?v=X87uefV5iHw&t=62s)
+- **هز قت** — conjugació del verb [1:08](https://www.youtube.com/watch?v=X87uefV5iHw&t=68s)
+- **اكال** — verb que concorda amb 'aman' (aigua) com a plural [1:50](https://www.youtube.com/watch?v=X87uefV5iHw&t=110s)
+
+## شرح مبسط لقواعد كتابة [ⴻ] [ə] فالمدرستين الإملائيتين الأمازيغيتين المغربية والليبوجزائرية — `W5qTOEMKj5I` (14 ítems)
+
+
+**regla**
+
+- **** — la geminació s'expressa repetint la lletra [1:36](https://www.youtube.com/watch?v=W5qTOEMKj5I&t=96s)
+- **** — a la escola marroquina el separador no és un so sinó que separa lletres iguals [0:36](https://www.youtube.com/watch?v=W5qTOEMKj5I&t=36s)
+- **** — regla d'ús del separador a l'amazic estàndard del Marroc [3:17](https://www.youtube.com/watch?v=W5qTOEMKj5I&t=197s)
+- **** — a Algèria i Líbia el separador es considera un so [4:55](https://www.youtube.com/watch?v=W5qTOEMKj5I&t=295s)
+- **** — a Algèria/Líbia és un so labial en fonètica [5:04](https://www.youtube.com/watch?v=W5qTOEMKj5I&t=304s)
+- **** — en l'imperfet sovint hi ha geminació al principi del verb [4:17](https://www.youtube.com/watch?v=W5qTOEMKj5I&t=257s)
+
+**paraula**
+
+- **زم** *zem* — escriure, registrar, anotar [1:55](https://www.youtube.com/watch?v=W5qTOEMKj5I&t=115s)
+- **تممت** *tammemt* — mel [2:20](https://www.youtube.com/watch?v=W5qTOEMKj5I&t=140s)
+- **تينزت** *tinzert* — paraula esmentada com a exemple de pronúncia [2:50](https://www.youtube.com/watch?v=W5qTOEMKj5I&t=170s)
+- **تيللي** *tilli* — paraula esmentada com a exemple [2:55](https://www.youtube.com/watch?v=W5qTOEMKj5I&t=175s)
+- **اري** *ari* — arrel verbal esmentada com a exemple [3:52](https://www.youtube.com/watch?v=W5qTOEMKj5I&t=232s)
+- **توت** *tut* — paraula esmentada com a exemple d'escriptura [5:55](https://www.youtube.com/watch?v=W5qTOEMKj5I&t=355s)
+- **الم** — el separador entre lletres iguals [2:09](https://www.youtube.com/watch?v=W5qTOEMKj5I&t=129s)
+- **الم** — nom amazic del separador [4:33](https://www.youtube.com/watch?v=W5qTOEMKj5I&t=273s)
+
+## الذكاء الاصطناعي ومهارات تحليل النصوص باللغة الأمازيغية — `XWvam2JUdlI` (7 ítems)
+
+
+**regla**
+
+- **الصيغه التام وغير التام** — aspecte perfectiu (tam) i imperfectiu (el que expressa l'hàbit, acció repetida) [3:20](https://www.youtube.com/watch?v=XWvam2JUdlI&t=200s)
+
+**expressió**
+
+- **كواس** — expressió temporal (exemple d'expressió de temps) [4:10](https://www.youtube.com/watch?v=XWvam2JUdlI&t=250s)
+
+**paraula**
+
+- **تمل** — el verb 'posseir' (no és un verb, sinó una paraula d'origen amazic) [1:05](https://www.youtube.com/watch?v=XWvam2JUdlI&t=65s)
+- **تمرار** — és el mot important (exemple donat pel professor) [1:13](https://www.youtube.com/watch?v=XWvam2JUdlI&t=73s)
+- **ادرار** *adrar* — muntanya (exemple de camp lèxic de la natura) [4:00](https://www.youtube.com/watch?v=XWvam2JUdlI&t=240s)
+- **تاله** *tala* — la font (d'aigua) [4:03](https://www.youtube.com/watch?v=XWvam2JUdlI&t=243s)
+- **امان** *aman* — l'aigua
+
+## حوار حول أمازيغية  صنهاجة السراير وغمارة بشمال المغرب — `UsGClO_qLTU` (33 ítems)
+
+
+**regla**
+
+- **تماز** *tamaz* — els noms de tribus solen anar en plural [41:08](https://www.youtube.com/watch?v=UsGClO_qLTU&t=2468s)
+
+**expressió**
+
+- **اكس تمسلايت** *aks tmeslayt* — expressió sentida en un testimoni [18:47](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1127s)
+- **قم سكل** — seure a terra [32:28](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1948s)
+
+**paraula**
+
+- **تمازيغت** *tamaziɣt* — el mot 'amazic' (tamazight) [22:04](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1324s)
+- **الشلحة** *šelḥa* — el mot 'xelha' per dir amazic [22:33](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1353s)
+- **امكل** *amkl* — exemple de canvi de l en y [11:38](https://www.youtube.com/watch?v=UsGClO_qLTU&t=698s)
+- **امكي** *amki* — forma amb y de 'amkl' [11:41](https://www.youtube.com/watch?v=UsGClO_qLTU&t=701s)
+- **اذف** *aḍf* — exemple de pèrdua de la l
+- **اواي** *away* — exemple de canvi de l en y [11:57](https://www.youtube.com/watch?v=UsGClO_qLTU&t=717s)
+- **افج** *afg* — exemple de canvi de l en g [12:47](https://www.youtube.com/watch?v=UsGClO_qLTU&t=767s)
+- **ماغون** *maɣun* — exemple de variació lèxica [14:22](https://www.youtube.com/watch?v=UsGClO_qLTU&t=862s)
+- **اشان** *ašan* — variant de 'maɣun' [14:22](https://www.youtube.com/watch?v=UsGClO_qLTU&t=862s)
+- **انسي** *ansi* — mot del centre/sud per una cosa [19:43](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1183s)
+- **انيك** *anik* — variant local de 'ansi' [20:07](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1207s)
+- **شنيف** *šnif* — paraula de l'amazic de Ghomara [20:21](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1221s)
+- **تيرين** *tirin* — exemple de plural femení [29:21](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1761s)
+- **تموтан** *tmutan* — exemple de plural (cas rar) [29:33](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1773s)
+- **تمط** *tmeṭṭ* — exemple de forma (dona) [29:40](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1780s)
+- **تمتين** *temṭṭin* — plural de 'tmeṭṭ' [29:40](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1780s)
+- **عيان** *ɛyan* — adjectiu 'cansat' [29:49](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1789s)
+- **عيالين** *ɛyalin* — plural de 'ɛyan' [29:49](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1789s)
+- **تيمين** *timin* — forma per 'blanc' en alguns llocs [18:06](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1086s)
+- **تملين** *tmellin* — forma per 'blanc' (blancs) [18:19](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1099s)
+- **تغارين** *tɣarin* — dona gran o respectada [34:36](https://www.youtube.com/watch?v=UsGClO_qLTU&t=2076s)
+- **امغار** *amɣar* — home gran; també parent polític [35:05](https://www.youtube.com/watch?v=UsGClO_qLTU&t=2105s)
+- **ت مغار** *tamɣart* — parenta política (femení de amɣar) [36:01](https://www.youtube.com/watch?v=UsGClO_qLTU&t=2161s)
+- **افواي** — germà (variant de xway) [32:38](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1958s)
+- **خواي** — germà meu
+- **كرغ** — variant regional (cap/director?) [33:03](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1983s)
+- **ابرين** — el plural [31:39](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1899s)
+- **ابن روقن** — terme esmentat sense definir [31:41](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1901s)
+- **ابرت** — sortir (verb manllevat de l'àrab) [31:45](https://www.youtube.com/watch?v=UsGClO_qLTU&t=1905s)
+- **تمازيغت** *tamaziɣt* — la llengua amaziga [39:40](https://www.youtube.com/watch?v=UsGClO_qLTU&t=2380s)
+
+## أصل تسمية الريف — `_go0WCme-eE` (5 ítems)
+
+
+**regla**
+
+- **الريف** *arif* — en amazic vol dir 'arif' amb alif i designa un indret [1:46](https://www.youtube.com/watch?v=_go0WCme-eE&t=106s)
+
+**paraula**
+
+- **الريف** *arif* — la costa, el costat, la vora, l'últim tros de terra [0:03](https://www.youtube.com/watch?v=_go0WCme-eE&t=3s)
+- **الريف** *arif* — les vores, el costat de la terra [0:33](https://www.youtube.com/watch?v=_go0WCme-eE&t=33s)
+- **تمازيرت** *tamazirt* — la terra, el territori [0:44](https://www.youtube.com/watch?v=_go0WCme-eE&t=44s)
+- **الريف** *arif* — no té relació amb la costa sinó que és un tros geogràfic, l'últim tros de terra [0:55](https://www.youtube.com/watch?v=_go0WCme-eE&t=55s)
+
+## شرح بعض الأدعية باللغة الأمازيغية المعيارية (3) — `_op053uAXHk` (10 ítems)
+
+
+**expressió**
+
+- **تغفي اي** — no em carreguis [0:44](https://www.youtube.com/watch?v=_op053uAXHk&t=44s)
+- **او ارتجت تدرت** — ho vaig ajuntar tot en una sola paraula [1:32](https://www.youtube.com/watch?v=_op053uAXHk&t=92s)
+- **تقدي تودرت** — les desgràcies de la vida [1:38](https://www.youtube.com/watch?v=_op053uAXHk&t=98s)
+- **تقدي دونيت** — les desgràcies del món [1:38](https://www.youtube.com/watch?v=_op053uAXHk&t=98s)
+- **ربي يسن فاطم** — reformulació del du'a de separar-se dels mals del món [2:41](https://www.youtube.com/watch?v=_op053uAXHk&t=161s)
+- **انهك امرز** — les desgràcies al cap [5:22](https://www.youtube.com/watch?v=_op053uAXHk&t=322s)
+- **سو غين نكيا** — com la distància entre llevant i ponent [5:30](https://www.youtube.com/watch?v=_op053uAXHk&t=330s)
+
+**paraula**
+
+- **انفلا** — el cirurgià [4:06](https://www.youtube.com/watch?v=_op053uAXHk&t=246s)
+- **امرز** — ferida al cap; figuradament, desgràcia [4:13](https://www.youtube.com/watch?v=_op053uAXHk&t=253s)
+- **اكيا** — conjunt de rancúnia, angoixa i desgràcies [4:29](https://www.youtube.com/watch?v=_op053uAXHk&t=269s)
+
+## الاستعمالات المجازية للفعل في اللغة الأمازيغية (1) — `_zQxd893DJ0` (15 ítems)
+
+
+**expressió**
+
+- **يشك يشد** — venir cap a mi (amb morfema de direcció) [1:58](https://www.youtube.com/watch?v=_zQxd893DJ0&t=118s)
+- **اش كيجيك فلان ماكدي تشكا** — què et sembla / què et fa algú (literalment 'què t'apropa') [2:16](https://www.youtube.com/watch?v=_zQxd893DJ0&t=136s)
+- **اتشا واسيف** — ofegar-se al riu (literalment 'el riu l'ha menjat') [3:21](https://www.youtube.com/watch?v=_zQxd893DJ0&t=201s)
+- **ما كيشان** — què t'ha passat / què hi tens a veure [3:43](https://www.youtube.com/watch?v=_zQxd893DJ0&t=223s)
+- **ماك تشان** — amenaça: et puc pegar tot seguit [3:59](https://www.youtube.com/watch?v=_zQxd893DJ0&t=239s)
+- **تس شلس كشم في تمش** — se m'ha obert la gana (literalment 'm'ha entrat') [4:30](https://www.youtube.com/watch?v=_zQxd893DJ0&t=270s)
+- **رزس** — estar tocat del bolet / ser un ximple [4:50](https://www.youtube.com/watch?v=_zQxd893DJ0&t=290s)
+
+**paraula**
+
+- **اد** *ad* — anar-se'n, marxar [1:07](https://www.youtube.com/watch?v=_zQxd893DJ0&t=67s)
+- **ادد** *add* — venir, apropar-se (amb el morfema de direcció) [1:12](https://www.youtube.com/watch?v=_zQxd893DJ0&t=72s)
+- **يوشكا** — verb amb molts significats segons el context [1:24](https://www.youtube.com/watch?v=_zQxd893DJ0&t=84s)
+- **يشك** — perdre's (al bosc) [1:33](https://www.youtube.com/watch?v=_zQxd893DJ0&t=93s)
+- **يشكن** — anar-se'n a un lloc llunyà [2:06](https://www.youtube.com/watch?v=_zQxd893DJ0&t=126s)
+- **اشا** — menjar [3:04](https://www.youtube.com/watch?v=_zQxd893DJ0&t=184s)
+- **اكشم** — entrar [4:04](https://www.youtube.com/watch?v=_zQxd893DJ0&t=244s)
+- **ارز** — tornar-se boig [4:42](https://www.youtube.com/watch?v=_zQxd893DJ0&t=282s)
+
+## تعلم اللغة الأمازيغية | أدوات الوصل — `aGUKmfltq00` (10 ítems)
+
+
+**regla**
+
+- **أركاز د تمغارت** — 'd' d'annexió (home de la dona), no relatiu [1:14](https://www.youtube.com/watch?v=aGUKmfltq00&t=74s)
+
+**expressió**
+
+- **دايز دغن كديخ** — 'que viu aquí' [0:29](https://www.youtube.com/watch?v=aGUKmfltq00&t=29s)
+- **إيز دغن كديخ** — 'que viu aquí' (en tarifit) [0:51](https://www.youtube.com/watch?v=aGUKmfltq00&t=51s)
+- **داركاز دا محتار** — 'da' de presentació/relatiu [1:21](https://www.youtube.com/watch?v=aGUKmfltq00&t=81s)
+- **تمغارت لي إيز دغن كديخ** — exemple de relatiu 'li' en taixelhit [1:37](https://www.youtube.com/watch?v=aGUKmfltq00&t=97s)
+
+**paraula**
+
+- **دا** *da* — pronom relatiu 'que/el qui' [0:02](https://www.youtube.com/watch?v=aGUKmfltq00&t=2s)
+- **إي** *i* — relatiu equivalent a 'da' en tarifit [0:51](https://www.youtube.com/watch?v=aGUKmfltq00&t=51s)
+- **لي** *li* — relatiu 'li' en altres dialectes [0:39](https://www.youtube.com/watch?v=aGUKmfltq00&t=39s)
+- **نا** *na* — relatiu 'na' en altres dialectes [0:39](https://www.youtube.com/watch?v=aGUKmfltq00&t=39s)
+- **أدليس** *adlis* — 'llibre/text' (adlis) [1:58](https://www.youtube.com/watch?v=aGUKmfltq00&t=118s)
+
+## لقاء مع الدكتور عبد الله الحلوي | شنو هي اللغة الأمازيغيةالفصحى وPan-Amazigh (المشترك الأمازيغي)؟ — `aroOzKCo-KY` (4 ítems)
+
+
+**expressió**
+
+- **بان أمازيغ** — el lèxic comú amazic [0:56](https://www.youtube.com/watch?v=aroOzKCo-KY&t=56s)
+
+**paraula**
+
+- **إيموهاق** *Imuhaɣ* — grup amazic (Imuhaɣ) [1:05](https://www.youtube.com/watch?v=aroOzKCo-KY&t=65s)
+- **تاريفيت** *Tarifit* — el rifeny (tarifit) [3:46](https://www.youtube.com/watch?v=aroOzKCo-KY&t=226s)
+- **التاقبايليت** *Taqbaylit* — el cabilenc (taqbaylit) [3:49](https://www.youtube.com/watch?v=aroOzKCo-KY&t=229s)
+
+## اللغة الأمازيغية تدخل العالم الرقمي!!! — `aYNrdfbt9WY` (7 ítems)
+
+
+**expressió**
+
+- **تلس تماز** — llengua i cultura amazigues [1:00](https://www.youtube.com/watch?v=aYNrdfbt9WY&t=60s)
+- **ازلان نتزنيت** — primera cançó amaziga enregistrada, del Raïss Boujemaa [3:00](https://www.youtube.com/watch?v=aYNrdfbt9WY&t=180s)
+- **تلان تزنيت اوال ن الشلوح** — títol de la cançó del Raïss Boujemaa [3:22](https://www.youtube.com/watch?v=aYNrdfbt9WY&t=202s)
+
+**paraula**
+
+- **تيفي** *tifinagh* — l'alfabet tifinag [16:02](https://www.youtube.com/watch?v=aYNrdfbt9WY&t=962s)
+- **تيفيناغ** *tifinagh* — l'alfabet tifinag [17:49](https://www.youtube.com/watch?v=aYNrdfbt9WY&t=1069s)
+- **ت مازيغ** — amazic estàndard (codi de escriptura) [16:39](https://www.youtube.com/watch?v=aYNrdfbt9WY&t=999s)
+- **تيفيناغ** *tifinaɣ* — l'alfabet amazic [20:20](https://www.youtube.com/watch?v=aYNrdfbt9WY&t=1220s)
+
+## اللغة الأمازيغية لغة حياة مع الدكتور عبد الله الحلوي — `aruZmd55ouQ` (4 ítems)
+
+
+**paraula**
+
+- **اكبز** — el guix [1:20](https://www.youtube.com/watch?v=aruZmd55ouQ&t=80s)
+- **امغران** — nom d'un lloc o grup lligat al guix [1:35](https://www.youtube.com/watch?v=aruZmd55ouQ&t=95s)
+- **ازل** *azul* — salutació [3:34](https://www.youtube.com/watch?v=aruZmd55ouQ&t=214s)
+- **ايكي** — partícula que acompanya la salutació, encara en ús [3:41](https://www.youtube.com/watch?v=aruZmd55ouQ&t=221s)
+
+## واش المغاربة عندهم غير لغة أم وحدة؟ — `cJgfCH_oadE` (4 ítems)
+
+
+**paraula**
+
+- **ازول** *azul* — salutació en amazic [0:02](https://www.youtube.com/watch?v=cJgfCH_oadE&t=2s)
+- **تمازيغت** *tamaziɣt* — la llengua amaziga [4:55](https://www.youtube.com/watch?v=cJgfCH_oadE&t=295s)
+- **تمزيق** *tamaziɣt* — dialecte amazic de l'Atles [2:51](https://www.youtube.com/watch?v=cJgfCH_oadE&t=171s)
+- **تماز** *tamaz* — dialecte amazic del nord del Marroc [2:54](https://www.youtube.com/watch?v=cJgfCH_oadE&t=174s)
+
+## حوار مغربي جزائري ساخن حول اللغة الأمازيغية — `cThvEy-4oH8` (3 ítems)
+
+
+**paraula**
+
+- **يون** *yun* — el número u [2:56](https://www.youtube.com/watch?v=cThvEy-4oH8&t=176s)
+- **سين** *sin* — el número dos [3:00](https://www.youtube.com/watch?v=cThvEy-4oH8&t=180s)
+- **كراب** *kraḍ* — el número quatre en amazic [3:27](https://www.youtube.com/watch?v=cThvEy-4oH8&t=207s)
+
+## حوار مع ناطق بأمازيغية فكيك المهددة بالانقراض — `b7_17u3ReWc` (10 ítems)
+
+
+**expressió**
+
+- **ماني الشك** *mani šək* — d'on ets [6:06](https://www.youtube.com/watch?v=b7_17u3ReWc&t=366s)
+
+**paraula**
+
+- **اغرون** *aɣrum* — el poblat o ksar (vilatge fortificat amazic) [1:48](https://www.youtube.com/watch?v=b7_17u3ReWc&t=108s)
+- **غر** — el poblat o ksar [1:48](https://www.youtube.com/watch?v=b7_17u3ReWc&t=108s)
+- **نش** *nəš* — jo (pronom) [5:28](https://www.youtube.com/watch?v=b7_17u3ReWc&t=328s)
+- **شك** *šək* — tu (pronom) [5:36](https://www.youtube.com/watch?v=b7_17u3ReWc&t=336s)
+- **شم** *šəm* — tu (pronom) [5:36](https://www.youtube.com/watch?v=b7_17u3ReWc&t=336s)
+- **شنم** *šənum* — vosaltres (pronom) [5:44](https://www.youtube.com/watch?v=b7_17u3ReWc&t=344s)
+- **شنتي** *šənti* — vosaltres (pronom) [5:44](https://www.youtube.com/watch?v=b7_17u3ReWc&t=344s)
+- **هما** *həmma* — ells (pronom) [5:48](https://www.youtube.com/watch?v=b7_17u3ReWc&t=348s)
+- **اثنتي** *əttnti* — elles (pronom) [5:58](https://www.youtube.com/watch?v=b7_17u3ReWc&t=358s)
+
+## خواطر بالدارجة: عاوتاني واش الدارجة لهجة عربية ولا أمازيغية؟ — `cqHRZ7HWFLE` (1 ítems)
+
+
+**paraula**
+
+- **ازول** *azul* — benvingut / hola [0:03](https://www.youtube.com/watch?v=cqHRZ7HWFLE&t=3s)
+
+## حوار مع ناطق بأمازيغية ايث يزناسن المهددة بالانقراض — `d0X88EzvkdY` (3 ítems)
+
+
+**expressió**
+
+- **ماني تشك** *mani tškk* — d'on ets [2:55](https://www.youtube.com/watch?v=d0X88EzvkdY&t=175s)
+
+**paraula**
+
+- **ميشك** *mišš* — gairebé igual que el rifeny [3:08](https://www.youtube.com/watch?v=d0X88EzvkdY&t=188s)
+- **تمازيغت** *tamaziɣt* — la llengua amaziga [6:30](https://www.youtube.com/watch?v=d0X88EzvkdY&t=390s)
+
+## أنقى لهجة أمازيغية #اللغة_الأمازيغية_المعيارية #تمازيغت_أطلس_الكبير_الأوسط #الأمازيغية #تمازيغت — `geJCSc_20Ws` (2 ítems)
+
+
+**regla**
+
+- **** — La varietat 'pura' és la parla pròpia un cop tretes les interferències externes [0:17](https://www.youtube.com/watch?v=geJCSc_20Ws&t=17s)
+- **** — L'amazic estàndard és aquella parla sense les interferències ni els canvis fonètics [0:53](https://www.youtube.com/watch?v=geJCSc_20Ws&t=53s)
+
+## الأعراس الأمازيغية من منظور لغوي #اللغة_الأمازيغية_المعيارية #motivation #تمازيغت_أطلس_الكبير_الأوسط — `iP5ByuxsIYQ` (8 ítems)
+
+
+**expressió**
+
+- **السودان سغراتين** — anar en processó amb regals per a la núvia [0:46](https://www.youtube.com/watch?v=iP5ByuxsIYQ&t=46s)
+- **ايوان دار سنليتسخ** — avui fan el ritual de la henna [1:59](https://www.youtube.com/watch?v=iP5ByuxsIYQ&t=119s)
+
+**paraula**
+
+- **تمغرا** *tamɣra* — el casament, en general [0:02](https://www.youtube.com/watch?v=iP5ByuxsIYQ&t=2s)
+- **تيغراطين** *tiɣraṭin* — els crits de joia (zgharit), no el casament en si [0:11](https://www.youtube.com/watch?v=iP5ByuxsIYQ&t=11s)
+- **تندلي** — un dels costums/ritus del casament [0:56](https://www.youtube.com/watch?v=iP5ByuxsIYQ&t=56s)
+- **تمضليط** *tamḍliṭ* — la henna (el ribot/cerimònia de la henna) [1:54](https://www.youtube.com/watch?v=iP5ByuxsIYQ&t=114s)
+- **السخمضليط** — el ritual de la henna de la núvia [1:07](https://www.youtube.com/watch?v=iP5ByuxsIYQ&t=67s)
+- **اقيم** *qim* — seure [1:49](https://www.youtube.com/watch?v=iP5ByuxsIYQ&t=109s)
+
+## الاستعمالات المجازية للفعل في اللغة الأمازيغية (2) — `inOFP9f3GVk` (7 ítems)
+
+
+**regla**
+
+- **ايشن** — el significat depèn de l'èmfasi i del context [2:52](https://www.youtube.com/watch?v=inOFP9f3GVk&t=172s)
+
+**expressió**
+
+- **اشا تغرت** *ecca tɣṛt* — va menjar l'arròs/la canya: va rebre una pallissa [2:21](https://www.youtube.com/watch?v=inOFP9f3GVk&t=141s)
+- **اشتن** *ecctn* — menja-te'ls: amenaça o empenta a pegar [2:26](https://www.youtube.com/watch?v=inOFP9f3GVk&t=146s)
+- **ماغن الشانك يف السنك** — què et mengen les mans: ets un temerari [3:30](https://www.youtube.com/watch?v=inOFP9f3GVk&t=210s)
+
+**paraula**
+
+- **اشا** *ecca* — menjar (equivalent a 'kla' en dàrija) [1:07](https://www.youtube.com/watch?v=inOFP9f3GVk&t=67s)
+- **اشتت** *ecctt* — vull anar a pegar algú [2:59](https://www.youtube.com/watch?v=inOFP9f3GVk&t=179s)
+- **اشن** *ecn* — canvia el significat segons l'èmfasi [3:06](https://www.youtube.com/watch?v=inOFP9f3GVk&t=186s)
+
+## أسطورة وحش الماء الأمازيغية... ⵙⴳⴹⴰⵎⴰⵏ — `itzjSpEWBgc` (4 ítems)
+
+
+**expressió**
+
+- **سقد امان** *sged aman* — expressió composta: 'ofegar-se a l'aigua' [1:42](https://www.youtube.com/watch?v=itzjSpEWBgc&t=102s)
+
+**paraula**
+
+- **سكدم** *sgdem* — nom del monstre en tamazight, compost de 'sged' i 'aman' [1:26](https://www.youtube.com/watch?v=itzjSpEWBgc&t=86s)
+- **سقد** *sged* — ofegar-se [1:51](https://www.youtube.com/watch?v=itzjSpEWBgc&t=111s)
+- **امان** *aman* — aigua [1:48](https://www.youtube.com/watch?v=itzjSpEWBgc&t=108s)
+
+## واش كاينين كلمات دخيلة في اللغة الأمازيغية المعيارية ؟ — `jRGbSl13kKY` (8 ítems)
+
+
+**regla**
+
+- **ت-** *t-* — femení amb valor de diminutiu/despectiu [3:50](https://www.youtube.com/watch?v=jRGbSl13kKY&t=230s)
+
+**afix**
+
+- **أم** *am-* — prefix per formar el nom d'agent [3:14](https://www.youtube.com/watch?v=jRGbSl13kKY&t=194s)
+
+**paraula**
+
+- **الدو** *ddu* — caminar, anar [2:08](https://www.youtube.com/watch?v=jRGbSl13kKY&t=128s)
+- **السدو** *ssdu* — fer caminar, fer anar (causatiu) [2:22](https://www.youtube.com/watch?v=jRGbSl13kKY&t=142s)
+- **السدو** *ssdu* — en alguns dialectes: muntar, pujar-hi [2:53](https://www.youtube.com/watch?v=jRGbSl13kKY&t=173s)
+- **أمسدو** *amsdu* — masculí/agent de ssdu [3:03](https://www.youtube.com/watch?v=jRGbSl13kKY&t=183s)
+- **أنكرات** *ankrat* — llaurador; també l'arada [3:19](https://www.youtube.com/watch?v=jRGbSl13kKY&t=199s)
+- **تمسسوت** *tmesst* — cotxe, vehicle [3:59](https://www.youtube.com/watch?v=jRGbSl13kKY&t=239s)
+
+## خرافة الأصل اليمني للأمازيغ — `jEAupuJXYSg` (25 ítems)
+
+
+**paraula**
+
+- **ازمور** *azmur* — nom d'una ciutat costanera (Azemmour) [4:44](https://www.youtube.com/watch?v=jEAupuJXYSg&t=284s)
+- **ايجن** *aygen* — dormir (ell dorm) [9:01](https://www.youtube.com/watch?v=jEAupuJXYSg&t=541s)
+- **يض** *iḍ* — nit (ahir de nit) [9:26](https://www.youtube.com/watch?v=jEAupuJXYSg&t=566s)
+- **امان** *aman* — aigua [10:05](https://www.youtube.com/watch?v=jEAupuJXYSg&t=605s)
+- **البر** — terra, sòl sec [10:11](https://www.youtube.com/watch?v=jEAupuJXYSg&t=611s)
+- **اجمو** *agmu* — de vegades, l'est (orient) [10:43](https://www.youtube.com/watch?v=jEAupuJXYSg&t=643s)
+- **اسقر** *asqer* — l'est (orient) [10:50](https://www.youtube.com/watch?v=jEAupuJXYSg&t=650s)
+- **اغار** *aɣar* — lloc [11:18](https://www.youtube.com/watch?v=jEAupuJXYSg&t=678s)
+- **ثمن** *tmen* — a prop, proximitat [11:51](https://www.youtube.com/watch?v=jEAupuJXYSg&t=711s)
+- **غور** *ɣur* — a casa de, tenir (preposició) [12:04](https://www.youtube.com/watch?v=jEAupuJXYSg&t=724s)
+- **اكو** *aku* — lluny, distància [12:11](https://www.youtube.com/watch?v=jEAupuJXYSg&t=731s)
+- **اقريب** *aqrib* — parentiu de sang [12:50](https://www.youtube.com/watch?v=jEAupuJXYSg&t=770s)
+- **اماس** *amas* — parent (proper) [13:07](https://www.youtube.com/watch?v=jEAupuJXYSg&t=787s)
+- **امياس** *amyas* — parent (proper) [13:07](https://www.youtube.com/watch?v=jEAupuJXYSg&t=787s)
+- **ايمي** *imi* — boca [14:10](https://www.youtube.com/watch?v=jEAupuJXYSg&t=850s)
+- **اذام** *iḍam* — sang [14:13](https://www.youtube.com/watch?v=jEAupuJXYSg&t=853s)
+- **ادامن** *idammen* — sang (relacionat amb 'adim', cara) [14:13](https://www.youtube.com/watch?v=jEAupuJXYSg&t=853s)
+- **ارحت** *arḥet* — ànima, esperit [14:41](https://www.youtube.com/watch?v=jEAupuJXYSg&t=881s)
+- **ايمان** *iman* — ànima, esperit [14:41](https://www.youtube.com/watch?v=jEAupuJXYSg&t=881s)
+- **قوس** *qus* — ombra [15:48](https://www.youtube.com/watch?v=jEAupuJXYSg&t=948s)
+- **تليت** *tlit* — bonic, bella [16:26](https://www.youtube.com/watch?v=jEAupuJXYSg&t=986s)
+- **ايمن** *aymen* — dreta; jurament [16:22](https://www.youtube.com/watch?v=jEAupuJXYSg&t=982s)
+- **افسي** *afsi* — dreta (direcció) [16:44](https://www.youtube.com/watch?v=jEAupuJXYSg&t=1004s)
+- **نقل** *nqel* — traslladar, moure una cosa [16:48](https://www.youtube.com/watch?v=jEAupuJXYSg&t=1008s)
+- **اركب** *arkeb* — pujar-hi, muntar [16:59](https://www.youtube.com/watch?v=jEAupuJXYSg&t=1019s)
+
+## المتغيرات الأمازيغية: لقاء مع الدكتور عبد الخالق كلاب — `jgGedDYv2R0` (8 ítems)
+
+
+**paraula**
+
+- **تماش** — variant de 'temaz' (forma de dir 'tamazight') [4:11](https://www.youtube.com/watch?v=jgGedDYv2R0&t=251s)
+- **تماز** — variant de 'tamazight' [4:11](https://www.youtube.com/watch?v=jgGedDYv2R0&t=251s)
+- **تماج** — variant de 'tamazight' amb j en lloc de z [4:11](https://www.youtube.com/watch?v=jgGedDYv2R0&t=251s)
+- **تماق** — variant de 'tamazight' amb q [4:16](https://www.youtube.com/watch?v=jgGedDYv2R0&t=256s)
+- **اسلمان** — exemple amb l > r (aselman) [6:03](https://www.youtube.com/watch?v=jgGedDYv2R0&t=363s)
+- **اس رمان** — variant d'aselman amb r en lloc de l [6:03](https://www.youtube.com/watch?v=jgGedDYv2R0&t=363s)
+- **انسس** — vol dir 'digues' [7:17](https://www.youtube.com/watch?v=jgGedDYv2R0&t=437s)
+- **انس** — vol dir 'digues' [7:17](https://www.youtube.com/watch?v=jgGedDYv2R0&t=437s)
+
+## #اللغة_الأمازيغية_المعيارية #تمازيغت_أطلس_الكبير_الأوسط #الأمازيغية #song #تمازيغت #music #تيفيناغ — `juP-EmHPUDc` (2 ítems)
+
+
+**paraula**
+
+- **تيفيناغ** *tifinaɣ* — l'escriptura tifinag [1:11](https://www.youtube.com/watch?v=juP-EmHPUDc&t=71s)
+- **الز** *z* — la lletra z amb punt sota [1:23](https://www.youtube.com/watch?v=juP-EmHPUDc&t=83s)
+
+## الكلمات الأمازيغية بين الحقيقة والمجاز — `ju5bkTawGKg` (10 ítems)
+
+
+**expressió**
+
+- **اخ فينو** — 'el meu cap' (literalment 'cap de mi') [1:28](https://www.youtube.com/watch?v=ju5bkTawGKg&t=88s)
+- **يخفين** *ixf-inu* — 'jo mateix' (literalment 'el meu cap') [1:31](https://www.youtube.com/watch?v=ju5bkTawGKg&t=91s)
+- **فنك** *fnn-k* — 'a tu mateix' (literalment 'el teu cap') [1:41](https://www.youtube.com/watch?v=ju5bkTawGKg&t=101s)
+- **زير فنك** — 'mira per tu mateix' [1:42](https://www.youtube.com/watch?v=ju5bkTawGKg&t=102s)
+- **فغض خفي** — 'em surt del cap' (idea que se'n va del cap) [1:48](https://www.youtube.com/watch?v=ju5bkTawGKg&t=108s)
+- **يغ في** — 'li surt del cap' [1:52](https://www.youtube.com/watch?v=ju5bkTawGKg&t=112s)
+
+**paraula**
+
+- **اخف** *axf* — cap [0:28](https://www.youtube.com/watch?v=ju5bkTawGKg&t=28s)
+- **ازيف** *azif* — una de les altres paraules (metafòrica), no 'cap' [0:39](https://www.youtube.com/watch?v=ju5bkTawGKg&t=39s)
+- **اقرو** *aqru* — el darrere del cap, perquè és dur; ve de l'arrel 'aqur' [1:01](https://www.youtube.com/watch?v=ju5bkTawGKg&t=61s)
+- **اقور** *aqur* — arrel de 'aqru', 'dur' [1:01](https://www.youtube.com/watch?v=ju5bkTawGKg&t=61s)
+
+## هل اللغة البونيقية والأمازيغية لغات عربية قديمة؟ وكيف كانتا تنطقان؟ — `k7qUTaITpWI` (6 ítems)
+
+
+**expressió**
+
+- **الباي سكريبت** — text bilingüe (bi-script) [4:31](https://www.youtube.com/watch?v=k7qUTaITpWI&t=271s)
+
+**paraula**
+
+- **ما سنسن** *masensen* — nom propi del rei (Masinissa) [3:06](https://www.youtube.com/watch?v=k7qUTaITpWI&t=186s)
+- **بسنس** *bsns* — equivalent amazic del nom reial al text bilingüe [3:44](https://www.youtube.com/watch?v=k7qUTaITpWI&t=224s)
+- **اجد** *agellid* — rei (en amazic actual) [5:37](https://www.youtube.com/watch?v=k7qUTaITpWI&t=337s)
+- **ل د ت** *ldt* — lletres d i t (t final) [5:46](https://www.youtube.com/watch?v=k7qUTaITpWI&t=346s)
+- **تيفيناغ** *tifinaɣ* — escriptura tifinag [1:39](https://www.youtube.com/watch?v=k7qUTaITpWI&t=99s)
+
+## بلاغة وغنى اللغة الأمازيغية المعيارية في الترجمة الدينية — `kXaHq-2qBEk` (13 ítems)
+
+
+**expressió**
+
+- **كيد امقران** *kid amqqran* — oració nominal: 'aquest és gran' [2:08](https://www.youtube.com/watch?v=kXaHq-2qBEk&t=128s)
+- **كي تكيت م قريان** — construcció del sud amb el verb 'tobi' [2:32](https://www.youtube.com/watch?v=kXaHq-2qBEk&t=152s)
+- **شك ذ مقران** *šk d amqqran* — construcció del nord: 'tu ets gran' [2:39](https://www.youtube.com/watch?v=kXaHq-2qBEk&t=159s)
+- **شك مقران** *šk amqqran* — forma acceptada a l'estàndard [3:09](https://www.youtube.com/watch?v=kXaHq-2qBEk&t=189s)
+- **ارك قراخ** *ark qraɣ* — variant dialectal (amb ɣ final) [3:47](https://www.youtube.com/watch?v=kXaHq-2qBEk&t=227s)
+- **ارك قرك** *ark qrk* — forma estàndard (amb la variant acceptada) [3:52](https://www.youtube.com/watch?v=kXaHq-2qBEk&t=232s)
+
+**paraula**
+
+- **غفي** *ɣfi* — forma del nord/Atles Mitjà (variant) [1:12](https://www.youtube.com/watch?v=kXaHq-2qBEk&t=72s)
+- **دك** *dkk* — variant de 'aquí' segons la zona [1:31](https://www.youtube.com/watch?v=kXaHq-2qBEk&t=91s)
+- **امقران** *amqqran* — gran [2:11](https://www.youtube.com/watch?v=kXaHq-2qBEk&t=131s)
+- **امق** *amq* — arrel/forma de 'gran' [2:13](https://www.youtube.com/watch?v=kXaHq-2qBEk&t=133s)
+- **زري** *zri* — paraula esmentada com a variant [4:03](https://www.youtube.com/watch?v=kXaHq-2qBEk&t=243s)
+- **تزمت** *tzmt* — variant lèxica (enfront de 'zmrt') [4:08](https://www.youtube.com/watch?v=kXaHq-2qBEk&t=248s)
+- **زمرت** *zmrt* — variant no acceptada a l'estàndard [4:08](https://www.youtube.com/watch?v=kXaHq-2qBEk&t=248s)
+
+## اللقاء الكامل مع الدكتور عبد الله الحلوي: اللغة الأمازيغية الفصحىى ومعيرة اللغة الأمازيغية — `i5Zshc4dRbY` (39 ítems)
+
+
+**expressió**
+
+- **ابو النار** — intercanvi sexual [7:47](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=467s)
+- **تيكينون تمازغت** — l'ésser amazic [13:45](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=825s)
+- **ماترغاك** *materɣak* — t'he suplicat per algú [84:08](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=5048s)
+- **اللغه الامازيغيه المعياريه** — llengua amaziga estàndard: usable en tots els registres, basada a eliminar el manlleu i unificar terminologia [140:30](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=8430s)
+
+**paraula**
+
+- **اشق** — cinturó [6:10](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=370s)
+- **ايزيكر** — cinturó [6:18](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=378s)
+- **بكوس** — cinturó (mot antic) [6:40](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=400s)
+- **بنظر** — harmal (planta) [7:10](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=430s)
+- **امكس** — verb 'agafar/prendre' [8:12](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=492s)
+- **امكوس** — nom amazic antic [8:20](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=500s)
+- **تيجنجر** — lila (color) [8:56](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=536s)
+- **تيلوفين** — mena de menjar (tradicional) [9:20](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=560s)
+- **تيفلوت** — porta [9:33](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=573s)
+- **اري** — fer (verb) [10:17](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=617s)
+- **امكاي** — forma nominal del verb 'fer' [10:28](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=628s)
+- **امينو** — nou (arrel per a 'novetats') [11:13](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=673s)
+- **تينوتين** — novetats [11:19](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=679s)
+- **تيليت** — ésser i posseir [14:23](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=863s)
+- **ايجا** — fer (verb) [15:03](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=903s)
+- **تلالت** *tallalt* — avió [20:10](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=1210s)
+- **مينو** *minu* — nou (mot amazic autèntic, en lloc del manllevat) [19:26](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=1166s)
+- **افود** *afud* — paraula antiga (per 'genoll'?) avui desapareguda [23:04](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=1384s)
+- **الركابي** — paraula antiga avui desapareguda [23:12](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=1392s)
+- **انكر** *nker* — estar dret / aturar-se [40:22](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=2422s)
+- **اكر** *ker* — variant del verb 'estar dret' [40:35](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=2435s)
+- **انشر** *nšer* — una altra variant del mateix verb [40:43](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=2443s)
+- **تنكر** *tanker* — nom derivat (causatiu) de 'ker' [41:33](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=2493s)
+- **اسنكر** *asnker* — forma causativa derivada de 'ker' [41:33](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=2493s)
+- **ارزم** *rzem* — mot del fons amazic comú absent dels diccionaris tradicionals [45:36](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=2736s)
+- **تزدغت** *tazdɣt* — paraula que ve de l'arrel 'zd', 'casa/lloc on viu' [51:37](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=3097s)
+- **نكر** *nker* — verb 'nker' (llevar-se/alçar-se), més freqüent al Marroc [56:02](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=3362s)
+- **يسكر** *isker* — verb 'isker' (fer alguna cosa) [56:19](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=3379s)
+- **امسكار** *amskar* — títol noble; persona que fa el bé, persona honorable [57:03](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=3423s)
+- **امسكيرونيبل** — equivalent amazic de 'generós/noble', no present al Marroc [57:13](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=3433s)
+- **البانمازيغ** *panamaziɣ* — el panamazic, el conjunt comú de totes les variants [63:17](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=3797s)
+- **تيفيناغ** *tifinaɣ* — 
+- **تيفيناغ** *tifinaɣ* — l'escriptura amaziga antiga (les inscripcions) [66:06](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=3966s)
+- **ماتر** *mater* — suplicar, pregar [83:32](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=5012s)
+- **تمازيغت** *tamaziɣt* — la llengua amaziga [140:01](https://www.youtube.com/watch?v=i5Zshc4dRbY&t=8401s)
+
+## تعلم اللغة الأمازيغية | الجملة البسيطة — `mgrpl_5cTMY` (6 ítems)
+
+
+**afix**
+
+- **الش** — subjecte femení de tercera persona [4:00](https://www.youtube.com/watch?v=mgrpl_5cTMY&t=240s)
+- **ت** *t-* — prefix que marca el subjecte [1:06](https://www.youtube.com/watch?v=mgrpl_5cTMY&t=66s)
+- **اي** — element que segueix el verb i marca el subjecte [1:00](https://www.youtube.com/watch?v=mgrpl_5cTMY&t=60s)
+
+**paraula**
+
+- **ارڤ** — verb (el professor assenyala 'ارڤ' com el verb de l'oració) [3:51](https://www.youtube.com/watch?v=mgrpl_5cTMY&t=231s)
+- **اغرم** *aɣṛum* — objecte directe (exemple de complement) [3:56](https://www.youtube.com/watch?v=mgrpl_5cTMY&t=236s)
+- **تربات** — subjecte femení (exemple) [4:10](https://www.youtube.com/watch?v=mgrpl_5cTMY&t=250s)
+
+## شرح بعض الأدعية باللغة الأمازيغية المعيارية (2) — `n52kcfp7SKc` (5 ítems)
+
+
+**expressió**
+
+- **ثقت حر خوي** — súplica, usada en sentit figurat [1:00](https://www.youtube.com/watch?v=n52kcfp7SKc&t=60s)
+- **تن ميرتك السي محمد ياسين** — traducció amaziga de «si em toca l'angoixa, allibera'm» [1:40](https://www.youtube.com/watch?v=n52kcfp7SKc&t=100s)
+- **ابا ابني قنوان رزي ركرك رجمه** — versió amaziga de «si estic en la necessitat, no em deixis dependre de ningú més» [2:57](https://www.youtube.com/watch?v=n52kcfp7SKc&t=177s)
+
+**paraula**
+
+- **الرزي** — destruït, necessitat extrema [5:32](https://www.youtube.com/watch?v=n52kcfp7SKc&t=332s)
+- **زمرت** *zmer* — força, poder [4:17](https://www.youtube.com/watch?v=n52kcfp7SKc&t=257s)
+
+## حوار حول اللسانيات الأمازيغية والفرق بين المتغيرات الأمازيغية — `mJ3ZwFqfrgc` (19 ítems)
+
+
+**expressió**
+
+- **بابا امقران** *baba amqran* — avi; compost, i en sintaxi esdevé subjecte [17:50](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=1070s)
+- **افغ بابا امقران** *afɣ baba amqran* — el compost passa a subjecte en sintaxi [18:12](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=1092s)
+
+**paraula**
+
+- **تممت** *tmmt* — forma original amb m final que canvia a n [0:49](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=49s)
+- **تمنت** *tmnt* — variant amb n en lloc de m per facilitat articulatòria [1:47](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=107s)
+- **تدي** *tdi* — es transforma en 'didi' per assimilació [2:45](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=165s)
+- **تزغ** *tzɣ* — amb ɣ sonora, la t s'assimila i esdevé 'mxt' [4:05](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=245s)
+- **مخت** *mxt* — resultat de l'assimilació de tzɣ [4:22](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=262s)
+- **اور** *ur* — negació; la l esdevé r sense canvi de significat [4:47](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=287s)
+- **اول** *ul* — variant de 'ur' amb l en lloc de r [5:00](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=300s)
+- **نورمالمون** — forma amb d que perd la d i guanya t [5:31](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=331s)
+- **ازلان** *azlan* — en la parla es diu 'zlan' amb y per evitar el xoc de vocals [7:43](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=463s)
+- **زلان** *zlan* — forma amb y afegida per evitar el hiatus [7:45](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=465s)
+- **انو** *nu* — en rifeny 'aw minu', amb w per evitar el hiatus [8:10](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=490s)
+- **انس** *ns* — forma amb assimilació en lloc de 'n s' [8:40](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=520s)
+- **اسغ** *sɣ* — primera forma verbal; 's' assenyala el subjecte [12:03](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=723s)
+- **اصغى** *aṣɣa* — forma escrita correcta 'aṣɣa s' [12:40](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=760s)
+- **ويوشي** *wiwci* — forma autèntica rifenya; la variant 'nq' és només fonètica [16:22](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=982s)
+- **اغروم** *aɣrum* — exemple de mot que varia segons la zona (aɣrum / aɣm) [34:32](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=2072s)
+- **اغم** *aɣm* — variant de aɣrum en una altra zona (fenomen fonètic) [34:36](https://www.youtube.com/watch?v=mJ3ZwFqfrgc&t=2076s)
+
+## لقاء مع الناشطة الأمازيغية والإعلامية التونسية نوميديا حول وضعية اللغة الأمازيغية في تونس 🇹🇳 — `n2j4oY30KTY` (12 ítems)
+
+
+**expressió**
+
+- **حساب غيلان** — el calendari amazic (cap d'any amazic) [9:01](https://www.youtube.com/watch?v=n2j4oY30KTY&t=541s)
+- **راس السنه الامازيغيه** — cap d'any amazic [4:15](https://www.youtube.com/watch?v=n2j4oY30KTY&t=255s)
+- **الحضاره النوميه** — la civilització númida (amaziga antiga) [10:08](https://www.youtube.com/watch?v=n2j4oY30KTY&t=608s)
+- **الملوك النمي** — els reis númides [10:08](https://www.youtube.com/watch?v=n2j4oY30KTY&t=608s)
+
+**paraula**
+
+- **ماط ازمز** — la llengua amaziga [0:12](https://www.youtube.com/watch?v=n2j4oY30KTY&t=12s)
+- **الشح** — la llengua amaziga (xelha) [0:36](https://www.youtube.com/watch?v=n2j4oY30KTY&t=36s)
+- **العزايز** — la llengua amaziga, la llengua de les àvies [0:50](https://www.youtube.com/watch?v=n2j4oY30KTY&t=50s)
+- **الشلحه** — la llengua amaziga [7:47](https://www.youtube.com/watch?v=n2j4oY30KTY&t=467s)
+- **تزرت** — una variant amaziga tunisiana [5:52](https://www.youtube.com/watch?v=n2j4oY30KTY&t=352s)
+- **تمزرط** — la llengua amaziga (variant tunisiana) [5:52](https://www.youtube.com/watch?v=n2j4oY30KTY&t=352s)
+- **ازرو** — nom d'una zona/variant amaziga tunisiana [5:40](https://www.youtube.com/watch?v=n2j4oY30KTY&t=340s)
+- **جبل نفوسه** — zona amaziga líbia (muntanya de Nafusa) [11:58](https://www.youtube.com/watch?v=n2j4oY30KTY&t=718s)
+
+## شنو هوما الكلمات المعتمدة فمعجم اللغة الأمازيغية المعيارية؟ — `nZEoWAAKasQ` (7 ítems)
+
+
+**paraula**
+
+- **ابريد** *abrid* — camí (forma acceptada al lèxic) [0:41](https://www.youtube.com/watch?v=nZEoWAAKasQ&t=41s)
+- **اغراس** *aɣras* — camí (variant acceptada) [0:41](https://www.youtube.com/watch?v=nZEoWAAKasQ&t=41s)
+- **ازل** *azl* — una altra paraula, potser de vegades 'camí' [0:58](https://www.youtube.com/watch?v=nZEoWAAKasQ&t=58s)
+- **اكل** *akl* — forma amb k acceptada; les variants amb š no [1:12](https://www.youtube.com/watch?v=nZEoWAAKasQ&t=72s)
+- **اشال** — variant no acceptada de 'akl' [1:14](https://www.youtube.com/watch?v=nZEoWAAKasQ&t=74s)
+- **اشل** — variant no acceptada de 'akl' [1:14](https://www.youtube.com/watch?v=nZEoWAAKasQ&t=74s)
+- **جك** *gk* — paraula local recollida al lèxic [3:06](https://www.youtube.com/watch?v=nZEoWAAKasQ&t=186s)
+
+## تعلم اللغة الأمازيغية: الضمائر في اللغة الأمازيغية — `nLMYTj6qCZM` (11 ítems)
+
+
+**paraula**
+
+- **أنت** — tu (singular) [0:09](https://www.youtube.com/watch?v=nLMYTj6qCZM&t=9s)
+- **أنتات** — tu (femení)
+- **نكني** *nkkni* — nosaltres
+- **نشني** — variant de 'nosaltres' [0:40](https://www.youtube.com/watch?v=nLMYTj6qCZM&t=40s)
+- **كنومي** *knmmi* — vosaltres (masc.) [0:50](https://www.youtube.com/watch?v=nLMYTj6qCZM&t=50s)
+- **كنومتي** *knmmti* — vosaltres (fem.) [1:03](https://www.youtube.com/watch?v=nLMYTj6qCZM&t=63s)
+- **كنيمتي** — variant de 'vosaltres (fem.)' [1:05](https://www.youtube.com/watch?v=nLMYTj6qCZM&t=65s)
+- **كنيو** — variant de 'vosaltres' [1:12](https://www.youtube.com/watch?v=nLMYTj6qCZM&t=72s)
+- **نوتني** *nutni* — ells [1:40](https://www.youtube.com/watch?v=nLMYTj6qCZM&t=100s)
+- **نوتنتي** *nutnti* — elles [1:48](https://www.youtube.com/watch?v=nLMYTj6qCZM&t=108s)
+- **نيتنتي** — variant de 'elles' [1:51](https://www.youtube.com/watch?v=nLMYTj6qCZM&t=111s)
+
+## المجاز بين تمازيغت والدارجة المغربية — `nDQylIhYOuY` (12 ítems)
+
+
+**expressió**
+
+- **الا اصمض** *lla iṣemmeḍ* — fa fred (literalment 'hi ha fred') [2:22](https://www.youtube.com/watch?v=nDQylIhYOuY&t=142s)
+- **يوسخ فنس** *yusi xfens* — porta el seu cap, treballa per a ell mateix [3:45](https://www.youtube.com/watch?v=nDQylIhYOuY&t=225s)
+- **يوسي وجنس** *yusi uggens* — manté la família [4:01](https://www.youtube.com/watch?v=nDQylIhYOuY&t=241s)
+- **زل فونس** *zell ufuns* — corre per als seus fills (guanya el pa) [4:46](https://www.youtube.com/watch?v=nDQylIhYOuY&t=286s)
+- **يوم زكيس** *yum zekkis* — se'n riu d'algú, el té agafat [5:43](https://www.youtube.com/watch?v=nDQylIhYOuY&t=343s)
+
+**paraula**
+
+- **اصمض** *iṣemmeḍ* — el fred [2:40](https://www.youtube.com/watch?v=nDQylIhYOuY&t=160s)
+- **تصدرت** *tesdert* — la febre (que l'ha fet caure) [3:26](https://www.youtube.com/watch?v=nDQylIhYOuY&t=206s)
+- **تولى** *tulla* — la febre [3:30](https://www.youtube.com/watch?v=nDQylIhYOuY&t=210s)
+- **يوسي** *yusi* — portar, carregar (sobre un mateix) [3:42](https://www.youtube.com/watch?v=nDQylIhYOuY&t=222s)
+- **يخف** *ixf* — el cap [4:26](https://www.youtube.com/watch?v=nDQylIhYOuY&t=266s)
+- **زل** *zell* — corre [4:57](https://www.youtube.com/watch?v=nDQylIhYOuY&t=297s)
+- **فون** *funs* — pels seus fills [4:57](https://www.youtube.com/watch?v=nDQylIhYOuY&t=297s)
+
+## قصة القلعة الأمازيغية في الأندلس — `oDhJOjL8K3g` (2 ítems)
+
+
+**paraula**
+
+- **ازوغ** *azuɣ* — variant de «azk», que vol dir el color vermell [1:52](https://www.youtube.com/watch?v=oDhJOjL8K3g&t=112s)
+- **ازك** *azk* — vol dir el color vermell [1:57](https://www.youtube.com/watch?v=oDhJOjL8K3g&t=117s)
+
+## حوار مع مصري ناطق بأمازيغية واحة سيوة — `nenzQZlb03s` (12 ítems)
+
+
+**expressió**
+
+- **ايم تح** — on vas? [5:35](https://www.youtube.com/watch?v=nenzQZlb03s&t=335s)
+- **اجبن** — vaig sortir de casa [6:12](https://www.youtube.com/watch?v=nenzQZlb03s&t=372s)
+
+**paraula**
+
+- **امان** *aman* — aigua [4:46](https://www.youtube.com/watch?v=nenzQZlb03s&t=286s)
+- **تحظ** — verb 'anar' [5:58](https://www.youtube.com/watch?v=nenzQZlb03s&t=358s)
+- **اف اخام** — casa (en libi) [6:53](https://www.youtube.com/watch?v=nenzQZlb03s&t=413s)
+- **نيش** *niš* — jo (pronom) [7:23](https://www.youtube.com/watch?v=nenzQZlb03s&t=443s)
+- **نتن** *ntnin* — ells (pronom) [7:32](https://www.youtube.com/watch?v=nenzQZlb03s&t=452s)
+- **نتاتت** *nttat* — ella (pronom) [7:37](https://www.youtube.com/watch?v=nenzQZlb03s&t=457s)
+- **نكين** *nkin* — jo (variant) [8:04](https://www.youtube.com/watch?v=nenzQZlb03s&t=484s)
+- **غوري** — tinc [12:54](https://www.youtube.com/watch?v=nenzQZlb03s&t=774s)
+- **الجن** — u (número) [13:28](https://www.youtube.com/watch?v=nenzQZlb03s&t=808s)
+- **سن** *sin* — dos [13:30](https://www.youtube.com/watch?v=nenzQZlb03s&t=810s)
+
+## تجربة صادمة بين الذكاء الاصطناعي واللغة الأمازيغية - Claude AI — `nlnbW7VKVAg` (16 ítems)
+
+
+**regla**
+
+- **اس** *as* — ordre de l'oració: verb-subjecte-objecte [19:33](https://www.youtube.com/watch?v=nlnbW7VKVAg&t=1173s)
+- **امقورن ادجيكتيف** *amqurn adjectif* — l'adjectiu descriu [19:09](https://www.youtube.com/watch?v=nlnbW7VKVAg&t=1149s)
+
+**expressió**
+
+- **امغار اولد مان** *amɣar urd man* — l'home vell gran [11:43](https://www.youtube.com/watch?v=nlnbW7VKVAg&t=703s)
+- **اسنوس امزين** *asnus amzin* — la ciutat vella/petita [11:54](https://www.youtube.com/watch?v=nlnbW7VKVAg&t=714s)
+- **تتعني** *tettɛni* — hi havia una vegada (fórmula d'inici de contes) [20:05](https://www.youtube.com/watch?v=nlnbW7VKVAg&t=1205s)
+
+**paraula**
+
+- **املو** *amlu* — l'ombra [4:47](https://www.youtube.com/watch?v=nlnbW7VKVAg&t=287s)
+- **امغار** *amɣar* — l'home vell [6:32](https://www.youtube.com/watch?v=nlnbW7VKVAg&t=392s)
+- **اسنوس** *asnus* — la ciutat [6:39](https://www.youtube.com/watch?v=nlnbW7VKVAg&t=399s)
+- **اغراس** *aɣras* — ciutat [4:50](https://www.youtube.com/watch?v=nlnbW7VKVAg&t=290s)
+- **امورن** *amurn* — el nom descrit (el que rep l'adjectiu) [11:29](https://www.youtube.com/watch?v=nlnbW7VKVAg&t=689s)
+- **امقورن** *amqurn* — l'adjectiu (la descripció) [11:29](https://www.youtube.com/watch?v=nlnbW7VKVAg&t=689s)
+- **تيغرقن** *tiɣrɣn* — llunyana [11:51](https://www.youtube.com/watch?v=nlnbW7VKVAg&t=711s)
+- **احط** *aḥṭṭ* — adverbi (que el Claude va classificar malament com a nom) [12:25](https://www.youtube.com/watch?v=nlnbW7VKVAg&t=745s)
+- **ار** *ar* — conjunció (element de lligam) [13:33](https://www.youtube.com/watch?v=nlnbW7VKVAg&t=813s)
+- **الاغلا** *allaɣla* — verb existencial (hi havia / hi ha) [19:56](https://www.youtube.com/watch?v=nlnbW7VKVAg&t=1196s)
+- **تغرم** *tɣrm* — sintagma (on viu, en una ciutat) [20:38](https://www.youtube.com/watch?v=nlnbW7VKVAg&t=1238s)
+
+## تعلم اللغة الأمازيغية | شنو لي كايسبق فالترتيب في الجملة فاللغة الأمازيغية؟ واش الفعل ولا الفاعل🤔🤔 — `pBv9udNvkVE` (5 ítems)
+
+
+**afix**
+
+- **ايد** — sobre el subjecte (marca de subjecte) [0:39](https://www.youtube.com/watch?v=pBv9udNvkVE&t=39s)
+- **ت تد** — sobre el subjecte [0:43](https://www.youtube.com/watch?v=pBv9udNvkVE&t=43s)
+- **افغ ند** — sobre el subjecte [0:43](https://www.youtube.com/watch?v=pBv9udNvkVE&t=43s)
+
+**expressió**
+
+- **نش د مازي** — oració nominal amb el pronom 'nš d' [1:10](https://www.youtube.com/watch?v=pBv9udNvkVE&t=70s)
+- **توبي زي** — equivalent del verb; 'amaziɣ' vol dir 'sóc amazic' [1:18](https://www.youtube.com/watch?v=pBv9udNvkVE&t=78s)
+
+## دور الرقمنة في النهوض باللغة الأمازيغية — `pBc5GNk6I8s` (4 ítems)
+
+
+**paraula**
+
+- **تيفيناغ** *tifinaɣ* — l'alfabet tifinag [13:49](https://www.youtube.com/watch?v=pBc5GNk6I8s&t=829s)
+- **ازول** *azul* — salutació [4:29](https://www.youtube.com/watch?v=pBc5GNk6I8s&t=269s)
+- **تمازيغت** *tamaziɣt* — la llengua amaziga [15:37](https://www.youtube.com/watch?v=pBc5GNk6I8s&t=937s)
+- **تمازيغات** *tamaziɣt* — la llengua amaziga [35:39](https://www.youtube.com/watch?v=pBc5GNk6I8s&t=2139s)
+
+## واش الدارجة المغربية لهجة أمازيغية؟ — `pREGsBiY7-M` (4 ítems)
+
+
+**regla**
+
+- **دا ايتد يباس** — forma d'imperfet en tamazight amb prefix d- [4:55](https://www.youtube.com/watch?v=pREGsBiY7-M&t=295s)
+
+**afix**
+
+- **تيكال** — prefix t- per al passiu/impersonal [1:24](https://www.youtube.com/watch?v=pREGsBiY7-M&t=84s)
+- **ايسي** — prefix de passiu en tamazight [2:34](https://www.youtube.com/watch?v=pREGsBiY7-M&t=154s)
+
+**expressió**
+
+- **تودو دار باس** — variant emfàtica de la mateixa forma d'imperfet [5:18](https://www.youtube.com/watch?v=pREGsBiY7-M&t=318s)
+
+## الغنى المعجمي في اللغة الأمازيغية — `qEUUfNtKb1o` (11 ítems)
+
+
+**paraula**
+
+- **اخساس** *axsas* — part física del cos (el cap) [1:58](https://www.youtube.com/watch?v=qEUUfNtKb1o&t=118s)
+- **اخ** *ax* — el cap en sentit figurat [2:01](https://www.youtube.com/watch?v=qEUUfNtKb1o&t=121s)
+- **اسيف** *asif* — paraula comuna entre els amazics (riu) [1:41](https://www.youtube.com/watch?v=qEUUfNtKb1o&t=101s)
+- **ازيف** *azif* — paraula comuna entre els amazics [1:41](https://www.youtube.com/watch?v=qEUUfNtKb1o&t=101s)
+- **اكيو** *akʷyu* — una altra paraula en altres amazics [1:44](https://www.youtube.com/watch?v=qEUUfNtKb1o&t=104s)
+- **اشاش** *aššaš* — una altra paraula en altres amazics [1:44](https://www.youtube.com/watch?v=qEUUfNtKb1o&t=104s)
+- **لاز** *laz* — la fam [5:42](https://www.youtube.com/watch?v=qEUUfNtKb1o&t=342s)
+- **راز** *raz* — la fam (variant) [5:52](https://www.youtube.com/watch?v=qEUUfNtKb1o&t=352s)
+- **اجز** *agz* — tenir fam (verb) [6:00](https://www.youtube.com/watch?v=qEUUfNtKb1o&t=360s)
+- **انغز** *anɣz* — expressió per dir que té fam [6:17](https://www.youtube.com/watch?v=qEUUfNtKb1o&t=377s)
+- **اوجي** *uji* — exemple de canvi fonètic [7:14](https://www.youtube.com/watch?v=qEUUfNtKb1o&t=434s)
+
+## الرد على خرافة الأمازيغ لا يفهمون بعضهم مع ناطق بأمازيغة للشاوية بالجزائر — `qeKSowEb164` (11 ítems)
+
+
+**afix**
+
+- **ارغ** — marcador que indica que es parla en la llengua materna [6:19](https://www.youtube.com/watch?v=qeKSowEb164&t=379s)
+
+**paraula**
+
+- **اوي** — marcador de direcció (cap aquí), oposat a 'wid' [6:44](https://www.youtube.com/watch?v=qeKSowEb164&t=404s)
+- **ويد** — marcador de direcció oposat a 'awi' [6:44](https://www.youtube.com/watch?v=qeKSowEb164&t=404s)
+- **كنوم** — pronom de 2a persona plural (variant zenet) [5:02](https://www.youtube.com/watch?v=qeKSowEb164&t=302s)
+- **كومتي** — pronom de 2a persona plural (variant zenet) [5:02](https://www.youtube.com/watch?v=qeKSowEb164&t=302s)
+- **ارسول** — forma verbal amb el sentit 'en aquest moment' [6:12](https://www.youtube.com/watch?v=qeKSowEb164&t=372s)
+- **يتش** — forma passiva, 'es diu' [9:14](https://www.youtube.com/watch?v=qeKSowEb164&t=554s)
+- **تمش** — del mateix arrel verbal, 'menjar' [11:15](https://www.youtube.com/watch?v=qeKSowEb164&t=675s)
+- **مشش** — vol dir 'el gat' [11:49](https://www.youtube.com/watch?v=qeKSowEb164&t=709s)
+- **باشو** — un tipus d'estornell, ocell negre amb bec groc [11:59](https://www.youtube.com/watch?v=qeKSowEb164&t=719s)
+- **اي شيمي** — la pedra [12:08](https://www.youtube.com/watch?v=qeKSowEb164&t=728s)
+
+## حرف واحد كايبدل المعنى فاللغة الأمازيغية — `rK0ssepZH1A` (16 ítems)
+
+
+**regla**
+
+- **اسد** — la marca de direcció va abans del verb en interrogatives [4:03](https://www.youtube.com/watch?v=rK0ssepZH1A&t=243s)
+
+**afix**
+
+- **الد** — marca de direcció (afix verbal) [0:52](https://www.youtube.com/watch?v=rK0ssepZH1A&t=52s)
+
+**expressió**
+
+- **اسديد** — ha vingut? (interrogatiu) [4:03](https://www.youtube.com/watch?v=rK0ssepZH1A&t=243s)
+
+**paraula**
+
+- **اشك** — allunyar-se, desaparèixer [1:05](https://www.youtube.com/watch?v=rK0ssepZH1A&t=65s)
+- **اشكد** — venir, apropar-se [1:22](https://www.youtube.com/watch?v=rK0ssepZH1A&t=82s)
+- **اغول** — torna d'on has vingut [1:36](https://www.youtube.com/watch?v=rK0ssepZH1A&t=96s)
+- **اغولد** — ets lluny, vine cap aquí [1:41](https://www.youtube.com/watch?v=rK0ssepZH1A&t=101s)
+- **اور** — torna [1:53](https://www.youtube.com/watch?v=rK0ssepZH1A&t=113s)
+- **اريد** — vine cap a mi [1:58](https://www.youtube.com/watch?v=rK0ssepZH1A&t=118s)
+- **الدود** — vine cap a mi / ves [2:26](https://www.youtube.com/watch?v=rK0ssepZH1A&t=146s)
+- **فغ** — sortir [4:42](https://www.youtube.com/watch?v=rK0ssepZH1A&t=282s)
+- **فغض** — surt cap a mi, vine [4:46](https://www.youtube.com/watch?v=rK0ssepZH1A&t=286s)
+- **اغلي** — pujar [4:54](https://www.youtube.com/watch?v=rK0ssepZH1A&t=294s)
+- **غليد** — puja cap a mi [5:00](https://www.youtube.com/watch?v=rK0ssepZH1A&t=300s)
+- **هبط** — baixar [5:14](https://www.youtube.com/watch?v=rK0ssepZH1A&t=314s)
+- **زد** — baixa cap a mi [5:17](https://www.youtube.com/watch?v=rK0ssepZH1A&t=317s)
+
+## حكاية الحمار وتاجر الملح باللغة الأمازيغية والدارجة المغربية — `tvFKjUBmSc8` (4 ítems)
+
+
+**expressió**
+
+- **وان في تزري يا تكلي ودا تراره تكلي ضنين** — el qui s'ha cremat amb llet, bufa el iogurt [4:46](https://www.youtube.com/watch?v=tvFKjUBmSc8&t=286s)
+
+**paraula**
+
+- **تريري تريريت** — remolí d'aigua que et fa moure les cames [2:49](https://www.youtube.com/watch?v=tvFKjUBmSc8&t=169s)
+- **سومرت** — es va alegrar, se li va veure l'alegria [3:35](https://www.youtube.com/watch?v=tvFKjUBmSc8&t=215s)
+- **يتفي** — omplir de més, fins a vessar [4:12](https://www.youtube.com/watch?v=tvFKjUBmSc8&t=252s)
+
+## التغيرات الصوتية في تمازيغت صنهاجة السراير بمنطقة الريف بالمغرب — `sbEkqFX0-_g` (16 ítems)
+
+
+**regla**
+
+- **اللام المشددة كترجع الجيم** — regla: l geminada > j [4:58](https://www.youtube.com/watch?v=sbEkqFX0-_g&t=298s)
+- **اللام المشددة كترجع الياء** — regla: l geminada > y al nord [5:43](https://www.youtube.com/watch?v=sbEkqFX0-_g&t=343s)
+- **الياء يرجعوها راء** — regla: y > r en un context [5:43](https://www.youtube.com/watch?v=sbEkqFX0-_g&t=343s)
+- **الكاف كوها** — regla: k > ... (fenomen dels Rif) [5:52](https://www.youtube.com/watch?v=sbEkqFX0-_g&t=352s)
+
+**paraula**
+
+- **اوزنا** *awzuna* — llengua pura (sense la l) [0:59](https://www.youtube.com/watch?v=sbEkqFX0-_g&t=59s)
+- **تسليت** *taslit* — exemple de mot amb l (l > y) [2:59](https://www.youtube.com/watch?v=sbEkqFX0-_g&t=179s)
+- **اغيول** *aɣyul* — ase (amb l > y) [3:03](https://www.youtube.com/watch?v=sbEkqFX0-_g&t=183s)
+- **اغيو** *aɣyu* — ase (sense l) [3:08](https://www.youtube.com/watch?v=sbEkqFX0-_g&t=188s)
+- **اسمان** *asman* — peix [6:04](https://www.youtube.com/watch?v=sbEkqFX0-_g&t=364s)
+- **تهيه** *tahya* — ovella (singular) [6:13](https://www.youtube.com/watch?v=sbEkqFX0-_g&t=373s)
+- **تهوين** *tahwin* — ovelles (plural) [6:17](https://www.youtube.com/watch?v=sbEkqFX0-_g&t=377s)
+- **اولي** *uli* — ovella (amb l) [4:31](https://www.youtube.com/watch?v=sbEkqFX0-_g&t=271s)
+- **هرش** *harš* — exemple de canvi amazic zanata (w) [4:01](https://www.youtube.com/watch?v=sbEkqFX0-_g&t=241s)
+- **املان** *amlan* — exemple de forma amb l (Atles/Sus) [4:06](https://www.youtube.com/watch?v=sbEkqFX0-_g&t=246s)
+- **غرش** *ɣarš* — exemple de variació (ɣ/š) [8:05](https://www.youtube.com/watch?v=sbEkqFX0-_g&t=485s)
+- **غرك** *ɣark* — variant de ɣarš [8:05](https://www.youtube.com/watch?v=sbEkqFX0-_g&t=485s)
+
+## اللغة الأمازيغية لغة قوية وصامدة بحرفها تيفيناغ — `uaXoK9eKJ8Y` (12 ítems)
+
+
+**expressió**
+
+- **اتي يكي** — límit entre dos camps [3:38](https://www.youtube.com/watch?v=uaXoK9eKJ8Y&t=218s)
+- **ايزي وازي المراره والدبانه** — exemple difícil d'escriure en àrab [6:44](https://www.youtube.com/watch?v=uaXoK9eKJ8Y&t=404s)
+
+**paraula**
+
+- **تيفي** *tifinagh* — l'alfabet tifinagh [1:39](https://www.youtube.com/watch?v=uaXoK9eKJ8Y&t=99s)
+- **ازوان** *azwan* — exemple de mot amb zà simple [2:45](https://www.youtube.com/watch?v=uaXoK9eKJ8Y&t=165s)
+- **ازري** *azri* — exemple de mot amb zà emfàtica [2:53](https://www.youtube.com/watch?v=uaXoK9eKJ8Y&t=173s)
+- **يرزم** *yṛzem* — estar cansat [3:10](https://www.youtube.com/watch?v=uaXoK9eKJ8Y&t=190s)
+- **ارزم** *aṛzem* — obrir [3:14](https://www.youtube.com/watch?v=uaXoK9eKJ8Y&t=194s)
+- **ايرز** *yirz* — buscar [3:14](https://www.youtube.com/watch?v=uaXoK9eKJ8Y&t=194s)
+- **ارز** *arz* — trencar-ho [3:22](https://www.youtube.com/watch?v=uaXoK9eKJ8Y&t=202s)
+- **اجرا** *agʷra* — teixir [4:00](https://www.youtube.com/watch?v=uaXoK9eKJ8Y&t=240s)
+- **اجرا** *agra* — recollir [4:04](https://www.youtube.com/watch?v=uaXoK9eKJ8Y&t=244s)
+- **تمازيغت** *tamaziɣt* — la llengua amaziga [12:17](https://www.youtube.com/watch?v=uaXoK9eKJ8Y&t=737s)
+
+## الاستعمالات المجازية للفعل في اللغة الأمازيغية والدارجة المغربية (3) — `uwrYuwQlrIg` (10 ítems)
+
+
+**expressió**
+
+- **يوتي اصمض** *yutti aṣemmeḍ* — m'ha colpejat el fred [1:58](https://www.youtube.com/watch?v=uwrYuwQlrIg&t=118s)
+- **يوت تمره** *yut tamara* — treballar molt i patir en la feina [2:32](https://www.youtube.com/watch?v=uwrYuwQlrIg&t=152s)
+- **يوت افوس** *yut afus* — guanyar / fer bon negoci (literalment 'colpejar les mans') [3:22](https://www.youtube.com/watch?v=uwrYuwQlrIg&t=202s)
+- **يوت اغراس** *yut aɣras* — recórrer una llarga distància / patir el camí [3:42](https://www.youtube.com/watch?v=uwrYuwQlrIg&t=222s)
+- **يوت سط** *yut s-ṭ* — fer el mal d'ull [4:33](https://www.youtube.com/watch?v=uwrYuwQlrIg&t=273s)
+
+**paraula**
+
+- **يوت** *yut* — verb 'colpejar' (equivalent de 'ḍreb') [1:15](https://www.youtube.com/watch?v=uwrYuwQlrIg&t=75s)
+- **اصمض** *aṣemmeḍ* — el fred [2:07](https://www.youtube.com/watch?v=uwrYuwQlrIg&t=127s)
+- **تماره** *tamara* — l'esforç / la feinada [2:30](https://www.youtube.com/watch?v=uwrYuwQlrIg&t=150s)
+- **افوس** *afus* — la mà [3:30](https://www.youtube.com/watch?v=uwrYuwQlrIg&t=210s)
+- **اغراس** *aɣras* — el camí [3:42](https://www.youtube.com/watch?v=uwrYuwQlrIg&t=222s)
+
+## قصة نبي كتامة ... ابن أبي الطواجين الكتامي — `wVv04ds4K_Q` (3 ítems)
+
+
+**paraula**
+
+- **ازول** *azul* — benvingut / hola [0:02](https://www.youtube.com/watch?v=wVv04ds4K_Q&t=2s)
+- **تمازيغت** *tamaziɣt* — la llengua amaziga [0:22](https://www.youtube.com/watch?v=wVv04ds4K_Q&t=22s)
+- **افسار** *afsar* — explicació / exposició del tema [0:56](https://www.youtube.com/watch?v=wVv04ds4K_Q&t=56s)
+
+## واش اللغة الأمازيغية لهجة شينوية معقدة؟ — `wZBDDrYJm5c` (3 ítems)
+
+
+**paraula**
+
+- **تمازيرت** *Tamazirt* — la llengua amaziga (li ha donat pa) [7:26](https://www.youtube.com/watch?v=wZBDDrYJm5c&t=446s)
+- **تيفيناغ** *Tifinaɣ* — l'alfabet amazic, que diu que és dels més fàcils d'aprendre [9:29](https://www.youtube.com/watch?v=wZBDDrYJm5c&t=569s)
+- **ازول** *azul* — salutació amaziga [0:03](https://www.youtube.com/watch?v=wZBDDrYJm5c&t=3s)
+
+## واش حنا مراض بعقدة النقص؟ — `yofD2eza4iY` (1 ítems)
+
+
+**expressió**
+
+- **ودوران اتن وفيان** — si no et valores a tu mateix, ningú no et valorarà [9:24](https://www.youtube.com/watch?v=yofD2eza4iY&t=564s)
+
+## واش كان الفنان والشاعر الأمازيغي (أمدياز) منبوذ فمنطقة الريف المغربي؟ — `y20seyzWoqc` (6 ítems)
+
+
+**paraula**
+
+- **امدياز** *amdyaz* — artista que canta al Rif; a l'Atles, poeta [20:11](https://www.youtube.com/watch?v=y20seyzWoqc&t=1211s)
+- **ام فياز** *amdyaz* — artista que canta al Rif; a l'Atles, poeta [20:11](https://www.youtube.com/watch?v=y20seyzWoqc&t=1211s)
+- **احيدوس** *aḥidus* — conjunt de amdyaz, folklore tradicional [19:33](https://www.youtube.com/watch?v=y20seyzWoqc&t=1173s)
+- **ازول** *azul* — salutació [3:13](https://www.youtube.com/watch?v=y20seyzWoqc&t=193s)
+- **تيفيناغ** *tifinaɣ* — l'escriptura amaziga [10:19](https://www.youtube.com/watch?v=y20seyzWoqc&t=619s)
+- **تمازيغت** *tamaziɣt* — la llengua amaziga [10:12](https://www.youtube.com/watch?v=y20seyzWoqc&t=612s)
+
+## واش اللغة الأمازيغية لغة واحد فشمال افريقيا ؟ — `zk-TbLm_Ts8` (6 ítems)
+
+
+**expressió**
+
+- **ماكني صصان** — expressió que el professor cita i glossa com a 'no hi és' [1:23](https://www.youtube.com/watch?v=zk-TbLm_Ts8&t=83s)
+
+**paraula**
+
+- **ازواد** *azwad* — mot amazic dit per un home d'Azawad (Tombuctú) [1:03](https://www.youtube.com/watch?v=zk-TbLm_Ts8&t=63s)
+- **انياس** — forma citada com a equivalent en una altra variant [1:27](https://www.youtube.com/watch?v=zk-TbLm_Ts8&t=87s)
+- **مايان** — variant citada; el professor diu que no hi ha diferència [1:32](https://www.youtube.com/watch?v=zk-TbLm_Ts8&t=92s)
+- **تدلق** — forma per a 'tres' en una variant, equivalent a 'telt' [1:45](https://www.youtube.com/watch?v=zk-TbLm_Ts8&t=105s)
+- **لاز** *laz* — 'laz' vol dir gana i té verb [3:34](https://www.youtube.com/watch?v=zk-TbLm_Ts8&t=214s)

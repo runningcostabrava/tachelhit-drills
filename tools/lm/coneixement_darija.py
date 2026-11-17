@@ -5,7 +5,8 @@ al moment del vídeo on ho diu: la parella veu – transcripció – traducció 
 Entrada: `mina_*.jsonl` (sortida de mina_transcrits.py) i la carpeta dels vtt automàtics.
 Per a cada ítem es busca el rètol del vtt que conté la frase `on` (o el seu tros més llarg) i se
 li posa l'instant (de–a) del vídeo. Sortida:
-  · <sortida>.jsonl: un ítem per línia amb video, de, a, amazic_ar, amazic_llati, significat_ca,
+  · <sortida>.jsonl: un ítem per línia amb video, idx (posició de l'ítem al minat: la clau que fa
+    servir l'auditoria), model (el que l'ha extret), de, a, amazic_ar, amazic_llati, significat_ca,
     significat_ar, mena, on, url (youtube amb &t=)
   · <sortida>.md: el coneixement per vídeo i mena (regles i afixos primer), amb l'enllaç al moment
 
@@ -73,18 +74,19 @@ if __name__ == "__main__":
             rets = cues(cami) if os.path.exists(cami) else []
             linies_md.append(f"\n## {d.get('titol') or vid} — `{vid}` ({len(items)} ítems)\n")
             for mena in ("regla", "afix", "expressió", "paraula"):
-                xs = [it for it in items if it.get("mena") == mena]
+                xs = [(i, it) for i, it in enumerate(items) if it.get("mena") == mena]
                 if not xs:
                     continue
                 linies_md.append(f"\n**{mena}**\n")
-                for it in xs:
+                for idx, it in xs:
                     n_items += 1
                     t = troba(it.get("on") or "", rets) if rets else None
                     de, a = (round(t[0], 1), round(t[1], 1)) if t else (None, None)
                     if t:
                         n_temps += 1
                     url = f"https://www.youtube.com/watch?v={vid}&t={int(de)}s" if de is not None else ""
-                    fila = {"video": vid, "titol": d.get("titol"), "de": de, "a": a, "amazic_ar": it.get("amazic_ar"),
+                    fila = {"video": vid, "idx": idx, "model": d.get("model") or "deepseek-chat", "titol": d.get("titol"),
+                            "de": de, "a": a, "amazic_ar": it.get("amazic_ar"),
                             "amazic_llati": it.get("amazic_llati") or "", "significat_ca": it.get("significat_ca"),
                             "significat_ar": it.get("significat_ar"), "mena": mena, "on": it.get("on"), "url": url}
                     g.write(json.dumps(fila, ensure_ascii=False) + "\n")
