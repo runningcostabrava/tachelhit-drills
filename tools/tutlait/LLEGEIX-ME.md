@@ -29,3 +29,18 @@ va renombrar-ho tot sense perdre la feina dels identificadors únics (10.328 tra
 veredictes conservats; 2.761 talls tornats a traduir i auditar), i `comprova_so.py` compara el so de
 cada tall amb el del parquet byte a byte i el torna a escriure si falta o no coincideix (en va trobar
 15). **Abans de `carrega.py --escriu`, `comprova_so.py` ha de dir 0 que falten i 0 diferents.**
+
+## Engegar la cadena fora de la sessió
+
+La nit del 16 al 17-11 el sistema de la sessió de Claude va matar `nit.py` per falta de memòria just
+quan començava l'auditoria. Les cadenes d'hores no han de dependre de la sessió: s'engeguen com a
+procés propi del Windows amb `tools\lm\engega_fora.ps1`, que fa servir el venv del backend, les deixa
+córrer en segon pla i escriu el registre a part:
+
+```powershell
+tools\lm\engega_fora.ps1 tools\tutlait\nit.py -Registre C:\Users\josep\Veus-tachelhit\_paquets\tutlait\nit_fora.log
+```
+
+Imprimeix el PID; `Get-Content <registre> -Wait` per seguir-la, `Stop-Process -Id <PID>` per aturar-la.
+`nit.py` reprèn on era (traduccions, veredictes i pendents es reprenen per id), així que tornar-la a
+engegar no repeteix feina.
