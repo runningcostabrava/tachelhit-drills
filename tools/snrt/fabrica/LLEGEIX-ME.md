@@ -120,8 +120,7 @@ Les rèpliques ajuntades hereten `arab_dubtos` si ho era algun tram i la pitjor 
 **El límit honest.** CER 0,0074 (84 línies exactes de 100; sense tashkil ni puntuació) sobre 100 línies de 1080p, **però: (1) la veritat l'ha transcrita el
 peó que ha entrenat el lector, no en Pablo** (en queda la revisió: `tipografia/arab/veritat/revisio.html`; 16 línies en discrepància); (2) els dos vídeos de la
 mesura (Illy cap. 1 i l'entrevista de Tadfi) són els de l'ajust fi: les línies mesurades són diferents de les entrenades (82 amb text nou: 0,0070), però la
-tipografia, la sèrie i la compressió són les mateixes; (3) només 30 de les 659 línies d'ajust són d'Illy (Illy: 0,014; entrevista: 0,005). No s'ha mesurat en
-un altre programa ni en un capítol nou: `INFORME_LECTOR.md` («mesura neta en capítol nou») hi anirà quan es faci. Només amb línies sintètiques el CER era 0,08, i més
+tipografia, la sèrie i la compressió són les mateixes; (3) només 30 de les 659 línies d'ajust són d'Illy (Illy: 0,014; entrevista: 0,005). En un **capítol nou** de l'entrevista (Asmae Moudoubah; instants i regla congelats abans, 100 línies transcrites a mà abans d'executar el lector): CER 0,0059, 82 línies exactes, error dominant ت→ن (9 de 18); a l'etapa 02 sobre els primers 600 s: 0 crides de visió, 28 % de rèpliques `arab_dubtos`, i alguns errors no van marcats. Cap mesura en un altre programa (`INFORME_LECTOR.md`, «mesura neta en capítol nou»). Només amb línies sintètiques el CER era 0,08, i més
 d'una època d'ajust fi l'empitjora (0,016): no es pot reentrenar a cegues. Fins llavors és **candidat**, no substitut del visió.
 
 ## El lector de tifinag és una funció
