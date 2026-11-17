@@ -70,3 +70,30 @@ Catalogada. Si en Pablo vol tirar endavant: (1) demanar permís a la SNRT; (2) m
 prova sobre UN capítol d'«Illy» amb la cadena que ja tenim, només per mesurar, sense carregar res.
 Relacionat: `tamazight-for-all.md`, `models-de-text.md` (Baba Ali), memòria «YouTube no té més
 veritat humana amaziga» (que cal matisar: pistes no, text cremat sí).
+
+## Per a la trucada amb la SNRT (17-11)
+
+En Pablo parlarà amb el director lingüístic de la SNRT perquè ho passi al cap de la secció
+amaziga. El que es demana, per ordre de valor, i el que s'ofereix:
+
+**Demanar.** (1) **Els fitxers de subtítols originals** (SRT o semblant) de les sèries: la línia en
+tifinag i la línia en àrab amb els temps. És la petició clau: l'OCR del tifinag cremat costa un
+29 % d'error; el fitxer original dona el text exacte i a ells no els costa res. Si tenen guió o
+versió llatina, millor. (2) **Permís per fer servir rèpliques curtes de so** dels capítols amb el seu
+text i la traducció al català, en una biblioteca educativa sense ànim de lucre, amb crèdit a
+Tamazight TV i a la SNRT a cada rèplica i enllaç al capítol sencer a YouTube. (3) **La varietat de
+cada sèrie** (Atles Central, Souss, Rif) i, si pot ser, la zona dels actors: només ho saben ells.
+(4) Que **ho revisin** si volen: ensenyar-los com queda abans de publicar res seu i retirar el que
+demanin.
+
+**Oferir.** Crèdit visible a cada rèplica («Tamazight TV, SNRT, sèrie Illy, capítol 1»), mai
+l'estat del permís a l'app; ús només educatiu i sense ànim de lucre; cap redistribució de capítols
+ni d'àudio llarg; la traducció catalana marcada com a nostra; les frases alineades i traduïdes a la
+seva disposició (tindrien les sèries traduïdes al català i un corpus de l'Atles alineat); enllaç a
+cada capítol.
+
+**Què cal per escrit.** Un correu d'un paràgraf: qui autoritza, què (sèries i canal de YouTube), per
+a què (biblioteca educativa) i com s'ha de citar. Es desa a `docs/PERMISOS.md`.
+
+**La prova de mesura** (capítol 1 d'«Illy», `q8rMnmWpMkI`, autoritzada per en Pablo el 17-11 només
+per baixar i mesurar) és a `Veus-tachelhit\_escoltats\tamazight_tv\illy_01\INFORME.md` quan acabi.
