@@ -21,6 +21,8 @@ def _args(**k):
 def _simula(monkeypatch, tmp_path, estat):
     """Estat del capítol = `estat`; torna la llista de les etapes que s'han executat."""
     executades = []
+    (tmp_path / "talls").mkdir(exist_ok=True)   # 03 només es dona per feta amb el registre d'intervals (#681)
+    (tmp_path / "talls" / "intervals.json").write_text("{}")
     monkeypatch.setattr(comu, "etapa_feta", lambda c, e: e in estat)
     monkeypatch.setattr(comu, "estat_llegeix", lambda c: estat)
 
