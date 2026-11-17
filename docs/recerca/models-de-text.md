@@ -365,6 +365,35 @@ cap a l'anglès segueix viu («I do not speak Arabic.»). Per tornar a la v2:
 fitxers de la revisió v2 com a commit nou i reinicia el Space de fàbrica); les mesures en viu de cada
 versió són a la mateixa carpeta (`viu_abans.json`, `viu_despres.json`, `viu_v3.json`).
 
+**Ablació: la v3 sense les 302** (17-11, matí; peó `nllb-afina`, nucli `nllb-afina-propi` v4 = el guió de la
+v3 tal qual, `tools/lm/kaggle/prepara_ablacio.py` + `compara_ablacio.py`). La v3 va canviar tres coses
+alhora; aquí el mateix nucli (5e-5, 5 èpoques, millor pèrdua de dev, llavor 1114, mateix test-dins de 200 i
+mateixes 60) amb un sol canvi: fora del train les parelles d'origen «auditors 16-11». Al `train.json` de la
+v3 n'hi havia **236, no 302**: de les 302 afegides al pas v3.2, el pas v3.3 (fuita i duplicats) en va treure
+66 (35 duplicaven una parella que ja era al train, 28 es duplicaven entre elles, 3 tenien el mateix text que
+la mostra o el test). Train: 3.163 (3.013 entrenen, 150 de dev). Pèrdua de dev 2,08 → 1,88 → 1,80 → 1,79 →
+**1,78** (la 5a, encara baixava). Sortides a `Veus-tachelhit\_escoltats\models\nllb_afina\v3_sense_302\`
+(`taula_ablacio.md`).
+
+| camí | grup | abans | v2 | ablació (sense les 302) | v3 (amb) | Δ ablació → v3 | IC 95 % |
+|---|---|---|---|---|---|---|---|
+| **català directe** | **60 frases** | 0,454 | 0,571 | **0,614** | 0,618 | +0,004 | [−0,021, +0,029] |
+| català directe | shi (30) | 0,494 | 0,554 | 0,582 | 0,587 | +0,005 | [−0,028, +0,044] |
+| català directe | Beni Mellal (30) | 0,414 | 0,589 | 0,647 | 0,649 | +0,003 | [−0,033, +0,035] |
+| **català directe** | **test-dins (200)** | 0,278 | 0,425 | **0,448** | 0,453 | +0,006 | [−0,006, +0,016] |
+| pont (→ anglès + DeepSeek) | 60 frases | 0,527 | 0,554 | 0,601 | 0,587 | −0,013 | [−0,039, +0,008] |
+| pont | test-dins (200) | 0,307 | 0,392 | 0,408 | 0,409 | +0,000 | [−0,011, +0,012] |
+
+Contra la v2, l'ablació guanya igual que la v3: 60 frases +0,043 [+0,010, +0,078], test-dins +0,023
+[+0,003, +0,042]. El que se'n treu: (1) **les 302 confirmades no aporten res mesurable**: amb o sense, la v3
+dóna el mateix (+0,004 i +0,006, l'IC centrat al zero), i al test-dins les fonts que haurien de notar-ho
+tampoc es mouen (MTNRA 0,720 → 0,725, Common Voice 0,620 → 0,623). (2) El salt de la v2 a la v3 ve, doncs,
+de treure el vocabulari sol i del ritme/èpoques amb el millor checkpoint, no de les parelles noves; 236
+frases més sobre 3.000 d'una font ja ben representada no canvien el model. (3) Pel pont, sense les 302 surt
+un pèl millor (0,601 contra 0,587), dins del soroll. (4) Les dues passades coincideixen també a cegues
+(ablació 0,614 contra v3 0,618 amb la mateixa llavor): la variància entre execucions és de l'ordre de 0,005,
+cosa que posa una vara per llegir diferències petites d'ara endavant. No s'ha tocat el Space.
+
 ## La capa gratuïta de Groq (16-11, nit; `Veus-tachelhit\_escoltats\models\compara_groq.py`)
 
 Clau `GROQ_API_KEY` a `backend/.env` (en Pablo, 16-11). Les mateixes 60 frases, raonament baix,
