@@ -15,12 +15,12 @@ yt-dlp (amb ffmpeg) baixa el vídeo.
 Per omissió desa a C:\Users\josep\Veus-tachelhit\_escoltats\tamazight_tv\replay\<slug>.mp4 i un .json al costat
 amb el títol i les adreces. --nomes-url només imprimeix la llista amb fitxa (per provar sense baixar).
 """
-import argparse, html, io, json, os, re, subprocess, sys, urllib.parse, urllib.request
+import argparse, concurrent.futures, html, io, json, os, re, shutil, subprocess, sys, time, urllib.error, urllib.parse, urllib.request
 
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) tachelhit-drills/recerca"
 CAPS = {"User-Agent": UA, "Referer": "https://forja.ma/", "Origin": "https://forja.ma", "Accept": "*/*"}
-VENV_PY = r"C:\Users\josep\app2\tachelhit-drills\backend\venv\Scripts\python.exe"
-CARPETA = r"C:\Users\josep\Veus-tachelhit\_escoltats\tamazight_tv\replay"
+# Només cal python 3 i ffmpeg al PATH: corre igual al PC i a l'ECS (forja.ma no bloqueja per país com YouTube).
+CARPETA = os.environ.get("TD_REPLAY") or (r"C:\Users\josep\Veus-tachelhit\_escoltats\tamazight_tv\replay" if os.name == "nt" else os.path.expanduser("~/tamazight_tv/replay"))
 
 
 def llegeix(url, caps=CAPS):
@@ -125,11 +125,92 @@ def main():
     json.dump({"url_pagina": a.url, "titol": titol, "titol_pagina": titol_pagina, "slug": slug, "stream_api": stream_api,
                "llista": llista, "fitxer": sortida, "permis": "SNRT 17-11-2026, recerca, no republicar"},
               io.open(sortida[:-4] + ".json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    ordre = [VENV_PY, "-X", "utf8", "-m", "yt_dlp", "--no-warnings", "--referer", "https://forja.ma/", "--user-agent", UA,
-             "-f", f"bestvideo[height<={a.qualitat}]+bestaudio/best[height<={a.qualitat}]/best",
-             "--merge-output-format", "mp4", "-o", sortida, final]
-    print("yt-dlp →", sortida, flush=True)
-    sys.exit(subprocess.call(ordre))
+    # yt-dlp no passa la fitxa (la cua de consulta) als trossos: 403. Ho baixem nosaltres.
+    baixa_hls(llista, sortida, a.qualitat)
+
+
+def _baixa_tros(url, cua, desti, fitxa_nova):
+    """Un tros .ts amb la fitxa; si la fitxa ha caducat (403), en demana una de nova i torna a provar."""
+    for intent in range(4):
+        try:
+            req = urllib.request.Request(url + "?" + cua[0], headers=CAPS)
+            with urllib.request.urlopen(req, timeout=120) as r, io.open(desti, "wb") as f:
+                while True:
+                    b = r.read(1 << 16)
+                    if not b:
+                        break
+                    f.write(b)
+            return
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403) and intent < 3:
+                cua[0] = fitxa_nova()
+                continue
+            raise
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            if intent == 3:
+                raise
+            time.sleep(3)
+
+
+def baixa_hls(llista, sortida, qualitat=720, fils=6):
+    """Llista mestra → variant de vídeo (≤ qualitat) i pista d'àudio → trossos amb fitxa → ffmpeg."""
+    def fitxa_nova():
+        return amb_fitxa(llista).split("?", 1)[1]
+    cua = [fitxa_nova()]
+    mestra = llegeix(llista + "?" + cua[0])
+    variants, audio = [], None
+    linies = mestra.splitlines()
+    for i, l in enumerate(linies):
+        if l.startswith("#EXT-X-MEDIA:") and "TYPE=AUDIO" in l:
+            m = re.search(r'URI="([^"]+)"', l)
+            if m:
+                audio = m.group(1)
+        if l.startswith("#EXT-X-STREAM-INF:"):
+            m = re.search(r"RESOLUTION=(\d+)x(\d+)", l)
+            alt = int(m.group(2)) if m else 0
+            variants.append((alt, linies[i + 1].strip()))
+    if not variants:
+        sys.exit("la llista mestra no té variants")
+    aptes = [v for v in variants if v[0] <= qualitat] or [min(variants)]
+    alt, uri_video = max(aptes)
+    print(f"variant {alt}p: {uri_video}" + (f" | àudio: {audio}" if audio else ""), flush=True)
+    tmp = sortida[:-4] + "_trossos"
+    os.makedirs(tmp, exist_ok=True)
+    parts = []
+    for nom, uri in (("video", uri_video), ("audio", audio)):
+        if not uri:
+            continue
+        base = urllib.parse.urljoin(llista, uri)
+        mitja = llegeix(base + "?" + cua[0])
+        trossos = [urllib.parse.urljoin(base, l.strip()) for l in mitja.splitlines() if l.strip() and not l.startswith("#")]
+        print(f"{nom}: {len(trossos)} trossos", flush=True)
+        fitxers = []
+        with concurrent.futures.ThreadPoolExecutor(fils) as ex:
+            futurs = []
+            for k, url in enumerate(trossos):
+                desti = os.path.join(tmp, f"{nom}_{k:05d}.ts")
+                fitxers.append(desti)
+                if os.path.exists(desti) and os.path.getsize(desti) > 0:
+                    continue
+                futurs.append(ex.submit(_baixa_tros, url, cua, desti, fitxa_nova))
+            for n, f in enumerate(concurrent.futures.as_completed(futurs), 1):
+                f.result()
+                if n % 50 == 0:
+                    print(f"  {nom} {n}/{len(futurs)}", flush=True)
+        junt = os.path.join(tmp, nom + ".ts")
+        with io.open(junt, "wb") as out:
+            for p in fitxers:
+                out.write(io.open(p, "rb").read())
+        parts.append(junt)
+    ordre = ["ffmpeg", "-y", "-loglevel", "error"]
+    for p in parts:
+        ordre += ["-i", p]
+    ordre += ["-c", "copy", "-movflags", "+faststart", sortida]
+    print("ffmpeg →", sortida, flush=True)
+    if subprocess.call(ordre) != 0:
+        sys.exit("ffmpeg ha fallat; els trossos queden a " + tmp)
+    shutil.rmtree(tmp, ignore_errors=True)
+    print("fet:", sortida, round(os.path.getsize(sortida) / 1e6, 1), "MB", flush=True)
 
 
 if __name__ == "__main__":
