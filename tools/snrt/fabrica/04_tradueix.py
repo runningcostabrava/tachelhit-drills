@@ -5,12 +5,18 @@
 
 - Àrab → català amb dos models (`qwen3.8-max` a Model Studio i `deepseek-chat`; temperatura 0; el prompt de
   tools/tutlait/tradueix_ar_ca.py): `catala_a`, `catala_b`, `model_a`, `model_b`, `chrf_ab`.
-- Si 0,3 ≤ chrf_ab < 0,5, un tercer (`gemini-2.5-flash` només si hi ha crèdit, que avui no; si no, `qwen4-max`) i
+- Si 0,3 ≤ chrf_ab < 0,5, un tercer auditor (`gemini-2.5-flash` sense raonar, només en aquest cas; o el que digui `TD_MODEL_AR_C`) i
   es queda el dels dos que coincideixi ≥ 0,5 amb el tercer (`catala_estat` = «tercer»). Si chrf_ab ≥ 0,5,
   `catala` = `catala_a` («confirmat»). Si no hi ha acord, «descartat» i `catala` buit.
 - Tifinag → català amb el nostre Space, només per mesurar: `catala_de_tifinag` i `chrf_tif_ar` (contra `catala`).
 Reprèn per id: una fila amb `catala_estat` i sense error no es repeteix; si l'àrab o el tifinag han canviat, sí.
-Els crèdits no es tradueixen.
+Els crèdits no es tradueixen. Les rèpliques amb `arab_dubtos` (lector d'àrab propi) tampoc: no passen la porta del traductor (§5) i no han de gastar fitxes.
+
+Límit de cost (ordre del director, 18-11-2026): cada crida suma les fitxes del model a `TD_TV/_costos.json` (acumulat de tots els capítols). Quan un model passa el
+límit — DeepSeek `TD_LIMIT_DEEPSEEK_USD` (3,6 $ de seguretat per als 4 €), Gemini `TD_LIMIT_GEMINI_USD` (1,8 $ per als 2 €), la resta (Qwen, quota gratuïta d'1 M)
+`TD_LIMIT_QWEN_FITXES` (850.000) — l'etapa deixa de traduir: les files que queden no es toquen (catàleg amb el català buit), l'etapa acaba bé amb
+`comptes.pressupost_esgotat`, i quan es pugi el límit la mateixa etapa reprèn el que falta. El preu es compta per excés: totes les fitxes (dins i fora) al preu de
+sortida (DeepSeek 0,28 $/M, Gemini 2,5 $/M).
 """
 import argparse
 import os
@@ -25,7 +31,7 @@ import comu  # noqa: E402
 ETAPA = "04_tradueix"
 MODEL_A = os.environ.get("TD_MODEL_AR_A", "qwen3.8-max")
 MODEL_B = os.environ.get("TD_MODEL_AR_B", "deepseek-chat")
-MODEL_C = os.environ.get("TD_MODEL_AR_C", "qwen4-max")
+MODEL_C = os.environ.get("TD_MODEL_AR_C", "gemini-2.5-flash")   # tercer auditor (ordre del 18-11-2026; abans qwen4-max)
 SPACE = os.environ.get("TD_SPACE_NLLB", "josepabloucr/Finetuned-Quantized-NLLB")
 CONFIRMAT, DUBTE = 0.5, 0.3
 SISTEMA = ("Ets un traductor de l'àrab al català. T'arriba la traducció àrab (àrab estàndard, de vegades amb "
@@ -33,6 +39,62 @@ SISTEMA = ("Ets un traductor de l'àrab al català. T'arriba la traducció àrab
            "una dita o una frase solta. Torna NOMÉS la traducció al català, en una sola línia, natural i correcta, "
            "sense cometes ni comentaris. Deixa els noms propis tal com són; «إن شاء الله» és «si Déu vol». "
            "Si l'àrab és incomplet o no té sentit, tradueix el que hi ha sense inventar res.")
+
+
+PREU_M_USD = {"deepseek": 0.28, "gemini": 2.5}   # $ per milió de fitxes, preu de sortida (per excés)
+
+
+class PressupostEsgotat(RuntimeError):
+    pass
+
+
+class Pressupost:
+    """Fitxes de text acumulades per model a `<TD_TV>/_costos.json` i el seu límit (vegeu el docstring del mòdul)."""
+
+    def __init__(self, path):
+        self.path = path
+        self.lock = threading.Lock()
+        self.fitxes = {}
+        try:
+            import json
+            with open(path, encoding="utf-8") as fh:
+                self.fitxes = {k: int(v) for k, v in json.load(fh).get("fitxes", {}).items()}
+        except Exception:
+            self.fitxes = {}
+
+    @staticmethod
+    def tipus(model):
+        return "deepseek" if model.startswith("deepseek") else "gemini" if model.startswith("gemini") else "qwen"
+
+    @staticmethod
+    def limit(model):
+        t = Pressupost.tipus(model)
+        if t == "deepseek":
+            return float(os.environ.get("TD_LIMIT_DEEPSEEK_USD", "3.6"))
+        if t == "gemini":
+            return float(os.environ.get("TD_LIMIT_GEMINI_USD", "1.8"))
+        return float(os.environ.get("TD_LIMIT_QWEN_FITXES", "850000"))
+
+    def cost(self, model):
+        """Dòlars (per excés) per a DeepSeek i Gemini; fitxes per a la resta."""
+        t = Pressupost.tipus(model)
+        n = self.fitxes.get(model, 0)
+        return n * PREU_M_USD[t] / 1e6 if t in PREU_M_USD else n
+
+    def esgotat(self, models):
+        return [m for m in models if m and self.cost(m) >= Pressupost.limit(m)]
+
+    def suma(self, model, n):
+        import json
+        with self.lock:
+            self.fitxes[model] = self.fitxes.get(model, 0) + int(n or 0)
+            tmp = self.path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as fh:
+                json.dump({"fitxes": self.fitxes}, fh, indent=1)
+            os.replace(tmp, self.path)
+
+
+PRESSUPOST = None   # es crea a main() (necessita TD_TV)
 
 
 def primera_linia(t):
@@ -45,9 +107,39 @@ def tradueix(model, text):
     if model.startswith("deepseek"):
         out, u = comu.xat(model, msgs, max_tokens=300, base=os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
                           key=os.environ.get("DEEPSEEK_API_KEY", ""))
+    elif model.startswith("gemini"):
+        out, u = gemini(model, msgs)
     else:
         out, u = comu.xat(model, msgs, max_tokens=300)
-    return primera_linia(out), u.get("total_tokens", 0)
+    n = u.get("total_tokens", 0)
+    if PRESSUPOST is not None:
+        PRESSUPOST.suma(model, n)
+    return primera_linia(out), n
+
+
+def gemini(model, msgs, intents=4):
+    """Tercer auditor: Gemini pel punt OpenAI-compatible, SENSE raonar (reasoning_effort none: només fitxes de text, el preu més baix).
+    La clau és GEMINI_API_KEY. Torna (text, usage)."""
+    import requests
+    key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not key:
+        raise RuntimeError("falta GEMINI_API_KEY")
+    body = {"model": model, "messages": msgs, "max_tokens": 300, "temperature": 0.0, "reasoning_effort": "none"}
+    err = ""
+    for intent in range(intents):
+        try:
+            r = requests.post("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+                              headers={"Authorization": "Bearer " + key}, json=body, timeout=120)
+            if r.status_code == 200:
+                d = r.json()
+                return (d["choices"][0]["message"].get("content") or "").strip(), d.get("usage") or {}
+            err = f"{r.status_code} {r.text[:120]}"
+            if r.status_code not in (429, 500, 502, 503):
+                break
+        except Exception as e:
+            err = str(e)[:120]
+        time.sleep(4 + 8 * intent)
+    raise RuntimeError(err)
 
 
 def main():
@@ -69,10 +161,14 @@ def main():
         comu.diu(log, f"== {ETAPA} {comu.ara()} {MODEL_A} + {MODEL_B if te_b else 'cap segon model (sense DEEPSEEK_API_KEY)'} + tercer {MODEL_C} + Space {SPACE}")
         fitxes = {MODEL_A: 0, MODEL_B: 0, MODEL_C: 0}
         pany = threading.Lock()
+        global PRESSUPOST
+        PRESSUPOST = Pressupost(os.path.join(comu.td_tv(), "_costos.json"))
+        usats = [MODEL_A, MODEL_B if te_b else None, MODEL_C]
+        saltades = [0]
 
         def cal(f):
-            if f.get("credits") or not f.get("arab"):
-                return False
+            if f.get("credits") or not f.get("arab") or f.get("arab_dubtos"):
+                return False   # les dubtoses del lector propi no passen la porta del traductor: no gasten fitxes
             if f.get("catala_estat") and not f.get("error_traduccio") and f.get("arab_traduit") == f["arab"]:
                 return not f.get("tifinag") or f.get("tifinag_traduit") == f.get("tifinag")
             return True
@@ -102,6 +198,10 @@ def main():
             return ""
 
         def feina(f):
+            if PRESSUPOST.esgotat(usats):   # límit de cost: no es toca la fila (es traduirà quan es pugi el límit)
+                with pany:
+                    saltades[0] += 1
+                return f
             err = None
             canvi_arab = f.get("arab_traduit") != f["arab"] or not f.get("catala_a")
             if canvi_arab:
@@ -175,7 +275,9 @@ def main():
         comptes = {"traduides": len(dial), "estats": estats, "chrf_ab_mitja": round(sum(ab) / len(ab), 4) if ab else None,
                    "fitxes_text": {m: fitxes[m] + (vell.get("fitxes_text") or {}).get(m, 0) for m in fitxes},
                    "model_a": MODEL_A, "model_b": MODEL_B if te_b else None, "model_c": MODEL_C, "space": SPACE,
-                   "errors": sum(1 for f in dial if f.get("error_traduccio")), "segons": round(time.time() - t0)}
+                   "errors": sum(1 for f in dial if f.get("error_traduccio")), "segons": round(time.time() - t0),
+                   "saltades_pressupost": saltades[0], "pressupost_esgotat": PRESSUPOST.esgotat(usats) or None,
+                   "cost_acumulat": {m: round(PRESSUPOST.cost(m), 4) for m in PRESSUPOST.fitxes}}
         comu.etapa_fi(carpeta, ETAPA, comptes)
         comu.diu(log, f"{ETAPA}: {estats}, chrf_ab {comptes['chrf_ab_mitja']}, {comptes['segons']} s")
     except Exception as e:
