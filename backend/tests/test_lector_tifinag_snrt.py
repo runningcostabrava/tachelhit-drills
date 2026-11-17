@@ -11,7 +11,10 @@ import sys
 
 import numpy as np
 import pytest
-from scipy import ndimage
+
+# scipy no és a requirements.txt de Render (el lector de la fàbrica és una eina de recerca, no del backend): sense
+# scipy aquestes proves se salten en comptes de trencar la CI.
+ndimage = pytest.importorskip("scipy.ndimage")
 
 FABRICA = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "tools", "snrt", "fabrica")
 sys.path.insert(0, FABRICA)
