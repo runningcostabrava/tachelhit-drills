@@ -58,6 +58,24 @@ def treu_franges(video, carpeta, ample, alt, durada, log):
     fr = os.path.join(carpeta, "franges")
     os.makedirs(fr, exist_ok=True)
     n = len([f for f in os.listdir(fr) if f.endswith(".png")])
+    marca = os.path.join(fr, "_banda.json")
+    # Les franges són el retall BANDA_720 de cada segon. Si ja n'hi ha d'una altra geometria (les d'abans de la geometria dinàmica eren sempre l'estàndard), no valen:
+    # s'esborren amb tot el que se'n va derivar (lectures d'àrab i retalls de tifinag) i es tornen a treure.
+    anterior = json.load(open(marca, encoding="utf-8")) if os.path.exists(marca) else list(comu.BANDA_ESTANDARD)
+    if n > 0 and anterior != list(comu.BANDA_720):
+        comu.diu(log, f"franges: n'hi havia {n} de la franja {anterior} i la geometria del capítol és {list(comu.BANDA_720)}: es tornen a treure (i s'esborren les lectures derivades)")
+        for f in os.listdir(fr):
+            if f.endswith(".png"):
+                os.remove(os.path.join(fr, f))
+        for derivat in ("lectures.jsonl",):
+            p = os.path.join(carpeta, derivat)
+            if os.path.exists(p):
+                os.remove(p)
+        tifdir = os.path.join(carpeta, "tif")
+        if os.path.isdir(tifdir):
+            for f in os.listdir(tifdir):
+                os.remove(os.path.join(tifdir, f))
+        n = 0
     if n >= math.floor(durada) - 1:
         comu.diu(log, f"franges: ja n'hi ha {n}")
         return n
@@ -66,6 +84,7 @@ def treu_franges(video, carpeta, ample, alt, durada, log):
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", video, "-vf", f"fps=1,crop={ample}:{round((y1 - y0) * s)}:0:{round(y0 * s)}",
                     os.path.join(fr, "%05d.png")], check=True)
     n = len([f for f in os.listdir(fr) if f.endswith(".png")])
+    json.dump(list(comu.BANDA_720), open(marca, "w", encoding="utf-8"))
     comu.diu(log, f"franges: {n} (una per segon)")
     return n
 
@@ -101,28 +120,35 @@ def linies_de_text(gris):
 
 
 def decideix_ordre(carpeta, video, ample, alt, durada, log):
-    """#601: quina línia és tifinag i quina àrab, pel tipus de caràcter i no per la posició (hi ha sèries amb l'àrab a dalt). Si l'ordre és invertit, les franges
-    d'aquest capítol es calculen amb la geometria detectada i es desa `geometria.json` (la 05 la fa servir). Si no es pot decidir, OrdreIndecis atura l'etapa."""
+    """#601: la geometria del capítol es MESURA, no es dona per fixa. `ordre_linies` mira 12 fotogrames, decideix quina línia és tifinag i quina àrab pel tipus de caràcter
+    (hi ha sèries amb l'àrab a dalt) i troba la y real del cos del tifinag i de la línia d'àrab (cada programa i cada capítol pot tenir un desplaçament vertical:
+    a «caxy…» el cos és 9 px més amunt). Es desa SEMPRE `geometria.json` al capítol (estàndard o no) i les franges, el lector de tifinag, el d'àrab i la comprovació
+    de geometria fan servir aquesta. Si el capítol ja té `geometria.json`, es reutilitza. Amb la geometria estàndard no canvia res. OrdreIndecis si no es pot decidir."""
     import ordre_linies
+    p = os.path.join(carpeta, "geometria.json")
     if comu.carrega_geometria(carpeta):
-        comu.diu(log, "ordre de les línies: geometria.json del capítol (ja decidida)")
-        return "invertit"
+        ordre = json.load(open(p, encoding="utf-8")).get("ordre", "invertit")
+        comu.diu(log, f"geometria.json del capítol (ja mesurada): ordre {ordre}")
+        return ordre
     r = ordre_linies.ordre_del_video(video, ample, alt, durada, log=lambda m: comu.diu(log, m))
-    if r["ordre"] == "invertit":
-        g = comu.geometria_de_linies(r["geometria"]["tifinag_720"], r["geometria"]["arab_720"])
-        comu.aplica_geometria(g)
-        comu.desa_geometria(carpeta, g)
-        comu.diu(log, f"AVÍS: l'àrab és a dalt i el tifinag a sota: geometria del capítol {g}")
+    g = comu.geometria_de_linies(r["geometria"]["cos_tifinag_1080"], r["geometria"]["arab_1080"])
+    g["ordre"] = r["ordre"]; g["fotogrames"] = r["geometria"]["fotogrames_votants"]; g["alt_cos_1080"] = r["geometria"]["alt_cos_1080"]
+    comu.aplica_geometria(g)
+    comu.desa_geometria(carpeta, g)
+    if g["estandard"]:
+        comu.diu(log, f"geometria del capítol: estàndard (cos del tifinag a y {g['cos_tifinag_1080'][0]} de 1080p)")
+    else:
+        comu.diu(log, f"AVÍS: geometria del capítol NO estàndard: tifinag {g['TIFINAG_720']}, àrab {g['ARAB_720']}, franja {g['BANDA_720']} (cos del tifinag a y {g['cos_tifinag_1080'][0]}, àrab {g['arab_1080']}; ordre {r['ordre']})")
     return r["ordre"]
 
 
 def comprova_geometria(video, ample, alt, durada, log):
-    """§4: 10 fotogrames repartits; en ≥ 3 hi ha d'haver text blanc a la línia del tifinag i a la de l'àrab."""
+    """§4: 10 fotogrames repartits; en ≥ 3 hi ha d'haver text blanc a la línia del tifinag i a la de l'àrab de la geometria VIGENT (la que `decideix_ordre` ha mesurat per
+    a aquest capítol, o l'estàndard). Ja no es compara amb una posició fixa ni es demana que la franja de sobre sigui buida: l'únic que atura l'etapa és no veure
+    cap banda de text plausible allà on la geometria del capítol diu que hi és."""
     s = comu.escala(alt)
-    # Les franges de cada línia, derivades de la geometria vigent (les per defecte donen 584–612, 613–656 i «sobre» 540–580; en una sèrie amb l'ordre invertit, les detectades)
     tif = (round((comu.TIFINAG_720[0] + 4) * s), round((comu.TIFINAG_720[1] - 2) * s))
     ara = (round((comu.ARAB_720[0] + 1) * s), round(comu.ARAB_720[1] * s))
-    sobre = (round((comu.BANDA_720[0] - 36) * s), round((comu.BANDA_720[0] + 4) * s))
     bones = 0
     for k in range(1, 11):
         t = durada * k / 11
@@ -135,11 +161,9 @@ def comprova_geometria(video, ample, alt, durada, log):
         prof = blanc.sum(axis=1)
         te_tif = prof[tif[0]:tif[1]].max() >= 8 if tif[1] <= len(prof) else False
         te_ara = prof[ara[0]:ara[1]].max() >= 8 if ara[1] <= len(prof) else False
-        # i que la franja de SOBRE el tifinag sigui buida: si hi ha text més amunt, no és la geometria coneguda
-        buit_sobre = prof[sobre[0]:sobre[1]].max() < 8
-        if te_tif and te_ara and buit_sobre:
+        if te_tif and te_ara:
             bones += 1
-    comu.diu(log, f"geometria: {bones} de 10 fotogrames amb les dues línies on toca")
+    comu.diu(log, f"geometria: {bones} de 10 fotogrames amb les dues línies on toca (geometria del capítol)")
     return bones
 
 

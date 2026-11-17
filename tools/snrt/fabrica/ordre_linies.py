@@ -33,6 +33,8 @@ MARGE_FOTOGRAMA = 0.15     # diferència mínima entre les puntuacions dels dos 
 MIN_FOTOGRAMES = 4         # fotogrames informatius mínims per decidir
 MAJORIA = 0.7              # fracció mínima de vots per al mateix ordre
 COS_1080 = 28              # alçada del cos del tifinag a 1080p (vegeu tifinag_segmenta)
+COS_PERFIL = 0.35          # el cos és el tram de files amb ≥ 35 % de la tinta de la fila més carregada (les comes, el ⵯ i els punts queden fora)
+COS_BIAS = 1               # sobre els fotogrames de l'entrevista (cos nominal 884) el perfil dona 883: la correcció que ho fa coincidir
 
 
 class OrdreIndecis(RuntimeError):
@@ -79,6 +81,14 @@ def trams_de_text(rgb1080, y_ini=0):
     return sorted(sortida[:2], key=lambda t: t[0])
 
 
+def cos_del_tram(sub):
+    """(top, bot) de les files del cos dins un tram: les que tenen ≥ COS_PERFIL de la tinta de la fila més carregada. Per al tifinag és el cos de 26–29 px
+    (sense comes ni marques); es fa servir per saber a quina y real és el cos, que és el que el lector del tifinag necessita."""
+    prof = sub.sum(axis=1).astype(float)
+    ys = np.nonzero(prof >= COS_PERFIL * prof.max())[0]
+    return int(ys.min()), int(ys.max()) + 1
+
+
 def forma_ample(sub):
     """Fracció de la tinta en components amples: ≈ 0 per al tifinag (glifs aïllats), alta per a l'àrab cursiu."""
     lab, n = ndimage.label(sub, structure=np.ones((3, 3)))
@@ -113,7 +123,8 @@ def ordre_del_fotograma(rgb):
     p = [puntua_tifinag(f, t) for t in trams]
     marge = abs(p[0][0] - p[1][0])
     return {"ordre": "normal" if p[0][0] > p[1][0] else "invertit", "marge": marge,
-            "puntuacions": [round(x[0], 3) for x in p], "trams_1080": [(t[0], t[1]) for t in trams], "factor": factor}
+            "puntuacions": [round(x[0], 3) for x in p], "trams_1080": [(t[0], t[1]) for t in trams], "factor": factor,
+            "cos_1080": [tuple(t[0] + c for c in cos_del_tram(t[3])) for t in trams]}
 
 
 def decideix(resultats):
@@ -129,14 +140,15 @@ def decideix(resultats):
     return "normal" if n_normal > len(bons) - n_normal else "invertit"
 
 
-def geometria(resultats, ordre, alt):
-    """Les y (a l'escala de 720p) del cos del tifinag i de la línia d'àrab, medianes dels fotogrames que han votat l'ordre decidit."""
+def geometria(resultats, ordre, alt=None):
+    """La posició REAL (escala 1080p) del cos del tifinag i de la línia d'àrab, medianes dels fotogrames que han votat l'ordre decidit:
+    {"cos_tifinag_1080": (top, bot) amb la correcció COS_BIAS, "arab_1080": (y0, y1) del tram d'àrab, "alt_cos_1080": alçada del cos}."""
     bons = [r for r in resultats if r is not None and r["ordre"] == ordre and r["marge"] >= MARGE_FOTOGRAMA]
     i_tif, i_ara = (0, 1) if ordre == "normal" else (1, 0)
-    tif = np.median([r["trams_1080"][i_tif] for r in bons], axis=0)
+    cos = np.median([r["cos_1080"][i_tif] for r in bons], axis=0)
     ara = np.median([r["trams_1080"][i_ara] for r in bons], axis=0)
-    s = 720.0 / 1080.0
-    return {"tifinag_720": (float(tif[0]) * s, float(tif[1]) * s), "arab_720": (float(ara[0]) * s, float(ara[1]) * s)}
+    return {"cos_tifinag_1080": (float(cos[0]) + COS_BIAS, float(cos[1]) + COS_BIAS), "arab_1080": (float(ara[0]), float(ara[1])),
+            "alt_cos_1080": float(cos[1] - cos[0]), "fotogrames_votants": len(bons)}
 
 
 def ordre_del_video(video, ample, alt, durada, log=print, n=12, part_baixa=0.55):
@@ -154,6 +166,7 @@ def ordre_del_video(video, ample, alt, durada, log=print, n=12, part_baixa=0.55)
         r = ordre_del_fotograma(a[y0:])
         if r is not None:
             r["trams_1080"] = [(t0 + y0 * r["factor"], t1 + y0 * r["factor"]) for t0, t1 in r["trams_1080"]]
+            r["cos_1080"] = [(t0 + y0 * r["factor"], t1 + y0 * r["factor"]) for t0, t1 in r["cos_1080"]]
         resultats.append(r)
     ordre = decideix(resultats)
     log(f"ordre de les línies: {ordre} ({sum(1 for r in resultats if r is not None)} fotogrames amb dues línies de {len(resultats)})")
