@@ -280,6 +280,7 @@ def main():
     a = ap.parse_args()
     comu.carrega_env()
     carpeta = os.path.abspath(a.carpeta)
+    comu.carrega_geometria(carpeta)      # #601: una sèrie amb l'ordre de les línies invertit té la seva geometria al capítol
     log = comu.obre_log(carpeta)
     comu.etapa_inici(carpeta, ETAPA)
     t0 = time.time()
