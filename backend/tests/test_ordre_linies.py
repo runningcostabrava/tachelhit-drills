@@ -6,6 +6,7 @@ Synthetic frames of both layouts: the Tifinagh line is drawn from the shipped gl
 (joined sine-wave words with tall stems and dots, white with a dark border: what matters is that the words are long connected
 components, like cursive). The real-frame check (150 «Illy» frames, normal and with the lines swapped) lives in the PR text.
 """
+import io
 import os
 import sys
 
@@ -88,30 +89,92 @@ def test_one_frame_each_layout():
     assert i["ordre"] == "invertit" and i["marge"] >= OL.MARGE_FOTOGRAMA
 
 
-def test_chapter_decision_and_geometry():
+def _rs(fabrica, n=6, y0=800):
+    out = []
+    for sd in range(n):
+        r = OL.ordre_del_fotograma(fabrica(sd)[y0:1040])
+        r["trams_1080"] = [(t0 + y0, t1 + y0) for t0, t1 in r["trams_1080"]]
+        r["cos_1080"] = [(t0 + y0, t1 + y0) for t0, t1 in r["cos_1080"]]
+        out.append(r)
+    return out
+
+
+def test_chapter_decision():
     for fabrica, esperat in ((normal_frame, "normal"), (inverted_frame, "invertit")):
-        rs = [OL.ordre_del_fotograma(fabrica(s)[800:1040]) for s in range(6)]
-        assert OL.decideix(rs) == esperat
-    rs = [OL.ordre_del_fotograma(inverted_frame(s)[800:1040]) for s in range(6)]
-    g = OL.geometria(rs, "invertit", 1080)
-    # the Tifinagh body starts at 940 (1080p) = 626.7 (720p); the Arabic line starts at 884 = 589.3
-    assert abs(g["tifinag_720"][0] + 800 * 2 / 3 - 626.7) < 4 and abs(g["arab_720"][0] + 800 * 2 / 3 - 589.3) < 4
+        assert OL.decideix(_rs(fabrica)) == esperat
 
 
-def test_inverted_geometry_for_the_factory(monkeypatch):
-    g = comu.geometria_de_linies((626.7, 645), (589.3, 616))
-    assert g["TIFINAG_720"] == (619 - 0, 653)     # 8 px above the body, 34 px tall
-    assert g["BANDA_720"][0] <= g["ARAB_720"][0] and g["BANDA_720"][1] >= g["TIFINAG_720"][1]
-    monkeypatch.setattr(comu, "BANDA_720", comu.BANDA_720); monkeypatch.setattr(comu, "TIFINAG_720", comu.TIFINAG_720)
-    monkeypatch.setattr(comu, "ARAB_720", comu.ARAB_720)
-    comu.aplica_geometria(g)
-    assert comu.TIFINAG_720 == g["TIFINAG_720"]
+def test_standard_chapter_keeps_the_constants():
+    """The standard layout (body at 884) must give back EXACTLY the constants the stage always used: same crops, same band."""
+    rs = _rs(normal_frame)
+    g = OL.geometria(rs, "normal")
+    assert abs(g["cos_tifinag_1080"][0] - 884) <= 1
+    G = comu.geometria_de_linies(g["cos_tifinag_1080"], g["arab_1080"])
+    assert G["estandard"] is True
+    assert (G["BANDA_720"], G["TIFINAG_720"], G["ARAB_720"]) == ((576, 660), (580, 614), (612, 656))
 
 
-def test_default_geometry_is_what_the_stage_always_used():
-    """For the standard layout the derived crops reproduce the constants of §4 (tifinag 588 -> 580-614)."""
-    g = comu.geometria_de_linies((588, 610), (615, 652))
-    assert g["TIFINAG_720"] == (580, 614) and g["ARAB_720"] == (612, 656)
+def shifted_frame(seed=0):     # same order, whole block 9 px higher (a real chapter, «caxy…»): body at 875, Arabic at 915
+    return frame(875, 915, seed)
+
+
+def test_shifted_chapter_gets_its_own_geometry_and_reads_well():
+    """A chapter whose lines sit 9 px higher than the standard: the standard crop (870-921) cuts the Tifinagh so the reader keeps nothing;
+    the crop derived from the measured geometry reads the line."""
+    import lector_tifinag as LT
+    rs = _rs(shifted_frame)
+    assert OL.decideix(rs) == "normal"
+    g = OL.geometria(rs, "normal")
+    assert abs(g["cos_tifinag_1080"][0] - 875) <= 1.5
+    G = comu.geometria_de_linies(g["cos_tifinag_1080"], g["arab_1080"])
+    assert G["estandard"] is False and G["TIFINAG_720"][0] < 580
+    f = shifted_frame()
+    estandard = LT.llegeix_banda(f[870:921])
+    dinamica = LT.llegeix_banda(f[round(G["TIFINAG_720"][0] * 1.5):round(G["TIFINAG_720"][1] * 1.5)])
+    assert dinamica["tifinag"] == TIF
+    assert estandard["tifinag"] != TIF
+    assert G["BANDA_720"][0] == min(G["TIFINAG_720"][0], G["ARAB_720"][0]) - 4      # the band covers both lines
+
+
+def test_inverted_chapter_geometry():
+    g = OL.geometria(_rs(inverted_frame), "invertit")
+    G = comu.geometria_de_linies(g["cos_tifinag_1080"], g["arab_1080"])
+    assert G["estandard"] is False
+    assert abs(g["cos_tifinag_1080"][0] - 940) <= 1.5 and abs(g["arab_1080"][0] - 884) <= 4      # Arabic above, Tifinagh below
+    assert G["TIFINAG_720"][0] > G["ARAB_720"][0]
+
+
+def test_geometry_json_roundtrip(tmp_path, monkeypatch):
+    for k in ("BANDA_720", "TIFINAG_720", "ARAB_720"):
+        monkeypatch.setattr(comu, k, getattr(comu, k))
+    G = comu.geometria_de_linies((876.0, 905.0), (932.0, 972.0))
+    comu.desa_geometria(str(tmp_path), dict(G, ordre="normal"))
+    comu.aplica_geometria({"BANDA_720": (576, 660), "TIFINAG_720": (580, 614), "ARAB_720": (612, 656)})
+    assert comu.carrega_geometria(str(tmp_path)) is True
+    assert comu.TIFINAG_720 == tuple(G["TIFINAG_720"])
+
+
+def test_stage_02_regenerates_bands_cut_with_another_geometry(tmp_path, monkeypatch):
+    """Bands extracted with the old standard geometry (no marker) are thrown away, with the arab readings derived from them, when the chapter has another geometry."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("llegeix02", os.path.join(FABRICA, "02_llegeix.py"))
+    m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+    fr = tmp_path / "franges"; fr.mkdir()
+    for i in range(1, 6):
+        (fr / f"{i:05d}.png").write_bytes(b"x")
+    (tmp_path / "lectures.jsonl").write_text("{}")
+    monkeypatch.setattr(comu, "BANDA_720", (561, 660))
+    chamades = []
+    monkeypatch.setattr(m.subprocess, "run", lambda *a, **k: chamades.append(a))
+    m.treu_franges("v.mp4", str(tmp_path), 1280, 720, 5.0, io.StringIO())
+    assert chamades and not (tmp_path / "lectures.jsonl").exists() and not (fr / "00001.png").exists()
+    assert (fr / "_banda.json").exists()
+    # with the standard geometry the existing bands are kept
+    fr2 = tmp_path / "b" / "franges"; fr2.mkdir(parents=True)
+    for i in range(1, 6):
+        (fr2 / f"{i:05d}.png").write_bytes(b"x")
+    monkeypatch.setattr(comu, "BANDA_720", (576, 660)); chamades.clear()
+    assert m.treu_franges("v.mp4", str(tmp_path / "b"), 1280, 720, 5.0, io.StringIO()) == 5 and not chamades
 
 
 def test_stops_with_a_clear_error_when_it_cannot_decide():

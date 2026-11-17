@@ -39,19 +39,43 @@ def aplica_geometria(g):
     BANDA_720, TIFINAG_720, ARAB_720 = tuple(g["BANDA_720"]), tuple(g["TIFINAG_720"]), tuple(g["ARAB_720"])
 
 
-def geometria_de_linies(tif_720, arab_720):
-    """De les y (escala 720p) del cos del tifinag i de la línia d'àrab a les tres franges: el retall del tifinag comença 8 px per sobre del cos i fa 34 px
-    (com a la geometria per defecte, 588 → 580–614), el de l'àrab 3 px per sobre i 4 per sota, i la franja guardada les cobreix totes dues amb 4 px de marge."""
-    t0 = int(round(tif_720[0])) - 8
-    tif = (t0, t0 + 34)
-    ara = (int(round(arab_720[0])) - 3, int(round(arab_720[1])) + 4)
-    banda = (min(tif[0], ara[0]) - 4, max(tif[1], ara[1]) + 4)
-    return {"BANDA_720": banda, "TIFINAG_720": tif, "ARAB_720": ara}
+#: La geometria estàndard (les constants de dalt) i el que se n'espera als fotogrames de 1080p: cos del tifinag a y 884, línia d'àrab entre 918 i 984 (retall de 66 px).
+BANDA_ESTANDARD = (576, 660)
+COS_TOP_1080_ESTANDARD = 884
+TOLERANCIA_COS = 3         # px (1080p) de desplaçament del cos del tifinag a partir dels quals es mou la franja (el segmentador n'admet ±6)
+MARGE_ARAB = 3             # px (1080p) mínims entre la línia d'àrab i la vora del seu retall
+
+
+def geometria_de_linies(cos_tifinag_1080, arab_1080):
+    """Les tres franges d'un capítol a partir de la posició REAL de les línies (escala 1080p), mesurada per ordre_linies.
+    - Tifinag: el lector espera el retall que comença 14 px (1080p) per sobre del cos. Si el cos és a 884 ± TOLERANCIA_COS, es deixa l'estàndard (580–614); si no, el retall
+      es desplaça (mateixa alçada, 34 px a 720p).
+    - Àrab: es deixa l'estàndard si la línia hi cap amb MARGE_ARAB de marge; si no, es desplaça (i s'allarga si cal).
+    - La franja desada cobreix totes dues amb 4 px de marge. Amb la geometria estàndard torna exactament les constants de sempre.
+    Torna {"BANDA_720", "TIFINAG_720", "ARAB_720", "estandard": bool, ...}."""
+    s = 1.5
+    tif_std, ara_std = (580, 614), (612, 656)
+    cos_top = cos_tifinag_1080[0]
+    if abs(cos_top - COS_TOP_1080_ESTANDARD) < TOLERANCIA_COS:
+        tif, mou_tif = tif_std, False
+    else:
+        t0 = int(round((cos_top - 14) / s))
+        tif, mou_tif = (t0, t0 + 34), True
+    a0, a1 = arab_1080
+    c0, c1 = ara_std[0] * s, ara_std[1] * s
+    if a0 >= c0 + MARGE_ARAB and a1 <= c1 - MARGE_ARAB:
+        ara, mou_ara = ara_std, False
+    else:
+        y0 = int(round((a0 - 4) / s)); y1 = max(y0 + 44, int(round((a1 + 5) / s)))
+        ara, mou_ara = (y0, y1), True
+    banda = (min(tif[0], ara[0]) - 4, max(tif[1], ara[1]) + 4)      # amb l'estàndard: (576, 660)
+    return {"BANDA_720": banda, "TIFINAG_720": tif, "ARAB_720": ara, "estandard": not (mou_tif or mou_ara),
+            "cos_tifinag_1080": [round(v, 1) for v in cos_tifinag_1080], "arab_1080": [round(v, 1) for v in arab_1080]}
 
 
 def desa_geometria(carpeta, g):
     with io.open(os.path.join(carpeta, "geometria.json"), "w", encoding="utf-8") as f:
-        json.dump({k: list(v) for k, v in g.items()}, f)
+        json.dump({k: (list(v) if isinstance(v, (tuple, list)) else v) for k, v in g.items()}, f, ensure_ascii=False, indent=1)
 
 
 def carrega_geometria(carpeta):

@@ -17,7 +17,7 @@ L'única cosa fora de la carpeta és una línia a `TD_TV/_informes/AAAA-MM-DD.md
 | etapa | què fa | reprèn per |
 |---|---|---|
 | 01 (dins `nit.py`) | `../baixa_replay.py` (replay; va bé des de l'ECS) o `yt-dlp` del venv (YouTube; només des del PC) → `video.mp4`, i `video_1080.mp4` si n'hi ha | el vídeo que ja hi és |
-| `02_llegeix.py` | franges 1 fps · **comprovació de la geometria** (10 fotogrames; s'atura amb error si < 3 tenen les dues línies on toca) · **rellotge pel tifinag** (segmentador de glifs, gratuït) → trams · **un fotograma d'àrab per tram** (el del mig; un segon si la lectura és buida, < 6 caràcters o errònia) amb `qwen3-vl-plus` (o, amb `--lector-arab propi`, el CRNN propi sense visió: vegeu més avall) · franges idèntiques saltades · tifinag al fotograma del mig amb `lector_tifinag.llegeix_bandes` (sobre `video_1080.mp4` si hi és) · `credits` (> 3 línies de text o text idèntic repetit > 20 s) | segon (`lectures.jsonl`) i retall (`tif/`) |
+| `02_llegeix.py` | **geometria del capítol MESURADA** (`ordre_linies.py`: 12 fotogrames → quina línia és tifinag i quina àrab pel tipus de caràcter i la y real del cos; es desa SEMPRE `geometria.json`, estàndard o no) · franges 1 fps (es tornen a treure si són d'una altra geometria) · **comprovació de la geometria** (10 fotogrames, contra la geometria del capítol; s'atura amb error si < 3 tenen les dues línies on toca) · **rellotge pel tifinag** (segmentador de glifs, gratuït) → trams · **un fotograma d'àrab per tram** (el del mig; un segon si la lectura és buida, < 6 caràcters o errònia) amb `qwen3-vl-plus` (o, amb `--lector-arab propi`, el CRNN propi sense visió: vegeu més avall) · franges idèntiques saltades · tifinag al fotograma del mig amb `lector_tifinag.llegeix_bandes` (sobre `video_1080.mp4` si hi és) · `credits` (> 3 línies de text o text idèntic repetit > 20 s) | segon (`lectures.jsonl`) i retall (`tif/`) |
 | `03_talla.py` | `talls/<id>.wav` mono 16 kHz, t_ini − 0,25 … t_fi + 0,25, dins el vídeo; els crèdits no | id (el wav que ja hi és) |
 | `04_tradueix.py` | àrab → català amb `qwen3.8-max` (a) i `deepseek-chat` (b), `chrf_ab`; 0,3 ≤ chrf_ab < 0,5 → tercer `qwen4-max` (Gemini no té crèdit) i es queda el que hi coincideix ≥ 0,5 («tercer»); ≥ 0,5 → «confirmat»; si no, «descartat». Tifinag → català amb el Space només per a `chrf_tif_ar` | id (una fila amb `catala_estat` i el mateix àrab/tifinag no es repeteix) |
 | `05_informe.py` | `numeros.json`, `INFORME.md` (plantilla §7), portes §5, varietat §6.1 (punts 1–3, si `TD_CATALEG`), 20 a ull, línia a `_informes/` | sempre es refà (és barat) |
@@ -141,3 +141,14 @@ adapten `tools/notebooks/llegeix_episodi_arab.py` (Baba Ali), `tools/ocr_tifinag
 curtes de l'àrab abans d'ajuntar segons; el «:» del lector de plantilles és la ⵓ; el senyal petit darrere ⴳ/ⴽ és ⵯ;
 el logotip d'un programa dins la franja surt com a lletres de confiança baixa (es descarta per paraula); el client
 `android` del yt-dlp només donava 360p (SABR), el per defecte dona 136+140.
+
+
+## Geometria dinàmica per capítol (#601)
+
+Cada programa, i fins i tot cada capítol, pot tenir les línies de subtítol desplaçades en vertical (a `caxy…` el cos del tifinag és 9 px més amunt que a l'estàndard i el lector
+en descartava els glifs per posició; a `hmssy…` són uns 16 px a 720p més amunt i la franja guardada tallava el tifinag). Per això l'etapa 02 ja no dona la geometria per
+fixa: `ordre_linies.ordre_del_video` troba la y real del cos del tifinag (files amb ≥ 35 % de la tinta de la fila més carregada) i de la línia d'àrab, `comu.geometria_de_linies` en
+deriva les tres franges (`TIFINAG_720`, `ARAB_720`, `BANDA_720`) i `geometria.json` queda al capítol. **Amb la geometria estàndard (cos a 884 ± 3 px de 1080p, àrab dins del
+retall estàndard) torna exactament les constants de sempre**; si no, desplaça els retalls (mateixes alçades). Les etapes 02 i 05 la carreguen; el lector d'àrab ja desplaçava la banda
+segons `comu.ARAB_720`. Si les franges ja existents són d'una altra geometria (o de les d'abans, que eren sempre l'estàndard) s'esborren amb `lectures.jsonl` i `tif/` i es tornen a
+treure (`franges/_banda.json` recorda la franja). La comprovació de geometria ja no compara amb una posició fixa: s'atura només si no hi ha cap banda de text plausible on el capítol diu que hi és.
