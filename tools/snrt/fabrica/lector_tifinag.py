@@ -124,7 +124,9 @@ def text_de(gs, fila):
     # una «paraula» on cap glif passa de 0,6 és el logotip del programa o una taca (l'entrevista «Tadfi n Tskla»
     # porta un llibre dibuixat a la dreta de la línia, que sortia com a ⵄⵄ a cada subtítol)
     # i una coma o cometa enmig d'una paraula és un tros de lletra trencada (a 720p passa sovint), no puntuació
-    return " ".join(re.sub(r'[,"](?=.)', "", p) for _, p, c in paraules if p and p not in ("ⵯ", "ⵯⵯ") and c >= 0.6).strip()
+    text = " ".join(re.sub(r'[,"](?=.)', "", p) for _, p, c in paraules if p and p not in ("ⵯ", "ⵯⵯ") and c >= 0.6).strip()
+    # cap espai abans de , . ! (el signe surt com a «paraula» pròpia); el «?» sí que porta espai als subtítols de la SNRT
+    return re.sub(r" +([,.!])", lambda m: m.group(1), text)
 
 
 def llegeix_bandes(imatges, log=print):
