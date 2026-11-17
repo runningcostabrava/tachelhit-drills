@@ -207,3 +207,10 @@ Com s'aplica:
   aquest material.
 - **Pendent:** tenir-ho en un correu (qui autoritza, abast, data); tornar a demanar els SRT més
   endavant, perquè estalviarien l'OCR del tifinag.
+
+**Ampliació (17-11-2026, més tard):** en Pablo confirma que l'autorització cobreix **tota mena de
+material** de la SNRT, també el replay del web (`snrt.ma/fr/...`, per exemple el programa «Tadfi n
+Tskla» sobre figures de la literatura amaziga), no només el canal de YouTube. El replay del web se
+serveix pel reproductor de `forja.ma` (plataforma VOD de la SNRT): flux HLS amb fitxa d'accés
+temporal que dona `token.forja.ma`; el canal de YouTube es baixa directament amb `yt-dlp` i és el
+camí per omissió. Mateixos límits: recerca sí, republicar no.
