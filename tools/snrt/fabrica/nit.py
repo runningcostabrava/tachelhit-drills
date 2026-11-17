@@ -100,6 +100,8 @@ def corre(carpeta, a, log):
         feta = comu.etapa_feta(carpeta, etapa)
         if feta and etapa == "02_llegeix" and comu.estat_llegeix(carpeta).get(etapa, {}).get("comptes", {}).get("sense_arab"):
             feta = False   # feta sense àrab (tanda --sense-arab del 17-11-2026): ara cal llegir-lo
+        if feta and etapa == "03_talla" and not os.path.exists(os.path.join(carpeta, "talls", "intervals.json")):
+            feta = False   # talls sense registre d'intervals: no validats (poden ser d'una lectura vella de 02), es refan
         if not a.refes and feta and not refer:
             comu.diu(log, f"   {etapa}: ja feta"); continue
         cmd = [comu.PY, "-X", "utf8", os.path.join(comu.AQUI, etapa + ".py"), carpeta]
@@ -145,33 +147,49 @@ def main():
     caps = comu.jsonl_llegeix(cat_p)
     if not caps:
         sys.exit(f"cap capítol a {cat_p}")
-    fitxes = [fitxa(c) for c in caps]
-    ordre = sorted(range(len(caps)), key=lambda i: (fitxes[i]["prioritat"], ORDRE_MENA.get(fitxes[i]["mena"], 9), i))
-    pendents = [i for i in ordre if (caps[i].get("estat") or "pendent") != "fet" or a.refes]
-    if a.nomes:
-        pendents = [i for i in pendents if fitxes[i]["slug"] in a.nomes]
+    # El catàleg es rellegeix abans de triar cada capítol i s'hi desa només la fila d'aquest capítol: qui reencua un capítol (estat
+    # «pendent», fila al final) mentre la nit corre no es perd, i ningú no el trepitja (#601: capítols amb talls no validats).
+    intentats = set()
+
+    def cua(caps):
+        fitxes = [fitxa(c) for c in caps]
+        ordre = sorted(range(len(caps)), key=lambda i: (fitxes[i]["prioritat"], ORDRE_MENA.get(fitxes[i]["mena"], 9), i))
+        pend = [i for i in ordre if ((caps[i].get("estat") or "pendent") != "fet" or a.refes) and fitxes[i]["slug"] not in intentats]
+        if a.nomes:
+            pend = [i for i in pend if fitxes[i]["slug"] in a.nomes]
+        return fitxes, pend
+
+    def desa_fila(slug, **camps):
+        fresc = comu.jsonl_llegeix(cat_p)
+        for c in fresc:
+            if fitxa(c)["slug"] == slug:
+                c.update(camps)
+        comu.jsonl_escriu(cat_p, fresc)
+
+    fitxes, pendents = cua(caps)
     comu.diu(log, f"==== nit {comu.ara()} {len(pendents)} capítols pendents de {len(caps)} ({cat_p})")
-    for i in pendents:
-        cap, f = caps[i], fitxes[i]
+    while True:
+        caps = comu.jsonl_llegeix(cat_p)
+        fitxes, pendents = cua(caps)
+        if not pendents:
+            break
+        i = pendents[0]
+        f = fitxes[i]
         slug = f["slug"]
+        intentats.add(slug)
         if not slug:
-            cap["estat"], cap["nota"] = "error", "sense slug"; comu.jsonl_escriu(cat_p, caps); continue
+            continue
         carpeta = os.path.join(arrel, slug)
         comu.diu(log, f"-- {slug} [{f['mena']}, prioritat {f['prioritat']}] {f['titol'][:60]}")
         t0 = time.time()
         if a.sense_baixar and not te_video(carpeta):
-            cap["estat"], cap["nota"] = "error", "01_baixa: sense vídeo (--sense-baixar)"
-            comu.jsonl_escriu(cat_p, caps); continue
+            desa_fila(slug, estat="error", nota="01_baixa: sense vídeo (--sense-baixar)"); continue
         if not a.sense_baixar and not baixa(f, carpeta, log, amb_1080=not a.sense_1080):
-            cap["estat"], cap["nota"] = "error", "01_baixa: sense vídeo"
-            comu.jsonl_escriu(cat_p, caps); continue
+            desa_fila(slug, estat="error", nota="01_baixa: sense vídeo"); continue
         comu.estat_desa(carpeta, slug=slug, titol=f["titol"], font=f["font"], mena=f["mena"])
         be, motiu = corre(carpeta, a, log)
-        cap["estat"] = "fet" if be else "error"
-        cap["nota"] = "" if be else motiu
-        cap["fet_el"] = comu.ara()
-        comu.jsonl_escriu(cat_p, caps)
-        comu.diu(log, f"   {slug}: {cap['estat']} {motiu} en {(time.time() - t0) / 60:.0f} min")
+        desa_fila(slug, estat="fet" if be else "error", nota="" if be else motiu, fet_el=comu.ara())
+        comu.diu(log, f"   {slug}: {'fet' if be else 'error'} {motiu} en {(time.time() - t0) / 60:.0f} min")
     comu.diu(log, f"==== nit acabada {comu.ara()}")
 
 
