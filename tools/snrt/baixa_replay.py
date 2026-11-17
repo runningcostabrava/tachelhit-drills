@@ -15,7 +15,7 @@ yt-dlp (amb ffmpeg) baixa el vídeo.
 Per omissió desa a C:\Users\josep\Veus-tachelhit\_escoltats\tamazight_tv\replay\<slug>.mp4 i un .json al costat
 amb el títol i les adreces. --nomes-url només imprimeix la llista amb fitxa (per provar sense baixar).
 """
-import argparse, io, json, os, re, subprocess, sys, urllib.parse, urllib.request
+import argparse, html, io, json, os, re, subprocess, sys, urllib.parse, urllib.request
 
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) tachelhit-drills/recerca"
 CAPS = {"User-Agent": UA, "Referer": "https://forja.ma/", "Origin": "https://forja.ma", "Accept": "*/*"}
@@ -92,6 +92,11 @@ def amb_fitxa(llista):
     m = re.search(r"https?://[^\s\"']+m3u8[^\s\"']*", cos)
     if m:
         return m.group(0)
+    # El 17-11-2026 el servidor contesta només la cua de consulta, amb els «&» escapats en HTML:
+    # «token=…&amp;token_path=…&amp;expires=…». S'enganxa a la llista.
+    cua = html.unescape(cos.strip().strip('"'))
+    if "token=" in cua:
+        return llista + ("&" if "?" in llista else "?") + cua.lstrip("?&")
     sys.exit(f"el servidor de fitxes no ha donat cap llista: {cos[:300]}")
 
 
