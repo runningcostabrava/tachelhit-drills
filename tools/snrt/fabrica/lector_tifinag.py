@@ -32,6 +32,7 @@ K_CONF = 0.75
 GAP_ESPAI = 10                      # px entre caixes (a l'escala de 1080p) per posar un espai: 4 dins el mot, 16 entre mots
 GAP_DARRERE_W = 15                  # darrere ⵯ (dues marques fines: la caixa és més estreta que la cel·la)
 GAP_DAVANT_INTERROGANT = 5          # el «?» va precedit d'espai (a les 52 línies de veritat, sempre)
+GAP_ENTRE_XIFRES = 20               # dins d'un nombre («2026») no hi ha espai: les xifres van més separades que les lletres
 Y_ORIGEN_720 = 580                  # y del retall TIFINAG_720 (crop=1280:34:0:580); a 1080p és 870
 
 
@@ -69,6 +70,8 @@ def _text(r, punts):
             llindar = GAP_DARRERE_W
         elif ch == "?":
             llindar = GAP_DAVANT_INTERROGANT
+        elif ch.isdigit() and text and text[-1].isdigit():
+            llindar = GAP_ENTRE_XIFRES
         if ant_x1 is not None and x0 - ant_x1 >= llindar and ch not in (",", ".", "ⵯ"):
             text.append(" ")
             p += 1
@@ -87,8 +90,13 @@ def llegeix_banda(a):
     r = _segmenta(a)
     if not r["glifs"]:
         return buit
+    SEG.unifica_grups(r, PL.classifica)     # un glif partit per un buit de columnes torna a ser un si la plantilla l'encaixa millor sencer
+    SEG.resol_amples(r, PL.classifica)      # dues rodones tangents (ⴰ+ⵔ sobre fons clar): el tall el tria la plantilla
+    if not r["glifs"]:
+        return buit
     cos_top = r["cos"][0]
     punts = [PL.classifica(g["mask"], g["caixa"][1] - cos_top) for g in r["glifs"]]
+    r["glifs"], punts = SEG.afegeix_marques_w(r, punts)   # el ⵯ (dues marques de 1-2 px) que la màscara fina perd darrere ⴳ/ⴽ
     text, glifs = _text(r, punts)
     confs = [g["conf"] for g in glifs]
     return {"tifinag": text, "glifs": glifs, "n_glifs": len(glifs), "n_dubtosos": sum(1 for c in confs if c < LLINDAR),
