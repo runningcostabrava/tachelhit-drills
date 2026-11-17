@@ -385,3 +385,30 @@ no el proveïdor. (3) El diccionari al prompt ajuda els models que no saben la l
 aporta res als que la saben (Gemini +0,008): és un apòsit, no una solució. (4) On sí que pot servir
 Groq: anglès → català ràpid i gratuït al pont, o com a auditor d'àrab/dàrija si Qwen i DeepSeek
 s'acaben. 121.000 fitxes gastades, de franc.
+
+## Tamazight MultiLingo App i `tamazightdev` (17-11, matí; `Veus-tachelhit\_escoltats\models\multilingo\`)
+
+En Pablo va passar `github.com/mindful-ai-dude/v3.6-Tamazight_MultiLingo_App`: l'app d'un hackató de
+Kaggle (Gemma-3n, agost 2025) per a emergències, amazic ↔ àrab/francès/anglès. El repositori no es
+toca des del 6-8-2025 (1 estrella). El que importa és el que hi ha darrere a HuggingFace
+(`tamazightdev`): el dataset `tamazight-ar-en-fr` («1.033.656 files», MIT) i una vintena de Gemma
+afinats sense cap mètrica publicada.
+
+Mirat sense baixar res al disc (mostres per rang del fitxer):
+
+- **No és 1 M de parelles.** Cada frase surt en les 12 direccions entre quatre llengües: en 3.299
+  files mostrejades a cinc punts del fitxer hi havia 278 textos amazics únics (~86.000 entrades
+  reals), i una part són numerals generats («ⴽⴽⵓⵥⵜ ⵜⵎⴰⴹ ⴷ ⵙⵎⵎⵓⵙⵎⵔⴰⵡ...»).
+- **Tres capes i cap fitxa de procedència:** terminologia de l'IRCAM (l'eval de 10.719 files és quasi
+  tot termes de 2-3 mots: 505 de 595 únics), frases de Tatoeba (Tom i Mary, «All roads lead to
+  Rome») i números. La llicència MIT és autodeclarada sobre dades de l'IRCAM i de Tatoeba (CC BY).
+  Varietat barrejada: hi surt la negació cabilenca «ur... ara».
+- **El mateix món que el nostre model.** 100 frases Tamazight→English del seu test (4-14 mots, sense
+  numerals, llavor 1114) pel nostre Space (NLLB afinat v3, fitxa Standard Moroccan Tamazight) cap a
+  l'anglès, chrF contra el seu anglès: **0,584 de mitjana, 58 de 100 per sobre de 0,5, cap buit**, i
+  diverses frases idèntiques («I was tired, so I didn't go.»). El NLLB de base ja es va entrenar amb
+  aquestes mateixes frases de Tatoeba: afegir-les no ensenya res, i el vocabulari solt ja vam veure
+  que fa nosa (v3). No hi ha català.
+
+Conclusió: font mirada i descartada, com Groq. Els Gemma afinats es podrien mesurar sobre les 60
+(GGUF d'uns 2 GB a l'ECS), però tal com són les dades no hi ha motiu per esperar-ne res.
