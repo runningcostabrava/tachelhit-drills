@@ -102,7 +102,7 @@ def corre(carpeta, a, log):
             feta = False   # feta sense àrab (tanda --sense-arab del 17-11-2026): ara cal llegir-lo
         if feta and etapa == "03_talla" and not os.path.exists(os.path.join(carpeta, "talls", "intervals.json")):
             feta = False   # talls sense registre d'intervals: no validats (poden ser d'una lectura vella de 02), es refan
-                if not a.refes and feta and not refer:
+        if not a.refes and feta and not refer:
             comu.diu(log, f"   {etapa}: ja feta"); continue
         cmd = [comu.PY, "-X", "utf8", os.path.join(comu.AQUI, etapa + ".py"), carpeta]
         if etapa == "02_llegeix":
