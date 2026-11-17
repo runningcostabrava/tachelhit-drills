@@ -214,3 +214,8 @@ Tskla» sobre figures de la literatura amaziga), no només el canal de YouTube. 
 serveix pel reproductor de `forja.ma` (plataforma VOD de la SNRT): flux HLS amb fitxa d'accés
 temporal que dona `token.forja.ma`; el canal de YouTube es baixa directament amb `yt-dlp` i és el
 camí per omissió. Mateixos límits: recerca sí, republicar no.
+
+**17-11-2026, més tard:** la SNRT confirma que **no ens donarà els SRT**, però que **podem fer servir els
+nostres OCR** per treure els subtítols cremats. L'ordre de treball d'en Pablo: entrevistes primer
+(autors de la zona Boumalne Dadès – Kalaat M'Gouna i Azilal – Aït Bougmez, o a prop), les sèries
+després; lector d'àrab propi especialitzat en la lletra de la SNRT.
