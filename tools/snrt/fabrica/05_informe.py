@@ -74,6 +74,7 @@ def numeros(files, est):
         "aptes_traductor": len(aptes), "aptes_asr_durada": sum(1 for f in aptes if f["durada"] >= 0.8), "aptes_asr": None,
         "capitol_apte": (len(aptes) / max(1, len(D))) >= 0.6,
         "fitxes_visio": c02.get("fitxes_visio"), "crides_visio": c02.get("crides_visio"), "metode_arab": c02.get("metode"),
+        "fotogrames_arab_usats": c02.get("fotogrames_llegits"), "fitxes_visio_equivalents": (c02.get("fotogrames_llegits") or 0) * 172,
         "fitxes_text": c04.get("fitxes_text"),
         "minuts_maquina": round(sum(est.get(e, {}).get("comptes", {}).get("segons") or 0 for e in ("02_llegeix", "03_talla", "04_tradueix")) / 60, 1),
     }
@@ -97,7 +98,7 @@ def varietat(files, est):
     def mots(text, ja_llati=False):
         if not text:
             return []
-        cl = text if ja_llati else tr(text)
+        cl = text if ja_llati and not any("ⴰ" <= c <= "⵿" for c in text) else tr(text)
         return [m for m in re.split(r"[^\w]+", comu.normalitza(cl)) if len(m) > 1 and not m.isdigit()]
 
     aptes = [f for f in files if apta_traductor(f)] or [f for f in files if not f.get("credits") and (f.get("tifinag_conf") or 0) >= 0.85]
@@ -201,7 +202,7 @@ def informe(carpeta, files, num, mostra, est, var, cap):
     w(f"| traducció: chrf_ab mitjà, confirmat / tercer / descartat | {num['chrf_ab_mitja']}, {e['confirmat']} / {e['tercer']} / {e['descartat']} ({pc(e['confirmat'], num['dialeg'])} / {pc(e['tercer'], num['dialeg'])} / {pc(e['descartat'], num['dialeg'])}) |")
     w(f"| chrf_tif_ar mitjà i ≥ 0,5 (mesura del traductor, no porta) | {num['chrf_tif_ar_mitja']}, {num['chrf_tif_ar_sobre_0_5']} de {num['chrf_tif_ar_n']} ({pc(num['chrf_tif_ar_sobre_0_5'], num['chrf_tif_ar_n'])}) |")
     w(f"| **portes (§5)**: aptes per al traductor / per a l'ASR | **{num['aptes_traductor']}** ({pc(num['aptes_traductor'], num['dialeg'])}; capítol {'apte' if num['capitol_apte'] else 'NO apte (< 60 %)'}) / {num['aptes_asr_durada']} per durada, CER de l'ASR no mesurat |")
-    w(f"| cost: fitxes de visió / de text per model | {num['fitxes_visio']} ({num['crides_visio']} crides) / {num['fitxes_text']} |")
+    w(f"| cost: fitxes de visió / de text per model | {num['fitxes_visio']} pagades ara ({num['crides_visio']} crides); {num['fotogrames_arab_usats']} fotogrames d'àrab usats ≈ {num['fitxes_visio_equivalents']} fitxes si es paguessin tots / {num['fitxes_text']} |")
     w(f"| minuts de màquina (02–04) | {num['minuts_maquina']} |")
     w("")
     if var:
@@ -263,7 +264,10 @@ def linia_informe_nit(num, cap):
 def fitxa_del_cataleg(slug):
     p = os.path.join(comu.td_tv(), "cataleg", "capitols.jsonl")
     for x in comu.jsonl_llegeix(p):
-        if x.get("slug") == slug:
+        if slug and slug in (x.get("slug"), x.get("slug_forja"), x.get("youtube_id")):
+            x = dict(x)
+            x.setdefault("font", x.get("cami_per_omissio") or ("replay" if x.get("url_snrt") else "youtube"))
+            x.setdefault("mena", "entrevista" if "tadfi" in (x.get("programa") or "") else "desconeguda")
             return x
     return {}
 
