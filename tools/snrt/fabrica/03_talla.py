@@ -73,6 +73,9 @@ def main():
             f["tall"] = "talls/" + f["id"] + ".wav"
             so += fin - ini
         json.dump(reg, open(p_reg, "w", encoding="utf-8"))
+        marca = os.path.join(carpeta, "talls_no_validats.txt")   # posat a mà quan es van trobar talls vells; ja no val
+        if os.path.exists(marca):
+            os.remove(marca)
         comu.desa_subtitols(carpeta, files)
         comptes = {"talls": sum(1 for f in files if f.get("tall")), "talls_nous": nous, "talls_refets_per_durada": refets, "segons_so": round(so, 1), "segons": round(time.time() - t0)}
         comu.etapa_fi(carpeta, ETAPA, comptes)
