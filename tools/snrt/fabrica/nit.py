@@ -4,7 +4,7 @@ abans que sèries), i per a cada capítol pendent fa 01 (baixar) → 02 → 03 �
 `estat.json` ja dona per feta (fi sense error) es salta, i cada etapa reprèn per dins. L'`estat` del capítol al
 catàleg passa a «fet» o «error» (amb la `nota`). Registre a `TD_TV/nit.log`. A l'ECS: `tmux new -s nit` i deixar-ho.
 
-  python -X utf8 nit.py [--cataleg RUTA] [--nomes SLUG ...] [--refes] [--fils 6] [--sense-baixar] [--un-per-segon]
+  python -X utf8 nit.py [--cataleg RUTA] [--nomes SLUG ...] [--refes] [--fils 6] [--sense-baixar] [--un-per-segon] [--lector-arab visio|propi]
   python -X utf8 nit.py <carpeta> [<carpeta> ...]      # sense catàleg: aquestes carpetes, 02 → 05
 
 01 baixa: `font` = «replay» → `tools/snrt/baixa_replay.py <url> --carpeta TD_TV/<slug> --nom video` (va bé des de
@@ -97,7 +97,7 @@ def corre(carpeta, a, log):
             comu.diu(log, f"   {etapa}: ja feta"); continue
         cmd = [comu.PY, "-X", "utf8", os.path.join(comu.AQUI, etapa + ".py"), carpeta]
         if etapa == "02_llegeix":
-            cmd += ["--fils", str(a.fils)] + (["--un-per-segon"] if a.un_per_segon else [])
+            cmd += ["--fils", str(a.fils)] + (["--un-per-segon"] if a.un_per_segon else []) + (["--lector-arab", a.lector_arab] if a.lector_arab != "visio" else [])
         t0 = time.time()
         r = subprocess.run(cmd)
         comu.diu(log, f"   {etapa}: {'bé' if r.returncode == 0 else 'ERROR ' + str(r.returncode)} en {time.time() - t0:.0f} s")
@@ -117,6 +117,7 @@ def main():
     ap.add_argument("--sense-baixar", action="store_true")
     ap.add_argument("--sense-1080", action="store_true", help="no baixar també el 1080p del replay per al tifinag")
     ap.add_argument("--un-per-segon", action="store_true")
+    ap.add_argument("--lector-arab", choices=["visio", "propi"], default="visio", help="propi: CRNN propi sense visió (candidat; marca arab_dubtos)")
     a = ap.parse_args()
     arrel = comu.td_tv()
     os.makedirs(arrel, exist_ok=True)

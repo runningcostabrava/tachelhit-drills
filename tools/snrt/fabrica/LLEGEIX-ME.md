@@ -17,7 +17,7 @@ L'única cosa fora de la carpeta és una línia a `TD_TV/_informes/AAAA-MM-DD.md
 | etapa | què fa | reprèn per |
 |---|---|---|
 | 01 (dins `nit.py`) | `../baixa_replay.py` (replay; va bé des de l'ECS) o `yt-dlp` del venv (YouTube; només des del PC) → `video.mp4`, i `video_1080.mp4` si n'hi ha | el vídeo que ja hi és |
-| `02_llegeix.py` | franges 1 fps · **comprovació de la geometria** (10 fotogrames; s'atura amb error si < 3 tenen les dues línies on toca) · **rellotge pel tifinag** (segmentador de glifs, gratuït) → trams · **un fotograma d'àrab per tram** (el del mig; un segon si la lectura és buida, < 6 caràcters o errònia) amb `qwen3-vl-plus` · franges idèntiques saltades · tifinag al fotograma del mig amb `lector_tifinag.llegeix_bandes` (sobre `video_1080.mp4` si hi és) · `credits` (> 3 línies de text o text idèntic repetit > 20 s) | segon (`lectures.jsonl`) i retall (`tif/`) |
+| `02_llegeix.py` | franges 1 fps · **comprovació de la geometria** (10 fotogrames; s'atura amb error si < 3 tenen les dues línies on toca) · **rellotge pel tifinag** (segmentador de glifs, gratuït) → trams · **un fotograma d'àrab per tram** (el del mig; un segon si la lectura és buida, < 6 caràcters o errònia) amb `qwen3-vl-plus` (o, amb `--lector-arab propi`, el CRNN propi sense visió: vegeu més avall) · franges idèntiques saltades · tifinag al fotograma del mig amb `lector_tifinag.llegeix_bandes` (sobre `video_1080.mp4` si hi és) · `credits` (> 3 línies de text o text idèntic repetit > 20 s) | segon (`lectures.jsonl`) i retall (`tif/`) |
 | `03_talla.py` | `talls/<id>.wav` mono 16 kHz, t_ini − 0,25 … t_fi + 0,25, dins el vídeo; els crèdits no | id (el wav que ja hi és) |
 | `04_tradueix.py` | àrab → català amb `qwen3.8-max` (a) i `deepseek-chat` (b), `chrf_ab`; 0,3 ≤ chrf_ab < 0,5 → tercer `qwen4-max` (Gemini no té crèdit) i es queda el que hi coincideix ≥ 0,5 («tercer»); ≥ 0,5 → «confirmat»; si no, «descartat». Tifinag → català amb el Space només per a `chrf_tif_ar` | id (una fila amb `catala_estat` i el mateix àrab/tifinag no es repeteix) |
 | `05_informe.py` | `numeros.json`, `INFORME.md` (plantilla §7), portes §5, varietat §6.1 (punts 1–3, si `TD_CATALEG`), 20 a ull, línia a `_informes/` | sempre es refà (és barat) |
@@ -96,6 +96,33 @@ hora de vídeo, la meitat a l'API de visió (6 fils).
   no canvien.
 - `tifinag_glifs`, `linies_text`, `arab_traduit`, `tifinag_traduit`, `catala_c`, `error_traduccio` són camps de més a
   `subtitols.jsonl` (serveixen per reprendre i per comptar); els de §3.3 hi són tots.
+
+## El lector d'àrab propi (CANDIDAT, `--lector-arab propi`)
+
+`02_llegeix.py <carpeta> --lector-arab propi` (o `nit.py ... --lector-arab propi`, o `TD_LECTOR_ARAB=propi`) llegeix l'àrab amb un CRNN+CTC propi
+(`lector_arab.py`, 4,2 M paràmetres, CPU) **sense cap crida de visió**: no gasta quota. Per a cada tram del rellotge del tifinag llegeix **dos fotogrames**
+(el del mig i el d'un quart; un de sol si el tram dura 1 s) del `video_1080.mp4` (si només hi ha el de 720p el retall es puja a 1450×64: no està mesurat
+i s'avisa al log), retallats a **x 110–1560 de 1080p** (fora el logotip de la dreta, que Qwen llegia com a subtítol) i **y 912–976** (desplaçat si
+la geometria del capítol no és l'estàndard). No es reescala: les lletres han de tenir la mida del vídeo.
+
+La rèplica surt amb `arab_lector` = «crnn-v4», `arab_conf` (probabilitat mínima dels símbols de la lectura triada, la del fotograma més segur;
+no és una probabilitat calibrada) i `arab_dubtos`, que és cert si les dues lectures discrepen, n'hi ha una de buida, el text té menys de 2 caràcters o
+`arab_conf` < 0,60. **No es crida Qwen** per a les dubtoses: només es marquen, perquè una cosa posterior (el visió quan hi hagi quota, o un humà)
+les revisi. Les lectures es desen per segon a `lectures_crnn.jsonl` (reprendre = no tornar a llegir). `arab_lectures`/`arab_acord` es compten com sempre.
+Les rèpliques ajuntades hereten `arab_dubtos` si ho era algun tram i la pitjor `arab_conf`.
+
+- **El pes no és al repositori** (`lector_arab_crnn_v4.pt`, 16,9 MB: 4,2 M paràmetres en float32). Es busca a `TD_MODEL_ARAB` (ruta) i, si no, a
+  `<TD_TV>/models/lector_arab_crnn_v4.pt` (al PC `C:\Users\josep\Veus-tachelhit\_escoltats\tamazight_tv\models\`, a l'ECS `/root/tamazight_tv/models/`).
+- Cal `torch` per a CPU (no és al venv del backend de Render: `pip install torch --index-url https://download.pytorch.org/whl/cpu`). Només s'importa amb aquest mode.
+- Proves sense vídeo: `backend/tests/test_lector_arab_snrt.py` (retall, contracte amb un pes aleatori, regla de dubtós, flux de l'etapa amb un lector fals i
+  represa; i una línia sintètica amb el pes real si hi ha `TD_MODEL_ARAB`).
+
+**El límit honest.** CER 0,0074 (84 línies exactes de 100; sense tashkil ni puntuació) sobre 100 línies de 1080p, **però: (1) la veritat l'ha transcrita el
+peó que ha entrenat el lector, no en Pablo** (en queda la revisió: `tipografia/arab/veritat/revisio.html`; 16 línies en discrepància); (2) els dos vídeos de la
+mesura (Illy cap. 1 i l'entrevista de Tadfi) són els de l'ajust fi: les línies mesurades són diferents de les entrenades (82 amb text nou: 0,0070), però la
+tipografia, la sèrie i la compressió són les mateixes; (3) només 30 de les 659 línies d'ajust són d'Illy (Illy: 0,014; entrevista: 0,005). No s'ha mesurat en
+un altre programa ni en un capítol nou: `INFORME_LECTOR.md` («mesura neta en capítol nou») hi anirà quan es faci. Només amb línies sintètiques el CER era 0,08, i més
+d'una època d'ajust fi l'empitjora (0,016): no es pot reentrenar a cegues. Fins llavors és **candidat**, no substitut del visió.
 
 ## El lector de tifinag és una funció
 
