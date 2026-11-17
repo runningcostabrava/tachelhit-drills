@@ -87,6 +87,10 @@ def llegeix_banda(a):
     r = _segmenta(a)
     if not r["glifs"]:
         return buit
+    SEG.unifica_grups(r, PL.classifica)     # un glif partit per un buit de columnes torna a ser un si la plantilla l'encaixa millor sencer
+    SEG.resol_amples(r, PL.classifica)      # dues rodones tangents (ⴰ+ⵔ sobre fons clar): el tall el tria la plantilla
+    if not r["glifs"]:
+        return buit
     cos_top = r["cos"][0]
     punts = [PL.classifica(g["mask"], g["caixa"][1] - cos_top) for g in r["glifs"]]
     text, glifs = _text(r, punts)

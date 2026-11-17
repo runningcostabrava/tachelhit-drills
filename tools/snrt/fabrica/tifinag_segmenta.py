@@ -30,6 +30,8 @@ R_VORA = 5                                # distància màx. a la vora fosca a c
 LLINDAR_BLANC = 175
 LLINDAR_FOSC = 135
 MODE_TALL_BUITS = True
+TALL_TOLERANT = True
+_GRUPS = [0]
 FOSC_RELATIU = True
 FOSC_DELTA = 55
 
@@ -167,7 +169,7 @@ def segmenta(rgb, y_origen=870, alt_video=1080, extensio_forcada=None):
                     j = i
                     while j < len(proj) and proj[j] == 0:
                         j += 1
-                    if j < len(proj):
+                    if j < len(proj) and (j - i) >= 3:      # el buit entre lletres és de ~4 px; 1-2 columnes buides són soroll de JPEG dins d'un glif
                         talls.append((ini, i)); ini = j
                     i = j
                 else:
@@ -180,9 +182,11 @@ def segmenta(rgb, y_origen=870, alt_video=1080, extensio_forcada=None):
                     parts.append((a, b, ys.min(), ys.max() + 1, xs.min(), xs.max() + 1, int(sub.sum())))
             bons = [p for p in parts if (p[5] - p[4]) >= 3 and (p[3] - p[2]) >= 9 and p[6] >= 20]
             if len(parts) > 1 and len(bons) == len(parts):
+                _GRUPS[0] += 1
+                tot = {"grup_buit": _GRUPS[0], "caixa_total": [x0, y0, x1, y1]}
                 for a, b, ya, yb, xa_, xb_, ar in parts:
                     sense_buits.append({"caixa": [x0 + a + xa_, y0 + ya, x0 + a + xb_, y0 + yb], "area": ar, "ids": c.get("ids", [c["id"]]), "id": c["id"],
-                                        "x_talla": (x0 + a, x0 + b), "partit_buit": True})
+                                        "x_talla": (x0 + a, x0 + b), "partit_buit": True, **tot})
                 continue
         sense_buits.append(c)
     comps = sense_buits
@@ -204,6 +208,20 @@ def segmenta(rgb, y_origen=870, alt_video=1080, extensio_forcada=None):
                                   "ids": c["ids"], "partit": True, "x_talla": (a, b), "id": c["id"]})
                 continue
             c["massa_ample"] = True
+            if TALL_TOLERANT and x1 - x0 <= 2 * AMPLE_MAX:
+                # dues lletres rodones tangents (ⴰ+ⵔ sobre fons clar) no tenen cap columna buida. Es guarden els valls de projecció com a CANDIDATS de tall
+                # (la columna del mínim de cada vall, ≤ 10 px de nucli, a ≥ 8 px de les vores); l'escollirà la plantilla (resol_amples): la projecció sola
+                # no distingeix el punt de contacte de dues rodones del mig d'una sola rodona.
+                proj = msk[y0:y1, x0:x1].sum(axis=0)
+                vall, cols = [], []
+                for i in range(8, (x1 - x0) - 8):
+                    if proj[i] <= 10:
+                        vall.append(i)
+                    elif vall:
+                        cols.append(min(vall, key=lambda j: proj[j])); vall = []
+                if vall:
+                    cols.append(min(vall, key=lambda j: proj[j]))
+                c["cand_cols"] = [x0 + i for i in cols][:8]
         noves.append(c)
     comps = noves
 
@@ -218,7 +236,7 @@ def segmenta(rgb, y_origen=870, alt_video=1080, extensio_forcada=None):
             motiu = "area"
         elif x0 < VORA_MIN or x1 > W - VORA_MIN:
             motiu = "vora_franja"
-        elif c.get("massa_ample"):
+        elif c.get("massa_ample") and not c.get("cand_cols"):
             motiu = "massa_ample"
         elif y1 < cos_top + 6 or y0 > cos_bot + 8:
             motiu = "fora_de_fila"
@@ -304,5 +322,67 @@ def segmenta(rgb, y_origen=870, alt_video=1080, extensio_forcada=None):
         glifs = millor[2]
     elif glifs and ext is not None:
         glifs = [g for g in glifs if g["caixa"][0] >= ext[0] - 2 and g["caixa"][2] <= ext[1] + 2]
-    return {"glifs": glifs, "extensio": ext, "descartats": descartats, "mask": mask, "y_origen": y_origen, "rgb": rgb,
+    return {"glifs": glifs, "extensio": ext, "descartats": descartats, "mask": mask, "lab": lab, "y_origen": y_origen, "rgb": rgb,
             "cos": (cos_top, cos_bot)}
+
+
+
+def unifica_grups(r, classifica):
+    """Un component partit pel buit de columnes torna a ser UN glif si la plantilla l'encaixa millor sencer que les seves parts
+    (p. ex. la barra i els braços de ⵥ, que a vegades queden separats): IoU del conjunt >= mitjana dels IoU de les parts - 0,02.
+    Si no, es queden separats (ⴰ i ⵍ enganxats sobre fons clar). `classifica(mask, y_rel_top)` torna [(IoU, signe), ...]."""
+    cos_top = r["cos"][0]
+    grups = {}
+    for g in r["glifs"]:
+        if g.get("grup_buit"):
+            grups.setdefault(g["grup_buit"], []).append(g)
+    for gid, parts in grups.items():
+        x0, y0, x1, y1 = parts[0]["caixa_total"]
+        ids = parts[0]["ids"]
+        msk = np.isin(r["lab"], ids)[y0:y1, x0:x1]
+        ys, xs = np.nonzero(msk)
+        if not len(ys):
+            continue
+        cx0, cy0, cx1, cy1 = x0 + xs.min(), y0 + ys.min(), x0 + xs.max() + 1, y0 + ys.max() + 1
+        msk = msk[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+        iou_tot = classifica(msk, cy0 - cos_top)[0][0]
+        iou_parts = np.mean([classifica(p["mask"], p["caixa"][1] - cos_top)[0][0] for p in parts])
+        if iou_tot >= iou_parts - 0.02:
+            nou = {"caixa": [cx0, cy0, cx1, cy1], "area": int(msk.sum()), "ids": ids, "tipus": "cos", "mask": msk, "unit_per_plantilla": True}
+            pos = r["glifs"].index(parts[0])
+            r["glifs"] = [g for g in r["glifs"] if g not in parts]
+            r["glifs"].insert(pos, nou)
+    return r
+
+
+def resol_amples(r, classifica, iou_min=0.5):
+    """Els components massa amples sense columna buida (ⴰ+ⵔ tangents sobre fons clar) porten `cand_cols`. Es parteix per la columna
+    que dona les dues parts amb millor IoU de plantilla (mitjana ≥ iou_min); si cap no hi arriba, el component es descarta com abans."""
+    cos_top = r["cos"][0]
+    nous = []
+    for g in r["glifs"]:
+        cols = g.get("cand_cols")
+        if not cols:
+            nous.append(g); continue
+        x0, y0, x1, y1 = g["caixa"]
+        full = np.isin(r["lab"], g["ids"])
+        best = None
+        for cx in cols:
+            parts = []
+            for a, b in ((x0, cx), (cx, x1)):
+                sub = full[y0:y1, a:b]
+                ys, xs = np.nonzero(sub)
+                if len(ys) < 20 or (xs.max() - xs.min() + 1) < 6:
+                    parts = None; break
+                m = sub[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
+                parts.append({"caixa": [a + xs.min(), y0 + ys.min(), a + xs.max() + 1, y0 + ys.max() + 1], "area": int(sub.sum()), "ids": g["ids"],
+                              "tipus": "cos" if (ys.max() - ys.min() + 1) >= 20 else "petit", "mask": m})
+            if not parts:
+                continue
+            ious = [classifica(p["mask"], p["caixa"][1] - cos_top)[0][0] for p in parts]
+            if best is None or np.mean(ious) > best[0]:
+                best = (np.mean(ious), parts)
+        if best and best[0] >= iou_min:
+            nous.extend(best[1])
+    r["glifs"] = nous
+    return r
