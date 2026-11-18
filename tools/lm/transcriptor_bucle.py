@@ -126,9 +126,19 @@ def alineacio_ok(r, carpeta):
     if os.environ.get("SNRT_ALTA") == "1":   # només «alta certesa»: el model acústic i l'OCR diuen el mateix (tools/snrt/concordanca.py)
         try:
             with open(os.path.join(carpeta, "talls", "concordanca.json"), encoding="utf-8") as f:
-                return json.load(f).get(r["id"], {}).get("alta") is True
+                c = json.load(f).get(r["id"], {})
         except (OSError, ValueError):
             return False
+        if c.get("alta") is not True:
+            return False
+        # 18-11: «alta» és un RANG (millor que 20 controls) i la mediana del CER d'esquelet dels «alta» és 0,54; amb SNRT_ESQ_MAX
+        # només entren els talls on les consonants que sent el model i les que llegeix l'OCR coincideixen de debò.
+        if os.environ.get("SNRT_ESQ_MAX"):
+            import importlib.util   # noqa: PLC0415
+            esp = importlib.util.spec_from_file_location("concordanca_snrt_local", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "snrt", "concordanca.py"))
+            mod = importlib.util.module_from_spec(esp)
+            esp.loader.exec_module(mod)
+            return mod.cer_esq(c.get("hip", ""), c.get("text", "")) <= float(os.environ["SNRT_ESQ_MAX"])
     return True
 
 
@@ -366,6 +376,10 @@ def prepara_nucli(sortida, recepta, arrel_repo):
         font = open(os.path.join(arrel_repo, "tools", "lm", "kaggle", "transcriptor_snrt.py"), encoding="utf-8").read()
         nou, n = re.subn(r'^RECEPTA = "[AB]"$', f'RECEPTA = "{recepta}"', font, flags=re.M)
         assert n == 1, "no trobo la línia RECEPTA al nucli"
+        for nom, env in (("RITME", "SNRT_RITME"), ("EPOQUES", "SNRT_EPOQUES")):   # entrenament més suau sense editar el guió
+            if os.environ.get(env):
+                nou, n = re.subn(rf"^{nom} = .*$", f"{nom} = {float(os.environ[env]) if nom == 'RITME' else int(os.environ[env])}", nou, flags=re.M)
+                assert n == 1, f"no trobo la línia {nom} al nucli"
     codi = f"snrt-transcriptor-{recepta.lower()}.py"
     open(os.path.join(d, codi), "w", encoding="utf-8").write(nou)
     json.dump({"id": f"{USUARI_KAGGLE}/{NUCLI[recepta]}", "title": NUCLI[recepta].replace("-", " "), "code_file": codi, "language": "python",

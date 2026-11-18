@@ -321,3 +321,31 @@ def test_alta_certesa_nomes_amb_el_flag_i_amb_concordanca(tmp_path, monkeypatch)
     assert tb.alineacio_ok({"id": "llarg_0000"}, c) is True
     assert tb.alineacio_ok({"id": "llarg_0001"}, c) is False
     assert tb.alineacio_ok({"id": "llarg_0002"}, c) is False           # sense entrada a la concordància
+
+
+def test_esquelet_estricte_i_parametres_suaus(tmp_path, monkeypatch):
+    """SNRT_ESQ_MAX deixa passar només els «alta» amb consonants coincidents; SNRT_RITME/EPOQUES reescriuen el nucli."""
+    import json as _j
+    import os as _o
+    sys_mod = __import__("tools.lm.transcriptor_bucle", fromlist=["x"]) if False else None  # noqa: F841
+    import importlib.util
+    arrel = _o.path.abspath(_o.path.join(_o.path.dirname(__file__), "..", ".."))
+    esp = importlib.util.spec_from_file_location("tb", _o.path.join(arrel, "tools", "lm", "transcriptor_bucle.py"))
+    tb = importlib.util.module_from_spec(esp)
+    esp.loader.exec_module(tb)
+    talls = tmp_path / "talls"
+    talls.mkdir()
+    (talls / "alineacio.json").write_text(_j.dumps({"talls": {"a": {"v": "ok"}, "b": {"v": "ok"}}}))
+    (talls / "concordanca.json").write_text(_j.dumps({
+        "a": {"alta": True, "hip": "azul imanay", "text": "azul imannay"},
+        "b": {"alta": True, "hip": "qqq ssdd", "text": "azul imannay"}}))
+    monkeypatch.setenv("SNRT_ALTA", "1")
+    assert tb.alineacio_ok({"id": "b"}, str(tmp_path)) is True
+    monkeypatch.setenv("SNRT_ESQ_MAX", "0.4")
+    assert tb.alineacio_ok({"id": "a"}, str(tmp_path)) is True
+    assert tb.alineacio_ok({"id": "b"}, str(tmp_path)) is False
+    monkeypatch.setenv("SNRT_RITME", "3e-05")
+    monkeypatch.setenv("SNRT_EPOQUES", "3")
+    d = tb.prepara_nucli(str(tmp_path / "s"), "B", arrel)
+    codi = open(_o.path.join(d, "snrt-transcriptor-b.py"), encoding="utf-8").read()
+    assert "RITME = 3e-05" in codi and "EPOQUES = 3\n" in codi and 'RECEPTA = "B"' in codi
