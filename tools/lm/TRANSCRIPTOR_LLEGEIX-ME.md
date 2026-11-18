@@ -24,18 +24,18 @@ Reprenible: cada subordre deixa un fitxer (`ds/rows.json`, `particio.json`, `sor
    no crèdit, tifinag amb confiança ≥ 0,85 i ≤ 2 glifs dubtosos, durada ≥ 0,8 s, 2–30 paraules, i el wav **hi és, dura
    durada + 0,5 s i no és anterior al final de la 02**. Aquest darrer control importa: la 03 és reprenible per id i no refà
    els talls que ja hi són, així que quan la 02 es refà queden **talls vells sota els mateixos ids** (vist el 17/18-11: 486 de
-   700 files d'un capítol). Un capítol amb menys de 100 aptes queda fora.
+   700 files d'un capítol). Un capítol amb menys de 50 aptes queda fora.
 2. **Partició per capítol, mai per línia** (llavor 1114): ~10 % dels capítols sencers a test, ~5 % a dev (almenys 1 i 1),
    la resta a train. La llista d'ids es congela a `particio.json` amb el seu hash. Es treuen del train (i del dev) les
    rèpliques amb el mateix text ric que el test o el dev.
 3. **Objectiu**: tifinag → llatí **ric sense plegar** (ġ ε ḥ ḍ ṭ ṣ ẓ es conserven; regla `tachelhit-asr-plegat-esborrava-lletres`),
    la mateixa `rica()` que H4/H4b/H5.
-4. **Nucli** (`transcriptor_snrt.py`, T4): mesura l'adaptador actual («abans»); filtra el train i el dev amb **CER ≤ 0,4**
-   de l'adaptador actual contra el tifinag (§5: treu els subtítols que resumeixen en lloc de transcriure); treu del train
-   tot el que coincideix per text amb qualsevol prova; entrena (només adaptadors, 4 èpoques, 1e-4, millor època per dev) i
-   torna a mesurar sobre els mateixos talls («després»). Proves: **cv-zgh-test** (256 clips), **test-fora**, **tfa-226**,
-   **zouhir-tests**, **snrt-retingut** (capítols sencers fora d'entrenament, **sense** el filtre CER perquè el filtre és de
-   l'ASR actual i afavoriria el test).
+4. **Nucli** (`transcriptor_snrt.py`, T4): mesura l'adaptador actual («abans»); treu del train tot el que coincideix per text
+   amb qualsevol prova; entrena (només adaptadors, 4 èpoques, 1e-4, millor època per dev) i torna a mesurar sobre els
+   mateixos talls («després»). Proves: **cv-zgh-test** (256 clips), **test-fora**, **tfa-226**, **zouhir-tests**,
+   **snrt-retingut** (capítols sencers fora d'entrenament). **El filtre de §5 «CER ≤ 0,4 de l'adaptador actual» va apagat**
+   (`FILTRE_CER = None`): a Tadfi n Tskla el CER mediana és 0,86 i només passa el 0,6 % dels talls (5 de 782), així que buida
+   el train. El nucli només el compta per a l'informe. Reactivar-lo o canviar-lo és decisió del director (§8).
 5. **Regla** (`avalua`, bootstrap aparellat 2.000 × llavor 1114): s'adopta **només si** CV zgh baixa amb IC (límit alt de
    Δ < 0), **i** test-fora no empitjora més de 0,005, **i** els capítols retinguts no empitjoren (salvaguarda del pla). Si
    falta cap de les tres proves, no s'adopta.
