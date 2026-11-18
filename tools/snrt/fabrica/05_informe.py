@@ -45,10 +45,34 @@ def paraules(t):
     return len((t or "").split())
 
 
-def apta_traductor(f):
+def apta_traductor(f, dubtos_ok=False):
+    """`arab_dubtos` (lector d'àrab propi: lectures que discrepen o poca confiança) NO és apta per al traductor; per a l'ASR sí
+    (dubtos_ok=True): decisió del director del 18-11-2026, només afegeix una condició, no toca cap llindar."""
+    if f.get("arab_dubtos") and not dubtos_ok:
+        return False
     return (not f.get("credits") and (f.get("tifinag_conf") or 0) >= 0.85 and (f.get("tifinag_dubtosos") or 0) <= 2
             and ((f.get("arab_acord") or 0) >= 0.5 or (f.get("arab_lectures") == 1 and f.get("arab")))
             and f.get("catala_estat") in ("confirmat", "tercer") and 2 <= paraules(f.get("tifinag")) <= 30)
+
+
+def talls_durades(carpeta, files):
+    """Comprovació dels talls (#601): la durada de cada wav ha de ser la de la rèplica ± 0,5 s (03 hi afegeix 0,25 s a cada banda) i la carpeta
+    ha de dur `talls/intervals.json` (el registre que 03 desa quan talla: sense ell, els wav poden ser d'una lectura vella). Menys del 99 %
+    o sense registre = el capítol NO és apte per a l'ASR."""
+    import wave
+    amb = [f for f in files if f.get("tall")]
+    ok = 0
+    for f in amb:
+        try:
+            with wave.open(os.path.join(carpeta, f["tall"])) as w:
+                d = w.getnframes() / w.getframerate()
+        except Exception:
+            continue
+        ok += abs(d - (f["t_fi"] - f["t_ini"])) <= 0.52
+    validats = os.path.exists(os.path.join(carpeta, "talls", "intervals.json"))
+    pct = round(100 * ok / len(amb), 1) if amb else None
+    return {"talls_total": len(amb), "talls_durada_ok": ok, "talls_durada_pct": pct, "talls_validats": validats,
+            "capitol_apte_asr": bool(validats and pct is not None and pct >= 99)}
 
 
 def numeros(files, est):
@@ -71,7 +95,9 @@ def numeros(files, est):
         "tifinag_dubtosos": sum(f.get("tifinag_dubtosos") or 0 for f in D), "tifinag_amb_text": sum(1 for f in D if f.get("tifinag")),
         "chrf_ab_mitja": mitj(ab), "catala_estats": {e: sum(1 for f in D if f.get("catala_estat") == e) for e in ("confirmat", "tercer", "descartat")},
         "chrf_tif_ar_mitja": mitj(ta), "chrf_tif_ar_sobre_0_5": sum(1 for c in ta if c >= 0.5), "chrf_tif_ar_n": len(ta),
-        "aptes_traductor": len(aptes), "aptes_asr_durada": sum(1 for f in aptes if f["durada"] >= 0.8), "aptes_asr": None,
+        "aptes_traductor": len(aptes), "aptes_asr_durada": sum(1 for f in D if apta_traductor(f, True) and f["durada"] >= 0.8), "aptes_asr": None,
+        "arab_dubtoses": sum(1 for f in D if f.get("arab_dubtos")),
+        "aptes_so_tifinag": sum(1 for f in D if (f.get("tifinag_conf") or 0) >= 0.85 and (f.get("tifinag_dubtosos") or 0) <= 2 and 2 <= paraules(f.get("tifinag")) <= 30),
         "capitol_apte": (len(aptes) / max(1, len(D))) >= 0.6,
         "fitxes_visio": c02.get("fitxes_visio"), "crides_visio": c02.get("crides_visio"), "metode_arab": c02.get("metode"),
         "fotogrames_arab_usats": c02.get("fotogrames_llegits"), "fitxes_visio_equivalents": (c02.get("fotogrames_llegits") or 0) * 172,
@@ -201,6 +227,7 @@ def informe(carpeta, files, num, mostra, est, var, cap):
     e = num["catala_estats"]
     w(f"| traducció: chrf_ab mitjà, confirmat / tercer / descartat | {num['chrf_ab_mitja']}, {e['confirmat']} / {e['tercer']} / {e['descartat']} ({pc(e['confirmat'], num['dialeg'])} / {pc(e['tercer'], num['dialeg'])} / {pc(e['descartat'], num['dialeg'])}) |")
     w(f"| chrf_tif_ar mitjà i ≥ 0,5 (mesura del traductor, no porta) | {num['chrf_tif_ar_mitja']}, {num['chrf_tif_ar_sobre_0_5']} de {num['chrf_tif_ar_n']} ({pc(num['chrf_tif_ar_sobre_0_5'], num['chrf_tif_ar_n'])}) |")
+    w(f"| talls: durada = t_fi − t_ini ± 0,5 s (cal ≥ 99 %) i `talls/intervals.json` | {num['talls_durada_ok']} de {num['talls_total']} ({num['talls_durada_pct']} %); registre {'sí' if num['talls_validats'] else 'NO'}; capítol {'apte' if num['capitol_apte_asr'] else "**NO apte per a l ASR**"} |")
     w(f"| **portes (§5)**: aptes per al traductor / per a l'ASR | **{num['aptes_traductor']}** ({pc(num['aptes_traductor'], num['dialeg'])}; capítol {'apte' if num['capitol_apte'] else 'NO apte (< 60 %)'}) / {num['aptes_asr_durada']} per durada, CER de l'ASR no mesurat |")
     w(f"| cost: fitxes de visió / de text per model | {num['fitxes_visio']} pagades ara ({num['crides_visio']} crides); {num['fotogrames_arab_usats']} fotogrames d'àrab usats ≈ {num['fitxes_visio_equivalents']} fitxes si es paguessin tots / {num['fitxes_text']} |")
     w(f"| minuts de màquina (02–04) | {num['minuts_maquina']} |")
@@ -234,6 +261,8 @@ def informe(carpeta, files, num, mostra, est, var, cap):
     avis = est.get("02_llegeix", {}).get("comptes", {}).get("avis")
     if avis:
         w(f"- {avis}")
+    if not num["capitol_apte_asr"]:
+        w(f"- Els talls no estan validats ({num['talls_durada_pct']} % amb la durada que toca; registre d'intervals {'sí' if num['talls_validats'] else 'NO'}): el capítol NO és apte per a l'ASR fins que 03 els refaci.")
     if not num["capitol_apte"]:
         w(f"- El capítol no passa la porta del 60 % ({pc(num['aptes_traductor'], num['dialeg'])} d'aptes): el director decideix (geometria, so, lector).")
     w("- La porta de l'ASR (CER ≤ 0,4 contra el tifinag) no està mesurada: cal decidir quin transcriptor i on corre.")
@@ -296,6 +325,7 @@ def main():
             comu.desa_subtitols(carpeta, files)
         comu.diu(log, f"== {ETAPA} {comu.ara()}")
         num, aptes = numeros(files, est)
+        num.update(talls_durades(carpeta, files))
         var = varietat(files, est)
         if var:
             num["varietat"] = var
@@ -306,7 +336,7 @@ def main():
             json.dump(mostra, f, ensure_ascii=False, indent=1)
         informe(carpeta, files, num, mostra, est, var, cap)
         linia_informe_nit(num, cap)
-        comu.etapa_fi(carpeta, ETAPA, {"dialeg": num["dialeg"], "aptes_traductor": num["aptes_traductor"], "capitol_apte": num["capitol_apte"],
+        comu.etapa_fi(carpeta, ETAPA, {"dialeg": num["dialeg"], "aptes_traductor": num["aptes_traductor"], "capitol_apte": num["capitol_apte"], "capitol_apte_asr": num["capitol_apte_asr"], "talls_durada_pct": num["talls_durada_pct"],
                                        "segons": round(time.time() - t0)})
         comu.diu(log, f"{ETAPA}: {num['dialeg']} de diàleg, {num['aptes_traductor']} aptes, chrf_ab {num['chrf_ab_mitja']} -> INFORME.md")
     except Exception as e:
