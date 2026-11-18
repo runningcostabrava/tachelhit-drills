@@ -42,7 +42,7 @@ MILLORA_CV_MAX_IC = 0.0                                  # límit superior de l'
 EMPITJORA_FORA_MAX = 0.005                               # test-fora: Δ no pot passar de +0,005
 USUARI_KAGGLE = "josepabloucr"
 DATASET = "snrt-transcriptor"
-NUCLI = {"A": "snrt-transcriptor-a", "B": "snrt-transcriptor-b"}
+NUCLI = {"A": "snrt-transcriptor-a", "B": "snrt-transcriptor-b", "CONC": "snrt-concordanca"}
 DATASETS_NUCLI = ["josepabloucr/adaptador-shi-zouhir-b", "josepabloucr/tfa-veritat-h3", "josepabloucr/corpus-v4-amb-cv-zgh",
                   "josepabloucr/cv-zgh-test-256", "josepabloucr/zouhir-veritat"]
 ESPERA_COMENCA_MAX = 90 * 60
@@ -338,6 +338,7 @@ def kaggle(*args, cwd=None, cli=None, check=True):
 
 def puja(sortida):
     ds = os.path.join(sortida, "ds")
+    shutil.copy(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "snrt", "concordanca.py"), ds)   # el nucli CONC l'importa
     json.dump({"title": "SNRT transcriptor", "id": f"{USUARI_KAGGLE}/{DATASET}", "licenses": [{"name": "other"}], "isPrivate": True},
               open(os.path.join(ds, "dataset-metadata.json"), "w"))
     ja = DATASET in kaggle("datasets", "list", "--mine", "-s", DATASET, check=False)
@@ -351,9 +352,12 @@ def prepara_nucli(sortida, recepta, arrel_repo):
     d = os.path.join(sortida, f"nucli_{recepta}")
     shutil.rmtree(d, ignore_errors=True)
     os.makedirs(d)
-    font = open(os.path.join(arrel_repo, "tools", "lm", "kaggle", "transcriptor_snrt.py"), encoding="utf-8").read()
-    nou, n = re.subn(r'^RECEPTA = "[AB]"$', f'RECEPTA = "{recepta}"', font, flags=re.M)
-    assert n == 1, "no trobo la línia RECEPTA al nucli"
+    if recepta == "CONC":   # només escolta i puntua (tools/snrt/concordanca.py), no entrena
+        nou = open(os.path.join(arrel_repo, "tools", "lm", "kaggle", "concordanca_snrt.py"), encoding="utf-8").read()
+    else:
+        font = open(os.path.join(arrel_repo, "tools", "lm", "kaggle", "transcriptor_snrt.py"), encoding="utf-8").read()
+        nou, n = re.subn(r'^RECEPTA = "[AB]"$', f'RECEPTA = "{recepta}"', font, flags=re.M)
+        assert n == 1, "no trobo la línia RECEPTA al nucli"
     codi = f"snrt-transcriptor-{recepta.lower()}.py"
     open(os.path.join(d, codi), "w", encoding="utf-8").write(nou)
     json.dump({"id": f"{USUARI_KAGGLE}/{NUCLI[recepta]}", "title": NUCLI[recepta].replace("-", " "), "code_file": codi, "language": "python",
@@ -417,7 +421,7 @@ def main(argv=None):
     ap.add_argument("--arrel", default="/root/tamazight_tv")
     ap.add_argument("--sortida", default="/root/transcriptor")
     ap.add_argument("--repo", default=os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    ap.add_argument("--recepta", choices=["A", "B"], default="A")
+    ap.add_argument("--recepta", choices=["A", "B", "CONC"], default="A", help="CONC: nucli de concordància (només escolta); no passa per «cicle»")
     ap.add_argument("--sortides", help="avalua: fitxer *_sortides.json")
     ap.add_argument("--forca", action="store_true", help="salta la parada de 2 cicles sense millora")
     a = ap.parse_args(argv)
@@ -433,6 +437,8 @@ def main(argv=None):
     elif a.ordre == "avalua":
         print(json.dumps(avalua(a.sortides), ensure_ascii=False, indent=1))
     else:
+        if a.recepta == "CONC":
+            sys.exit("CONC no entrena: usa construeix, puja, llanca, espera (en aquest ordre)")
         if cicles_sense_millora(a.sortida) >= 2 and not a.forca:
             sys.exit("parat: dos cicles seguits sense millora (regla del pla); --forca per saltar-ho")
         r = construeix(a.arrel, a.sortida)
