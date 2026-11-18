@@ -74,6 +74,7 @@ const VideoDrillCreator = lazyPagina(() => import('./components/VideoDrillCreato
 const SrtImport = lazyPagina(() => import('./components/SrtImport'));
 const VideoLibraryPage = lazyPagina(() => import('./components/VideoLibraryPage'));
 const BabaAliViewer = lazyPagina(() => import('./components/BabaAliViewer'));
+const SnrtPrivat = lazyPagina(() => import('./components/SnrtPrivat'));
 const CaptureReview = lazyPagina(() => import('./components/CaptureReview'));
 const MethodPage = lazyPagina(() => import('./components/MethodPage'));
 const MethodChapter = lazyPagina(() => import('./components/MethodChapter'));
@@ -425,6 +426,7 @@ function App() {
         <Route path="/library" element={<VideoLibraryPage />} />
         {/* El Baba Ali: la sèrie del canal amb el nostre text a sota. */}
         <Route path="/baba-ali" element={<BabaAliViewer />} />
+        <Route path="/snrt" element={<SnrtPrivat />} />
         {/* What a video gave us, and the chance to move a cut or correct its words. */}
         <Route path="/captura/video" element={<CaptureReview />} />
         <Route path="/profile" element={<ProfilePage />} />
