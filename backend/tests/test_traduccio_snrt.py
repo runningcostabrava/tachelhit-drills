@@ -171,3 +171,43 @@ def test_05_dubtoses_no_aptes_pel_traductor_si_per_l_asr():
     assert n["aptes_traductor"] == 1 and n["arab_dubtoses"] == 1
     assert n["aptes_asr_durada"] == 2                                          # per a l'ASR la dubtosa sí que val
     assert n["aptes_so_tifinag"] == 2
+
+
+def test_reconcilia_amb_els_capitols_si_el_comptador_va_per_sota(tmp_path):
+    """El 18-11-2026 una 04 sense comptador (el capítol en curs d'un desplegament) va gastar 55 k que `_costos.json` no sabia."""
+    m = _carrega("04_tradueix")
+    json.dump({"fitxes": {"qwen3.8-max": 800_000}}, open(tmp_path / "_costos.json", "w"))
+    for i, n in enumerate((600_000, 255_430)):
+        (tmp_path / ("cap%d" % i)).mkdir()
+        json.dump({"04_tradueix": {"comptes": {"fitxes_text": {"qwen3.8-max": n}}}}, open(tmp_path / ("cap%d" % i) / "estat.json", "w"))
+    p = m.Pressupost(str(tmp_path / "_costos.json"))
+    assert p.fitxes["qwen3.8-max"] == 855_430                          # el màxim dels dos: la suma dels capítols
+    assert p.esgotat(["qwen3.8-max"]) == ["qwen3.8-max"]
+
+
+def test_el_limit_es_comprova_abans_de_cada_crida(etapa04, tmp_path, monkeypatch):
+    m, crides = etapa04
+    m.PRESSUPOST = m.Pressupost(str(tmp_path / "_costos.json"))
+    m.PRESSUPOST.fitxes["qwen3.8-max"] = 850_000
+    with pytest.raises(m.PressupostEsgotat):
+        m.tradueix("qwen3.8-max", "ar-ok")
+    assert crides == []                                                 # ni una crida al model esgotat
+    m.PRESSUPOST.fitxes["qwen3.8-max"] = 849_900
+    assert m.tradueix("qwen3.8-max", "ar-ok")[0] == "bé"                # per sota: crida
+    assert m.PRESSUPOST.fitxes["qwen3.8-max"] == 850_000                # i el comptador s'actualitza a cada crida
+
+
+def test_fila_a_mig_quan_un_model_arriba_al_limit_queda_intacta(etapa04, tmp_path, monkeypatch):
+    m, crides = etapa04
+    json.dump({"fitxes": {"deepseek-chat": 20_000_000}}, open(tmp_path / "_costos.json", "w"))    # DeepSeek ja és al límit
+    real = m.Pressupost.esgotat
+    estat = {"n": 0}
+
+    def esgotat(self, models):          # la primera consulta (la de la fila, `aturat()`) passa; la de DeepSeek dins la crida ja no (cursa entre fils)
+        estat["n"] += 1
+        return [] if estat["n"] == 1 else real(self, models)
+    monkeypatch.setattr(m.Pressupost, "esgotat", esgotat)
+    car = _capitol(tmp_path, [_fila(1, "ar-ok")])
+    f = _executa(m, car, monkeypatch)[0]
+    assert "catala_estat" not in f and "arab_traduit" not in f and not f.get("catala")      # ni «descartat» ni mig traduïda: es refarà
+    assert comu.estat_llegeix(car)["04_tradueix"]["comptes"]["saltades_pressupost"] >= 1

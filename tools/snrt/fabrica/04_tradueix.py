@@ -51,8 +51,9 @@ SISTEMA = ("Ets un traductor de l'àrab al català. T'arriba la traducció àrab
 PREU_M_USD = {"deepseek": 0.28, "gemini": 2.5}   # $ per milió de fitxes, preu de sortida (per excés)
 
 
-class PressupostEsgotat(RuntimeError):
-    pass
+class PressupostEsgotat(BaseException):
+    """Es llança ABANS de cada crida si el model ja ha arribat al límit. És una BaseException a posta: els `except Exception` de la feina no
+    l'han d'empassar (la fila quedaria com a «descartat»); `feina()` la captura i deixa la fila sense tocar."""
 
 
 class Pressupost:
@@ -68,6 +69,26 @@ class Pressupost:
                 self.fitxes = {k: int(v) for k, v in json.load(fh).get("fitxes", {}).items()}
         except Exception:
             self.fitxes = {}
+        self.reconcilia(os.path.dirname(path))
+
+    def reconcilia(self, td):
+        """El comptador no es pot quedar per sota del que els capítols diuen que s'ha gastat (`estat.json` -> 04 -> comptes.fitxes_text): una etapa 04
+        d'una versió del codi sense comptador (el capítol en curs en un desplegament) gastava sense deixar rastre a `_costos.json`, i el límit es va
+        passar de 55 k el 18-11-2026. Es pren el màxim dels dos, sumant els capítols."""
+        import glob
+        import json
+        suma = {}
+        for q in glob.glob(os.path.join(td, "*", "estat.json")):
+            try:
+                with open(q, encoding="utf-8") as fh:
+                    ft = ((json.load(fh).get("04_tradueix") or {}).get("comptes") or {}).get("fitxes_text") or {}
+            except Exception:
+                continue
+            for m, n in ft.items():
+                suma[m] = suma.get(m, 0) + int(n or 0)
+        for m, n in suma.items():
+            if n > self.fitxes.get(m, 0):
+                self.fitxes[m] = n
 
     @staticmethod
     def tipus(model):
@@ -119,6 +140,8 @@ def primera_linia(t):
 
 def tradueix(model, text):
     msgs = [{"role": "system", "content": SISTEMA}, {"role": "user", "content": f"Àrab: {text}\n\nCatalà:"}]
+    if PRESSUPOST is not None and PRESSUPOST.esgotat([model]):   # el límit es comprova ABANS de cada crida, no al final del capítol
+        raise PressupostEsgotat(model)
     if model.startswith("deepseek"):
         out, u = comu.xat(model, msgs, max_tokens=300, base=os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
                           key=os.environ.get("DEEPSEEK_API_KEY", ""))
@@ -220,6 +243,15 @@ def main():
             return ""
 
         def feina(f):
+            try:
+                return feina_int(f)
+            except PressupostEsgotat:   # un model ha arribat al límit a mitja fila: la fila es queda sense tocar i es farà quan es pugi el límit
+                with pany:
+                    saltades[0] += 1
+                f.pop("arab_traduit", None)
+                return f
+
+        def feina_int(f):
             if aturat():   # límit de cost: no es toca la fila (es traduirà quan es pugi el límit)
                 with pany:
                     saltades[0] += 1
