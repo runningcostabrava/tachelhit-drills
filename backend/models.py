@@ -496,3 +496,31 @@ class UserSession(Base):
     device = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     last_used = Column(DateTime, default=datetime.utcnow, nullable=True)
+
+
+class SnrtEpisode(Base):
+    """Un episodi de Tamazight TV (SNRT) per al visor PRIVAT d'administradors (docs/adr/0012). Només text i temps: el
+    vídeo no és nostre i no se'n guarda ni se'n serveix cap còpia. Mai surt en cap exportació ni corpus."""
+    __tablename__ = "snrt_episodes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    slug = Column(String, unique=True, index=True, nullable=False)
+    titol = Column(String, nullable=False)
+    url_pagina = Column(String, nullable=True)      # pàgina original de la SNRT (forja.ma / YouTube), on es mira el vídeo
+    video_youtube = Column(String, nullable=True)   # id de YouTube si l'episodi hi és (s'encasta; no és una còpia)
+    durada = Column(Float, nullable=True)
+    creat = Column(DateTime, default=datetime.utcnow)
+
+
+class SnrtCue(Base):
+    __tablename__ = "snrt_cues"
+
+    id = Column(Integer, primary_key=True, index=True)
+    episodi_id = Column(Integer, ForeignKey("snrt_episodes.id"), index=True, nullable=False)
+    k = Column(Integer, nullable=False)            # ordre dins l'episodi
+    t_ini = Column(Float, nullable=False)
+    t_fi = Column(Float, nullable=False)
+    tifinag = Column(Text, nullable=True)
+    arab = Column(Text, nullable=True)
+    catala = Column(Text, nullable=True)           # traducció de màquina, sense revisar
+    catala_estat = Column(String, nullable=True)   # acord entre models o no
