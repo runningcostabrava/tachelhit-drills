@@ -141,7 +141,7 @@ export default function SnrtPrivat() {
                     <>
                       <video ref={videoRef} src={videoUrl || fitxer || undefined} controls />
                       <p style={{ fontSize: '.85rem' }}>
-                        {videoUrl ? 'Vídeo del servidor privat.' : fitxer ? 'Vídeo carregat des del teu ordinador (no surt d'aquí).' : 'Carrega el vídeo de l'episodi des del teu ordinador:'}{' '}
+                        {videoUrl ? "Vídeo del servidor privat." : fitxer ? "Vídeo carregat des del teu ordinador (no surt d'aquí)." : "Carrega el vídeo de l'episodi des del teu ordinador:"}{' '}
                         {!videoUrl && <input type="file" accept="video/*" onChange={(ev) => { const f = ev.target.files?.[0]; if (f) setFitxer(URL.createObjectURL(f)); }} />}
                         {dades.url_pagina && <> · <a href={dades.url_pagina} target="_blank" rel="noreferrer noopener">pàgina original</a></>}
                       </p>
