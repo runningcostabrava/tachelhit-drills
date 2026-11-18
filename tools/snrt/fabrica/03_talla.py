@@ -5,8 +5,10 @@ límits del vídeo; els crèdits no es tallen. Reprèn per id: el tall que ja hi
   python -X utf8 03_talla.py <carpeta_del_capitol>
 """
 import argparse
+import json
 import os
 import subprocess
+import wave
 import sys
 import time
 
@@ -14,6 +16,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import comu  # noqa: E402
 
 ETAPA = "03_talla"
+
+
+def durada_wav(p):
+    try:
+        with wave.open(p) as w:
+            return w.getnframes() / w.getframerate()
+    except Exception:
+        return None
 
 
 def main():
@@ -37,6 +47,12 @@ def main():
         talls = os.path.join(carpeta, "talls")
         os.makedirs(talls, exist_ok=True)
         nous = 0
+        refets = 0
+        p_reg = os.path.join(talls, "intervals.json")
+        try:
+            reg = json.load(open(p_reg, encoding="utf-8"))
+        except Exception:
+            reg = {}
         so = 0.0
         for f in files:
             if f.get("credits"):
@@ -45,13 +61,23 @@ def main():
             ini = max(0.0, f["t_ini"] - comu.MARGE_TALL)
             fin = min(durada, f["t_fi"] + comu.MARGE_TALL)
             desti = os.path.join(talls, f["id"] + ".wav")
-            if not os.path.exists(desti):
+            # un tall només es reutilitza si el registre diu que es va tallar d'aquest interval i la durada del wav hi quadra
+            # (si 02 s'ha refet, els ids es reaprofiten amb altres t_ini/t_fi i el wav vell no hi correspon); si no, es refà
+            d = durada_wav(desti) if os.path.exists(desti) else None
+            interval = [round(ini, 2), round(fin, 2)]
+            if d is None or reg.get(f["id"]) != interval or abs(d - (fin - ini)) > 0.06:
+                refets += d is not None
+                reg[f["id"]] = interval
                 subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", f"{ini:.2f}", "-to", f"{fin:.2f}", "-i", audio, "-ac", "1", "-ar", "16000", desti], check=True)
                 nous += 1
             f["tall"] = "talls/" + f["id"] + ".wav"
             so += fin - ini
+        json.dump(reg, open(p_reg, "w", encoding="utf-8"))
+        marca = os.path.join(carpeta, "talls_no_validats.txt")   # posat a mà quan es van trobar talls vells; ja no val
+        if os.path.exists(marca):
+            os.remove(marca)
         comu.desa_subtitols(carpeta, files)
-        comptes = {"talls": sum(1 for f in files if f.get("tall")), "talls_nous": nous, "segons_so": round(so, 1), "segons": round(time.time() - t0)}
+        comptes = {"talls": sum(1 for f in files if f.get("tall")), "talls_nous": nous, "talls_refets_per_durada": refets, "segons_so": round(so, 1), "segons": round(time.time() - t0)}
         comu.etapa_fi(carpeta, ETAPA, comptes)
         comu.diu(log, f"{ETAPA}: {comptes['talls']} talls ({nous} nous), {comptes['segons_so']} s de so, {comptes['segons']} s")
     except Exception as e:
