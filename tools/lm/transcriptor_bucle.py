@@ -41,7 +41,7 @@ FILTRE_CER = None                                        # §5 diu 0,4, però bu
 MILLORA_CV_MAX_IC = 0.0                                  # límit superior de l'IC de Δ CER a CV zgh ha de ser < 0
 EMPITJORA_FORA_MAX = 0.005                               # test-fora: Δ no pot passar de +0,005
 USUARI_KAGGLE = "josepabloucr"
-DATASET = "snrt-transcriptor"
+DATASET = os.environ.get("SNRT_DATASET", "snrt-transcriptor")   # la concordància usa el seu propi dataset: no trepitja les files congelades dels cicles
 NUCLI = {"A": "snrt-transcriptor-a", "B": "snrt-transcriptor-b", "CONC": "snrt-concordanca"}
 DATASETS_NUCLI = ["josepabloucr/adaptador-shi-zouhir-b", "josepabloucr/tfa-veritat-h3", "josepabloucr/corpus-v4-amb-cv-zgh",
                   "josepabloucr/cv-zgh-test-256", "josepabloucr/zouhir-veritat"]
