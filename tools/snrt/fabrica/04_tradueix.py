@@ -3,7 +3,8 @@
 
   python -X utf8 04_tradueix.py <carpeta_del_capitol> [--fils 4] [--nomes N]
 
-- Àrab → català amb dos models (`qwen3.8-max` a Model Studio i `deepseek-chat`; temperatura 0; el prompt de
+- Àrab → català amb dos models (un Qwen de la quota gratuïta de Model Studio, en cascada `qwen3.8-max` → `qwen4-max` → `qwen3.7-max` → `qwen3.8-flash`
+  (rota a l'800.000 de cadascun), i `deepseek-chat`; sense cap Qwen, «acord DeepSeek + Gemini» només amb `arab_conf` ≥ 0,8; temperatura 0; el prompt de
   tools/tutlait/tradueix_ar_ca.py): `catala_a`, `catala_b`, `model_a`, `model_b`, `chrf_ab`.
 - Si 0,3 ≤ chrf_ab < 0,5, un tercer auditor (`gemini-2.5-flash` sense raonar, només en aquest cas; o el que digui `TD_MODEL_AR_C`) i
   es queda el dels dos que coincideixi ≥ 0,5 amb el tercer (`catala_estat` = «tercer»). Si chrf_ab ≥ 0,5,
@@ -29,7 +30,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import comu  # noqa: E402
 
 ETAPA = "04_tradueix"
-MODEL_A = os.environ.get("TD_MODEL_AR_A", "qwen3.8-max")
+# Primer auditor: models Qwen de la quota gratuïta, en cascada. Quan el que toca passa de `TD_ROTA_QWEN_FITXES` (800.000, per sota del límit d'850.000) la
+# fila següent va al model següent, cadascun amb el seu comptador. Provats àrab -> català (chrF contra qwen3.8-max, 8 frases): qwen4-max 0,88, qwen3.7-max 0,83,
+# qwen3.8-flash 0,81. (`qwen3.8-max-0902` dona exactament el mateix i no es pot assegurar que tingui quota pròpia; per això no hi és.)
+MODELS_A = [m.strip() for m in os.environ.get("TD_MODELS_AR_A", os.environ.get("TD_MODEL_AR_A", "qwen3.8-max,qwen4-max,qwen3.7-max,qwen3.8-flash")).split(",") if m.strip()]
+MODEL_A = MODELS_A[0]
+ROTA_QWEN = float(os.environ.get("TD_ROTA_QWEN_FITXES", "800000"))
+CONF_ALTA = float(os.environ.get("TD_ARAB_CONF_ALTA", "0.8"))   # sense cap Qwen: només es tradueixen (DeepSeek + Gemini) les rèpliques amb arab_conf >= això
 MODEL_B = os.environ.get("TD_MODEL_AR_B", "deepseek-chat")
 MODEL_C = os.environ.get("TD_MODEL_AR_C", "gemini-2.5-flash")   # tercer auditor (ordre del 18-11-2026; abans qwen4-max)
 SPACE = os.environ.get("TD_SPACE_NLLB", "josepabloucr/Finetuned-Quantized-NLLB")
@@ -97,6 +104,14 @@ class Pressupost:
 PRESSUPOST = None   # es crea a main() (necessita TD_TV)
 
 
+def tria_a():
+    """El primer model Qwen de la cascada que encara no ha arribat a la rotació; None si cap."""
+    for m in MODELS_A:
+        if PRESSUPOST.cost(m) < min(ROTA_QWEN, Pressupost.limit(m)):
+            return m
+    return None
+
+
 def primera_linia(t):
     ls = [l.strip().strip('«»"') for l in (t or "").splitlines() if l.strip()]
     return ls[0] if ls else ""
@@ -159,12 +174,19 @@ def main():
             raise RuntimeError("sense subtitols.jsonl")
         te_b = bool(os.environ.get("DEEPSEEK_API_KEY"))
         comu.diu(log, f"== {ETAPA} {comu.ara()} {MODEL_A} + {MODEL_B if te_b else 'cap segon model (sense DEEPSEEK_API_KEY)'} + tercer {MODEL_C} + Space {SPACE}")
-        fitxes = {MODEL_A: 0, MODEL_B: 0, MODEL_C: 0}
+        import collections
+        fitxes = collections.defaultdict(int)
         pany = threading.Lock()
         global PRESSUPOST
         PRESSUPOST = Pressupost(os.path.join(comu.td_tv(), "_costos.json"))
-        usats = [MODEL_A, MODEL_B if te_b else None, MODEL_C]
-        saltades = [0]
+        saltades = [0, 0]   # [pel pressupost, per confiança baixa sense Qwen]
+
+        def aturat():
+            """Models (DeepSeek, Gemini) que han esgotat el límit: l'etapa para. Els Qwen no paren res: roten, i sense cap Qwen es passa a DeepSeek + Gemini."""
+            ex = PRESSUPOST.esgotat([MODEL_B if te_b else None, MODEL_C])
+            if not ex and tria_a() is None and not te_b:
+                ex = ["qwen (tots) i sense DeepSeek"]
+            return ex
 
         def cal(f):
             if f.get("credits") or not f.get("arab") or f.get("arab_dubtos"):
@@ -198,17 +220,42 @@ def main():
             return ""
 
         def feina(f):
-            if PRESSUPOST.esgotat(usats):   # límit de cost: no es toca la fila (es traduirà quan es pugi el límit)
+            if aturat():   # límit de cost: no es toca la fila (es traduirà quan es pugi el límit)
                 with pany:
                     saltades[0] += 1
                 return f
             err = None
+            mod_a = tria_a()
             canvi_arab = f.get("arab_traduit") != f["arab"] or not f.get("catala_a")
-            if canvi_arab:
-                try:
-                    f["catala_a"], n = tradueix(MODEL_A, f["arab"]); f["model_a"] = MODEL_A
+            if mod_a is None and canvi_arab:
+                # Cap Qwen gratuït: «acord DeepSeek + Gemini», només en rèpliques de confiança alta (la porta de línia de §5 no baixa)
+                conf = f.get("arab_conf")
+                if conf is not None and conf < CONF_ALTA:
                     with pany:
-                        fitxes[MODEL_A] += n
+                        saltades[1] += 1
+                    return f
+                f["model_a"], f["catala_a"], f["catala_b"], f["catala_c"], f["chrf_ab"] = None, "", "", None, None
+                try:
+                    f["catala_b"], n = tradueix(MODEL_B, f["arab"]); f["model_b"] = MODEL_B
+                    with pany:
+                        fitxes[MODEL_B] += n
+                    f["catala_c"], n = tradueix(MODEL_C, f["arab"])
+                    with pany:
+                        fitxes[MODEL_C] += n
+                    acord = comu.chrf(f["catala_c"], f["catala_b"])
+                    f["chrf_bc"] = acord
+                    f["catala"], f["catala_estat"] = (f["catala_b"], "confirmat") if acord >= CONFIRMAT else ("", "descartat")
+                    f["via"] = "deepseek+gemini"
+                except Exception as e:
+                    err = f"b/c: {str(e)[:80]}"; f["catala"], f["catala_estat"] = "", "descartat"
+                f["arab_traduit"] = f["arab"]
+                canvi_arab = False
+            if canvi_arab:
+                f.pop("via", None)
+                try:
+                    f["catala_a"], n = tradueix(mod_a, f["arab"]); f["model_a"] = mod_a
+                    with pany:
+                        fitxes[mod_a] += n
                 except Exception as e:
                     f["catala_a"] = ""; err = f"a: {str(e)[:80]}"
                 f["catala_b"] = ""; f["model_b"] = None
@@ -273,10 +320,11 @@ def main():
         ab = [f["chrf_ab"] for f in dial if f.get("chrf_ab") is not None]
         vell = comu.estat_llegeix(carpeta).get(ETAPA, {}).get("comptes", {})
         comptes = {"traduides": len(dial), "estats": estats, "chrf_ab_mitja": round(sum(ab) / len(ab), 4) if ab else None,
-                   "fitxes_text": {m: fitxes[m] + (vell.get("fitxes_text") or {}).get(m, 0) for m in fitxes},
-                   "model_a": MODEL_A, "model_b": MODEL_B if te_b else None, "model_c": MODEL_C, "space": SPACE,
+                   "fitxes_text": {m: fitxes.get(m, 0) + (vell.get("fitxes_text") or {}).get(m, 0) for m in set(fitxes) | set(vell.get("fitxes_text") or {})},
+                   "model_a": MODELS_A, "model_b": MODEL_B if te_b else None, "model_c": MODEL_C, "space": SPACE,
                    "errors": sum(1 for f in dial if f.get("error_traduccio")), "segons": round(time.time() - t0),
-                   "saltades_pressupost": saltades[0], "pressupost_esgotat": PRESSUPOST.esgotat(usats) or None,
+                   "saltades_pressupost": saltades[0], "saltades_sense_qwen_confianca_baixa": saltades[1], "pressupost_esgotat": aturat() or None,
+                   "qwen_actual": tria_a(),
                    "cost_acumulat": {m: round(PRESSUPOST.cost(m), 4) for m in PRESSUPOST.fitxes}}
         comu.etapa_fi(carpeta, ETAPA, comptes)
         comu.diu(log, f"{ETAPA}: {estats}, chrf_ab {comptes['chrf_ab_mitja']}, {comptes['segons']} s")

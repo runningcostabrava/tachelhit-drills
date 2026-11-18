@@ -227,7 +227,7 @@ def informe(carpeta, files, num, mostra, est, var, cap):
     e = num["catala_estats"]
     w(f"| traducció: chrf_ab mitjà, confirmat / tercer / descartat | {num['chrf_ab_mitja']}, {e['confirmat']} / {e['tercer']} / {e['descartat']} ({pc(e['confirmat'], num['dialeg'])} / {pc(e['tercer'], num['dialeg'])} / {pc(e['descartat'], num['dialeg'])}) |")
     w(f"| chrf_tif_ar mitjà i ≥ 0,5 (mesura del traductor, no porta) | {num['chrf_tif_ar_mitja']}, {num['chrf_tif_ar_sobre_0_5']} de {num['chrf_tif_ar_n']} ({pc(num['chrf_tif_ar_sobre_0_5'], num['chrf_tif_ar_n'])}) |")
-    w(f"| talls: durada = t_fi − t_ini ± 0,5 s (cal ≥ 99 %) i `talls/intervals.json` | {num['talls_durada_ok']} de {num['talls_total']} ({num['talls_durada_pct']} %); registre {'sí' if num['talls_validats'] else 'NO'}; capítol {'apte' if num['capitol_apte_asr'] else "**NO apte per a l ASR**"} |")
+    w(f"| talls: durada = t_fi − t_ini ± 0,5 s (cal ≥ 99 %) i `talls/intervals.json` | {num['talls_durada_ok']} de {num['talls_total']} ({num['talls_durada_pct']} %); registre {'sí' if num['talls_validats'] else 'NO'}; capítol {'apte' if num['capitol_apte_asr'] else '**NO apte per a l ASR**'} |")
     w(f"| **portes (§5)**: aptes per al traductor / per a l'ASR | **{num['aptes_traductor']}** ({pc(num['aptes_traductor'], num['dialeg'])}; capítol {'apte' if num['capitol_apte'] else 'NO apte (< 60 %)'}) / {num['aptes_asr_durada']} per durada, CER de l'ASR no mesurat |")
     w(f"| cost: fitxes de visió / de text per model | {num['fitxes_visio']} pagades ara ({num['crides_visio']} crides); {num['fotogrames_arab_usats']} fotogrames d'àrab usats ≈ {num['fitxes_visio_equivalents']} fitxes si es paguessin tots / {num['fitxes_text']} |")
     w(f"| minuts de màquina (02–04) | {num['minuts_maquina']} |")
