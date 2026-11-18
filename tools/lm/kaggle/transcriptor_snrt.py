@@ -19,6 +19,8 @@ FILTRE_CER = None
 EPOQUES = 4
 LOT = 4
 RITME = 1e-4
+SEED = 42                 # el cercle virtuós (tools/lm/cercle_virtuos.py) el canvia entre intents amb el mateix model de partida
+RUN_ID = ""              # el cercle hi escriu un identificador únic i comprova que el resultat el porta (cap sortida vella com a nova)
 SEGONS_MAXIM = 14
 FORA_ZOUHIR = ["RzG-vYOY2L8", "24EkU437k1s", "srnE-hORsio", "ENmpd74ODGo"]
 FORA_QURAN = ["ROl7INibBdg", "f3bUnaPrGYY", "4YoU1icL8zY"]
@@ -82,7 +84,7 @@ CORPUS = de_kaggle("corpus_v4.json") or de_kaggle("corpus_v3.json")
 CV = de_kaggle("cv_test.json")
 CUES = de_kaggle("cues.json")
 TFA = de_kaggle("veritat_parlat.json")
-ADAPT = de_kaggle("adaptador_shi_zouhir_b.pt")
+ADAPT = de_kaggle("adaptador_inici.pt") or de_kaggle("adaptador_shi_zouhir_b.pt")   # inici = el model M_r del cercle; sense ell, H4b
 assert ROWS and CORPUS and CV and CUES and TFA and ADAPT, (ROWS, CORPUS, CV, CUES, TFA, ADAPT)
 D_S, D_C, D_CV, D_Z, D_T = (os.path.dirname(x) for x in (ROWS, CORPUS, CV, CUES, TFA))
 
@@ -281,7 +283,7 @@ args = TrainingArguments(output_dir="/kaggle/working/afinat", per_device_train_b
                          eval_accumulation_steps=1, num_train_epochs=EPOQUES, learning_rate=RITME, warmup_steps=60,
                          fp16=torch.cuda.is_available(), logging_steps=50, eval_strategy="epoch", save_strategy="epoch",
                          save_total_limit=1, load_best_model_at_end=True, metric_for_best_model="cer", greater_is_better=False,
-                         report_to=[], dataloader_num_workers=2)
+                         report_to=[], dataloader_num_workers=2, seed=SEED, data_seed=SEED)
 ent = Trainer(model=model, args=args, train_dataset=Talls(train), eval_dataset=Talls(dev), data_collator=ajunta,
               compute_metrics=mesura, processing_class=proc.feature_extractor)
 model.to(dev_gpu).train()
@@ -299,7 +301,7 @@ torch.save({k: v.cpu() for k, v in model._get_adapters().items()}, f"/kaggle/wor
 tot_res["despres"], s_despres = avalua(model, "després")
 json.dump({"config": {"recepta": RECEPTA, "epoques": EPOQUES, "ritme": RITME, "filtre_cer": FILTRE_CER, "train": len(train),
                       "train_snrt": len(train_s), "train_zouhir": len(z_train), "hores_train": h_train, "dev": len(dev),
-                      "fuita_treta": fuita, "filtre_train": f_train, "filtre_dev": f_dev},
+                      "fuita_treta": fuita, "run_id": RUN_ID, "seed": SEED, "adaptador_inici": os.path.basename(ADAPT), "filtre_train": f_train, "filtre_dev": f_dev},
            "resultats": tot_res}, open(f"/kaggle/working/snrt_{RECEPTA}_resultat.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 json.dump(s_abans + s_despres, open(f"/kaggle/working/snrt_{RECEPTA}_sortides.json", "w", encoding="utf-8"), ensure_ascii=False)
 print("fet")
