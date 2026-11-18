@@ -107,7 +107,7 @@ def viterbi(lp, tok):
     path = np.zeros(T, dtype=np.int64)
     for t in range(T - 1, -1, -1):
         path[t] = s
-        s -= bp[t, s]
+        s -= int(bp[t, s])
     return path
 
 
