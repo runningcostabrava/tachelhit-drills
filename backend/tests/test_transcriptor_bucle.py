@@ -16,7 +16,7 @@ import transcriptor_bucle as tb  # noqa: E402
 
 
 def fila(i, tif="ⴰⵣⵓⵍ ⴼⵍⵍⴰⵡⵏ", **k):
-    return {"id": f"c_{i:04d}", "slug": "c", "tifinag": tif, "tifinag_conf": 0.95, "tifinag_dubtosos": 0, "durada": 3,
+    return {"id": f"c_{i:04d}", "slug": "c", "tifinag": tif, "tifinag_conf": 0.95, "tifinag_dubtosos": 0, "durada": 3, "t_ini": i * 4, "t_fi": i * 4 + 3,
             "credits": False, "tall": f"talls/c_{i:04d}.wav", **k}
 
 
@@ -137,11 +137,18 @@ def _unic(slug, i):
             return out + "ⵜⵜ"
 
 
-def _capitol(arrel, slug, n, vells=0):
+def _capitol(arrel, slug, n, vells=0, intervals=True, marca=False):
     c = os.path.join(arrel, slug)
     files = [dict(fila(i), id=f"{slug}_{i:04d}", slug=slug, tall=f"talls/{slug}_{i:04d}.wav", tifinag=f"ⴰⵣⵓⵍ {_unic(slug, i)}") for i in range(n)]
     for i, r in enumerate(files):
         escriu_wav(os.path.join(c, r["tall"]), 3.5 if i >= vells else 5.0)    # els «vells» no quadren
+    if intervals:
+        iv = {r["id"]: [max(0.0, r["t_ini"] - 0.25), r["t_fi"] + 0.25] for r in files}
+        for r in files[:vells]:
+            iv[r["id"]] = [100.0, 106.0]                     # el registre diu que aquest tall és d'una altra fila
+        json.dump(iv, open(os.path.join(c, "talls", "intervals.json"), "w"))
+    if marca:
+        open(os.path.join(c, "talls_no_validats.txt"), "w").write("vells")
     with open(os.path.join(c, "subtitols.jsonl"), "w", encoding="utf-8") as f:
         f.write("\n".join(json.dumps(r, ensure_ascii=False) for r in files))
     json.dump({"slug": slug, "titol": slug, "02_llegeix": {"fi": "2020-01-01 00:00:00", "error": None},
@@ -298,3 +305,26 @@ def test_mostra_a_ull_es_reprodible_i_porta_referencia_abans_i_despres():
 def test_el_nucli_no_filtra_per_cer_per_omissio():
     nucli = open(os.path.join(os.path.dirname(LM), "lm", "kaggle", "transcriptor_snrt.py"), encoding="utf-8").read().splitlines()
     assert "FILTRE_CER = None" in nucli and tb.FILTRE_CER is None
+
+
+def test_capitol_sense_intervals_json_no_s_usa_mai(tmp_path):
+    arrel = str(tmp_path / "tv")
+    _capitol(arrel, "sense", 150, intervals=False)
+    _capitol(arrel, "marcat", 150, marca=True)
+    _capitol(arrel, "bo", 150)
+    assert list(tb.llegeix_capitols(arrel)) == ["bo"]
+
+
+def test_interval_que_no_casa_deixa_el_tall_fora_encara_que_el_wav_duri_be(tmp_path):
+    arrel = str(tmp_path / "tv")
+    _capitol(arrel, "cap0", 150, vells=40)
+    aptes, diag = tb.selecciona(tb.llegeix_capitols(arrel))
+    assert len(aptes["cap0"]) == 110 and diag["cap0"]["descartades"]["sense so"] == 40
+
+
+def test_interval_quadra_amb_inici_retallat_a_zero():
+    r = {"id": "x_0000", "t_ini": 0, "t_fi": 3}
+    assert tb.interval_quadra(r, {"x_0000": [0.0, 3.25]})
+    assert not tb.interval_quadra(r, {"x_0000": [0.0, 4.25]})
+    assert not tb.interval_quadra(r, {})
+    assert not tb.interval_quadra(r, None)

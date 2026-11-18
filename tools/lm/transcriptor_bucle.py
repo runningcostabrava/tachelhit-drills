@@ -36,6 +36,7 @@ FRAC_TEST, FRAC_DEV = 0.10, 0.05
 CONF_MIN, DUBTOSOS_MAX, DURADA_MIN = 0.85, 2, 0.8        # §5
 PARAULES_MIN, PARAULES_MAX = 2, 30                       # §5 (porta del traductor, que l'ASR hereta)
 MIN_APTES_CAPITOL = 50                                   # un capítol amb menys no és un capítol llegit
+PERMET_SENSE_INTERVALS = False                           # només les proves ho posen a True
 MARGE_TALL = 0.5                                         # 0,25 s a cada banda (etapa 03)
 FILTRE_CER = None                                        # §5 diu 0,4, però buida el train (vegeu el nucli): apagat fins que el director decideixi
 MILLORA_CV_MAX_IC = 0.0                                  # límit superior de l'IC de Δ CER a CV zgh ha de ser < 0
@@ -97,12 +98,34 @@ def fi_02(estat):
         return None
 
 
-def wav_quadra(r, carpeta, t02=None):
-    """El wav existeix, dura durada + 0,5 s (menys als extrems del vídeo) i, si es coneix, NO és anterior al final de l'etapa 02
-    d'ara: la 03 és reprenible per id i no refà els talls que ja hi són, de manera que quan l'etapa 02 es refà
-    queden talls VELLS sota els mateixos ids (17-11: 486 de 700 files a Hasnae Fatni). Un tall vell és una veritat falsa."""
+def llegeix_intervals(carpeta):
+    """{id: [ini, fi]} de talls/intervals.json (el registre que escriu l'etapa 03 corregida), o None si no hi és."""
+    p = os.path.join(carpeta, "talls", "intervals.json")
+    if not os.path.isfile(p):
+        return None
+    try:
+        return json.load(open(p, encoding="utf-8"))
+    except ValueError:
+        return None
+
+
+def interval_quadra(r, intervals, tol=0.06):
+    """L'interval enregistrat del tall és el de la fila d'ara: [t_ini - 0,25, t_fi + 0,25] (l'inici es retalla a 0)."""
+    iv = (intervals or {}).get(r.get("id"))
+    if not iv or r.get("t_ini") is None or r.get("t_fi") is None:
+        return False
+    return abs(iv[0] - max(0.0, r["t_ini"] - 0.25)) <= tol and abs(iv[1] - (r["t_fi"] + 0.25)) <= tol
+
+
+def wav_quadra(r, carpeta, t02=None, intervals=None):
+    """El wav existeix i dura durada + 0,5 s (menys als extrems del vídeo). Si el capítol té intervals.json, l'interval
+    enregistrat ha de ser el de la fila d'ara; si no, és un tall vell (la 03 no refeia els wav quan la 02 es refeia: 17-11,
+    486 de 700 files a Hasnae Fatni) i no s'usa. Sense intervals.json, el criteri antic (mtime del wav >= final de la 02)
+    només serveix per a les proves: `llegeix_capitols` ja no deixa passar cap capítol sense intervals.json."""
     cami = os.path.join(carpeta, r.get("tall", "x"))
     if not os.path.exists(cami):
+        return False
+    if intervals is not None and not interval_quadra(r, intervals):
         return False
     if t02 is not None and os.path.getmtime(cami) < t02 - 1:
         return False
@@ -159,8 +182,13 @@ def llegeix_capitols(arrel):
             continue
         if not all((estat.get(k) or {}).get("fi") and not (estat.get(k) or {}).get("error") for k in ("02_llegeix", "03_talla")):
             continue
+        if os.path.exists(os.path.join(c, "talls_no_validats.txt")):
+            continue
+        intervals = llegeix_intervals(c)
+        if intervals is None and not PERMET_SENSE_INTERVALS:
+            continue          # decisió del director (18-11): cap tall sense talls/intervals.json s'usa per entrenar ni per mesurar
         files = [json.loads(l) for l in open(sub, encoding="utf-8") if l.strip()]
-        res[nom] = {"carpeta": c, "files": files, "sha": sha_fitxer(sub), "estat": estat}
+        res[nom] = {"carpeta": c, "files": files, "sha": sha_fitxer(sub), "estat": estat, "intervals": intervals}
     return res
 
 
@@ -171,7 +199,7 @@ def selecciona(capitols):
         motius = collections.Counter()
         bones = []
         for r in c["files"]:
-            ok_wav = wav_quadra(r, c["carpeta"], fi_02(c["estat"])) if r.get("tifinag") and not r.get("credits") else True
+            ok_wav = wav_quadra(r, c["carpeta"], None if c.get("intervals") is not None else fi_02(c["estat"]), c.get("intervals")) if r.get("tifinag") and not r.get("credits") else True
             ok, motiu = apta(r, ok_wav)
             if ok:
                 bones.append(r)
