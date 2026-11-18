@@ -111,12 +111,11 @@ proves["tfa-226"] = talla(D_T, json.load(open(TFA, encoding="utf-8")))
 # ---------------------------------------------------------------- omniASR (CTC) amb sherpa-onnx, només CPU
 import sherpa_onnx
 from huggingface_hub import snapshot_download
-MODELS = {"omniASR-CTC-1B": "csukuangfj/sherpa-onnx-omnilingual-asr-1600-languages-1B-ctc-2025-11-12",
-          "omniASR-CTC-300M": "csukuangfj/sherpa-onnx-omnilingual-asr-1600-languages-300M-ctc-2025-11-12"}
+MODELS = {"omniASR-CTC-1B": "csukuangfj/sherpa-onnx-omnilingual-asr-1600-languages-1B-ctc-2025-11-12"}
 SORTIDA = []
 for nom, repo in MODELS.items():
     try:
-        d = snapshot_download(repo, allow_patterns=["model.onnx", "model.weights", "model.int8.onnx", "tokens.txt"])
+        d = snapshot_download(repo, allow_patterns=["model.onnx", "model.weights", "model.int8.onnx", "tokens.txt"], local_dir="/kaggle/working/" + nom)   # local_dir: sense enllaços simbòlics (onnxruntime els rebutja)
         print(nom, "baixat", os.listdir(d), flush=True)
         mod = os.path.join(d, "model.onnx")
         rec = sherpa_onnx.OfflineRecognizer.from_omnilingual_asr_ctc(model=mod, tokens=os.path.join(d, "tokens.txt"), num_threads=4)
