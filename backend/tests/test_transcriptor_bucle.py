@@ -144,6 +144,7 @@ def _capitol(arrel, slug, n, vells=0):
         escriu_wav(os.path.join(c, r["tall"]), 3.5 if i >= vells else 5.0)    # els «vells» no quadren
     with open(os.path.join(c, "subtitols.jsonl"), "w", encoding="utf-8") as f:
         f.write("\n".join(json.dumps(r, ensure_ascii=False) for r in files))
+    json.dump({"talls": {r["id"]: {"v": "ok"} for r in files}}, open(os.path.join(c, "talls", "alineacio.json"), "w"))   # porta d'alineació
     json.dump({"slug": slug, "titol": slug, "02_llegeix": {"fi": "2020-01-01 00:00:00", "error": None},
                "03_talla": {"fi": "2020-01-01 00:01:00", "error": None}}, open(os.path.join(c, "estat.json"), "w"))
 
@@ -298,3 +299,13 @@ def test_mostra_a_ull_es_reprodible_i_porta_referencia_abans_i_despres():
 def test_el_nucli_no_filtra_per_cer_per_omissio():
     nucli = open(os.path.join(os.path.dirname(LM), "lm", "kaggle", "transcriptor_snrt.py"), encoding="utf-8").read().splitlines()
     assert "FILTRE_CER = None" in nucli and tb.FILTRE_CER is None
+
+
+def test_un_tall_dubtos_per_alineacio_no_entra(tmp_path):
+    _capitol(str(tmp_path), "llarg", 60)
+    c = os.path.join(str(tmp_path), "llarg")
+    al = json.load(open(os.path.join(c, "talls", "alineacio.json")))
+    al["talls"]["llarg_0000"]["v"] = "dubtosa"
+    json.dump(al, open(os.path.join(c, "talls", "alineacio.json"), "w"))
+    aptes, diag = tb.selecciona(tb.llegeix_capitols(str(tmp_path)))
+    assert len(aptes["llarg"]) == 59 and diag["llarg"]["descartades"]["alineació"] == 1
