@@ -77,6 +77,11 @@ def main():
         if os.path.exists(marca):
             os.remove(marca)
         comu.desa_subtitols(carpeta, files)
+        try:    # porta d'alineació so<->text (només escriu talls/alineacio.json; si falla, la fàbrica segueix i el transcriptor no hi confia)
+            import porta_alineacio
+            porta_alineacio.main_carpeta(carpeta, files)
+        except Exception as e:
+            comu.diu(log, f"{ETAPA}: porta d'alineació no feta ({type(e).__name__}: {e})")
         comptes = {"talls": sum(1 for f in files if f.get("tall")), "talls_nous": nous, "talls_refets_per_durada": refets, "segons_so": round(so, 1), "segons": round(time.time() - t0)}
         comu.etapa_fi(carpeta, ETAPA, comptes)
         comu.diu(log, f"{ETAPA}: {comptes['talls']} talls ({nous} nous), {comptes['segons_so']} s de so, {comptes['segons']} s")

@@ -114,3 +114,16 @@ Per aturar el bucle d'àrab: `arab.actiu=false` a `/root/supervisor/config.json`
 | Transcriptor | CER ≈ 0,15 (test net CV zgh) |
 
 Relacionats: `ocr-tifinag-snrt.md`, `ocr-arab-text-cremat.md`, `tifinag-estandard-i-dialecte.md`, `tamazight-tv.md`.
+
+## Porta d'alineació so ↔ text (18-11-2026, #601)
+
+**Per què.** Els intervals de les rèpliques són d'1 s (el rellotge mira un fotograma per segon) i el subtítol no surt exactament quan es parla. En Pablo va escoltar 10 talls (`transcriptor/INFORME.md`, addenda 3): 1 concordava del tot, 4 no, 5 dubtes; «la frase és inclosa en el que es diu». Entrenar amb això ensenyaria al transcriptor so d'una altra frase.
+
+**Què fa** (`tools/snrt/fabrica/porta_alineacio.py`, es crida al final de l'etapa 03 i escriu `talls/alineacio.json`; el transcriptor, `alineacio_ok`, només agafa els talls «ok»; un capítol sense el fitxer no és apte):
+- **ritme**: lletres de tifinag per segon del subtítol entre 0,70 i 1,40 vegades la mediana del capítol;
+- **buit**: més de 0,7 s de silenci seguit al principi o al final del tall;
+- **curt**: menys de 4 lletres o menys d'1 s de so.
+
+**Què ha mesurat** (en els 3 capítols de les 10 marques, ECS): ok 57 %, 31 % i 50 % dels talls. Sobre les 10 marques d'en Pablo: dels 4 «no concorda» en descarta 3, l'únic «concorda» passa, i el quart «no concorda» també passa (ritme normal però desplaçat).
+
+**Què NO fa.** No sap on cau cada paraula, així que un desplaçament d'1 s amb ritme normal passa. Només 10 marques: és un indici, no una mesura. El pas que ho resol és l'**alineació forçada** amb el model acústic (CTC amb l'adaptador MMS) sobre una finestra de ±1,5 s: retalla el tall a la part parlada i dona una puntuació; s'ha de fer a Kaggle (GPU) i es jutja amb ≥50 marques d'en Pablo. Fins que existeixi, el transcriptor només rep el que passa la porta.
