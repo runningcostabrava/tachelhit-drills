@@ -103,7 +103,7 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
 
-from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel, LessonProposal as LessonProposalModel, AppSetting as AppSettingModel, CaptureRequest as CaptureRequestModel, DrillTombstone as DrillTombstoneModel, UserSession as UserSessionModel, GeminiUsage as GeminiUsageModel, DrillAiText as DrillAiTextModel  # ← Alias for ORM models
+from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel, LessonProposal as LessonProposalModel, AppSetting as AppSettingModel, CaptureRequest as CaptureRequestModel, DrillTombstone as DrillTombstoneModel, UserSession as UserSessionModel, GeminiUsage as GeminiUsageModel, DrillAiText as DrillAiTextModel, SnrtEpisode as SnrtEpisodeModel, SnrtCue as SnrtCueModel  # ← Alias for ORM models
 from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort, VideoProcessingJobCreate, VideoProcessingJob, VideoSegmentCreate, VideoSegment, TranscribeRequest, TranscribeResponse, TranslateRequest, TranslateResponse, DrillPairInfo, GlossaryItem, GlossaryItemCreate, SrtImportRequest, SrtImportResponse, SrtSegment, BulkVideoUrlUpdateRequest, BulkVideoUrlUpdateResponse, iso_z  # ← Pydantic schemas
 from srt_parser import parse_srt_content, create_youtube_url_with_timestamp
 import magatzem  # l'únic lloc que sap on viuen els fitxers (#577)
@@ -10940,6 +10940,53 @@ def bulk_update_video_url(request: BulkVideoUrlUpdateRequest, db: Session = Depe
         print(f"[BULK VIDEO URL] Error: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Bulk video URL update failed: {str(e)}")
+
+
+# ---- Visor PRIVAT de Tamazight TV (SNRT): només administradors (docs/adr/0012) -----------------------
+# Material de recerca amb permís de la SNRT: recerca sí, republicar no. Per això TOTES les rutes demanen un administrador,
+# no surt a cap exportació ni al corpus, i el vídeo no es guarda ni es serveix (s'encasta de YouTube o es carrega a la pàgina).
+@app.get("/snrt-privat/")
+def snrt_privat_index(_admin: UserModel = Depends(require_admin), db: Session = Depends(get_db)):
+    eps = db.query(SnrtEpisodeModel).order_by(SnrtEpisodeModel.titol).all()
+    out = []
+    for e in eps:
+        n = db.query(SnrtCueModel).filter(SnrtCueModel.episodi_id == e.id).count()
+        nc = db.query(SnrtCueModel).filter(SnrtCueModel.episodi_id == e.id, SnrtCueModel.catala.isnot(None), SnrtCueModel.catala != "").count()
+        out.append({"slug": e.slug, "titol": e.titol, "durada": e.durada, "linies": n, "amb_catala": nc,
+                    "video_youtube": e.video_youtube, "url_pagina": e.url_pagina})
+    return {"episodis": out}
+
+
+@app.get("/snrt-privat/{slug}")
+def snrt_privat_episodi(slug: str, _admin: UserModel = Depends(require_admin), db: Session = Depends(get_db)):
+    e = db.query(SnrtEpisodeModel).filter(SnrtEpisodeModel.slug == slug).first()
+    if not e:
+        raise HTTPException(status_code=404, detail="Episodi desconegut")
+    cues = db.query(SnrtCueModel).filter(SnrtCueModel.episodi_id == e.id).order_by(SnrtCueModel.k).all()
+    return {"slug": e.slug, "titol": e.titol, "durada": e.durada, "url_pagina": e.url_pagina, "video_youtube": e.video_youtube,
+            "avis": "Text llegit per màquina de la imatge i traduït per màquina: sense revisar. Material de la SNRT, només per a recerca.",
+            "linies": [{"k": c.k, "t_ini": c.t_ini, "t_fi": c.t_fi, "tifinag": c.tifinag, "arab": c.arab,
+                        "catala": c.catala, "catala_estat": c.catala_estat} for c in cues]}
+
+
+@app.post("/snrt-privat/{slug}/importa")
+def snrt_privat_importa(slug: str, dades: Dict[str, Any] = Body(...), _admin: UserModel = Depends(require_admin),
+                        db: Session = Depends(get_db)):
+    """Substitueix tot l'episodi (idempotent). `dades` = {titol, url_pagina?, video_youtube?, durada?, linies:[{k,t_ini,t_fi,tifinag,arab,catala,catala_estat}]}."""
+    linies = dades.get("linies") or []
+    if not dades.get("titol") or not isinstance(linies, list) or not linies:
+        raise HTTPException(status_code=400, detail="Cal `titol` i `linies`")
+    e = db.query(SnrtEpisodeModel).filter(SnrtEpisodeModel.slug == slug).first()
+    if not e:
+        e = SnrtEpisodeModel(slug=slug, titol=dades["titol"]); db.add(e); db.flush()
+    e.titol = dades["titol"]; e.url_pagina = dades.get("url_pagina"); e.video_youtube = dades.get("video_youtube"); e.durada = dades.get("durada")
+    db.query(SnrtCueModel).filter(SnrtCueModel.episodi_id == e.id).delete()
+    for n, l in enumerate(linies):
+        db.add(SnrtCueModel(episodi_id=e.id, k=int(l.get("k", n)), t_ini=float(l["t_ini"]), t_fi=float(l["t_fi"]), tifinag=l.get("tifinag"),
+                            arab=l.get("arab"), catala=l.get("catala"), catala_estat=l.get("catala_estat")))
+    db.commit()
+    return {"slug": slug, "linies": len(linies)}
+
 
 if __name__ == "__main__":
     import uvicorn
