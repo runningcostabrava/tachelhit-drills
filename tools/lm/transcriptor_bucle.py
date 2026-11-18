@@ -119,9 +119,17 @@ def alineacio_ok(r, carpeta):
     Sense talls/alineacio.json el capítol no és apte (18-11: els intervals són d'1 s i el so pot no ser el del text)."""
     try:
         with open(os.path.join(carpeta, "talls", "alineacio.json"), encoding="utf-8") as f:
-            return json.load(f)["talls"].get(r["id"], {}).get("v") == "ok"
+            if json.load(f)["talls"].get(r["id"], {}).get("v") != "ok":
+                return False
     except (OSError, ValueError, KeyError):
         return False
+    if os.environ.get("SNRT_ALTA") == "1":   # només «alta certesa»: el model acústic i l'OCR diuen el mateix (tools/snrt/concordanca.py)
+        try:
+            with open(os.path.join(carpeta, "talls", "concordanca.json"), encoding="utf-8") as f:
+                return json.load(f).get(r["id"], {}).get("alta") is True
+        except (OSError, ValueError):
+            return False
+    return True
 
 
 def particio(slugs, llavor=LLAVOR):

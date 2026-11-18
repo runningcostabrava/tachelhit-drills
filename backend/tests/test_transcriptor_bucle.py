@@ -309,3 +309,15 @@ def test_un_tall_dubtos_per_alineacio_no_entra(tmp_path):
     json.dump(al, open(os.path.join(c, "talls", "alineacio.json"), "w"))
     aptes, diag = tb.selecciona(tb.llegeix_capitols(str(tmp_path)))
     assert len(aptes["llarg"]) == 59 and diag["llarg"]["descartades"]["alineació"] == 1
+
+
+def test_alta_certesa_nomes_amb_el_flag_i_amb_concordanca(tmp_path, monkeypatch):
+    _capitol(str(tmp_path), "llarg", 60)
+    c = os.path.join(str(tmp_path), "llarg")
+    json.dump({"llarg_0000": {"alta": True}, "llarg_0001": {"alta": False}}, open(os.path.join(c, "talls", "concordanca.json"), "w"))
+    monkeypatch.delenv("SNRT_ALTA", raising=False)
+    assert tb.alineacio_ok({"id": "llarg_0001"}, c) is True            # sense flag, només la porta d'alineació
+    monkeypatch.setenv("SNRT_ALTA", "1")
+    assert tb.alineacio_ok({"id": "llarg_0000"}, c) is True
+    assert tb.alineacio_ok({"id": "llarg_0001"}, c) is False
+    assert tb.alineacio_ok({"id": "llarg_0002"}, c) is False           # sense entrada a la concordància
