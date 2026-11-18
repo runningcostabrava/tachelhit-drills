@@ -114,6 +114,16 @@ def wav_quadra(r, carpeta, t02=None):
     return esperat - 0.3 <= d <= esperat + 0.1
 
 
+def alineacio_ok(r, carpeta):
+    """Porta d'alineació (tools/snrt/fabrica/porta_alineacio.py): només entren els talls que la porta ha marcat «ok».
+    Sense talls/alineacio.json el capítol no és apte (18-11: els intervals són d'1 s i el so pot no ser el del text)."""
+    try:
+        with open(os.path.join(carpeta, "talls", "alineacio.json"), encoding="utf-8") as f:
+            return json.load(f)["talls"].get(r["id"], {}).get("v") == "ok"
+    except (OSError, ValueError, KeyError):
+        return False
+
+
 def particio(slugs, llavor=LLAVOR):
     """Partició PER CAPÍTOL: ~10 % de capítols sencers a test, ~5 % a dev, la resta a train (mai per línia).
     Amb pocs capítols en cau almenys 1 a test i 1 a dev; l'ordre és determinista (slugs ordenats, llavor 1114)."""
@@ -173,6 +183,8 @@ def selecciona(capitols):
         for r in c["files"]:
             ok_wav = wav_quadra(r, c["carpeta"], fi_02(c["estat"])) if r.get("tifinag") and not r.get("credits") else True
             ok, motiu = apta(r, ok_wav)
+            if ok and not alineacio_ok(r, c["carpeta"]):
+                ok, motiu = False, "alineació"
             if ok:
                 bones.append(r)
             else:
