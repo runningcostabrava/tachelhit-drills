@@ -49,3 +49,30 @@ def test_no_surt_a_cap_exportacio_ni_al_corpus(monkeypatch):
         r = client.get(ruta)
         assert "TADFI N TSKLA - PROVA" not in r.text, ruta
         assert "الأمازيغية" not in r.text, ruta
+
+
+def test_convidat_de_la_snrt_veu_el_visor_pero_no_importa(monkeypatch):
+    h_admin = _entra("boss-snrt@example.com", "bosssnrt", monkeypatch, admin=True)
+    client.post("/snrt-privat/prova-3/importa", json=EP, headers=h_admin)
+    monkeypatch.setenv("SNRT_VIEWER_EMAILS", "convidat-snrt@example.com")
+    h = _entra("convidat-snrt@example.com", "convidatsnrt", monkeypatch, admin=False)
+    monkeypatch.setenv("SNRT_VIEWER_EMAILS", "convidat-snrt@example.com")
+    assert client.get("/snrt-privat/", headers=h).status_code == 200
+    assert client.get("/snrt-privat/prova-3", headers=h).status_code == 200
+    assert client.post("/snrt-privat/prova-3/importa", json=EP, headers=h).status_code == 403   # no és administrador
+
+
+def test_video_signat_nomes_amb_base_i_secret(monkeypatch):
+    import hashlib, hmac
+    h = _entra("boss-snrt@example.com", "bosssnrt", monkeypatch, admin=True)
+    client.post("/snrt-privat/prova-4/importa", json=EP, headers=h)
+    monkeypatch.delenv("SNRT_VIDEO_BASE", raising=False); monkeypatch.delenv("SNRT_VIDEO_SECRET", raising=False)
+    assert client.get("/snrt-privat/prova-4/video", headers=h).json() == {"url": None}
+    monkeypatch.setenv("SNRT_VIDEO_BASE", "https://v.example.org/"); monkeypatch.setenv("SNRT_VIDEO_SECRET", "s3cret")
+    j = client.get("/snrt-privat/prova-4/video", headers=h).json()
+    base, q = j["url"].split("?")
+    assert base == "https://v.example.org/v/prova-4"
+    par = dict(x.split("=") for x in q.split("&"))
+    assert par["sig"] == hmac.new(b"s3cret", f"prova-4.{par['exp']}".encode(), hashlib.sha256).hexdigest()
+    assert client.get("/snrt-privat/no-existeix/video", headers=h).status_code == 404
+    assert client.get("/snrt-privat/prova-4/video").status_code in (401, 403)

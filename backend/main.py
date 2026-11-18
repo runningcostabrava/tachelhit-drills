@@ -10945,8 +10945,19 @@ def bulk_update_video_url(request: BulkVideoUrlUpdateRequest, db: Session = Depe
 # ---- Visor PRIVAT de Tamazight TV (SNRT): només administradors (docs/adr/0012) -----------------------
 # Material de recerca amb permís de la SNRT: recerca sí, republicar no. Per això TOTES les rutes demanen un administrador,
 # no surt a cap exportació ni al corpus, i el vídeo no es guarda ni es serveix (s'encasta de YouTube o es carrega a la pàgina).
+def _snrt_viewer_emails() -> set:
+    return {e.strip().lower() for e in (os.getenv("SNRT_VIEWER_EMAILS") or "").split(",") if e.strip()}
+
+
+def require_snrt_viewer(user: UserModel = Depends(require_user)) -> UserModel:
+    """Administrador, o un correu de la llista SNRT_VIEWER_EMAILS (la gent de la SNRT): veuen NOMÉS el visor, no la resta d'admin."""
+    if user.is_admin or (user.email and user.email.lower() in _snrt_viewer_emails()):
+        return user
+    raise HTTPException(status_code=403, detail="Només per a administradors i convidats de la SNRT")
+
+
 @app.get("/snrt-privat/")
-def snrt_privat_index(_admin: UserModel = Depends(require_admin), db: Session = Depends(get_db)):
+def snrt_privat_index(_admin: UserModel = Depends(require_snrt_viewer), db: Session = Depends(get_db)):
     eps = db.query(SnrtEpisodeModel).order_by(SnrtEpisodeModel.titol).all()
     out = []
     for e in eps:
@@ -10958,7 +10969,7 @@ def snrt_privat_index(_admin: UserModel = Depends(require_admin), db: Session = 
 
 
 @app.get("/snrt-privat/{slug}")
-def snrt_privat_episodi(slug: str, _admin: UserModel = Depends(require_admin), db: Session = Depends(get_db)):
+def snrt_privat_episodi(slug: str, _admin: UserModel = Depends(require_snrt_viewer), db: Session = Depends(get_db)):
     e = db.query(SnrtEpisodeModel).filter(SnrtEpisodeModel.slug == slug).first()
     if not e:
         raise HTTPException(status_code=404, detail="Episodi desconegut")
@@ -10967,6 +10978,21 @@ def snrt_privat_episodi(slug: str, _admin: UserModel = Depends(require_admin), d
             "avis": "Text llegit per màquina de la imatge i traduït per màquina: sense revisar. Material de la SNRT, només per a recerca.",
             "linies": [{"k": c.k, "t_ini": c.t_ini, "t_fi": c.t_fi, "tifinag": c.tifinag, "arab": c.arab,
                         "catala": c.catala, "catala_estat": c.catala_estat} for c in cues]}
+
+
+@app.get("/snrt-privat/{slug}/video")
+def snrt_privat_video(slug: str, _admin: UserModel = Depends(require_snrt_viewer), db: Session = Depends(get_db)):
+    """Adreça signada (4 h) del vídeo, que viu al servidor d'Alibaba (visor-video) i no passa mai per aquesta app.
+    Sense SNRT_VIDEO_BASE i SNRT_VIDEO_SECRET (o sense vídeo allà) torna `url: null` i el visor demana el fitxer a qui el mira."""
+    import hashlib, hmac, time as _t
+    if not db.query(SnrtEpisodeModel).filter(SnrtEpisodeModel.slug == slug).first():
+        raise HTTPException(status_code=404, detail="Episodi desconegut")
+    base, secret = (os.getenv("SNRT_VIDEO_BASE") or "").rstrip("/"), os.getenv("SNRT_VIDEO_SECRET") or ""
+    if not base or not secret:
+        return {"url": None}
+    exp = int(_t.time()) + 4 * 3600
+    sig = hmac.new(secret.encode(), f"{slug}.{exp}".encode(), hashlib.sha256).hexdigest()
+    return {"url": f"{base}/v/{slug}?exp={exp}&sig={sig}", "caduca": exp}
 
 
 @app.post("/snrt-privat/{slug}/importa")

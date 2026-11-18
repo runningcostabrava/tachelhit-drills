@@ -1,5 +1,5 @@
 /**
- * El visor PRIVAT de Tamazight TV (SNRT): només per a administradors (docs/adr/0012).
+ * El visor PRIVAT de Tamazight TV (SNRT): només per a administradors i convidats de la SNRT (docs/adr/0012). El vídeo, si hi és, viu al servidor d'Alibaba i es demana amb una adreça signada de 4 h.
  *
  * Material de recerca amb permís de la SNRT: recerca sí, republicar no. Aquí no es republica res: el vídeo no es guarda ni es
  * serveix (s'encasta de YouTube, o es carrega des de l'ordinador de qui mira), i el text només el veuen els administradors.
@@ -8,7 +8,6 @@
  * El text està SENSE REVISAR: el tifinag i l'àrab els va llegir una màquina de la imatge i el català el va traduir una altra.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { api } from '../api';
 import { API_BASE } from '../config';
 import { loadYouTubeApi } from '../utils/youtubeUtils';
 
@@ -39,31 +38,31 @@ export default function SnrtPrivat() {
   const ytRef = useRef<{ getCurrentTime: () => number; seekTo: (s: number, a: boolean) => void; destroy?: () => void } | null>(null);
   const llistaRef = useRef<HTMLDivElement | null>(null);
 
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
   useEffect(() => {
-    api.me().then((m) => setAdmin(!!m?.is_admin)).catch(() => setAdmin(false));
+    // L'accés (administrador o convidat de la SNRT) el decideix el servidor: si no hi deixa entrar, es diu i prou.
+    demana<{ episodis: Episodi[] }>('/snrt-privat/').then((d) => { setEps(d.episodis); setAdmin(true); }).catch((e) => { setAdmin(false); setError(String(e.message || e)); });
   }, []);
   useEffect(() => {
-    if (!admin) return;
-    demana<{ episodis: Episodi[] }>('/snrt-privat/').then((d) => setEps(d.episodis)).catch((e) => setError(String(e.message || e)));
-  }, [admin]);
-  useEffect(() => {
     if (!sel) return;
-    setDades(null); setFitxer(null); setAra(0);
+    setDades(null); setFitxer(null); setAra(0); setVideoUrl(null);
     try { setDesp(Number(localStorage.getItem(`snrt.desp.${sel}`)) || 0); } catch { setDesp(0); }
     demana<Dades>(`/snrt-privat/${encodeURIComponent(sel)}`).then(setDades).catch((e) => setError(String(e.message || e)));
+    // vídeo allotjat al servidor d'Alibaba: adreça signada de 4 h (si no n'hi ha, es carrega des de l'ordinador)
+    demana<{ url: string | null }>(`/snrt-privat/${encodeURIComponent(sel)}/video`).then((d) => setVideoUrl(d.url)).catch(() => setVideoUrl(null));
   }, [sel]);
   useEffect(() => { try { if (sel) localStorage.setItem(`snrt.desp.${sel}`, String(desp)); } catch { /* finestra privada */ } }, [sel, desp]);
 
   // vídeo de YouTube, si l'episodi hi és
   useEffect(() => {
-    if (!dades?.video_youtube) return;
+    if (!dades?.video_youtube || videoUrl) return;
     let viu = true;
     loadYouTubeApi().then((YT) => {
       if (!viu) return;
       ytRef.current = new YT.Player('snrt-yt', { videoId: dades.video_youtube, playerVars: { rel: 0, playsinline: 1 } });
     });
     return () => { viu = false; try { ytRef.current?.destroy?.(); } catch { /* ja no hi és */ } ytRef.current = null; };
-  }, [dades?.video_youtube]);
+  }, [dades?.video_youtube, videoUrl]);
 
   // el temps del vídeo, vingui d'on vingui
   useEffect(() => {
@@ -95,7 +94,7 @@ export default function SnrtPrivat() {
   }, [desp]);
 
   if (admin === null) return <p style={{ padding: 16 }}>Carregant…</p>;
-  if (!admin) return <p style={{ padding: 16 }}>Aquesta pàgina és només per a administradors. Entra amb el teu compte.</p>;
+  if (!admin) return <p style={{ padding: 16 }}>Aquesta pàgina és només per a administradors i convidats de la SNRT. Entra amb el teu compte.</p>;
   const linia = dades && actual >= 0 ? dades.linies[actual] : null;
 
   return (
@@ -138,12 +137,12 @@ export default function SnrtPrivat() {
               <h2 style={{ fontSize: '1.1rem' }}>{dades.titol}</h2>
               <div className="cols">
                 <div className="video">
-                  {dades.video_youtube ? <div id="snrt-yt" /> : (
+                  {dades.video_youtube && !videoUrl ? <div id="snrt-yt" /> : (
                     <>
-                      <video ref={videoRef} src={fitxer || undefined} controls />
+                      <video ref={videoRef} src={videoUrl || fitxer || undefined} controls />
                       <p style={{ fontSize: '.85rem' }}>
-                        {fitxer ? 'Vídeo carregat des del teu ordinador (no surt d\'aquí).' : 'Carrega el vídeo de l\'episodi des del teu ordinador:'}{' '}
-                        <input type="file" accept="video/*" onChange={(ev) => { const f = ev.target.files?.[0]; if (f) setFitxer(URL.createObjectURL(f)); }} />
+                        {videoUrl ? 'Vídeo del servidor privat.' : fitxer ? 'Vídeo carregat des del teu ordinador (no surt d'aquí).' : 'Carrega el vídeo de l'episodi des del teu ordinador:'}{' '}
+                        {!videoUrl && <input type="file" accept="video/*" onChange={(ev) => { const f = ev.target.files?.[0]; if (f) setFitxer(URL.createObjectURL(f)); }} />}
                         {dades.url_pagina && <> · <a href={dades.url_pagina} target="_blank" rel="noreferrer noopener">pàgina original</a></>}
                       </p>
                     </>
