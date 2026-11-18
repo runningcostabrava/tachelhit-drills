@@ -328,3 +328,11 @@ def test_interval_quadra_amb_inici_retallat_a_zero():
     assert not tb.interval_quadra(r, {"x_0000": [0.0, 4.25]})
     assert not tb.interval_quadra(r, {})
     assert not tb.interval_quadra(r, None)
+
+
+def test_recepta_c_es_a_la_linia_i_el_nucli_la_coneix(tmp_path):
+    repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    d = tb.prepara_nucli(str(tmp_path), "C", repo)
+    codi = open(os.path.join(d, "snrt-transcriptor-c.py"), encoding="utf-8").read()
+    assert 'RECEPTA = "C"' in codi.splitlines() and 'if RECEPTA == "C":' in codi
+    assert json.load(open(os.path.join(d, "kernel-metadata.json")))["id"].endswith("snrt-transcriptor-c")

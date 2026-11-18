@@ -5,6 +5,8 @@
 # El llança `tools/lm/transcriptor_bucle.py`, que posa la recepta a la línia de sota abans de pujar el nucli:
 #   RECEPTA = "A"  -> train = només SNRT (rèpliques aptes amb CER <= 0,4 de l'adaptador actual)
 #   RECEPTA = "B"  -> train = SNRT + les dades d'H4b (rètols nets de Zouhir i l'Alcorà)
+#   RECEPTA = "C"  -> train = només les rèpliques SNRT més netes: confiança >= 0,95, durada 2-6 s, <= 18 lletres/s, les 200 de més
+#                     confiança (desempat a l'atzar, llavor 1114); mateix ritme que A per aïllar l'efecte de la neteja de les dades
 # Mateixa recepta que H4b: només els adaptadors, cap congelat, gradient no reentrant, objectiu ric (sense plegar).
 # Mesura «abans -> després», mateixos talls i mateixa regla, sobre cinc proves:
 #   cv-zgh-test (256 clips nets), test-fora (la nostra parla mai sentida), tfa-226, zouhir-fora, snrt-retingut
@@ -95,11 +97,16 @@ def snrt(split):
         cami = os.path.join(D_S, r["fitxer"])
         t = rica(r["tifinag"])
         if t and os.path.exists(cami):
-            fora.append({"rica": t, "cami": cami, "meta": {"video": r["slug"], "de": r["id"]}})
+            fora.append({"rica": t, "cami": cami, "meta": {"video": r["slug"], "de": r["id"]}, "conf": r.get("conf") or 0, "durada": r["durada"]})
     return fora
 
 
 train_s, dev_s, test_s = snrt("train"), snrt("dev"), snrt("test")
+if RECEPTA == "C":
+    _net = [x for x in train_s if x["conf"] >= 0.95 and 2 <= x["durada"] <= 6 and len(x["rica"]) / x["durada"] <= 18]
+    random.Random(1114).shuffle(_net)
+    train_s = sorted(_net, key=lambda x: -x["conf"])[:200]
+    print(f"recepta C: {len(train_s)} rèpliques netes", flush=True)
 corpus = json.load(open(CORPUS, encoding="utf-8"))
 proves = {"snrt-retingut": test_s}
 fora_c = []

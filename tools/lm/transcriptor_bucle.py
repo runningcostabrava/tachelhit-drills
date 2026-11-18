@@ -43,7 +43,7 @@ MILLORA_CV_MAX_IC = 0.0                                  # límit superior de l'
 EMPITJORA_FORA_MAX = 0.005                               # test-fora: Δ no pot passar de +0,005
 USUARI_KAGGLE = "josepabloucr"
 DATASET = "snrt-transcriptor"
-NUCLI = {"A": "snrt-transcriptor-a", "B": "snrt-transcriptor-b"}
+NUCLI = {"A": "snrt-transcriptor-a", "B": "snrt-transcriptor-b", "C": "snrt-transcriptor-c"}
 DATASETS_NUCLI = ["josepabloucr/adaptador-shi-zouhir-b", "josepabloucr/tfa-veritat-h3", "josepabloucr/corpus-v4-amb-cv-zgh",
                   "josepabloucr/cv-zgh-test-256", "josepabloucr/zouhir-veritat"]
 ESPERA_COMENCA_MAX = 90 * 60
@@ -368,7 +368,7 @@ def prepara_nucli(sortida, recepta, arrel_repo):
     shutil.rmtree(d, ignore_errors=True)
     os.makedirs(d)
     font = open(os.path.join(arrel_repo, "tools", "lm", "kaggle", "transcriptor_snrt.py"), encoding="utf-8").read()
-    nou, n = re.subn(r'^RECEPTA = "[AB]"$', f'RECEPTA = "{recepta}"', font, flags=re.M)
+    nou, n = re.subn(r'^RECEPTA = "[ABC]"$', f'RECEPTA = "{recepta}"', font, flags=re.M)
     assert n == 1, "no trobo la línia RECEPTA al nucli"
     codi = f"snrt-transcriptor-{recepta.lower()}.py"
     open(os.path.join(d, codi), "w", encoding="utf-8").write(nou)
@@ -433,7 +433,7 @@ def main(argv=None):
     ap.add_argument("--arrel", default="/root/tamazight_tv")
     ap.add_argument("--sortida", default="/root/transcriptor")
     ap.add_argument("--repo", default=os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    ap.add_argument("--recepta", choices=["A", "B"], default="A")
+    ap.add_argument("--recepta", choices=["A", "B", "C"], default="A")
     ap.add_argument("--sortides", help="avalua: fitxer *_sortides.json")
     ap.add_argument("--forca", action="store_true", help="salta la parada de 2 cicles sense millora")
     a = ap.parse_args(argv)
