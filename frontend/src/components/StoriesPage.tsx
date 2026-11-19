@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FaBookOpen, FaChevronLeft, FaCrosshairs, FaExpand, FaInfinity, FaExternalLinkAlt, FaHeadphones, FaPause, FaPlay, FaRedo, FaStepBackward, FaStepForward, FaStop } from 'react-icons/fa';
 import { api, type Story, type StoryPage, type WordTime } from '../api';
-import { getMediaUrl } from '../config';
+import { API_BASE, getMediaUrl } from '../config';
 import AmbSo from './AmbSo';
 import { audioSrc, imatgeSrc } from '../services/audioLocal';
 import type { Drill } from '../types';
@@ -29,6 +29,57 @@ const TORNA_A_SEGUIR_MS = 5000;
 export default function StoriesPage() {
   const { slug } = useParams<{ slug: string }>();
   return slug ? <OneStory slug={slug} /> : <StoryList />;
+}
+
+/**
+ * Els capítols de Tamazight TV, per a qui el servidor hi deixi entrar (#695, ADR 0012).
+ *
+ * No es comprova aquí qui ets: es demana la llista i, si el servidor contesta que no, la secció
+ * NO EXISTEIX — ni error, ni «no tens permís», ni un espai buit. Qui no hi té accés no ha de
+ * saber que hi ha res a l'altra banda. El permís el decideix `/snrt-privat/`, com sempre.
+ *
+ * Material de recerca de la SNRT: recerca sí, republicar no. D'aquí només se'n pinta el títol.
+ */
+function SeccioSnrt() {
+  const navigate = useNavigate();
+  const [eps, setEps] = useState<{ slug: string; titol: string; linies: number; amb_catala: number }[]>([]);
+
+  useEffect(() => {
+    let viu = true;
+    fetch(`${API_BASE}/snrt-privat/`, { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (viu && d?.episodis?.length) setEps(d.episodis); })
+      .catch(() => { /* sense accés: la secció no hi és */ });
+    return () => { viu = false; };
+  }, []);
+
+  if (!eps.length) return null;
+
+  return (
+    <section style={{ marginBottom: 26 }}>
+      <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 17, margin: '0 0 2px', lineHeight: 1.3 }}>
+        SNRT · Tamazight TV
+      </h2>
+      <p style={{ fontSize: 12.5, color: 'var(--text-soft)', margin: '0 0 10px' }}>
+        {eps.length === 1 ? '1 capítol' : `${eps.length} capítols`} · material de recerca, text sense revisar
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 14 }}>
+        {eps.map((e) => (
+          <button key={e.slug} onClick={() => navigate(`/snrt?ep=${encodeURIComponent(e.slug)}`)} style={card}>
+            <div style={{ fontWeight: 800, fontSize: 15, lineHeight: 1.3 }}>{e.titol}</div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-soft)', marginTop: 3 }}>
+              {e.linies} línies · {e.amb_catala} amb català
+            </div>
+            {/* Es diu a cada targeta i no un sol cop a dalt: qui hi entra ha de saber, en prémer,
+                que el tifinag i l'àrab els ha llegit una màquina i el català l'ha traduït una altra. */}
+            <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4, color: 'var(--text-muted)' }}>
+              llegit per una màquina, sense revisar
+            </div>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function StoryList() {
@@ -105,6 +156,8 @@ function StoryList() {
           </div>
         </section>
       ))}
+
+      <SeccioSnrt />
     </div>
   );
 }

@@ -27,7 +27,12 @@ const mmss = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).
 export default function SnrtPrivat() {
   const [admin, setAdmin] = useState<boolean | null>(null);
   const [eps, setEps] = useState<Episodi[]>([]);
-  const [sel, setSel] = useState<string | null>(null);
+  //: Es pot arribar aquí des d'Històries amb el capítol ja triat (`/snrt?ep=<slug>`, #695). Es
+  //: llegeix un sol cop, en muntar: després mana el que tria qui mira, i canviar-li el capítol
+  //: perquè l'adreça encara digui una altra cosa seria desconcertant.
+  const [sel, setSel] = useState<string | null>(() => {
+    try { return new URLSearchParams(window.location.search).get('ep'); } catch { return null; }
+  });
   const [dades, setDades] = useState<Dades | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ara, setAra] = useState(0);
@@ -41,7 +46,7 @@ export default function SnrtPrivat() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   useEffect(() => {
     // L'accés (administrador o convidat de la SNRT) el decideix el servidor: si no hi deixa entrar, es diu i prou.
-    demana<{ episodis: Episodi[] }>('/snrt-privat/').then((d) => { setEps(d.episodis); setAdmin(true); }).catch((e) => { setAdmin(false); setError(String(e.message || e)); });
+    demana<{ episodis: Episodi[] }>('/snrt-privat/').then((d) => { setEps(d.episodis); setAdmin(true); setSel((s) => (s && d.episodis.some((e) => e.slug === s) ? s : null)); }).catch((e) => { setAdmin(false); setError(String(e.message || e)); });
   }, []);
   useEffect(() => {
     if (!sel) return;
