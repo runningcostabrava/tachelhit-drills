@@ -7,6 +7,7 @@ import {
   FaPlay, FaPlus, FaRedo, FaSearch, FaVideo, FaFont,
 } from 'react-icons/fa';
 import { api, type HomeData } from '../api';
+import { PORTES } from './portes';
 
 // La casa.
 //
@@ -32,18 +33,22 @@ import { api, type HomeData } from '../api';
 // el navegador no pot començar a baixar una imatge fins que en sap l'adreça, i l'adreça venia
 // després de l'API — que és un servei gratuït que s'adorm. Sabent-les, les portes es pinten
 // mentre l'API encara s'aixeca.
+//
+// Per això els sis fitxers van DINS de la compilació (`public/portes/`) i no a R2 (#693). Els
+// mitjans de R2 es demanen per `/mitjans/...`, que els serveix la mateixa API adormida: posar
+// les portes allà hauria fet que la portada s'esperés igualment, que és justament el que això
+// evitava. Pesen 155 kB entre totes sis.
 //: Un nombre tal com es diu en català. Viu aquí fora i no dins de la portada perquè la
 //: franja de les lletres també el fa servir.
 const n = (x?: number) => (x === undefined ? '…' : x.toLocaleString('ca-ES'));
 
-const DOORS_KNOWN: Record<string, string> = {
-  method: 'https://res.cloudinary.com/du26ppvh0/image/upload/v1792770886/tachelhit/app/porta-method.webp',
-  grammar: 'https://res.cloudinary.com/du26ppvh0/image/upload/v1792770883/tachelhit/app/porta-grammar.webp',
-  practice: 'https://res.cloudinary.com/du26ppvh0/image/upload/v1792770886/tachelhit/app/porta-practice.webp',
-  library: 'https://res.cloudinary.com/du26ppvh0/image/upload/v1792770884/tachelhit/app/porta-library.webp',
-  stories: 'https://res.cloudinary.com/du26ppvh0/image/upload/v1792770887/tachelhit/app/porta-stories.webp',
-  capture: 'https://res.cloudinary.com/du26ppvh0/image/upload/v1792770883/tachelhit/app/porta-capture.webp',
-};
+//: Una portada de la compilació, resolta contra l'adreça de la pàgina. Ha de quedar absoluta:
+//: `getMediaUrl` posa la base de l'API davant de tota ruta relativa, i aquestes no són de l'API.
+const porta = (nom: string) => new URL(PORTES[nom], document.baseURI).href;
+
+const DOORS_KNOWN: Record<string, string> = Object.fromEntries(
+  Object.keys(PORTES).map((nom) => [nom, porta(nom)]),
+);
 
 export default function HomePage() {
   const navigate = useNavigate();
