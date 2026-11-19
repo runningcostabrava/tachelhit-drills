@@ -119,6 +119,84 @@ def _iou_posat(real, ry, temp, ty, gruix):
     return float(best)
 
 
+# --- desempat per topologia (#699) ------------------------------------------------------------
+# Sis lletres son la MATEIXA anella amb una marca diferent a dins i se solapen entre 0,74 i 0,88:
+# l'anella es la major part dels pixels i la comparteixen totes, o sigui que l'IoU no les pot
+# separar. A `tskla` el lector triava ⵀ sobre ⵙ per 0,03 i encertava nou de cada deu vegades.
+#
+# El que si que les separa es comptar, no mirar: quants trossos de tinta te el signe, quants
+# forats tanca i, quan en tanca dos, com estan posats. Surt de les plantilles mateixes:
+#
+#     trossos | forats | com estan              | signes
+#        2    |   1    |                        | ⵙ   (unica)
+#        1    |   2    | un al costat de l'altre| ⵀ
+#        1    |   2    | un sobre l'altre       | ⴱ
+#        1    |   2    | minusculs              | ⵛ
+#
+# Sis lletres hi tenen firma unica: ⴱ ⴻ ⵀ ⵓ ⵙ ⵛ.
+VUIT = np.ones((3, 3), bool)
+CREU = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], bool)
+FORAT_MIN = 8          # per sota d'aixo un forat es soroll de binaritzacio, no un forat
+MARGE_EMPAT = 0.08     # nomes es desempata quan els dos primers estan junts
+MIRA = 4               # quants candidats de dalt es miren
+
+
+def topologia(mask):
+    """La firma d'una mascara: (trossos de tinta, forats, com estan posats els dos forats)."""
+    m = np.asarray(mask) > 0
+    if m.size == 0 or not m.any():
+        return (0, 0, "")
+    _, n_tinta = ndimage.label(m, structure=VUIT)
+    lab, n = ndimage.label(~m, structure=CREU)
+    if n == 0:
+        return (n_tinta, 0, "")
+    vora = set(lab[0, :]) | set(lab[-1, :]) | set(lab[:, 0]) | set(lab[:, -1])
+    forats = []
+    for i in range(1, n + 1):
+        if i in vora:
+            continue
+        ys, xs = np.nonzero(lab == i)
+        if len(ys) < FORAT_MIN:
+            continue
+        forats.append((len(ys), ys.mean(), xs.mean()))
+    if len(forats) != 2:
+        return (n_tinta, len(forats), "")
+    forats.sort(key=lambda t: -t[0])
+    (na, ya, xa), (nb, yb, xb) = forats
+    # en proporcio a la mida: les plantilles i els glifs de pantalla no fan la mateixa
+    if max(na, nb) < 0.08 * m.size:
+        return (n_tinta, 2, "petits")
+    return (n_tinta, 2, "apilats" if abs(ya - yb) > abs(xa - xb) else "costat")
+
+
+_TOPO = {}
+
+
+def topologia_plantilles():
+    """La firma de cada plantilla, calculada un sol cop."""
+    if not _TOPO:
+        for ch, (m, _dy) in plantilles().items():
+            _TOPO[ch] = topologia(m)
+    return _TOPO
+
+
+def desempata(mask, punts):
+    """Reordena `punts` quan la forma global no sap triar i la topologia si.
+
+    Nomes actua si els dos primers estan dins de `MARGE_EMPAT`: si el primer guanya de molt, la
+    forma ja ho te clar. I si cap dels candidats de dalt no casa amb la topologia del glif, no
+    es toca res: val mes deixar-ho com estava que forcar una resposta.
+    """
+    if len(punts) < 2 or punts[0][0] - punts[1][0] > MARGE_EMPAT:
+        return punts
+    t = topologia(mask)
+    taula = topologia_plantilles()
+    casen = [p for p in punts[:MIRA] if taula.get(p[1]) == t]
+    if not casen or casen[0][1] == punts[0][1]:
+        return punts
+    return [casen[0]] + [p for p in punts if p is not casen[0]]
+
+
 def classifica(mask, y_rel_top, gruix_real=1):
     """Llista [(IoU, signe)] ordenada de més a menys. mask: màscara del glif; y_rel_top: y del capdamunt relativa al cos.
     La màscara de «blanc entre vores» és ~1 px més prima que el traç real: es dilata `gruix_real` px.
@@ -133,7 +211,7 @@ def classifica(mask, y_rel_top, gruix_real=1):
     for ch, (m, dy) in P.items():
         punts.append((max(_iou_posat(mask, y_rel_top, m, dy, g) for g in GRUIXOS), ch))
     punts.sort(reverse=True)
-    return punts
+    return desempata(mask, punts)
 
 
 if __name__ == "__main__":
