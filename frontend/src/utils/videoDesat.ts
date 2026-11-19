@@ -91,3 +91,73 @@ export async function triaFitxer(): Promise<NansaFitxer | null> {
     return null;
   }
 }
+
+/* ---- la carpeta: triar-la un cop i que cada episodi hi trobi el seu (#697) --------------- */
+
+const CARPETA = "__carpeta";
+
+interface NansaCarpeta {
+  name: string;
+  getFileHandle(nom: string, o?: { create?: boolean }): Promise<NansaFitxer>;
+  queryPermission?(d: { mode: 'read' }): Promise<PermissionState>;
+  requestPermission?(d: { mode: 'read' }): Promise<PermissionState>;
+}
+
+export function potTriarCarpeta(): boolean {
+  return typeof window !== 'undefined' && 'showDirectoryPicker' in window && 'indexedDB' in window;
+}
+
+/** Obre el triador de carpetes i la recorda. Una sola per a tots els episodis. */
+export async function triaCarpeta(): Promise<NansaCarpeta | null> {
+  try {
+    const w = window as unknown as { showDirectoryPicker(o?: unknown): Promise<NansaCarpeta> };
+    const n = await w.showDirectoryPicker({ mode: 'read' });
+    await amb<void>('readwrite', (s) => s.put(n, CARPETA));
+    return n;
+  } catch {
+    // Qui mira ha tancat el triador.
+    return null;
+  }
+}
+
+export const llegeixCarpeta = () => amb<NansaCarpeta>('readonly', (s) => s.get(CARPETA));
+export const oblidaCarpeta = () => amb<void>('readwrite', (s) => s.delete(CARPETA));
+
+/**
+ * El vídeo d'un episodi dins de la carpeta recordada, buscant-lo pel nom.
+ *
+ * El conveni és que el fitxer es digui com l'episodi (`baba_ali_01.mp4`), que és com els deixa
+ * `baixa_baba_ali.py`. Es proven unes quantes extensions perquè no tots els episodis arriben en
+ * el mateix contenidor.
+ *
+ * `demana` només pot ser `true` dins d'un clic: sense gest, el navegador rebutja la petició de
+ * permís. En carregar la pàgina es mira només si el permís ja hi és.
+ */
+export async function fitxerDeLaCarpeta(slug: string, demana: boolean): Promise<File | null> {
+  const c = await llegeixCarpeta();
+  if (!c) return null;
+  try {
+    const estat = (await c.queryPermission?.({ mode: 'read' })) ?? 'granted';
+    if (estat !== 'granted') {
+      if (!demana) return null;
+      if (((await c.requestPermission?.({ mode: 'read' })) ?? 'denied') !== 'granted') return null;
+    }
+    for (const ext of ['.mp4', '.mkv', '.webm', '.mov', '.m4v']) {
+      try {
+        const n = await c.getFileHandle(slug + ext);
+        return await n.getFile();
+      } catch {
+        // aquest no hi és: es prova el següent
+      }
+    }
+  } catch {
+    // la carpeta s'ha mogut o s'ha esborrat
+  }
+  return null;
+}
+
+/** El nom de la carpeta recordada, per poder-lo ensenyar; `null` si no n'hi ha cap. */
+export async function nomDeLaCarpeta(): Promise<string | null> {
+  const c = await llegeixCarpeta();
+  return c ? c.name : null;
+}
