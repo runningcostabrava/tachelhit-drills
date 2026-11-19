@@ -31,7 +31,10 @@ def carrega(carpeta):
         if r.get("t_ini") is None or r.get("t_fi") is None or not (r.get("tifinag") or r.get("arab")):
             continue
         linies.append({"k": r.get("k", n), "t_ini": r["t_ini"], "t_fi": r["t_fi"], "tifinag": r.get("tifinag"),
-                       "arab": r.get("arab"), "catala": r.get("catala") or None, "catala_estat": r.get("catala_estat")})
+                       "arab": r.get("arab"), "catala": r.get("catala") or None, "catala_estat": r.get("catala_estat"),
+                       #: el que ha sentit el nostre transcriptor, si ja s'hi ha passat: va a part del
+                       #: subtitol de la cadena, que es una altra cosa i sovint no diu el mateix
+                       "sentit": r.get("sentit") or None})
     url = vid.get("url_pagina")
     yt = None
     m = re.search(r"(?:youtu\.be/|v=)([\w-]{11})", url or "")

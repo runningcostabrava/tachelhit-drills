@@ -524,3 +524,7 @@ class SnrtCue(Base):
     arab = Column(Text, nullable=True)
     catala = Column(Text, nullable=True)           # traducció de màquina, sense revisar
     catala_estat = Column(String, nullable=True)   # acord entre models o no
+    #: El que el NOSTRE transcriptor sent en aquest tall. No és el subtitol de la cadena: aquell
+    #: va en norma de l'IRCAM i aquí hi ha la parla dialectal, i sovint no diuen el mateix. És
+    #: justament la diferència el que es vol poder mirar, i per això va en un camp a part.
+    sentit = Column(Text, nullable=True)

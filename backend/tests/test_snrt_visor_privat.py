@@ -76,3 +76,22 @@ def test_video_signat_nomes_amb_base_i_secret(monkeypatch):
     assert par["sig"] == hmac.new(b"s3cret", f"prova-4.{par['exp']}".encode(), hashlib.sha256).hexdigest()
     assert client.get("/snrt-privat/no-existeix/video", headers=h).status_code == 404
     assert client.get("/snrt-privat/prova-4/video").status_code in (401, 403)
+
+
+def test_el_que_sent_el_nostre_model_va_en_un_camp_a_part(monkeypatch):
+    """El subtitol de la cadena i el que sent el transcriptor NO es barregen.
+
+    El text de la SNRT va en norma de l'IRCAM i el transcriptor sent la parla dialectal: sovint
+    no diuen el mateix, i aquesta diferencia es justament el que es vol poder mirar. Si una cosa
+    sobreescrivis l'altra, es perdria el material; per aixo son dos camps.
+    """
+    h = _entra("boss-snrt@example.com", "bosssnrt", monkeypatch, admin=True)
+    ep = {"titol": "Amb el que sentim", "linies": [
+        {"k": 0, "t_ini": 1.0, "t_fi": 4.0, "tifinag": "ⴰⵣⵓⵍ", "catala": "hola",
+         "sentit": "ⴰⵣⵓ"},
+        {"k": 1, "t_ini": 5.0, "t_fi": 7.0, "tifinag": "ⴰⵣⵓⵍ"}]}
+    assert client.post("/snrt-privat/prova-sentit/importa", json=ep, headers=h).json()["linies"] == 2
+    linies = client.get("/snrt-privat/prova-sentit", headers=h).json()["linies"]
+    assert [l["sentit"] for l in linies] == ["ⴰⵣⵓ", None]
+    #: i el de la cadena no s'ha mogut
+    assert [l["tifinag"] for l in linies] == ["ⴰⵣⵓⵍ", "ⴰⵣⵓⵍ"]

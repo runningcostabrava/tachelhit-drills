@@ -10,9 +10,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API_BASE } from '../config';
 import { loadYouTubeApi } from '../utils/youtubeUtils';
+import { formes } from '../utils/tifinag';
+import { desaNansa, fitxerDeLaNansa, llegeixNansa, oblidaNansa, potRecordar, triaFitxer } from '../utils/videoDesat';
 
 interface Episodi { slug: string; titol: string; durada: number | null; linies: number; amb_catala: number; video_youtube: string | null; url_pagina: string | null }
-interface Linia { k: number; t_ini: number; t_fi: number; tifinag: string | null; arab: string | null; catala: string | null; catala_estat: string | null }
+interface Linia { k: number; t_ini: number; t_fi: number; tifinag: string | null; arab: string | null; catala: string | null; catala_estat: string | null; sentit: string | null }
 interface Dades { slug: string; titol: string; durada: number | null; url_pagina: string | null; video_youtube: string | null; avis: string; linies: Linia[] }
 
 async function demana<T>(ruta: string): Promise<T> {
@@ -27,12 +29,27 @@ const mmss = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).
 export default function SnrtPrivat() {
   const [admin, setAdmin] = useState<boolean | null>(null);
   const [eps, setEps] = useState<Episodi[]>([]);
-  const [sel, setSel] = useState<string | null>(null);
+  //: Es pot arribar aquí des d'Històries amb el capítol ja triat (`/snrt?ep=<slug>`, #695). Es
+  //: llegeix un sol cop, en muntar: després mana el que tria qui mira, i canviar-li el capítol
+  //: perquè l'adreça encara digui una altra cosa seria desconcertant.
+  const [sel, setSel] = useState<string | null>(() => {
+    try { return new URLSearchParams(window.location.search).get('ep'); } catch { return null; }
+  });
   const [dades, setDades] = useState<Dades | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ara, setAra] = useState(0);
   const [desp, setDesp] = useState(0);
-  const [veu, setVeu] = useState({ catala: true, arab: true, tifinag: false });
+  const [veu, setVeu] = useState({ catala: true, arab: true, tifinag: false, sentit: false });
+  //: Amb quina grafia es pinta l'amazic. El tifinag primer, que és el seu alfabet; el llatí hi és
+  //: perquè llegir-lo de pressa, sota un vídeo que no s'atura, encara costa a qui aprèn.
+  const [grafia, setGrafia] = useState<'tif' | 'lat'>(() => {
+    try { return localStorage.getItem('snrt.grafia') === 'lat' ? 'lat' : 'tif'; } catch { return 'tif'; }
+  });
+  useEffect(() => { try { localStorage.setItem('snrt.grafia', grafia); } catch { /* finestra privada */ } }, [grafia]);
+  const marcRef = useRef<HTMLDivElement | null>(null);
+  //: El nom del fitxer que aquest episodi ja va fer servir un altre dia, si el navegador el
+  //: recorda. No és el vídeo: és una nansa al disc de qui mira, i cal un clic per reobrir-la.
+  const [desat, setDesat] = useState<string | null>(null);
   const [fitxer, setFitxer] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const ytRef = useRef<{ getCurrentTime: () => number; seekTo: (s: number, a: boolean) => void; destroy?: () => void } | null>(null);
@@ -41,12 +58,20 @@ export default function SnrtPrivat() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   useEffect(() => {
     // L'accés (administrador o convidat de la SNRT) el decideix el servidor: si no hi deixa entrar, es diu i prou.
-    demana<{ episodis: Episodi[] }>('/snrt-privat/').then((d) => { setEps(d.episodis); setAdmin(true); }).catch((e) => { setAdmin(false); setError(String(e.message || e)); });
+    demana<{ episodis: Episodi[] }>('/snrt-privat/').then((d) => { setEps(d.episodis); setAdmin(true); setSel((s) => (s && d.episodis.some((e) => e.slug === s) ? s : null)); }).catch((e) => { setAdmin(false); setError(String(e.message || e)); });
   }, []);
   useEffect(() => {
     if (!sel) return;
     setDades(null); setFitxer(null); setAra(0); setVideoUrl(null);
     try { setDesp(Number(localStorage.getItem(`snrt.desp.${sel}`)) || 0); } catch { setDesp(0); }
+    setDesat(null);
+    //: Si el permís encara hi és (mateixa sessió), el vídeo s'obre sol i no es pregunta res. Si
+    //: ha caducat, només se'n diu el nom i es deixa el botó: demanar-lo sense un clic no val.
+    llegeixNansa(sel).then(async (n) => {
+      if (!n) return;
+      const f = await fitxerDeLaNansa(n, false);
+      if (f) setFitxer(URL.createObjectURL(f)); else setDesat(n.name);
+    }).catch(() => {});
     demana<Dades>(`/snrt-privat/${encodeURIComponent(sel)}`).then(setDades).catch((e) => setError(String(e.message || e)));
     // vídeo allotjat al servidor d'Alibaba: adreça signada de 4 h (si no n'hi ha, es carrega des de l'ordinador)
     demana<{ url: string | null }>(`/snrt-privat/${encodeURIComponent(sel)}/video`).then((d) => setVideoUrl(d.url)).catch(() => setVideoUrl(null));
@@ -106,7 +131,15 @@ export default function SnrtPrivat() {
         .snrt-privat .llista{flex:1 1 320px;min-width:0;max-height:70vh;overflow:auto;border:1px solid rgba(128,128,128,.35);border-radius:8px}
         .snrt-privat .fila{padding:6px 10px;border-bottom:1px solid rgba(128,128,128,.2);cursor:pointer;overflow-wrap:anywhere}
         .snrt-privat .fila.ara{background:rgba(70,130,220,.2)}
-        .snrt-privat .sub{min-height:4.5em;padding:8px 12px;margin-top:6px;border-radius:8px;background:rgba(0,0,0,.78);color:#fff;text-align:center;overflow-wrap:anywhere}
+        .snrt-privat .marc{position:relative;background:#000;border-radius:8px;overflow:hidden}
+        .snrt-privat .marc:fullscreen{border-radius:0;display:flex;align-items:center;justify-content:center}
+        .snrt-privat .marc:fullscreen video{max-height:100vh;width:auto}
+        /* Damunt del vídeo i per sota dels seus controls: els controls natius seuen a sota i
+           taparien el subtítol si aquest hi fos enganxat. */
+        .snrt-privat .sub{position:absolute;left:0;right:0;bottom:3.2em;padding:6px 12px;color:#fff;text-align:center;overflow-wrap:anywhere;pointer-events:none;text-shadow:0 2px 4px #000,0 0 10px #000}
+        .snrt-privat .sub>div{display:inline-block;background:rgba(0,0,0,.62);border-radius:6px;padding:2px 10px;margin:1px 0}
+        .snrt-privat .pantalla{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:6px;padding:4px 9px;font-size:1rem;cursor:pointer}
+        .snrt-privat .sub .se{font-size:1rem;opacity:.95;border:1px dashed rgba(255,255,255,.55)}
         .snrt-privat .sub .ca{font-size:1.25rem}.snrt-privat .sub .ar{font-size:1.05rem;opacity:.9;direction:rtl}.snrt-privat .sub .ti{font-size:1rem;opacity:.8}
         .snrt-privat video,.snrt-privat #snrt-yt{width:100%;aspect-ratio:16/9;background:#000;border-radius:8px}
         .snrt-privat .ep{display:block;width:100%;text-align:left;padding:8px 10px;margin:4px 0;border:1px solid rgba(128,128,128,.35);border-radius:8px;background:transparent;color:inherit;cursor:pointer}
@@ -137,27 +170,75 @@ export default function SnrtPrivat() {
               <h2 style={{ fontSize: '1.1rem' }}>{dades.titol}</h2>
               <div className="cols">
                 <div className="video">
-                  {dades.video_youtube && !videoUrl ? <div id="snrt-yt" /> : (
-                    <>
+                  {/* El subtítol va DINS del marc del vídeo, no a sota: a pantalla completa el
+                      navegador només ensenya el que hi ha dins de l'element que s'hi posa, i un
+                      subtítol que desapareix justament quan mires de prop no serveix de res. */}
+                  <div className="marc" ref={marcRef}>
+                    {dades.video_youtube && !videoUrl ? <div id="snrt-yt" /> : (
                       <video ref={videoRef} src={videoUrl || fitxer || undefined} controls />
-                      <p style={{ fontSize: '.85rem' }}>
-                        {videoUrl ? "Vídeo del servidor privat." : fitxer ? "Vídeo carregat des del teu ordinador (no surt d'aquí)." : "Carrega el vídeo de l'episodi des del teu ordinador:"}{' '}
-                        {!videoUrl && <input type="file" accept="video/*" onChange={(ev) => { const f = ev.target.files?.[0]; if (f) setFitxer(URL.createObjectURL(f)); }} />}
-                        {dades.url_pagina && <> · <a href={dades.url_pagina} target="_blank" rel="noreferrer noopener">pàgina original</a></>}
-                      </p>
-                    </>
-                  )}
-                  <div className="sub" aria-live="polite">
-                    {linia ? (<>
-                      {veu.catala && <div className="ca">{linia.catala || <em>(sense traducció)</em>}</div>}
-                      {veu.arab && linia.arab && <div className="ar" dir="rtl">{linia.arab}</div>}
-                      {veu.tifinag && linia.tifinag && <div className="ti">{linia.tifinag}</div>}
-                    </>) : <span style={{ opacity: .6 }}>…</span>}
+                    )}
+                    <div className="sub" aria-live="polite">
+                      {linia ? (<>
+                        {veu.catala && <div className="ca">{linia.catala || <em>(sense traducció)</em>}</div>}
+                        {veu.arab && linia.arab && <div className="ar" dir="rtl">{linia.arab}</div>}
+                        {veu.tifinag && linia.tifinag && (
+                          <div className="ti">{grafia === 'tif' ? formes(linia.tifinag).tif : formes(linia.tifinag).lat}</div>
+                        )}
+                        {/* El que ha sentit el nostre model, quan hi és. Va en una línia a part i
+                            marcada: no és el subtítol de la cadena, és una altra font que sovint
+                            el contradiu, i confondre-les faria perdre justament el que val. */}
+                        {veu.sentit && linia.sentit && (
+                          <div className="se">{grafia === 'tif' ? formes(linia.sentit).tif : formes(linia.sentit).lat}</div>
+                        )}
+                      </>) : <span style={{ opacity: .6 }}>…</span>}
+                    </div>
+                    <button className="pantalla" title="Pantalla completa amb els subtítols"
+                            onClick={() => {
+                              const m = marcRef.current;
+                              if (!m) return;
+                              if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+                              else m.requestFullscreen().catch(() => {});
+                            }}>⛶</button>
                   </div>
-                  <div className="tria" style={{ marginTop: 8, fontSize: '.9rem' }}>
-                    {(['catala', 'arab', 'tifinag'] as const).map((k) => (
-                      <label key={k}><input type="checkbox" checked={veu[k]} onChange={() => setVeu({ ...veu, [k]: !veu[k] })} /> {k === 'catala' ? 'Català' : k === 'arab' ? 'Àrab' : 'Tifinag'}</label>
+                  <p style={{ fontSize: '.85rem' }}>
+                    {videoUrl ? "Vídeo del servidor privat." : fitxer ? "Vídeo carregat des del teu ordinador (no surt d'aquí)." : "Carrega el vídeo de l'episodi des del teu ordinador:"}{' '}
+                    {!videoUrl && !dades.video_youtube && (potRecordar() ? (
+                      <button onClick={async () => {
+                        const nansa = await triaFitxer();
+                        if (!nansa || !sel) return;
+                        const f = await fitxerDeLaNansa(nansa, true);
+                        if (!f) return;
+                        setFitxer(URL.createObjectURL(f)); setDesat(null);
+                        desaNansa(sel, nansa).catch(() => {});
+                      }}>Tria el vídeo…</button>
+                    ) : (
+                      <input type="file" accept="video/*" onChange={(ev) => { const f = ev.target.files?.[0]; if (f) setFitxer(URL.createObjectURL(f)); }} />
                     ))}
+                    {desat && !fitxer && !videoUrl && (
+                      <> <button onClick={async () => {
+                        const n = sel ? await llegeixNansa(sel) : null;
+                        const f = n ? await fitxerDeLaNansa(n, true) : null;
+                        //: si la nansa ha quedat orfe (fitxer mogut o esborrat), s'oblida en comptes
+                        //: de deixar un botó que no farà mai res
+                        if (f) { setFitxer(URL.createObjectURL(f)); setDesat(null); }
+                        else if (sel) { oblidaNansa(sel).catch(() => {}); setDesat(null); }
+                      }}>Torna a obrir «{desat}»</button></>
+                    )}
+                    {dades.url_pagina && <> · <a href={dades.url_pagina} target="_blank" rel="noreferrer noopener">pàgina original</a></>}
+                  </p>
+                  <div className="tria" style={{ marginTop: 8, fontSize: '.9rem' }}>
+                    {(['catala', 'arab', 'tifinag', 'sentit'] as const).map((k) => (
+                      <label key={k}><input type="checkbox" checked={veu[k]} onChange={() => setVeu({ ...veu, [k]: !veu[k] })} /> {k === 'catala' ? 'Català' : k === 'arab' ? 'Àrab' : k === 'tifinag' ? 'Amazic' : 'El que sentim'}</label>
+                    ))}
+                    {/* La grafia val per a l'amazic de la cadena i per al que sentim: són la
+                        mateixa llengua escrita, i tenir-les en alfabets diferents impediria
+                        justament el que es vol fer aquí, que és comparar-les d'un cop d'ull. */}
+                    <label>Lletra:{' '}
+                      <select value={grafia} onChange={(e) => setGrafia(e.target.value === 'lat' ? 'lat' : 'tif')}>
+                        <option value="tif">ⵜⵉⴼⵉⵏⴰⵖ</option>
+                        <option value="lat">llatina</option>
+                      </select>
+                    </label>
                     <label>Ajust dels subtítols: <input type="range" min={-6} max={6} step={0.25} value={desp} onChange={(e) => setDesp(Number(e.target.value))} /> {desp > 0 ? '+' : ''}{desp.toFixed(2)} s</label>
                   </div>
                 </div>
