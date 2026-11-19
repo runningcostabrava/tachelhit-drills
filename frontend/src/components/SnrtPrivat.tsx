@@ -11,7 +11,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API_BASE } from '../config';
 import { loadYouTubeApi } from '../utils/youtubeUtils';
 import { formes } from '../utils/tifinag';
-import { desaNansa, fitxerDeLaNansa, llegeixNansa, oblidaNansa, potRecordar, triaFitxer } from '../utils/videoDesat';
+import { desaNansa, fitxerDeLaCarpeta, fitxerDeLaNansa, llegeixNansa, nomDeLaCarpeta, oblidaNansa,
+         potRecordar, potTriarCarpeta, triaCarpeta, triaFitxer } from '../utils/videoDesat';
 
 interface Episodi { slug: string; titol: string; durada: number | null; linies: number; amb_catala: number; video_youtube: string | null; url_pagina: string | null }
 interface Linia { k: number; t_ini: number; t_fi: number; tifinag: string | null; arab: string | null; catala: string | null; catala_estat: string | null; sentit: string | null }
@@ -50,6 +51,10 @@ export default function SnrtPrivat() {
   //: El nom del fitxer que aquest episodi ja va fer servir un altre dia, si el navegador el
   //: recorda. No és el vídeo: és una nansa al disc de qui mira, i cal un clic per reobrir-la.
   const [desat, setDesat] = useState<string | null>(null);
+  //: La carpeta on són tots els vídeos. Triada un cop, cada episodi hi busca el seu pel nom, i
+  //: així no s'han de buscar 39 fitxers a mà.
+  const [carpeta, setCarpeta] = useState<string | null>(null);
+  useEffect(() => { nomDeLaCarpeta().then(setCarpeta).catch(() => {}); }, []);
   const [fitxer, setFitxer] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const ytRef = useRef<{ getCurrentTime: () => number; seekTo: (s: number, a: boolean) => void; destroy?: () => void } | null>(null);
@@ -67,11 +72,18 @@ export default function SnrtPrivat() {
     setDesat(null);
     //: Si el permís encara hi és (mateixa sessió), el vídeo s'obre sol i no es pregunta res. Si
     //: ha caducat, només se'n diu el nom i es deixa el botó: demanar-lo sense un clic no val.
-    llegeixNansa(sel).then(async (n) => {
-      if (!n) return;
-      const f = await fitxerDeLaNansa(n, false);
-      if (f) setFitxer(URL.createObjectURL(f)); else setDesat(n.name);
-    }).catch(() => {});
+    (async () => {
+      //: mana la nansa d'aquest episodi: si algú n'ha triat un fitxer a mà, no se li canvia
+      const n = await llegeixNansa(sel);
+      if (n) {
+        const f = await fitxerDeLaNansa(n, false);
+        if (f) { setFitxer(URL.createObjectURL(f)); return; }
+        setDesat(n.name);
+        return;
+      }
+      const g = await fitxerDeLaCarpeta(sel, false);
+      if (g) setFitxer(URL.createObjectURL(g));
+    })().catch(() => {});
     demana<Dades>(`/snrt-privat/${encodeURIComponent(sel)}`).then(setDades).catch((e) => setError(String(e.message || e)));
     // vídeo allotjat al servidor d'Alibaba: adreça signada de 4 h (si no n'hi ha, es carrega des de l'ordinador)
     demana<{ url: string | null }>(`/snrt-privat/${encodeURIComponent(sel)}/video`).then((d) => setVideoUrl(d.url)).catch(() => setVideoUrl(null));
@@ -214,6 +226,16 @@ export default function SnrtPrivat() {
                     ) : (
                       <input type="file" accept="video/*" onChange={(ev) => { const f = ev.target.files?.[0]; if (f) setFitxer(URL.createObjectURL(f)); }} />
                     ))}
+                    {!videoUrl && !dades.video_youtube && potTriarCarpeta() && (
+                      <> <button onClick={async () => {
+                        const c = await triaCarpeta();
+                        if (!c) return;
+                        setCarpeta(c.name);
+                        if (!sel) return;
+                        const f = await fitxerDeLaCarpeta(sel, true);
+                        if (f) { setFitxer(URL.createObjectURL(f)); setDesat(null); }
+                      }}>{carpeta ? `Carpeta: ${carpeta}` : 'Tria la carpeta dels vídeos…'}</button></>
+                    )}
                     {desat && !fitxer && !videoUrl && (
                       <> <button onClick={async () => {
                         const n = sel ? await llegeixNansa(sel) : null;
