@@ -11,6 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API_BASE } from '../config';
 import { loadYouTubeApi } from '../utils/youtubeUtils';
 import { formes } from '../utils/tifinag';
+import { desaNansa, fitxerDeLaNansa, llegeixNansa, oblidaNansa, potRecordar, triaFitxer } from '../utils/videoDesat';
 
 interface Episodi { slug: string; titol: string; durada: number | null; linies: number; amb_catala: number; video_youtube: string | null; url_pagina: string | null }
 interface Linia { k: number; t_ini: number; t_fi: number; tifinag: string | null; arab: string | null; catala: string | null; catala_estat: string | null; sentit: string | null }
@@ -46,6 +47,9 @@ export default function SnrtPrivat() {
   });
   useEffect(() => { try { localStorage.setItem('snrt.grafia', grafia); } catch { /* finestra privada */ } }, [grafia]);
   const marcRef = useRef<HTMLDivElement | null>(null);
+  //: El nom del fitxer que aquest episodi ja va fer servir un altre dia, si el navegador el
+  //: recorda. No és el vídeo: és una nansa al disc de qui mira, i cal un clic per reobrir-la.
+  const [desat, setDesat] = useState<string | null>(null);
   const [fitxer, setFitxer] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const ytRef = useRef<{ getCurrentTime: () => number; seekTo: (s: number, a: boolean) => void; destroy?: () => void } | null>(null);
@@ -60,6 +64,14 @@ export default function SnrtPrivat() {
     if (!sel) return;
     setDades(null); setFitxer(null); setAra(0); setVideoUrl(null);
     try { setDesp(Number(localStorage.getItem(`snrt.desp.${sel}`)) || 0); } catch { setDesp(0); }
+    setDesat(null);
+    //: Si el permís encara hi és (mateixa sessió), el vídeo s'obre sol i no es pregunta res. Si
+    //: ha caducat, només se'n diu el nom i es deixa el botó: demanar-lo sense un clic no val.
+    llegeixNansa(sel).then(async (n) => {
+      if (!n) return;
+      const f = await fitxerDeLaNansa(n, false);
+      if (f) setFitxer(URL.createObjectURL(f)); else setDesat(n.name);
+    }).catch(() => {});
     demana<Dades>(`/snrt-privat/${encodeURIComponent(sel)}`).then(setDades).catch((e) => setError(String(e.message || e)));
     // vídeo allotjat al servidor d'Alibaba: adreça signada de 4 h (si no n'hi ha, es carrega des de l'ordinador)
     demana<{ url: string | null }>(`/snrt-privat/${encodeURIComponent(sel)}/video`).then((d) => setVideoUrl(d.url)).catch(() => setVideoUrl(null));
@@ -190,7 +202,28 @@ export default function SnrtPrivat() {
                   </div>
                   <p style={{ fontSize: '.85rem' }}>
                     {videoUrl ? "Vídeo del servidor privat." : fitxer ? "Vídeo carregat des del teu ordinador (no surt d'aquí)." : "Carrega el vídeo de l'episodi des del teu ordinador:"}{' '}
-                    {!videoUrl && !dades.video_youtube && <input type="file" accept="video/*" onChange={(ev) => { const f = ev.target.files?.[0]; if (f) setFitxer(URL.createObjectURL(f)); }} />}
+                    {!videoUrl && !dades.video_youtube && (potRecordar() ? (
+                      <button onClick={async () => {
+                        const nansa = await triaFitxer();
+                        if (!nansa || !sel) return;
+                        const f = await fitxerDeLaNansa(nansa, true);
+                        if (!f) return;
+                        setFitxer(URL.createObjectURL(f)); setDesat(null);
+                        desaNansa(sel, nansa).catch(() => {});
+                      }}>Tria el vídeo…</button>
+                    ) : (
+                      <input type="file" accept="video/*" onChange={(ev) => { const f = ev.target.files?.[0]; if (f) setFitxer(URL.createObjectURL(f)); }} />
+                    ))}
+                    {desat && !fitxer && !videoUrl && (
+                      <> <button onClick={async () => {
+                        const n = sel ? await llegeixNansa(sel) : null;
+                        const f = n ? await fitxerDeLaNansa(n, true) : null;
+                        //: si la nansa ha quedat orfe (fitxer mogut o esborrat), s'oblida en comptes
+                        //: de deixar un botó que no farà mai res
+                        if (f) { setFitxer(URL.createObjectURL(f)); setDesat(null); }
+                        else if (sel) { oblidaNansa(sel).catch(() => {}); setDesat(null); }
+                      }}>Torna a obrir «{desat}»</button></>
+                    )}
                     {dades.url_pagina && <> · <a href={dades.url_pagina} target="_blank" rel="noreferrer noopener">pàgina original</a></>}
                   </p>
                   <div className="tria" style={{ marginTop: 8, fontSize: '.9rem' }}>
