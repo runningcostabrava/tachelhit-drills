@@ -104,3 +104,47 @@ def test_segmenta_compat_for_the_clock():
     glifs, fila, H = LT.segmenta(draw_band(LINES[0]))
     assert len(glifs) == len(LINES[0].replace(" ", "")) and all("caixa" in g for g in glifs)
     assert fila[0] < 964 < fila[2] and H == 28.0
+
+
+# --- el desempat per topologia (#699) ---------------------------------------------------------
+
+def test_les_lletres_cercle_tenen_firma_topologica_propia():
+    """Sis lletres son la mateixa anella amb una marca diferent a dins i l'IoU no les separa.
+
+    Mesurat sobre les plantilles d'aquest repositori: ⵔ/ⵙ se solapen 0,83 i ⵔ/ⵕ 0,88, o sigui
+    que la forma global no decideix; a `tskla` el lector triava ⵀ sobre ⵙ per 0,03. El desempat
+    es recolza en una propietat que s'ha de mantenir: comptant trossos de tinta i forats,
+    aquestes quatre lletres tenen firma UNICA. Si algu canvia les plantilles i la perd, el
+    desempat deixa de funcionar en silenci, i per aixo es prova aqui.
+    """
+    taula = PL.topologia_plantilles()
+    assert taula["ⵙ"] == (2, 1, "")          # anella + punt: dos trossos, un forat
+    assert taula["ⵀ"] == (1, 2, "costat")    # barra vertical: dos forats, un al costat de l'altre
+    assert taula["ⴱ"] == (1, 2, "apilats")   # barra horitzontal: un forat sobre l'altre
+    assert taula["ⵛ"] == (1, 2, "petits")    # dos punts minusculs
+    for ch in ("ⵙ", "ⵀ", "ⴱ", "ⵛ"):
+        altres = [c for c, t in taula.items() if t == taula[ch] and c != ch]
+        assert altres == [], f"{ch} ja no te firma propia: la comparteix amb {altres}"
+
+
+def test_el_desempat_no_toca_res_quan_el_primer_guanya_de_molt():
+    """Si la forma global ho te clar, la topologia no s'hi ha de ficar."""
+    mask = np.zeros((20, 20), bool)
+    mask[5:15, 5:15] = True
+    punts = [(0.90, "ⵔ"), (0.40, "ⵙ"), (0.30, "ⵀ")]
+    assert PL.desempata(mask, punts) == punts
+
+
+def test_el_desempat_posa_davant_el_que_casa_amb_la_topologia():
+    """Amb dos candidats empatats, mana el que te la mateixa topologia que el glif.
+
+    El glif es una anella amb un punt al mig: la firma de la ⵙ. Encara que la nota de la ⵀ
+    vagi primera per tres mil·lesimes, el desempat ha de posar la ⵙ davant.
+    """
+    anella, punt = PL.plantilles()["ⵙ"][0], None
+    assert PL.topologia(anella) == (2, 1, "")
+    punts = [(0.461, "ⵀ"), (0.458, "ⵙ"), (0.40, "ⵔ")]
+    sortida = PL.desempata(anella, punts)
+    assert sortida[0][1] == "ⵙ", sortida[:2]
+    #: i no es perd cap candidat pel cami
+    assert sorted(s for _, s in sortida) == sorted(s for _, s in punts)
