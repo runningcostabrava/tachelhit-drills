@@ -10977,7 +10977,7 @@ def snrt_privat_episodi(slug: str, _admin: UserModel = Depends(require_snrt_view
     return {"slug": e.slug, "titol": e.titol, "durada": e.durada, "url_pagina": e.url_pagina, "video_youtube": e.video_youtube,
             "avis": "Text llegit per màquina de la imatge i traduït per màquina: sense revisar. Material de la SNRT, només per a recerca.",
             "linies": [{"k": c.k, "t_ini": c.t_ini, "t_fi": c.t_fi, "tifinag": c.tifinag, "arab": c.arab,
-                        "catala": c.catala, "catala_estat": c.catala_estat} for c in cues]}
+                        "catala": c.catala, "catala_estat": c.catala_estat, "sentit": c.sentit} for c in cues]}
 
 
 @app.get("/snrt-privat/{slug}/video")
@@ -11009,7 +11009,8 @@ def snrt_privat_importa(slug: str, dades: Dict[str, Any] = Body(...), _admin: Us
     db.query(SnrtCueModel).filter(SnrtCueModel.episodi_id == e.id).delete()
     for n, l in enumerate(linies):
         db.add(SnrtCueModel(episodi_id=e.id, k=int(l.get("k", n)), t_ini=float(l["t_ini"]), t_fi=float(l["t_fi"]), tifinag=l.get("tifinag"),
-                            arab=l.get("arab"), catala=l.get("catala"), catala_estat=l.get("catala_estat")))
+                            arab=l.get("arab"), catala=l.get("catala"), catala_estat=l.get("catala_estat"),
+                            sentit=l.get("sentit")))
     db.commit()
     return {"slug": slug, "linies": len(linies)}
 
