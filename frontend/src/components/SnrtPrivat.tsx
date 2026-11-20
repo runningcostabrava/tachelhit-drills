@@ -151,6 +151,44 @@ export default function SnrtPrivat() {
     setAra(s);
   }, [desp]);
 
+  //: Si el navegador acaba posant a pantalla completa el `<video>` sol —hi ha camins que no
+  //: passen pel nostre botó: F11 en algun navegador, el menú del botó dret, iOS— el subtítol
+  //: desapareix, que és justament el que es va queixar en Pablo. Aquí es detecta i es canvia pel
+  //: marc, que porta el subtítol a dins.
+  useEffect(() => {
+    const canvia = () => {
+      const fs = document.fullscreenElement;
+      if (fs && videoRef.current && fs === videoRef.current && marcRef.current) {
+        document.exitFullscreen().then(() => marcRef.current?.requestFullscreen()).catch(() => {});
+      }
+    };
+    document.addEventListener('fullscreenchange', canvia);
+    return () => document.removeEventListener('fullscreenchange', canvia);
+  }, []);
+
+  //: A pantalla completa no hi ha llista ni botons: les tecles són l'única manera de moure's.
+  //: Espai atura, les fletxes salten de línia en línia, F hi entra i en surt.
+  useEffect(() => {
+    const tecla = (e: KeyboardEvent) => {
+      const on = e.target as HTMLElement | null;
+      if (on && /^(INPUT|TEXTAREA|SELECT)$/.test(on.tagName)) return;
+      const v = videoRef.current;
+      if (e.key === ' ' && v) { e.preventDefault(); if (v.paused) void v.play(); else v.pause(); }
+      else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && dades?.linies?.length) {
+        e.preventDefault();
+        const i = Math.min(Math.max(actual < 0 ? 0 : actual + (e.key === 'ArrowRight' ? 1 : -1), 0),
+                           dades.linies.length - 1);
+        salta(dades.linies[i]);
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+        else void marcRef.current?.requestFullscreen().catch(() => {});
+      }
+    };
+    window.addEventListener('keydown', tecla);
+    return () => window.removeEventListener('keydown', tecla);
+  }, [dades, actual, salta]);
+
   if (carregat === null) return <p style={{ padding: 16 }}>Carregant…</p>;
   if (!carregat) return (
     <p style={{ padding: 16 }} role="alert">
@@ -172,6 +210,13 @@ export default function SnrtPrivat() {
         .snrt-privat .marc{position:relative;background:#000;border-radius:8px;overflow:hidden}
         .snrt-privat .marc:fullscreen{border-radius:0;display:flex;align-items:center;justify-content:center}
         .snrt-privat .marc:fullscreen video{max-height:100vh;width:auto}
+        /* A pantalla completa la pantalla és tres o quatre vegades més gran i el subtítol es
+           queda minúscul: puja amb la mida de la finestra, i s'enfila una mica més amunt per no
+           quedar sota els controls del reproductor. */
+        .snrt-privat .marc:fullscreen .sub{bottom:5vh}
+        .snrt-privat .marc:fullscreen .sub .ca{font-size:min(4.6vh,2.6rem)}
+        .snrt-privat .marc:fullscreen .sub .ar{font-size:min(3.8vh,2.1rem)}
+        .snrt-privat .marc:fullscreen .sub .ti,.snrt-privat .marc:fullscreen .sub .se{font-size:min(3.4vh,1.9rem)}
         /* Damunt del vídeo i per sota dels seus controls: els controls natius seuen a sota i
            taparien el subtítol si aquest hi fos enganxat. */
         .snrt-privat .sub{position:absolute;left:0;right:0;bottom:3.2em;padding:6px 12px;color:#fff;text-align:center;overflow-wrap:anywhere;pointer-events:none;text-shadow:0 2px 4px #000,0 0 10px #000}
@@ -213,7 +258,12 @@ export default function SnrtPrivat() {
                       subtítol que desapareix justament quan mires de prop no serveix de res. */}
                   <div className="marc" ref={marcRef}>
                     {dades.video_youtube && !videoUrl ? <div id="snrt-yt" /> : (
-                      <video ref={videoRef} src={videoUrl || fitxer || undefined} controls />
+                      //: `nofullscreen`: el botó de pantalla completa del reproductor posa a pantalla
+                      //: completa el `<video>` SOL, i llavors el subtítol —que viu al marc, al
+                      //: costat— desapareix. En Pablo (20-11-2026): «quan utilitzo la pantalla
+                      //: completa ja no veig els subtítols». Treure'l deixa només el camí bo.
+                      <video ref={videoRef} src={videoUrl || fitxer || undefined} controls
+                             controlsList="nofullscreen" disablePictureInPicture />
                     )}
                     <div className="sub" aria-live="polite">
                       {linia ? (<>
@@ -230,7 +280,7 @@ export default function SnrtPrivat() {
                         )}
                       </>) : <span style={{ opacity: .6 }}>…</span>}
                     </div>
-                    <button className="pantalla" title="Pantalla completa amb els subtítols"
+                    <button className="pantalla" title="Pantalla completa amb els subtítols (tecla F) · espai atura · ← → salten de línia"
                             onClick={() => {
                               const m = marcRef.current;
                               if (!m) return;
