@@ -1,4 +1,10 @@
-"""El visor privat de Tamazight TV: només administradors; res a les exportacions (docs/adr/0012)."""
+"""El visor de Tamazight TV: el TEXT és obert, el vídeo i l'escriptura no; res a les exportacions.
+
+Des del 20-11-2026 (ADR 0013, decisió d'en Pablo) la llista i el text d'un episodi els pot
+llegir qualsevol, perquè el vídeo no el serveix ningú: el posa qui mira, des del seu disc. El que
+segueix tancat és `/video` —que dóna un enllaç signat al vídeo que tenim allotjat— i `importa`,
+que escriu.
+"""
 import main
 from test_api import client
 
@@ -17,15 +23,28 @@ def _entra(email, username, monkeypatch, admin):
     return {"X-User-Token": r.json()["token"]}
 
 
-def test_anonim_i_usuari_normal_no_hi_entren(monkeypatch):
-    assert client.get("/snrt-privat/").status_code in (401, 403)
-    assert client.get("/snrt-privat/x").status_code in (401, 403)
+def test_el_text_el_llegeix_qualsevol_pero_escriure_no(monkeypatch):
+    """Sense cap compte es pot MIRAR; per escriure-hi segueix calent ser administrador."""
+    assert client.get("/snrt-privat/").status_code == 200
+    assert client.get("/snrt-privat/x").status_code == 404          # no existeix, no «no hi entres»
     assert client.post("/snrt-privat/x/importa", json=EP).status_code in (401, 403)
     h = _entra("simple-snrt@example.com", "simplesnrt", monkeypatch, admin=False)
     if client.get("/users/me", headers=h).json().get("is_admin"):   # el primer usuari d'una base buida és admin: no és aquest cas
         return
-    assert client.get("/snrt-privat/", headers=h).status_code == 403
+    assert client.get("/snrt-privat/", headers=h).status_code == 200
     assert client.post("/snrt-privat/x/importa", json=EP, headers=h).status_code == 403
+
+
+def test_el_video_allotjat_segueix_tancat(monkeypatch):
+    """Obrir el text no obre el vídeo: `/video` dóna un enllaç signat al que tenim allotjat.
+
+    Aquesta és la ratlla de l'ADR 0013. El vídeo d'un episodi el posa qui mira des del seu disc;
+    el que tenim nosaltres no es reparteix a qui passi per l'adreça.
+    """
+    h = _entra("boss-snrt@example.com", "bosssnrt", monkeypatch, admin=True)
+    client.post("/snrt-privat/prova-0/importa", json=EP, headers=h)
+    assert client.get("/snrt-privat/prova-0").status_code == 200    # el text, sí
+    assert client.get("/snrt-privat/prova-0/video").status_code in (401, 403)
 
 
 def test_admin_importa_llista_i_llegeix(monkeypatch):
@@ -60,6 +79,11 @@ def test_convidat_de_la_snrt_veu_el_visor_pero_no_importa(monkeypatch):
     assert client.get("/snrt-privat/", headers=h).status_code == 200
     assert client.get("/snrt-privat/prova-3", headers=h).status_code == 200
     assert client.post("/snrt-privat/prova-3/importa", json=EP, headers=h).status_code == 403   # no és administrador
+    #: el text ja el veu tothom; el que li dóna ser convidat de la SNRT és el vídeo allotjat
+    monkeypatch.setenv("SNRT_VIDEO_BASE", "https://v.example.org/")
+    monkeypatch.setenv("SNRT_VIDEO_SECRET", "s3cret")
+    assert client.get("/snrt-privat/prova-3/video", headers=h).json()["url"].startswith("https://v.example.org/")
+    assert client.get("/snrt-privat/prova-3/video").status_code in (401, 403)
 
 
 def test_video_signat_nomes_amb_base_i_secret(monkeypatch):
