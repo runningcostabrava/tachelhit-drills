@@ -10956,8 +10956,14 @@ def require_snrt_viewer(user: UserModel = Depends(require_user)) -> UserModel:
     raise HTTPException(status_code=403, detail="Només per a administradors i convidats de la SNRT")
 
 
+#: Per què aquestes dues rutes ja no demanen qui ets (decisió d'en Pablo, 20-11-2026, ADR 0013):
+#: el vídeo no el serveix ningú —surt del disc de qui mira— i la porta d'administrador no
+#: protegia el vídeo, només el text. Qui vulgui mirar un episodi necessita tenir-ne el fitxer, i
+#: això ja és la tria. El que SEGUEIX tancat és `/video` (dóna un enllaç signat al vídeo que
+#: tenim allotjat) i `importa` (escriu). Li he dit que això fa públic el text de la SNRT i que el
+#: permís que tenim apuntat és de recerca; ho ha decidit igualment i hi consta.
 @app.get("/snrt-privat/")
-def snrt_privat_index(_admin: UserModel = Depends(require_snrt_viewer), db: Session = Depends(get_db)):
+def snrt_privat_index(db: Session = Depends(get_db)):
     eps = db.query(SnrtEpisodeModel).order_by(SnrtEpisodeModel.titol).all()
     out = []
     for e in eps:
@@ -10969,7 +10975,7 @@ def snrt_privat_index(_admin: UserModel = Depends(require_snrt_viewer), db: Sess
 
 
 @app.get("/snrt-privat/{slug}")
-def snrt_privat_episodi(slug: str, _admin: UserModel = Depends(require_snrt_viewer), db: Session = Depends(get_db)):
+def snrt_privat_episodi(slug: str, db: Session = Depends(get_db)):
     e = db.query(SnrtEpisodeModel).filter(SnrtEpisodeModel.slug == slug).first()
     if not e:
         raise HTTPException(status_code=404, detail="Episodi desconegut")

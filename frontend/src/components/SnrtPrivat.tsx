@@ -1,8 +1,13 @@
 /**
- * El visor PRIVAT de Tamazight TV (SNRT): només per a administradors i convidats de la SNRT (docs/adr/0012). El vídeo, si hi és, viu al servidor d'Alibaba i es demana amb una adreça signada de 4 h.
+ * El visor de Tamazight TV (SNRT). **El vídeo el posa qui mira, des del seu disc**: aquí no se'n
+ * serveix cap (ADR 0013; el vídeo allotjat, si n'hi ha, segueix darrere `/video`, que sí que
+ * demana qui ets).
  *
- * Material de recerca amb permís de la SNRT: recerca sí, republicar no. Aquí no es republica res: el vídeo no es guarda ni es
- * serveix (s'encasta de YouTube, o es carrega des de l'ordinador de qui mira), i el text només el veuen els administradors.
+ * Material de recerca amb permís de la SNRT: recerca sí, republicar no. El text (tifinag, àrab i
+ * un català de màquina) és obert des del 20-11-2026 per decisió d'en Pablo, a qui consta que
+ * això el fa públic. El vídeo segueix sense servir-se: qui vulgui mirar un episodi n'ha de tenir
+ * el fitxer, i això ja és la tria.
+ *
  * Les respostes no passen pel cau fora de línia de l'app (`api.ts`): s'han de poder oblidar en tancar la sessió.
  *
  * El text està SENSE REVISAR: el tifinag i l'àrab els va llegir una màquina de la imatge i el català el va traduir una altra.
@@ -19,8 +24,20 @@ interface Linia { k: number; t_ini: number; t_fi: number; tifinag: string | null
 interface Dades { slug: string; titol: string; durada: number | null; url_pagina: string | null; video_youtube: string | null; avis: string; linies: Linia[] }
 
 async function demana<T>(ruta: string): Promise<T> {
-  const r = await fetch(`${API_BASE}${ruta}`, { cache: 'no-store' });
-  if (r.status === 401 || r.status === 403) throw new Error('Només per a administradors.');
+  let r: Response;
+  try {
+    r = await fetch(`${API_BASE}${ruta}`, { cache: 'no-store' });
+  } catch {
+    //: ni tan sols hi ha hagut resposta: sense xarxa, o el servidor caigut del tot
+    throw new Error('No he pogut arribar al servidor. Mira la connexió i torna-ho a provar.');
+  }
+  //: Un 502 o un 503 és el servidor que no hi és, no una porta tancada. El 20-11-2026 el servidor
+  //: es moria de memòria cada ~70 minuts i la pàgina acusava en Pablo de no ser administrador —
+  //: ho era. Un silenci no es llegeix mai com un «no hi entres».
+  if (r.status === 502 || r.status === 503 || r.status === 504) {
+    throw new Error('El servidor no contesta ara mateix. Torna-ho a provar d\'aquí a un moment.');
+  }
+  if (r.status === 401 || r.status === 403) throw new Error('Aquesta part demana que entris amb el teu compte.');
   if (!r.ok) throw new Error(`Error ${r.status}`);
   return r.json();
 }
@@ -28,7 +45,8 @@ async function demana<T>(ruta: string): Promise<T> {
 const mmss = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
 export default function SnrtPrivat() {
-  const [admin, setAdmin] = useState<boolean | null>(null);
+  //: `null` = encara no s'ha sabut res. No és «no hi entres»: això ja no existeix per al text.
+  const [carregat, setCarregat] = useState<boolean | null>(null);
   const [eps, setEps] = useState<Episodi[]>([]);
   //: Es pot arribar aquí des d'Històries amb el capítol ja triat (`/snrt?ep=<slug>`, #695). Es
   //: llegeix un sol cop, en muntar: després mana el que tria qui mira, i canviar-li el capítol
@@ -62,8 +80,11 @@ export default function SnrtPrivat() {
 
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   useEffect(() => {
-    // L'accés (administrador o convidat de la SNRT) el decideix el servidor: si no hi deixa entrar, es diu i prou.
-    demana<{ episodis: Episodi[] }>('/snrt-privat/').then((d) => { setEps(d.episodis); setAdmin(true); setSel((s) => (s && d.episodis.some((e) => e.slug === s) ? s : null)); }).catch((e) => { setAdmin(false); setError(String(e.message || e)); });
+    // La llista és oberta (ADR 0013). Si no ve, és que el servidor no contesta: es diu això i no
+    // es fa passar per una porta tancada.
+    demana<{ episodis: Episodi[] }>('/snrt-privat/')
+      .then((d) => { setEps(d.episodis); setCarregat(true); setSel((s) => (s && d.episodis.some((e) => e.slug === s) ? s : null)); })
+      .catch((e) => { setCarregat(false); setError(String(e.message || e)); });
   }, []);
   useEffect(() => {
     if (!sel) return;
@@ -130,8 +151,13 @@ export default function SnrtPrivat() {
     setAra(s);
   }, [desp]);
 
-  if (admin === null) return <p style={{ padding: 16 }}>Carregant…</p>;
-  if (!admin) return <p style={{ padding: 16 }}>Aquesta pàgina és només per a administradors i convidats de la SNRT. Entra amb el teu compte.</p>;
+  if (carregat === null) return <p style={{ padding: 16 }}>Carregant…</p>;
+  if (!carregat) return (
+    <p style={{ padding: 16 }} role="alert">
+      {error || 'El servidor no contesta ara mateix.'}{' '}
+      <button onClick={() => window.location.reload()}>Torna-ho a provar</button>
+    </p>
+  );
   const linia = dades && actual >= 0 ? dades.linies[actual] : null;
 
   return (
@@ -157,8 +183,8 @@ export default function SnrtPrivat() {
         .snrt-privat .ep{display:block;width:100%;text-align:left;padding:8px 10px;margin:4px 0;border:1px solid rgba(128,128,128,.35);border-radius:8px;background:transparent;color:inherit;cursor:pointer}
         .snrt-privat .tria label{margin-right:12px;white-space:nowrap}
       `}</style>
-      <h1 style={{ fontSize: '1.3rem' }}>Tamazight TV · visor privat</h1>
-      <div className="avis">Material de la SNRT, només per a recerca i només visible per a administradors. El text és llegit i traduït per màquina, <strong>sense revisar</strong>. No es guarda ni es serveix cap vídeo.</div>
+      <h1 style={{ fontSize: '1.3rem' }}>Tamazight TV · visor</h1>
+      <div className="avis">Material de la SNRT, només per a recerca. El text és llegit i traduït per màquina, <strong>sense revisar</strong>. <strong>Aquí no es serveix cap vídeo</strong>: el posa qui mira, des del seu ordinador.</div>
       {error && <p role="alert">{error}</p>}
 
       {!sel && (
@@ -227,14 +253,34 @@ export default function SnrtPrivat() {
                       <input type="file" accept="video/*" onChange={(ev) => { const f = ev.target.files?.[0]; if (f) setFitxer(URL.createObjectURL(f)); }} />
                     ))}
                     {!videoUrl && !dades.video_youtube && potTriarCarpeta() && (
-                      <> <button onClick={async () => {
-                        const c = await triaCarpeta();
-                        if (!c) return;
-                        setCarpeta(c.name);
-                        if (!sel) return;
-                        const f = await fitxerDeLaCarpeta(sel, true);
-                        if (f) { setFitxer(URL.createObjectURL(f)); setDesat(null); }
-                      }}>{carpeta ? `Carpeta: ${carpeta}` : 'Tria la carpeta dels vídeos…'}</button></>
+                      <>
+                        {' '}
+                        <button onClick={async () => {
+                          //: Chrome oblida el permís de lectura a cada recàrrega, però la nansa
+                          //: de la carpeta es recorda. Si ja n'hi ha una, NO s'ha de tornar a
+                          //: buscar la carpeta pel disc: només cal tornar a demanar-ne el permís,
+                          //: i això `fitxerDeLaCarpeta(…, true)` ja ho fa dins del clic. Obrir el
+                          //: triador cada vegada era fer-li buscar una carpeta que ja havia dit.
+                          if (carpeta && sel) {
+                            const f = await fitxerDeLaCarpeta(sel, true);
+                            if (f) { setFitxer(URL.createObjectURL(f)); setDesat(null); return; }
+                          }
+                          const c = await triaCarpeta();
+                          if (!c) return;
+                          setCarpeta(c.name);
+                          if (!sel) return;
+                          const f = await fitxerDeLaCarpeta(sel, true);
+                          if (f) { setFitxer(URL.createObjectURL(f)); setDesat(null); }
+                        }}>{carpeta ? `Obre la carpeta «${carpeta}»` : 'Tria la carpeta dels vídeos…'}</button>
+                        {carpeta && <> <button onClick={async () => {
+                          const c = await triaCarpeta();
+                          if (!c) return;
+                          setCarpeta(c.name);
+                          if (!sel) return;
+                          const f = await fitxerDeLaCarpeta(sel, true);
+                          if (f) { setFitxer(URL.createObjectURL(f)); setDesat(null); }
+                        }} title="Triar-ne una altra">canvia-la</button></>}
+                      </>
                     )}
                     {desat && !fitxer && !videoUrl && (
                       <> <button onClick={async () => {
@@ -247,6 +293,14 @@ export default function SnrtPrivat() {
                       }}>Torna a obrir «{desat}»</button></>
                     )}
                     {dades.url_pagina && <> · <a href={dades.url_pagina} target="_blank" rel="noreferrer noopener">pàgina original</a></>}
+                    {!videoUrl && !dades.video_youtube && !fitxer && (
+                      //: Dir QUIN fitxer busca. Sense això, una carpeta sense el fitxer d'aquest
+                      //: episodi i una carpeta sense permís es veuen igual: un vídeo negre.
+                      <><br /><small style={{ opacity: .75 }}>
+                        A la carpeta hi busco <code>{sel}.mp4</code> (o .mkv, .webm, .mov, .m4v).
+                        {carpeta ? ' Chrome oblida el permís en recarregar: cal un clic per sessió.' : ''}
+                      </small></>
+                    )}
                   </p>
                   <div className="tria" style={{ marginTop: 8, fontSize: '.9rem' }}>
                     {(['catala', 'arab', 'tifinag', 'sentit'] as const).map((k) => (
