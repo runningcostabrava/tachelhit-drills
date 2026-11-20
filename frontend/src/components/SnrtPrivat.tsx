@@ -147,6 +147,25 @@ export default function SnrtPrivat() {
     el?.scrollIntoView({ block: 'nearest' });
   }, [actual]);
 
+  //: Saltar una mica enrere i tornar-ho a sentir és el que més es fa quan s'aprèn una llengua
+  //: (#707). Arrossegar la barra no serveix: no és precisa, i a pantalla completa no hi és.
+  //: Salta i **reprodueix**, perquè el que es vol és tornar-ho a sentir, no situar-se.
+  const mou = useCallback((segons: number) => {
+    const v = videoRef.current;
+    if (v) {
+      v.currentTime = Math.max(0, v.currentTime + segons);
+      void v.play();
+      setAra(v.currentTime);
+      return;
+    }
+    const yt = ytRef.current;
+    if (yt?.getCurrentTime) {
+      const t = Math.max(0, yt.getCurrentTime() + segons);
+      yt.seekTo(t, true);
+      setAra(t);
+    }
+  }, []);
+
   const salta = useCallback((l: Linia) => {
     const s = Math.max(0, l.t_ini - desp);
     if (videoRef.current) { videoRef.current.currentTime = s; void videoRef.current.play(); }
@@ -182,6 +201,10 @@ export default function SnrtPrivat() {
         const i = Math.min(Math.max(actual < 0 ? 0 : actual + (e.key === 'ArrowRight' ? 1 : -1), 0),
                            dades.linies.length - 1);
         salta(dades.linies[i]);
+      } else if ('zxcv'.includes(e.key.toLowerCase()) && !e.ctrlKey && !e.metaKey) {
+        //: z x c v, d'esquerra a dreta com el temps: −5, −2, +2, +5 (#707)
+        e.preventDefault();
+        mou({ z: -5, x: -2, c: 2, v: 5 }[e.key.toLowerCase() as 'z' | 'x' | 'c' | 'v']);
       } else if (e.key === 'f' || e.key === 'F') {
         e.preventDefault();
         if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
@@ -190,7 +213,7 @@ export default function SnrtPrivat() {
     };
     window.addEventListener('keydown', tecla);
     return () => window.removeEventListener('keydown', tecla);
-  }, [dades, actual, salta]);
+  }, [dades, actual, salta, mou]);
 
   if (carregat === null) return <p style={{ padding: 16 }}>Carregant…</p>;
   if (!carregat) return (
@@ -222,9 +245,35 @@ export default function SnrtPrivat() {
         .snrt-privat .marc:fullscreen .sub .ti,.snrt-privat .marc:fullscreen .sub .se{font-size:min(3.4vh,1.9rem)}
         /* Damunt del vídeo i per sota dels seus controls: els controls natius seuen a sota i
            taparien el subtítol si aquest hi fos enganxat. */
-        .snrt-privat .sub{position:absolute;left:0;right:0;bottom:3.2em;padding:6px 12px;color:#fff;text-align:center;overflow-wrap:anywhere;pointer-events:none;text-shadow:0 2px 4px #000,0 0 10px #000}
+        /* Columna, no línia. Amb inline-block i dues frases curtes («Sí.» i ⵢⴰⵀ.) les dues
+           llengües cabien al mateix renglò i semblaven una sola frase (#708): llegir una llengua
+           que estàs aprenent enganxada a la seva traducció és pitjor que no veure-la. */
+        .snrt-privat .sub{position:absolute;left:0;right:0;bottom:3.2em;padding:6px 12px;color:#fff;overflow-wrap:anywhere;pointer-events:none;text-shadow:0 2px 4px #000,0 0 10px #000;display:flex;flex-direction:column;align-items:center;gap:3px}
         .snrt-privat .sub>div{display:inline-block;background:rgba(0,0,0,.62);border-radius:6px;padding:2px 10px;margin:1px 0}
         .snrt-privat .pantalla{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:6px;padding:4px 9px;font-size:1rem;cursor:pointer}
+        /* Els salts viuen DINS del marc perquè a pantalla completa són els únics controls que
+           queden. A baix a l'esquerra: el subtítol va centrat i el botó de pantalla completa a
+           la dreta, i així no es trepitgen a cap amplada. */
+        /* A DALT a l'esquerra, fent parella amb el botó de pantalla completa. A baix quedaven
+           damunt de la barra de controls del reproductor: amb el vídeo negre no es notava, i
+           mirant-ho amb un vídeo de debò s'hi trepitjaven. */
+        .snrt-privat .salts{position:absolute;left:8px;top:8px;display:flex;gap:4px;z-index:2}
+        .snrt-privat .salts button{background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:6px;padding:4px 8px;font-size:.85rem;cursor:pointer;font-variant-numeric:tabular-nums}
+        .snrt-privat .salts button:hover{background:rgba(0,0,0,.8)}
+        .snrt-privat .marc:fullscreen .salts{left:2vh;top:2vh}
+        .snrt-privat .marc:fullscreen .salts button{font-size:min(2.4vh,1.2rem);padding:6px 12px}
+        /* En un telèfon el marc fa 191 px d'alt i el subtítol de tres llengües en fa 115: creix
+           cap amunt i arriba on són els salts. Mesurat a 360 px, es trepitjaven per un píxel.
+           inline-size i no size: l'alçada del marc la mana el vídeo i contenir-la el faria
+           col·lapsar. (Cap cometa inversa en aquest bloc: és una plantilla de JS i la tanquen.) */
+        .snrt-privat .marc{container-type:inline-size}
+        @container (max-width: 430px){
+          .snrt-privat .sub{bottom:2.4em;gap:1px;padding:2px 8px}
+          .snrt-privat .sub .ca{font-size:.95rem}
+          .snrt-privat .sub .ar{font-size:.85rem}
+          .snrt-privat .sub .ti,.snrt-privat .sub .se{font-size:.8rem}
+          .snrt-privat .salts button{font-size:.72rem;padding:2px 6px}
+        }
         .snrt-privat .sub .se{font-size:1rem;opacity:.95;border:1px dashed rgba(255,255,255,.55)}
         .snrt-privat .sub .ca{font-size:1.25rem}.snrt-privat .sub .ar{font-size:1.05rem;opacity:.9;direction:rtl}.snrt-privat .sub .ti{font-size:1rem;opacity:.8}
         .snrt-privat video,.snrt-privat #snrt-yt{width:100%;aspect-ratio:16/9;background:#000;border-radius:8px}
@@ -283,7 +332,15 @@ export default function SnrtPrivat() {
                         )}
                       </>) : <span style={{ opacity: .6 }}>…</span>}
                     </div>
-                    <button className="pantalla" title="Pantalla completa amb els subtítols (tecla F) · espai atura · ← → salten de línia"
+                    <div className="salts">
+                      {([[-5, 'z'], [-2, 'x'], [2, 'c'], [5, 'v']] as const).map(([s, k]) => (
+                        <button key={s} onClick={() => mou(s)}
+                                title={`${s > 0 ? 'Endavant' : 'Enrere'} ${Math.abs(s)} s i reprodueix (tecla ${k.toUpperCase()})`}>
+                          {s > 0 ? `+${s}s` : `${s}s`}
+                        </button>
+                      ))}
+                    </div>
+                    <button className="pantalla" title="Pantalla completa amb els subtítols (tecla F) · espai atura · ← → salten de línia · z x c v salten segons"
                             onClick={() => {
                               const m = marcRef.current;
                               if (!m) return;
