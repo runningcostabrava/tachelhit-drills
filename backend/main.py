@@ -551,7 +551,17 @@ def hf_predict(space_id: str, *args, api_name: str = "/predict", token: str = No
                 raise
         except Exception as e:
             last_err = e
-            _hf_clients.pop(space_id, None)  # a stale client after a cold restart: rebuild next time
+            #: Un client llençat sense tancar es queda amb el seu fil viu, i per això no es pot
+            #: alliberar MAI: mesurat el 20-11-2026, sis clients construïts i deixats anar són sis
+            #: fils i +5 MB que no tornen; amb `close()`, la memòria queda plana i els fils no
+            #: creixen. El servidor de producció es moria per això cada ~70 minuts (512 MB), perquè
+            #: cada crida fallida en construeix fins a tres i les crides fallaven totes.
+            vell = _hf_clients.pop(space_id, None)  # a stale client after a cold restart: rebuild next time
+            if vell is not None:
+                try:
+                    vell.close()
+                except Exception:
+                    pass  # si ja és mort, que no tapi l'error de debò
             print(f"[HF] {space_id} attempt {attempt}/{retries} failed: {e}")
             if attempt < retries:
                 _time.sleep(min(20, 5 * attempt))  # give the Space time to finish booting
@@ -10272,7 +10282,13 @@ async def transcribe_audio(
     """
     Calls external Hugging Face ASR Space to process audio.
     """
-    audio_url = request.audio_url
+    #: Les adreces que aquest servidor DÓNA són `/mitjans/...` (la clau de R2, veg. magatzem.py),
+    #: i aquí tornaven tal com són: el lector les rebia com a ruta i es queixava que no tenen
+    #: esquema («Invalid URL '/mitjans/...': No scheme supplied»). Cada frase amb una adreça així
+    #: fallava sempre, i la repesca de lectures de l'app hi torna mentre en quedi cap: el 20-11-2026
+    #: eren 201 gravacions reintentades de vuit en vuit cada deu minuts, per sempre. `normalize_media_url`
+    #: és el que ja fa servir tota la resta del programa per treure-les a fora senceres.
+    audio_url = normalize_media_url(request.audio_url or "") or request.audio_url
 
     # If audio_url is not provided but we have a cloudinary_path, use it
     if not audio_url and request.cloudinary_path:
@@ -10387,6 +10403,7 @@ async def transcribe_audio(
     except Exception as e:
         print(f"[ASR_SPACE ERROR] {type(e).__name__}: {str(e)}")
         # Try a fallback if handle_file fails
+        client = None
         try:
             client = Client(asr_space_url)
             rough = await asyncio.to_thread(client.predict, audio_url, api_name="/predict")
@@ -10394,6 +10411,14 @@ async def transcribe_audio(
         except Exception as fallback_e:
             print(f"[ASR_SPACE FALLBACK ERROR] {type(fallback_e).__name__}: {str(fallback_e)}")
             raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+        finally:
+            #: aquest client es construeix a cada fallada, i sense tancar-lo es queda amb el seu
+            #: fil viu per sempre (veg. la nota de `hf_predict`)
+            if client is not None:
+                try:
+                    client.close()
+                except Exception:
+                    pass
 
     # Una lectura buida no és una lectura (#556).
     #
