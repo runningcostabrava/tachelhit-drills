@@ -307,25 +307,39 @@ def bootstrap(parells, n=2000, llavor=LLAVOR):
     da = [dist(o, a) for o, a, *_ in parells]
     db = [dist(o, b) for o, _, b, *_ in parells]
     ln = [len(o) for o, *_ in parells]
+    #: el mateix, per paraula. El CER diluta el defecte mes gros que te el model ara: no posar
+    #: els espais. A `nkkin massa faṭni ḥsna` sentit com `nkkinmassattn iḥsna`, el CER es mou
+    #: un 29 % i el WER un 50 %, i el filtre de grau A -- que compara esquelets, sense espais --
+    #: no ho veu gens.
+    wa_ = [dist(o.split(), a.split()) for o, a, *_ in parells]
+    wb_ = [dist(o.split(), b.split()) for o, _, b, *_ in parells]
+    lw = [max(1, len(o.split())) for o, *_ in parells]
     N = len(parells)
     tot = max(1, sum(ln))
+    totw = max(1, sum(lw))
     cer_a, cer_b = sum(da) / tot, sum(db) / tot
+    wer_a, wer_b = sum(wa_) / totw, sum(wb_) / totw
     unitat = unitat_de_remostreig(parells)
     if unitat == "capitol":
         blocs = collections.defaultdict(list)
         for i, p in enumerate(parells):
             blocs[p[3]].append(i)
         claus = sorted(blocs)
-    boots = []
+    boots, bootsw = [], []
     for _ in range(n):
         if unitat == "capitol":
             idx = [i for _ in claus for i in blocs[rnd.choice(claus)]]
         else:
             idx = [rnd.randrange(N) for _ in range(N)]
         boots.append((sum(db[i] for i in idx) - sum(da[i] for i in idx)) / max(1, sum(ln[i] for i in idx)))
+        #: la MATEIXA replica per als dos: si no, els dos intervals no son comparables
+        bootsw.append((sum(wb_[i] for i in idx) - sum(wa_[i] for i in idx)) / max(1, sum(lw[i] for i in idx)))
     boots.sort()
+    bootsw.sort()
     return {"n": N, "abans": cer_a, "despres": cer_b, "delta": cer_b - cer_a, "ic_lo": boots[int(0.025 * n)], "ic_hi": boots[int(0.975 * n) - 1],
             "unitat": unitat, "unitats": len({p[3] for p in parells if len(p) > 3}) if unitat == "capitol" else N,
+            "wer_abans": wer_a, "wer_despres": wer_b, "wer_delta": wer_b - wer_a,
+            "wer_ic_lo": bootsw[int(0.025 * n)], "wer_ic_hi": bootsw[int(0.975 * n) - 1],
             "milloren": sum(1 for x, y in zip(da, db) if y < x), "empitjoren": sum(1 for x, y in zip(da, db) if y > x)}
 
 
