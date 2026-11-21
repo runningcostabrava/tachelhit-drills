@@ -43,6 +43,18 @@ def fitxa(cap):
             "forja": f"https://forja.ma/player/{cap['slug_forja']}?lang=ar" if cap.get("slug_forja") else None, "programa": cap.get("programa")}
 
 
+#: el 21-11 el disc es va omplir i la fabrica va petar; la guardia ha de ser aqui, on es
+#: baixa, i no nomes al supervisor, que mira cada 15 minuts
+MIN_GB = 15          # per sota d'aixo no es baixa cap video
+MIN_GB_1080 = 25     # el 1080p es opcional: demana mes marge
+
+
+def prou_espai(gb, carpeta="/"):
+    """GB lliures al disc de `carpeta`."""
+    import shutil as _sh
+    return _sh.disk_usage(carpeta).free / 1e9 >= gb
+
+
 def baixa(f, carpeta, log, amb_1080=True):
     """01: video.mp4 (720p amb so) i, si el replay en té, video_1080.mp4 per al tifinag. Replay des d'on sigui; YouTube només
     des del PC (l'ECS té la IP bloquejada): si el replay falla i hi ha YouTube, es prova."""
@@ -72,6 +84,9 @@ def baixa(f, carpeta, log, amb_1080=True):
         return subprocess.run(cmd).returncode == 0
 
     if not te_video(carpeta):
+        if not prou_espai(MIN_GB, carpeta):
+            comu.diu(log, f"   01_baixa: NO baixo, queden menys de {MIN_GB} GB al disc")
+            return False
         be = False
         if f["font"] == "replay" and f["url"]:
             be = replay(720, "video.mp4")
@@ -80,6 +95,9 @@ def baixa(f, carpeta, log, amb_1080=True):
         if not be or not te_video(carpeta):
             comu.diu(log, "   01_baixa: ERROR, sense vídeo")
             return False
+    if amb_1080 and not prou_espai(MIN_GB_1080, carpeta):
+        comu.diu(log, f"   01_baixa: salto el 1080p, queden menys de {MIN_GB_1080} GB")
+        amb_1080 = False
     if amb_1080 and not os.path.exists(os.path.join(carpeta, "video_1080.mp4")):
         be = False
         if f["font"] == "replay" and f.get("te_1080"):
