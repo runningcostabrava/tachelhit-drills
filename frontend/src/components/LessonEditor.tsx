@@ -125,7 +125,7 @@ export default function LessonEditor() {
   if (!loaded) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Carregant la lliçó…</div>;
 
   return (
-    <div style={{ padding: '18px 16px 60px', maxWidth: 820, margin: '0 auto' }}>
+    <div style={{ padding: '18px 16px 60px', maxWidth: 820, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate(`/grammar/${slug}`)} style={back}>← La unitat</button>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, margin: '6px 0 2px' }}>Edita la lliçó</h1>
       <p style={{ color: 'var(--text-soft)', fontSize: 13, margin: '0 0 14px', lineHeight: 1.5 }}>

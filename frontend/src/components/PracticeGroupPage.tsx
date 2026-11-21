@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FaBullseye, FaChevronLeft, FaPlay, FaVolumeUp } from 'react-icons/fa';
 import { api, type PracticeCard } from '../api';
 import { getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 
 import type { Drill } from '../types';
 import DrillPlayer from './DrillPlayer';
@@ -60,12 +61,12 @@ export default function PracticeGroupPage() {
     for (const k of KEYS) { const v = params.get(k); if (v) q.set(k, v); }
     navigate(`/tests/sessio?${q.toString()}`);
   };
-  const play = (url?: string | null) => { if (url) new Audio(getMediaUrl(url)).play().catch(() => {}); };
+  const play = (url?: string | null) => { if (url) new Audio(audioSrc(url)).play().catch(() => {}); };
 
   if (playing && drills && drills.length > 0) return <DrillPlayer drills={drills} onExit={() => setPlaying(false)} />;
 
   return (
-    <div style={{ padding: '20px 16px 32px', maxWidth: 1100, margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px 32px', maxWidth: 1100, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate('/tests')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: '4px 0', marginBottom: 6 }}><FaChevronLeft /> Pràctica</button>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, margin: '0 0 4px' }}>{title}</h1>
       <p style={{ color: 'var(--text-soft)', fontSize: 14, margin: '0 0 14px' }}>{drills ? `${drills.length} drills` : 'Carregant…'}{drills && drills.length === 400 ? ' (els primers 400)' : ''}</p>
@@ -101,7 +102,7 @@ export default function PracticeGroupPage() {
         <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', background: 'var(--surface)' }}>
           {drills.map((d, i) => {
             const c = cards[i];
-            const voice = d.audio_url || d.audio_tts_shi_url;
+            const voice = d.audio_url;
             return (
               <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderTop: i ? '1px solid var(--border)' : 'none' }}>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 44, flexShrink: 0 }}>#{d.id}</span>

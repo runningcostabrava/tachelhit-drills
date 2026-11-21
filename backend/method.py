@@ -160,7 +160,14 @@ CHAPTERS: List[Dict] = [
             "dir els colors",
             "dir que no n'hi ha cap",
         ],
-        "grammar": ["demostratius", "negacio", "relatiu-participi", "adjectius-qualitat"],
+        # El capítol escrit (31-10) ensenya també els numerals del preu, les fórmules del
+        # regateig, «tenir» (dar-/ɣur-), els pronoms enganxats (ḍfar-as), les preguntes
+        # (mnckk, mad), l'imperatiu (sti, ẓr), el gènere i el nombre, les preposicions, el
+        # perfectiu i la y entre vocals: sense dir-ho aquí, aquelles seccions no rebrien cap
+        # frase nostra.
+        "grammar": ["demostratius", "negacio", "relatiu-participi", "adjectius-qualitat",
+                    "numerals", "formules", "ser-tenir", "clitics-objecte", "preguntes", "imperatiu",
+                    "noms-genere-nombre", "preposicions", "perfectiu", "sons-i-escriptura"],
         "topics": ["menjar", "mercat", "roba-colors"],
         "roles": ["qui compra", "qui para la parada"],
     },
@@ -661,8 +668,11 @@ def content_with_ours(db, slug: str, rows: List, card) -> Optional[Dict]:
              "why": why_here(said[d.id], keys_of[s["id"]], unit, d)}
             for d in picked]
         s["ours_total"] = len(scored)
-    return with_letters_everywhere(with_tifinagh(attach_cd(
-        attach_heard(db, attach_library(db, body, rows), rows), slug)))
+    #: L'ordre importa: primer la veu de la línia (per número), després el so que ensenya,
+    #: després el CD del manual, i NOMÉS AL FINAL la pesca per tota la biblioteca. Així una
+    #: línia que ja té la seva veu, o la de l'autor, no se li canvia per una de prestada.
+    fet = attach_cd(attach_heard(db, attach_library(db, body, rows), rows), slug)
+    return with_letters_everywhere(with_tifinagh(attach_la_veu_que_ja_tenim(db, fet)))
 
 
 #: El que hi ha escrit on hauria d'haver-hi la frase, a 170 drills (115 amb veu, #320). No són
@@ -777,6 +787,99 @@ def attach_cd(body: Optional[Dict], slug: str) -> Optional[Dict]:
                 posa(r, f"{s['id']}:col{ci}:{i}")
     for i, v in enumerate(body.get("vocabulary") or []):
         posa(v, f"vocabulary:{i}")
+    return body
+
+
+def attach_la_veu_que_ja_tenim(db, body: Optional[Dict]) -> Optional[Dict]:
+    """La línia muda que la biblioteca JA SAP dir, encara que sigui en una altra frase (#495).
+
+    En Pablo (11-11-2026), veient «tifawin» marcada «sense veu encara» amb mitja dotzena de
+    frases gravades que la diuen: «em sembla molt fort». Tenia raó. Comptades les 1.756 línies
+    dels deu capítols: 494 se senten i **1.262 no**, i de les mudes n'hi ha **268 que la
+    biblioteca sap dir** — 111 al CD del Mètode retallat, 153 dins d'una frase d'algú, i 4 que
+    hi són exactes. Cap no arribava al capítol.
+
+    Per què no hi arribaven: `attach_library` lliga per NÚMERO de frase, i una línia lligada a
+    una frase muda es queda muda encara que n'hi hagi una altra que digui el mateix;
+    `attach_heard` només mira les línies que ensenyen una LLETRA (`sound`), que són les del
+    capítol dels sons. Entremig hi queia tota la resta.
+
+    Es penja a `heard` i no a `audio_url`, que no és el mateix i a la pantalla tampoc: `heard`
+    vol dir «això no ho diu ningú, però se sent aquí», amb el crèdit de qui parla i d'on és.
+    Posar-ho com a veu de la línia faria passar la veu d'un canal, o la de l'autor del llibre,
+    per una gravació nostra, i això no es fa (#288).
+
+    Ordre de preferència: una frase que digui EXACTAMENT això; si no, la més curta que ho
+    contingui, i entre aquestes, abans les del CD del manual, que és el llibre d'on surt el
+    capítol. Una frase ja feta servir passa al darrere: trenta línies amb la mateixa gravació
+    no és sentir-les, és sentir-ne una.
+    """
+    import practice
+    from models import Drill as DrillModel
+    if not body:
+        return body
+
+    #: Només les que NO se senten de cap manera. Una línia que ja porta la veu del CD del
+    #: manual se sent, encara que no sigui cap parlant nostre: afegir-hi una frase prestada
+    #: hi posaria una segona veu per a la mateixa línia sense resoldre res.
+    mudes = [l for kind in LINE_KINDS for l in _lines_of(body, kind)
+             if not (l.get("audio_url") or "").strip() and not l.get("heard")
+             and not l.get("cd") and (l.get("shi") or "").strip()]
+    if not mudes:
+        return body
+
+    #: Només les sis columnes que es fan servir, i no la fila sencera: són 6.652 frases i el
+    #: servidor de Render té 512 MB, que ja va petar una vegada amb una càrrega massiva.
+    veus = [d for d in db.query(
+        DrillModel.id, DrillModel.text_tachelhit, DrillModel.text_catalan,
+        DrillModel.audio_url, DrillModel.speaker, DrillModel.author,
+        DrillModel.region, DrillModel.tag,
+    ).filter(DrillModel.audio_url.isnot(None)).all()
+        if _readable(d.text_tachelhit) and (d.text_catalan or "").strip()]
+    if not veus:
+        return body
+
+    exactes: Dict[str, List] = {}
+    conte: Dict[str, List] = {}
+    for d in veus:
+        t = d.text_tachelhit or ""
+        k = practice.sound_key(t)
+        if k:
+            exactes.setdefault(k, []).append(d)
+        for p in t.split():
+            kp = practice.sound_key(p)
+            #: una clau d'un sol caràcter casa amb mig diccionari i no diu res
+            if kp and len(kp) >= 2:
+                conte.setdefault(kp, []).append(d)
+
+    fetes_servir: set = set()
+    for line in mudes:
+        k = practice.sound_key(line["shi"])
+        if not k:
+            continue
+        d = None
+        for cand in (exactes.get(k) or []):
+            d = cand
+            break
+        if d is None:
+            cands = conte.get(k) or []
+            if cands:
+                d = min(cands, key=lambda c: (
+                    1 if c.id in fetes_servir else 0,
+                    0 if "metode-cd" in (c.tag or "").lower() else 1,
+                    len((c.text_tachelhit or "").split()), c.id))
+        if d is None:
+            continue
+        fetes_servir.add(d.id)
+        qui = d.speaker or d.author
+        captura = (qui or "").strip().lower() == "auto capture"
+        line["heard"] = {
+            "drill_id": d.id, "shi": d.text_tachelhit, "ca": d.text_catalan,
+            "audio_url": d.audio_url, "speaker": None if captura else qui,
+            "captured": captura, "region": d.region,
+            "tif": (transliteration.to_forms(d.text_tachelhit or "")["tifinagh"] or "").strip()
+            or None,
+        }
     return body
 
 
@@ -906,6 +1009,33 @@ def attach_library(db, body: Optional[Dict], rows: List) -> Optional[Dict]:
         if d is not None:
             from_drill(line, d)
             line["from_drill_id"] = d.id
+
+    # Una PARAULA del llibre que ningú no ha gravat sola, però que sona dins d'una frase nostra.
+    #
+    # El catàleg té milers de frases i gairebé cap paraula sola: de 224 línies del llibre sense
+    # veu, 12 tenien una gravació que digués exactament això i 58 més sortien dins d'una frase
+    # gravada (#534). La frase no substitueix la paraula: va al costat, amb qui la diu, igual
+    # que el capítol dels sons fa amb les lletres. Només paraules soles, i només frases que es
+    # poden entendre (amb català).
+    sense = [l for l in lines if not l.get("audio_url") and not l.get("heard")
+             and len(practice.words_of(l.get("shi") or "")) == 1]
+    if sense:
+        _short_drills(db, set())   # fa l'índex de paraules si no hi és
+        by_word = _short_index.get("by_word") or {}
+        for line in sense:
+            k = _said_key(line.get("shi"))
+            cands = by_word.get(k) or []
+            if not cands:
+                continue
+            # la més curta, i amb imatge si pot ser: una paraula se sent millor en quatre que en catorze
+            d = min(cands, key=lambda x: (len((x.text_tachelhit or "").split()), 0 if x.image_url else 1, x.id))
+            qui = d.speaker or d.author
+            captura = (qui or "").strip().lower() == "auto capture"
+            line["heard"] = {
+                "drill_id": d.id, "shi": d.text_tachelhit, "ca": d.text_catalan, "audio_url": d.audio_url,
+                "speaker": None if captura else qui, "captured": captura, "region": d.region, "what": "paraula",
+                "tif": (transliteration.to_forms(d.text_tachelhit or "")["tifinagh"] or "").strip() or None,
+            }
     return body
 
 
@@ -926,17 +1056,28 @@ def _said_key(text: Optional[str]) -> str:
     return " ".join(practice.sound_key(w) for w in practice.words_of(text or ""))
 
 
+def _said_keys(text: Optional[str]) -> List[str]:
+    """Totes les maneres com una frase de la biblioteca diu el que diu.
+
+    Una frase pot portar les seves variants separades per una barra —«I cg? / I ck?»—, i la veu
+    les diu totes dues (#504). Amb una sola clau per a la frase sencera, una línia que digués
+    «I ck?» no la trobava mai."""
+    keys = [_said_key(text)]
+    parts = [p for p in (text or "").split("/") if p.strip()]
+    if len(parts) > 1:
+        keys += [_said_key(p) for p in parts]
+    return [k for k in dict.fromkeys(keys) if k]
+
+
 def _by_what_it_says(rows: List) -> Dict[str, object]:
     said: Dict[str, object] = {}
     # la que es pugui mirar i escoltar primer; si no, la que tingui veu
     rank = lambda x: (0 if (x.image_url and x.audio_url) else 1 if x.audio_url else 2 if x.image_url else 3)
     for d in rows:
-        k = _said_key(getattr(d, "text_tachelhit", None))
-        if not k:
-            continue
-        have = said.get(k)
-        if have is None or rank(d) < rank(have):
-            said[k] = d
+        for k in _said_keys(getattr(d, "text_tachelhit", None)):
+            have = said.get(k)
+            if have is None or rank(d) < rank(have):
+                said[k] = d
     return said
 
 
@@ -948,18 +1089,19 @@ SHORT_LINE = 60
 class _Said:
     """El poc que una línia del capítol necessita d'una frase: qui la diu i on sona."""
     __slots__ = ("id", "text_tachelhit", "audio_url", "image_url", "speaker", "author",
-                 "region", "variety")
+                 "region", "variety", "text_tachelhit_latin", "text_catalan")
 
     def __init__(self, row):
         (self.id, self.text_tachelhit, self.audio_url, self.image_url,
-         self.speaker, self.author, self.region, self.variety) = row
+         self.speaker, self.author, self.region, self.variety,
+         self.text_tachelhit_latin, self.text_catalan) = row
 
 
 #: L'índex de «què diu cada frase curta gravada» es guarda entre peticions, perquè refer-lo vol
 #: dir llegir unes quantes milers de files i passar-les pel normalitzador a cada capítol que
 #: algú obre. El que decideix si encara val és un segell barat —quantes n'hi ha i quan es va
 #: tocar la darrera— de manera que una frase acabada de gravar hi entra de seguida.
-_short_index: Dict[str, object] = {"stamp": None, "by_key": {}}
+_short_index: Dict[str, object] = {"stamp": None, "by_key": {}, "by_word": {}}
 
 
 def _short_stamp(db) -> tuple:
@@ -979,22 +1121,54 @@ def _short_drills(db, keys: set) -> List:
         if _short_index["stamp"] != stamp:
             rows = (db.query(DrillModel.id, DrillModel.text_tachelhit, DrillModel.audio_url,
                              DrillModel.image_url, DrillModel.speaker, DrillModel.author,
-                             DrillModel.region, DrillModel.variety)
+                             DrillModel.region, DrillModel.variety,
+                             DrillModel.text_tachelhit_latin, DrillModel.text_catalan)
                     .filter(DrillModel.text_tachelhit.isnot(None))
                     .filter(DrillModel.audio_url.isnot(None))
                     .filter(func.length(DrillModel.text_tachelhit) <= SHORT_LINE)
                     .all())
             by_key: Dict[str, object] = {}
+            by_word: Dict[str, List[object]] = {}
             for r in rows:
-                k = _said_key(r[1])
-                if k and k not in by_key:
-                    by_key[k] = _Said(r)
-            _short_index["by_key"], _short_index["stamp"] = by_key, stamp
+                d = _Said(r)
+                # El que diu, escrit com sigui: milers de frases gravades (MTNRA, Common Voice,
+                # IRCAM) porten tifinag a `text_tachelhit` i el llatí a `text_tachelhit_latin`;
+                # la clau de so les fa iguals, però la segona grafia s'ha de mirar també (#534).
+                for text in (r[1], r[8]):
+                    for k in _said_keys(text):
+                        if k not in by_key:
+                            by_key[k] = d
+                # i cada paraula que conté, per poder fer sentir una paraula del llibre DINS
+                # d'una frase nostra quan ningú no l'ha gravada sola
+                if (r[9] or "").strip():
+                    for w in set(_said_key(r[1]).split()):
+                        if len(w) >= 2:
+                            by_word.setdefault(w, []).append(d)
+            _short_index["by_key"], _short_index["by_word"], _short_index["stamp"] = by_key, by_word, stamp
     except Exception as e:   # una base de dades que no respon no deixa el capítol sense servir
         print(f"[METHOD] no s'ha pogut buscar veus a la biblioteca: {str(e)[:120]}")
         return []
     by_key = _short_index["by_key"]
     return [d for k, d in by_key.items() if k in keys]
+
+
+def voiced_for(db, forms: List[str]) -> Dict[str, Optional[Dict]]:
+    """La veu que la biblioteca ja té per a cada text amazic, si en té (#504).
+
+    Qualsevol pantalla que mostri amazic escrit a mà —la lliçó en anglès, una fitxa, la clau de
+    grafies— pot preguntar aquí abans de dir que «encara no té veu». Només compta si una frase
+    curta gravada diu exactament això (o una de les seves variants): una paraula que només surt
+    dins d'una frase més llarga no es fa passar per la paraula sola.
+    """
+    keys = {f: _said_key(f) for f in forms if (f or "").strip()}
+    found = _by_what_it_says(_short_drills(db, {k for k in keys.values() if k}))
+    out: Dict[str, Optional[Dict]] = {}
+    for f, k in keys.items():
+        d = found.get(k) if k else None
+        out[f] = None if d is None else {
+            "drill_id": d.id, "text_tachelhit": d.text_tachelhit, "audio_url": d.audio_url,
+            "speaker": d.speaker or d.author, "region": d.region or d.variety}
+    return out
 
 
 def _lines_of(body: Dict, kind: str) -> List[Dict]:
@@ -1357,8 +1531,36 @@ def drill_for_line(db, slug: str, kind: str, section: Optional[str], index: int,
     return {"drill_id": d.id, "created": True}
 
 
-def sentences_for(db, slug: str) -> List:
+def candidates(db) -> List:
+    """Totes les frases que un capítol pot citar: la consulta, feta UNA vegada.
+
+    `sentences_for` la feia per a cada capítol i filtrava després en Python, de manera que
+    l'índex del Mètode la repetia deu vegades. Mentre la biblioteca era petita no es notava; el
+    31-10-2026, en omplir el significat en català de 5.522 frases, les files que torna gairebé es
+    van doblar —el filtre demana `text_catalan` no buit— i l'índex va passar a trigar **disset
+    segons**, que a l'app es llegia com «el servidor s'està despertant». Qui obria el capítol 3
+    esperava vint segons.
+
+    Les files surten amb la sessió oberta i es fan servir dins de la mateixa petició: no es
+    guarden entre peticions, que amb objectes de SQLAlchemy seria demanar problemes.
+    """
+    from models import Drill as DrillModel
+    # El recull de Beni Mellal («private») hi entra: l'amo en té permís (decisió de 23-10-2026).
+    # Aquella etiqueta protegeix la redistribució, no l'ensenyament. El que sí que queda fora és
+    # el de sempre: les llengües excloses.
+    return grammar.not_excluded(
+        db.query(DrillModel).filter(DrillModel.text_tachelhit != None,      # noqa: E711
+                                    DrillModel.text_tachelhit != "",
+                                    DrillModel.text_catalan != None,        # noqa: E711
+                                    DrillModel.text_catalan != ""),
+        DrillModel).all()
+
+
+def sentences_for(db, slug: str, rows: Optional[List] = None) -> List:
     """Les frases NOSTRES que fan el que aquest capítol demana.
+
+    `rows` són les candidates ja demanades (`candidates`), per a qui en vol diversos capítols
+    seguits i no vol pagar la consulta a cada un.
 
     Es trien pels slugs de gramàtica i de tema del capítol, i passen pels filtres d'exclusió de
     sempre (`grammar.not_excluded`): res gravat en càmera de «Tamazight For All», res etiquetat
@@ -1366,19 +1568,11 @@ def sentences_for(db, slug: str) -> List:
     només coincideix pel tema, i una amb veu va davant d'una muda: un capítol ha de començar pel
     que es pot escoltar.
     """
-    from models import Drill as DrillModel
     c = BY_SLUG.get(slug)
     if not c:
         return []
-    # El recull de Beni Mellal («private») hi entra: l'amo en té permís (decisió de 23-10-2026).
-    # Aquella etiqueta protegeix la redistribució, no l'ensenyament. El que sí que queda fora és
-    # el de sempre: les llengües excloses.
-    rows = grammar.not_excluded(
-        db.query(DrillModel).filter(DrillModel.text_tachelhit != None,      # noqa: E711
-                                    DrillModel.text_tachelhit != "",
-                                    DrillModel.text_catalan != None,        # noqa: E711
-                                    DrillModel.text_catalan != ""),
-        DrillModel).all()
+    if rows is None:
+        rows = candidates(db)
 
     units, subjects = set(c["grammar"]), set(c["topics"])
     by_unit, by_topic = [], []

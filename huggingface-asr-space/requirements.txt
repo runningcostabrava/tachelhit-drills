@@ -17,6 +17,9 @@ fastapi==0.112.4
 starlette<0.39
 pydantic<2.11
 uvicorn[standard]
+# Beam search with the lexicon's word list for /transcribe_mms_lm (#601, H3). Pure Python;
+# KenLM is optional and only used if lm_shi.arpa is shipped next to mms_shi.py.
+pyctcdecode==0.5.0
 gradio==4.44.1
 gradio_client==1.3.0
 requests

@@ -1,11 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { FaPlay, FaCut } from 'react-icons/fa';
-import { API_BASE } from '../config';
 import { getYouTubeVideoId } from '../utils/youtubeUtils';
 import type { Drill } from '../types';
 import VideoLibraryPlayer from './VideoLibraryPlayer';
+import { bibliotecaAlDia } from '../services/biblioteca';
 
 type LibraryVideo = { id: string; url: string; title: string; drills: Drill[] };
 
@@ -41,8 +40,8 @@ export default function VideoLibraryPage() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    axios.get(`${API_BASE}/drills/`)
-      .then(res => setDrills(res.data))
+    bibliotecaAlDia()
+      .then(setDrills)
       .catch(err => { console.error('Failed to load drills:', err); setError(true); })
       .finally(() => setLoading(false));
   }, []);
@@ -56,6 +55,14 @@ export default function VideoLibraryPage() {
           Biblioteca de vídeos{videos.length > 0 && <span style={{ marginLeft: 10, fontSize: 14, fontWeight: 600, color: 'var(--text-muted)' }}>{videos.length}</span>}
         </h1>
         <p style={{ margin: '4px 0 0 0', color: 'var(--text-soft)', fontSize: '14px' }}>Els vídeos sencers, amb els drills que n'has capturat com a subtítols.</p>
+        {/* La serie sencera te pantalla propia: 3.621 linies nostres a sota del video (#583). */}
+        <button onClick={() => navigate('/baba-ali')}
+                style={{ marginTop: 10, padding: '8px 14px', borderRadius: 'var(--r-pill)', cursor: 'pointer',
+                         border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)',
+                         fontFamily: 'inherit', fontSize: 14, fontWeight: 600, display: 'inline-flex',
+                         alignItems: 'center', gap: 8 }}>
+          <FaPlay size={11} /> Mira el Baba Ali amb el nostre text
+        </button>
       </div>
 
       <div role="region" aria-labelledby="library-title" style={{ padding: 'clamp(12px, 4vw, 32px)', display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', alignContent: 'start' }}>

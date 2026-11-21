@@ -1,0 +1,445 @@
+/**
+ * El visor de Tamazight TV (SNRT). **El vídeo el posa qui mira, des del seu disc**: aquí no se'n
+ * serveix cap (ADR 0013; el vídeo allotjat, si n'hi ha, segueix darrere `/video`, que sí que
+ * demana qui ets).
+ *
+ * Material de recerca amb permís de la SNRT: recerca sí, republicar no. El text (tifinag, àrab i
+ * un català de màquina) és obert des del 20-11-2026 per decisió d'en Pablo, a qui consta que
+ * això el fa públic. El vídeo segueix sense servir-se: qui vulgui mirar un episodi n'ha de tenir
+ * el fitxer, i això ja és la tria.
+ *
+ * Les respostes no passen pel cau fora de línia de l'app (`api.ts`): s'han de poder oblidar en tancar la sessió.
+ *
+ * El text està SENSE REVISAR: el tifinag i l'àrab els va llegir una màquina de la imatge i el català el va traduir una altra.
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { API_BASE } from '../config';
+import { loadYouTubeApi } from '../utils/youtubeUtils';
+import { formes } from '../utils/tifinag';
+import { desaNansa, fitxerDeLaCarpeta, fitxerDeLaNansa, llegeixNansa, nomDeLaCarpeta, oblidaNansa,
+         potRecordar, potTriarCarpeta, triaCarpeta, triaFitxer } from '../utils/videoDesat';
+
+interface Episodi { slug: string; titol: string; durada: number | null; linies: number; amb_catala: number; video_youtube: string | null; url_pagina: string | null }
+interface Linia { k: number; t_ini: number; t_fi: number; tifinag: string | null; arab: string | null; catala: string | null; catala_estat: string | null; sentit: string | null }
+interface Dades { slug: string; titol: string; durada: number | null; url_pagina: string | null; video_youtube: string | null; avis: string; linies: Linia[] }
+
+async function demana<T>(ruta: string): Promise<T> {
+  let r: Response;
+  try {
+    r = await fetch(`${API_BASE}${ruta}`, { cache: 'no-store' });
+  } catch {
+    //: ni tan sols hi ha hagut resposta: sense xarxa, o el servidor caigut del tot
+    throw new Error('No he pogut arribar al servidor. Mira la connexió i torna-ho a provar.');
+  }
+  //: Un 502 o un 503 és el servidor que no hi és, no una porta tancada. El 20-11-2026 el servidor
+  //: es moria de memòria cada ~70 minuts i la pàgina acusava en Pablo de no ser administrador —
+  //: ho era. Un silenci no es llegeix mai com un «no hi entres».
+  if (r.status === 502 || r.status === 503 || r.status === 504) {
+    throw new Error('El servidor no contesta ara mateix. Torna-ho a provar d\'aquí a un moment.');
+  }
+  if (r.status === 401 || r.status === 403) throw new Error('Aquesta part demana que entris amb el teu compte.');
+  if (!r.ok) throw new Error(`Error ${r.status}`);
+  return r.json();
+}
+
+const mmss = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+
+export default function SnrtPrivat() {
+  //: `null` = encara no s'ha sabut res. No és «no hi entres»: això ja no existeix per al text.
+  const [carregat, setCarregat] = useState<boolean | null>(null);
+  const [eps, setEps] = useState<Episodi[]>([]);
+  //: Es pot arribar aquí des d'Històries amb el capítol ja triat (`/snrt?ep=<slug>`, #695). Es
+  //: llegeix un sol cop, en muntar: després mana el que tria qui mira, i canviar-li el capítol
+  //: perquè l'adreça encara digui una altra cosa seria desconcertant.
+  const [sel, setSel] = useState<string | null>(() => {
+    try { return new URLSearchParams(window.location.search).get('ep'); } catch { return null; }
+  });
+  const [dades, setDades] = useState<Dades | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [ara, setAra] = useState(0);
+  const [desp, setDesp] = useState(0);
+  const [veu, setVeu] = useState({ catala: true, arab: true, tifinag: false, sentit: false });
+  //: Amb quina grafia es pinta l'amazic. El tifinag primer, que és el seu alfabet; el llatí hi és
+  //: perquè llegir-lo de pressa, sota un vídeo que no s'atura, encara costa a qui aprèn.
+  const [grafia, setGrafia] = useState<'tif' | 'lat'>(() => {
+    try { return localStorage.getItem('snrt.grafia') === 'lat' ? 'lat' : 'tif'; } catch { return 'tif'; }
+  });
+  useEffect(() => { try { localStorage.setItem('snrt.grafia', grafia); } catch { /* finestra privada */ } }, [grafia]);
+  const marcRef = useRef<HTMLDivElement | null>(null);
+  //: El nom del fitxer que aquest episodi ja va fer servir un altre dia, si el navegador el
+  //: recorda. No és el vídeo: és una nansa al disc de qui mira, i cal un clic per reobrir-la.
+  const [desat, setDesat] = useState<string | null>(null);
+  //: La carpeta on són tots els vídeos. Triada un cop, cada episodi hi busca el seu pel nom, i
+  //: així no s'han de buscar 39 fitxers a mà.
+  const [carpeta, setCarpeta] = useState<string | null>(null);
+  useEffect(() => { nomDeLaCarpeta().then(setCarpeta).catch(() => {}); }, []);
+  const [fitxer, setFitxer] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const ytRef = useRef<{ getCurrentTime: () => number; seekTo: (s: number, a: boolean) => void; destroy?: () => void } | null>(null);
+  const llistaRef = useRef<HTMLDivElement | null>(null);
+
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  useEffect(() => {
+    // La llista és oberta (ADR 0013). Si no ve, és que el servidor no contesta: es diu això i no
+    // es fa passar per una porta tancada.
+    demana<{ episodis: Episodi[] }>('/snrt-privat/')
+      .then((d) => { setEps(d.episodis); setCarregat(true); setSel((s) => (s && d.episodis.some((e) => e.slug === s) ? s : null)); })
+      .catch((e) => { setCarregat(false); setError(String(e.message || e)); });
+  }, []);
+  useEffect(() => {
+    if (!sel) return;
+    setDades(null); setFitxer(null); setAra(0); setVideoUrl(null);
+    try { setDesp(Number(localStorage.getItem(`snrt.desp.${sel}`)) || 0); } catch { setDesp(0); }
+    setDesat(null);
+    //: Si el permís encara hi és (mateixa sessió), el vídeo s'obre sol i no es pregunta res. Si
+    //: ha caducat, només se'n diu el nom i es deixa el botó: demanar-lo sense un clic no val.
+    (async () => {
+      //: mana la nansa d'aquest episodi: si algú n'ha triat un fitxer a mà, no se li canvia
+      //: La nansa d'aquest episodi mana **si funciona**: una tria feta a mà no s'ha de trepitjar
+      //: per un fitxer que casa de nom (#697). Però si no s'obre en silenci —Chrome oblida el
+      //: permís a cada recàrrega— abans es parava aquí i es deixava el vídeo negre amb un botó,
+      //: encara que la carpeta triada tingués el mateix episodi amb el nom bo. En Pablo, al
+      //: capítol `tadfi_goughelt` (#704): els 39 episodis eren a la carpeta i no en sortia cap.
+      const n = await llegeixNansa(sel);
+      const f = n ? await fitxerDeLaNansa(n, false) : null;
+      if (f) { setFitxer(URL.createObjectURL(f)); return; }
+      const g = await fitxerDeLaCarpeta(sel, false);
+      if (g) { setFitxer(URL.createObjectURL(g)); return; }
+      //: ni l'una ni l'altra sense demanar permís: es deixa el botó, que sí que el pot demanar
+      if (n) setDesat(n.name);
+    })().catch(() => {});
+    demana<Dades>(`/snrt-privat/${encodeURIComponent(sel)}`).then(setDades).catch((e) => setError(String(e.message || e)));
+    // vídeo allotjat al servidor d'Alibaba: adreça signada de 4 h (si no n'hi ha, es carrega des de l'ordinador)
+    demana<{ url: string | null }>(`/snrt-privat/${encodeURIComponent(sel)}/video`).then((d) => setVideoUrl(d.url)).catch(() => setVideoUrl(null));
+  }, [sel]);
+  useEffect(() => { try { if (sel) localStorage.setItem(`snrt.desp.${sel}`, String(desp)); } catch { /* finestra privada */ } }, [sel, desp]);
+
+  // vídeo de YouTube, si l'episodi hi és
+  useEffect(() => {
+    if (!dades?.video_youtube || videoUrl) return;
+    let viu = true;
+    loadYouTubeApi().then((YT) => {
+      if (!viu) return;
+      ytRef.current = new YT.Player('snrt-yt', { videoId: dades.video_youtube, playerVars: { rel: 0, playsinline: 1 } });
+    });
+    return () => { viu = false; try { ytRef.current?.destroy?.(); } catch { /* ja no hi és */ } ytRef.current = null; };
+  }, [dades?.video_youtube, videoUrl]);
+
+  // el temps del vídeo, vingui d'on vingui
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const v = videoRef.current;
+      const t = v ? v.currentTime : (ytRef.current?.getCurrentTime ? ytRef.current.getCurrentTime() : null);
+      if (t != null && Number.isFinite(t)) setAra(t);
+    }, 250);
+    return () => window.clearInterval(id);
+  }, []);
+  useEffect(() => () => { if (fitxer) URL.revokeObjectURL(fitxer); }, [fitxer]);
+
+  const t = ara + desp;
+  const actual = useMemo(() => {
+    if (!dades) return -1;
+    return dades.linies.findIndex((l) => t >= l.t_ini && t < l.t_fi);
+  }, [dades, t]);
+  useEffect(() => {
+    if (actual < 0 || !llistaRef.current) return;
+    const el = llistaRef.current.querySelector<HTMLElement>(`[data-k="${actual}"]`);
+    el?.scrollIntoView({ block: 'nearest' });
+  }, [actual]);
+
+  //: Saltar una mica enrere i tornar-ho a sentir és el que més es fa quan s'aprèn una llengua
+  //: (#707). Arrossegar la barra no serveix: no és precisa, i a pantalla completa no hi és.
+  //: Salta i **reprodueix**, perquè el que es vol és tornar-ho a sentir, no situar-se.
+  const mou = useCallback((segons: number) => {
+    const v = videoRef.current;
+    if (v) {
+      v.currentTime = Math.max(0, v.currentTime + segons);
+      void v.play();
+      setAra(v.currentTime);
+      return;
+    }
+    const yt = ytRef.current;
+    if (yt?.getCurrentTime) {
+      const t = Math.max(0, yt.getCurrentTime() + segons);
+      yt.seekTo(t, true);
+      setAra(t);
+    }
+  }, []);
+
+  const salta = useCallback((l: Linia) => {
+    const s = Math.max(0, l.t_ini - desp);
+    if (videoRef.current) { videoRef.current.currentTime = s; void videoRef.current.play(); }
+    else ytRef.current?.seekTo(s, true);
+    setAra(s);
+  }, [desp]);
+
+  //: Si el navegador acaba posant a pantalla completa el `<video>` sol —hi ha camins que no
+  //: passen pel nostre botó: F11 en algun navegador, el menú del botó dret, iOS— el subtítol
+  //: desapareix, que és justament el que es va queixar en Pablo. Aquí es detecta i es canvia pel
+  //: marc, que porta el subtítol a dins.
+  useEffect(() => {
+    const canvia = () => {
+      const fs = document.fullscreenElement;
+      if (fs && videoRef.current && fs === videoRef.current && marcRef.current) {
+        document.exitFullscreen().then(() => marcRef.current?.requestFullscreen()).catch(() => {});
+      }
+    };
+    document.addEventListener('fullscreenchange', canvia);
+    return () => document.removeEventListener('fullscreenchange', canvia);
+  }, []);
+
+  //: A pantalla completa no hi ha llista ni botons: les tecles són l'única manera de moure's.
+  //: Espai atura, les fletxes salten de línia en línia, F hi entra i en surt.
+  useEffect(() => {
+    const tecla = (e: KeyboardEvent) => {
+      const on = e.target as HTMLElement | null;
+      if (on && /^(INPUT|TEXTAREA|SELECT)$/.test(on.tagName)) return;
+      const v = videoRef.current;
+      if (e.key === ' ' && v) { e.preventDefault(); if (v.paused) void v.play(); else v.pause(); }
+      else if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && dades?.linies?.length) {
+        e.preventDefault();
+        const i = Math.min(Math.max(actual < 0 ? 0 : actual + (e.key === 'ArrowRight' ? 1 : -1), 0),
+                           dades.linies.length - 1);
+        salta(dades.linies[i]);
+      } else if ('zxcv'.includes(e.key.toLowerCase()) && !e.ctrlKey && !e.metaKey) {
+        //: z x c v, d'esquerra a dreta com el temps: −5, −2, +2, +5 (#707)
+        e.preventDefault();
+        mou({ z: -5, x: -2, c: 2, v: 5 }[e.key.toLowerCase() as 'z' | 'x' | 'c' | 'v']);
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+        else void marcRef.current?.requestFullscreen().catch(() => {});
+      }
+    };
+    window.addEventListener('keydown', tecla);
+    return () => window.removeEventListener('keydown', tecla);
+  }, [dades, actual, salta, mou]);
+
+  if (carregat === null) return <p style={{ padding: 16 }}>Carregant…</p>;
+  if (!carregat) return (
+    <p style={{ padding: 16 }} role="alert">
+      {error || 'El servidor no contesta ara mateix.'}{' '}
+      <button onClick={() => window.location.reload()}>Torna-ho a provar</button>
+    </p>
+  );
+  const linia = dades && actual >= 0 ? dades.linies[actual] : null;
+
+  return (
+    <div className="snrt-privat" style={{ maxWidth: 1100, margin: '0 auto', padding: '12px 16px' }}>
+      <style>{`
+        .snrt-privat .avis{border:1px solid #c9a227;background:rgba(201,162,39,.12);border-radius:8px;padding:8px 12px;font-size:.85rem;margin:8px 0}
+        .snrt-privat .cols{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+        .snrt-privat .video{flex:1 1 480px;min-width:0}
+        .snrt-privat .llista{flex:1 1 320px;min-width:0;max-height:70vh;overflow:auto;border:1px solid rgba(128,128,128,.35);border-radius:8px}
+        .snrt-privat .fila{padding:6px 10px;border-bottom:1px solid rgba(128,128,128,.2);cursor:pointer;overflow-wrap:anywhere}
+        .snrt-privat .fila.ara{background:rgba(70,130,220,.2)}
+        .snrt-privat .marc{position:relative;background:#000;border-radius:8px;overflow:hidden}
+        .snrt-privat .marc:fullscreen{border-radius:0;display:flex;align-items:center;justify-content:center}
+        .snrt-privat .marc:fullscreen video{max-height:100vh;width:auto}
+        /* A pantalla completa la pantalla és tres o quatre vegades més gran i el subtítol es
+           queda minúscul: puja amb la mida de la finestra, i s'enfila una mica més amunt per no
+           quedar sota els controls del reproductor. */
+        .snrt-privat .marc:fullscreen .sub{bottom:5vh}
+        .snrt-privat .marc:fullscreen .sub .ca{font-size:min(4.6vh,2.6rem)}
+        .snrt-privat .marc:fullscreen .sub .ar{font-size:min(3.8vh,2.1rem)}
+        .snrt-privat .marc:fullscreen .sub .ti,.snrt-privat .marc:fullscreen .sub .se{font-size:min(3.4vh,1.9rem)}
+        /* Damunt del vídeo i per sota dels seus controls: els controls natius seuen a sota i
+           taparien el subtítol si aquest hi fos enganxat. */
+        /* Columna, no línia. Amb inline-block i dues frases curtes («Sí.» i ⵢⴰⵀ.) les dues
+           llengües cabien al mateix renglò i semblaven una sola frase (#708): llegir una llengua
+           que estàs aprenent enganxada a la seva traducció és pitjor que no veure-la. */
+        .snrt-privat .sub{position:absolute;left:0;right:0;bottom:3.2em;padding:6px 12px;color:#fff;overflow-wrap:anywhere;pointer-events:none;text-shadow:0 2px 4px #000,0 0 10px #000;display:flex;flex-direction:column;align-items:center;gap:3px}
+        .snrt-privat .sub>div{display:inline-block;background:rgba(0,0,0,.62);border-radius:6px;padding:2px 10px;margin:1px 0}
+        .snrt-privat .pantalla{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:6px;padding:4px 9px;font-size:1rem;cursor:pointer}
+        /* Els salts viuen DINS del marc perquè a pantalla completa són els únics controls que
+           queden. A baix a l'esquerra: el subtítol va centrat i el botó de pantalla completa a
+           la dreta, i així no es trepitgen a cap amplada. */
+        /* A DALT a l'esquerra, fent parella amb el botó de pantalla completa. A baix quedaven
+           damunt de la barra de controls del reproductor: amb el vídeo negre no es notava, i
+           mirant-ho amb un vídeo de debò s'hi trepitjaven. */
+        .snrt-privat .salts{position:absolute;left:8px;top:8px;display:flex;gap:4px;z-index:2}
+        .snrt-privat .salts button{background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:6px;padding:4px 8px;font-size:.85rem;cursor:pointer;font-variant-numeric:tabular-nums}
+        .snrt-privat .salts button:hover{background:rgba(0,0,0,.8)}
+        .snrt-privat .marc:fullscreen .salts{left:2vh;top:2vh}
+        .snrt-privat .marc:fullscreen .salts button{font-size:min(2.4vh,1.2rem);padding:6px 12px}
+        /* En un telèfon el marc fa 191 px d'alt i el subtítol de tres llengües en fa 115: creix
+           cap amunt i arriba on són els salts. Mesurat a 360 px, es trepitjaven per un píxel.
+           inline-size i no size: l'alçada del marc la mana el vídeo i contenir-la el faria
+           col·lapsar. (Cap cometa inversa en aquest bloc: és una plantilla de JS i la tanquen.) */
+        .snrt-privat .marc{container-type:inline-size}
+        @container (max-width: 430px){
+          .snrt-privat .sub{bottom:2.4em;gap:1px;padding:2px 8px}
+          .snrt-privat .sub .ca{font-size:.95rem}
+          .snrt-privat .sub .ar{font-size:.85rem}
+          .snrt-privat .sub .ti,.snrt-privat .sub .se{font-size:.8rem}
+          .snrt-privat .salts button{font-size:.72rem;padding:2px 6px}
+        }
+        .snrt-privat .sub .se{font-size:1rem;opacity:.95;border:1px dashed rgba(255,255,255,.55)}
+        .snrt-privat .sub .ca{font-size:1.25rem}.snrt-privat .sub .ar{font-size:1.05rem;opacity:.9;direction:rtl}.snrt-privat .sub .ti{font-size:1rem;opacity:.8}
+        .snrt-privat video,.snrt-privat #snrt-yt{width:100%;aspect-ratio:16/9;background:#000;border-radius:8px}
+        .snrt-privat .ep{display:block;width:100%;text-align:left;padding:8px 10px;margin:4px 0;border:1px solid rgba(128,128,128,.35);border-radius:8px;background:transparent;color:inherit;cursor:pointer}
+        .snrt-privat .tria label{margin-right:12px;white-space:nowrap}
+      `}</style>
+      <h1 style={{ fontSize: '1.3rem' }}>Tamazight TV · visor</h1>
+      <div className="avis">Material de la SNRT, només per a recerca. El text és llegit i traduït per màquina, <strong>sense revisar</strong>. <strong>Aquí no es serveix cap vídeo</strong>: el posa qui mira, des del seu ordinador.</div>
+      {error && <p role="alert">{error}</p>}
+
+      {!sel && (
+        <div>
+          {eps.length === 0 && !error && <p>Encara no hi ha cap episodi carregat.</p>}
+          {eps.map((e) => (
+            <button key={e.slug} className="ep" onClick={() => setSel(e.slug)}>
+              <strong>{e.titol}</strong><br />
+              <small>{e.durada ? mmss(e.durada) + ' · ' : ''}{e.linies} línies · {e.amb_catala} amb català{e.video_youtube ? ' · vídeo de YouTube' : ''}</small>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {sel && (
+        <div>
+          <button onClick={() => { setSel(null); setDades(null); }} style={{ marginBottom: 8 }}>← Episodis</button>
+          {!dades && <p>Carregant l'episodi…</p>}
+          {dades && (
+            <>
+              <h2 style={{ fontSize: '1.1rem' }}>{dades.titol}</h2>
+              <div className="cols">
+                <div className="video">
+                  {/* El subtítol va DINS del marc del vídeo, no a sota: a pantalla completa el
+                      navegador només ensenya el que hi ha dins de l'element que s'hi posa, i un
+                      subtítol que desapareix justament quan mires de prop no serveix de res. */}
+                  <div className="marc" ref={marcRef}>
+                    {dades.video_youtube && !videoUrl ? <div id="snrt-yt" /> : (
+                      //: `nofullscreen`: el botó de pantalla completa del reproductor posa a pantalla
+                      //: completa el `<video>` SOL, i llavors el subtítol —que viu al marc, al
+                      //: costat— desapareix. En Pablo (20-11-2026): «quan utilitzo la pantalla
+                      //: completa ja no veig els subtítols». Treure'l deixa només el camí bo.
+                      <video ref={videoRef} src={videoUrl || fitxer || undefined} controls
+                             controlsList="nofullscreen" disablePictureInPicture />
+                    )}
+                    <div className="sub" aria-live="polite">
+                      {linia ? (<>
+                        {veu.catala && <div className="ca">{linia.catala || <em>(sense traducció)</em>}</div>}
+                        {veu.arab && linia.arab && <div className="ar" dir="rtl">{linia.arab}</div>}
+                        {veu.tifinag && linia.tifinag && (
+                          <div className="ti">{grafia === 'tif' ? formes(linia.tifinag).tif : formes(linia.tifinag).lat}</div>
+                        )}
+                        {/* El que ha sentit el nostre model, quan hi és. Va en una línia a part i
+                            marcada: no és el subtítol de la cadena, és una altra font que sovint
+                            el contradiu, i confondre-les faria perdre justament el que val. */}
+                        {veu.sentit && linia.sentit && (
+                          <div className="se">{grafia === 'tif' ? formes(linia.sentit).tif : formes(linia.sentit).lat}</div>
+                        )}
+                      </>) : <span style={{ opacity: .6 }}>…</span>}
+                    </div>
+                    <div className="salts">
+                      {([[-5, 'z'], [-2, 'x'], [2, 'c'], [5, 'v']] as const).map(([s, k]) => (
+                        <button key={s} onClick={() => mou(s)}
+                                title={`${s > 0 ? 'Endavant' : 'Enrere'} ${Math.abs(s)} s i reprodueix (tecla ${k.toUpperCase()})`}>
+                          {s > 0 ? `+${s}s` : `${s}s`}
+                        </button>
+                      ))}
+                    </div>
+                    <button className="pantalla" title="Pantalla completa amb els subtítols (tecla F) · espai atura · ← → salten de línia · z x c v salten segons"
+                            onClick={() => {
+                              const m = marcRef.current;
+                              if (!m) return;
+                              if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+                              else m.requestFullscreen().catch(() => {});
+                            }}>⛶</button>
+                  </div>
+                  <p style={{ fontSize: '.85rem' }}>
+                    {videoUrl ? "Vídeo del servidor privat." : fitxer ? "Vídeo carregat des del teu ordinador (no surt d'aquí)." : "Carrega el vídeo de l'episodi des del teu ordinador:"}{' '}
+                    {!videoUrl && !dades.video_youtube && (potRecordar() ? (
+                      <button onClick={async () => {
+                        const nansa = await triaFitxer();
+                        if (!nansa || !sel) return;
+                        const f = await fitxerDeLaNansa(nansa, true);
+                        if (!f) return;
+                        setFitxer(URL.createObjectURL(f)); setDesat(null);
+                        desaNansa(sel, nansa).catch(() => {});
+                      }}>Tria el vídeo…</button>
+                    ) : (
+                      <input type="file" accept="video/*" onChange={(ev) => { const f = ev.target.files?.[0]; if (f) setFitxer(URL.createObjectURL(f)); }} />
+                    ))}
+                    {!videoUrl && !dades.video_youtube && potTriarCarpeta() && (
+                      <>
+                        {' '}
+                        <button onClick={async () => {
+                          //: Chrome oblida el permís de lectura a cada recàrrega, però la nansa
+                          //: de la carpeta es recorda. Si ja n'hi ha una, NO s'ha de tornar a
+                          //: buscar la carpeta pel disc: només cal tornar a demanar-ne el permís,
+                          //: i això `fitxerDeLaCarpeta(…, true)` ja ho fa dins del clic. Obrir el
+                          //: triador cada vegada era fer-li buscar una carpeta que ja havia dit.
+                          if (carpeta && sel) {
+                            const f = await fitxerDeLaCarpeta(sel, true);
+                            if (f) { setFitxer(URL.createObjectURL(f)); setDesat(null); return; }
+                          }
+                          const c = await triaCarpeta();
+                          if (!c) return;
+                          setCarpeta(c.name);
+                          if (!sel) return;
+                          const f = await fitxerDeLaCarpeta(sel, true);
+                          if (f) { setFitxer(URL.createObjectURL(f)); setDesat(null); }
+                        }}>{carpeta ? `Obre la carpeta «${carpeta}»` : 'Tria la carpeta dels vídeos…'}</button>
+                        {carpeta && <> <button onClick={async () => {
+                          const c = await triaCarpeta();
+                          if (!c) return;
+                          setCarpeta(c.name);
+                          if (!sel) return;
+                          const f = await fitxerDeLaCarpeta(sel, true);
+                          if (f) { setFitxer(URL.createObjectURL(f)); setDesat(null); }
+                        }} title="Triar-ne una altra">canvia-la</button></>}
+                      </>
+                    )}
+                    {desat && !fitxer && !videoUrl && (
+                      <> <button onClick={async () => {
+                        const n = sel ? await llegeixNansa(sel) : null;
+                        const f = n ? await fitxerDeLaNansa(n, true) : null;
+                        //: si la nansa ha quedat orfe (fitxer mogut o esborrat), s'oblida en comptes
+                        //: de deixar un botó que no farà mai res
+                        if (f) { setFitxer(URL.createObjectURL(f)); setDesat(null); }
+                        else if (sel) { oblidaNansa(sel).catch(() => {}); setDesat(null); }
+                      }}>Torna a obrir «{desat}»</button></>
+                    )}
+                    {dades.url_pagina && <> · <a href={dades.url_pagina} target="_blank" rel="noreferrer noopener">pàgina original</a></>}
+                    {!videoUrl && !dades.video_youtube && !fitxer && (
+                      //: Dir QUIN fitxer busca. Sense això, una carpeta sense el fitxer d'aquest
+                      //: episodi i una carpeta sense permís es veuen igual: un vídeo negre.
+                      <><br /><small style={{ opacity: .75 }}>
+                        A la carpeta hi busco <code>{sel}.mp4</code> (o .mkv, .webm, .mov, .m4v).
+                        {carpeta ? ' Chrome oblida el permís en recarregar: cal un clic per sessió.' : ''}
+                      </small></>
+                    )}
+                  </p>
+                  <div className="tria" style={{ marginTop: 8, fontSize: '.9rem' }}>
+                    {(['catala', 'arab', 'tifinag', 'sentit'] as const).map((k) => (
+                      <label key={k}><input type="checkbox" checked={veu[k]} onChange={() => setVeu({ ...veu, [k]: !veu[k] })} /> {k === 'catala' ? 'Català' : k === 'arab' ? 'Àrab' : k === 'tifinag' ? 'Amazic' : 'El que sentim'}</label>
+                    ))}
+                    {/* La grafia val per a l'amazic de la cadena i per al que sentim: són la
+                        mateixa llengua escrita, i tenir-les en alfabets diferents impediria
+                        justament el que es vol fer aquí, que és comparar-les d'un cop d'ull. */}
+                    <label>Lletra:{' '}
+                      <select value={grafia} onChange={(e) => setGrafia(e.target.value === 'lat' ? 'lat' : 'tif')}>
+                        <option value="tif">ⵜⵉⴼⵉⵏⴰⵖ</option>
+                        <option value="lat">llatina</option>
+                      </select>
+                    </label>
+                    <label>Ajust dels subtítols: <input type="range" min={-6} max={6} step={0.25} value={desp} onChange={(e) => setDesp(Number(e.target.value))} /> {desp > 0 ? '+' : ''}{desp.toFixed(2)} s</label>
+                  </div>
+                </div>
+                <div className="llista" ref={llistaRef}>
+                  {dades.linies.map((l, i) => (
+                    <div key={l.k} data-k={i} className={'fila' + (i === actual ? ' ara' : '')} onClick={() => salta(l)}>
+                      <small>{mmss(l.t_ini)}</small> {l.catala || <em>(sense traducció)</em>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

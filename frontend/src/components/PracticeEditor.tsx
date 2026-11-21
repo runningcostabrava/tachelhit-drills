@@ -7,6 +7,7 @@ import {
 } from 'react-icons/fa';
 import { api, type PracticeCollections, type PracticeList, type PracticeStep } from '../api';
 import { getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import MobileDrillCreator from './MobileDrillCreator';
@@ -57,7 +58,7 @@ const SOURCES: { kind: SourceKind; label: string }[] = [
 
 // A sentence is only usable if somebody has written what it says, in both languages.
 const usable = (d?: Drill) => !!d && !!(d.text_tachelhit || '').trim() && !!(d.text_catalan || '').trim();
-const hasVoice = (d?: Drill) => !!d && !!((d.audio_url || '').trim() || (d.audio_tts_shi_url || '').trim());
+const hasVoice = (d?: Drill) => !!d && !!((d.audio_url || '').trim());
 
 /** Les eines que demanen repetir el que se sent: la gravació hi fa de model (#273). */
 const PER_IMITAR: PracticeStep['kind'][] = ['say_it', 'write_heard'];
@@ -229,8 +230,9 @@ export default function PracticeEditor() {
   // A sentence that does not exist yet. The same sheet as everywhere else -- write the two texts,
   // let the AI translate one into the other, record it, attach media -- and when it comes back
   // with an id it goes straight into the sequence, so you never lose your place.
+  // El creador es queda obert: desar-ne una no vol dir haver acabat (#569). Qui en grava tres
+  // seguides les troba totes tres al final de la seqüència quan plega.
   const drillWasMade = async (drillId?: number) => {
-    setMakingDrill(false);
     if (!drillId) { toast.success('Desada. Busca-la aquí sota per afegir-la.'); return; }
     const got = await api.drillsByIds([drillId]).catch(() => [] as Drill[]);
     if (!got.length) { toast.error('S’ha creat, però no s’ha pogut llegir'); return; }
@@ -364,7 +366,7 @@ export default function PracticeEditor() {
   };
 
   return (
-    <div style={{ padding: '18px 16px 60px', maxWidth: 1180, margin: '0 auto' }}>
+    <div style={{ padding: '18px 16px 60px', maxWidth: 1180, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
         <button onClick={() => navigate('/tests')} style={back}>← Pràctiques</button>
         <button
@@ -488,7 +490,7 @@ export default function PracticeEditor() {
       </div>}
 
       {view === 'document' ? (
-        <article className="practice-document" style={{ maxWidth: 720, margin: '0 auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '28px 30px 36px' }}>
+        <article className="practice-document" style={{ maxWidth: 720, margin: '0 auto', width: '100%', boxSizing: 'border-box', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '28px 30px 36px' }}>
           <div className="no-print" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginBottom: 14 }}>
             <button onClick={() => window.print()} style={secondary}><FaPrint size={12} /> Imprimeix o desa en PDF</button>
             <button onClick={download} style={secondary}><FaDownload size={12} /> Baixa’l en text</button>
@@ -623,7 +625,7 @@ export default function PracticeEditor() {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end', marginTop: 8 }}>
                     {drill && hasVoice(drill) && (
-                      <button onClick={() => new Audio(getMediaUrl(drill.audio_url || drill.audio_tts_shi_url || '')).play().catch(() => {})}
+                      <button onClick={() => new Audio(audioSrc(drill.audio_url || '')).play().catch(() => {})}
                               title="Escolta" style={icon}><FaPlay size={11} /></button>
                     )}
                     {drill && !hasVoice(drill) && (

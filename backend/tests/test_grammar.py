@@ -6,6 +6,20 @@ import main
 from test_api import client
 
 
+def test_unit_titles_promise_nothing_the_audits_disproved():
+    # Recerca del 30-10: a Beni Mellal i Aït Mraw no hi ha ša/bu de reforç, dar-i és una sola fila
+    # negada, «manik» i «maymi» no hi surten, i el perfectiu no és sempre passat.
+    title = dict(grammar.TITLES)
+    assert "(passat)" not in title["perfectiu"]
+    assert "ša" not in title["negacio"] and "bu" not in title["negacio"].split()
+    assert "dar-i" not in title["ser-tenir"] and "ghori" in title["ser-tenir"]
+    assert "manik" not in title["preguntes"] and "maymi" not in title["preguntes"] and "makh" in title["preguntes"]
+    assert "lli" not in title["relatiu-participi"] and "nna" in title["relatiu-participi"]
+    # the classifier still has to recognise a Souss sentence, so the hint keeps what the title drops
+    assert "dar-i" in next(u["hint"] for u in grammar.UNITS if u["slug"] == "ser-tenir")
+    assert "not always a past" in next(u["hint"] for u in grammar.UNITS if u["slug"] == "perfectiu")
+
+
 def test_units_are_ordered_and_endpoint_lists_them():
     r = client.get("/grammar").json()
     assert [u["slug"] for u in r["units"]] == grammar.SLUGS and r["units"][0]["slug"] == grammar.SOUNDS_UNIT and r["units"][1]["slug"] == "formules"

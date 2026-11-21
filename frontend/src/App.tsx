@@ -3,11 +3,15 @@ import { useIsMobileLayout } from './utils/layout';
 import { Network } from '@capacitor/network';
 import axios from 'axios';
 import { API_BASE } from './config';
+import { OBERTURA_MS } from './services/biblioteca';
 import { api } from './api';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { FaLayerGroup, FaVideo, FaGraduationCap, FaComments, FaUser, FaRedo, FaFire, FaPlay, FaBook, FaBookOpen, FaMicrophone, FaInfo, FaSearch, FaPlus, FaFeatherAlt, FaFont } from 'react-icons/fa';
 import { syncManager } from './services/OfflineSyncManager';
+import { engegaAudios } from './services/audioLocal';
+import { posaLesLecturesQueFalten } from './services/lecturesPendents';
 import * as cuaDeVeus from './services/cuaDeVeus';
+import { toast } from './toast';
 import ToastHost from './components/ToastHost';
 import StaleBuildBanner from './components/StaleBuildBanner';
 import DataNotice from './components/DataNotice';
@@ -69,6 +73,8 @@ const PublicTestView = lazyPagina(() => import('./components/PublicTestView'));
 const VideoDrillCreator = lazyPagina(() => import('./components/VideoDrillCreator'));
 const SrtImport = lazyPagina(() => import('./components/SrtImport'));
 const VideoLibraryPage = lazyPagina(() => import('./components/VideoLibraryPage'));
+const BabaAliViewer = lazyPagina(() => import('./components/BabaAliViewer'));
+const SnrtPrivat = lazyPagina(() => import('./components/SnrtPrivat'));
 const CaptureReview = lazyPagina(() => import('./components/CaptureReview'));
 const MethodPage = lazyPagina(() => import('./components/MethodPage'));
 const MethodChapter = lazyPagina(() => import('./components/MethodChapter'));
@@ -82,6 +88,8 @@ const StoriesPage = lazyPagina(() => import('./components/StoriesPage'));
 const ListenPage = lazyPagina(() => import('./components/ListenPage'));
 const GrammarPage = lazyPagina(() => import('./components/GrammarPage'));
 const AlfabetPage = lazyPagina(() => import('./components/AlfabetPage'));
+// The one page in English (#487): the first words for someone coming to run in the Atlas.
+const StartEnglish = lazyPagina(() => import('./components/StartEnglish'));
 const PracticeEditor = lazyPagina(() => import('./components/PracticeEditor'));
 const VerifyQueue = lazyPagina(() => import('./components/VerifyQueue'));
 const RevisaPage = lazyPagina(() => import('./components/RevisaPage'));
@@ -148,6 +156,100 @@ function App() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [veusPendents, setVeusPendents] = useState(0);
   useEffect(() => cuaDeVeus.escolta(setVeusPendents), []);
+  useEffect(() => { void engegaAudios(); }, []);
+
+  // Les gravacions que van quedar sense lectura de màquina, repescades.
+  //
+  // `/transcribe/` només es demana just després de gravar, i només si llavors hi ha xarxa: qui
+  // grava sense senyal —el cas d'anar pel camp amb algú que parla— es quedava sense per sempre,
+  // perquè el fitxer puja sol però ningú no en torna a demanar la lectura. Això ho mira en
+  // arrencar i cada cop que torna el senyal, només per a les teves i de vuit en vuit.
+  useEffect(() => {
+    let corrent = false;
+    let avisatSenseNom = false;
+    /**
+     * El rellotge dels reintents (#560).
+     *
+     * Els tres moments d'abans no bastaven. El 2-11-2026 tres gravacions de l'amo es van quedar
+     * sense lectura perquè el servidor anava ofegat just llavors —una cua nostra li escrivia
+     * 5.389 lectures— i després no hi va tornar ningú: el senyal no havia caigut, i quan va
+     * parar de gravar ja no hi havia cap esdeveniment més. L'única sortida era tancar i obrir
+     * l'app, i això ningú no ho sap. Comprovat amb el servidor descansat, aquelles tres es
+     * llegien a la primera.
+     *
+     * Espera creixent i només mentre quedi feina: 30 s, 1 min, 2 min, 5 min i després cada 10.
+     */
+    const ESPERES = [30_000, 60_000, 120_000, 300_000, 600_000];
+    let passos = 0;
+    let rellotge: number | undefined;
+    const tornaHiMesTard = () => {
+      window.clearTimeout(rellotge);
+      const espera = ESPERES[Math.min(passos, ESPERES.length - 1)];
+      passos++;
+      rellotge = window.setTimeout(() => { void mira(false); }, espera);
+    };
+    const plegaElRellotge = () => { window.clearTimeout(rellotge); rellotge = undefined; passos = 0; };
+    /**
+     * `acabes` = això ve de fer o tocar una frase, no d'arrencar l'app.
+     *
+     * És el que decideix si es parla o no (#556). Qui acaba de gravar espera una resposta i se li
+     * deu, també quan és «ara no s'ha pogut»; qui obre l'app al matí no ha demanat res i no vol
+     * un avís de fa tres setmanes. Les lectures que SÍ que s'han fet es diuen sempre: són una
+     * frase que ha canviat a la pantalla, i val més saber per què.
+     */
+    const mira = async (acabes: boolean) => {
+      if (corrent) return;                     // una de sola: no se'n volen dues alhora
+      corrent = true;
+      try {
+        const r = await posaLesLecturesQueFalten();
+        if (r.motiu === 'sense-nom') {
+          if (r.falten > 0 && !avisatSenseNom) {
+            avisatSenseNom = true;
+            toast.info(`Tens ${r.falten} ${r.falten === 1 ? 'gravació' : 'gravacions'} sense llegir, `
+              + 'i sense un nom al perfil no se sap quines són teves. Posa-te\'l i es llegiran.');
+          }
+        } else if (r.fetes > 0) {
+          toast.success(`${r.fetes} ${r.fetes === 1 ? 'gravació llegida' : 'gravacions llegides'} `
+            + 'per la màquina' + (r.falten > 0 ? `; en queden ${r.falten}.` : '.'));
+        } else if (acabes && r.motiu === 'sense-senyal' && r.falten > 0) {
+          toast.info(`Sense senyal: ${r.falten} ${r.falten === 1 ? 'gravació espera' : 'gravacions esperen'} `
+            + 'la lectura de la màquina. Es farà sol quan en torni.');
+        } else if (acabes && r.fallades > 0) {
+          toast.info(`La màquina no ha pogut llegir ${r.fallades === 1 ? 'la gravació' : `${r.fallades} gravacions`} `
+            + 'ara mateix. Es tornarà a provar.');
+        }
+        // Mentre quedi feina, s'hi torna sol. Una passada que no en deixa atura el rellotge i
+        // torna l'espera a trenta segons, de manera que la pròxima vegada que calgui serà aviat.
+        if (r.motiu !== 'sense-nom' && r.falten > 0) tornaHiMesTard();
+        else plegaElRellotge();
+        // Els reintents del rellotge són muts si no arreglen res (`acabes` és fals): un avís cada
+        // deu minuts no és informació, és sorra. El que es diu segueix sent el del #556.
+      } catch { /* el cop següent */ } finally { corrent = false; }
+    };
+    // Un esdeveniment (gravar, tornar el senyal) torna l'espera a zero: si s'ha mogut alguna
+    // cosa, val la pena mirar-ho aviat encara que el rellotge anés pels deu minuts.
+    const aviat = (acabes: boolean) => {
+      passos = 0;
+      return window.setTimeout(() => { void mira(acabes); }, 2500);
+    };
+    const t = window.setTimeout(() => { void mira(false); }, 8000);   // deixa respirar la primera pantalla
+    // Tres moments: en obrir, quan torna el senyal, i cada cop que es fa o es toca una frase.
+    // Aquest últim és el que l'amo demanava: gravar-ne una i veure'n la lectura de seguida.
+    const nova = () => { aviat(true); };
+    window.addEventListener('drills-changed', nova);
+    let treu: (() => void) | undefined;
+    // Quan torna el senyal no s'hi diu res si no s'ha fet res: no és el moment de recordar-te
+    // una gravació de la setmana passada, però sí de dir-te què s'acaba de llegir.
+    Network.addListener('networkStatusChange', (s) => { if (s.connected) aviat(false); })
+      .then((h) => { treu = () => h.remove(); })
+      .catch(() => {});
+    return () => {
+      window.clearTimeout(t);
+      plegaElRellotge();
+      window.removeEventListener('drills-changed', nova);
+      treu?.();
+    };
+  }, []);
 
   // Offline sync bootstrap. All queue processing lives in OfflineSyncManager;
   // this effect just pushes pending actions and refreshes the local caches on
@@ -169,13 +271,10 @@ function App() {
       cuaDeVeus.engega();
 
       try {
-        const [drillsRes, testsRes] = await Promise.all([
-          axios.get(`${API_BASE}/drills/`),
+        const [, testsRes] = await Promise.all([
+          syncManager.refreshDrills(OBERTURA_MS),
           axios.get(`${API_BASE}/tests/`),
         ]);
-        // saveDrillsToCache also kicks off background media caching
-        // (audio & images only; videos are cached on demand)
-        await syncManager.saveDrillsToCache(drillsRes.data);
         await syncManager.saveTestsToCache(testsRes.data);
       } catch (e) {
         console.error('Failed to pre-cache data', e);
@@ -325,6 +424,9 @@ function App() {
         <Route path="/srt-import" element={<SrtImport />} />
         <Route path="/player" element={<DrillPlayerPage />} />
         <Route path="/library" element={<VideoLibraryPage />} />
+        {/* El Baba Ali: la sèrie del canal amb el nostre text a sota. */}
+        <Route path="/baba-ali" element={<BabaAliViewer />} />
+        <Route path="/snrt" element={<SnrtPrivat />} />
         {/* What a video gave us, and the chance to move a cut or correct its words. */}
         <Route path="/captura/video" element={<CaptureReview />} />
         <Route path="/profile" element={<ProfilePage />} />
@@ -337,6 +439,7 @@ function App() {
         <Route path="/stories" element={<StoriesPage />} />
         <Route path="/stories/:slug" element={<StoriesPage />} />
         <Route path="/alfabet" element={<AlfabetPage />} />
+        <Route path="/start" element={<StartEnglish />} />
         <Route path="/grammar" element={<GrammarPage />} />
         <Route path="/grammar/:slug" element={<GrammarPage />} />
         <Route path="/grammar/:slug/editor" element={<LessonEditor />} />
