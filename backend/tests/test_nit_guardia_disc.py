@@ -68,11 +68,15 @@ def test_amb_el_disc_just_no_baixa_i_no_es_un_error(monkeypatch, tmp_path):
 
 def test_el_1080p_se_salta_abans_que_el_720p(monkeypatch, tmp_path):
     """El 1080p és opcional —sense ell el tifinag es llegeix a 720p— i per això demana més
-    marge. Amb 20 GB s'ha de baixar el 720p i saltar el 1080p."""
+    marge: amb espai per al 720p però no per al 1080p, s'ha de saltar només el 1080p.
+
+    L'espai de la prova es calcula **dels llindars**, no a mà: els valors es van haver
+    d'ajustar al disc real de l'ECS i una prova que els porta escrits es trenca cada vegada.
+    """
     import shutil
-    monkeypatch.setattr(shutil, "disk_usage", _disc(20))
-    assert nit.MIN_GB < 20 < nit.MIN_GB_1080, (
-        f"la prova dona per fet {nit.MIN_GB} < 20 < {nit.MIN_GB_1080}")
+    assert nit.MIN_GB < nit.MIN_GB_1080, "el 1080p ha de demanar més marge que el 720p"
+    entremig = (nit.MIN_GB + nit.MIN_GB_1080) / 2
+    monkeypatch.setattr(shutil, "disk_usage", _disc(entremig))
 
     monkeypatch.setattr(nit, "te_video", lambda _c: True)   # el 720p ja hi és
     fora = []

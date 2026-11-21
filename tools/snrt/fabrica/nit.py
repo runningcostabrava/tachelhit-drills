@@ -45,8 +45,8 @@ def fitxa(cap):
 
 #: el 21-11 el disc es va omplir i la fabrica va petar; la guardia ha de ser aqui, on es
 #: baixa, i no nomes al supervisor, que mira cada 15 minuts
-MIN_GB = 15          # per sota d'aixo no es baixa cap video
-MIN_GB_1080 = 25     # el 1080p es opcional: demana mes marge
+MIN_GB = 8           # per sota d'aixo no es baixa cap video
+MIN_GB_1080 = 14    # el 1080p es opcional: demana mes marge
 
 
 def prou_espai(gb, carpeta="/"):
