@@ -17,8 +17,15 @@ cremat i l'àrab cremat. D'aquí surten tres vies, i una quarta que no és un mo
 |---|---|---|---|
 | **jo traduint l'àrab a mà** | **chrF 0,746** | 21-11 | contra una traducció confirmada, prova aparellada neta |
 | **tifinag → àrab** (NLLB afinat) | **chrF 0,3470** (de 0,2634) | 21-11 | test per capítols, sense Rif, 4 capítols mai vistos |
-| **veu → àrab** (Whisper afinat) | punt de partida **0,1003** | 21-11 | el mateix test |
+| **veu → àrab** (Whisper afinat) | chrF 0,1573 (de 0,1003) — **però no tradueix** | 21-11 | el mateix test |
 | **l'orella** (MMS + adaptador H4b) | CER **0,140** a cv-zgh-test-256 | 16-11 | 256 clips nets |
+
+**El 0,1573 de la veu no és un guany, i el document ho ha de dir.** El número puja, però el
+que en surt parla **del tema, no de la frase**: com que tot l'episodi va de literatura, el
+model produeix àrab plausible sobre llibres i encerta el vocabulari del domini. Un 6 % de les
+sortides es queden repetint una paraula. Comparat amb el de text, on les sortides sí parlen de
+la mateixa frase, aquest **encara no serveix**. 7,4 h són molt poques — i, sobretot, el 40 %
+d'aquelles hores no és la frase (§3, pas 1).
 
 **La notícia incòmoda és la primera fila.** El que de debò tradueix avui no és cap model
 nostre: és una lectura a mà de l'àrab. Els models valen per allò que no es pot fer a mà —215
@@ -49,18 +56,33 @@ Estat: **27 capítols collits, ~17,9 h**, dels quals **8 són del Rif** i no ent
 
 L'ordre no és per gust: és **per guany mesurat dividit per esforç**.
 
-### 1r. Tornar a tallar amb l'alineació forçada — **−0,0789 de CER**
+### 1r. Tornar a tallar amb l'alineació forçada — **el 40 % del so no és la frase**
 
-El diagnòstic és del 18-11 i diu que **el 62 % dels talls tenen l'inici desplaçat més de mig
-segon** (de −36 s a +119 s). Retallant on el model sent la veu, el CER passa de 0,7370 a
-**0,6581**.
+El diagnòstic del 18-11, sobre talls de capítols **antics**, deia que el 62 % tenien l'inici
+desplaçat més de mig segon, i que retallant bé el CER passava de 0,7370 a **0,6581**: −0,0789.
 
-Per comparar: una ronda del cercle val **−0,003 a −0,013**, i el model de llengua al feix
-−0,009. **Això val sis vegades la millor ronda i no demana cap dada nova.** Toca el material
-que alimenta les tres vies alhora.
+**El 21-11 s'ha mesurat sobre ELS NOSTRES talls** (1.187 de la collita, MMS + adaptador H4b),
+i estan pitjor:
 
-Falta: una GPU i tornar a tallar les 17,9 h. El guió és
-[`tools/snrt/magatzem/kaggle_alinea.py`](../tools/snrt/magatzem/kaggle_alinea.py).
+| | |
+|---|---|
+| silenci al davant | mediana **0,74 s** · més de 0,3 s al **84 %** |
+| silenci al darrere | mediana **0,85 s** · més de 0,3 s al **94 %** |
+| **so que no és la frase** | **40 %** |
+
+*«Silenci» vol dir «fora d'on el model sent el text»: pot ser el veí parlant. Tant se val —
+no és la frase.*
+
+**Dues de cada cinc hores que donem als models no són el que els diem que són.** Per comparar:
+una ronda del cercle val −0,003 a −0,013 de CER, i el model de llengua al feix −0,009. Això és
+d'un altre ordre, **no demana cap dada nova**, i toca el material que alimenta les tres vies
+alhora. També explica per què la veu → àrab parla del tema i no de la frase.
+
+Els límits nous ja estan calculats (`alineacio_nostra.json`, a la versió 3 del quadern
+`veu-ar-afina` de Kaggle). Falta **tornar a tallar les 17,9 h amb aquests límits** i refer-ho
+tot a sobre. El guió és
+[`tools/snrt/magatzem/kaggle_alinea.py`](../tools/snrt/magatzem/kaggle_alinea.py) (i
+`modelscope_alinea.py` per a aquella plataforma).
 
 ### 2n. Desencallar i fer córrer la fàbrica
 
@@ -77,11 +99,12 @@ Hi ha **dos encallaments diferents**, i convé no confondre'ls:
 
 Cada capítol nou que passi són ~500 rèpliques per a les tres vies alhora.
 
-### 3r. Acabar els dos afinaments cap a l'àrab
+### 3r. Refer els dos afinaments cap a l'àrab, amb els talls bons
 
-El de text ja ha donat 0,3470. El de veu està corrent. **Cap dels dos no s'ha de desplegar
-abans que el pas 1 estigui fet**: entrenar sobre talls mal alineats és pagar GPU per aprendre
-soroll.
+Tots dos ja s'han fet un cop amb els talls d'ara: text **0,3470**, veu **0,1573 però sense
+traduir**. **Cap dels dos no s'ha de desplegar ni donar per bo fins que el pas 1 estigui fet**:
+entrenar amb un 40 % de so que no és la frase és pagar GPU per aprendre soroll. Els dos models
+estan desats a Kaggle com a punt de partida per comparar-hi.
 
 ### 4t. Més parelles
 
