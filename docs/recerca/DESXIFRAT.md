@@ -45,6 +45,7 @@ primera porta un avís que hi apunta. Mira l'índex abans de citar cap número.
 - **§39** El gir cap a l'àrab (21-11, d'en Pablo)
 - **§40** L'ECS tenia una fàbrica millor, i jo duplicava (21-11)
 - **§41** L'alineació forçada: −0,0789, i feia tres dies que hi era (21-11)
+- **§44** La taula norma↔parla tenia 26 entrades que són tarifit (21-11)
 - **§43** El primer guany de debò amb el material del SNRT: 0,2634 → 0,3470 (21-11)
 - **§42** El corpus tenia tarifit, i el dev n'era el 100 % (21-11)
 
@@ -2373,8 +2374,10 @@ El senyal bo no passa per cap dels dos filtres: **els topònims a l'àrab**.
 | `XSQcExn0e08` | Rif ×27, Nador | 0,92 |
 | `bij1eT0tAW0` | Rif ×17, Driouch ×4 | 0,73 |
 
-**Els cinc capítols amb menys puntuació tachelhit són cinc dels sis del Rif**: el classificador
+**Els sis capítols amb menys puntuació tachelhit són sis dels vuit del Rif**, i els cinc de sota ho són tots: el classificador
 els veia, el llindar era massa fluix. Dos senyals independents, i coincideixen.
+
+**Compte de no barrejar dos conjunts.** Aquests **8 del Rif són de la collita nova** (27 capítols, slugs de YouTube). Els **11 tarifit de producció** són els capítols **vells** de Tadfi (slugs de 40 lletres de forja.ma) i **no se'n solapa cap**: 8 i 11 no són dos comptes de la mateixa cosa, són dos conjunts diferents. En total, 19 capítols rifenys coneguts.
 
 Corpus refets: text **4.562 / 599 / 1.278** (de 7.194 / 861 / 1.682), veu **7,4 h** (de 12,7).
 Punt de partida net del traductor: **chrF 0,2634** (el contaminat deia 0,2614 — el tarifit no
@@ -2418,3 +2421,41 @@ La primera és bona; la segona es desfà; la tercera encerta l'estructura i fall
 Per comparar, el mateix dia: **jo traduint l'àrab a mà fa chrF 0,746**. La distància entre
 0,347 i 0,746 és la notícia: el que de debò tradueix avui no és cap model nostre. El model val
 per allò que jo no puc fer -- 215 capítols-- i encara no tradueix prou bé.
+
+
+## 44. La taula norma↔parla tenia 26 entrades que són tarifit (21-11)
+
+Un peó que auditava la documentació va deixar una pregunta oberta: la taula de correspondències
+estàndard↔dialecte (§2, 181 correspondències), **està contaminada de tarifit?** No ho va poder
+tancar perquè el fitxer viu fora del repositori. Tancada:
+
+**Sí.** Les 74.761 parelles alineades venen de 25 capítols i **11 són del Rif**: **27.180
+parelles, el 36,4 %**.
+
+De les 181 correspondències publicades:
+
+| | |
+|---|---|
+| **només del Rif** | **26 (14 %)** |
+| majoria del Rif | 6 més — **32 en total per sobre del 50 %** |
+| cap rastre de Rif | 109 (60 %) |
+
+I les 26 no són soroll qualsevol: són **tarifit de manual**.
+
+| la taula deia | i això és |
+|---|---|
+|  → ,  → ,  →  | la **l → r** rifenya, la marca que fem servir per **detectar** el tarifit |
+|  →  | l'interrogatiu rifeny |
+|  → ,  →  | fonologia rifenya |
+
+O sigui que la taula que descriu **com el tachelhit s'aparta de la norma de l'IRCAM** contenia,
+en un 14 % de les seves entrades, **com se'n aparta una altra llengua**. I la pitjor part: hi
+havia la mateixa l→r que el classificador de varietat fa servir com a prova que un capítol és
+rifeny. La taula hauria pogut ensenyar a prendre tarifit per tachelhit.
+
+Taula neta a : **149 correspondències**.
+
+**La lliçó, que és la del dia repetida:** el 20-11 vaig descobrir que el corpus d'entrenament
+tenia el dev 100 % tarifit. Vaig arreglar el corpus i **no vaig mirar què més s'havia construït
+amb el mateix material**. Una contaminació trobada en un lloc s'ha de buscar a tots els que
+beuen de la mateixa font.
