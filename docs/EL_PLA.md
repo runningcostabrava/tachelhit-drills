@@ -64,8 +64,18 @@ Falta: una GPU i tornar a tallar les 17,9 h. El guió és
 
 ### 2n. Desencallar i fer córrer la fàbrica
 
-Amb #721 resolt, els sis capítols de `nkkni-didk` poden passar. Cada capítol nou són
-~500 rèpliques per a les tres vies.
+Hi ha **dos encallaments diferents**, i convé no confondre'ls:
+
+- **`tadfi-n-tskla / OMAR DEROUICH`** va caure amb `OrdreIndecis` perquè el logotip del canal
+  és a la mateixa alçada que els subtítols i la seva tinta entrava a la puntuació del tram.
+  **#721 ho resol**: de 3 N / 3 I (indecís) a **41 N / 0 I**, i els capítols que ja anaven
+  donen retalls idèntics.
+- **Els sis de `nkkni-didk`** no és cap error nostre: **la SNRT no en publica el vídeo.** La
+  pàgina respon 200 i no porta **cap** font (0 m3u8, 0 mp4, `qualitats_replay: None`), mentre
+  que una de bona en porta sis. No es poden collir, i el supervisor els hauria de marcar
+  «sense font» en lloc de reintentar-los.
+
+Cada capítol nou que passi són ~500 rèpliques per a les tres vies alhora.
 
 ### 3r. Acabar els dos afinaments cap a l'àrab
 
