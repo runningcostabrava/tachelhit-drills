@@ -9,11 +9,17 @@ La feina no era resumir els documents: era trobar **afirmacions que ja sabem fal
 encara es donen per bones**. Cada troballa diu quin fitxer, quina línia, què hi diu, què és cert
 i **com ho sé**. Quan no ho he pogut comprovar, ho diu.
 
-**Resultat:** 6 falses, 8 velles que no enganyen, 12 números comprovats que casen, i 3 preguntes
-que no vaig poder tancar des d'aquí — **dues de les quals s'han tancat després, i la primera era
-una contaminació de debò** (la taula estàndard ↔ dialecte té un 36,4 % de línies del Rif: quadern
-§44). Val més que la major part del que he trobat jo. Les sis falses porten ara un avís al seu lloc, sense esborrar l'error: **onze avisos
-en vuit documents**, perquè tres de les troballes viuen en més d'un fitxer.
+**Resultat:** 7 falses, 8 velles que no enganyen, 12 números comprovats que casen, i **cap pregunta
+oberta**. Les set falses porten un avís al seu lloc, sense esborrar l'error: **dotze avisos en nou
+documents**, perquè tres de les troballes viuen en més d'un fitxer.
+
+Les tres preguntes que vaig deixar obertes perquè no les podia comprovar des d'aquí s'han tancat
+totes: dues amb mesures que no estaven al meu abast —i **la primera era una contaminació de debò**,
+la taula estàndard ↔ dialecte amb un 36,4 % de línies del Rif (quadern §44), que val més que la
+major part del que he trobat jo— i **la tercera va resultar falsa, amb la prova dins del repositori**
+(troballa 7). Aquella la podia haver tancada jo: la vaig deixar oberta dues vegades per haver
+suposat que calia llegir producció, quan n'hi havia prou amb `git show` del commit que la va
+escriure. La lliçó és que «no ho he pogut comprovar» s'ha de guanyar buscant.
 
 Una cosa que val la pena dir primer, perquè era la sospita principal: **cap dels 40 documents
 repeteix les «quatre proves amb veritat humana» ni el −0,044 del model de llengua.** Les dues
@@ -201,6 +207,48 @@ d'entrada al train que mai no s'ha aplicat. El cost ja és conegut: el dev del t
 **100 % rifeny**, i «el tarifit no inflava el número, però el dev hauria triat el model
 equivocat» (§42).
 
+### 7. «Cap d'aquestes conclusions no s'ha aplicat a producció» era fals el dia que es va escriure
+
+| | |
+|---|---|
+| on | `2026-10-31-la-llengua.md:6` |
+| què diu | «Cap d'aquestes conclusions no s'ha aplicat a producció. Les lliçons continuen com estaven.» |
+
+Aquesta la vaig deixar oberta dues vegades perquè pensava que calia llegir producció per
+tancar-la. **No calia: la prova és al mateix commit que va crear el document.**
+
+**Què és cert.** `5eed55d` («recerca: el que hem après de la llengua, i cinc títols falsos fora
+del curs (#530) (#531)», 31-10 08:43) toca tres fitxers: el document, `backend/tests/test_grammar.py`
+i **`backend/grammar.py` (+19/−9)**, que és el que serveix els títols de les unitats del curs. Hi
+canvia cinc títols i l'encàrrec al redactor, i són **exactament** les conclusions del document:
+
+| abans | després |
+|---|---|
+| `«Ser», «estar» i «tenir»: iga, illa, ɣur-i, dar-i` | `ija/iga, illa, ghori/ɣur-i` |
+| `El perfectiu: accions acabades (passat)` | **`El perfectiu: accions fetes i estats`** |
+| `La negació: ur …, ur … ša / bu` | `La negació: ur i les paraules que l'acompanyen` |
+| `Les preguntes: is, ma, mani, manik, mšta, maymi` | `is, mayd, mani, manimsh, mšta, makh` |
+| `El relatiu i el participi: lli, ay-, verb en -n` | `El relatiu i la forma en -n: nna, ayda, verb en -n` |
+
+I al `hint` del perfectiu, «a finished action» passa a «a finished action, **or a state that already
+holds, so often but not always a past**» — que és la §4 del document, «el perfectiu no és “passat”»,
+aplicada. Al text del redactor, «forma de passat / acció acabada» → «forma d'acció feta o d'estat».
+
+**Com ho sé.** `git show --stat 5eed55d` i `git show 5eed55d -- backend/grammar.py`. I **el document
+es contradiu a si mateix**: la línia 183 diu «El que sí que canvia amb aquesta PR: **cinc títols de
+`backend/grammar.py`** que prometien coses falses, la pista del perfectiu per al classificador i
+l'encàrrec al model, que deia “passat”». La línia 6 i la 183 no poden ser les dues.
+
+**Què sí que és cert, i val la pena deixar-ho escrit:** la **resta** no s'ha aplicat. Des del 31-10
+no s'ha tocat cap fitxer de curs (`git log --since=2026-10-31 -- backend/data/metode`: buit) ni
+`grammar.py` un altre cop, i `LESSON_VERSION` no es va tocar, així que **cap lliçó no es va
+reescriure**. La frase hauria estat certa dient «les lliçons», que és el que el commit va deixar
+igual; dient «cap conjunt de conclusions», no.
+
+**Per què enganya.** És la segona línia del document, abans de qualsevol resultat, i és la que
+decideix si un lector es pensa que allò encara és una proposta o que ja corre. Mitja dotzena de
+títols del curs porten aquestes conclusions des del 31-10.
+
 ---
 
 ## Velles, però que no enganyen
@@ -283,18 +331,22 @@ Un informe que només acusa no és un informe. Això és el que he anat a compro
 | OCR àrab de la SNRT: CER 0,0074 i 0,0059 | `tamazight-tv-sistema.md:111` | memòria «lector d'àrab SNRT: l'ajust fi amb línies reals» (0,007) |
 | 269 vídeos minats en dàrija; 58 amb subtítols humans | `tamazight-for-all-llibre-de-registre.md:7`, `-cataleg-unic.md:8` | `tamazight-for-all-darija-vs-lexic.md:3` (269) i `-cataleg-unic.md:8` (58): els tres documents casen entre ells |
 
-I una nota de qualitat, no de veritat: `2026-10-31-la-llengua.md` és el document millor fet dels
+I una nota de qualitat, no de veritat: `2026-10-31-la-llengua.md` és el document **millor fet** dels
 40. Marca cada afirmació com a **atestat / inferit / sense verificar**, posa els límits abans dels
 resultats («ningú no ha escoltat cap àudio»), i té una taula pròpia de «coses que vam creure i que
-les auditories van tombar». No hi he trobat res a dir.
+les auditories van tombar». Que la troballa 7 sigui seva no ho desmenteix: l'error és a la línia 6,
+i la prova per enxampar-lo és **a la línia 183 del mateix document**, que diu què va canviar a
+`grammar.py`. Un document que es contradiu així es pot auditar; un que no diu res, no.
 
 ---
 
 ## El que vaig deixar obert, i com s'ha tancat
 
-Les dues primeres les vaig deixar com a preguntes perquè no les podia comprovar des d'aquí. Les ha
-tancades totes dues qui porta el quadern, i **la primera era una contaminació de debò**: val més
-que la major part del que he trobat jo.
+Les tres les vaig deixar com a preguntes perquè em semblava que no les podia comprovar des d'aquí.
+**Totes tres estan tancades.** Les dues primeres les ha tancades qui porta el quadern, amb mesures
+que no estaven al meu abast, i **la primera era una contaminació de debò**: val més que la major
+part del que he trobat jo. La tercera **va resultar falsa i la podia haver tancada jo** — vegeu-ho
+al final.
 
 1. **Si la taula estàndard ↔ dialecte està contaminada de tarifit: SÍ.** El fitxer no era a
    `Veus-tachelhit\` sinó a `E:\tamazight\_magatzem\`, i per això no el vaig trobar. Mesurat: les
@@ -310,16 +362,22 @@ que la major part del que he trobat jo.
    tots del Rif (i els cinc de sota també), que és el que la frase volia dir. I els **11** tarifit
    de producció són **uns altres capítols** —els vells de Tadfi, amb slugs de 40 lletres—, amb
    **solapament zero** amb els 8. Corregit al quadern.
-3. **`2026-10-31-la-llengua.md:6`: «Cap d'aquestes conclusions no s'ha aplicat a producció. Les
-   lliçons continuen com estaven.»** Aquesta segueix oberta. Era cert el 31-10 i probablement ja no
-   ho és (hi ha hagut capítols del Mètode publicats a producció des d'aleshores), però no ho he
-   comprovat contra producció i no ho reporto com a fals.
+3. **`2026-10-31-la-llengua.md:6`: «Cap d'aquestes conclusions no s'ha aplicat a producció»: és
+   FALSA**, i ha passat a ser la **troballa 7** de la primera llista. No calia llegir producció: el
+   commit que va crear el document, `5eed55d`, també canvia `backend/grammar.py` amb cinc títols
+   d'unitat i l'encàrrec al redactor, que són les conclusions de la §4 i la §9. La vaig deixar
+   oberta **dues vegades** per haver suposat que la comprovació era fora del meu abast, quan n'hi
+   havia prou amb un `git show`. Les dues suposicions del mateix tipus —aquesta i la del fitxer que
+   era a `E:\tamazight\_magatzem\` i no a `Veus-tachelhit\`— són l'error d'ofici d'aquesta
+   auditoria: **«no ho he pogut comprovar» s'ha de guanyar buscant, no suposant.** Dir-ho com a
+   pregunta oberta va servir perquè algú ho tancés, i és millor que inventar-s'ho; però dues de les
+   tres es podien tancar des d'aquí.
 
 ---
 
 ## Com s'han marcat els errors
 
-Als vuit documents que contenen les sis troballes falses hi ha ara, al lloc exacte de l'error i
+Als nou documents que contenen les set troballes falses hi ha ara, al lloc exacte de l'error i
 **sense esborrar-lo**, un avís de la forma que fa servir el quadern:
 
 ```
