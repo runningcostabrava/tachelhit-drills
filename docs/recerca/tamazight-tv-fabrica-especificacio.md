@@ -187,9 +187,16 @@ l'entrenament, no per a l'acceptació). Acceptació: §5.
 > **Això es va corregir a `AUDITORIA-2026-11-21.md`, troballa 2:** la «referència 0,1537» és la
 > xifra del 29-10 d'un adaptador que des del 16-11 ja no serveix. Al mateix test de 256 clips,
 > l'adaptador que servim ara (H4b) fa **0,140** (`zouhir-amazigh.md:173`), i el quadern §38 en dona
-> el greedy a 0,1463. Un model nou que «millorés 0,1537» pot ser pitjor que el que ja tenim. A més,
-> el text no diu amb quina escala de puntuació és el 0,1537, i el projecte sap que les escales
-> difereixen (`tamazight-for-all.md:893`). El que hi ha aquí sota és el que es va creure.
+> el greedy a 0,1463. Un model nou que «millorés 0,1537» seria pitjor que el que ja tenim. A més, el
+> text no diu amb quina escala de puntuació és el 0,1537, i el projecte sap que les escales
+> difereixen (`tamazight-for-all.md:893`).
+>
+> **Això no afecta el bucle que corre:** `tools/lm/cercle_virtuos.py` no fa servir cap llindar
+> absolut (el 0,1537 no és en cap `.py` del repositori), sinó una regla comparativa contra el model
+> d'ara —cap conjunt empitjora amb IC, almenys dos milloren— i el seu capçal ja diu «la regla de
+> producció (§6.5) NO es toca». El que cal arreglar és **aquesta** regla escrita, que és la que es
+> llegiria el dia que s'adoptés un transcriptor a producció fora del bucle. El que hi ha aquí sota
+> és el que es va creure.
 
 Dades: rèpliques aptes per a l'ASR (§5) de capítols amb `varietat_capitol` = «atles-central» primer;
 objectiu text = tifinag transliterat sense plegar (regla `tachelhit-asr-plegat-esborrava-lletres`).

@@ -26,7 +26,10 @@ per sèrie, i tot passa per dos OCR que avui no són perfectes.
 > (`tools/snrt/fabrica/05_informe.py:111-150`) no té cap referència del Rif, de manera que no pot
 > dir-ne «rif». Va dir «tachelhit» als 27 capítols collits, i 8 són del Rif (quadern §42). La
 > **fase 6** posa com a porta «millorar el 0,1537 actual»: 0,1537 és del 29-10 i des del 16-11
-> servim H4b, que al mateix test fa 0,140. El que hi ha aquí sota és el que es va creure.
+> servim H4b, que al mateix test fa 0,140 — un model que passés aquesta porta seria pitjor que el
+> que tenim. (El bucle que corre no la fa servir: `tools/lm/cercle_virtuos.py` compara contra el
+> model d'ara i no té cap llindar absolut. És el text que està malament, no la màquina.) El que hi
+> ha aquí sota és el que es va creure.
 
 1. **OCR tancat** (peó `ocr-tipografia`, en curs). La lletra dels subtítols és fixa: identificar-la,
    generar línies sintètiques amb aquesta lletra, entrenar un lector per a cada escriptura i mesurar

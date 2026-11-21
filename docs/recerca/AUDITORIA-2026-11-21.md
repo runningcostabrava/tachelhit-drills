@@ -9,8 +9,10 @@ La feina no era resumir els documents: era trobar **afirmacions que ja sabem fal
 encara es donen per bones**. Cada troballa diu quin fitxer, quina línia, què hi diu, què és cert
 i **com ho sé**. Quan no ho he pogut comprovar, ho diu.
 
-**Resultat:** 6 falses, 8 velles que no enganyen, 12 números comprovats que casen, 3 que no he
-pogut tancar. Les sis falses porten ara un avís al seu lloc, sense esborrar l'error: **onze avisos
+**Resultat:** 6 falses, 8 velles que no enganyen, 12 números comprovats que casen, i 3 preguntes
+que no vaig poder tancar des d'aquí — **dues de les quals s'han tancat després, i la primera era
+una contaminació de debò** (la taula estàndard ↔ dialecte té un 36,4 % de línies del Rif: quadern
+§44). Val més que la major part del que he trobat jo. Les sis falses porten ara un avís al seu lloc, sense esborrar l'error: **onze avisos
 en vuit documents**, perquè tres de les troballes viuen en més d'un fitxer.
 
 Una cosa que val la pena dir primer, perquè era la sospita principal: **cap dels 40 documents
@@ -74,13 +76,27 @@ desplegament.
 `facebook/mms-1b-all+adaptador_shi_zouhir_b(... H4b 16-11-2026)`, o sigui que el que serveix és
 H4b i no l'adaptador de 0,1537.
 
-**Per què enganya.** És una **porta d'adopció**, no una nota: un transcriptor nou que fes 0,15
-«milloraria la referència» i s'adoptaria, tot i ser pitjor que el que ja servim. I hi ha un
-segon problema que la fa inaplicable tal com està escrita: **no diu amb quina escala de
-puntuació** és el 0,1537, i el projecte sap que les escales difereixen — `tamazight-for-all.md:893`
-ho diu per a TFA: «l'escala ric del nucli no és la de `h3_puntua` (0,187 aquí és el 0,207
-d'allà)». 0,1537 i 0,146 poden ser el mateix model en dues escales; sense dir-ho, la porta no es
-pot aplicar.
+**Per què enganya.** Llegida tal com està, és una **porta d'adopció** que es pot passar sent
+pitjor que el que ja servim: un transcriptor nou a 0,15 «milloraria la referència». I hi ha un
+segon problema que la fa inaplicable: **no diu amb quina escala de puntuació** és el 0,1537, i el
+projecte sap que les escales difereixen — `tamazight-for-all.md:893` ho diu per a TFA: «l'escala
+ric del nucli no és la de `h3_puntua` (0,187 aquí és el 0,207 d'allà)». 0,1537 i 0,146 poden ser
+el mateix model en dues escales; sense dir-ho, no es pot aplicar.
+
+**El que NO és, i és la diferència entre arreglar un document i parar una màquina: el 0,1537
+només és a la documentació. La regla que corre és correcta.** `tools/lm/cercle_virtuos.py` **no
+fa servir cap llindar absolut**: `regla_interna()` (`:123-137`) és purament comparativa contra
+el model d'ara —s'adopta si **cap conjunt empitjora amb IC i almenys dos milloren amb IC**, i si
+falta una prova no es jutja— i el capçal del fitxer (`:10-11`) diu en tantes paraules «REGLA
+INTERNA (director)… **La regla de producció (§6.5) NO es toca**». Qui va escriure el codi ja sabia
+que §6.5 era una altra cosa i no la va fer servir.
+
+**Com ho sé.** `grep -rn '1537' --include=*.py .` sobre tot el repositori: **cap coincidència**.
+El número no és enlloc del codi, només als dos documents (i en aquest informe).
+
+**Per tant la gravetat és aquesta:** no hi ha risc viu d'adoptar un model pitjor. El que està
+malament és la **regla de producció escrita** de §6.5, que és la que es llegiria el dia que
+s'adoptés un transcriptor a producció fora del bucle. S'arregla el document; no s'ha d'aturar res.
 
 ### 3. El tifinag cremat no es llegeix amb CER 0,29
 
@@ -274,29 +290,37 @@ les auditories van tombar». No hi he trobat res a dir.
 
 ---
 
-## El que no he pogut tancar
+## El que vaig deixar obert, i com s'ha tancat
 
-1. **Si la taula estàndard ↔ dialecte està contaminada de tarifit.** El quadern §2 la construeix
-   «de 26 capítols i 15.745 talls» de la collita del SNRT, i el §42 diu que **8 dels 27 capítols
-   collits són del Rif**. Cap document diu que la taula els exclogui. No ho he pogut comprovar:
-   `estandard_dialecte.jsonl` viu a `Veus-tachelhit\`, fora del repositori. **És la pregunta que
-   deixo oberta**, perquè si hi són, les 181 correspondències barregen dues llengües.
-2. **Una incoherència dins del quadern mateix**, que no és meva d'arreglar: la taula de la §42 dona
-   4 + 2 + 2 = **8 capítols del Rif**, i tres paràgrafs més avall el text diu «els cinc capítols
-   amb menys puntuació tachelhit són cinc **dels sis** del Rif». Vuit o sis, no les dues. La
-   memòria del 20-11 («Tadfi n Tskla són tres llengües») en compta **11** de tarifit sobre 25
-   episodis. Tres comptes diferents del mateix.
+Les dues primeres les vaig deixar com a preguntes perquè no les podia comprovar des d'aquí. Les ha
+tancades totes dues qui porta el quadern, i **la primera era una contaminació de debò**: val més
+que la major part del que he trobat jo.
+
+1. **Si la taula estàndard ↔ dialecte està contaminada de tarifit: SÍ.** El fitxer no era a
+   `Veus-tachelhit\` sinó a `E:\tamazight\_magatzem\`, i per això no el vaig trobar. Mesurat: les
+   **74.761 parelles vénen de 25 capítols i 11 són del Rif — el 36,4 %**. De les 181
+   correspondències, **26 vénen només del Rif** i 6 més en són majoria; 109 són netes. I no és
+   soroll qualsevol: `awal→awar`, `wawal→wawar`, `izlan→izran` són la **l→r rifenya**, que és
+   justament la marca que fem servir per detectar el tarifit, i `mad→min` és l'interrogatiu
+   rifeny — o sigui que la taula ensenyava com a «estandardització» el senyal que serveix per
+   separar les dues llengües. Taula neta a `estandard_dialecte_net.jsonl`, 149 correspondències.
+   Escrit al quadern com a **§44**, amb l'avís a la §2.
+2. **La incoherència de la §42: eren dos conjunts mal explicats, no tres comptes del mateix.** Són
+   **8** capítols del Rif a la collita nova, no sis; els **sis** de puntuació lèxica més baixa són
+   tots del Rif (i els cinc de sota també), que és el que la frase volia dir. I els **11** tarifit
+   de producció són **uns altres capítols** —els vells de Tadfi, amb slugs de 40 lletres—, amb
+   **solapament zero** amb els 8. Corregit al quadern.
 3. **`2026-10-31-la-llengua.md:6`: «Cap d'aquestes conclusions no s'ha aplicat a producció. Les
-   lliçons continuen com estaven.»** Era cert el 31-10 i probablement ja no ho és (hi ha hagut
-   capítols del Mètode publicats a producció des d'aleshores), però no ho he comprovat contra
-   producció i no ho reporto com a fals.
+   lliçons continuen com estaven.»** Aquesta segueix oberta. Era cert el 31-10 i probablement ja no
+   ho és (hi ha hagut capítols del Mètode publicats a producció des d'aleshores), però no ho he
+   comprovat contra producció i no ho reporto com a fals.
 
 ---
 
 ## Com s'han marcat els errors
 
-Als sis documents de la primera llista hi ha ara, al lloc exacte de l'error i **sense esborrar-lo**,
-un avís de la forma que fa servir el quadern:
+Als vuit documents que contenen les sis troballes falses hi ha ara, al lloc exacte de l'error i
+**sense esborrar-lo**, un avís de la forma que fa servir el quadern:
 
 ```
 > **Això es va corregir a <on>:** <què és cert>. El que hi ha aquí sota és el que es va creure.
