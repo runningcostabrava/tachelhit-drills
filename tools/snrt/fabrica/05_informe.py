@@ -52,7 +52,10 @@ def apta_traductor(f, dubtos_ok=False):
         return False
     return (not f.get("credits") and (f.get("tifinag_conf") or 0) >= 0.85 and (f.get("tifinag_dubtosos") or 0) <= 2
             and ((f.get("arab_acord") or 0) >= 0.5 or (f.get("arab_lectures") == 1 and f.get("arab")))
-            and f.get("catala_estat") in ("confirmat", "tercer") and 2 <= paraules(f.get("tifinag")) <= 30)
+            #: «creuat» és «confirmat» amb la segona escriptura d'acord (ADR 0014): si l'un val, l'altre
+            #: val més. «sense_acord» segueix fora: es catalogua, però no se'n fia ningú.
+            and f.get("catala_estat") in ("creuat", "confirmat", "tercer")
+            and 2 <= paraules(f.get("tifinag")) <= 30)
 
 
 def talls_durades(carpeta, files):
@@ -93,7 +96,7 @@ def numeros(files, est):
         "arab_multi": len(multi), "arab_unanimes": sum(1 for f in multi if f.get("arab_acord") == 1.0),
         "tifinag_conf_mitjana": mitj(conf), "tifinag_glifs": sum(f.get("tifinag_glifs") or 0 for f in D),
         "tifinag_dubtosos": sum(f.get("tifinag_dubtosos") or 0 for f in D), "tifinag_amb_text": sum(1 for f in D if f.get("tifinag")),
-        "chrf_ab_mitja": mitj(ab), "catala_estats": {e: sum(1 for f in D if f.get("catala_estat") == e) for e in ("confirmat", "tercer", "descartat")},
+        "chrf_ab_mitja": mitj(ab), "catala_estats": {e: sum(1 for f in D if f.get("catala_estat") == e) for e in ("creuat", "confirmat", "tercer", "sense_acord")},
         "chrf_tif_ar_mitja": mitj(ta), "chrf_tif_ar_sobre_0_5": sum(1 for c in ta if c >= 0.5), "chrf_tif_ar_n": len(ta),
         "aptes_traductor": len(aptes), "aptes_asr_durada": sum(1 for f in D if apta_traductor(f, True) and f["durada"] >= 0.8), "aptes_asr": None,
         "arab_dubtoses": sum(1 for f in D if f.get("arab_dubtos")),
@@ -225,7 +228,12 @@ def informe(carpeta, files, num, mostra, est, var, cap):
     w(f"| OCR àrab: lectures, acord mitjà, unànimes entre les de ≥ 2 lectures | {num['arab_lectures_total']}, {num['arab_acord_mitja']}, {num['arab_unanimes']} de {num['arab_multi']} ({pc(num['arab_unanimes'], num['arab_multi'])}); mètode: {num['metode_arab']} |")
     w(f"| OCR tifinag: conf mitjana, glifs ≥ 0,85, dubtosos | {num['tifinag_conf_mitjana']}, {pc(num['tifinag_glifs_sobre_0_85'], num['tifinag_glifs'])}, {num['tifinag_dubtosos']} (vídeo de {est.get('02_llegeix', {}).get('comptes', {}).get('tifinag_alt')}p; {num['tifinag_amb_text']} rèpliques amb text) |")
     e = num["catala_estats"]
-    w(f"| traducció: chrf_ab mitjà, confirmat / tercer / descartat | {num['chrf_ab_mitja']}, {e['confirmat']} / {e['tercer']} / {e['descartat']} ({pc(e['confirmat'], num['dialeg'])} / {pc(e['tercer'], num['dialeg'])} / {pc(e['descartat'], num['dialeg'])}) |")
+    #: «creuat» va primer perquè és el que val més: les dues escriptures diuen el mateix i per
+    #: tant el significat no depèn d'una sola lectura (ADR 0014)
+    w(f"| traducció: chrf_ab mitjà, creuat / confirmat / tercer / sense acord | {num['chrf_ab_mitja']}, "
+      f"{e['creuat']} / {e['confirmat']} / {e['tercer']} / {e['sense_acord']} "
+      f"({pc(e['creuat'], num['dialeg'])} / {pc(e['confirmat'], num['dialeg'])} / "
+      f"{pc(e['tercer'], num['dialeg'])} / {pc(e['sense_acord'], num['dialeg'])}) |")
     w(f"| chrf_tif_ar mitjà i ≥ 0,5 (mesura del traductor, no porta) | {num['chrf_tif_ar_mitja']}, {num['chrf_tif_ar_sobre_0_5']} de {num['chrf_tif_ar_n']} ({pc(num['chrf_tif_ar_sobre_0_5'], num['chrf_tif_ar_n'])}) |")
     w(f"| talls: durada = t_fi − t_ini ± 0,5 s (cal ≥ 99 %) i `talls/intervals.json` | {num['talls_durada_ok']} de {num['talls_total']} ({num['talls_durada_pct']} %); registre {'sí' if num['talls_validats'] else 'NO'}; capítol {'apte' if num['capitol_apte_asr'] else '**NO apte per a l ASR**'} |")
     w(f"| **portes (§5)**: aptes per al traductor / per a l'ASR | **{num['aptes_traductor']}** ({pc(num['aptes_traductor'], num['dialeg'])}; capítol {'apte' if num['capitol_apte'] else 'NO apte (< 60 %)'}) / {num['aptes_asr_durada']} per durada, CER de l'ASR no mesurat |")

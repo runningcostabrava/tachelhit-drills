@@ -204,6 +204,47 @@ def _gran(n, abans, despres, ref="abcdefghij"):
     return [(ref, abans, despres)] * n
 
 
+def _per_capitols(capitols):
+    """[(nom, quants, abans, despres)] -> parelles amb el capítol, com les dona el bucle."""
+    fora = []
+    for nom, quants, abans, despres in capitols:
+        fora += [("abcdefghij", abans, despres, nom)] * quants
+    return fora
+
+
+def test_bootstrap_remostreja_capitols_quan_els_talls_hi_estan_agrupats():
+    """Tota la millora és d'UN capítol de quatre: per talls sembla certa, per capítols no.
+
+    És el cas de `snrt-retingut`: 1.127 frases que surten de quatre capítols."""
+    p = (_per_capitols([("a", 9, "abcdefghix", "abcdefghij")])
+         + _per_capitols([("a", 1, "abcdefghij", "abcdefghij")]))
+    for cap in "bcd":
+        p += _per_capitols([(cap, 10, "abcdefghij", "abcdefghij")])
+    s = tb.bootstrap(p, n=600)
+    assert s["unitat"] == "capitol" and s["unitats"] == 4
+    assert s["ic_hi"] >= 0, "amb la millora en un sol capítol de quatre, l'interval ha de tocar zero"
+    #: les mateixes dades sense el capítol (com es feia) donen un interval que NO toca zero:
+    #: això és exactament l'estretor falsa
+    assert tb.bootstrap([x[:3] for x in p], n=600)["ic_hi"] < 0
+
+
+def test_una_prova_d_un_sol_capitol_es_remostreja_per_talls():
+    """El `cv-zgh-test` són 256 clips independents amb un sol valor de capítol."""
+    p = (_per_capitols([("cv", 20, "abcdefghix", "abcdefghij")])
+         + _per_capitols([("cv", 20, "abcdefghij", "abcdefghij")]))
+    s = tb.bootstrap(p, n=400)
+    assert s["unitat"] == "tall" and s["unitats"] == 40
+    assert s["ic_lo"] < s["ic_hi"], "un sol capítol no pot donar un interval d'amplada zero"
+    assert s["ic_hi"] < 0
+
+
+def test_el_punt_estimat_no_depen_de_la_unitat():
+    p = _per_capitols([("a", 10, "abcdefghix", "abcdefghij"),
+                       ("b", 10, "abcdefghij", "abcdefghix"),
+                       ("c", 10, "abcdefghij", "abcdefghij")])
+    assert tb.bootstrap(p, n=200)["delta"] == tb.bootstrap([x[:3] for x in p], n=200)["delta"]
+
+
 def test_bootstrap_delta_i_ic():
     s = tb.bootstrap(_gran(60, "abcdefghix", "abcdefghij"), n=300)
     assert s["n"] == 60 and s["delta"] < 0 and s["ic_hi"] < 0 and s["milloren"] == 60 and s["empitjoren"] == 0
