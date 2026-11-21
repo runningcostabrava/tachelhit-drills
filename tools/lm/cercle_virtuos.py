@@ -128,13 +128,33 @@ def regla_interna(stats, proves=PROVES):
         s = stats.get(p)
         if s is None:
             absents.append(p)
+        elif s.get("unitats", 10 ** 9) < 3:
+            #: amb menys de tres unitats independents l'interval no vol dir res (una sola
+            #: unitat en dona un d'amplada zero, que diria «millora» per construcció)
+            absents.append(p)
         elif s["ic_lo"] > 0:
             empitjora.append(p)
         elif s["ic_hi"] < 0:
             millora.append(p)
     adopta = not absents and not empitjora and len(millora) >= 2
     motiu = (f"milloren {millora}; empitjoren {empitjora}; absents {absents}")
-    return {"adopta": adopta, "milloren": millora, "empitjoren": empitjora, "absents": absents, "motiu": motiu}
+    #: El WER **no** decideix: la condicio es la de sempre. Pero el CER dilueix les fronteres de
+    #: paraula, que es el defecte mes gros del model ara, i una ronda pot baixar el CER mentre
+    #: empitjora el que es llegeix. Quan els dos veredictes no coincideixen, es diu.
+    discrepen = []
+    for p in proves:
+        s = stats.get(p)
+        if s is None or "wer_ic_lo" not in s:
+            continue
+        cer_v = "millora" if s["ic_hi"] < 0 else ("empitjora" if s["ic_lo"] > 0 else "igual")
+        wer_v = ("millora" if s["wer_ic_hi"] < 0
+                 else ("empitjora" if s["wer_ic_lo"] > 0 else "igual"))
+        if cer_v != wer_v:
+            discrepen.append(f"{p}: CER {cer_v}, WER {wer_v}")
+    if discrepen:
+        motiu += f" · el WER no diu el mateix que el CER a {discrepen}"
+    return {"adopta": adopta, "milloren": millora, "empitjoren": empitjora, "absents": absents,
+            "discrepen": discrepen, "motiu": motiu}
 
 
 def rondes_sense_millora(rondes):

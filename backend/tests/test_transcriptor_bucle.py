@@ -13,6 +13,7 @@ import pytest
 LM = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "tools", "lm")
 sys.path.insert(0, LM)
 import transcriptor_bucle as tb  # noqa: E402
+import cercle_virtuos as cv  # noqa: E402
 
 
 def fila(i, tif="ⴰⵣⵓⵍ ⴼⵍⵍⴰⵡⵏ", **k):
@@ -202,6 +203,88 @@ def _tres_proves(cv, fora, ret):
 
 def _gran(n, abans, despres, ref="abcdefghij"):
     return [(ref, abans, despres)] * n
+
+
+def _per_capitols(capitols):
+    """[(nom, quants, abans, despres)] -> parelles amb el capítol, com les dona el bucle."""
+    fora = []
+    for nom, quants, abans, despres in capitols:
+        fora += [("abcdefghij", abans, despres, nom)] * quants
+    return fora
+
+
+def test_bootstrap_remostreja_capitols_quan_els_talls_hi_estan_agrupats():
+    """Tota la millora és d'UN capítol de quatre: per talls sembla certa, per capítols no.
+
+    És el cas de `snrt-retingut`: 1.127 frases que surten de quatre capítols."""
+    p = (_per_capitols([("a", 9, "abcdefghix", "abcdefghij")])
+         + _per_capitols([("a", 1, "abcdefghij", "abcdefghij")]))
+    for cap in "bcd":
+        p += _per_capitols([(cap, 10, "abcdefghij", "abcdefghij")])
+    s = tb.bootstrap(p, n=600)
+    assert s["unitat"] == "capitol" and s["unitats"] == 4
+    assert s["ic_hi"] >= 0, "amb la millora en un sol capítol de quatre, l'interval ha de tocar zero"
+    #: les mateixes dades sense el capítol (com es feia) donen un interval que NO toca zero:
+    #: això és exactament l'estretor falsa
+    assert tb.bootstrap([x[:3] for x in p], n=600)["ic_hi"] < 0
+
+
+def test_una_prova_d_un_sol_capitol_es_remostreja_per_talls():
+    """El `cv-zgh-test` són 256 clips independents amb un sol valor de capítol."""
+    p = (_per_capitols([("cv", 20, "abcdefghix", "abcdefghij")])
+         + _per_capitols([("cv", 20, "abcdefghij", "abcdefghij")]))
+    s = tb.bootstrap(p, n=400)
+    assert s["unitat"] == "tall" and s["unitats"] == 40
+    assert s["ic_lo"] < s["ic_hi"], "un sol capítol no pot donar un interval d'amplada zero"
+    assert s["ic_hi"] < 0
+
+
+def test_el_punt_estimat_no_depen_de_la_unitat():
+    p = _per_capitols([("a", 10, "abcdefghix", "abcdefghij"),
+                       ("b", 10, "abcdefghij", "abcdefghix"),
+                       ("c", 10, "abcdefghij", "abcdefghij")])
+    assert tb.bootstrap(p, n=200)["delta"] == tb.bootstrap([x[:3] for x in p], n=200)["delta"]
+
+
+def test_el_wer_veu_l_enganxada_que_el_cer_dilueix():
+    """El cas real `asywmmpqztvnotxd:52`: l'ull diu quatre paraules, l'orella n'enganxa dues.
+
+    Tres de les quatre estan ben sentides; el que les amaga és que no hi ha espais. El CER es
+    mou un 29 % i el WER un 50 %, i per això la regla, que decideix amb CER, gairebé no ho veu.
+    """
+    ull = "nkkin massa fatni hsna"
+    enganxat = [(ull, "nkkinmassattn ihsna", "nkkinmassattn ihsna", "cap")] * 12
+    espaiat = [(ull, "nkkinmassattn ihsna", "nkkin massa ttn ihsna", "cap")] * 12
+    a, b = tb.bootstrap(enganxat, n=100), tb.bootstrap(espaiat, n=100)
+    assert a["despres"] > b["despres"], "posar els espais ha de baixar el CER"
+    assert a["wer_despres"] > b["wer_despres"], "i el WER molt més"
+    #: el WER es mou més del doble que el CER
+    cer = (a["despres"] - b["despres"]) / a["despres"]
+    wer = (a["wer_despres"] - b["wer_despres"]) / a["wer_despres"]
+    #: el WER es mou 1,5 vegades el que es mou el CER (al cas real, 50 % contra 29 %)
+    assert wer >= 1.4 * cer
+
+
+def test_la_regla_diu_quan_el_wer_no_diu_el_mateix():
+    """Una ronda pot baixar el CER i empitjorar el que es llegeix: la regla ho ha de dir."""
+    bo = {"ic_lo": -0.02, "ic_hi": -0.01, "wer_ic_lo": -0.03, "wer_ic_hi": -0.01, "unitats": 9}
+    traidor = {"ic_lo": -0.02, "ic_hi": -0.01, "wer_ic_lo": 0.01, "wer_ic_hi": 0.04, "unitats": 9}
+    proves = ("a", "b", "c")
+    net = cv.regla_interna({"a": bo, "b": bo, "c": bo}, proves=proves)
+    assert net["adopta"] and not net["discrepen"]
+
+    r = cv.regla_interna({"a": bo, "b": bo, "c": traidor}, proves=proves)
+    #: la condició NO canvia: segueix adoptant amb el CER
+    assert r["adopta"], "el WER informa, no decideix"
+    assert r["discrepen"] == ["c: CER millora, WER empitjora"]
+    assert "WER no diu el mateix" in r["motiu"]
+
+
+def test_la_regla_calla_quan_no_hi_ha_wer():
+    """Estadístiques velles, sense els camps de WER: ni peta ni inventa discrepàncies."""
+    vell = {"ic_lo": -0.02, "ic_hi": -0.01}
+    r = cv.regla_interna({"a": vell, "b": vell}, proves=("a", "b"))
+    assert r["adopta"] and r["discrepen"] == []
 
 
 def test_bootstrap_delta_i_ic():

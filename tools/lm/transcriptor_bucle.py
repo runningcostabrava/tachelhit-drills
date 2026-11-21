@@ -264,33 +264,82 @@ def dist(a, b):
 
 
 def parells_per_prova(sortides):
-    """sortides: [{prova, video, de, or, dit, model}] -> {prova: [(or, abans, després)]}, només els talls amb els dos models."""
+    """sortides: [{prova, video, de, or, dit, model}] -> {prova: [(or, abans, després, capítol)]}, només els talls amb els dos models.
+
+    El capítol hi va perquè el bootstrap el necessita: els talls d'un mateix capítol no són
+    mostres independents i remostrejar-los com si ho fossin estreny l'interval."""
     per = {}
     for x in sortides:
         de = round(x["de"], 2) if isinstance(x["de"], (int, float)) else str(x["de"])
         per.setdefault((x["prova"], x["video"], de), {})[x["model"]] = x
     res = collections.defaultdict(list)
-    for (prova, _, _), m in per.items():
+    for (prova, video, _), m in per.items():
         if "abans" in m and "després" in m:
-            res[prova].append((m["abans"]["or"], m["abans"]["dit"], m["després"]["dit"]))
+            res[prova].append((m["abans"]["or"], m["abans"]["dit"], m["després"]["dit"], video))
     return res
 
 
+#: Per sota d'aquests mínims els capítols no són una unitat de remostreig utilitzable.
+MIN_CAPITOLS, MIN_TALLS_PER_CAPITOL = 3, 5
+
+
+def unitat_de_remostreig(parells):
+    """«capítol» o «tall»: la unitat que es va mostrejar de debò en aquesta prova.
+
+    Els talls d'un capítol comparteixen veu, gravació, soroll i lector: no són independents, i
+    remostrejar-los un a un fa l'interval més estret del que toca. Però una prova pot ser al
+    revés: el `cv-zgh-test` són 256 enregistraments independents amb **un sol** valor al camp
+    del capítol, i remostrejar-lo hi tornaria sempre la mateixa mostra -- un interval d'amplada
+    zero que diria «millora» per construcció. Per això la unitat es tria per prova."""
+    caps = {p[3] for p in parells if len(p) > 3 and p[3] is not None}
+    if len(caps) >= MIN_CAPITOLS and len(parells) / len(caps) >= MIN_TALLS_PER_CAPITOL:
+        return "capitol"
+    return "tall"
+
+
 def bootstrap(parells, n=2000, llavor=LLAVOR):
-    """Δ CER (després - abans) agregat amb IC 95 % per bootstrap aparellat sobre els talls."""
+    """Δ CER (després - abans) agregat amb IC 95 % per bootstrap aparellat.
+
+    Remostreja **la unitat que es va mostrejar**: el capítol quan n'hi ha prou (bootstrap per
+    blocs, tots els talls del capítol triat alhora), i el tall altrament. El punt estimat no
+    depèn de la unitat; només l'interval."""
     rnd = random.Random(llavor)
-    da = [dist(o, a) for o, a, _ in parells]
-    db = [dist(o, b) for o, _, b in parells]
-    ln = [len(o) for o, _, _ in parells]
+    da = [dist(o, a) for o, a, *_ in parells]
+    db = [dist(o, b) for o, _, b, *_ in parells]
+    ln = [len(o) for o, *_ in parells]
+    #: el mateix, per paraula. El CER diluta el defecte mes gros que te el model ara: no posar
+    #: els espais. A `nkkin massa faṭni ḥsna` sentit com `nkkinmassattn iḥsna`, el CER es mou
+    #: un 29 % i el WER un 50 %, i el filtre de grau A -- que compara esquelets, sense espais --
+    #: no ho veu gens.
+    wa_ = [dist(o.split(), a.split()) for o, a, *_ in parells]
+    wb_ = [dist(o.split(), b.split()) for o, _, b, *_ in parells]
+    lw = [max(1, len(o.split())) for o, *_ in parells]
     N = len(parells)
     tot = max(1, sum(ln))
+    totw = max(1, sum(lw))
     cer_a, cer_b = sum(da) / tot, sum(db) / tot
-    boots = []
+    wer_a, wer_b = sum(wa_) / totw, sum(wb_) / totw
+    unitat = unitat_de_remostreig(parells)
+    if unitat == "capitol":
+        blocs = collections.defaultdict(list)
+        for i, p in enumerate(parells):
+            blocs[p[3]].append(i)
+        claus = sorted(blocs)
+    boots, bootsw = [], []
     for _ in range(n):
-        idx = [rnd.randrange(N) for _ in range(N)]
+        if unitat == "capitol":
+            idx = [i for _ in claus for i in blocs[rnd.choice(claus)]]
+        else:
+            idx = [rnd.randrange(N) for _ in range(N)]
         boots.append((sum(db[i] for i in idx) - sum(da[i] for i in idx)) / max(1, sum(ln[i] for i in idx)))
+        #: la MATEIXA replica per als dos: si no, els dos intervals no son comparables
+        bootsw.append((sum(wb_[i] for i in idx) - sum(wa_[i] for i in idx)) / max(1, sum(lw[i] for i in idx)))
     boots.sort()
+    bootsw.sort()
     return {"n": N, "abans": cer_a, "despres": cer_b, "delta": cer_b - cer_a, "ic_lo": boots[int(0.025 * n)], "ic_hi": boots[int(0.975 * n) - 1],
+            "unitat": unitat, "unitats": len({p[3] for p in parells if len(p) > 3}) if unitat == "capitol" else N,
+            "wer_abans": wer_a, "wer_despres": wer_b, "wer_delta": wer_b - wer_a,
+            "wer_ic_lo": bootsw[int(0.025 * n)], "wer_ic_hi": bootsw[int(0.975 * n) - 1],
             "milloren": sum(1 for x, y in zip(da, db) if y < x), "empitjoren": sum(1 for x, y in zip(da, db) if y > x)}
 
 
