@@ -61,6 +61,12 @@ hi guanya el mateix. Errors: ɣ→ġ (plec de sempre), talls de paraula (`gumzw 
 
 ## Resultats sobre tot el corpus (16-11; nucli `zouhir-lector-contra-pista-humana`, CPU, 2 h)
 
+> **Això es va corregir més avall, en aquest mateix document (vegeu `AUDITORIA-2026-11-21.md`,
+> troballa 5):** `adaptador_shi_ric.pt` **no és el que serveix al Space**. Des del 16-11 al migdia
+> hi serveix `adaptador_shi_zouhir_b` (H4b) — ho diu la secció «Desplegat el 16-11 al migdia» d'aquí
+> sota, i `/health` del Space ho confirma avui. El `ric` es queda al repositori només per poder
+> tornar enrere. El que hi ha aquí sota és el que es va creure.
+
 El mateix lector de sempre (`mms-1b-all` + `adaptador_shi_ric.pt`, el que serveix al Space) sobre
 els **2.164 rètols** dels 50 vídeos, tallats del so a ±0,1 s, descodificat de quatre maneres
 (`tools/lm/kaggle/zouhir_lector_contra_pista.py`); el CER/WER a casa amb `h3_puntua` via

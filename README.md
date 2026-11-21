@@ -5,6 +5,9 @@
 > `shi` variety label. The site answers at tamazight-drills.vercel.app (the old
 > tachelhit-drills.vercel.app address keeps working for installed apps and shared links).
 
+> 📍 **Where the work stands and what comes next: [`docs/EL_PLA.md`](docs/EL_PLA.md)** — each
+> route with its measured number, the current bottleneck, and the next steps in order.
+
 A community platform for **collecting Atlas Tamazight (Tachelhit) from people
 and the internet, and learning it** — built around Catalan as the reference
 language, with Arabic and Latin romanization alongside Tifinagh (ⵜⵉⴼⵉⵏⴰⵖ).
