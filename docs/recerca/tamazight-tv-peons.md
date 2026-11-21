@@ -37,6 +37,13 @@ sol bloc de feina. El peó no decideix res de §5 ni §8 de l'especificació: ho
 
 ## Bloc C: mesurar la varietat d'un capítol
 
+> **Això es va corregir a `DESXIFRAT.md` §42 (vegeu `AUDITORIA-2026-11-21.md`, troballa 6):** aquest
+> encàrrec demana «§6.1 i §6.2 sencers», i el punt 4 de §6.1 —el que l'especificació diu que és «la
+> mesura que val»— **no està construït**. L'única mesura que corre, la del punt 2, no té cap
+> referència del Rif i no pot retornar «rif»: va dir «tachelhit» als 27 capítols collits, 8 dels
+> quals són del Rif. Un peó amb aquest encàrrec no pot trobar material rifeny. El que hi ha aquí
+> sota és el que es va creure.
+
 > Capítol `<slug>` amb `subtitols.jsonl` fet. Aplica §6.1 i §6.2 sencers: tres proporcions (totes
 > les formes i només gramaticals), el control entre referències, i les 30 rèpliques passades per
 > l'ASR actual amb els parells de correspondència a `_varietat\<slug>.jsonl`. No posis

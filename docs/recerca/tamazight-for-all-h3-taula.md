@@ -1,3 +1,14 @@
+# H3: el lèxic al feix, taules crues (15-11-2026)
+
+Les dues taules de sota són la sortida crua de l'experiment H3 sobre els 226 versos narrats de
+Tamazight For All amb veritat humana (nucli `tfa-h3-el-lexic-al-feix`). La lectura és a
+`tamazight-for-all.md`, secció «H3 · Descodificar amb el lèxic a dins».
+
+> **Això es va corregir a `DESXIFRAT.md` §38 (vegeu `AUDITORIA-2026-11-21.md`, troballa 1):** tot
+> plegat està mesurat amb `adaptador_shi_ric`, que el 16-11 al migdia va deixar de servir.
+> Redescodificades les proves amb l'adaptador d'ara (H4b), el guany del model de llengua a
+> TFA-226 és −0,0014 i **no es pot dir**. El que hi ha aquí sota és el que es va creure.
+
 | descodificació | n | CER | CER plegat | WER | WER plegat | de la qual, frontera |
 |---|---|---|---|---|---|---|
 | **parlat** | | | | | | |
