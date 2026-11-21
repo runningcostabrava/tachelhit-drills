@@ -33,8 +33,26 @@ def slug_of(title: str) -> str:
     return text[:60] or "historia"
 
 
+#: «Baba Ali · episodi 15 · 29:40»: una sèrie de televisió retallada a partir dels seus subtítols
+#: (#535). Cada línia porta l'episodi i el minut dins del títol, i cap no porta `video_start_time`
+#: perquè no ve de YouTube sinó d'una plataforma on el vídeo no es pot incrustar. El títol de la
+#: història és la part sense el minut; el minut és l'ordre.
+_EPISODI = re.compile(r"^(?P<serie>.+?)\s*·\s*episodi\s+(?P<n>\d{1,3})\s*·\s*(?P<m>\d{1,3}):(?P<s>\d{2})\s*$")
+
+
 def _title_of(drill) -> str:
-    return (getattr(drill, "source_title", None) or "").strip() or (getattr(drill, "tag", None) or "").strip()
+    title = (getattr(drill, "source_title", None) or "").strip() or (getattr(drill, "tag", None) or "").strip()
+    m = _EPISODI.match(title)
+    return f"{m.group('serie')} · episodi {int(m.group('n'))}" if m else title
+
+
+def _at(drill) -> Optional[float]:
+    """Quan es diu una línia: el segon dins del vídeo, o el minut que porta al títol."""
+    t = getattr(drill, "video_start_time", None)
+    if t is not None:
+        return t
+    m = _EPISODI.match((getattr(drill, "source_title", None) or "").strip())
+    return int(m.group("m")) * 60 + int(m.group("s")) if m else None
 
 
 #: «The Traveller -2- …», «The Rivals - 1 - …», «The Last Warrior- 2 -…», «… Red Rock … - 1 -».
@@ -52,6 +70,9 @@ def series_of(title: str) -> tuple[Optional[str], Optional[int]]:
 
     Torna `(None, None)` quan el títol no porta cap capítol: un conte sol és un conte sol.
     """
+    e = re.match(r"^(?P<serie>.+?)\s*·\s*episodi\s+(?P<n>\d{1,3})\s*$", (title or "").strip())
+    if e:
+        return e.group("serie").strip(), int(e.group("n"))
     m = _CAPITOL.match((title or "").strip())
     if not m:
         return None, None
@@ -90,7 +111,7 @@ def _voiced(drill) -> bool:
 
 
 def _timed(drill) -> bool:
-    return getattr(drill, "video_start_time", None) is not None
+    return _at(drill) is not None
 
 
 def _written(drill) -> bool:
@@ -124,8 +145,14 @@ def is_story(drills: List) -> bool:
     """
     if len(drills) < MIN_LINES:
         return False
-    starts = [d.video_start_time for d in drills if _timed(d)]
-    if len(set(starts)) != len(starts):
+    starts = [_at(d) for d in drills if _timed(d)]
+    # Dues línies d'una història no comencen mai al mateix segon… quan el segon és exacte. El
+    # minut del títol d'un episodi (29:40) és el mateix per a dues rèpliques seguides: allà la
+    # repetició no diu res, i es mira que la sèrie tingui prou minuts diferents.
+    per_titol = any(_EPISODI.match((getattr(d, "source_title", None) or "").strip()) for d in drills)
+    if len(set(starts)) != len(starts) and not per_titol:
+        return False
+    if per_titol and len(set(starts)) < MIN_LINES:
         return False
     voiced = sum(1 for d in drills if _voiced(d))
     return len(starts) >= MIN_LINES and len(starts) >= len(drills) * 0.6 and voiced >= len(drills) * 0.6
@@ -134,7 +161,7 @@ def is_story(drills: List) -> bool:
 def in_order(drills: List) -> List:
     """The lines as they are spoken. Anything untimed goes last, in the order it was added:
     it is usually a line somebody wrote later, and guessing where it belongs would be a lie."""
-    timed = sorted((d for d in drills if _timed(d)), key=lambda d: (d.video_start_time, d.id))
+    timed = sorted((d for d in drills if _timed(d)), key=lambda d: (_at(d), d.id))
     rest = sorted((d for d in drills if not _timed(d)), key=lambda d: d.id)
     return timed + rest
 

@@ -226,6 +226,29 @@ L'Institut Royal de la Culture Amazighe publica les seves eines de llengua al po
 | **Corpus textual en amazic** i **corpus anotat morfosintàcticament** | IRCAM · [corpus.php](https://tal.ircam.ma/talam/corpus.php) · Creative Commons, amb l'obligació de citar l'IRCAM |
 | Què n'hem tret | Res a l'app encara. Fem servir les freqüències del sud (taixelhit, 224.000 mots) per triar què gravar (#381). |
 
+## 5d. Els canals amb transcripció humana que han afinat el transcriptor (16-11-2026)
+
+Tres canals de YouTube han posat, sense saber-ho al principi i amb el seu sí després, la primera
+veritat humana de volum que ha mogut el model acústic (`docs/recerca/zouhir-amazigh.md`,
+`ocr-tifinag-impres.md`). Permisos a [`PERMISOS.md`](PERMISOS.md); aquí, el crèdit:
+
+- **Zouhir Amazigh** (`https://www.youtube.com/@zouhiramazigh138`): 33 vídeos de divulgació en
+  amazic estàndard (ciència, història, salut, «la meva ciutat») amb la pista en tifinag escrita
+  per l'autor i alineada amb anglès, àrab i francès. 1.128 rètols i 68 minuts de veu han
+  entrenat i mesurat l'adaptador `shi` que serveix al Space des del 16-11-2026.
+- **BerberFreeQuranEducation** (`UCmlGmHeQOUL7AhYFmGHu8kw`): 17 vídeos de predicació en taixelhit
+  amb la pista en tifinag (parlants: ⴰⵙⵍⵎⴰⴷ ⵄⴰⵍⵉ ⵀⵉⴷⴰⵢⴰⵜ, ⵢⵓⵛⴰⵄ ⵉⵠⴰⵏⵥ). Els rètols nets també
+  han entrenat l'adaptador.
+- **aslmdtv** (`https://www.youtube.com/@aslmdtv`): el llibre escolar «ⴰⴱⵔⵉⴷ ⵏ ⵓⵎⵓⵔⵙ» (tamazight
+  de l'Atles central, nivells 1-3) llegit en veu alta amb el text a la pantalla. 63 vídeos
+  llegits pel lector de plantilles: 1.034 files i 5.215 paraules de text imprès amb la seva veu.
+  Encara no entrena res: cal alinear-ne els temps.
+- **Tamazight For All** (Naceur Jabouja Ulmer) ja consta més amunt: els seus 226 versos amb
+  subtítol humà són el test de sempre del transcriptor.
+
+El text d'aquests autors és text d'autor: es cataloga i serveix per entrenar i mesurar, no es
+reescriu ni entra a la biblioteca com si fos nostre.
+
 ## 6. Eines i serveis
 
 **Google Gemini** escriu els esborranys de lliçó i dibuixa les il·lustracions de les targetes (cap

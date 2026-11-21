@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { FaCheck, FaPlay, FaRedo, FaTimes } from 'react-icons/fa';
 import type { Exercici } from '../api';
-import { getMediaUrl } from '../config';
+import AmbSo from './AmbSo';
+import { audioSrc } from '../services/audioLocal';
 import Frase from './Frase';
 
 // «Fes-ho tu»: els exercicis que pregunten LA PEÇA de la unitat (#428).
@@ -57,7 +58,7 @@ function Un({ e }: { e: Exercici }) {
 
   const resposta = tria ?? dit;
   const encertat = mirat && pla(resposta) === pla(e.resposta);
-  const toca = () => { if (e.audio_url) new Audio(getMediaUrl(e.audio_url)).play().catch(() => {}); };
+  const toca = () => { if (e.audio_url) new Audio(audioSrc(e.audio_url)).play().catch(() => {}); };
 
   return (
     <section style={{ padding: '14px 16px', borderRadius: 'var(--r-xl)', border: `1px solid ${mirat ? (encertat ? 'var(--emerald)' : 'var(--rose)') : 'var(--border)'}`, background: 'var(--surface)' }}>
@@ -110,9 +111,9 @@ function Un({ e }: { e: Exercici }) {
           </span>
           {/* Qui ho diu, sempre: la frase és d'algú. */}
           {e.audio_url && (
-            <button onClick={toca} style={botonet}>
+            <AmbSo url={e.audio_url}><button onClick={toca} style={botonet}>
               <FaPlay size={10} /> Escolta-la{e.speaker ? ` · ${e.speaker}` : ''}{e.region ? ` · ${e.region}` : ''}
-            </button>
+            </button></AmbSo>
           )}
           <button onClick={() => { setMirat(false); setTria(null); setDit(''); }} style={botonet}>
             <FaRedo size={10} /> Torna-hi

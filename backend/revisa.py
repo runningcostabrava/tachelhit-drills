@@ -103,6 +103,18 @@ PILES: Dict[str, Dict] = {
             {"id": "no-ho-se", "diu": "no ho sé"},
         ],
     },
+    #: La proposta és de màquina. Només passa al català de la frase quan una persona la
+    #: confirma, i es desa el que aquesta persona deixa a la caixa (#494).
+    "per-traduir": {
+        "titol": "Una frase sense traducció",
+        "pregunta": "Aquesta traducció de màquina és bona?",
+        "parella": False,
+        "opcions": [
+            {"id": "tria", "diu": "és correcta"},
+            {"id": "fora", "diu": "no serveix"},
+            {"id": "no-ho-se", "diu": "no ho sé"},
+        ],
+    },
 }
 
 TIFINAG = re.compile(r"[ⴰ-⵿]")
@@ -125,6 +137,11 @@ def esborranys_de(d) -> List[Dict]:
                 for e in carregats:
                     if isinstance(e, dict) and (e.get("text") or "").strip():
                         fora.append({"text": e["text"].strip(),
+                                     # El que hi ha entre parèntesis a la línia del llibre no
+                                     # sona mai: «(dar)», «(afasi)», «(lbɛd n-tkal)» són
+                                     # indicacions de l'exercici. En Pablo ho va comprovar als
+                                     # 30 talls (29/10). La proposta que s'edita és aquesta.
+                                     "text_net": re.sub(r"\s*\([^)]*\)", "", e["text"]).strip(),
                                      "model": (e.get("model") or "").strip() or None,
                                      "acord": e.get("acord"),
                                      # D'on surt, quan no és una màquina: «pàgina 72 del
@@ -229,6 +246,11 @@ def decideix(db, pila: str, drill, altre, opcio: str, tria: Optional[int] = None
             treu_etiqueta(altre, pila)
         fet["canvis"].append("s'han deixat com estaven")
 
+    elif opcio == "fora" and pila == "per-traduir":
+        drill.text_catalan_suggested = None
+        treu_etiqueta(drill, pila)
+        fet["canvis"].append("s'ha tret la traducció de màquina")
+
     elif opcio == "fora":
         # L'aparellament era fals. La gravació és real i es queda; el que se'n va és la
         # proposta, perquè deixar-la seria deixar escrit que diu una cosa que no diu.
@@ -250,6 +272,15 @@ def decideix(db, pila: str, drill, altre, opcio: str, tria: Optional[int] = None
             drill.text_tachelhit_suggested = None
             treu_etiqueta(drill, pila)
             fet["canvis"].append("la línia del llibre queda com a text del parlant")
+
+        elif pila == "per-traduir":
+            text = (esborrany or drill.text_catalan_suggested or "").strip()
+            if not text:
+                raise ValueError("falta la traducció")
+            drill.text_catalan = text
+            drill.text_catalan_suggested = None
+            treu_etiqueta(drill, pila)
+            fet["canvis"].append("una persona ha confirmat el significat")
 
         elif pila == "per-escriure":
             # Un esborrany triat NO és el text del parlant: va a `*_suggested`, i allà el

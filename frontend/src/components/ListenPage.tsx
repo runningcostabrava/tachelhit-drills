@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaChevronLeft, FaExternalLinkAlt, FaPlay, FaRedo } from 'react-icons/fa';
 import { api, type ListenItem } from '../api';
-import { getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import { say, stop } from '../utils/veu';
 import { GlossWords, type Gloss } from './WordGloss';
 import Frase from './Frase';
@@ -38,11 +38,11 @@ export default function ListenPage() {
   useEffect(() => () => stop(), []);
 
   const item = items?.[n];
-  const sona = () => { if (item) say(getMediaUrl(item.audio_url)); };
+  const sona = () => { if (item) say(audioSrc(item.audio_url)); };
 
   // Sonar tot sol en arribar a un tall nou: el primer que ha de passar és sentir-lo.
   useEffect(() => {
-    if (item) say(getMediaUrl(item.audio_url));
+    if (item) say(audioSrc(item.audio_url));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item?.drill_id]);
 
@@ -55,7 +55,7 @@ export default function ListenPage() {
 
   if (!item) {
     return (
-      <div style={{ padding: '40px 16px', maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
+      <div style={{ padding: '40px 16px', maxWidth: 560, margin: '0 auto', width: '100%', boxSizing: 'border-box', textAlign: 'center' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24 }}>
           {encerts} de {items.length}
         </h1>
@@ -75,7 +75,7 @@ export default function ListenPage() {
   })();
 
   return (
-    <div style={{ padding: '20px 16px 60px', maxWidth: 620, margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px 60px', maxWidth: 620, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate('/practice')} style={enrere}><FaChevronLeft /> Pràctica</button>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', margin: '6px 0 2px' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 23, margin: 0 }}>Escolta i tria</h1>

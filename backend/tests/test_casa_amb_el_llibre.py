@@ -86,6 +86,17 @@ def _prepara(nom, linia="is tskrm ibrin i-Zinb d-Yamna?", pagina=59):
     return i, _com_admin(nom)
 
 
+def test_el_parentesi_del_llibre_no_sona_i_la_proposta_el_treu():
+    """En Pablo va escoltar 30 talls (29/10): «(dar)», «(afasi)», «(lbɛd n-tkal)» no sonen mai,
+    són indicacions de l'exercici. La proposta que s'edita els ha de dur trets; el text original
+    es conserva al costat per poder anar a mirar el llibre."""
+    i, cap = _prepara("admin_casa_parentesi", linia="iskr Brahim ttilifun i-gʷma-s. (lbɛd n-tkal)")
+    cos = _demana(i, cap)
+    e = cos["esborranys"][0]
+    assert e["text"] == "iskr Brahim ttilifun i-gʷma-s. (lbɛd n-tkal)"
+    assert e["text_net"] == "iskr Brahim ttilifun i-gʷma-s."
+
+
 def test_la_pila_existeix_i_pregunta_pel_so_no_pel_text():
     """La pregunta ha de ser si la gravació DIU això: és el que es pot respondre escoltant."""
     import revisa

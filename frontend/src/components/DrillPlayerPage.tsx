@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
-import { Network } from '@capacitor/network';
-import { API_BASE } from '../config';
 import { api } from '../api';
 import { syncManager } from '../services/OfflineSyncManager';
 import type { Drill } from '../services/OfflineSyncManager';
 import DrillPlayer from './DrillPlayer';
+import { bibliotecaAlDia } from '../services/biblioteca';
 
 export default function DrillPlayerPage() {
   const navigate = useNavigate();
@@ -24,16 +22,7 @@ export default function DrillPlayerPage() {
           return;
         }
 
-        const status = await Network.getStatus();
-        let allDrills: Drill[] = [];
-
-        if (status.connected) {
-          const response = await axios.get(`${API_BASE}/drills/`);
-          allDrills = response.data || [];
-          await syncManager.saveDrillsToCache(allDrills);
-        } else {
-          allDrills = await syncManager.getDrills();
-        }
+        const allDrills = await bibliotecaAlDia();
 
         // Sort by date created descending
         const sorted = allDrills.sort((a, b) =>

@@ -8,6 +8,8 @@
     "dev:local": "vite --mode development",
     "start": "vite",
     "build": "tsc -b && vite build",
+    "test": "vitest run",
+    "test:mira": "vitest",
     "lint": "eslint .",
     "preview": "vite preview",
     "cap:sync": "npm run build && npx cap sync",
@@ -51,6 +53,7 @@
     "globals": "^16.5.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vitest": "^4.1.12"
   }
 }

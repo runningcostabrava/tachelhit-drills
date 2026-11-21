@@ -174,17 +174,49 @@ def gemini_generate(system_instruction: str, contents: list, *,
             temperature=temperature, timeout=timeout)
 
 
+def agent_provider() -> str:
+    """Qui fa anar el copilot: «deepseek» o «gemini».
+
+    L'amo (31-10): «vull que possis el copilot amb deepseek». Per defecte, doncs, DeepSeek quan
+    hi ha clau; `AI_PROVIDER=gemini` ho torna enrere sense tocar codi. Només afecta el copilot
+    —el que fa servir eines—: la resta de text (lliçons, glosses, comprovacions) segueix anant
+    a Gemini primer, que és on s'ha mesurat la qualitat.
+    """
+    tria = (os.getenv("AI_PROVIDER") or "").strip().lower()
+    if tria in ("deepseek", "gemini"):
+        return tria
+    import deepseek_client
+    return "deepseek" if deepseek_client.deepseek_available() else "gemini"
+
+
 def gemini_agent(system_instruction: str, contents: list, tools: list, executor,
                  *, max_rounds: int = 6, max_output_tokens: int = 1500,
                  temperature: float = 0.4, timeout: int = 90) -> dict:
     """
-    Agentic loop with Gemini function-calling. The model can call the provided
-    tools (functionDeclarations); `executor(name, args) -> dict` runs each one.
+    Agentic loop with function-calling. The model can call the provided
+    tools; `executor(name, args) -> dict` runs each one.
     Returns {"text": final answer, "actions": [{name, args, result}, ...]}.
 
     - contents: [{"role": "user"|"model", "text": "..."}] conversation turns.
     - tools: list of function declarations (name/description/parameters JSON schema).
+
+    Qui contesta el tria `agent_provider()`. Si el primer falla perquè és EL PROVEÏDOR qui no
+    pot —sense crèdit, massa peticions, la porta tancada— es prova l'altre; davant de qualsevol
+    altre error, no, perquè repetir una pregunta mal feta a un altre model dona la mateixa
+    resposta mal feta i amaga l'errada de debò.
     """
+    import deepseek_client
+    if agent_provider() == "deepseek" and deepseek_client.deepseek_available():
+        try:
+            return deepseek_client.deepseek_agent(
+                system_instruction, contents, tools, executor, max_rounds=max_rounds,
+                max_output_tokens=max_output_tokens, temperature=temperature, timeout=timeout)
+        except BudgetExceeded:
+            raise
+        except Exception as err:
+            if not (deepseek_client.is_quota_error(err) and gemini_available()):
+                raise
+            print(f"[AI] DeepSeek no pot ({str(err)[:80]}); ho demano a Gemini")
     g_contents = [
         {"role": ("model" if c.get("role") == "model" else "user"),
          "parts": [{"text": c.get("text", "")}]}

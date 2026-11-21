@@ -1,12 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { api } from '../api';
-import { getMediaUrl } from '../config';
+import { audioSrc, imatgeSrc } from '../services/audioLocal';
 import { subscribeSelection, notifyDrillsChanged } from '../selection';
 import AiQuota from './AiQuota';
 import { FaComments, FaPlay, FaRedo, FaChevronRight, FaPaperPlane, FaCheck, FaSearch, FaExclamationTriangle } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import Frase from './Frase';
-import { thumb } from '../config';
 
 interface Action { name: string; args: any; result: any; }
 interface Msg { role: 'user' | 'model'; text: string; actions?: Action[]; }
@@ -34,7 +33,7 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }, [messages, busy]);
 
-  const play = (url: string) => { const a = new Audio(getMediaUrl(url)); a.play().catch(() => {}); };
+  const play = (url: string) => { const a = new Audio(audioSrc(url)); a.play().catch(() => {}); };
 
   const send = async (text: string) => {
     const q = text.trim();
@@ -86,7 +85,7 @@ export default function AiCopilot({ onClose }: { onClose: () => void }) {
                 {trobades.slice(0, 6).map((d: any) => (
                   <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--surface)' }}>
                     {d.image_url && (
-                      <img src={thumb(getMediaUrl(d.image_url), 120)} alt="" loading="lazy"
+                      <img src={imatgeSrc(d.image_url, 120)} alt="" loading="lazy"
                            style={{ width: 44, height: 44, borderRadius: 'var(--r-sm)', objectFit: 'cover', flexShrink: 0 }}
                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
                     )}

@@ -32,6 +32,8 @@ export interface Drill {
   grammar?: string;        // grammar course units: comma-separated slugs (see GrammarPage)
   grammar_source?: string; // 'auto' | 'owner'
   text_catalan_suggested?: string;
+  /** Les propostes de màquina amb la seva procedència, en JSON: [{text, model, llengua, de}]. */
+  esborranys?: string | null;
   variety?: string;
   region?: string;
   speaker?: string;

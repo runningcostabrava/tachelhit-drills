@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { FaVolumeUp } from 'react-icons/fa';
 import { api } from '../api';
-import { getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import type { Drill } from '../types';
 
 // Word by word: each Tamazight word as the speaker wrote it, its Tifinagh, and the Catalan word(s)
@@ -60,7 +60,7 @@ export function GlossWords({ words: g, size = 'md', align = 'left' }: { words: G
       const clip = r.clips[0];
       if (!clip) { setHeard((h) => ({ ...h, [word]: null })); return; }
       if (audioRef.current) audioRef.current.pause();
-      const a = new Audio(getMediaUrl(clip.audio_url));
+      const a = new Audio(audioSrc(clip.audio_url));
       audioRef.current = a;
       stopAt.current = clip.end + 0.08;          // a breath past the word, so it is not clipped short
       a.currentTime = Math.max(0, clip.start - 0.04);

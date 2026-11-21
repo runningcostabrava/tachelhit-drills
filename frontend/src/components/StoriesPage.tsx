@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FaBookOpen, FaChevronLeft, FaCrosshairs, FaExpand, FaInfinity, FaExternalLinkAlt, FaHeadphones, FaPause, FaPlay, FaRedo, FaStepBackward, FaStepForward, FaStop } from 'react-icons/fa';
 import { api, type Story, type StoryPage, type WordTime } from '../api';
-import { getMediaUrl, thumb } from '../config';
+import { API_BASE, getMediaUrl } from '../config';
+import AmbSo from './AmbSo';
+import { audioSrc, imatgeSrc } from '../services/audioLocal';
 import type { Drill } from '../types';
 import WordGloss, { parseGlosses, type Gloss } from './WordGloss';
 import Frase from './Frase';
@@ -29,6 +31,57 @@ export default function StoriesPage() {
   return slug ? <OneStory slug={slug} /> : <StoryList />;
 }
 
+/**
+ * Els capítols de Tamazight TV, per a qui el servidor hi deixi entrar (#695, ADR 0012).
+ *
+ * No es comprova aquí qui ets: es demana la llista i, si el servidor contesta que no, la secció
+ * NO EXISTEIX — ni error, ni «no tens permís», ni un espai buit. Qui no hi té accés no ha de
+ * saber que hi ha res a l'altra banda. El permís el decideix `/snrt-privat/`, com sempre.
+ *
+ * Material de recerca de la SNRT: recerca sí, republicar no. D'aquí només se'n pinta el títol.
+ */
+function SeccioSnrt() {
+  const navigate = useNavigate();
+  const [eps, setEps] = useState<{ slug: string; titol: string; linies: number; amb_catala: number }[]>([]);
+
+  useEffect(() => {
+    let viu = true;
+    fetch(`${API_BASE}/snrt-privat/`, { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (viu && d?.episodis?.length) setEps(d.episodis); })
+      .catch(() => { /* sense accés: la secció no hi és */ });
+    return () => { viu = false; };
+  }, []);
+
+  if (!eps.length) return null;
+
+  return (
+    <section style={{ marginBottom: 26 }}>
+      <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 17, margin: '0 0 2px', lineHeight: 1.3 }}>
+        SNRT · Tamazight TV
+      </h2>
+      <p style={{ fontSize: 12.5, color: 'var(--text-soft)', margin: '0 0 10px' }}>
+        {eps.length === 1 ? '1 capítol' : `${eps.length} capítols`} · material de recerca, text sense revisar
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 14 }}>
+        {eps.map((e) => (
+          <button key={e.slug} onClick={() => navigate(`/snrt?ep=${encodeURIComponent(e.slug)}`)} style={card}>
+            <div style={{ fontWeight: 800, fontSize: 15, lineHeight: 1.3 }}>{e.titol}</div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-soft)', marginTop: 3 }}>
+              {e.linies} línies · {e.amb_catala} amb català
+            </div>
+            {/* Es diu a cada targeta i no un sol cop a dalt: qui hi entra ha de saber, en prémer,
+                que el tifinag i l'àrab els ha llegit una màquina i el català l'ha traduït una altra. */}
+            <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4, color: 'var(--text-muted)' }}>
+              llegit per una màquina, sense revisar
+            </div>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function StoryList() {
   const navigate = useNavigate();
   const [stories, setStories] = useState<Story[] | null>(null);
@@ -40,7 +93,7 @@ function StoryList() {
   }, []);
 
   return (
-    <div style={{ padding: '20px 16px 40px', maxWidth: 900, margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px 40px', maxWidth: 900, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate('/grammar')} style={back}><FaChevronLeft /> Gramàtica</button>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, margin: '6px 0 4px' }}>Històries i cançons</h1>
       <p style={{ color: 'var(--text-soft)', fontSize: 14, margin: '0 0 18px', lineHeight: 1.55 }}>
@@ -103,6 +156,8 @@ function StoryList() {
           </div>
         </section>
       ))}
+
+      <SeccioSnrt />
     </div>
   );
 }
@@ -348,7 +403,7 @@ function OneStory({ slug }: { slug: string }) {
 
   // Un so, i s'espera que s'acabi. El reproductor és el de tota l'app: un sol element, dins el
   // document i declarat al sistema, perquè la veu no calli quan s'apaga la pantalla (#342).
-  const sona = useCallback((url: string) => say(url.trim() ? getMediaUrl(url) : ''), []);
+  const sona = useCallback((url: string) => say(url.trim() ? audioSrc(url) : ''), []);
 
   /**
    * La veu amaziga d'una línia, amb la paraula encesa a mesura que es diu (#340).
@@ -377,7 +432,7 @@ function OneStory({ slug }: { slug: string }) {
     try { return await sona(url); } finally { viu = false; setMot(null); }
   }, [sona, page]);
 
-  const amazic = (d: Drill) => (d.audio_url || d.audio_tts_shi_url || '').trim();
+  const amazic = (d: Drill) => (d.audio_url || '').trim();
 
   // Estudiar una línia: primer saps QUÈ sentiràs, i després ho sents dues vegades.
   //
@@ -575,7 +630,7 @@ function OneStory({ slug }: { slug: string }) {
   const potTriarSentit = escrites.filter((d) => (d.text_catalan || '').trim()).length >= 4;
 
   return (
-    <div style={{ padding: sonant ? '20px 16px 120px' : '20px 16px 60px', maxWidth: 760, margin: '0 auto' }}>
+    <div style={{ padding: sonant ? '20px 16px 120px' : '20px 16px 60px', maxWidth: 760, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate('/stories')} style={back}><FaChevronLeft /> Històries</button>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 25, margin: '6px 0 4px', lineHeight: 1.25 }}>{page.title}</h1>
       <p style={{ color: 'var(--text-soft)', fontSize: 13.5, margin: '0 0 14px' }}>
@@ -715,7 +770,7 @@ function OneStory({ slug }: { slug: string }) {
                   mateix riu, el mateix xai (#390)— i es demanen a la mida que es veuen, que no
                   és la que pesen. */}
               {(d.image_url || '').trim() && (
-                <img src={thumb(getMediaUrl(d.image_url), 760)} alt=""
+                <img src={imatgeSrc(d.image_url, 760)} alt=""
                      loading="lazy" decoding="async"
                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
                      // Sencer, i no retallat. Amb un topall d'alçada i `cover` es perdia mitja
@@ -726,10 +781,10 @@ function OneStory({ slug }: { slug: string }) {
               <div style={{ display: 'flex', gap: 10 }}>
               {/* Amb la història engegada, el ▶ d'una línia hi porta la lectura en comptes de
                   sonar-hi a sobre; i torni d'on torni, la pantalla torna a seguir la veu. */}
-              <button onClick={() => vesA(i)} aria-label={`Escolta la línia ${i + 1}`}
+              <AmbSo url={amazic(d)}><button onClick={() => vesA(i)} aria-label={`Escolta la línia ${i + 1}`}
                       style={{ flexShrink: 0, width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'var(--surface-2)', color: 'var(--brand-1)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                 <FaPlay size={11} />
-              </button>
+              </button></AmbSo>
               <div style={{ flex: 1, minWidth: 0 }}>
                 {written ? (
                   <Frase text={written} latin={d.text_tachelhit_latin} mots={mots} encesa={dins} size="md" />
@@ -786,7 +841,7 @@ function OneStory({ slug }: { slug: string }) {
             </div>
 
             {(d.image_url || '').trim() && (
-              <img src={thumb(getMediaUrl(d.image_url), 900)} alt=""
+              <img src={imatgeSrc(d.image_url, 900)} alt=""
                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                    style={{ width: '100%', height: 'auto', aspectRatio: '4 / 3', objectFit: 'cover',
                             borderRadius: 'var(--r-lg)', display: 'block', marginBottom: 14 }} />
@@ -794,9 +849,25 @@ function OneStory({ slug }: { slug: string }) {
 
             {written
               ? <Frase text={written} latin={d.text_tachelhit_latin} mots={mots} encesa={dins} size="xl" />
-              : <div style={{ fontSize: 19, color: 'var(--saffron-dark, #7A4A12)', fontWeight: 700 }}>
-                  (aquesta línia encara no té les paraules escrites)
-                </div>}
+              : (
+                // Sense el text del parlant, aquí es pinta el que la màquina hi sent, com fa la
+                // llista. Abans la pantalla gran es quedava amb l'avís i prou: l'amo va trobar una
+                // línia que deia «encara no té les paraules escrites» i tenia la lectura desada
+                // des de feia estona (#8677, `mani-ɣ izdɣ Mbark?`).
+                <>
+                  <div style={{ fontSize: 19, color: 'var(--saffron-dark, #7A4A12)', fontWeight: 700 }}>
+                    (aquesta línia encara no té les paraules escrites)
+                  </div>
+                  {(d.text_tachelhit_suggested || '').trim() && (
+                    <div style={{ marginTop: 6, color: 'var(--text-soft)' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>
+                        lectura de màquina
+                      </span>
+                      <Frase text={d.text_tachelhit_suggested || ''} size="lg" />
+                    </div>
+                  )}
+                </>
+              )}
             <CatalaEncès text={d.text_catalan || ''} gl={gl}
                          estil={{ fontSize: 'clamp(22px, 6.4vw, 32px)', color: 'var(--text)',
                                   lineHeight: 1.4, margin: '10px 0 4px', fontWeight: 600 }} />
@@ -904,7 +975,7 @@ const pantallaGran: React.CSSProperties = {
   position: 'fixed', inset: 0, zIndex: 1100, overflowY: 'auto',
   background: 'var(--bg, var(--surface))',
   padding: `calc(var(--nav-h, 56px) + env(safe-area-inset-top, 0px) + 14px) max(16px, env(safe-area-inset-left, 0px)) calc(96px + env(safe-area-inset-bottom, 0px))`,
-  maxWidth: 760, margin: '0 auto',
+  maxWidth: 760, margin: '0 auto', width: '100%', boxSizing: 'border-box',
 };
 /** Res per sota de la mida d'un dit: 64 px el normal, 86 el de pausa. */
 const rodoGran: React.CSSProperties = {

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaMicrophone, FaStop, FaSave, FaTrash, FaTimes, FaPlay } from 'react-icons/fa';
-import { API_BASE, getMediaUrl } from '../config';
+import { API_BASE } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import { api, type Recording } from '../api';
+import { esborranysAmb, llegeixIAvisa } from '../services/lectura';
 import { toast } from '../toast';
 import { varietyShort, varietyLabel, VARIETIES } from '../varieties';
 import type { Drill } from '../types';
@@ -22,6 +24,10 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
   const [blob, setBlob] = useState<Blob | null>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // El que la màquina ha entès de l'última presa teva (#556). Es veu aquí i no només en un avís
+  // que s'apaga: és el que et diu si val la pena tornar-la a gravar.
+  const [llegint, setLlegint] = useState(false);
+  const [lectura, setLectura] = useState<string | null>(null);
   // "Com ho dius tu?": the sentence in the recorder's own words (prefilled with the drill's),
   // their variety and their town. Only a different wording is kept by the server.
   const [ownText, setOwnText] = useState(drill.text_tachelhit || '');
@@ -53,7 +59,7 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
   useEffect(load, [drill.id]);
   useEffect(() => () => { if (blobUrl) URL.revokeObjectURL(blobUrl); }, [blobUrl]);
 
-  const play = (url: string) => { const a = new Audio(getMediaUrl(url)); a.play().catch(() => {}); };
+  const play = (url: string) => { const a = new Audio(audioSrc(url)); a.play().catch(() => {}); };
 
   const start = async () => {
     try {
@@ -116,9 +122,38 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
       setBlobUrl(null);
       load();
       onSaved();
+      // I què hi ha entès la màquina (#556).
+      //
+      // Aquest camí no demanava cap lectura, mai, i la repesca tampoc no l'agafava: només mira
+      // les frases de les quals ets l'autor, de manera que una veu teva a una targeta del Mètode
+      // o d'Halima no en tenia ni n'hauria tingut. Ara es demana sempre i es diu sempre: saber si
+      // el que has gravat s'entén és justament per què serveix.
+      //
+      // Es DESA només si aquesta presa és la veu de la targeta, que ho diu el servidor. Si no,
+      // `text_tachelhit_suggested` parlaria d'una altra gravació; es diu i no es desa, fins que
+      // `recordings` tingui el seu camp (és el tros que el #556 deixa per a després).
+      if (saved?.audio_url) void laLlegeix(saved.audio_url, !!saved.es_principal);
     } catch (e: any) {
       toast.error(e.message || 'No s\'ha pogut desar la veu');
     } finally { setBusy(false); }
+  };
+
+  /** La lectura de la màquina d'una presa acabada de pujar: dita sempre, desada quan toca. */
+  const laLlegeix = async (audioUrl: string, esPrincipal: boolean) => {
+    setLlegint(true);
+    try {
+      // El número de la frase, només si aquesta presa és la seva veu: així el servidor hi desa
+      // qui ha llegit i què ha dit (#575), i no ho desa d'una presa que no és la seva.
+      const r = await llegeixIAvisa(audioUrl, esPrincipal ? drill.id : undefined);
+      if (!r.ok) return;
+      setLectura(r.text);
+      if (!esPrincipal) return;
+      const cos: Record<string, unknown> = { text_tachelhit_suggested: r.text, quiet: true };
+      // La base és el camp que ha tornat la lectura; el que tenim aquí és d'abans (#575).
+      if (r.significat) cos.esborranys = esborranysAmb(r.esborranys ?? drill.esborranys, r.text, r.significat);
+      try { await api.updateDrill(drill.id, cos); onSaved(); }
+      catch { /* la lectura ja s'ha dit; desar-la pot esperar la repesca */ }
+    } finally { setLlegint(false); }
   };
 
   const del = async (id: number) => {
@@ -273,6 +308,24 @@ export default function RecordAudioModal({ drill, onClose, onSaved }: {
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button onClick={() => setIsNative(true)} style={{ padding: '7px 14px', borderRadius: 'var(--r-pill)', border: '1px solid var(--brand-1)', background: 'var(--surface)', color: 'var(--brand-1)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>Sí, és la meva llengua</button>
                 <button onClick={() => setIsNative(false)} style={{ padding: '7px 14px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>No, l&apos;estic aprenent</button>
+              </div>
+            </div>
+          )}
+          {/* Què hi ha entès la màquina de la teva última presa (#556). */}
+          {llegint && (
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '10px' }}>
+              Escoltant el que has gravat…
+            </div>
+          )}
+          {!llegint && lectura && (
+            <div style={{ marginTop: '10px', padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>
+                La màquina hi ha entès
+              </div>
+              <div style={{ fontSize: '14px', color: 'var(--text)', fontStyle: 'italic' }} lang="shi">{lectura}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 4, lineHeight: 1.45 }}>
+                No és el que has dit tu: és el que n'ha sentit una màquina. Si no s'hi assembla
+                gens, val més tornar-la a gravar més a prop.
               </div>
             </div>
           )}

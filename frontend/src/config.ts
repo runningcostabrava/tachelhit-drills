@@ -95,7 +95,10 @@ const originalFetch = window.fetch.bind(window);
 window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
   const url =
     typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-  if (url.startsWith(API_BASE)) {
+  // Els mitjans (`/mitjans/…`) no demanen cap clau: el servidor contesta 307 cap a una adreça
+  // signada de R2, i una capçalera pròpia faria que el navegador enviés un preflight a R2,
+  // que el 15-11-2026 contestava 403 i deixava la memòria cau fora de línia sense fitxers.
+  if (url.startsWith(API_BASE) && !url.startsWith(`${API_BASE}/mitjans/`)) {
     const headers = new Headers(
       init?.headers ?? (input instanceof Request ? input.headers : undefined)
     );

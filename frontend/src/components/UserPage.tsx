@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { FaChevronLeft, FaMapMarkerAlt, FaMicrophone, FaVolumeUp } from 'react-icons/fa';
 import { api, type UserPublicPage, type ContributionDrill } from '../api';
 import { getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import { varietyLabel } from '../varieties';
 
 // A person's page («fitxa»): who they are and what they gave the library — the drills they
@@ -15,7 +16,7 @@ export default function UserPage() {
   const [page, setPage] = useState<UserPublicPage | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { if (username) api.userPage(username).then(setPage).catch((e) => setError(e?.message || 'Error')); }, [username]);
-  const play = (url?: string | null) => { if (url) new Audio(getMediaUrl(url)).play().catch(() => {}); };
+  const play = (url?: string | null) => { if (url) new Audio(audioSrc(url)).play().catch(() => {}); };
   if (error) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>{error === 'User not found' ? 'No hi ha cap persona amb aquest nom.' : error}</div>;
   if (!page) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Carregant…</div>;
   const c = page.counts;
@@ -30,7 +31,7 @@ export default function UserPage() {
     </div>
   );
   return (
-    <div style={{ padding: '20px 16px 32px', maxWidth: 900, margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px 32px', maxWidth: 900, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate(-1)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: '4px 0', marginBottom: 6 }}><FaChevronLeft /> Enrere</button>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 24, margin: '0 0 2px' }}>{page.display_name}</h1>
       <div style={{ fontSize: 13, color: 'var(--text-soft)', marginBottom: 14, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -40,8 +41,15 @@ export default function UserPage() {
         {page.since && <span>des de {new Date(page.since).toLocaleDateString('ca-ES', { month: 'short', year: 'numeric' })}</span>}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8, marginBottom: 20 }}>
-        {[[c.drills, 'drills aportats'], [c.takes, 'veus gravades'], [c.variants, 'variants pròpies'], [c.petitions, 'peticions'], [c.proposals_accepted, 'canvis al curs acceptats']].map(([n, l]) => (
-          <div key={String(l)} style={{ padding: '10px 12px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)' }}><div style={{ fontSize: 22, fontWeight: 800 }}>{n}</div><div style={{ fontSize: 12, color: 'var(--text-soft)' }}>{l}</div></div>
+        {/* Un de sol es diu en singular: aquesta és la pàgina que mira qui acaba d'aportar la
+            seva primera frase, i deia «1 drills aportats» (#564). */}
+        {([[c.drills, 'drill aportat', 'drills aportats'],
+           [c.takes, 'veu gravada', 'veus gravades'],
+           [c.variants, 'variant pròpia', 'variants pròpies'],
+           [c.petitions, 'petició', 'peticions'],
+           [c.proposals_accepted, 'canvi al curs acceptat', 'canvis al curs acceptats'],
+        ] as [number, string, string][]).map(([n, un, molts]) => (
+          <div key={molts} style={{ padding: '10px 12px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)' }}><div style={{ fontSize: 22, fontWeight: 800 }}>{n}</div><div style={{ fontSize: 12, color: 'var(--text-soft)' }}>{n === 1 ? un : molts}</div></div>
         ))}
       </div>
       {page.takes.length > 0 && (

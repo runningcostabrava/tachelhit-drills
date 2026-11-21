@@ -17,12 +17,12 @@ def test_una_feina_sense_ningu_que_la_pugui_fer_ho_diu():
 
     tot_caigut = serveis.quina_feina_fa_qui(
         spaces={"asr": {"state": "down"}, "translation": {"state": "down"}, "image": {"state": "down"}},
-        gemini_ok=False, gemini_clau=False, deepseek_clau=False)
+        gemini_ok=False, gemini_clau=False, deepseek_clau=False, qwen_clau=False)
     quines = {f["id"]: f for f in tot_caigut["feines"]}
     assert "traduir-amazic" in tot_caigut["aturades"]
     assert quines["traduir-amazic"]["funciona"] is False
-    assert [q["diu"] for q in quines["traduir-amazic"]["qui"]] == [
-        "sense clau configurada", "sense clau configurada"]
+    # DeepSeek, Qwen (el segon auditor des del 16-11-2026) i Gemini: tots tres sense clau.
+    assert [q["diu"] for q in quines["traduir-amazic"]["qui"]] == ["sense clau configurada"] * 3
 
     # Escriure amazic no depèn de cap màquina: ho fa qui parla la llengua, i per això aquesta
     # feina no s'atura mai.
@@ -45,10 +45,10 @@ def test_no_shan_mirat_no_es_el_mateix_que_no_contesten():
 def test_dun_servei_de_pagament_no_es_diu_que_contesta():
     """El 24-10-2026 Gemini tenia clau, tenia pressupost i contestava «402 prepayment credits are
     depleted». De la nostra banda només se sap que hi ha clau i que queda pressupost nostre."""
-    r = serveis.quina_feina_fa_qui(spaces={}, gemini_ok=True, gemini_clau=True, deepseek_clau=True)
+    r = serveis.quina_feina_fa_qui(spaces={}, gemini_ok=True, gemini_clau=True, deepseek_clau=True, qwen_clau=True)
     escriure = {f["id"]: f for f in r["feines"]}["escriure"]
     assert [q["diu"] for q in escriure["qui"]] == [
-        "hi ha clau i pressupost (si contesta, no se sap fins que se li truca)"] * 2
+        "hi ha clau i pressupost (si contesta, no se sap fins que se li truca)"] * 3
     assert escriure["funciona"] is True, "amb clau i pressupost, la feina es pot fer"
 
 
@@ -58,8 +58,9 @@ def test_distingeix_no_tenir_clau_de_haver_gastat_el_pressupost():
     sense = serveis.quina_feina_fa_qui(spaces={}, gemini_ok=False, gemini_clau=False, deepseek_clau=True)
     gastat = serveis.quina_feina_fa_qui(spaces={}, gemini_ok=False, gemini_clau=True, deepseek_clau=True)
     de = lambda r, feina, i: {f["id"]: f for f in r["feines"]}[feina]["qui"][i]["diu"]  # noqa: E731
-    assert de(sense, "escriure", 1) == "sense clau configurada"
-    assert de(gastat, "escriure", 1) == "ha arribat al pressupost del mes"
+    # Gemini és el tercer de la fila (DeepSeek, Qwen, Gemini) des del 16-11-2026.
+    assert de(sense, "escriure", 2) == "sense clau configurada"
+    assert de(gastat, "escriure", 2) == "ha arribat al pressupost del mes"
 
 
 def test_la_porta_serveix_la_taula_sencera_sense_trucar_a_ningu():
