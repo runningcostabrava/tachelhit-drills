@@ -55,6 +55,14 @@ so ↔ tifinag ↔ àrab ↔ català**, per aconseguir que els nostres models en
 
 ## 5. Les portes: què decideix si una cosa entra o no (números, no opinions)
 
+> **Hi falta una porta (vegeu `AUDITORIA-2026-11-21.md`, troballa 6):** cap de les portes de sota
+> mira **de quina llengua** és el material. En Pablo ha decidit que el tarifit és una altra llengua
+> i que no entra enlloc, i el corpus que es va pujar el 20-11 en tenia: 22 % del train i **el 100 %
+> del dev** (quadern §42). El filtre de varietat de §6.1 de l'especificació no ho atrapa —no té cap
+> referència del Rif i no pot retornar «rif»— i va dir «tachelhit» als 27 capítols collits, 8 dels
+> quals són del Rif. El senyal que sí que funciona són **els topònims a l'àrab**. La llista de sota
+> es queda escrita tal com era.
+
 - **Una rèplica és apta per al traductor** si: no és crèdit, tifinag amb confiança ≥ 0,85 i ≤ 2 glifs dubtosos, àrab llegit sense `arab_dubtos`, català amb acord entre els dos models (chrF ≥ 0,5) o decidit pel tercer, i 2–30 paraules. **No** es filtra pel chrF tifinag→català (mesura el traductor, no la dada).
 - **Apta per a l'ASR** si a més dura ≥ 0,8 s i el transcriptor actual hi té CER ≤ 0,4 contra el tifinag.
 - **Un lector nou substitueix l'actual** només si CER ≤ 0,02 sobre línies reals de veritat, no empitjora cap parella de confusió, i es va mesurar en un capítol que no ha vist.
@@ -125,5 +133,7 @@ Relacionats: `ocr-tifinag-snrt.md`, `ocr-arab-text-cremat.md`, `tifinag-estandar
 - **curt**: menys de 4 lletres o menys d'1 s de so.
 
 **Què ha mesurat** (en els 3 capítols de les 10 marques, ECS): ok 57 %, 31 % i 50 % dels talls. Sobre les 10 marques d'en Pablo: dels 4 «no concorda» en descarta 3, l'únic «concorda» passa, i el quart «no concorda» també passa (ritme normal però desplaçat).
+
+> **Això es va corregir a `DESXIFRAT.md` §41 (vegeu `AUDITORIA-2026-11-21.md`, troballa 4):** l'alineació forçada **ja existeix i ja està mesurada** des del 18-11 (#601). 358 de 589 talls (62 %) tenen l'inici desplaçat més de 0,5 s, i retallar on el model sent la veu baixa el CER de 0,7370 a 0,6581: **−0,0789**, sis vegades més que la millor ronda del cercle, sense demanar dades noves. El que hi ha aquí sota és el que es va creure.
 
 **Què NO fa.** No sap on cau cada paraula, així que un desplaçament d'1 s amb ritme normal passa. Només 10 marques: és un indici, no una mesura. El pas que ho resol és l'**alineació forçada** amb el model acústic (CTC amb l'adaptador MMS) sobre una finestra de ±1,5 s: retalla el tall a la part parlada i dona una puntuació; s'ha de fer a Kaggle (GPU) i es jutja amb ≥50 marques d'en Pablo. Fins que existeixi, el transcriptor només rep el que passa la porta.
