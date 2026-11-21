@@ -26,7 +26,8 @@ W, H = 1920, 1080
 TIF = "ⵓⵟⵟⵓⵏ ⵉⴳⴳⵓⵜ ⵎⵉⵏⵣⵉ ⴰⵙⵏⴼⴰⵕ ⵉⵎⵇⵓⵔ ⴰⵡⴷ ⵏⵜⵜⴰ"
 
 
-def tifinag_mask(text, top):
+def tifinag_mask(text, top, x0=None):
+    """The glyphs of `text` from the shipped templates, with their body on row `top`; centred at x=964 unless `x0` says where to start."""
     P = PL.plantilles()
     parts, width = [], 0
     for ch in text:
@@ -35,7 +36,7 @@ def tifinag_mask(text, top):
             continue
         m, dy = P[ch]
         parts.append((width, m, dy)); width += m.shape[1] + 4
-    x0 = 964 - width // 2
+    x0 = 964 - width // 2 if x0 is None else x0
     white = np.zeros((H, W), bool)
     for dx, m, dy in parts:
         y = top + dy
@@ -43,14 +44,14 @@ def tifinag_mask(text, top):
     return white
 
 
-def arab_mask(top, seed=0):
-    """Joined words: a wavy baseline 4 px thick, with an alef-like stem and dots; 41 px tall, centred at x=964, like the real Arabic line."""
+def arab_mask(top, seed=0, xa=964 - 480, xb=964 + 460, mot=(90, 190)):
+    """Joined words: a wavy baseline 4 px thick, with an alef-like stem and dots; 41 px tall, from `xa` to `xb` (by default centred at x=964, like the real Arabic line)."""
     rng = np.random.default_rng(seed)
     im = Image.new("L", (W, H), 0)
     d = ImageDraw.Draw(im)
-    x = 964 - 480
-    while x < 964 + 460:
-        n = int(rng.integers(90, 190))
+    x = xa
+    while x < xb:
+        n = int(rng.integers(*mot))
         pts = [(x + i, top + 24 + 5 * np.sin(i / 7.0 + rng.uniform(0, 1))) for i in range(0, n, 2)]
         d.line(pts, fill=255, width=4)
         for _ in range(int(rng.integers(1, 4))):
@@ -63,10 +64,25 @@ def arab_mask(top, seed=0):
     return np.asarray(im) > 0
 
 
-def frame(tif_top, arab_top, seed=0):
+LOGO_X0, LOGO_X1 = 1686, 1812      # the channel's logo, measured on the Tamazight TV frames: always these columns, 1080p
+LOGO_TIF = "ⵜⴰⴷⴼ"                  # the logo is a stacked block of Tifinagh over Arabic (ⵜⴰⴷⴼⵉ ⵏ ⵜⵙⴽⵍⴰ / تاصفي ن تسكلا)
+
+
+def logo_mask(tif_top, arab_top, seed=0):
+    """The channel's logo in the right-hand corner, at the height of the subtitle lines: a Tifinagh word over an Arabic one.
+    The glyphs are at subtitle size (the templates are not scaled), which makes it the most confusable corner possible."""
+    return (tifinag_mask(LOGO_TIF, tif_top, x0=LOGO_X0)
+            | arab_mask(arab_top, seed + 7, xa=LOGO_X0, xb=LOGO_X1, mot=(30, 55)))
+
+
+def frame(tif_top, arab_top, seed=0, logo=False, subtitol=True):
     rng = np.random.default_rng(seed)
     img = np.zeros((H, W, 3), np.float32) + np.array((110, 90, 85), np.float32) + rng.normal(0, 6, (H, W, 1))
-    white = tifinag_mask(TIF, tif_top) | arab_mask(arab_top, seed)
+    white = np.zeros((H, W), bool)
+    if subtitol:
+        white |= tifinag_mask(TIF, tif_top) | arab_mask(arab_top, seed)
+    if logo:
+        white |= logo_mask(884, 924, seed)          # the logo does not move with the subtitle: it is always at the same rows
     ring = ndimage.binary_dilation(white, iterations=2)
     img[ring] = (60, 55, 55)
     img[white] = (225, 221, 218)
@@ -175,6 +191,33 @@ def test_stage_02_regenerates_bands_cut_with_another_geometry(tmp_path, monkeypa
         (fr2 / f"{i:05d}.png").write_bytes(b"x")
     monkeypatch.setattr(comu, "BANDA_720", (576, 660)); chamades.clear()
     assert m.treu_franges("v.mp4", str(tmp_path / "b"), 1280, 720, 5.0, io.StringIO()) == 5 and not chamades
+
+
+def test_the_logo_alone_does_not_vote():
+    """#721: half of a «nkkni-didk» episode runs with no subtitle, and then the only text in the band is the channel's logo —
+    a stacked Tifinagh-over-Arabic block in the corner. There is nothing to decide, so the frame must not vote."""
+    assert OL.ordre_del_fotograma(frame(884, 924, logo=True, subtitol=False)[800:1040]) is None
+
+
+def test_the_logo_does_not_touch_the_vote_of_a_frame_with_a_subtitle():
+    """#721: the logo sits at the same rows as the two subtitle lines, so its ink joined their runs and poisoned both scores.
+    The same frame with and without the logo must vote the same, with the same lines and the same margin."""
+    for fabrica, esperat in ((normal_frame, "normal"), (inverted_frame, "invertit")):
+        tops = (884, 924) if esperat == "normal" else (940, 884)
+        net = OL.ordre_del_fotograma(fabrica()[800:1040])
+        amb = OL.ordre_del_fotograma(frame(*tops, logo=True)[800:1040])
+        assert net["ordre"] == esperat
+        assert amb["ordre"] == esperat and amb["marge"] >= OL.MARGE_FOTOGRAMA
+        assert amb["trams_1080"] == net["trams_1080"] and amb["cos_1080"] == net["cos_1080"]
+        assert abs(amb["marge"] - net["marge"]) < 0.05
+
+
+def test_an_episode_half_without_subtitle_still_decides():
+    """#721: six frames with a subtitle and six with only the logo. The six mute ones must add nothing, and the chapter decides
+    on the six that say something — which is what the 70 % majority is for."""
+    rs = [OL.ordre_del_fotograma(frame(884, 924, sd, logo=True)[800:1040]) for sd in range(6)]
+    rs += [OL.ordre_del_fotograma(frame(884, 924, sd, logo=True, subtitol=False)[800:1040]) for sd in range(6)]
+    assert OL.decideix(rs) == "normal"
 
 
 def test_stops_with_a_clear_error_when_it_cannot_decide():
