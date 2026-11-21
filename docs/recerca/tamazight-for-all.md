@@ -596,6 +596,8 @@ castiga menys el desconegut (unk −5). Kernel `tfa-h3-el-lexic-al-feix` (datase
 `tfa-veritat-h3`): greedy reproduït a Kaggle (241 versos, 53 s; CER 0,207 contra el 0,206
 desat: la línia de base es reconstrueix).
 
+> **Això es va corregir a `DESXIFRAT.md` §38 (vegeu `AUDITORIA-2026-11-21.md`, troballa 1):** aquesta mesura és sobre `adaptador_shi_ric`, que el 16-11 al migdia va deixar de servir. Redescodificades les proves amb l'adaptador d'ara (H4b), el guany del model de llengua a TFA-226 és −0,0014 i **no es pot dir**; només millora Common Voice, i per la nostra pròpia regla no s'adopta. El que hi ha aquí sota és el que es va creure.
+
 *Resultat de l'H3 (226 versos narrats, veritat humana, mateix `net`+`dist` del 0,21; «plegat»
 = x/ḫ, ɣ/ġ, c/š comptats iguals):*
 
@@ -849,6 +851,8 @@ d'acord entre dues lectures queden 6,7 min; sense, 56 min de transcripció provi
    sempre la mateixa (mostra de 40 a cegues, i els 226 versos quan hi ha veritat).
 
 ## H3, segona volta (15-11, nit; Kaggle sense GPU, 241 versos): ⵡⵉⴽⵉⵎⴰⵡⴰⵍ al model de llengua no mou res
+
+> **Això es va corregir a `DESXIFRAT.md` §38 (vegeu `AUDITORIA-2026-11-21.md`, troballa 1):** «el desplegat» de la taula de sota val per a la ruta `/transcribe_mms_lm`, que és viva, però el seu guany està mesurat sobre l'adaptador acústic d'abans del 16-11. Amb el que serveix ara, a TFA-226 el guany és −0,0014 i no es pot dir. El que hi ha aquí sota és el que es va creure.
 
 Mateix nucli, mateixos versos, el corpus de bigrames de la biblioteca sol (`corpus_bi`) contra el
 que hi afegeix les 990 frases del Viccionari zgh (`corpus_bi_wm`), a quatre pesos:

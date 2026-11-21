@@ -20,6 +20,14 @@ per sèrie, i tot passa per dos OCR que avui no són perfectes.
 
 ## Les fases
 
+> **Dues fases de sota es van corregir (vegeu `AUDITORIA-2026-11-21.md`, troballes 2 i 6).** La
+> **fase 4** afirma un filtre («només les sèries de l'Alt Atles central entren al train») que no
+> existeix: `05_varietat.py` no s'ha construït mai i la funció que fa la feina
+> (`tools/snrt/fabrica/05_informe.py:111-150`) no té cap referència del Rif, de manera que no pot
+> dir-ne «rif». Va dir «tachelhit» als 27 capítols collits, i 8 són del Rif (quadern §42). La
+> **fase 6** posa com a porta «millorar el 0,1537 actual»: 0,1537 és del 29-10 i des del 16-11
+> servim H4b, que al mateix test fa 0,140. El que hi ha aquí sota és el que es va creure.
+
 1. **OCR tancat** (peó `ocr-tipografia`, en curs). La lletra dels subtítols és fixa: identificar-la,
    generar línies sintètiques amb aquesta lletra, entrenar un lector per a cada escriptura i mesurar
    sobre 200 franges reals transcrites a mà. Porta: CER < 1 % en totes dues línies. Comprovació

@@ -124,6 +124,15 @@ parella de confusió coneguda; es canvia només la funció `llegeix_*` de l'etap
 ## 6. Protocols
 
 ### 6.1 Varietat d'un capítol o d'una sèrie
+
+> **Això es va corregir a `DESXIFRAT.md` §42 (vegeu `AUDITORIA-2026-11-21.md`, troballa 6):** del
+> protocol de sota només corre el punt 2, el que el text mateix qualifica d'orientatiu, i les seves
+> tres referències **no inclouen el Rif**, de manera que no pot retornar «rif» per construcció
+> (`tools/snrt/fabrica/05_informe.py:118-122`). El punt 4, «la mesura que val», no es fa
+> (`tools/snrt/fabrica/LLEGEIX-ME.md:87-89`). El resultat: va dir «tachelhit» als 27 capítols
+> collits, i 8 són del Rif. El senyal bo no passa per cap dels dos filtres: són **els topònims a
+> l'àrab**. El que hi ha aquí sota és el que es va creure.
+
 1. Transliterar el tifinag de les rèpliques aptes al llatí amb `backend/transliteration.py`.
 2. Normalitzar (§6.2) i comptar formes. Comparar amb tres referències construïdes de la biblioteca
    (`cataleg_prod.json`, camps `region`/`variety`/`speaker`): **Aït Mraw / Beni Mellal** (Halima,
@@ -174,6 +183,14 @@ l'entrenament, no per a l'acceptació). Acceptació: §5.
   màquina no confirmat.
 
 ### 6.5 Transcriptor (fase 6)
+
+> **Això es va corregir a `AUDITORIA-2026-11-21.md`, troballa 2:** la «referència 0,1537» és la
+> xifra del 29-10 d'un adaptador que des del 16-11 ja no serveix. Al mateix test de 256 clips,
+> l'adaptador que servim ara (H4b) fa **0,140** (`zouhir-amazigh.md:173`), i el quadern §38 en dona
+> el greedy a 0,1463. Un model nou que «millorés 0,1537» pot ser pitjor que el que ja tenim. A més,
+> el text no diu amb quina escala de puntuació és el 0,1537, i el projecte sap que les escales
+> difereixen (`tamazight-for-all.md:893`). El que hi ha aquí sota és el que es va creure.
+
 Dades: rèpliques aptes per a l'ASR (§5) de capítols amb `varietat_capitol` = «atles-central» primer;
 objectiu text = tifinag transliterat sense plegar (regla `tachelhit-asr-plegat-esborrava-lletres`).
 Entrenament: adaptador MMS a Kaggle com H4 (`h4_afina_shi_amb_zouhir.py`). Mesura: test net CV zgh
