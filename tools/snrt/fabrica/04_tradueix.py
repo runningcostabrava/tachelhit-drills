@@ -9,7 +9,12 @@
 - Si 0,3 ≤ chrf_ab < 0,5, un tercer auditor (`gemini-2.5-flash` sense raonar, només en aquest cas; o el que digui `TD_MODEL_AR_C`) i
   es queda el dels dos que coincideixi ≥ 0,5 amb el tercer (`catala_estat` = «tercer»). Si chrf_ab ≥ 0,5,
   `catala` = `catala_a` («confirmat»). Si no hi ha acord, «descartat» i `catala` buit.
-- Tifinag → català amb el nostre Space, només per mesurar: `catala_de_tifinag` i `chrf_tif_ar` (contra `catala`).
+- Tifinag → català amb **el nostre NLLB a casa** (`traductor_local.py`, CTranslate2 en CPU): `catala_de_tifinag` i
+  `chrf_tif_ar` (contra `catala`). Si les dues escriptures coincideixen (`chrf_tif_ar ≥ 0,5`), l'estat puja a
+  **«creuat»**: dos OCR independents diuen el mateix, i això és l'única cosa de la cadena que pot enxampar una
+  paraula àrab mal llegida — dos traductors del mateix text àrab no poden, perquè en comparteixen l'error (ADR 0014).
+- El que no arriba a l'acord **es catalogua, no es llença**: `catala_estat` = «sense_acord», amb `catala_proposat`
+  marcada com a proposta i les dues lectures desades. `catala` només s'omple quan hi ha acord.
 Reprèn per id: una fila amb `catala_estat` i sense error no es repeteix; si l'àrab o el tifinag han canviat, sí.
 Els crèdits no es tradueixen. Les rèpliques amb `arab_dubtos` (lector d'àrab propi) tampoc: no passen la porta del traductor (§5) i no han de gastar fitxes.
 
@@ -39,8 +44,23 @@ ROTA_QWEN = float(os.environ.get("TD_ROTA_QWEN_FITXES", "800000"))
 CONF_ALTA = float(os.environ.get("TD_ARAB_CONF_ALTA", "0.8"))   # sense cap Qwen: només es tradueixen (DeepSeek + Gemini) les rèpliques amb arab_conf >= això
 MODEL_B = os.environ.get("TD_MODEL_AR_B", "deepseek-chat")
 MODEL_C = os.environ.get("TD_MODEL_AR_C", "gemini-2.5-flash")   # tercer auditor (ordre del 18-11-2026; abans qwen4-max)
-SPACE = os.environ.get("TD_SPACE_NLLB", "josepabloucr/Finetuned-Quantized-NLLB")
+#: el tifinag ja no passa per cap Space: es tradueix a casa (ADR 0014, `traductor_local.py`)
 CONFIRMAT, DUBTE = 0.5, 0.3
+
+
+def sense_acord(f):
+    """Dues lectures que no coincideixen: es **catalogen**, no es llencen (ADR 0014).
+
+    Abans quedaven amb `catala` buit i estat «descartat», i el significat es perdia: 142 rèpliques
+    (17 %) de l'episodi del 20-11. Mirant-les, el llindar castiga les maneres de dir diferents —
+    dues traduccions amb chrF 0,30 deien exactament el mateix i es van perdre totes dues.
+
+    `catala` segueix buit, que és el que impedeix que res presenti com a fet un significat que no
+    ho és; el que hi ha és una **proposta** marcada, i les dues lectures al costat.
+    """
+    f["catala"], f["catala_estat"] = "", "sense_acord"
+    f["catala_proposat"] = f.get("catala_a") or f.get("catala_b") or f.get("catala_c") or ""
+    return f
 SISTEMA = ("Ets un traductor de l'àrab al català. T'arriba la traducció àrab (àrab estàndard, de vegades amb "
            "trets marroquins) d'una frase dita en amazic per algú del Marroc: una frase de conversa, un conte, "
            "una dita o una frase solta. Torna NOMÉS la traducció al català, en una sola línia, natural i correcta, "
@@ -196,7 +216,7 @@ def main():
         if not files:
             raise RuntimeError("sense subtitols.jsonl")
         te_b = bool(os.environ.get("DEEPSEEK_API_KEY"))
-        comu.diu(log, f"== {ETAPA} {comu.ara()} {MODEL_A} + {MODEL_B if te_b else 'cap segon model (sense DEEPSEEK_API_KEY)'} + tercer {MODEL_C} + Space {SPACE}")
+        comu.diu(log, f"== {ETAPA} {comu.ara()} {MODEL_A} + {MODEL_B if te_b else 'cap segon model (sense DEEPSEEK_API_KEY)'} + tercer {MODEL_C} + tifinag a casa")
         import collections
         fitxes = collections.defaultdict(int)
         pany = threading.Lock()
@@ -218,29 +238,38 @@ def main():
                 return not f.get("tifinag") or f.get("tifinag_traduit") == f.get("tifinag")
             return True
 
+        #: Els capítols llegits abans de l'ADR 0014 porten «descartat», amb el significat llençat.
+        #: Com que la seva feina d'àrab ja està feta i no es tornarà a tocar, aquí es canvia el nom
+        #: i es recupera la proposta: si no, el catàleg tindria dos vocabularis per sempre i qui el
+        #: llegís hauria de conèixer-los tots dos.
+        vells = [f for f in files if f.get("catala_estat") == "descartat"]
+        for f in vells:
+            sense_acord(f)
+        if vells:
+            comu.diu(log, f"{len(vells)} rèpliques «descartat» passades a «sense_acord» (ADR 0014)")
+
         feines = [f for f in files if cal(f)]
         if a.nomes:
             feines = feines[:a.nomes]
         comu.diu(log, f"{len(files)} rèpliques, {len(feines)} a traduir")
-        space = None
-        if any(f.get("tifinag") for f in feines):
-            try:
-                from gradio_client import Client
-                space = Client(SPACE)
-            except Exception as e:
-                comu.diu(log, f"Space no disponible: {e}")
+        #: El tifinag es tradueix a casa (ADR 0014). Abans es demanava a un Space gratuït, i el
+        #: Space es dorm: el 20-11-2026 van sortir ZERO rèpliques amb la comparació entre les dues
+        #: vies perquè la crida va caducar. Un testimoni que no es presenta mai no val res, i
+        #: aquesta via és l'única que pot enxampar un error de lectura de l'àrab.
+        import traductor_local
+        local = traductor_local.disponible()
+        comu.diu(log, f"tifinag → català: {'el nostre NLLB a casa' if local else 'NO DISPONIBLE'}")
         sem = threading.Semaphore(2)
 
         def tif_ca(text):
-            if not text or space is None:
+            if not text or not local:
                 return ""
-            for intent in range(3):
-                try:
-                    with sem:
-                        return space.predict(text, "Standard Moroccan Tamazight", "Catalan", 237, 4, 1.0, api_name="/predict")
-                except Exception:
-                    time.sleep(3 + 5 * intent)
-            return ""
+            try:
+                with sem:
+                    return traductor_local.tradueix(text)
+            except Exception as e:
+                comu.diu(log, f"traductor local: {type(e).__name__} {str(e)[:70]}")
+                return ""
 
         def feina(f):
             try:
@@ -276,10 +305,13 @@ def main():
                         fitxes[MODEL_C] += n
                     acord = comu.chrf(f["catala_c"], f["catala_b"])
                     f["chrf_bc"] = acord
-                    f["catala"], f["catala_estat"] = (f["catala_b"], "confirmat") if acord >= CONFIRMAT else ("", "descartat")
+                    if acord >= CONFIRMAT:
+                        f["catala"], f["catala_estat"] = f["catala_b"], "confirmat"
+                    else:
+                        sense_acord(f)
                     f["via"] = "deepseek+gemini"
                 except Exception as e:
-                    err = f"b/c: {str(e)[:80]}"; f["catala"], f["catala_estat"] = "", "descartat"
+                    err = f"b/c: {str(e)[:80]}"; sense_acord(f)
                 f["arab_traduit"] = f["arab"]
                 canvi_arab = False
             if canvi_arab:
@@ -311,7 +343,10 @@ def main():
                             ok = comu.chrf(f["catala_c"], f["catala_a"]) >= CONFIRMAT
                         except Exception as e:
                             err = (err or "") + f" c: {str(e)[:80]}"
-                    f["catala"], f["catala_estat"] = (f["catala_a"], "tercer") if ok else ("", "descartat")
+                    if ok:
+                        f["catala"], f["catala_estat"] = f["catala_a"], "tercer"
+                    else:
+                        sense_acord(f)
                 elif f["chrf_ab"] >= CONFIRMAT:
                     f["catala"], f["catala_estat"] = f["catala_a"], "confirmat"
                 elif f["chrf_ab"] >= DUBTE:
@@ -325,9 +360,9 @@ def main():
                     if max(ca, cb) >= CONFIRMAT:
                         f["catala"], f["catala_estat"] = (f["catala_a"] if ca >= cb else f["catala_b"]), "tercer"
                     else:
-                        f["catala"], f["catala_estat"] = "", "descartat"
+                        sense_acord(f)
                 else:
-                    f["catala"], f["catala_estat"] = "", "descartat"
+                    sense_acord(f)
                 f["arab_traduit"] = f["arab"]
             if f.get("tifinag") and (f.get("tifinag_traduit") != f["tifinag"] or not f.get("catala_de_tifinag")):
                 f["catala_de_tifinag"] = tif_ca(f["tifinag"]); f["tifinag_traduit"] = f["tifinag"]
@@ -335,6 +370,16 @@ def main():
                 f["catala_de_tifinag"] = ""
             ref = f.get("catala") or ""
             f["chrf_tif_ar"] = comu.chrf(f.get("catala_de_tifinag", ""), ref) if ref and f.get("catala_de_tifinag") else None
+            #: Les dues escriptures diuen el mateix (ADR 0014). Això val més que «confirmat»: allà
+            #: hi ha dos traductors del MATEIX text àrab, que comparteixen l'error de lectura; aquí
+            #: hi ha dos OCR d'escriptures diferents, que no se'l poden compartir. És l'única cosa
+            #: de tota la cadena que pot enxampar una paraula àrab mal llegida.
+            #:
+            #: El desacord, de moment, NO treu res: abans de tancar aquesta porta cal saber quina
+            #: part és error d'OCR i quina és que el nostre traductor és fluix.
+            if f["chrf_tif_ar"] is not None and f["chrf_tif_ar"] >= CONFIRMAT \
+                    and f.get("catala_estat") in ("confirmat", "tercer"):
+                f["catala_estat"] = "creuat"
             f["error_traduccio"] = err
             return f
 
@@ -348,12 +393,18 @@ def main():
                     comu.diu(log, f"  {n}/{len(feines)} {time.time() - t0:.0f} s")
         comu.desa_subtitols(carpeta, files)
         dial = [f for f in files if not f.get("credits") and f.get("arab")]
-        estats = {e: sum(1 for f in dial if f.get("catala_estat") == e) for e in ("confirmat", "tercer", "descartat")}
+        estats = {e: sum(1 for f in dial if f.get("catala_estat") == e)
+                  for e in ("creuat", "confirmat", "tercer", "sense_acord")}
         ab = [f["chrf_ab"] for f in dial if f.get("chrf_ab") is not None]
+        #: quantes rèpliques han arribat a tenir la segona via: si surt zero, el traductor local no
+        #: s'ha carregat i el creuament no s'ha fet — val més veure-ho al registre que descobrir-ho
+        #: tres episodis més tard, que és el que va passar amb el Space
+        estats["amb_via_tifinag"] = sum(1 for f in dial if f.get("chrf_tif_ar") is not None)
         vell = comu.estat_llegeix(carpeta).get(ETAPA, {}).get("comptes", {})
         comptes = {"traduides": len(dial), "estats": estats, "chrf_ab_mitja": round(sum(ab) / len(ab), 4) if ab else None,
                    "fitxes_text": {m: fitxes.get(m, 0) + (vell.get("fitxes_text") or {}).get(m, 0) for m in set(fitxes) | set(vell.get("fitxes_text") or {})},
-                   "model_a": MODELS_A, "model_b": MODEL_B if te_b else None, "model_c": MODEL_C, "space": SPACE,
+                   "model_a": MODELS_A, "model_b": MODEL_B if te_b else None, "model_c": MODEL_C,
+                   "tifinag": "traductor_local",
                    "errors": sum(1 for f in dial if f.get("error_traduccio")), "segons": round(time.time() - t0),
                    "saltades_pressupost": saltades[0], "saltades_sense_qwen_confianca_baixa": saltades[1], "pressupost_esgotat": aturat() or None,
                    "qwen_actual": tria_a(),
