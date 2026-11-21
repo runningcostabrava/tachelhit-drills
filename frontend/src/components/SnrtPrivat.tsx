@@ -95,15 +95,18 @@ export default function SnrtPrivat() {
     //: ha caducat, només se'n diu el nom i es deixa el botó: demanar-lo sense un clic no val.
     (async () => {
       //: mana la nansa d'aquest episodi: si algú n'ha triat un fitxer a mà, no se li canvia
+      //: La nansa d'aquest episodi mana **si funciona**: una tria feta a mà no s'ha de trepitjar
+      //: per un fitxer que casa de nom (#697). Però si no s'obre en silenci —Chrome oblida el
+      //: permís a cada recàrrega— abans es parava aquí i es deixava el vídeo negre amb un botó,
+      //: encara que la carpeta triada tingués el mateix episodi amb el nom bo. En Pablo, al
+      //: capítol `tadfi_goughelt` (#704): els 39 episodis eren a la carpeta i no en sortia cap.
       const n = await llegeixNansa(sel);
-      if (n) {
-        const f = await fitxerDeLaNansa(n, false);
-        if (f) { setFitxer(URL.createObjectURL(f)); return; }
-        setDesat(n.name);
-        return;
-      }
+      const f = n ? await fitxerDeLaNansa(n, false) : null;
+      if (f) { setFitxer(URL.createObjectURL(f)); return; }
       const g = await fitxerDeLaCarpeta(sel, false);
-      if (g) setFitxer(URL.createObjectURL(g));
+      if (g) { setFitxer(URL.createObjectURL(g)); return; }
+      //: ni l'una ni l'altra sense demanar permís: es deixa el botó, que sí que el pot demanar
+      if (n) setDesat(n.name);
     })().catch(() => {});
     demana<Dades>(`/snrt-privat/${encodeURIComponent(sel)}`).then(setDades).catch((e) => setError(String(e.message || e)));
     // vídeo allotjat al servidor d'Alibaba: adreça signada de 4 h (si no n'hi ha, es carrega des de l'ordinador)
