@@ -7,6 +7,7 @@ import sys
 import glob
 import subprocess
 import json
+from functools import lru_cache
 import traceback
 import tempfile
 from pathlib import Path
@@ -10987,9 +10988,30 @@ def require_snrt_viewer(user: UserModel = Depends(require_user)) -> UserModel:
 #: això ja és la tria. El que SEGUEIX tancat és `/video` (dóna un enllaç signat al vídeo que
 #: tenim allotjat) i `importa` (escriu). Li he dit que això fa públic el text de la SNRT i que el
 #: permís que tenim apuntat és de recerca; ho ha decidit igualment i hi consta.
+@lru_cache(maxsize=1)
+def snrt_fora() -> set:
+    """Els episodis que el visor no serveix: tarifit, que es una altra llengua.
+
+    No s'esborra res de la base de dades. Amagar dades esborrant-les es pitjor que no
+    servir-les: el dia que es vulgui un corpus de tarifit, hi sera. La llista viu a
+    `backend/data/varietats_snrt.json` amb la varietat i d'on surt la classificacio, perque es
+    pugui corregir sense tocar codi.
+    """
+    cami = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data",
+                        "varietats_snrt.json")
+    try:
+        with open(cami, encoding="utf-8") as f:
+            return set(json.load(f).get("no_es_serveixen") or [])
+    except Exception as e:
+        print(f"[SNRT] no puc llegir varietats_snrt.json: {e}")
+        return set()
+
+
 @app.get("/snrt-privat/")
 def snrt_privat_index(db: Session = Depends(get_db)):
-    eps = db.query(SnrtEpisodeModel).order_by(SnrtEpisodeModel.titol).all()
+    fora = snrt_fora()
+    eps = [e for e in db.query(SnrtEpisodeModel).order_by(SnrtEpisodeModel.titol).all()
+           if e.slug not in fora]
     out = []
     for e in eps:
         n = db.query(SnrtCueModel).filter(SnrtCueModel.episodi_id == e.id).count()
@@ -11001,6 +11023,8 @@ def snrt_privat_index(db: Session = Depends(get_db)):
 
 @app.get("/snrt-privat/{slug}")
 def snrt_privat_episodi(slug: str, db: Session = Depends(get_db)):
+    if slug in snrt_fora():
+        raise HTTPException(status_code=404, detail="Episodi desconegut")
     e = db.query(SnrtEpisodeModel).filter(SnrtEpisodeModel.slug == slug).first()
     if not e:
         raise HTTPException(status_code=404, detail="Episodi desconegut")
@@ -11016,6 +11040,8 @@ def snrt_privat_video(slug: str, _admin: UserModel = Depends(require_snrt_viewer
     """Adreça signada (4 h) del vídeo, que viu al servidor d'Alibaba (visor-video) i no passa mai per aquesta app.
     Sense SNRT_VIDEO_BASE i SNRT_VIDEO_SECRET (o sense vídeo allà) torna `url: null` i el visor demana el fitxer a qui el mira."""
     import hashlib, hmac, time as _t
+    if slug in snrt_fora():
+        raise HTTPException(status_code=404, detail="Episodi desconegut")
     if not db.query(SnrtEpisodeModel).filter(SnrtEpisodeModel.slug == slug).first():
         raise HTTPException(status_code=404, detail="Episodi desconegut")
     base, secret = (os.getenv("SNRT_VIDEO_BASE") or "").rstrip("/"), os.getenv("SNRT_VIDEO_SECRET") or ""

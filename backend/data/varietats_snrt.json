@@ -1,0 +1,44 @@
+{
+ "que_es": "De quina varietat es cada episodi del visor del SNRT, i quins no es serveixen.",
+ "per_que": "El tarifit es una altra llengua i no s'ha de barrejar amb el tamazight. No s'esborra res: es deixa de servir, perque el dia que es vulgui un corpus de tarifit hi sigui. Hi ha copia sencera dels 11 (6.651 linies) fora del repositori.",
+ "d_on_surt": "El presentador de Tadfi n Tskla diu d'on es cada convidat, i es confirma amb les marques fonetiques (k->s, l->r) llegides per una orella sense parentiu amb la nostra. Els toponims a l'arab hi van d'acord.",
+ "no_es_serveixen": [
+  "agnkrfivlpeuwzmemweqshbstzqrjayldhxebjgk",
+  "gunpjctjuowarcaqtwcoysilskmhttttlqfeofmn",
+  "hmssyuzoyqzywbajgargfzkflkuppdermxyipydr",
+  "jzawuozpghwwdanplebbesgrqehtxxcbgxuplcbr",
+  "kzckfzkejpvanodkvuktcrwthfjgvhefksecojxi",
+  "lzvdtikcqbpplfksrtfjgyljwcrpogkpfobqqygu",
+  "murpbmcssuwhrysypnqgkklxipoqbjkttjznrbzf",
+  "nknrztnktbvaxnrsukrytkorskdyghhrcgxajuzm",
+  "oeeljuwkqlqtebzrtqyrbscresqsjncxwqmhtrsn",
+  "pqmarstkdcbygrjlujxnnxyelovzeveobxzvwqot",
+  "tecepvdrorfpeapyqswdszhlgqfdwepqntmrmgck"
+ ],
+ "varietat": {
+  "agnkrfivlpeuwzmemweqshbstzqrjayldhxebjgk": "tarifit",
+  "gunpjctjuowarcaqtwcoysilskmhttttlqfeofmn": "tarifit",
+  "hmssyuzoyqzywbajgargfzkflkuppdermxyipydr": "tarifit",
+  "jzawuozpghwwdanplebbesgrqehtxxcbgxuplcbr": "tarifit",
+  "kzckfzkejpvanodkvuktcrwthfjgvhefksecojxi": "tarifit",
+  "lzvdtikcqbpplfksrtfjgyljwcrpogkpfobqqygu": "tarifit",
+  "murpbmcssuwhrysypnqgkklxipoqbjkttjznrbzf": "tarifit",
+  "nknrztnktbvaxnrsukrytkorskdyghhrcgxajuzm": "tarifit",
+  "oeeljuwkqlqtebzrtqyrbscresqsjncxwqmhtrsn": "tarifit",
+  "pqmarstkdcbygrjlujxnnxyelovzeveobxzvwqot": "tarifit",
+  "tecepvdrorfpeapyqswdszhlgqfdwepqntmrmgck": "tarifit"
+ },
+ "titols": {
+  "agnkrfivlpeuwzmemweqshbstzqrjayldhxebjgk": "TADFI N TSKLA - OMAR BOUMZZOUGH",
+  "gunpjctjuowarcaqtwcoysilskmhttttlqfeofmn": "TADFI N TSKLA - RACHID FARIS",
+  "hmssyuzoyqzywbajgargfzkflkuppdermxyipydr": "TADFI N TSKLA - IBTISSAM KHBIZA",
+  "jzawuozpghwwdanplebbesgrqehtxxcbgxuplcbr": "TADFI N TSKLA - ALI EL ABDELLAOUI",
+  "kzckfzkejpvanodkvuktcrwthfjgvhefksecojxi": "TADFI N TSKLA - SAID AL MOUSSAWI",
+  "lzvdtikcqbpplfksrtfjgyljwcrpogkpfobqqygu": "TADFI N TSKLA - MOUSTAPHA AYEND",
+  "murpbmcssuwhrysypnqgkklxipoqbjkttjznrbzf": "TADFI N TSKLA - ANDICHI CHAHID",
+  "nknrztnktbvaxnrsukrytkorskdyghhrcgxajuzm": "TADFI N TSKLA - HAYAT BOUTERFAS",
+  "oeeljuwkqlqtebzrtqyrbscresqsjncxwqmhtrsn": "TADFI N TSKLA - SAID ABARNOUS",
+  "pqmarstkdcbygrjlujxnnxyelovzeveobxzvwqot": "TADFI N TSKLA - MIMOUN AMSBRID",
+  "tecepvdrorfpeapyqswdszhlgqfdwepqntmrmgck": "TADFI N TSKLA - ABD ERRAHIM FAOUZI"
+ }
+}
