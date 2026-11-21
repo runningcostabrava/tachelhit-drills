@@ -3,6 +3,8 @@
 Aprovat el 22-10-2026. Qualsevol issue o PR que surti d'aquí ha de poder-se llegir contra aquest
 document: si no hi cau a dins, primer es canvia l'abast.
 
+Això és **què** volem fer. **On som i què ve ara** és a [`EL_PLA.md`](EL_PLA.md).
+
 ## Què és
 
 Una biblioteca viva d'amazic de l'Atles central (i tachelhit) per a catalanoparlants: frases dites

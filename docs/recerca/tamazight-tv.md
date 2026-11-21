@@ -60,6 +60,13 @@ sencera. Llista plana del 17-11 a `Veus-tachelhit\_escoltats\tamazight_tv_videos
 - **Volum:** 284 hores de sèrie són més que tot el que hem processat fins ara junt. Si s'hi entra,
   per sèrie i varietat, començant per l'Atles, i amb la lliçó de TutlAit al davant (ids únics,
   so comprovat abans de cap cadena).
+> **Això es va corregir a `ocr-tifinag-snrt.md` (vegeu `AUDITORIA-2026-11-21.md`, troballa 3):** el
+> tifinag cremat de la SNRT es llegeix amb **CER 0,0009** sobre 100 línies no vistes, i aslmdtv amb
+> ≥ 99,5 % dels glifs. El 0,29 és d'un lector de veu sobre rètols d'un altre canal, no d'un OCR:
+> aquesta línia es va escriure sis hores abans que hi hagués la mesura. **I amb això cau la
+> conclusió que hi penja:** amb un 0,09 % d'error, el tifinag no és un esborrany que només l'àrab
+> pugui avalar. El que hi ha aquí sota és el que es va creure.
+
 - **El tifinag cremat** es llegeix amb CER 0,29 al millor cas (aslmdtv): la línia àrab és la que
   dona el significat segur; el tifinag és esborrany a `text_tachelhit_suggested` fins que algú el
   confirmi.

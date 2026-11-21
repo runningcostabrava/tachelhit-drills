@@ -140,7 +140,12 @@ def test_sense_cap_qwen_acord_deepseek_gemini_nomes_amb_confianca_alta(etapa04, 
     per_id = {f["id"]: f for f in _executa(m, car, monkeypatch)}
     assert per_id["c_0001"]["catala_estat"] == "confirmat" and per_id["c_0001"]["via"] == "deepseek+gemini" and per_id["c_0001"]["model_a"] is None
     assert "catala_estat" not in per_id["c_0002"]                                   # confiança < 0,8: no es tradueix sense Qwen
-    assert per_id["c_0003"]["catala_estat"] == "descartat"                          # DeepSeek i Gemini no coincideixen
+    # Les dues lectures no coincideixen: el significat NO s'afirma, però tampoc es llença
+    # (ADR 0014). Abans quedava «descartat» amb el text perdut; ara queda catalogat amb una
+    # proposta marcada com a proposta, que és el que permet tornar-hi.
+    assert per_id["c_0003"]["catala_estat"] == "sense_acord"
+    assert per_id["c_0003"]["catala"] == ""
+    assert per_id["c_0003"]["catala_proposat"]
     assert not any(c[0].startswith("qwen") for c in crides)                         # cap crida a Qwen
     comptes = comu.estat_llegeix(car)["04_tradueix"]["comptes"]
     assert comptes["saltades_sense_qwen_confianca_baixa"] == 1 and comptes["qwen_actual"] is None
