@@ -201,8 +201,19 @@ Com s'aplica:
   i àrab), tallar el so per rèplica, i fer-ho servir per entrenar i avaluar el traductor amazic →
   català i el transcriptor (ASR), i per al lèxic. Tot a `Veus-tachelhit\_escoltats\tamazight_tv\`.
 - **No:** cap rèplica (so ni text) a la biblioteca pública ni a cap drill de producció; cap
-  redistribució de vídeo, àudio o subtítols; el conjunt de dades que en surti no es publica (el
-  dataset de còpia d'HF és privat i s'hi queda).
+  redistribució de vídeo, àudio o subtítols; **res públic** — ni conjunt de dades obert, ni
+  Space que serveixi el material.
+- **Una còpia privada en una plataforma de càlcul és recerca, no republicació** (21-11-2026,
+  en Pablo: «tenim permís, modifica la regla, cap problema»). Pujar el so i el text tallats a
+  Kaggle, HuggingFace, ModelScope o la plataforma que vingui per entrenar-hi o mesurar-hi **no
+  demana permís cada vegada**, amb dues condicions: que el conjunt de dades sigui **privat**, i
+  que s'esborri quan ja no calgui. El que decideix no és el servei, és si algú altre hi pot
+  arribar.
+
+  *Abans això deia només «el dataset de còpia d'HF és privat i s'hi queda», i es llegia com una
+  excepció d'un servei concret. El 21-11 em vaig aturar a demanar permís per pujar 1,4 GB de so
+  a una GPU quan la regla ja ho cobria: una regla que només sap dir «HF sí» obliga a preguntar
+  a cada plataforma nova.*
 - **Crèdit:** «Tamazight TV (SNRT)» als informes de recerca i a la fitxa dels models entrenats amb
   aquest material.
 - **Pendent:** tenir-ho en un correu (qui autoritza, abast, data); tornar a demanar els SRT més
