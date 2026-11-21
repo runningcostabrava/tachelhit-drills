@@ -45,6 +45,7 @@ primera porta un avís que hi apunta. Mira l'índex abans de citar cap número.
 - **§39** El gir cap a l'àrab (21-11, d'en Pablo)
 - **§40** L'ECS tenia una fàbrica millor, i jo duplicava (21-11)
 - **§41** L'alineació forçada: −0,0789, i feia tres dies que hi era (21-11)
+- **§43** El primer guany de debò amb el material del SNRT: 0,2634 → 0,3470 (21-11)
 - **§42** El corpus tenia tarifit, i el dev n'era el 100 % (21-11)
 
 ---
@@ -2381,3 +2382,39 @@ inflava el número, però el dev hauria triat el model equivocat).
 
 I l'episodi que es va traduir sencer la nit del 20 (Said El Aabouti, Tafersit) **és rifeny**:
 val per al visor, no entra a cap entrenament.
+
+
+## 43. El primer guany de debò amb el material del SNRT: 0,2634 -> 0,3470 (21-11)
+
+Afinant el NLLB per a **tifinag -> àrab** amb les parelles de la pantalla del SNRT:
+
+| | chrF |
+|---|---|
+| punt de partida (NLLB afinat per al català, demanant-li àrab) | **0,2634** |
+| afinat amb 4.562 parelles, millor punt de control | **0,3470** |
+| | **+0,0836 · un 32 % relatiu** |
+
+Mesurat al **test net**: partició per capítols (no per línies), sense cap dels 8 capítols del Rif,
+4 capítols que el model no ha vist mai.
+
+Per època al dev: 0,4162 · 0,4189 · **0,4258** · 0,4214 · 0,4137. El millor és el **tercer**;
+cinc èpoques són massa i a partir de la quarta es desaprèn. S'ha fet servir el millor punt de
+control, no l'últim.
+
+El dev (0,4258) queda molt per sobre del test (0,3470): amb 2 capítols de dev i 4 de test, la
+diferència entre capítols pesa més que el model. **El número que val és el del test.**
+
+Què en surt, de debò:
+
+| la pantalla diu | el model diu |
+|---|---|
+| «Espectadors i espectadores del canal amazic, benvinguts» | «Espectadors del canal amazic, benvinguts» |
+| «Us dono la benvinguda al vostre programa *La flaire de la literatura*» | «Us volem presentar un programa del programa literari» |
+| «El convidat d'avui és un dels grans militants de la cultura amaziga» | «El convidat d'avui és d'entre els **artistes** de la cultura amaziga» |
+
+La primera és bona; la segona es desfà; la tercera encerta l'estructura i falla la paraula
+(«artistes» per «militants»). **Serveix per entendre de què es parla, no per publicar.**
+
+Per comparar, el mateix dia: **jo traduint l'àrab a mà fa chrF 0,746**. La distància entre
+0,347 i 0,746 és la notícia: el que de debò tradueix avui no és cap model nostre. El model val
+per allò que jo no puc fer -- 215 capítols-- i encara no tradueix prou bé.
