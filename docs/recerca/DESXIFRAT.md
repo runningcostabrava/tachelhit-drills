@@ -11,7 +11,7 @@ primera porta un avís que hi apunta. Mira l'índex abans de citar cap número.
 ## Índex
 
 - **§1** Els subtítols de la SNRT no són una transcripció, i no es poden arreglar
-- **§2** La taula estàndard ↔ dialecte existeix i és regular
+- **§2** La taula estàndard ↔ dialecte existeix i és regular — *corregit a la §44*
 - **§3** L'IoU global no pot llegir les lletres-cercle, i es pot arreglar
 - **§4** Tres coses que vaig afirmar i eren falses
 - **§5** Els graus, i què vol dir cadascun
@@ -76,6 +76,8 @@ màquines s'equivoca.
 ---
 
 ## 2. La taula estàndard ↔ dialecte existeix i és regular
+
+> **Això es va corregir a la §44:** de les 181 correspondències, **26 venen només de capítols del Rif** i 6 més en són majoria — són tarifit, no dialecte del tachelhit. El 36,4 % de les parelles que van fer la taula vénen d'11 capítols rifenys. La taula neta en té 149. El que hi ha aquí sota es va mesurar abans de saber-ho.
 
 181 correspondències que surten en dos capítols o més, de 26 capítols i 15.745 talls.
 **El 61 % difereixen en una sola lletra**, que és el que deia la hipòtesi H-E2 d'en Pablo.
