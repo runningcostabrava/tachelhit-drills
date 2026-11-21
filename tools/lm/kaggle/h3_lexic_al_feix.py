@@ -95,6 +95,8 @@ print(versos[0]["veritat"], "||", versos[0]["greedy"])
 
 # %%
 sys.path.insert(0, DADES)
+#: `arpa_lm.py` es al repositori (tools/lm/), no nomes al dataset: sense ell
+#: pyctcdecode ignora el lexic i el feix no te cap model de llengua (#715).
 import arpa_lm
 import pyctcdecode.language_model as plm
 import pyctcdecode.decoder as pdec
