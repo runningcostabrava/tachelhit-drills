@@ -21,7 +21,11 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
-ALI = Path(r"E:/tamazight/_magatzem/alineacio_tot.jsonl")
+#: es pot passar per la linia d ordres: la mesura del 22-11 es va fer contra fronteres que
+#: nomes alineaven els separadors de paraula (quadern, §48).
+import sys
+ALI = Path(sys.argv[1] if len(sys.argv) > 1
+           else r"E:/tamazight/_magatzem/alineacio_ecs_v2.jsonl")
 ARREL = Path(r"E:/tamazight/talls_ecs")
 QUANTS = 400
 FINESTRA = 0.02          # 20 ms, com els fotogrames del CTC

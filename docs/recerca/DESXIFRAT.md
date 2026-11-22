@@ -48,7 +48,8 @@ primera porta un avís que hi apunta. Mira l'índex abans de citar cap número.
 - **§42** El corpus tenia tarifit, i el dev n'era el 100 % (21-11)
 - **§43** El primer guany de debò amb el material del SNRT: 0,2634 → 0,3470 (21-11)
 - **§44** La taula norma↔parla tenia 26 entrades que són tarifit (21-11)
-- **§45** Retallar amb l'alineació forçada: −0,21 de CER, el guany més gran fins ara (22-11) — *l'explicació, corregida a la §48*
+- **§45** Retallar amb l'alineació forçada: −0,21 de CER, el guany més gran fins ara (22-11) — *el número no val: §48 i §49*
+- **§49** El CER d'inferència premia escurçar el so, no encertar la frontera (23-11)
 - **§46** L'energia no pot substituir l'alineació, i el perquè confirma la §45 (22-11) — *mesura invàlida, §48*
 - **§47** Tres dreceres per no esperar les 26 h d'alineació, i cap no val (22-11) — *mesura invàlida, §48*
 - **§48** L'alineació no alineava la frase: alineava els espais entre paraules (23-11)
@@ -2470,9 +2471,10 @@ beuen de la mateixa font.
 
 ## 45. Retallar amb l'alineació forçada: −0,21 de CER, el guany més gran fins ara (22-11)
 
-> ⚠️ **El guany és real; l'explicació no.** Les fronteres d'aquesta secció venen d'un
-> alineador que no rebia la frase, només els espais entre paraules, i que tallava veu de
-> debò. **Corregit a la §48.**
+> ⚠️ **El número no mesura el que diu.** Les fronteres d'aquesta secció venen d'un alineador
+> que no rebia la frase, només els espais entre paraules (**§48**), i el CER d'inferència
+> premia escurçar el so, no encertar la frontera (**§49**): retallant endins encara surt
+> millor. El guany real del retall està sense mesurar.
 
 **El diagnòstic.** L'alineació forçada de 4.788 talls nostres (MMS-1b-all, Viterbi sobre les
 probabilitats de CTC) diu que **el 51 % del so no és la frase**:
@@ -2679,3 +2681,57 @@ dels extrems és una altra persona parlant o simplement so.
 penses. El −0,2235 era prou gran per no fer-me mirar què rebia el model, i no el vaig mirar fins
 que una altra cosa —sis capítols encallats al 97 %— em va obligar. Aquí la mesura del resultat era bona i **la mesura del
 mecanisme no existia**.
+
+---
+
+## 49. El CER d'inferència premia escurçar el so, no encertar la frontera (23-11)
+
+La §48 va deixar una pregunta oberta: amb les fronteres bones el guany del retall baixa de
+**−0,2235** a **−0,0741**. Per què les fronteres **dolentes** donaven un número millor?
+
+**La sospita.** El CER del so sencer és **1,05**. Per sobre d'1 vol dir que l'ASR transcriu *més*
+del que diu la frase: la distància està dominada per **insercions**. I aleshores qualsevol cosa
+que escurci el so en treu, encerti la frontera o no.
+
+**La prova.** El mateix model, la mateixa referència i les **mateixes fronteres bones**, canviant
+només el marge. Un marge negatiu retalla **endins**, cap a veu que sabem que hi és:
+
+| condició | so que queda | CER sencer | CER retallat | diferència | millora |
+|---|---|---|---|---|---|
+| fronteres trencades, +0,15 (§45) | 59 % | 1,0818 | 0,8583 | **−0,2235** | 77 % |
+| fronteres bones, **−0,30** | 62 % | 1,0551 | 0,8638 | **−0,1913** | **80 %** |
+| fronteres bones, +0,15 | 82 % | 1,0479 | 0,9738 | **−0,0741** | 57 % |
+
+**Menjar-se 0,3 s de veu de cada banda millora el CER quasi tres vegades més que retallar bé**, i
+millora el 80 % dels talls en lloc del 57 %. L'ordre de la taula segueix el **so que es llença**,
+no l'encert de la frontera.
+
+Hi ha més senyal en el mateix sentit. Sobre els 91 talls de la condició bona, la correlació entre
+*quina fracció del so es treu* i *quant baixa el CER* és **r = −0,41**; el terç que es retalla
+menys (5 % del so) baixa **−0,034** i el terç que es retalla més (35 %) baixa **−0,143**.
+
+**Conclusió: el CER d'inferència no és un jutge vàlid per al retall.** No mesura si hem trobat la
+frase; mesura quant de so hem tret. El «guany més gran del projecte» d'ahir era el premi per
+haver llençat el 41 % del so, i si el criteri fos aquest, el màxim s'obtindria retallant-ho tot.
+
+### Què se'n salva, i què s'ha de fer
+
+El retall **pot** ser bo: no ho sabem. El que sabem és que **aquesta mesura no ho pot dir**.
+
+L'única pregunta que té resposta és la que l'experiment ja escrit fa: **entrenar** dues vegades,
+amb talls sencers i amb talls retallats, i mesurar sobre un **test sempre sencer i el mateix als
+dos costats**. Aquí l'escurçament no pot fer trampa, perquè el que es compara és què ha après el
+model, no quant de so li has donat a transcriure.
+
+Això ja era al guió `tools/snrt/magatzem/kaggle/retall-sencer-contra-retallat.py` — el test hi va
+sencer per disseny. El que ha canviat avui és que ha deixat de ser *la confirmació* d'un resultat
+i ha passat a ser **l'únic lloc d'on pot sortir el resultat**.
+
+**Cautela que queda oberta:** qualsevol comparació anterior feta transcrivint so retallat contra
+so sencer té el mateix biaix, inclòs el diagnòstic del 18-11 (0,7370 → 0,6581) que era el guany
+de referència del projecte. Allà el CER de partida era **0,74**, per sota d'1, i el biaix per
+insercions hi és molt més petit — però no s'ha comprovat, i no es pot citar com si s'hagués fet.
+
+**Els guions:** `prova_retall/mesura.py` (ara el marge i el fitxer d'alineació es passen per la
+línia d'ordres, que és el que ha permès fer aquesta prova), `prova_retall/prova_el_jutge.py` (el
+escombrat de marges amb una sola càrrega del model).

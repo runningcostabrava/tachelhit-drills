@@ -28,7 +28,11 @@ import torch
 import torchaudio
 from torchaudio.pipelines import MMS_FA
 
-ALI = Path(r"E:/tamazight/_magatzem/alineacio_tot.jsonl")
+#: el fitxer es pot passar per la linia d ordres: la primera mesura (22-11) es va fer contra
+#: fronteres que nomes alineaven els separadors de paraula, i cal poder-la refer.
+import sys
+ALI = Path(sys.argv[1] if len(sys.argv) > 1
+           else r"E:/tamazight/_magatzem/alineacio_ecs_v2.jsonl")
 ARREL = Path(r"E:/tamazight/talls_ecs")
 QUANTS = 60
 
