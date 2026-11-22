@@ -62,6 +62,14 @@ les va dir.
 | 1r | **DeepSeek** (`v4-pro` per a text llarg, `flash` per a lots) |
 | 2n | **Gemini** — avui sense crèdit (`402`) |
 
+Mesurat el 16-11-2026 sobre 60 frases de la biblioteca traduïdes al català
+(`docs/recerca/models-de-text.md`): quan contesten, `v4-pro` (chrF 0,59) i `flash` (0,48) guanyen
+de llarg `chat` (0,35-0,38); però amb 6.000 fitxes de raonament `flash` torna buit 1 cop de 5 i
+`v4-pro` 2 de 5, perquè rumien sobre les paraules que no coneixen. Les fonts al davant sumen a tots
+tres. Gemini no es va poder córrer. Amb el compte nou de Model Studio (16-11, migdia): **`qwen3.8-max`
+sense raonar fa chrF 0,47 sense cap buit en 2 s**, i és el segon auditor; `qwen4-max` raonant 0,50;
+els Qwen petits no serveixen per a l'amazic.
+
 **El que mai no fa una màquina sola:** escriure amazic. Pot proposar la traducció al català d'un
 text que té al davant (el manual és en italià), i això és feina de traductor, no d'inventor.
 

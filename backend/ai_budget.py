@@ -101,7 +101,17 @@ def cost_micro_eur(model: str, prompt_tokens: int, output_tokens: int, images: i
 
 
 def usage_from_response(data: Dict[str, Any]) -> Dict[str, int]:
-    """Tokens and generated images out of a generateContent response."""
+    """Tokens and generated images out of a model response.
+
+    Dues formes, perquè ara hi ha dos proveïdors: la de Gemini (`usageMetadata`) i la d'OpenAI,
+    que és la que fa servir DeepSeek (`usage`). Sense això, una crida a DeepSeek es comptava com
+    a zero fitxes i la despesa de l'assistent no sortia enlloc.
+    """
+    oa = (data or {}).get("usage") or {}
+    if oa and "usageMetadata" not in (data or {}):
+        return {"prompt_tokens": int(oa.get("prompt_tokens") or 0),
+                "output_tokens": int(oa.get("completion_tokens") or 0),
+                "images": 0}
     meta = (data or {}).get("usageMetadata") or {}
     prompt = int(meta.get("promptTokenCount") or 0)
     out = int(meta.get("candidatesTokenCount") or 0) + int(meta.get("thoughtsTokenCount") or 0)

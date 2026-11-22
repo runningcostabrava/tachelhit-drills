@@ -3,6 +3,8 @@
 Aprovat el 22-10-2026. Qualsevol issue o PR que surti d'aquí ha de poder-se llegir contra aquest
 document: si no hi cau a dins, primer es canvia l'abast.
 
+Això és **què** volem fer. **On som i què ve ara** és a [`EL_PLA.md`](EL_PLA.md).
+
 ## Què és
 
 Una biblioteca viva d'amazic de l'Atles central (i tachelhit) per a catalanoparlants: frases dites
@@ -16,7 +18,8 @@ No és un diccionari, ni un traductor automàtic, ni un curs genèric d'«amazic
 | | |
 |---|---|
 | qui aprèn | adult catalanoparlant, no lingüista: un viatger encuriosit, la parella d'algú que el parla |
-| qui el parla | Halima i Driss (Aït Mraw, Boutharar, Azilal), els reculls de Beni Mellal i d'Azilal, i qualsevol parlant que hi vulgui posar la veu |
+| qui no parla català | qui ve a córrer a l'Atles i només llegeix anglès: té **una** pàgina en anglès, `/start`, amb les primeres paraules i el context (ADR 0005); la resta de l'app continua en català |
+| qui el parla | Halima i Driss (Aït Mraw, uns 10 km al nord de Boutharar, a Tinghir, a prop del riu que baixa de Kalaat M'Gouna), els reculls de Beni Mellal i d'Azilal, i qualsevol parlant que hi vulgui posar la veu |
 | qui administra | manté la biblioteca, decideix què hi entra i corregeix el que cal |
 
 ## Què ha de fer

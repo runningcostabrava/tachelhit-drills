@@ -310,6 +310,21 @@ class SentenceAnalysis(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
 
 
+class DrillAiText(Base):
+    """L'anàlisi o l'explicació d'una frase, desada la primera vegada que algú la demana (#458).
+
+    És un text de màquina al costat de la frase, mai dins seu. `empremta` diu quin text ha llegit:
+    si el text de la frase canvia, aquest deixa de valer i es torna a escriure.
+    """
+    __tablename__ = "drill_ai_text"
+
+    drill_id = Column(Integer, primary_key=True)
+    kind = Column(String, primary_key=True)              # analyze | explain
+    body = Column(Text, nullable=False)
+    empremta = Column(String, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
+
+
 class GrammarNote(Base):
     """Why ONE sentence sits in ONE grammar unit: what that sentence shows of that unit's point.
     A sentence belongs to up to three units and shows something different in each, so the note is
@@ -481,3 +496,35 @@ class UserSession(Base):
     device = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     last_used = Column(DateTime, default=datetime.utcnow, nullable=True)
+
+
+class SnrtEpisode(Base):
+    """Un episodi de Tamazight TV (SNRT) per al visor PRIVAT d'administradors (docs/adr/0012). Només text i temps: el
+    vídeo no és nostre i no se'n guarda ni se'n serveix cap còpia. Mai surt en cap exportació ni corpus."""
+    __tablename__ = "snrt_episodes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    slug = Column(String, unique=True, index=True, nullable=False)
+    titol = Column(String, nullable=False)
+    url_pagina = Column(String, nullable=True)      # pàgina original de la SNRT (forja.ma / YouTube), on es mira el vídeo
+    video_youtube = Column(String, nullable=True)   # id de YouTube si l'episodi hi és (s'encasta; no és una còpia)
+    durada = Column(Float, nullable=True)
+    creat = Column(DateTime, default=datetime.utcnow)
+
+
+class SnrtCue(Base):
+    __tablename__ = "snrt_cues"
+
+    id = Column(Integer, primary_key=True, index=True)
+    episodi_id = Column(Integer, ForeignKey("snrt_episodes.id"), index=True, nullable=False)
+    k = Column(Integer, nullable=False)            # ordre dins l'episodi
+    t_ini = Column(Float, nullable=False)
+    t_fi = Column(Float, nullable=False)
+    tifinag = Column(Text, nullable=True)
+    arab = Column(Text, nullable=True)
+    catala = Column(Text, nullable=True)           # traducció de màquina, sense revisar
+    catala_estat = Column(String, nullable=True)   # acord entre models o no
+    #: El que el NOSTRE transcriptor sent en aquest tall. No és el subtitol de la cadena: aquell
+    #: va en norma de l'IRCAM i aquí hi ha la parla dialectal, i sovint no diuen el mateix. És
+    #: justament la diferència el que es vol poder mirar, i per això va en un camp a part.
+    sentit = Column(Text, nullable=True)

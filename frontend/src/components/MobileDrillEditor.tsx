@@ -7,7 +7,6 @@ import {
   FaMicrophone,
   FaKeyboard,
   FaFolderOpen,
-  FaVolumeUp,
   FaFileAlt,
   FaMicroscope,
   FaClipboardCheck,
@@ -32,6 +31,7 @@ import { syncManager, type Drill } from '../services/OfflineSyncManager';
 import { api } from '../api';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
+import { onVaLaLectura, queDirDeLaLectura } from '../services/lecturaDeMaquina';
 import AiAssistant from './AiAssistant';
 
 interface MobileDrillEditorProps {
@@ -362,9 +362,18 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
             const safeText = (res.data.corrected_transcription || '').trim();
             if (!safeText) return toast.error('La transcripció ha retornat un text buit.');
 
-            const updated = { ...localDrill, text_tachelhit: safeText };
+            // El text del parlant no es toca mai: si ja n'hi ha, la lectura va a suggeriment i
+            // ell es queda on és (#557, ADR 0003). La regla és compartida amb la graella.
+            //
+            // I els esborranys es prenen dels que ha tornat la lectura: aquí es desa el drill
+            // SENCER, i la còpia que té aquesta pantalla és d'abans que el servidor hi escrivís
+            // qui ha llegit i què ha dit (#575) —desar-la l'esborraria.
+            const esb = (res.data?.esborranys || '').trim();
+            const updated = { ...localDrill, ...onVaLaLectura(localDrill.text_tachelhit, safeText),
+                              ...(esb ? { esborranys: esb } : {}) };
             setLocalDrill(updated);
             triggerSave(updated);
+            toast.success(queDirDeLaLectura(localDrill.text_tachelhit, safeText));
             addLog('Transcription success');
         } catch (err: any) {
             const msg = err.response?.data?.detail || err.message;
@@ -373,29 +382,6 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
             setAiLoadingKey(null);
         }
     };
-
-  const handleTachelhitTTS = async () => {
-    const text = localDrill.text_tachelhit;
-    if (!text) return toast.error('El camp de tachelhit és buit.');
-
-    const status = await Network.getStatus();
-    if (!status.connected) return toast.error('El TTS requereix connexió a internet.');
-
-    setAiLoadingKey('tts-shi');
-    addLog('Generating Tachelhit TTS...');
-    try {
-        const res = await axios.post(`${API_BASE}/tts/tachelhit`, { text, drill_id: localDrill.id });
-        if (res.data.url) {
-            addLog('TTS ready, playing...');
-            new Audio(getMediaUrl(res.data.url)).play();
-        }
-    } catch (err: any) {
-        const msg = err.response?.data?.detail || err.message;
-        toast.error(`El TTS ha fallat: ${msg}`);
-    } finally {
-        setAiLoadingKey(null);
-    }
-  };
 
   const handleTranslateAction = async (source: 'ca' | 'shi', target: 'ca' | 'shi') => {
     const status = await Network.getStatus();
@@ -721,7 +707,6 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', background: 'var(--surface)', padding: '16px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)' }}>
           <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}><FaLanguage size={18} /> {aiLoadingKey === 'trans-text_tachelhit' ? '…' : 'CA➔SH'}</button>
           <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}><FaLanguage size={18} /> {aiLoadingKey === 'trans-text_catalan' ? '…' : 'SH➔CA'}</button>
-          <button onClick={handleTachelhitTTS} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: 'var(--amber-soft)', color: 'var(--amber-strong)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}><FaVolumeUp size={18} /> {aiLoadingKey === 'tts-shi' ? '…' : 'TTS'}</button>
           <button
                 onClick={() => {
                     const hasAudio = localDrill.audio_url;

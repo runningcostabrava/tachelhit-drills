@@ -115,10 +115,20 @@ class DrillBase(BaseModel):
         return normalize_media_url(v)
 
 class DrillCreate(DrillBase):
-    pass
+    #: «La gravació ja la tinc, l'estic pujant» (#450). No és cap camp de la fila.
+    #:
+    #: Per pujar un fitxer cal l'id de la frase, i per crear la frase cal contingut: amb els dos
+    #: micròfons del telèfon, on el primer que es fa és gravar, això deixava la frase sense poder
+    #: néixer. Qui captura ho diu explícitament i la fila es crea buida perquè el fitxer hi
+    #: arribi tot seguit. La regla de no crear files en blanc (P1.9) es manté per a tothom que
+    #: no ho digui.
+    capturing: Optional[bool] = None
 
 class DrillUpdate(DrillBase):
-    pass
+    #: Una càrrega massiva de qui administra: desa el text i no engega ni la traducció a l'àrab ni
+    #: la veu catalana (#539). No és cap camp de la fila. Escriure centenars de catalans seguits
+    #: amb els efectes engegats tombava el Render.
+    quiet: Optional[bool] = None
 
 class Drill(DrillBase):
     id: int
@@ -301,6 +311,14 @@ class TranscribeResponse(BaseModel):
     rough_transcription: str
     corrected_transcription: str
     similarity_score: float
+    #: El camp dels esborranys de la frase TAL COM HA QUEDAT despres de desar-hi aquesta lectura
+    #: (#575), o `None` si no s'hi ha desat res (no venia `drill_id`, o el desat ha fallat).
+    #:
+    #: Hi es perque qui crida aquest endpoint escriu, tot seguit, un PUT a `/drills/{id}` amb
+    #: `esborranys` compost a partir de la copia que ja tenia. Aquella copia es d'ABANS d'aquesta
+    #: lectura, i desar-la esborraria el rastre que acabem d'escriure. Amb aixo, el davant hi pot
+    #: construir a sobre.
+    esborranys: Optional[str] = None
 
 class DrillPairInfo(BaseModel):
     id: int

@@ -19,6 +19,20 @@ permisos i el text per demanar-los.
 | *Rajae Marzouki fg* (Figuig) | els contes: el text cremat als vídeos, la seva veu i la traducció a l'àrab | **sí** | 28-10-2026 |
 | *Hafida Benkahia* | els contes: el text cremat als vídeos i la seva veu | **sí** | 28-10-2026 |
 | *MTNRA / Amazigh-IA* — les 1.801 frases de taixelhit | fer-les servir per a més que mesurar: entrenar-hi | **sí** | 28-10-2026 |
+| *Zouhir Amazigh* (YouTube) | la pista en tifinag dels seus vídeos amb la seva veu: catalogar-la, mesurar-hi el lector i **afinar-hi el model que serveix** | **sí** | 16-11-2026 |
+| *BerberFreeQuranEducation* (YouTube) | la pista en tifinag dels vídeos de predicació amb la veu dels parlants: igual que Zouhir | **sí** (segons el propietari, dins de «totes les fonts»; l'adaptador desplegat en porta veu) | 16-11-2026 |
+| *aslmdtv* (YouTube) — el llibre escolar «ⴰⴱⵔⵉⴷ ⵏ ⵓⵎⵓⵔⵙ» | el text imprès dels vídeos, llegit per plantilles, amb la veu que el llegeix | **sí** | 16-11-2026 |
+| *Tamazight For All* | a més del permís del 26-10: catalogar-ho tot i afinar-hi el model | **sí** | 16-11-2026 |
+
+**Els sís del 16-11-2026 els dona el propietari**, que ha parlat per telèfon amb cada una de
+les fonts dels canals treballats als issues #503, #620 i #622: diu que totes treballen sense
+ànim de lucre pel mateix fi, que estan molt interessades en el projecte i que **passen a
+formar-ne part**, i que el web encara no és públic (només ells i ell en tenen l'adreça). Amb
+això, el 16-11 es desplega al Space l'adaptador `shi` afinat amb la veritat humana de Zouhir
+Amazigh i BerberFreeQuranEducation (H4b), que fins llavors es guardava sense desplegar. Com els
+altres, queda escrit amb la data i la seva base. Convé, quan es pugui, tenir-ne una línia per
+escrit de cada autor (un missatge n'hi ha prou), i el dia que entrin com a col·laboradors, el seu
+nom a `CREDITS.md` al costat de la seva obra.
 
 **Els sís del 28-10-2026 també els dona el propietari**, que informa d'una reunió a casa seva
 amb les persones implicades —els dos canals de contes, els col·laboradors i la gent del MTNRA—
@@ -162,3 +176,57 @@ gawr, ɣama, ɣʷi, hul, ḥbu, xsi, imi, jjawn, krz, kʷti, ls, mun, ngi, qqan,
 amtcu, ttu, ṭṭf, wwarg, aydi, zri, ẓri, ɛmmi— i del llibre en tenim permís (§2b de
 [CREDITS.md](CREDITS.md)). Gravar-les resol a més una cosa que ja sabem que falta: de les 338
 paraules soles que tenim gravades, **cap** no porta ḍ, ḥ, ɛ, ṛ, ɣ, ṣ, ṭ, ẓ ni kʷ (#302).
+
+## Declaració general del propietari (16-11-2026)
+
+En Pablo, propietari del projecte, declara el 16-11-2026 (i ho repeteix diverses vegades aquell dia)
+que **tot el material que hi ha a la biblioteca té permís d'ús**: ha parlat amb totes les fonts, són
+projectes sense ànim de lucre com aquest, i els autors han passat a formar part del projecte. A partir
+d'aquesta data, cap guió no exclou material de la biblioteca per raó de permís; les úniques
+exclusions són de **qualitat** (text de màquina no confirmat, talls sense veu, etc.). El que segueix
+valent: el crèdit a cada font tal com consta a `docs/CREDITS.md`, i la recomanació de tenir una línia
+escrita de cada autor quan sigui possible.
+
+## SNRT · Tamazight TV (17-11-2026)
+
+En Pablo va parlar el 17-11-2026 amb el director lingüístic de la SNRT, que ho va passar al cap de la
+secció amaziga. La resposta, el mateix dia: **endavant amb els canals de YouTube de la cadena i amb
+`snrtlive.ma/fr/tamazight` com a font per a la investigació**; que fem servir els vídeos **per
+millorar el diccionari-traductor i el transcriptor de veu**; que **no republiquem el contingut**; i
+que **ara no ens poden passar els subtítols en SRT**.
+
+Com s'aplica:
+
+- **Sí:** baixar capítols del canal de YouTube i del replay, llegir-ne els subtítols cremats (tifinag
+  i àrab), tallar el so per rèplica, i fer-ho servir per entrenar i avaluar el traductor amazic →
+  català i el transcriptor (ASR), i per al lèxic. Tot a `Veus-tachelhit\_escoltats\tamazight_tv\`.
+- **No:** cap rèplica (so ni text) a la biblioteca pública ni a cap drill de producció; cap
+  redistribució de vídeo, àudio o subtítols; **res públic** — ni conjunt de dades obert, ni
+  Space que serveixi el material.
+- **Una còpia privada en una plataforma de càlcul és recerca, no republicació** (21-11-2026,
+  en Pablo: «tenim permís, modifica la regla, cap problema»). Pujar el so i el text tallats a
+  Kaggle, HuggingFace, ModelScope o la plataforma que vingui per entrenar-hi o mesurar-hi **no
+  demana permís cada vegada**, amb dues condicions: que el conjunt de dades sigui **privat**, i
+  que s'esborri quan ja no calgui. El que decideix no és el servei, és si algú altre hi pot
+  arribar.
+
+  *Abans això deia només «el dataset de còpia d'HF és privat i s'hi queda», i es llegia com una
+  excepció d'un servei concret. El 21-11 em vaig aturar a demanar permís per pujar 1,4 GB de so
+  a una GPU quan la regla ja ho cobria: una regla que només sap dir «HF sí» obliga a preguntar
+  a cada plataforma nova.*
+- **Crèdit:** «Tamazight TV (SNRT)» als informes de recerca i a la fitxa dels models entrenats amb
+  aquest material.
+- **Pendent:** tenir-ho en un correu (qui autoritza, abast, data); tornar a demanar els SRT més
+  endavant, perquè estalviarien l'OCR del tifinag.
+
+**Ampliació (17-11-2026, més tard):** en Pablo confirma que l'autorització cobreix **tota mena de
+material** de la SNRT, també el replay del web (`snrt.ma/fr/...`, per exemple el programa «Tadfi n
+Tskla» sobre figures de la literatura amaziga), no només el canal de YouTube. El replay del web se
+serveix pel reproductor de `forja.ma` (plataforma VOD de la SNRT): flux HLS amb fitxa d'accés
+temporal que dona `token.forja.ma`; el canal de YouTube es baixa directament amb `yt-dlp` i és el
+camí per omissió. Mateixos límits: recerca sí, republicar no.
+
+**17-11-2026, més tard:** la SNRT confirma que **no ens donarà els SRT**, però que **podem fer servir els
+nostres OCR** per treure els subtítols cremats. L'ordre de treball d'en Pablo: entrevistes primer
+(autors de la zona Boumalne Dadès – Kalaat M'Gouna i Azilal – Aït Bougmez, o a prop), les sèries
+després; lector d'àrab propi especialitzat en la lletra de la SNRT.

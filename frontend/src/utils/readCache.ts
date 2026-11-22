@@ -36,6 +36,14 @@ export interface CachedRead {
   at: number;
   /** Per saber si el que ha arribat després és el mateix o una altra cosa. */
   fingerprint: string;
+  /**
+   * Una pantalla del curs baixada a posta per tenir-la sense connexió (#506, pas 4).
+   *
+   * No caduca als 30 dies i no compta per al sostre de 300: qui ha demanat el curs sencer no ha
+   * de perdre el capítol 7 perquè després hagi mirat tres-centes frases. Només ho posa
+   * `cursOffline`; una resposta que arriba pel camí normal no ho és mai.
+   */
+  fix?: boolean;
 }
 
 /**
@@ -123,14 +131,22 @@ function keyFor(path: string): string {
 export async function readCached(path: string): Promise<CachedRead | null> {
   const row = await run<CachedRead>('readonly', (s) => s.get(keyFor(path)) as IDBRequest<CachedRead>);
   if (!row) return null;
-  if (Date.now() - row.at > MAX_AGE_MS) return null;
+  if (!row.fix && Date.now() - row.at > MAX_AGE_MS) return null;
   return row;
 }
 
-/** Desa l'última resposta. Si no es pot, no passa res. */
-export async function writeCached(path: string, body: unknown): Promise<void> {
+/**
+ * Desa l'última resposta. Si no es pot, no passa res.
+ *
+ * `fix` marca les pantalles del curs baixades a posta: no caduquen ni es poden. Una resposta
+ * normal no treu mai la marca d'una de fixa —tornar a obrir el capítol amb xarxa l'actualitza i
+ * l'ha de deixar igual de fixa.
+ */
+export async function writeCached(path: string, body: unknown, fix = false): Promise<void> {
+  const key = keyFor(path);
+  const abans = fix ? null : await run<CachedRead>('readonly', (s) => s.get(key) as IDBRequest<CachedRead>).catch(() => null);
   await run('readwrite', (s) => s.put({
-    key: keyFor(path), path, body, at: Date.now(), fingerprint: fingerprint(body),
+    key, path, body, at: Date.now(), fingerprint: fingerprint(body), fix: fix || !!abans?.fix,
   }));
 }
 
@@ -190,7 +206,8 @@ export async function prune(): Promise<void> {
           return;
         }
         const row = cur.value as CachedRead;
-        if (Date.now() - row.at > MAX_AGE_MS) cur.delete();
+        if (row.fix) { /* el curs baixat a posta no caduca ni compta (#506, pas 4) */ }
+        else if (Date.now() - row.at > MAX_AGE_MS) cur.delete();
         else fresh.push(cur.primaryKey);
         cur.continue();
       };

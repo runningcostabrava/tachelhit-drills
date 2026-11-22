@@ -1,0 +1,745 @@
+{
+ "_font": "Creuament automàtic de fonts (tools/lm/creuament.py, 15-11-2026): una glossa hi entra quan DUES fonts independents coincideixen (subtítols humans en/ar del canal Tamazight For All comptats com UNA; web de l'autor; explicacions del professor en dàrija; amazic.cat; ⵡⵉⴽⵉⵎⴰⵡⴰⵍ). L'acord l'ha jutjat DeepSeek a t=0 amb el material davant; les fonts són a cada entrada. «nostre_lexic» diu què deia el diccionari abans.",
+ "termes": {
+  "tamaziɣt": {
+   "ca": "llengua amaziga",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "professor en dàrija (cLngPp02IbY)",
+    "professor en dàrija (fAn2qDLVDKE)",
+    "professor en dàrija (MMQae-UEEEY)",
+    "professor en dàrija (R9OKCUheiLw)",
+    "professor en dàrija (oT_Wnf9UN_4)",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Diverses fonts diuen 'llengua amaziga'; el nostre lèxic ho confirma."
+  },
+  "afus": {
+   "ca": "mà",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "professor en dàrija",
+    "subtítols humans"
+   ],
+   "coincideixen": [
+    "subtítols humans en anglès",
+    "subtítols humans en àrab",
+    "professor en dàrija (P4Ai5Iy4nO8)",
+    "professor en dàrija (YinB8GT975w)",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Diverses fonts donen 'mà'; el nostre lèxic també inclou main."
+  },
+  "tifinaɣ": {
+   "ca": "alfabet amazic",
+   "fonts": [
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "professor en dàrija (Kz4BCslNYnY)",
+    "professor en dàrija (cLngPp02IbY)",
+    "professor en dàrija (D1lGHd0vCDw)",
+    "professor en dàrija (oT_Wnf9UN_4)"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Totes les fonts diuen escriptura/alfabet amazic tifinag."
+  },
+  "adrar": {
+   "ca": "muntanya",
+   "fonts": [
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "professor en dàrija (MhAI2rnF-s8)",
+    "professor en dàrija (YinB8GT975w)",
+    "professor en dàrija (uz_w-A4PwVU)"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Diverses fonts diuen muntanya; amazic.cat discrepa (empenya)."
+  },
+  "argaz": {
+   "ca": "home",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "professor en dàrija (msAHxRT14mY)",
+    "professor en dàrija (P4Ai5Iy4nO8)",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Diverses fonts donen 'home'; amazic.cat no és clar"
+  },
+  "idda": {
+   "ca": "anar (passat, ell)",
+   "fonts": [
+    "amazic.cat",
+    "professor en dàrija",
+    "subtítols humans"
+   ],
+   "coincideixen": [
+    "subtítols humans en anglès",
+    "subtítols humans en àrab",
+    "professor en dàrija"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Anglès 'went', àrab 'ذهب' i dàrija coincideixen; amazic.cat discrepa."
+  },
+  "ifis": {
+   "ca": "hiena",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "subtítols humans"
+   ],
+   "coincideixen": [
+    "subtítols humans en anglès",
+    "subtítols humans en àrab",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Anglès, àrab i Viccionari zgh donen hiena; el nostre lèxic també."
+  },
+  "tudrt": {
+   "ca": "vida",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "subtítols humans"
+   ],
+   "coincideixen": [
+    "subtítols humans en anglès",
+    "subtítols humans en àrab",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Anglès, àrab i zgh coincideixen en 'vida'; amazic.cat divergeix."
+  },
+  "tamazirt": {
+   "ca": "país, terra",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "professor en dàrija",
+    "subtítols humans"
+   ],
+   "coincideixen": [
+    "subtítols humans en anglès",
+    "professor en dàrija",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Coincideixen en país/terra; amazic.cat (emigrar) no hi coincideix."
+  },
+  "akal": {
+   "ca": "terra",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "professor en dàrija",
+    "subtítols humans"
+   ],
+   "coincideixen": [
+    "subtítols humans en àrab",
+    "professor en dàrija",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Tres fonts donen 'terra'; el nostre lèxic també."
+  },
+  "aman": {
+   "ca": "aigua",
+   "fonts": [
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "MhAI2rnF-s8",
+    "P4Ai5Iy4nO8",
+    "cxz3R2W0u7I",
+    "amazic.cat"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Totes les fonts donen aigua; el lèxic també (eau)."
+  },
+  "amqqran": {
+   "ca": "gran",
+   "fonts": [
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "professor en dàrija (MMQae-UEEEY)",
+    "professor en dàrija (yQJjXlGhtB8)"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Dues fonts diuen 'gran'; amazic.cat discrepa (avi, eminència)."
+  },
+  "aɣyul": {
+   "ca": "ase",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "professor en dàrija (KajneAfUf0M)",
+    "professor en dàrija (yQJjXlGhtB8)",
+    "amazic.cat",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Totes les fonts donen 'ase'; el lèxic també."
+  },
+  "abrid": {
+   "ca": "camí",
+   "fonts": [
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "KajneAfUf0M",
+    "P4Ai5Iy4nO8",
+    "j0_xYZsL-dc"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Tres fonts diuen camí; el lèxic inclou way/chemin/route."
+  },
+  "rbbi": {
+   "ca": "Déu, el Senyor",
+   "fonts": [
+    "amazic.cat",
+    "subtítols humans"
+   ],
+   "coincideixen": [
+    "subtítols humans en anglès",
+    "subtítols humans en àrab"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Anglès 'lord' i àrab 'الله' coincideixen amb el lèxic."
+  },
+  "turft": {
+   "ca": "vaixell",
+   "fonts": [
+    "amazic.cat",
+    "subtítols humans"
+   ],
+   "coincideixen": [
+    "subtítols humans en anglès",
+    "subtítols humans en àrab"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Anglès i àrab coincideixen en vaixell; el nostre lèxic també ho recull."
+  },
+  "tiġrmt": {
+   "ca": "ciutat",
+   "fonts": [
+    "amazic.cat",
+    "subtítols humans"
+   ],
+   "coincideixen": [
+    "subtítols humans en anglès",
+    "subtítols humans en àrab",
+    "amazic.cat"
+   ],
+   "nostre_lexic": "no es pot dir",
+   "nota": "Anglès i àrab coincideixen en ciutat; el nostre lèxic diu forteresse, no comparable."
+  },
+  "amġar": {
+   "ca": "cap o líder",
+   "fonts": [
+    "amazic.cat",
+    "subtítols humans"
+   ],
+   "coincideixen": [
+    "subtítols humans en anglès",
+    "subtítols humans en àrab",
+    "amazic.cat"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Anglès leader/chief, àrab شيخ/زعيم, català cap coincideixen."
+  },
+  "tafukt": {
+   "ca": "sol",
+   "fonts": [
+    "amazic.cat",
+    "subtítols humans"
+   ],
+   "coincideixen": [
+    "subtítols humans en anglès",
+    "subtítols humans en àrab"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Anglès i àrab coincideixen en 'sol'; amazic.cat no."
+  },
+  "tutlayt": {
+   "ca": "llengua",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "subtítols humans"
+   ],
+   "coincideixen": [
+    "subtítols humans en àrab",
+    "Viccionari zgh",
+    "nostre lèxic"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Àrab لغه i Viccionari donen 'llengua'; amazic.cat discrepa."
+  },
+  "mani": {
+   "ca": "on (interrogatiu)",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "web de l'autor"
+   ],
+   "coincideixen": [
+    "web de l'autor",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Tots dos donen 'on/أين'; amazic.cat és proper però no idèntic."
+  },
+  "tawinst": {
+   "ca": "frase (terme lingüístic)",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "web de l'autor"
+   ],
+   "coincideixen": [
+    "web de l'autor",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Dues fonts donen 'sentence/frase'; amazic.cat no hi coincideix."
+  },
+  "afud": {
+   "ca": "genoll",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "Viccionari zgh",
+    "nostre lèxic"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Viccionari zgh i el lèxic donen genou/knee; amazic.cat no coincideix"
+  },
+  "nttat": {
+   "ca": "ella",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "professor en dàrija",
+    "amazic.cat",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Tres fonts donen 'ella'; el nostre lèxic també."
+  },
+  "amkraz": {
+   "ca": "agricultor",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "amazic.cat",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Farmer/agricultor coincideixen; arada és un altre concepte"
+  },
+  "amaziɣ": {
+   "ca": "amazic (identitat amaziga)",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "professor en dàrija (ph1YfhBY_J0)",
+    "amazic.cat (lemes catalans)",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Totes coincideixen en el poble/identitat amaziga"
+  },
+  "ayyur": {
+   "ca": "lluna; mes",
+   "fonts": [
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "BvpSUOifPGY",
+    "P4Ai5Iy4nO8"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Dues fonts donen lluna/mes; el lèxic inclou Moon/lune."
+  },
+  "afl": {
+   "ca": "adobar, assaonar (pells)",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "amazic.cat",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Dues fonts donen adobar/assaonar; la dàrija és nom propi, no compta."
+  },
+  "tizi": {
+   "ca": "coll o pas de muntanya",
+   "fonts": [
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "professor en dàrija (j0_xYZsL-dc)",
+    "amazic.cat (lemes catalans)"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Dues fonts donen coll/pas; el lèxic també ho recull."
+  },
+  "aḥuli": {
+   "ca": "xai o moltó (mascle oví)",
+   "fonts": [
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "professor en dàrija (HhYWVhvEPQc)",
+    "professor en dàrija (KajneAfUf0M)",
+    "amazic.cat (lemes catalans)"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Totes coincideixen en oví mascle; el nostre lèxic també."
+  },
+  "izm": {
+   "ca": "lleó",
+   "fonts": [
+    "Viccionari zgh",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "KajneAfUf0M",
+    "P4Ai5Iy4nO8",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Tres fonts donen 'lleó'; el lèxic també."
+  },
+  "amur": {
+   "ca": "part o porció",
+   "fonts": [
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "P4Ai5Iy4nO8",
+    "oT_Wnf9UN_4"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Dues fonts dàrija coincideixen en 'part'; el lèxic també."
+  },
+  "adf": {
+   "ca": "entrar, penetrar",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "Viccionari zgh",
+    "nostre lèxic"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "zgh i lèxic coincideixen en entrar/penetrar; dàrija i amazic.cat divergeixen"
+  },
+  "ads": {
+   "ca": "acostar-se o estar a prop",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "amazic.cat",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "El calostre dàrija no hi té relació"
+  },
+  "awar": {
+   "ca": "lleó",
+   "fonts": [
+    "Viccionari zgh",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "professor en dàrija (lC_BKB8A7n4)",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Dues fonts donen 'lleó'; el nostre lèxic també ho inclou."
+  },
+  "akl": {
+   "ca": "trepitjar",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "amazic.cat",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "calcigar/fouler coincideixen amb marcher sur, piétiner"
+  },
+  "awal": {
+   "ca": "paraula, llengua, parla",
+   "fonts": [
+    "Viccionari zgh",
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "professor en dàrija",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Dues fonts donen paraula/llengua; amazic.cat no hi coincideix."
+  },
+  "issufġ": {
+   "ca": "disparar",
+   "fonts": [
+    "amazic.cat",
+    "subtítols humans"
+   ],
+   "coincideixen": [
+    "subtítols humans en anglès",
+    "amazic.cat"
+   ],
+   "nostre_lexic": "no es pot dir",
+   "nota": "Anglès 'shot' i català 'disparar' coincideixen; el lèxic no és clar."
+  },
+  "immut": {
+   "ca": "mort",
+   "fonts": [
+    "amazic.cat",
+    "subtítols humans"
+   ],
+   "coincideixen": [
+    "subtítols humans en anglès",
+    "amazic.cat"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Anglès dead/died i amazic apatic coincideixen amb 'mort'."
+  },
+  "tasarut": {
+   "ca": "clau",
+   "fonts": [
+    "amazic.cat",
+    "subtítols humans"
+   ],
+   "coincideixen": [
+    "subtítols humans en anglès",
+    "amazic.cat"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Anglès 'key' i amazic.cat 'clau-2' coincideixen; el lèxic també."
+  },
+  "ignna": {
+   "ca": "cel",
+   "fonts": [
+    "amazic.cat",
+    "subtítols humans"
+   ],
+   "coincideixen": [
+    "subtítols humans en àrab",
+    "amazic.cat"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Àrab سماء i amazic.cat donen cel; lèxic també."
+  },
+  "azɣr": {
+   "ca": "arrel morfològica",
+   "fonts": [
+    "amazic.cat",
+    "web de l'autor"
+   ],
+   "coincideixen": [
+    "web de l'autor",
+    "amazic.cat"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Totes dues fonts i el lèxic donen arrel morfològica."
+  },
+  "kyy": {
+   "ca": "tu",
+   "fonts": [
+    "Viccionari zgh",
+    "web de l'autor"
+   ],
+   "coincideixen": [
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Només una font externa; coincideix amb el lèxic."
+  },
+  "knni": {
+   "ca": "vosaltres",
+   "fonts": [
+    "Viccionari zgh",
+    "web de l'autor"
+   ],
+   "coincideixen": [
+    "Viccionari zgh",
+    "diccionari"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Pronom de segona persona plural."
+  },
+  "mlmi": {
+   "ca": "quan (interrogatiu)",
+   "fonts": [
+    "Viccionari zgh",
+    "web de l'autor"
+   ],
+   "coincideixen": [
+    "web de l'autor",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Totes dues fonts i el lèxic donen 'quan' interrogatiu."
+  },
+  "tajṛṛumt": {
+   "ca": "gramàtica (terme lingüístic)",
+   "fonts": [
+    "Viccionari zgh",
+    "web de l'autor"
+   ],
+   "coincideixen": [
+    "web de l'autor",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Totes dues fonts i el lèxic donen gramàtica."
+  },
+  "targalt": {
+   "ca": "consonant (terme lingüístic)",
+   "fonts": [
+    "amazic.cat",
+    "web de l'autor"
+   ],
+   "coincideixen": [
+    "web de l'autor",
+    "amazic.cat"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Totes dues fonts i el lèxic donen consonant."
+  },
+  "amyag": {
+   "ca": "verb",
+   "fonts": [
+    "Viccionari zgh",
+    "web de l'autor"
+   ],
+   "coincideixen": [
+    "web de l'autor",
+    "Viccionari zgh"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Totes les fonts donen 'verb'."
+  },
+  "afris": {
+   "ca": "adjectiu (terme lingüístic)",
+   "fonts": [
+    "amazic.cat",
+    "web de l'autor"
+   ],
+   "coincideixen": [
+    "web de l'autor",
+    "amazic.cat"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Dues fonts i el lèxic coincideixen en 'adjectiu'."
+  },
+  "askkil": {
+   "ca": "grafema o lletra",
+   "fonts": [
+    "amazic.cat",
+    "web de l'autor"
+   ],
+   "coincideixen": [
+    "web de l'autor",
+    "amazic.cat"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Totes dues fonts i el lèxic donen grafema/lletra."
+  },
+  "tamunt": {
+   "ca": "reunió, unió",
+   "fonts": [
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "professor en dàrija (gf1Oqci_ycc)",
+    "amazic.cat (lemes catalans)"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "Reunió/trobada i unió/companyia convergeixen en unió."
+  },
+  "zdɣ": {
+   "ca": "allotjar-se, establir-se, habitar",
+   "fonts": [
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "amazic.cat",
+    "nostre lèxic"
+   ],
+   "nostre_lexic": "coincideix",
+   "nota": "habitar/allotjar-se coincideix; dàrija només esmenta l'arrel"
+  },
+  "izlan": {
+   "ca": "cançons",
+   "fonts": [
+    "amazic.cat",
+    "professor en dàrija"
+   ],
+   "coincideixen": [
+    "professor en dàrija",
+    "amazic.cat"
+   ],
+   "nostre_lexic": "no es pot dir",
+   "nota": "Fonts donen cançons/cantar; lèxic diu poema, no comparable directament."
+  }
+ }
+}

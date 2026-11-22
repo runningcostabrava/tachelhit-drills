@@ -96,6 +96,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return copy.body as T;
 }
 
+/**
+ * Baixa una pantalla i la desa per tenir-la sense connexió, per sempre (#506, pas 4).
+ *
+ * No passa per `request`: aquí no es vol el cau com a xarxa de seguretat sinó el contrari, posar
+ * a dins una cosa que encara no s'ha demanat mai. Torna `false` si no s'ha pogut, i no llença:
+ * una pantalla que falla no ha d'aturar la baixada de les altres cent.
+ */
+export async function baixaPerOffline(path: string): Promise<boolean> {
+  try {
+    const body = await fromNetwork<unknown>(path);
+    await writeCached(path, body, true);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export interface ReviewStats {
   total_drills: number;
   new: number;
@@ -271,6 +288,8 @@ export interface MethodHeard {
   audio_url?: string | null; speaker?: string | null; region?: string | null;
   /** La frase es va retallar d'un vídeo: hi ha una veu humana i no sabem de qui és. */
   captured?: boolean;
+  /** Què s'hi sent dins: un so (el capítol de les lletres) o una paraula sencera del llibre (#534). */
+  what?: 'so' | 'paraula';
 }
 /** La veu del CD del manual dient aquesta línia. El crèdit hi va a dins, no a part: qui dibuixa
  *  el botó no el pot deixar fora. */
@@ -326,7 +345,7 @@ export interface MethodContent {
     examples?: MethodExample[];
     table?: { title: string; rows: { p: string; v: string; v_tif?: string | null;
                                      sound?: string; heard?: MethodHeard | null }[] };
-    /** `cd`: la veu del manual, quan aquesta màquina té el CD. */
+    /** `cd`: la veu del manual (un tall del CD a Cloudinary, ADR 0007). */
     /** Les parelles mínimes. `audio_url` i companyia els enganxa el servidor quan la biblioteca
      *  té una frase que diu exactament això: una parella que no es pot escoltar no ensenya res. */
     columns?: { title: string; rows: { shi: string; ca: string; tif?: string | null;
@@ -370,7 +389,7 @@ export interface MethodContent {
   };
   /** Els exercicis del llibre, per fer-los de debò i no per mirar-los (#380). */
   exercises?: MethodExercise[];
-  vocabulary?: { shi: string; ca: string; audio_url?: string | null; drill_id?: number; tif?: string | null; image_url?: string | null; speaker?: string | null; region?: string | null; from_drill_id?: number }[];
+  vocabulary?: { shi: string; ca: string; audio_url?: string | null; drill_id?: number; tif?: string | null; image_url?: string | null; speaker?: string | null; region?: string | null; from_drill_id?: number; heard?: MethodHeard | null }[];
   source_note?: string;
   source_pages?: string;
   updated_at?: string | null;
@@ -560,6 +579,10 @@ export const api = {
   aiExplainDrill: (drillId: number) =>
     request<{ explanation: string; draft: boolean; related: RelatedDrill[] }>(`/ai/explain/${drillId}`, { method: 'POST' }),
   drill: (id: number) => request<Drill>(`/drills/${id}`),
+  /** For each Amazigh text, the recorded library sentence that says exactly that, if any (#504). */
+  voiced: (forms: string[]) =>
+    request<Record<string, { drill_id: number; audio_url: string; speaker: string | null } | null>>(
+      `/library/voiced?${forms.map((f) => `form=${encodeURIComponent(f)}`).join('&')}`),
   /** Una frase nova. Amb el text amazic buit, neix esperant que algú la digui. */
   createDrill: (d: { text_catalan: string; text_tachelhit?: string; note?: string | null }) =>
     request<Drill>('/drills/', { method: 'POST', body: JSON.stringify(d) }),
@@ -649,6 +672,13 @@ export const api = {
   /** Admin: ask for every sentence the library cannot say out loud, in one pass. */
   askForEveryMissingVoice: () => request<{ asked: number; already_asked: number; with_a_take: number }>('/drills/voice-wanted/missing', { method: 'POST', body: JSON.stringify({ include_synthetic: true }) }),
   /** Ask our speakers to say this sentence out loud; it goes to the top of «Veus». */
+  // --- El Baba Ali: la serie, amb el nostre text a sota (#visor) ---
+  /** Els episodis que tenim i de quins en sabem el video del canal. */
+  babaAliIndex: () => request<{ episodis: BabaAliEpisodi[]; amb_video: number; linies: number;
+    font: { obra: string; canal: string; text: string } }>('/baba-ali/'),
+  /** Un episodi: el video, el desplacament mesurat i les linies en ordre. */
+  babaAliEpisodi: (episodi: string) =>
+    request<BabaAliEpisodiData>(`/baba-ali/${encodeURIComponent(episodi)}`),
   // --- El Mètode: deu capítols fets amb la nostra biblioteca (ADR 0003) ---
   methodIndex: () => request<MethodIndex>('/method/'),
   /** El que hi ha a casa: les portes i quant hi ha darrere de cadascuna. Només comptes. */
@@ -983,4 +1013,71 @@ export interface AuthUser {
   region: string | null;
   is_admin: boolean;
   has_password: boolean;
+}
+
+/**
+ * Les proves que diuen que un episodi nostre es aquella pujada del canal (veg. backend/baba_ali.py).
+ * N'hi ha de dues menes, i `com` diu quina: deu episodis es van casar pel SO, i els dos que
+ * YouTube serveix muts (el 7 i el 9) per la IMATGE -- quan canvia el subtitol de la pantalla.
+ */
+export interface BabaAliProvesSo {
+  com: 'so';
+  talls_dacord: number; talls: number; dispersio: number | null;
+  minuts_de_la_pujada: number; falsos_esperats: number;
+  segona_candidata: string; falsos_de_la_segona: number;
+}
+export interface BabaAliProvesImatge {
+  com: 'imatge';
+  marques: number; marques_amb_canvi: number; dispersio: number;
+  minuts_de_la_pujada: number; millor_dels_altres_desplacaments: number;
+  desplacaments_possibles_s: number; sigmes: number;
+  frases_comprovades_a_la_pantalla: number; exemple: string;
+}
+/**
+ * L'episodi no s'ha hagut de casar amb res: les seves linies s'han llegit de la imatge
+ * d'aquesta mateixa pujada. El desplacament es 0 per construccio, no per mesura.
+ */
+export interface BabaAliProvesMateixFitxer {
+  com: 'el mateix fitxer';
+  per_que: string;
+  linies_llegides: number; de_segon: number; fins_segon: number;
+  com_s_ha_llegit: string; amb_dos_retalls_dacord: number;
+}
+export type BabaAliProves = BabaAliProvesSo | BabaAliProvesImatge | BabaAliProvesMateixFitxer;
+/** Un episodi a la llista: quantes linies en tenim i, si s'ha mesurat, quin video es. */
+export interface BabaAliEpisodi {
+  episodi: string; linies: number; amb_so: number;
+  video: string | null; desplacament: number | null;
+  titol_pujada: string | null; comprovat: BabaAliProves | null;
+  /** Si no en sabem el video, per que: el canal no el te, o la pujada es muda. */
+  per_que_sense_video: string | null;
+}
+/** Una linia del subtitol. `t` es el segon NOSTRE; al video va a `t + desplacament`. */
+export interface BabaAliLinia {
+  id: number; t: number; fi: number; ca: string; ar: string; so: string | null; esmenat: boolean;
+  /** L'amazic que un model d'ASR va sentir al tall de veu. No es text de ningu. */
+  am: string | null;
+  /** Quants models l'han llegida. */
+  am_models: number;
+  /** Dos models independents hi senten el mateix: nomes passa a 50 linies de 2.727. */
+  am_acord: boolean;
+  /**
+   * La paraula que la veu i el subtitol comparteixen, si n'hi ha cap.
+   *
+   * Son dues vies independents -el subtitol es arab llegit de la IMATGE, la lectura es
+   * taixelhit tret del SO- i es casen pel significat arab que el diccionari de l'IRCAM dona a
+   * les paraules amazigues. 206 linies de 3.621, contra 13 al control barrejat.
+   */
+  am_diu_igual: string | null;
+}
+export interface BabaAliEpisodiData {
+  episodi: string; video: string | null; desplacament: number | null;
+  titol_pujada: string | null; comprovat: BabaAliProves | null;
+  per_que_sense_video: string | null; duplicades_tretes: number; esmenades: number;
+  /** Quantes linies porten lectura de maquina, i a quantes dos models hi senten el mateix. */
+  amb_veu_sentida: number; acords: number;
+  /** Quantes linies on la veu i el subtitol comparteixen un significat. */
+  diuen_igual: number;
+  font: { obra: string; canal: string; text: string };
+  linies: BabaAliLinia[];
 }

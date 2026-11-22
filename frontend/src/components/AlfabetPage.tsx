@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaMicrophone, FaVolumeUp } from 'react-icons/fa';
 import { api, type Abecedari, type GrupParelles, type Lletra, type MotDeLletra } from '../api';
-import { getMediaUrl } from '../config';
+import AmbSo from './AmbSo';
+import { audioSrc } from '../services/audioLocal';
 import Frase from './Frase';
 
 // Els sons i l'escriptura: una secció pròpia (#368).
@@ -26,7 +27,7 @@ function useTall() {
   const toca = useCallback(async (mot: MotDeLletra, id?: string) => {
     if (!mot.audio_url) return;
     audio.current?.pause();
-    const a = new Audio(getMediaUrl(mot.audio_url));
+    const a = new Audio(audioSrc(mot.audio_url));
     audio.current = a;
     fins.current = mot.end + 0.08;        // un alè més enllà, perquè no quedi tallada
     a.currentTime = Math.max(0, mot.start - 0.04);
@@ -86,7 +87,7 @@ export default function AlfabetPage() {
   }
 
   return (
-    <div style={{ padding: '20px 16px 60px', maxWidth: 820, margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px 60px', maxWidth: 820, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, margin: '0 0 6px', lineHeight: 1.2 }}>
         Els sons i l’escriptura
       </h1>
@@ -174,10 +175,10 @@ export default function AlfabetPage() {
               {oberta.exemples.map((m) => (
                 <div key={`${m.key}-${m.drill_id}`}
                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface-2)' }}>
-                  <button onClick={() => toca(m)} aria-label={`Escolta ${m.word}`}
+                  <AmbSo url={m.audio_url}><button onClick={() => toca(m)} aria-label={`Escolta ${m.word}`}
                           style={{ width: 44, height: 44, flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', border: 'none', background: sonant === m.key ? 'var(--brand-1)' : 'var(--brand-gradient)', color: '#fff', cursor: 'pointer' }}>
                     <FaVolumeUp size={14} />
-                  </button>
+                  </button></AmbSo>
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <Frase text={m.word} size="md" />
                     {m.meaning && <span style={{ fontSize: 13, color: 'var(--text-soft)' }}>{m.meaning}</span>}

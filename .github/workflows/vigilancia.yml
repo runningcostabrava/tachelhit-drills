@@ -1,0 +1,50 @@
+name: Vigilància setmanal
+
+# #578: el 5 de novembre de 2026 Cloudinary va avisar sis vegades i els sis avisos eren a la
+# paperera. No va fallar el dipòsit: va fallar que ningú no mirava. Això mira cada dilluns
+# (R2: objectes i bytes contra el límit; edat de la còpia fora; el servidor; les claus) i
+# escriu el resultat com a comentari a l'issue #578, que és on es llegeix.
+#
+# LIMITS, DITS AQUÍ: (1) GitHub desactiva els crons d'un repositori sense activitat (ja va
+# passar del 5-09 al 23-10): si un dilluns no hi ha comentari, és que el cron s'ha adormit, i
+# això també és un senyal. (2) Un comentari a un issue arriba per correu, i el correu és
+# justament el que va fallar: val més activar les notificacions del mòbil de GitHub per a
+# aquest repositori. (3) Cal que l'amo posi els secrets: R2_ACCOUNT_ID, R2_ACCESS_KEY_ID,
+# R2_SECRET_ACCESS_KEY, R2_BUCKET i, si vol vigilar la còpia, HF_TOKEN + HF_COPIA_DATASET.
+# Sense secrets, el guió ho diu com un AVÍS en comptes de callar.
+
+on:
+  schedule:
+    - cron: '17 7 * * 1'
+  workflow_dispatch: {}
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  vigila:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -q boto3 python-dotenv requests huggingface_hub
+      - name: Mirar
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_COPIA_DATASET: ${{ vars.HF_COPIA_DATASET }}
+        run: python tools/vigilancia.py --env /dev/null | tee informe.md
+      - name: Escriure-ho a l'issue 578
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if grep -q "AVÍS" informe.md; then prefix="⚠️ "; else prefix="✅ "; fi
+          { echo "${prefix}Vigilància automàtica ($(date -u +%Y-%m-%d), [execució](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}))"; echo; cat informe.md; } > cos.md
+          gh issue comment 578 --repo "${{ github.repository }}" --body-file cos.md

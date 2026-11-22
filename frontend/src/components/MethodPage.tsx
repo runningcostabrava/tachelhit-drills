@@ -32,7 +32,7 @@ export default function MethodPage() {
   const ready = data.chapters.filter((c) => c.sections_ready === c.sections_total).length;
 
   return (
-    <div style={{ padding: '20px 16px 40px', maxWidth: 900, margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px 40px', maxWidth: 900, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 26, margin: '0 0 4px' }}>El Mètode</h1>
       <p style={{ color: 'var(--text-soft)', fontSize: 14.5, margin: '0 0 6px', lineHeight: 1.55 }}>
         Deu capítols, de saludar a tenir convidats a taula. Cada frase la diu algú de debò, i diu

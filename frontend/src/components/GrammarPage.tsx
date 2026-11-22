@@ -7,6 +7,8 @@ import { whyItFailed } from '../utils/errors';
 import { FaBullseye, FaCheck, FaChevronLeft, FaChevronRight, FaLightbulb, FaMapMarkerAlt, FaMicrophone, FaPen, FaRedo, FaTimes, FaVolumeUp } from 'react-icons/fa';
 import { api, type GrammarUnit, type GrammarUnitPage, type GrammarWishUnit, type LessonExample, type LessonProposal, type LessonStep } from '../api';
 import { API_BASE, getMediaUrl } from '../config';
+import AmbSo from './AmbSo';
+import { audioSrc } from '../services/audioLocal';
 import RecordAudioModal from './RecordAudioModal';
 import NotaOrtografia from './NotaOrtografia';
 import AiAssistant from './AiAssistant';
@@ -55,7 +57,7 @@ function CourseView() {
   const done = units.filter((u) => progress[u.slug]).length;
   const nextUnit = units.find((u) => !progress[u.slug] && counts[u.slug]);
   return (
-    <div style={{ padding: '20px 16px', maxWidth: '900px', margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px', maxWidth: '900px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', margin: '0 0 4px' }}>Gramàtica</h1>
       <div style={{ color: 'var(--text-soft)', fontSize: '14px', marginBottom: '14px' }}>
         El curs: cada unitat explica un punt de gramàtica pas a pas, amb les frases, les imatges i les veus de la biblioteca.
@@ -210,7 +212,7 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
   };
 
   return (
-    <div style={{ padding: '16px 16px 96px', maxWidth: '640px', margin: '0 auto' }}>
+    <div style={{ padding: '16px 16px 96px', maxWidth: '640px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate('/grammar')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: '4px 0', marginBottom: '6px' }}><FaChevronLeft /> Totes les unitats</button>
       {error && <div style={{ color: 'var(--rose)' }}>{error}</div>}
       {!page && !error && <LoadingUnit />}
@@ -260,7 +262,7 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
         {(card.type === 'explain' || card.type === 'tip' || card.type === 'dialect' || card.type === 'intro') && page.lesson.steps.length > 0 && <ProposeChange slug={slug} step={i - 1} current={card.type === 'intro' ? page.lesson.intro : card.text} signedIn={signedIn} onSent={loadProposals} />}
           </div>
           <div style={{ position: 'fixed', left: 0, right: 0, bottom: 'var(--menu-mobil-h, 0px)', padding: '10px 16px calc(10px + env(safe-area-inset-bottom))', background: 'var(--bg)', borderTop: '1px solid var(--border)', zIndex: 5 }}>
-            <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', gap: '10px' }}>
+            <div style={{ maxWidth: '640px', margin: '0 auto', width: '100%', boxSizing: 'border-box', display: 'flex', gap: '10px' }}>
               <button onClick={prev} disabled={i === 0} style={{ flex: 1, padding: '12px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: i === 0 ? 'var(--text-muted)' : 'var(--text)', fontWeight: 700, cursor: i === 0 ? 'default' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><FaChevronLeft /> Enrere</button>
               <button onClick={next} disabled={!canGoNext} style={{ flex: 2, padding: '12px', borderRadius: 'var(--r-pill)', border: 'none', background: canGoNext ? 'var(--brand-gradient)' : 'var(--surface-2)', color: canGoNext ? '#fff' : 'var(--text-muted)', fontWeight: 700, cursor: canGoNext ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                 {card.type === 'quiz' && answers[i] === undefined ? 'Tria una resposta' : card.type === 'end' ? 'Final' : i === 0 ? 'Comencem' : 'Següent'} <FaChevronRight />
@@ -340,7 +342,7 @@ function ExplainCard({ step, onAsk, onRecord, onWant, signedIn, isAdmin }: { ste
 }
 
 function Example({ e, highlight, onAsk, onRecord, onWant, signedIn, isAdmin }: { e: LessonExample; highlight?: 'ok' | 'ko'; onAsk?: (a: { id: number; label: string }) => void; onRecord?: (e: LessonExample) => void; onWant?: (e: LessonExample) => void; signedIn?: boolean; isAdmin?: boolean }) {
-  const play = () => { if (e.audio_url) new Audio(getMediaUrl(e.audio_url)).play().catch(() => {}); };
+  const play = () => { if (e.audio_url) new Audio(audioSrc(e.audio_url)).play().catch(() => {}); };
   const border = highlight === 'ok' ? 'var(--emerald)' : highlight === 'ko' ? 'var(--rose)' : 'var(--border)';
   // the word-by-word reading and why this sentence is in this unit: both stored, both free
   const [words, setWords] = useState(false);
@@ -411,7 +413,7 @@ function Example({ e, highlight, onAsk, onRecord, onWant, signedIn, isAdmin }: {
       </div>
       {signedIn && onRecord && <button onClick={() => onRecord(e)} title="Grava-ho amb la teva veu" aria-label="Grava-ho tu" style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--brand-1)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaMicrophone size={13} /></button>}
       {onAsk && <button onClick={() => onAsk({ id: e.id, label: e.ca || e.shi })} title="Explica'm aquesta frase paraula per paraula" aria-label="Explica'm aquesta frase" style={{ flexShrink: 0, width: 36, height: 36, padding: 0, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--brand-1)', cursor: 'pointer', fontSize: '15px', lineHeight: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>💡</button>}
-      <button onClick={play} disabled={!e.audio_url} aria-label="Escolta" style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 'var(--r-pill)', border: 'none', background: e.audio_url ? (e.recorded ? 'var(--brand-1)' : 'var(--sky)') : 'var(--surface)', color: e.audio_url ? '#fff' : 'var(--text-muted)', cursor: e.audio_url ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={15} /></button>
+      <AmbSo url={e.audio_url}><button onClick={play} disabled={!e.audio_url} aria-label="Escolta" style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 'var(--r-pill)', border: 'none', background: e.audio_url ? (e.recorded ? 'var(--brand-1)' : 'var(--sky)') : 'var(--surface)', color: e.audio_url ? '#fff' : 'var(--text-muted)', cursor: e.audio_url ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={15} /></button></AmbSo>
       {words && e.gloss && <div style={{ flexBasis: '100%' }}><GlossWords words={e.gloss} size="sm" /></div>}
       {/* I com ho diu qui ho diu d'una altra manera, amb el seu nom i el seu poble. */}
       {e.variants && e.variants.length > 0 && <div style={{ flexBasis: '100%' }}><SentenceVariants variants={e.variants} size="sm" /></div>}
@@ -516,7 +518,7 @@ function PatternCard({ step, slug, index, deep, signedIn, onRecord }: {
 function QuizCard({ step, chosen, onChoose, active = true, onEdit }: { step: Extract<LessonStep, { type: 'quiz' }>; chosen?: number; onChoose: (k: number) => void; active?: boolean; onEdit?: () => void }) {
   const answered = chosen !== undefined;
   const kind = step.kind || 'meaning';
-  const play = useCallback(() => { if (step.example.audio_url) new Audio(getMediaUrl(step.example.audio_url)).play().catch(() => {}); }, [step.example.audio_url]);
+  const play = useCallback(() => { if (step.example.audio_url) new Audio(audioSrc(step.example.audio_url)).play().catch(() => {}); }, [step.example.audio_url]);
   // «Escolta» speaks by itself only when this is the card the learner is on. The whole lesson on
   // one page renders every card at once: without this, a unit opens with four voices at a time.
   useEffect(() => { if (active && kind === 'listen' && !answered) play(); }, [active, kind, answered, play]);
@@ -538,7 +540,7 @@ function QuizCard({ step, chosen, onChoose, active = true, onEdit }: { step: Ext
       </div>
       <h2 style={{ fontSize: '18px', margin: '0 0 12px', lineHeight: 1.3 }}>{step.question}</h2>
       {kind === 'listen' && (
-        <button onClick={play} aria-label="Torna a escoltar" style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 auto 14px', padding: '14px 22px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 700, fontSize: '15px', cursor: 'pointer', boxShadow: 'var(--shadow-brand)' }}><FaVolumeUp size={20} /> Torna a escoltar</button>
+        <AmbSo url={step.example.audio_url} dins><button onClick={play} aria-label="Torna a escoltar" style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 auto 14px', padding: '14px 22px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 700, fontSize: '15px', cursor: 'pointer', boxShadow: 'var(--shadow-brand)' }}><FaVolumeUp size={20} /> Torna a escoltar</button></AmbSo>
       )}
       {kind === 'picture' && step.example.image_url && (
         <img src={getMediaUrl(step.example.image_url)} alt="" style={{ display: 'block', width: '100%', maxHeight: 240, objectFit: 'cover', borderRadius: 'var(--r-lg)', marginBottom: 14 }} onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = 'none'; }} />
@@ -617,7 +619,7 @@ function EndCard({ page, answers, cards, onTest, isAdmin, onRewrite, rewriting, 
   const [showAll, setShowAll] = useState(false);
   const quizzes = cards.map((c, k) => ({ c, k })).filter(({ c }) => c.type === 'quiz');
   const right = quizzes.filter(({ c, k }) => c.type === 'quiz' && answers[k] === c.answer).length;
-  const play = (url?: string | null) => { if (url) new Audio(getMediaUrl(url)).play().catch(() => {}); };
+  const play = (url?: string | null) => { if (url) new Audio(audioSrc(url)).play().catch(() => {}); };
   return (
     <div>
       <h2 style={{ fontSize: '18px', margin: '0 0 6px' }}>Unitat acabada</h2>
@@ -657,7 +659,7 @@ function EndCard({ page, answers, cards, onTest, isAdmin, onRewrite, rewriting, 
                 <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: '14px' }}>{d.text_tachelhit}</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-soft)' }}>{d.text_catalan}{d.region ? <span style={{ color: 'var(--text-muted)' }}> · {d.region}</span> : null}</div>
               </div>
-              <button onClick={() => play(d.audio_url || d.audio_tts_shi_url)} disabled={!d.audio_url && !d.audio_tts_shi_url} aria-label="Escolta" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : d.audio_tts_shi_url ? 'var(--sky)' : 'var(--surface)', color: d.audio_url || d.audio_tts_shi_url ? '#fff' : 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={12} /></button>
+              <AmbSo url={d.audio_url}><button onClick={() => play(d.audio_url)} disabled={!d.audio_url} aria-label="Escolta" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : 'var(--surface)', color: d.audio_url ? '#fff' : 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={12} /></button></AmbSo>
             </div>
           ))}
         </div>
@@ -693,9 +695,9 @@ function WishlistView() {
   useEffect(() => {
     api.grammarWishlist().then((r) => setUnits(r.units)).catch(() => toast.error('No s’ha pogut carregar la llista'));
   }, [tick]);
-  const play = (url?: string | null) => { if (url) new Audio(getMediaUrl(url)).play().catch(() => {}); };
+  const play = (url?: string | null) => { if (url) new Audio(audioSrc(url)).play().catch(() => {}); };
   return (
-    <div style={{ padding: '20px 16px', maxWidth: '900px', margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px', maxWidth: '900px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate('/grammar')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: '4px 0', marginBottom: '6px' }}><FaChevronLeft /> El curs</button>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', margin: '0 0 4px' }}>Frases per gravar</h1>
       <p style={{ color: 'var(--text-soft)', fontSize: '14px', margin: '0 0 16px', lineHeight: 1.5 }}>
@@ -721,7 +723,7 @@ function WishlistView() {
                   <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: '14px' }}>{d.text_tachelhit}</div>
                   <div style={{ fontSize: '12px', color: 'var(--text-soft)' }}>{d.text_catalan}{d.region ? <span style={{ color: 'var(--text-muted)' }}> · {d.region}</span> : null}</div>
                 </div>
-                <button onClick={() => play(d.audio_url || d.audio_tts_shi_url)} disabled={!d.audio_url && !d.audio_tts_shi_url} aria-label="Escolta" title="Escolta com ho diuen" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : d.audio_tts_shi_url ? 'var(--sky)' : 'var(--surface)', color: d.audio_url || d.audio_tts_shi_url ? '#fff' : 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={12} /></button>
+                <AmbSo url={d.audio_url}><button onClick={() => play(d.audio_url)} disabled={!d.audio_url} aria-label="Escolta" title="Escolta com ho diuen" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : 'var(--surface)', color: d.audio_url ? '#fff' : 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={12} /></button></AmbSo>
                 <button onClick={() => setRecording(d)} aria-label="Grava-ho tu" title="Grava-ho a la teva manera" style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaMicrophone size={14} /></button>
               </div>
             ))}

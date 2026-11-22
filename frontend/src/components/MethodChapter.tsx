@@ -3,7 +3,9 @@ import NotaOrtografia from './NotaOrtografia';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FaBookOpen, FaMicrophone, FaPlay, FaTag } from 'react-icons/fa';
 import { api, type LessonProposal, type MethodChapterData, type MethodSentence } from '../api';
-import { getMediaUrl, hasIdentity, thumb } from '../config';
+import { hasIdentity } from '../config';
+import AmbSo from './AmbSo';
+import { audioSrc, imatgeSrc } from '../services/audioLocal';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import MethodLesson from './MethodLesson';
@@ -19,7 +21,7 @@ import SentenceVariants from './SentenceVariants';
 
 function Sentence({ s }: { s: MethodSentence }) {
   const [asked, setAsked] = useState(false);
-  const play = () => { if (s.audio_url) new Audio(getMediaUrl(s.audio_url)).play().catch(() => {}); };
+  const play = () => { if (s.audio_url) new Audio(audioSrc(s.audio_url)).play().catch(() => {}); };
   const askForVoice = async () => {
     try { await api.askForVoice(s.id); setAsked(true); toast.success('Demanada a les nostres veus'); }
     catch (e) { toast.error(whyItFailed(e, 'No s’ha pogut demanar')); }
@@ -27,7 +29,7 @@ function Sentence({ s }: { s: MethodSentence }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)' }}>
       {s.image_url && (
-        <img src={thumb(getMediaUrl(s.image_url), 120)} alt="" loading="lazy"
+        <img src={imatgeSrc(s.image_url, 120)} alt="" loading="lazy"
              style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 'var(--r-md)', flexShrink: 0 }}
              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
       )}
@@ -42,10 +44,10 @@ function Sentence({ s }: { s: MethodSentence }) {
         <SentenceVariants variants={s.variants} size="sm" />
       </div>
       {s.audio_url ? (
-        <button onClick={play} aria-label="Escolta-la" title="Escolta-la"
+        <AmbSo url={s.audio_url}><button onClick={play} aria-label="Escolta-la" title="Escolta-la"
                 style={{ width: 38, height: 38, borderRadius: '50%', border: 'none', background: 'var(--brand-gradient)', color: '#fff', cursor: 'pointer', flexShrink: 0 }}>
           <FaPlay size={12} />
-        </button>
+        </button></AmbSo>
       ) : hasIdentity() && (
         <button onClick={askForVoice} disabled={asked} title="Demana que algú la digui"
                 style={{ padding: '6px 10px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-soft)', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap' }}>
@@ -118,7 +120,7 @@ export default function MethodChapter() {
   if (!c) return <p style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Carregant el capítol…</p>;
 
   return (
-    <div style={{ padding: '18px 16px 40px', maxWidth: 760, margin: '0 auto' }}>
+    <div style={{ padding: '18px 16px 40px', maxWidth: 760, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate('/metode')} style={{ ...pill, marginBottom: 12 }}>← El Mètode</button>
 
       {/* El dibuix del capítol: de què va, abans de llegir-ne una paraula. */}
