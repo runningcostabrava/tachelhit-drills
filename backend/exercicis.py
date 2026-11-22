@@ -1,0 +1,308 @@
+"""Exercicis que ensenyen el punt de la unitat, fets amb les frases de la biblioteca (#428).
+
+Les preguntes que ja hi havia a una lliçó comproven que **reconeixes** una frase —«com es diu
+X?», «escolta i tria el significat»—, i això no és el que la unitat ensenya. A «possessius» el
+que s'ha d'aprendre és que la casa d'ell no es diu com la casa teva; a «estat d'annexió», que
+`argaz` es torna `urgaz` darrere d'una preposició.
+
+Per això cada unitat diu **quina és la seva peça**, i l'exercici la tapa o la pregunta. La peça
+va escrita a mà, unitat per unitat, i no endevinada: una peça mal triada ensenya una cosa falsa,
+que és pitjor que no tenir exercici.
+
+Tres regles que fan que un exercici valgui:
+
+· **Només frases que algú ha dit.** La resposta és el que va dir qui la va dir, i no una forma
+  que hàgim construït nosaltres.
+· **Una sola peça a la frase.** Si el patró hi casa dues vegades, tapar-ne una és ambigu: qui
+  respon no pot saber quina li demanes. Aquella frase no serveix i es deixa.
+· **Es compara pel SO.** Qui escriu `gh` on la resposta diu `ɣ` ha encertat: són la mateixa
+  lletra escrita per dues mans (#364), i dir-li que no seria ensenyar-li una falsedat.
+
+I la regla de sempre: si una unitat no té prou frases per a un exercici honest, **no se'n fa cap
+i es diu**, com ja fem amb les seccions buides del Mètode.
+"""
+from __future__ import annotations
+
+import json
+import random
+import re
+from pathlib import Path
+from typing import Dict, List, Optional
+
+import practice
+import transliteration
+
+#: La peça de cada unitat: què es tapa, com es diu a la pantalla i què es pregunta.
+#:
+#: Els patrons surten de mirar com ho escriu la biblioteca, no d'un manual: els possessius hi
+#: són amb guionet (`tarbat-ns`) i sense (`tarbat nun`), i amb la x de Beni Mellal (`-nnx`) tant
+#: com amb la ɣ. Un patró que només conegués la forma del llibre deixaria fora mitja biblioteca.
+PECES: Dict[str, Dict] = {
+    "possessius": {
+        "nom": "el possessiu",
+        "pregunta": "De qui és? Escriu el tros que falta.",
+        "ajuda": "«meu» és -inu / -nu, «teu» -nnk (a un home) i -nnm (a una dona), «seu» -nns / -ns.",
+        "patro": re.compile(
+            r"(?:(?<=\s)|(?<=-)|(?<=‑))"
+            r"(inu|innu|nnu|nu|nnk|nnek|nnm|nnem|nns|nnes|ns|nnɣ|nnx|nnaɣ|nnax|nnun|nun|nnsn|nsn|winu|winsh|wins)"
+            r"(?=\s|$|[.,!?¿;:])", re.I),
+    },
+    "negacio": {
+        "nom": "la negació",
+        "pregunta": "Com es diu que NO? Escriu el tros que falta.",
+        "ajuda": "La negació va davant del verb: «ur», i de vegades amb un «ša» al final.",
+        "patro": re.compile(r"(?:(?<=^)|(?<=\s))(ur|urd|uhu)(?=\s|$|[.,!?¿;:])", re.I),
+    },
+    "preposicions": {
+        "nom": "la preposició",
+        "pregunta": "Quina preposició hi va? Tria-la.",
+        "ajuda": "«g/ɣ» és a dins, «s» cap a o amb, «f» damunt, «zg» des de, «dar/ɣur» a casa de o tenir.",
+        "patro": re.compile(
+            r"(?:(?<=^)|(?<=\s))(g|ɣ|gh|x|s|f|zg|zɣ|dar|ɣur|ghur|xur|ɣer|ger)(?=\s)", re.I),
+    },
+}
+
+#: L'estat d'annexió no té patró, i per això no és a `PECES`.
+#:
+#: La seva peça són les primeres lletres del nom —«argaz» es torna «urgaz», «tamɣart» es torna
+#: «tmɣart»—, i això no es pot trobar amb un patró: darrere d'una preposició, un nom que COMENÇA
+#: per t- («taffiwin», «tirra») s'hi veu igual que un que ha perdut la a-, i el patró en faria un
+#: exercici que ensenya una cosa falsa.
+#:
+#: Es pregunta d'una altra manera, i per això va a part (`fes_annexio`): amb una taula de noms en
+#: les dues formes, l'exercici és «aquí tens el nom sol, com queda darrere de la preposició?».
+#: La taula viu a `data/annexio.json` i diu de quin vídeo i de quin segon surt cada parella.
+ANNEXIO_UNITAT = "estat-annexio"
+ANNEXIO_FITXER = Path(__file__).parent / "data" / "annexio.json"
+
+#: El plural tampoc no te patro: de vegades es una terminacio i de vegades canvien les vocals de
+#: dins del mot. Es pregunta amb una taula, igual que l'estat d'annexio.
+PLURAL_UNITAT = "noms-genere-nombre"
+PLURAL_FITXER = Path(__file__).parent / "data" / "plurals.json"
+
+#: Com a mínim, perquè un exercici valgui la pena: quatre frases per poder-ne fer tres i que les
+#: respostes falses surtin de la mateixa unitat.
+MIN_FRASES = 4
+
+
+def _net(t: Optional[str]) -> str:
+    return " ".join((t or "").split())
+
+
+def igual_de_so(a: str, b: str) -> bool:
+    """Si dues respostes diuen el mateix, escrites com sigui.
+
+    `gh`/`ɣ`, `c`/`š`, `3`/`ɛ`: la mateixa lletra per dues mans. La clau fonètica del projecte ja
+    ho sap i és la que fan servir la cerca i el repàs."""
+    return practice.sound_key(a or "") == practice.sound_key(b or "")
+
+
+def _darrere_de(text: str, inici: int, quines) -> bool:
+    """Si la paraula que hi ha just abans d'aquesta posició és una de les que es demanen."""
+    abans = text[:inici].strip().split()
+    return bool(abans) and abans[-1].strip("-‑").lower() in quines
+
+
+def _una_peca(text: str, peca: Dict) -> Optional[re.Match]:
+    """L'única peça de la unitat dins d'aquesta frase, o res.
+
+    Dues peces a la mateixa frase no serveixen: tapar-ne una és demanar una cosa que qui respon
+    no pot endevinar quina és."""
+    quines = [m for m in peca["patro"].finditer(text)
+              if "nomes_darrere" not in peca or _darrere_de(text, m.start(1), peca["nomes_darrere"])]
+    return quines[0] if len(quines) == 1 else None
+
+
+def _amb_el_buit(text: str, m: re.Match) -> str:
+    """La frase amb la peça tapada, i el buit de la mida de la peça."""
+    return text[:m.start(1)] + "·" * max(3, len(m.group(1))) + text[m.end(1):]
+
+
+def tif_amb_buit(text: str) -> str:
+    """La mateixa frase en tifinag, amb el buit al mateix lloc.
+
+    El transliterador només tradueix lletres, i els punts del buit se li perdien pel camí: a la
+    pantalla, la ratlla tifinag sortia sense cap forat —i a l'exercici de l'annexió, que és «g»
+    i prou més el buit, quedava una sola lletra solta que semblava una errada.
+
+    Per això es tradueix el que hi ha a banda i banda i els punts es tornen a posar a mà."""
+    fora = []
+    for i, tros in enumerate(re.split(r"(·+)", text)):
+        if i % 2:
+            fora.append(tros)
+            continue
+        # El transliterador retalla els espais de les puntes, i sense tornar-los a posar la
+        # frase quedava enganxada al buit («ⴳ······» en comptes de «ⴳ ······»).
+        davant = tros[:len(tros) - len(tros.lstrip())]
+        darrere = tros[len(tros.rstrip()):]
+        fora.append(davant + transliteration.to_forms(tros)["tifinagh"] + darrere)
+    return "".join(fora)
+
+
+def _taula(fitxer) -> Dict:
+    """Una taula de formes, o res si no es pot llegir.
+
+    Sense taula no hi ha exercici, i prou: una unitat sense «Fes-ho tu» és una pantalla més
+    curta, i inventar-se les formes seria ensenyar paraules que ningú no diu.
+    """
+    try:
+        return json.loads(fitxer.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def _de_taula(taula: Dict, unitat: str, de: str, a: str, que: str,
+              pregunta, dins, quants: int) -> List[Dict]:
+    """Exercicis fets amb una taula de dues formes del mateix mot.
+
+    Hi ha unitats que no es poden preguntar buscant un tros dins d'una frase —l'estat d'annexió i
+    el plural són les dues— perquè la seva peça és **com canvia el mot sencer**. Per a aquestes,
+    la pregunta és «aquí tens una forma, quina és l'altra?», i les formes surten d'una taula que
+    diu de quin vídeo i de quin segon s'han tret.
+
+    Dues regles que fan que l'exercici valgui, i que són les mateixes dels exercicis de frases:
+
+    · **Només les lectures segures.** Les parelles amb `cert: false` hi són perquè algú les
+      confirmi, no per ensenyar-les: el tifinag es llegeix a ull i hi ha signes que s'assemblen.
+    · **Les respostes falses són formes de la MATEIXA regla.** Si es treuen d'una altra, la bona
+      es veu de lluny i l'exercici no ensenya res.
+
+    `de` i `a` són com es diuen les dues formes al fitxer; `pregunta` rep la forma de partida i
+    torna el text de la pregunta; `dins` rep la forma de partida i el buit, i torna la frase que
+    es veu. Cada unitat demana una frase diferent, i no se'n pot inventar cap: a l'annexió el
+    marc és una preposició de debò («g ···»), que és justament el que fa canviar el nom; al
+    plural no hi ha cap marc que es pugui escriure sense comprovar-lo abans, i per això s'hi
+    ensenya el mot sol.
+    """
+    general = taula.get("font") or {}
+    fora: List[Dict] = []
+    for regla in taula.get("regles") or []:
+        bones = [p for p in (regla.get("parelles") or []) if p.get("cert")]
+        if len(bones) < MIN_FRASES:
+            continue
+        formes = [p[a] for p in bones]
+        rnd = random.Random(regla.get("id") or "")
+        tria = list(bones)
+        rnd.shuffle(tria)
+        font = {**general, **(regla.get("font") or {})}
+        if regla.get("segon") and not font.get("segon"):
+            font["segon"] = regla["segon"]
+        for p in tria[:max(1, quants)]:
+            r = random.Random(p[de])
+            altres = [f for f in formes if not igual_de_so(f, p[a])]
+            r.shuffle(altres)
+            opcions = [p[a]] + altres[:3]
+            r.shuffle(opcions)
+            frase = dins(p[de], "·" * max(3, len(p[a])))
+            fora.append({
+                "id": "%s:%s:%s" % (unitat, regla.get("id"), p[de]),
+                "kind": "tria" if len(opcions) >= 4 else "omple",
+                "unit": unitat,
+                "drill_id": None,
+                "pregunta": pregunta(p[de]),
+                "ajuda": regla.get("diu"),
+                "que": que,
+                "shi": frase,
+                "tif": tif_amb_buit(frase),
+                "ca": p.get("ca"),
+                "resposta": p[a],
+                "opcions": opcions if len(opcions) >= 4 else [],
+                "audio_url": None,
+                "speaker": None,
+                "region": None,
+                "font": font,
+            })
+    return fora
+
+
+def fes_annexio(quants: int = 3) -> List[Dict]:
+    """«Aquí tens el nom sol: com queda darrere de la preposició?»"""
+    return _de_taula(
+        _taula(ANNEXIO_FITXER), ANNEXIO_UNITAT, "lliure", "annexat", "l'estat d'annexió",
+        lambda u: "El nom sol és «%s». Darrere de la preposició, com queda?" % u,
+        lambda u, buit: "g " + buit, quants)
+
+
+def fes_plural(quants: int = 3) -> List[Dict]:
+    """«Aquí en tens un: i quan n'hi ha molts?»
+
+    El plural amazic no és una terminació que s'enganxi sempre igual —de vegades canvien les
+    vocals de dins del mot— i per això tampoc no es pot buscar amb un patró dins d'una frase.
+    """
+    return _de_taula(
+        _taula(PLURAL_FITXER), PLURAL_UNITAT, "un", "molts", "el plural",
+        lambda u: "N'hi ha un de sol. I quan n'hi ha molts?",
+        lambda u, buit: u, quants)
+
+
+def fes(slug: str, frases: List, quants: int = 3) -> List[Dict]:
+    """Els exercicis que aquesta unitat pot fer de debò amb les seves frases.
+
+    `frases` són les files de la unitat (drills). Torna una llista buida quan no n'hi ha prou:
+    val més cap exercici que un de dolent.
+    """
+    # Aquestes dues no es fan amb les frases de la unitat sinó amb una taula de formes: la seva
+    # peça és com canvia el mot sencer, i cap patró no la sap trobar dins d'una frase.
+    if slug == ANNEXIO_UNITAT:
+        return fes_annexio(quants)
+    if slug == PLURAL_UNITAT:
+        return fes_plural(quants)
+    peca = PECES.get(slug)
+    if not peca:
+        return []
+    bones = []
+    for d in frases:
+        text = _net(getattr(d, "text_tachelhit", None))
+        ca = _net(getattr(d, "text_catalan", None))
+        if not text or not ca or len(text.split()) < 2:
+            continue
+        m = _una_peca(text, peca)
+        if m is None:
+            continue
+        bones.append((d, text, ca, m))
+    if len(bones) < MIN_FRASES:
+        return []
+
+    # Les que es poden escoltar van davant: un exercici que a més sona ensenya dues coses.
+    bones.sort(key=lambda t: (not (getattr(t[0], "audio_url", "") or "").strip(), len(t[1])))
+    totes_les_formes = sorted({m.group(1).lower() for _, _, _, m in bones})
+
+    fora: List[Dict] = []
+    for d, text, ca, m in bones[:max(1, quants)]:
+        resposta = m.group(1)
+        rnd = random.Random(d.id)
+        # Les falses són formes que la MATEIXA unitat fa servir de debò: inventar-ne una seria
+        # ensenyar una forma que ningú no diu.
+        altres = [f for f in totes_les_formes if not igual_de_so(f, resposta)]
+        rnd.shuffle(altres)
+        # Les opcions es pinten en minúscula: la frase pot començar amb majúscula i una llista
+        # amb «Winu» i «nns» ja diu quina és la bona sense pensar-hi.
+        opcions = [resposta.lower()] + altres[:3]
+        rnd.shuffle(opcions)
+        fora.append({
+            # Cada exercici porta el seu nom: la pantalla n'hi ha de poder posar un per un, i
+            # els d'annexió no surten de cap frase i per tant no tenen `drill_id`.
+            "id": "%s:%s" % (slug, d.id),
+            "kind": "omple" if len(opcions) < 4 else "tria",
+            "unit": slug,
+            "drill_id": d.id,
+            "pregunta": peca["pregunta"],
+            "ajuda": peca["ajuda"],
+            "que": peca["nom"],
+            "shi": _amb_el_buit(text, m),
+            "tif": tif_amb_buit(_amb_el_buit(text, m)),
+            "ca": ca,
+            "resposta": resposta,
+            "opcions": opcions if len(opcions) >= 4 else [],
+            "audio_url": (getattr(d, "audio_url", "") or "").strip() or None,
+            "speaker": getattr(d, "speaker", None) or getattr(d, "author", None),
+            "region": getattr(d, "region", None),
+            # Aquests surten de la biblioteca, i qui els va dir ja consta a `speaker`.
+            "font": None,
+        })
+    return fora
+
+
+def corregeix(exercici: Dict, dit: str) -> bool:
+    """Si la resposta val. Es compara pel so: `gh` i `ɣ` són la mateixa lletra."""
+    return igual_de_so(dit, (exercici or {}).get("resposta") or "")

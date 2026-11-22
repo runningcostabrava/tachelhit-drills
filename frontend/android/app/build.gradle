@@ -16,7 +16,33 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // La mateixa clau de depuració a tots els builds (#338).
+    //
+    // Abans aquí no es deia res, i quina clau signava l'APK ho decidia el plugin: busca un
+    // fitxer a la carpeta de l'usuari i, si no n'hi troba cap, se n'inventa un de nou. Cada
+    // màquina i cada runner del CI en tenia un altre, de manera que cap APK del CI no podia
+    // actualitzar-ne un altre: Android demana desinstal·lar primer, i desinstal·lar esborra les
+    // dades locals de l'app —el testimoni d'usuari i les gravacions que encara no s'hagin pujat.
+    //
+    // Ara el fitxer es diu pel seu nom. Si hi és, és la clau; si no hi és, el plugin fa el que
+    // feia. La contrasenya «android» i l'àlies «androiddebugkey» no són cap secret: són els que
+    // Android documenta per al magatzem de depuració, i el magatzem mateix no entra al
+    // repositori (va per `app/debug.keystore`, ignorat).
+    signingConfigs {
+        debug {
+            def compartida = file('debug.keystore')
+            if (compartida.exists()) {
+                storeFile compartida
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+            }
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

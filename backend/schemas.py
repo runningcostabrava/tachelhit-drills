@@ -78,6 +78,9 @@ class DrillBase(BaseModel):
     # Documentation / variation layer (auditor Phase 2)
     text_tachelhit_latin: Optional[str] = None
     text_tachelhit_suggested: Optional[str] = None  # machine/AI draft (not gold)
+    #: Els esborranys amb la seva procedencia, en JSON: [{"text", "model", "acord"}].
+    esborranys: Optional[str] = None
+    suggested_confidence: Optional[float] = None    # quanta certesa diu el transcriptor que té
     draft_check: Optional[str] = None  # JSON verdict of the draft's meaning check (draft_check.py)
     topics: Optional[str] = None         # subject catalogue: comma-separated slugs (topics.py)
     topics_source: Optional[str] = None  # 'auto' | 'owner'
@@ -96,6 +99,11 @@ class DrillBase(BaseModel):
     requested_by: Optional[str] = None
     requested_note: Optional[str] = None
     variant_of: Optional[int] = None
+    #: «so» (la mateixa paraula escrita o dita d'una altra manera) o «paraula» (una altra manera
+    #: de dir-ho). `None` quan ningú no ho ha dit (#332).
+    variant_kind: Optional[str] = None
+    #: El que qui l'ha escrita vol dir d'aquesta versió seva.
+    variant_note: Optional[str] = None
     glosses: Optional[str] = None
 
     # Validators for URL fields
@@ -107,10 +115,20 @@ class DrillBase(BaseModel):
         return normalize_media_url(v)
 
 class DrillCreate(DrillBase):
-    pass
+    #: «La gravació ja la tinc, l'estic pujant» (#450). No és cap camp de la fila.
+    #:
+    #: Per pujar un fitxer cal l'id de la frase, i per crear la frase cal contingut: amb els dos
+    #: micròfons del telèfon, on el primer que es fa és gravar, això deixava la frase sense poder
+    #: néixer. Qui captura ho diu explícitament i la fila es crea buida perquè el fitxer hi
+    #: arribi tot seguit. La regla de no crear files en blanc (P1.9) es manté per a tothom que
+    #: no ho digui.
+    capturing: Optional[bool] = None
 
 class DrillUpdate(DrillBase):
-    pass
+    #: Una càrrega massiva de qui administra: desa el text i no engega ni la traducció a l'àrab ni
+    #: la veu catalana (#539). No és cap camp de la fila. Escriure centenars de catalans seguits
+    #: amb els efectes engegats tombava el Render.
+    quiet: Optional[bool] = None
 
 class Drill(DrillBase):
     id: int
@@ -174,6 +192,10 @@ class Test(TestBase):
     updated_at: Optional[datetime] = None
     created_by_user_id: Optional[int] = None   # whose list it is: «les meves» is built on this
     visibility: Optional[str] = None           # private | shared
+    # How many steps it really holds (ADR 0002). `drill_ids` is the flat list a practice used to
+    # be and the workshop never writes it, so every practice built there read as «0 drills» on
+    # the screens that still count that column.
+    step_count: Optional[int] = None
 
     @field_serializer('date_created', 'updated_at', when_used='json')
     def _ser_dt(self, v: Optional[datetime]) -> Optional[str]:
@@ -289,6 +311,14 @@ class TranscribeResponse(BaseModel):
     rough_transcription: str
     corrected_transcription: str
     similarity_score: float
+    #: El camp dels esborranys de la frase TAL COM HA QUEDAT despres de desar-hi aquesta lectura
+    #: (#575), o `None` si no s'hi ha desat res (no venia `drill_id`, o el desat ha fallat).
+    #:
+    #: Hi es perque qui crida aquest endpoint escriu, tot seguit, un PUT a `/drills/{id}` amb
+    #: `esborranys` compost a partir de la copia que ja tenia. Aquella copia es d'ABANS d'aquesta
+    #: lectura, i desar-la esborraria el rastre que acabem d'escriure. Amb aixo, el davant hi pot
+    #: construir a sobre.
+    esborranys: Optional[str] = None
 
 class DrillPairInfo(BaseModel):
     id: int

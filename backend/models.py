@@ -37,7 +37,19 @@ class Drill(Base):
     # above so an approximation (often a different variety) never overwrites
     # what a real speaker collected.
     text_tachelhit_suggested = Column(String, nullable=True)
+    # Quanta certesa diu el transcriptor que té del que acaba de proposar, de 0 a 1.
+    #
+    # Sense això la cua de confirmació és un sac on la gravació neta i la inintel·ligible pesen
+    # igual, i qui s'hi asseu ha de descobrir-ho escoltant-les una per una. Amb això es confirma
+    # primer el que té números de ser bo. És el número del model (NeMo CTC), no una opinió: una
+    # frase amb certesa alta també pot ser errònia, i per això segueix sent una PROPOSTA.
+    suggested_confidence = Column(Float, nullable=True)
     text_catalan_suggested = Column(String, nullable=True)
+    # Els esborranys de maquina amb la seva procedencia (JSON): una llista de
+    # {"text", "model", "acord"}. Hi ha gravacions llegides per tres models independents, i el
+    # que fa que valgui la pena mirar-ne una no es el text sino que TRES hi coincideixin.
+    # `text_tachelhit_suggested` segueix essent el que algu ha triat d'aquesta llista.
+    esborranys = Column(Text, nullable=True)
     # Meaning check of text_tachelhit_suggested (draft_check.py): JSON with the draft
     # checked, its blind back-translation, verdict yes/roughly/no, confidence, note.
     draft_check = Column(String, nullable=True)
@@ -52,6 +64,17 @@ class Drill(Base):
     # A variant: the same sentence as another speaker says it (their words, their voice, their town),
     # created from a take whose own words differ from the drill's; the original lists its variants
     variant_of = Column(Integer, ForeignKey("drills.id"), nullable=True, index=True)
+    # De quina MENA és la relació amb l'original (#332). Un sinònim no és una variant dialectal:
+    #   «so»      ho diem igual però ho escrivim o ho pronunciem diferent → la mateixa paraula;
+    #   «paraula» al meu poble, per dir això, en diem una altra → una altra manera de dir-ho.
+    # Per a qui aprèn no és el mateix: la primera li diu com sona la paraula que està estudiant,
+    # la segona li ensenya una paraula nova. `None` vol dir que ningú no ho ha dit, i no
+    # s'endevina.
+    variant_kind = Column(String, nullable=True)
+    # El que qui l'escriu vol dir d'aquesta versió seva («així ho deia la meva àvia»). Hi havia
+    # el camp a la crida i no a la taula: `POST /drills/{id}/variant` petava amb un TypeError
+    # abans d'escriure res, de manera que «digues-ho com ho dius tu» sense gravar no funcionava.
+    variant_note = Column(Text, nullable=True)
     # Word by word: JSON list of {"shi": word as written, "tif": its Tifinagh, "ca": the Catalan
     # word(s) it answers to or "—"}; written by the gloss pass, shown under the sentence
     glosses = Column(Text, nullable=True)
@@ -228,6 +251,26 @@ class GrammarLesson(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
 
 
+class MethodChapter(Base):
+    """El text d'un capítol del Mètode: l'explicació, el diàleg i el vocabulari.
+
+    Viu aquí i no al repositori a posta. El Mètode és el manual d'El Mountassir traduït i
+    enriquit (ADR 0004), i el repositori és públic: penjar-hi la traducció capítol per capítol
+    és una altra cosa que fer-la servir a l'app. Aquí, l'app el serveix amb el seu crèdit, i qui
+    administra el pot corregir des de la mateixa app sense desplegar res.
+
+    `body` és el JSON del capítol; `method.py` hi posa l'estructura (quines seccions, quina
+    gramàtica) i les frases de la biblioteca.
+    """
+    __tablename__ = "method_chapters"
+
+    slug = Column(String, primary_key=True)        # el nom curt del capítol, de method.CHAPTERS
+    body = Column(Text, nullable=False)            # JSON: intro, sections, dialogue, vocabulary
+    version = Column(Integer, nullable=True, default=1)
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
+    updated_by = Column(String, nullable=True)
+
+
 class WordAudio(Base):
     """When one word is spoken inside one recording (#  hear a word on its own).
 
@@ -246,6 +289,39 @@ class WordAudio(Base):
     end_ms = Column(Integer, nullable=False)
     speaker = Column(String, nullable=True)              # who says it, when we know
     source = Column(String, nullable=True)               # 'library' | 'tosd'
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
+
+
+class SentenceAnalysis(Base):
+    """Què passa dins UNA oració, i quines unitats del curs l'expliquen (#341).
+
+    No és la nota de la Gramàtica. Aquella respon «què mostra aquesta frase d'aquesta unitat» i
+    penja d'una parella (frase, unitat); una línia d'un conte no pertany a cap unitat, de manera
+    que la pregunta es gira: què passa aquí, i què ho explica. Per això penja de la frase sola.
+
+    L'escriu una màquina i es diu. Només per a frases que algú ha escrit de debò: analitzar una
+    línia que ningú no ha transcrit seria analitzar una frase que la màquina s'ha inventat.
+    """
+    __tablename__ = "sentence_analysis"
+
+    drill_id = Column(Integer, primary_key=True, index=True)
+    body = Column(Text, nullable=False)                  # 30-55 paraules de català planer
+    units = Column(String, nullable=True)                # slugs del curs, separats per comes
+    updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
+
+
+class DrillAiText(Base):
+    """L'anàlisi o l'explicació d'una frase, desada la primera vegada que algú la demana (#458).
+
+    És un text de màquina al costat de la frase, mai dins seu. `empremta` diu quin text ha llegit:
+    si el text de la frase canvia, aquest deixa de valer i es torna a escriure.
+    """
+    __tablename__ = "drill_ai_text"
+
+    drill_id = Column(Integer, primary_key=True)
+    kind = Column(String, primary_key=True)              # analyze | explain
+    body = Column(Text, nullable=False)
+    empremta = Column(String, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=True)
 
 
@@ -337,6 +413,10 @@ class CaptureRequest(Base):
     error = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     claimed_at = Column(DateTime, nullable=True)
+    # Quantes vegades l'agent se l'ha endut. Un reclam que no torna es desfà (l'agent pot haver
+    # petat o haver perdut la xarxa), però no indefinidament: una URL que no es pot pair giraria
+    # per sempre. Columna nul·lable, així que la sincronització d'esquema l'afegeix sola.
+    attempts = Column(Integer, nullable=True, default=0)
 
 
 class Recording(Base):
@@ -356,6 +436,15 @@ class Recording(Base):
     is_native = Column(Boolean, nullable=True)              # a native speaker's take, or a learner's
     license = Column(String, nullable=True, default="CC-BY-SA")
     text = Column(Text, nullable=True)       # the sentence as THIS speaker says it, when their dialect's words differ
+    # «Les mateixes paraules, però no sona igual» (#332). Una persona pot gravar sense tocar la
+    # transcripció i tot i així estar dient sons que la transcripció no recull: no són altres
+    # paraules, és la mateixa paraula dita d'una altra manera. Marcar-ho fa que algú ho miri, en
+    # comptes que la fitxa digui que es diu d'una manera i la veu en digui una altra sense que
+    # consti enlloc.
+    sounds_differ = Column(Boolean, nullable=True)
+    #: Si aquesta presa porta text propi, de quina mena és respecte del de la frase: «so» o
+    #: «paraula» (#332). `None` = no s'ha dit.
+    variant_kind = Column(String, nullable=True)
     date_created = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 class ReviewLog(Base):
@@ -407,3 +496,35 @@ class UserSession(Base):
     device = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     last_used = Column(DateTime, default=datetime.utcnow, nullable=True)
+
+
+class SnrtEpisode(Base):
+    """Un episodi de Tamazight TV (SNRT) per al visor PRIVAT d'administradors (docs/adr/0012). Només text i temps: el
+    vídeo no és nostre i no se'n guarda ni se'n serveix cap còpia. Mai surt en cap exportació ni corpus."""
+    __tablename__ = "snrt_episodes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    slug = Column(String, unique=True, index=True, nullable=False)
+    titol = Column(String, nullable=False)
+    url_pagina = Column(String, nullable=True)      # pàgina original de la SNRT (forja.ma / YouTube), on es mira el vídeo
+    video_youtube = Column(String, nullable=True)   # id de YouTube si l'episodi hi és (s'encasta; no és una còpia)
+    durada = Column(Float, nullable=True)
+    creat = Column(DateTime, default=datetime.utcnow)
+
+
+class SnrtCue(Base):
+    __tablename__ = "snrt_cues"
+
+    id = Column(Integer, primary_key=True, index=True)
+    episodi_id = Column(Integer, ForeignKey("snrt_episodes.id"), index=True, nullable=False)
+    k = Column(Integer, nullable=False)            # ordre dins l'episodi
+    t_ini = Column(Float, nullable=False)
+    t_fi = Column(Float, nullable=False)
+    tifinag = Column(Text, nullable=True)
+    arab = Column(Text, nullable=True)
+    catala = Column(Text, nullable=True)           # traducció de màquina, sense revisar
+    catala_estat = Column(String, nullable=True)   # acord entre models o no
+    #: El que el NOSTRE transcriptor sent en aquest tall. No és el subtitol de la cadena: aquell
+    #: va en norma de l'IRCAM i aquí hi ha la parla dialectal, i sovint no diuen el mateix. És
+    #: justament la diferència el que es vol poder mirar, i per això va en un camp a part.
+    sentit = Column(Text, nullable=True)

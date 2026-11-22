@@ -30,6 +30,7 @@ backend/media/audio/
 backend/media/video/
 backend/media/images/
 backend/media/shorts/
+backend/media/tts/
 
 # Environment variables
 .env
@@ -68,3 +69,13 @@ backend/bakeoff/
 backend/bakeoff2/
 # Third-party lexicon (Oulhaj dictionary, IRCAM conjugations) fetched from HuggingFace at runtime
 backend/knowledge/lexicon/
+
+# material baixat per llegir-ne el text cremat (tools/text_de_video)
+feina/
+
+# mesures i vídeos baixats del Baba Ali (no van al repositori)
+tools/baba_ali/video/
+tools/baba_ali/_canvis/
+
+# claus SSH (ECS i semblants): mai al repositori
+*.pem

@@ -1,11 +1,16 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { duesCares } from '../utils/tifinag';
 import { answerSafeFilter } from '../utils/media';
 import SourceCredit from './SourceCredit';
-import { API_BASE, getMediaUrl } from '../config';
+import { getMediaUrl } from '../config';
 import { preferredRecorderMime, toPlayableAudioUrl } from '../utils/media';
 import { getMediaWithOfflineFallback } from '../utils/offlineCache';
+import AmbSo from './AmbSo';
+import { rutaLocal } from '../services/audioLocal';
+import { toast } from '../toast';
+import { whyItFailed } from '../utils/errors';
 import { getYouTubeVideoId, loadYouTubeApi } from '../utils/youtubeUtils';
-import { FaVideo, FaVolumeUp, FaPlay, FaPause, FaSync, FaTimes, FaStepBackward, FaStepForward, FaEye, FaStop, FaMicrophone } from 'react-icons/fa';
+import { FaVideo, FaPlay, FaPause, FaSync, FaTimes, FaStepBackward, FaStepForward, FaEye, FaStop, FaMicrophone } from 'react-icons/fa';
 import DrillVoices from './DrillVoices';
 import WordGloss from './WordGloss';
 import AiAssistant from './AiAssistant';
@@ -164,8 +169,6 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
   };
 
   // Synthetic-voice scaffold state (marks TTS fallback playback)
-  const [usingSyntheticVoice, setUsingSyntheticVoice] = useState(false);
-  const [synthesizingVoice, setSynthesizingVoice] = useState(false);
 
   // Say it yourself, then hear the two takes one after the other (review mode).
   //
@@ -308,7 +311,6 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
     // New card starts hidden again (recall-first)
     setAnswerRevealed(false);
     answerRevealedRef.current = false;
-    setUsingSyntheticVoice(false);
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -455,6 +457,18 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
     } catch (error) {
       console.error('Playback sequence error:', error);
       setIsPlaying(false);
+      // Dir per què calla (#562).
+      //
+      // L'amo, 2-11-2026, davant de la #6852: «there should be audio». I n'hi havia: el fitxer
+      // és a Cloudinary, dura 1,25 s i arriba a -13,3 dB, mesurat. El que no hi havia era cap
+      // manera de saber per què no sonava, perquè això era un `console.error` i prou —el mateix
+      // mal del #556, en un tercer lloc.
+      //
+      // Es calla en dos casos que NO són una avaria: canviar de frase mentre sona avorta el
+      // `play()`, i això rebota aquí; i una frase sense veu ja se salta abans d'arribar-hi.
+      if (currentIndexRef.current === startedAtIndex && (currentDrill?.audio_url || currentDrill?.video_url)) {
+        toast.error(`No s'ha pogut fer sonar la veu: ${whyItFailed(error, 'el fitxer no s’ha pogut obrir')}`);
+      }
       // Only auto-advance if the user hasn't already navigated away — an
       // interrupted play() also rejects, and advancing then would skip a drill
       if (autoPlayEnabled && !reviewMode && currentIndexRef.current === startedAtIndex) goToNextDrill();
@@ -467,45 +481,37 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
     if (speechSynthRef.current) { speechSynthesis.cancel(); speechSynthRef.current = null; }
   };
 
-  const playTachelhitAudio = async (): Promise<void> => {
-    // Voice-source chain: native recording (gold) -> stored synthetic voice
-    // (scaffold) -> synthesize on demand for text-only cards (the backend
-    // stores the result so this only happens once per drill)
-    // A captured video clip IS the native voice: play its sound track before any synthetic voice.
-    // A stored synthetic voice counts only when it is current (v2: read from standard Tifinagh;
-    // earlier voices were read from Latin letters and are near silence).
-    const storedVoice = /tts_v2_/.test(currentDrill?.audio_tts_shi_url || '') ? currentDrill?.audio_tts_shi_url || '' : '';
-    let sourceUrl = currentDrill?.audio_url || currentDrill?.video_url || storedVoice || '';
-    let synthetic = !currentDrill?.audio_url && !currentDrill?.video_url && !!sourceUrl;
+  /**
+   * Què ha passat de debò quan un `<audio>` es queixa (#562).
+   *
+   * El que arriba al `catch` és un `Event`, que no diu res: `error.message` és `undefined` i
+   * qualsevol avís que en surti acaba sent «alguna cosa ha anat malament». El motiu bo és a
+   * `audio.error.code`, i els quatre casos volen coses ben diferents de qui escolta: el fitxer
+   * que no hi és no és el mateix que un format que el telèfon no sap llegir.
+   */
+  const perQue = (error: unknown, audio: HTMLAudioElement): Error => {
+    const codi = audio.error?.code;
+    const local = audio.src.startsWith('http') ? '' : ' (la còpia del telèfon)';
+    if (codi === 1) return new Error('s’ha aturat a mitges');
+    if (codi === 2) return new Error(`no s’ha pogut llegir el fitxer${local}. Mira la connexió.`);
+    if (codi === 3) return new Error(`el fitxer està fet malbé${local}`);
+    if (codi === 4) return new Error(`el fitxer no hi és o el telèfon no el sap llegir${local}`);
+    return error instanceof Error ? error : new Error('el so no ha arrencat');
+  };
 
-    if (!sourceUrl && currentDrill?.text_tachelhit) {
-      try {
-        setSynthesizingVoice(true);
-        const res = await fetch(`${API_BASE}/tts/tachelhit`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: currentDrill.text_tachelhit, drill_id: currentDrill.id, meaning: currentDrill.text_catalan || null }),
-        });
-        if (res.ok) {
-          sourceUrl = (await res.json()).url || '';
-          synthetic = !!sourceUrl;
-        }
-      } catch (e) {
-        console.warn('Tachelhit TTS synthesis failed:', e);
-      } finally {
-        setSynthesizingVoice(false);
-      }
-    }
+  const playTachelhitAudio = async (): Promise<void> => {
+    // Només veus de persona: la gravació o el so del vídeo. Una frase sense veu queda muda (#532).
+    const sourceUrl = currentDrill?.audio_url || currentDrill?.video_url || '';
+
 
     if (!sourceUrl) {
       if (autoPlayEnabled && !reviewMode) goToNextDrill();
       return;
     }
-    setUsingSyntheticVoice(synthetic);
 
     try {
       // Get audio URL with offline fallback
-      const audioUrl = await getMediaWithOfflineFallback(sourceUrl, (u) => toPlayableAudioUrl(getMediaUrl(u)));
+      const audioUrl = rutaLocal(sourceUrl) ?? await getMediaWithOfflineFallback(sourceUrl, (u) => toPlayableAudioUrl(getMediaUrl(u)));
       const audio = new Audio(audioUrl);
       audioRef.current = audio;
       let internalCount = 0;
@@ -536,7 +542,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
             audio.removeEventListener('error', handleError);
             setIsPlaying(false);
             // Advancing on failure is handled once, in playCurrentAudio's catch
-            reject(error);
+            reject(perQue(error, audio));
           };
 
           audio.addEventListener('ended', handleEnded);
@@ -556,7 +562,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
   const handleSpeakCatalan = async (): Promise<void> => {
     if (currentDrill?.audio_tts_url) {
       try {
-        const audioUrl = await getMediaWithOfflineFallback(currentDrill.audio_tts_url, (u) => toPlayableAudioUrl(getMediaUrl(u)));
+        const audioUrl = rutaLocal(currentDrill.audio_tts_url) ?? await getMediaWithOfflineFallback(currentDrill.audio_tts_url, (u) => toPlayableAudioUrl(getMediaUrl(u)));
         const audio = new Audio(audioUrl);
         ttsAudioRef.current = audio;
 
@@ -923,7 +929,10 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
             {hideAnswer ? (
               <span style={{ letterSpacing: '8px', opacity: 0.35 }}>· · ·</span>
             ) : currentDrill?.text_tachelhit ? (
-              <KaraokeLine text={currentDrill.text_tachelhit} frac={isPlaying && audioDuration > 0 ? Math.min(1, audioProgress / audioDuration) : -1} />
+              // La frase EN TIFINAG (#339). Fins ara aquí hi anava el text tal com el va escriure
+              // el parlant, pintat amb la lletra tifinag: qui havia escrit en llatí es veia en
+              // llatí amb tipografia tifinag, i de tifinag no n'hi havia enlloc.
+              <KaraokeLine text={duesCares(currentDrill.text_tachelhit, currentDrill.text_tachelhit_latin).tif} frac={isPlaying && audioDuration > 0 ? Math.min(1, audioProgress / audioDuration) : -1} />
             ) : draftText(currentDrill) ? (
               // Captured from subtitles / drafted by a machine and not yet confirmed by a speaker:
               // still worth seeing while learning, but visibly not gold
@@ -936,8 +945,10 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
             )}
           </div>
 
-          {/* Latin romanization (shown with the answer) */}
-          {!hideAnswer && currentDrill?.text_tachelhit_latin && (
+          {/* I el llatí a sota. Abans només sortia per als 90 drills que tenien la forma llatina
+              DESADA; ara surt sempre, perquè es calcula, i una frase amaziga ha de portar sempre
+              els dos alfabets (#339). */}
+          {!hideAnswer && currentDrill?.text_tachelhit && (
             <div style={{
               padding: '0 24px 14px',
               textAlign: 'center',
@@ -945,7 +956,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
               fontStyle: 'italic',
               color: 'var(--text-soft)'
             }}>
-              <KaraokeLine text={currentDrill.text_tachelhit_latin} frac={isPlaying && audioDuration > 0 ? Math.min(1, audioProgress / audioDuration) : -1} muted />
+              <KaraokeLine text={duesCares(currentDrill.text_tachelhit, currentDrill.text_tachelhit_latin).lat} frac={isPlaying && audioDuration > 0 ? Math.min(1, audioProgress / audioDuration) : -1} muted />
             </div>
           )}
 
@@ -971,18 +982,6 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
           {explainOpen && currentDrill && <AiAssistant drillId={currentDrill.id} drillLabel={currentDrill.text_catalan || currentDrill.text_tachelhit || `#${currentDrill.id}`} autoAction="explain" onClose={() => setExplainOpen(false)} />}
 
           {/* Synthetic-voice scaffold marker: learners must know sketch from gold */}
-          {(synthesizingVoice || usingSyntheticVoice) && (
-            <div style={{ textAlign: 'center', paddingBottom: '10px' }}>
-              <span style={{
-                fontSize: '11px', fontWeight: 700, padding: '3px 10px',
-                borderRadius: 'var(--r-pill)', background: 'var(--sky-soft)', color: 'var(--sky)'
-              }}>
-                {synthesizingVoice
-                  ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><FaVolumeUp /> Sintetitzant la veu…</span>
-                  : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}><FaVolumeUp /> Veu sintètica — encara sense gravació nativa</span>}
-              </span>
-            </div>
-          )}
 
           {/* Translations */}
           <div style={{ padding: '0 24px 8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1128,7 +1127,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
         </div>
 
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0 }}>
-          <button
+          <AmbSo url={currentDrill?.audio_url}><button
             onClick={togglePlayback}
             aria-label={isPlaying ? 'Pausa' : (isPaused ? 'Continua' : 'Reprodueix l\'àudio')}
             title={isPlaying ? 'Pausa' : (isPaused ? 'Continua' : 'Reprodueix')}
@@ -1149,7 +1148,7 @@ export default function DrillPlayer({ drills, onExit, reviewMode, onGrade }: Dri
             }}
           >
             {isPlaying ? <FaPause /> : <FaPlay />}
-          </button>
+          </button></AmbSo>
 
           <button
             onClick={goToNextDrill}

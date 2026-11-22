@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { formes } from '../utils/tifinag';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from '../toast';
@@ -6,9 +7,14 @@ import { whyItFailed } from '../utils/errors';
 import { FaBullseye, FaCheck, FaChevronLeft, FaChevronRight, FaLightbulb, FaMapMarkerAlt, FaMicrophone, FaPen, FaRedo, FaTimes, FaVolumeUp } from 'react-icons/fa';
 import { api, type GrammarUnit, type GrammarUnitPage, type GrammarWishUnit, type LessonExample, type LessonProposal, type LessonStep } from '../api';
 import { API_BASE, getMediaUrl } from '../config';
+import AmbSo from './AmbSo';
+import { audioSrc } from '../services/audioLocal';
 import RecordAudioModal from './RecordAudioModal';
+import NotaOrtografia from './NotaOrtografia';
 import AiAssistant from './AiAssistant';
 import { GlossWords } from './WordGloss';
+import SentenceVariants from './SentenceVariants';
+import ExercicisDeLaUnitat from './ExercicisDeLaUnitat';
 import type { Drill } from '../types';
 
 // The grammar course: the library organised as a sequence of grammar units (backend/grammar.py).
@@ -51,7 +57,7 @@ function CourseView() {
   const done = units.filter((u) => progress[u.slug]).length;
   const nextUnit = units.find((u) => !progress[u.slug] && counts[u.slug]);
   return (
-    <div style={{ padding: '20px 16px', maxWidth: '900px', margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px', maxWidth: '900px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', margin: '0 0 4px' }}>Gramàtica</h1>
       <div style={{ color: 'var(--text-soft)', fontSize: '14px', marginBottom: '14px' }}>
         El curs: cada unitat explica un punt de gramàtica pas a pas, amb les frases, les imatges i les veus de la biblioteca.
@@ -93,7 +99,7 @@ function CourseView() {
 
 // ---------------- the unit: a lesson in cards ----------------
 
-type Card = { type: 'intro' } | LessonStep;
+type Card = { type: 'intro' } | { type: 'exercicis' } | LessonStep;
 
 function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
   const navigate = useNavigate();
@@ -139,15 +145,24 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
     return k >= 0 ? units.slice(k + 1).find((u) => counts[u.slug]) || null : null;
   }, [units, counts, slug]);
 
-  const cards = useMemo<Card[]>(() => (page ? [{ type: 'intro' }, ...page.lesson.steps] : []), [page]);
-  const card = cards[i];
-  const cover = useMemo(() => {
-    if (!page) return null;
-    for (const s of page.lesson.steps) {
-      if (s.type === 'explain') { const e = s.examples.find((x) => x.image_url); if (e) return e; }
+  // «Fes-ho tu» va just abans del final: s'ha llegit la unitat i ara es fa (#428). Si la unitat
+  // no en té cap —perquè les seves frases no permeten fer-ne un d'honest— no hi ha targeta.
+  const cards = useMemo<Card[]>(() => {
+    if (!page) return [];
+    const passos: Card[] = [...page.lesson.steps];
+    if (page.exercicis && page.exercicis.length > 0) {
+      const fi = passos.findIndex((s) => s.type === 'end');
+      const fes: Card = { type: 'exercicis' };
+      if (fi >= 0) passos.splice(fi, 0, fes); else passos.push(fes);
     }
-    return page.drills.find((d) => d.image_url) ? { image_url: page.drills.find((d) => d.image_url)!.image_url } : null;
+    return [{ type: 'intro' }, ...passos];
   }, [page]);
+  const card = cards[i];
+  // La portada la decideix el servidor (#229): el dibuix de la unitat si n'hi ha, i si no la
+  // primera imatge NOSTRA. Aquí s'endevinava —«la primera frase que tingui imatge»— i per això
+  // la unitat dels possessius s'encapçalava amb una foto d'un projecte de la Viquipèdia en jukun
+  // que havia heretat una frase.
+  const cover = useMemo(() => (page?.cover ? { image_url: page.cover } : null), [page]);
 
   const canGoNext = !!card && (card.type !== 'quiz' || answers[i] !== undefined) && i < cards.length - 1;
   const next = useCallback(() => { if (canGoNext) setI((x) => x + 1); }, [canGoNext]);
@@ -197,7 +212,7 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
   };
 
   return (
-    <div style={{ padding: '16px 16px 96px', maxWidth: '640px', margin: '0 auto' }}>
+    <div style={{ padding: '16px 16px 96px', maxWidth: '640px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate('/grammar')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: '4px 0', marginBottom: '6px' }}><FaChevronLeft /> Totes les unitats</button>
       {error && <div style={{ color: 'var(--rose)' }}>{error}</div>}
       {!page && !error && <LoadingUnit />}
@@ -218,9 +233,10 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
             <div key={k} className="lesson-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', padding: '18px', marginTop: '12px', boxShadow: 'var(--shadow-sm)' }}>
               {c.type === 'intro' && <IntroCard page={page} cover={cover?.image_url || null} />}
               {c.type === 'explain' && <ExplainCard step={c} onAsk={setAsk} onRecord={recordExample} onWant={wantVoice} signedIn={signedIn} isAdmin={isAdmin} />}
-              {c.type === 'pattern' && <PatternCard step={c} />}
-              {c.type === 'quiz' && <QuizCard step={c} chosen={answers[k]} onChoose={(j) => setAnswers((a) => ({ ...a, [k]: j }))} active={false} />}
+              {c.type === 'pattern' && <PatternCard step={c} slug={slug} index={k - 1} deep={deep} signedIn={signedIn} onRecord={setRecording} />}
+              {c.type === 'quiz' && <QuizCard step={c} chosen={answers[k]} onChoose={(j) => setAnswers((a) => ({ ...a, [k]: j }))} active={false} onEdit={isAdmin ? () => navigate(`/grammar/${slug}/editor?step=${k - 1}`) : undefined} />}
               {(c.type === 'tip' || c.type === 'dialect') && <NoteCard step={c} />}
+              {c.type === 'exercicis' && <ExercicisDeLaUnitat exercicis={page.exercicis} />}
               {c.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} onEdit={() => navigate(`/grammar/${slug}/editor`)} nextUnit={nextUnit} proposals={proposals} onDecided={loadProposals} deep={deep} />}
               {(c.type === 'explain' || c.type === 'tip' || c.type === 'dialect' || c.type === 'intro') && page.lesson.steps.length > 0 && <ProposeChange slug={slug} step={k - 1} current={c.type === 'intro' ? page.lesson.intro : c.text} signedIn={signedIn} onSent={loadProposals} />}
             </div>
@@ -238,14 +254,15 @@ function UnitView({ slug, deep = false }: { slug: string; deep?: boolean }) {
           <div key={i} className="lesson-card" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-xl)', padding: '18px', marginTop: '12px', boxShadow: 'var(--shadow-sm)', minHeight: '240px' }}>
             {card.type === 'intro' && <IntroCard page={page} cover={cover?.image_url || null} />}
             {card.type === 'explain' && <ExplainCard step={card} onAsk={setAsk} onRecord={recordExample} onWant={wantVoice} signedIn={signedIn} isAdmin={isAdmin} />}
-            {card.type === 'pattern' && <PatternCard step={card} />}
-            {card.type === 'quiz' && <QuizCard step={card} chosen={answers[i]} onChoose={(k) => setAnswers((a) => ({ ...a, [i]: k }))} />}
+            {card.type === 'pattern' && <PatternCard step={card} slug={slug} index={i - 1} deep={deep} signedIn={signedIn} onRecord={setRecording} />}
+            {card.type === 'quiz' && <QuizCard step={card} chosen={answers[i]} onChoose={(k) => setAnswers((a) => ({ ...a, [i]: k }))} onEdit={isAdmin ? () => navigate(`/grammar/${slug}/editor?step=${i - 1}`) : undefined} />}
             {(card.type === 'tip' || card.type === 'dialect') && <NoteCard step={card} />}
+            {card.type === 'exercicis' && <ExercicisDeLaUnitat exercicis={page.exercicis} />}
             {card.type === 'end' && <EndCard page={page} answers={answers} cards={cards} onTest={makeTest} isAdmin={isAdmin} onRewrite={rewrite} rewriting={rewriting} onEdit={() => navigate(`/grammar/${slug}/editor`)} nextUnit={nextUnit} proposals={proposals} onDecided={loadProposals} deep={deep} />}
         {(card.type === 'explain' || card.type === 'tip' || card.type === 'dialect' || card.type === 'intro') && page.lesson.steps.length > 0 && <ProposeChange slug={slug} step={i - 1} current={card.type === 'intro' ? page.lesson.intro : card.text} signedIn={signedIn} onSent={loadProposals} />}
           </div>
-          <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, padding: '10px 16px calc(10px + env(safe-area-inset-bottom))', background: 'var(--bg)', borderTop: '1px solid var(--border)', zIndex: 5 }}>
-            <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', gap: '10px' }}>
+          <div style={{ position: 'fixed', left: 0, right: 0, bottom: 'var(--menu-mobil-h, 0px)', padding: '10px 16px calc(10px + env(safe-area-inset-bottom))', background: 'var(--bg)', borderTop: '1px solid var(--border)', zIndex: 5 }}>
+            <div style={{ maxWidth: '640px', margin: '0 auto', width: '100%', boxSizing: 'border-box', display: 'flex', gap: '10px' }}>
               <button onClick={prev} disabled={i === 0} style={{ flex: 1, padding: '12px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: i === 0 ? 'var(--text-muted)' : 'var(--text)', fontWeight: 700, cursor: i === 0 ? 'default' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><FaChevronLeft /> Enrere</button>
               <button onClick={next} disabled={!canGoNext} style={{ flex: 2, padding: '12px', borderRadius: 'var(--r-pill)', border: 'none', background: canGoNext ? 'var(--brand-gradient)' : 'var(--surface-2)', color: canGoNext ? '#fff' : 'var(--text-muted)', fontWeight: 700, cursor: canGoNext ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                 {card.type === 'quiz' && answers[i] === undefined ? 'Tria una resposta' : card.type === 'end' ? 'Final' : i === 0 ? 'Comencem' : 'Següent'} <FaChevronRight />
@@ -284,6 +301,7 @@ function Progress({ n, i, answers, cards }: { n: number; i: number; answers: Rec
 }
 
 function IntroCard({ page, cover }: { page: GrammarUnitPage; cover: string | null }) {
+  const navigate = useNavigate();
   const n = page.lesson.steps.filter((s) => s.type === 'explain').length;
   const q = page.lesson.steps.filter((s) => s.type === 'quiz').length;
   return (
@@ -293,6 +311,20 @@ function IntroCard({ page, cover }: { page: GrammarUnitPage; cover: string | nul
       <p style={{ fontSize: '16px', lineHeight: 1.55, margin: '0 0 12px', color: 'var(--text)' }}>{page.lesson.intro || 'Un punt de gramàtica explicat pas a pas amb frases reals de la biblioteca.'}</p>
       <div style={{ fontSize: '13px', color: 'var(--text-soft)' }}>{n} explicacions{q ? ` · ${q} preguntes ràpides` : ''} · {page.total} frases de la biblioteca</div>
       {page.lesson.error && <div style={{ marginTop: 10, fontSize: '12px', color: 'var(--rose)' }}>La lliçó no s’ha pogut escriure ara mateix; torna-ho a provar d’aquí a una estona.</div>}
+      {/* A la unitat dels sons: que la mateixa lletra s'escriu de dues maneres (#364). Va a
+          l'entrada, abans de cap explicació, perquè és el que fa que les frases d'aquesta unitat
+          s'entenguin i no és una excepció d'una d'elles. */}
+      <NotaOrtografia nota={page.ortografia} />
+      {/* Aquesta unitat és la lliçó dels sons; l'abecedari que sona, lletra per lletra, és una
+          secció pròpia (#368). La lliçó hi porta en comptes de repetir-la a mitges. */}
+      {page.ortografia && (
+        <button onClick={() => navigate('/alfabet')}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 12, padding: '10px 16px', minHeight: 44,
+                         borderRadius: 'var(--r-pill)', border: '1px solid var(--brand-1)', background: 'var(--surface)',
+                         color: 'var(--brand-1)', fontWeight: 700, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit' }}>
+          Les lletres una per una, amb el seu so →
+        </button>
+      )}
     </div>
   );
 }
@@ -310,7 +342,7 @@ function ExplainCard({ step, onAsk, onRecord, onWant, signedIn, isAdmin }: { ste
 }
 
 function Example({ e, highlight, onAsk, onRecord, onWant, signedIn, isAdmin }: { e: LessonExample; highlight?: 'ok' | 'ko'; onAsk?: (a: { id: number; label: string }) => void; onRecord?: (e: LessonExample) => void; onWant?: (e: LessonExample) => void; signedIn?: boolean; isAdmin?: boolean }) {
-  const play = () => { if (e.audio_url) new Audio(getMediaUrl(e.audio_url)).play().catch(() => {}); };
+  const play = () => { if (e.audio_url) new Audio(audioSrc(e.audio_url)).play().catch(() => {}); };
   const border = highlight === 'ok' ? 'var(--emerald)' : highlight === 'ko' ? 'var(--rose)' : 'var(--border)';
   // the word-by-word reading and why this sentence is in this unit: both stored, both free
   const [words, setWords] = useState(false);
@@ -337,10 +369,19 @@ function Example({ e, highlight, onAsk, onRecord, onWant, signedIn, isAdmin }: {
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'var(--surface-2)', border: `1px solid ${border}`, borderRadius: 'var(--r-lg)', flexWrap: 'wrap' }}>
       {e.image_url && <img src={getMediaUrl(e.image_url)} alt="" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 'var(--r-md)', flexShrink: 0 }} onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = 'none'; }} />}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 800, fontSize: '17px', color: 'var(--text)', lineHeight: 1.3 }}>{withFocus(shown.shi, e.focus)}</div>
-        {e.tif && <div lang="zgh" style={{ fontFamily: 'var(--font-tifinagh)', fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.4 }}>{e.tif}</div>}
+        {/* El tifinag primer i gran (#339). El llatí es queda a sota perquè és el que porta el
+            ressaltat del tros que la unitat ensenya (`withFocus`), i això no es pot perdre: el
+            que canvia és qui mana a la pantalla, no què s'hi veu. */}
+        <div lang="zgh" style={{ fontFamily: 'var(--font-tifinagh)', fontWeight: 800, fontSize: '19px', color: 'var(--text)', lineHeight: 1.45 }}>
+          {e.tif || formes(shown.shi).tif}
+        </div>
+        <div style={{ fontWeight: 600, fontSize: '14.5px', color: 'var(--text-soft)', lineHeight: 1.35 }}>{withFocus(shown.shi, e.focus)}</div>
         <div style={{ fontSize: '14px', color: 'var(--text-soft)' }}>{shown.ca}</div>
-        {(e.recorded || e.origin || e.region) && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>{e.recorded ? `veu de ${e.author || 'parlant'}` : 'veu sintètica'}{e.origin || e.region ? ` · ${e.origin || e.region}` : ''}</div>}
+        {/* El crèdit: qui ho diu i d'on és. Si la frase està gravada i no en sabem el poble, es
+            diu —«no sabem d'on és»— en comptes de deixar el lloc buit o, com abans, d'omplir-lo
+            amb «gravació», que ocupava el lloc de la procedència sense dir-ne res. Una varietat
+            desconeguda és feina pendent, no un lloc. */}
+        {(e.recorded || e.origin || e.region) && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: 2 }}>{e.recorded ? `veu de ${e.author || 'parlant'}` : 'veu sintètica'}{e.origin || e.region ? ` · ${e.origin || e.region}` : (e.recorded ? ' · no sabem d’on és' : '')}</div>}
         {((e.gloss && e.gloss.length > 0) || e.why) && (
           <div style={{ display: 'flex', gap: '10px', marginTop: 4, flexWrap: 'wrap' }}>
             {e.gloss && e.gloss.length > 0 && (
@@ -372,8 +413,10 @@ function Example({ e, highlight, onAsk, onRecord, onWant, signedIn, isAdmin }: {
       </div>
       {signedIn && onRecord && <button onClick={() => onRecord(e)} title="Grava-ho amb la teva veu" aria-label="Grava-ho tu" style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--brand-1)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaMicrophone size={13} /></button>}
       {onAsk && <button onClick={() => onAsk({ id: e.id, label: e.ca || e.shi })} title="Explica'm aquesta frase paraula per paraula" aria-label="Explica'm aquesta frase" style={{ flexShrink: 0, width: 36, height: 36, padding: 0, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--brand-1)', cursor: 'pointer', fontSize: '15px', lineHeight: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>💡</button>}
-      <button onClick={play} disabled={!e.audio_url} aria-label="Escolta" style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 'var(--r-pill)', border: 'none', background: e.audio_url ? (e.recorded ? 'var(--brand-1)' : 'var(--sky)') : 'var(--surface)', color: e.audio_url ? '#fff' : 'var(--text-muted)', cursor: e.audio_url ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={15} /></button>
+      <AmbSo url={e.audio_url}><button onClick={play} disabled={!e.audio_url} aria-label="Escolta" style={{ flexShrink: 0, width: 40, height: 40, borderRadius: 'var(--r-pill)', border: 'none', background: e.audio_url ? (e.recorded ? 'var(--brand-1)' : 'var(--sky)') : 'var(--surface)', color: e.audio_url ? '#fff' : 'var(--text-muted)', cursor: e.audio_url ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={15} /></button></AmbSo>
       {words && e.gloss && <div style={{ flexBasis: '100%' }}><GlossWords words={e.gloss} size="sm" /></div>}
+      {/* I com ho diu qui ho diu d'una altra manera, amb el seu nom i el seu poble. */}
+      {e.variants && e.variants.length > 0 && <div style={{ flexBasis: '100%' }}><SentenceVariants variants={e.variants} size="sm" /></div>}
       {suggest !== null && (
         <div style={{ flexBasis: '100%', display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
           <div style={{ fontSize: '12px', color: 'var(--text-soft)' }}>Com ho dius tu? Es desa com una segona versió d&apos;aquesta frase, amb el mateix significat.</div>
@@ -413,29 +456,69 @@ function Example({ e, highlight, onAsk, onRecord, onWant, signedIn, isAdmin }: {
 // the two quiet links under a sentence: the words, and why the sentence is in this unit
 const linkBtn = { padding: 0, border: 'none', background: 'none', color: 'var(--brand-1)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' };
 
-function PatternCard({ step }: { step: Extract<LessonStep, { type: 'pattern' }> }) {
+// Una taula de formes és on la gramàtica es veu d'un cop d'ull —ɣur-i, ɣur-k, ɣur-s— i era
+// l'únic lloc de la lliçó que no es podia DIR. Ara cada fila porta micròfon: la primera vegada
+// que algú el prem, la forma es torna una frase de la biblioteca i s'obre la gravadora. Una
+// forma que no s'ha sentit mai no se sap dir.
+function PatternCard({ step, slug, index, deep, signedIn, onRecord }: {
+  step: Extract<LessonStep, { type: 'pattern' }>;
+  slug: string; index: number; deep: boolean; signedIn: boolean;
+  onRecord: (d: Drill) => void;
+}) {
+  const [busy, setBusy] = useState<number | null>(null);
+  const [made, setMade] = useState<Record<string, number>>(step.drill_ids || {});
+
+  const record = async (k: number) => {
+    if (!signedIn) { toast.error('Per gravar et cal un nom: fes-te’n un al perfil.'); return; }
+    setBusy(k);
+    try {
+      const r = await api.grammarRowDrill(slug, index, k, deep);
+      setMade((m) => ({ ...m, [String(k)]: r.drill_id }));
+      onRecord(r.drill);
+    } catch (e) { toast.error(whyItFailed(e, 'No s’ha pogut preparar la gravació')); }
+    finally { setBusy(null); }
+  };
+
   return (
     <div>
       <h2 style={{ fontSize: '18px', margin: '0 0 10px' }}>{step.title || 'Les formes'}</h2>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '15px' }}>
         <tbody>
-          {step.rows.map((r, k) => (
-            <tr key={k} style={{ borderTop: k ? '1px solid var(--border)' : 'none' }}>
-              <td style={{ padding: '8px 6px 8px 0', fontWeight: 800, whiteSpace: 'nowrap', color: 'var(--brand-1)' }}>{r[0]}</td>
-              <td style={{ padding: '8px 6px', color: 'var(--text)' }}>{r[1]}</td>
-              <td style={{ padding: '8px 0 8px 6px', color: 'var(--text-soft)', fontSize: '14px' }}>{r[2]}</td>
-            </tr>
-          ))}
+          {step.rows.map((r, k) => {
+            const mine = made[String(k)];
+            return (
+              <tr key={k} style={{ borderTop: k ? '1px solid var(--border)' : 'none' }}>
+                <td style={{ padding: '8px 6px 8px 0', fontWeight: 800, whiteSpace: 'nowrap', color: 'var(--brand-1)' }}>{r[0]}</td>
+                <td style={{ padding: '8px 6px', color: 'var(--text)' }}>{r[1]}</td>
+                <td style={{ padding: '8px 0 8px 6px', color: 'var(--text-soft)', fontSize: '14px' }}>{r[2]}</td>
+                <td style={{ padding: '4px 0 4px 6px', width: 34 }}>
+                  <button onClick={() => record(k)} disabled={busy === k}
+                          aria-label={mine ? `Afegeix la teva veu a ${r[0]}` : `Grava ${r[0]}`}
+                          title={mine ? 'Afegeix-hi la teva veu' : 'Grava-la: la farà nostra'}
+                          style={{ width: 28, height: 28, borderRadius: 'var(--r-pill)', padding: 0,
+                                   border: `1px solid ${mine ? 'var(--emerald)' : 'var(--border)'}`,
+                                   background: 'var(--surface)', color: mine ? 'var(--emerald)' : 'var(--brand-1)',
+                                   cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                   fontFamily: 'inherit', fontSize: 11 }}>
+                    {busy === k ? '…' : <FaMicrophone size={11} />}
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
   );
 }
 
-function QuizCard({ step, chosen, onChoose, active = true }: { step: Extract<LessonStep, { type: 'quiz' }>; chosen?: number; onChoose: (k: number) => void; active?: boolean }) {
+// El llapis d'una pregunta: l'amo n'ha vista una amb el català de la frase mal escrit («Com es
+// diu "M'agrada mola"?») i no tenia per on tocar-la. Va a l'editor de la lliçó, obert per aquest
+// pas mateix, que és on es canvien l'enunciat, les respostes i quina és la bona.
+function QuizCard({ step, chosen, onChoose, active = true, onEdit }: { step: Extract<LessonStep, { type: 'quiz' }>; chosen?: number; onChoose: (k: number) => void; active?: boolean; onEdit?: () => void }) {
   const answered = chosen !== undefined;
   const kind = step.kind || 'meaning';
-  const play = useCallback(() => { if (step.example.audio_url) new Audio(getMediaUrl(step.example.audio_url)).play().catch(() => {}); }, [step.example.audio_url]);
+  const play = useCallback(() => { if (step.example.audio_url) new Audio(audioSrc(step.example.audio_url)).play().catch(() => {}); }, [step.example.audio_url]);
   // «Escolta» speaks by itself only when this is the card the learner is on. The whole lesson on
   // one page renders every card at once: without this, a unit opens with four voices at a time.
   useEffect(() => { if (active && kind === 'listen' && !answered) play(); }, [active, kind, answered, play]);
@@ -446,10 +529,18 @@ function QuizCard({ step, chosen, onChoose, active = true }: { step: Extract<Les
   };
   return (
     <div>
-      <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--saffron-strong)', marginBottom: 6 }}>{kind === 'listen' ? 'Escolta' : kind === 'picture' ? 'Mira' : 'Pregunta ràpida'}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <div style={{ fontSize: '12px', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--saffron-strong)', flex: 1 }}>{kind === 'listen' ? 'Escolta' : kind === 'picture' ? 'Mira' : 'Pregunta ràpida'}</div>
+        {onEdit && (
+          <button onClick={onEdit} aria-label="Corregeix aquesta pregunta" title="Corregeix-la"
+                  style={{ width: 26, height: 26, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+            <FaPen size={10} />
+          </button>
+        )}
+      </div>
       <h2 style={{ fontSize: '18px', margin: '0 0 12px', lineHeight: 1.3 }}>{step.question}</h2>
       {kind === 'listen' && (
-        <button onClick={play} aria-label="Torna a escoltar" style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 auto 14px', padding: '14px 22px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 700, fontSize: '15px', cursor: 'pointer', boxShadow: 'var(--shadow-brand)' }}><FaVolumeUp size={20} /> Torna a escoltar</button>
+        <AmbSo url={step.example.audio_url} dins><button onClick={play} aria-label="Torna a escoltar" style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '0 auto 14px', padding: '14px 22px', borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', fontWeight: 700, fontSize: '15px', cursor: 'pointer', boxShadow: 'var(--shadow-brand)' }}><FaVolumeUp size={20} /> Torna a escoltar</button></AmbSo>
       )}
       {kind === 'picture' && step.example.image_url && (
         <img src={getMediaUrl(step.example.image_url)} alt="" style={{ display: 'block', width: '100%', maxHeight: 240, objectFit: 'cover', borderRadius: 'var(--r-lg)', marginBottom: 14 }} onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = 'none'; }} />
@@ -528,7 +619,7 @@ function EndCard({ page, answers, cards, onTest, isAdmin, onRewrite, rewriting, 
   const [showAll, setShowAll] = useState(false);
   const quizzes = cards.map((c, k) => ({ c, k })).filter(({ c }) => c.type === 'quiz');
   const right = quizzes.filter(({ c, k }) => c.type === 'quiz' && answers[k] === c.answer).length;
-  const play = (url?: string | null) => { if (url) new Audio(getMediaUrl(url)).play().catch(() => {}); };
+  const play = (url?: string | null) => { if (url) new Audio(audioSrc(url)).play().catch(() => {}); };
   return (
     <div>
       <h2 style={{ fontSize: '18px', margin: '0 0 6px' }}>Unitat acabada</h2>
@@ -568,7 +659,7 @@ function EndCard({ page, answers, cards, onTest, isAdmin, onRewrite, rewriting, 
                 <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: '14px' }}>{d.text_tachelhit}</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-soft)' }}>{d.text_catalan}{d.region ? <span style={{ color: 'var(--text-muted)' }}> · {d.region}</span> : null}</div>
               </div>
-              <button onClick={() => play(d.audio_url || d.audio_tts_shi_url)} disabled={!d.audio_url && !d.audio_tts_shi_url} aria-label="Escolta" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : d.audio_tts_shi_url ? 'var(--sky)' : 'var(--surface)', color: d.audio_url || d.audio_tts_shi_url ? '#fff' : 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={12} /></button>
+              <AmbSo url={d.audio_url}><button onClick={() => play(d.audio_url)} disabled={!d.audio_url} aria-label="Escolta" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : 'var(--surface)', color: d.audio_url ? '#fff' : 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={12} /></button></AmbSo>
             </div>
           ))}
         </div>
@@ -604,9 +695,9 @@ function WishlistView() {
   useEffect(() => {
     api.grammarWishlist().then((r) => setUnits(r.units)).catch(() => toast.error('No s’ha pogut carregar la llista'));
   }, [tick]);
-  const play = (url?: string | null) => { if (url) new Audio(getMediaUrl(url)).play().catch(() => {}); };
+  const play = (url?: string | null) => { if (url) new Audio(audioSrc(url)).play().catch(() => {}); };
   return (
-    <div style={{ padding: '20px 16px', maxWidth: '900px', margin: '0 auto' }}>
+    <div style={{ padding: '20px 16px', maxWidth: '900px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate('/grammar')} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'transparent', border: 'none', color: 'var(--brand-1)', fontWeight: 700, cursor: 'pointer', padding: '4px 0', marginBottom: '6px' }}><FaChevronLeft /> El curs</button>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', margin: '0 0 4px' }}>Frases per gravar</h1>
       <p style={{ color: 'var(--text-soft)', fontSize: '14px', margin: '0 0 16px', lineHeight: 1.5 }}>
@@ -632,7 +723,7 @@ function WishlistView() {
                   <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: '14px' }}>{d.text_tachelhit}</div>
                   <div style={{ fontSize: '12px', color: 'var(--text-soft)' }}>{d.text_catalan}{d.region ? <span style={{ color: 'var(--text-muted)' }}> · {d.region}</span> : null}</div>
                 </div>
-                <button onClick={() => play(d.audio_url || d.audio_tts_shi_url)} disabled={!d.audio_url && !d.audio_tts_shi_url} aria-label="Escolta" title="Escolta com ho diuen" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : d.audio_tts_shi_url ? 'var(--sky)' : 'var(--surface)', color: d.audio_url || d.audio_tts_shi_url ? '#fff' : 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={12} /></button>
+                <AmbSo url={d.audio_url}><button onClick={() => play(d.audio_url)} disabled={!d.audio_url} aria-label="Escolta" title="Escolta com ho diuen" style={{ flexShrink: 0, width: 30, height: 30, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : 'var(--surface)', color: d.audio_url ? '#fff' : 'var(--text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={12} /></button></AmbSo>
                 <button onClick={() => setRecording(d)} aria-label="Grava-ho tu" title="Grava-ho a la teva manera" style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaMicrophone size={14} /></button>
               </div>
             ))}

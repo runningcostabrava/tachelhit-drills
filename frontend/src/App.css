@@ -1,6 +1,9 @@
 :root {
   /* Height of the sticky top nav (App.tsx) incl. the status-bar inset. */
   --nav-h: calc(58px + env(safe-area-inset-top, 0px));
+  /* Alçada del menú de baix al mòbil (MenuMobil.tsx). El publica el component mateix
+     mentre és a la pantalla; a l'escriptori no hi és i val zero. */
+  --menu-mobil-h: 0px;
 }
 
 #root {
@@ -14,8 +17,8 @@
 /* App-like pages (drill list, tests dashboard) that own their scroller and
    must fit exactly under the nav instead of using 100vh. */
 .app-page-fixed {
-  height: calc(100vh - var(--nav-h));
-  height: calc(100dvh - var(--nav-h));
+  height: calc(100vh - var(--nav-h) - var(--menu-mobil-h, 0px));
+  height: calc(100dvh - var(--nav-h) - var(--menu-mobil-h, 0px));
 }
 
 @keyframes pulse {

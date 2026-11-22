@@ -1,6 +1,6 @@
 """Pràctica: collections, sessions, pronunciation tips and the word-by-word comparison."""
 import practice
-from test_api import client
+from test_api import client, register
 
 
 def test_tips_name_the_hard_sounds_in_any_spelling():
@@ -56,7 +56,12 @@ def test_a_practice_is_a_sequence_of_steps_and_belongs_to_whoever_made_it():
                                              "username": "the_maker"}).json()
     hdr = {"X-User-Token": mine["token"]}
     d1 = client.post("/drills/", json={"text_catalan": "aigua", "text_tachelhit": "aman"}, headers=hdr).json()
-    d2 = client.post("/drills/", json={"text_catalan": "pa", "text_tachelhit": "aɣrum"}, headers=hdr).json()
+    # La «pa» porta veu d'una persona amb nom perquè després se li demani un pas per IMITAR:
+    # «digues-ho i compara't» només és veritat si la veu és d'algú (#273).
+    d2 = client.post("/drills/", json={"text_catalan": "pa", "text_tachelhit": "aɣrum",
+                                       "author": "Halima", "region": "Aït Mraw (Azilal)",
+                                       "audio_url": "https://res.cloudinary.com/x/video/upload/v1/halima-agrum.mp3"},
+                     headers=hdr).json()
 
     made = client.post("/tests/", headers=hdr, json={
         "title": "La meva llista", "question_type": "audio", "hint_level": "none",
@@ -341,3 +346,351 @@ def test_una_nota_amb_titol_i_sense_text_es_desa():
     assert empty.status_code == 400
     assert [x["kind"] for x in client.get(f"/tests/{made['id']}/steps").json()["steps"]] == \
         ["note", "listen_pick"], "el que ja hi havia no s'ha tocat"
+
+
+def test_una_practica_diu_quants_passos_te_i_quina_cara_fa():
+    """Every screen asked how big a practice is, and worked it out itself from `drill_ids` -- the
+    flat list a practice used to be. The workshop leaves that column empty (ADR 0002), so the
+    gallery called an eleven-step practice «0 drills» while the Pràctica screen called the same
+    one eleven. The practice now carries the number, and a picture to be recognised by: the first
+    of its sentences that has one."""
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("size_teller")}
+    plain = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "sal", "text_tachelhit": "tisent",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/s.mp3"}).json()
+    drawn = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "te", "text_tachelhit": "atay",
+        "image_url": "https://res.cloudinary.com/x/image/upload/v1/tea.jpg",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/t.mp3"}).json()
+
+    made = client.post("/tests/", headers=hdr, json={
+        "title": "Quants en t\u00e9", "question_type": "audio", "hint_level": "none",
+        "drill_ids": ""}).json()                       # empty on purpose: this is what the workshop makes
+    assert made["step_count"] == 0
+
+    client.put(f"/tests/{made['id']}/steps", headers=hdr, json={"steps": [
+        {"kind": "note", "payload": {"heading": "Per beure"}},
+        {"kind": "listen_pick", "drill_id": plain["id"]},
+        {"kind": "say_it", "drill_id": drawn["id"]},
+    ]})
+
+    one = client.get(f"/tests/{made['id']}").json()
+    assert one["drill_ids"] == "" and one["step_count"] == 3, "tres passos, encara que drill_ids sigui buit"
+    listed = next(t for t in client.get("/tests/?mine=1", headers=hdr).json() if t["id"] == made["id"])
+    assert listed["step_count"] == 3, "la llista ha de dir el mateix que la fitxa"
+
+    row = next(x for x in client.get("/practice/collections", headers=hdr).json()["lists"]
+               if x["id"] == made["id"])
+    assert row["count"] == 3
+    # the cover is the first sentence that has a picture, not the first sentence
+    assert row["cover"] == drawn["image_url"]
+
+    # an old practice, made of a flat list and never converted, still reports what it holds
+    old = client.post("/tests/", headers=hdr, json={
+        "title": "De les velles", "question_type": "audio", "hint_level": "none",
+        "drill_ids": f"{plain['id']},{drawn['id']}"}).json()
+    assert old["step_count"] == 2
+
+
+def test_una_practica_antiga_no_es_queda_en_blanc_per_una_frase_esborrada():
+    """La pràctica 28 portava 511 frases i s'obria amb «0 passos».
+
+    La llista plana d'una pràctica antiga és una llista de números, i un número deixa de voler
+    dir res quan la frase s'esborra: nou dels primers dos-cents d'aquella apuntaven a frases que
+    ja no hi són. `practice_steps.drill_id` és una clau forana, que a Postgres s'aplica de debò,
+    així que aquells passos no es podien escriure — i la conversió feia un sol `commit()` al
+    final de TOTES les pràctiques, de manera que una fila impossible en tombava el lot sencer i
+    cap pràctica no es convertia mai.
+
+    Ara una frase morta se salta i la pràctica es converteix igual."""
+    import practice_steps
+    import main
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("legacy_owner")}
+    alive = [client.post("/drills/", headers=hdr, json={
+        "text_catalan": f"frase {i}", "text_tachelhit": f"tafrast {i}"}).json() for i in range(3)]
+    doomed = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "la que marxa", "text_tachelhit": "ad ftugh"}).json()
+
+    old = client.post("/tests/", headers=hdr, json={
+        "title": "De les velles", "question_type": "audio", "hint_level": "none",
+        "drill_ids": ",".join(str(d["id"]) for d in [alive[0], doomed, alive[1], alive[2]])}).json()
+    # la pràctica neix amb els passos de la llista; els esborrem per deixar-la com les d'abans
+    client.put(f"/tests/{old['id']}/steps", headers=hdr, json={"steps": []})
+    assert client.get(f"/tests/{old['id']}/steps").json()["steps"] == []
+
+    client.delete(f"/drills/{doomed['id']}", headers=hdr)
+
+    out = practice_steps.convert_missing(main.SessionLocal)
+    assert out["practices"] >= 1, out
+    steps = client.get(f"/tests/{old['id']}/steps").json()["steps"]
+    assert [x["drill_id"] for x in steps] == [alive[0]["id"], alive[1]["id"], alive[2]["id"]], \
+        "les vives hi són, en ordre, i la morta se salta"
+    assert [x["position"] for x in steps] == [0, 1, 2], "sense forats a l'ordre"
+
+
+def test_desar_un_pas_cap_a_una_frase_morta_ho_diu_en_comptes_de_petar():
+    """`drill_id` és una clau forana. Un pas cap a una frase esborrada no es pot escriure, i si
+    ho descobreix la base de dades és un 500 **després** d'haver esborrat els passos que hi
+    havia. Es comprova abans, i es diu amb paraules que l'editor pot ensenyar."""
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("step_saver")}
+    good = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "aigua", "text_tachelhit": "aman"}).json()
+    doomed = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "pa", "text_tachelhit": "aɣrum"}).json()
+    p = client.post("/tests/", headers=hdr, json={
+        "title": "Amb una morta", "question_type": "audio", "hint_level": "none",
+        "drill_ids": ""}).json()
+    client.put(f"/tests/{p['id']}/steps", headers=hdr, json={"steps": [
+        {"kind": "listen_pick", "drill_id": good["id"]}]})
+
+    client.delete(f"/drills/{doomed['id']}", headers=hdr)
+    bad = client.put(f"/tests/{p['id']}/steps", headers=hdr, json={"steps": [
+        {"kind": "listen_pick", "drill_id": good["id"]},
+        {"kind": "say_it", "drill_id": doomed["id"]}]})
+    assert bad.status_code == 400
+    assert "ja no existeixen" in bad.json()["detail"]
+    # i el que ja hi havia segueix sent-hi: no s'esborra res fins que tot és possible
+    assert [x["drill_id"] for x in client.get(f"/tests/{p['id']}/steps").json()["steps"]] == [good["id"]]
+
+
+def test_esborrar_una_practica_s_endu_els_seus_passos():
+    """Una pràctica que se'n va no deixa els seus passos enrere.
+
+    Això es confiava al `ON DELETE CASCADE` de la clau forana. Postgres el fa; SQLite no aplica
+    les claus foranes si no s'ha activat `PRAGMA foreign_keys=ON`, i no l'activem enlloc. Els
+    passos sobrevivien a la seva pràctica, i com que SQLite reutilitza l'id que s'acaba
+    d'alliberar, la pràctica SEGÜENT naixia amb els passos de l'anterior: una prova que demanava
+    zero passos en veia dos, i la culpa semblava de qui els comptava.
+    """
+    import main
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("step_sweeper")}
+    d = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "la finestra", "text_tachelhit": "tiflut n-ufrag",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/f.mp3"}).json()
+    made = client.post("/tests/", headers=hdr, json={
+        "title": "Se'n va amb els seus passos", "question_type": "audio",
+        "hint_level": "none", "drill_ids": ""}).json()
+    assert client.put(f"/tests/{made['id']}/steps", headers=hdr, json={"steps": [
+        {"kind": "note", "payload": {"heading": "Hola"}},
+        {"kind": "listen_pick", "drill_id": d["id"]},
+    ]}).status_code == 200
+
+    db = main.SessionLocal()
+    try:
+        from models import PracticeStep
+        assert db.query(PracticeStep).filter(PracticeStep.test_id == made["id"]).count() == 2
+    finally:
+        db.close()
+
+    assert client.delete(f"/tests/{made['id']}", headers=hdr).status_code == 200
+
+    db = main.SessionLocal()
+    try:
+        from models import PracticeStep
+        left = db.query(PracticeStep).filter(PracticeStep.test_id == made["id"]).count()
+        assert left == 0, f"{left} passos han sobreviscut a la seva pràctica"
+    finally:
+        db.close()
+
+    # i la següent pràctica neix buida, encara que el motor li doni el mateix id
+    nova = client.post("/tests/", headers=hdr, json={
+        "title": "La següent", "question_type": "audio", "hint_level": "none",
+        "drill_ids": ""}).json()
+    try:
+        assert nova["step_count"] == 0, "una pràctica nova no hereta els passos de cap altra"
+    finally:
+        client.delete(f"/tests/{nova['id']}", headers=hdr)
+
+
+# ---- Escoltar i tria: un exercici d'entendre, no de llegir (#333) ----
+
+class _Fals:
+    def __init__(self, i, ca, temes="", shi="", audio="a.mp3"):
+        self.id = i; self.text_catalan = ca; self.topics = temes
+        self.text_tachelhit = shi; self.audio_url = audio
+
+
+def test_an_option_that_could_also_be_true_is_not_offered():
+    """Si la frase diu «vine aquí» i una opció diu «acosta't aquí», totes dues són certes i
+    l'exercici és injust: no es pot encertar entenent, només endevinant."""
+    import escoltar
+    bona = _Fals(1, "vine aquí de seguida")
+    altres = [_Fals(2, "vine aquí ara mateix"),          # diu el mateix: fora
+              _Fals(3, "el gat dorm sota la taula"),
+              _Fals(4, "demà anirem al mercat"),
+              _Fals(5, "la porta està oberta")]
+    opcions = escoltar.opcions_dolentes(bona, [bona] + altres)
+    assert all(o["drill_id"] != 2 for o in opcions)
+    assert len(opcions) == 3
+
+
+def test_the_wrong_options_are_about_as_long_as_the_right_one():
+    """Tres opcions curtes al costat d'una de llarga s'encerten pel descart, sense entendre res."""
+    import escoltar
+    bona = _Fals(1, "el meu germà petit ha anat a comprar pa al poble")
+    curtes = [_Fals(i, "sí") for i in range(2, 9)]
+    llargues = [_Fals(i, f"la meva germana gran ha tornat del mercat amb {i} peixos")
+                for i in range(9, 13)]
+    opcions = escoltar.opcions_dolentes(bona, [bona] + curtes + llargues)
+    assert all(o["paraules"] >= 6 for o in opcions), opcions
+
+
+def test_every_wrong_option_says_why_it_was_chosen():
+    """La tria s'ha de poder revisar, com tot a la casa."""
+    import escoltar
+    bona = _Fals(1, "el gat dorm sota la taula", temes="casa-i-objectes")
+    altres = [_Fals(2, "el gos corre pel carrer gran", temes="casa-i-objectes"),
+              _Fals(3, "demà anirem tots al mercat", temes="viatge"),
+              _Fals(4, "la porta de casa està oberta", temes="casa-i-objectes")]
+    opcions = escoltar.opcions_dolentes(bona, [bona] + altres)
+    assert all(o["perque"] and "s_assembla" in o for o in opcions)
+    assert opcions[0]["perque"] == "mateix tema i llargada"
+
+
+def test_a_line_with_no_amazigh_written_still_works_here():
+    """És el sentit de l'exercici: aquestes línies no serveixen per llegir i sí per escoltar."""
+    import escoltar
+    assert escoltar.es_bona_per_escoltar(_Fals(1, "no ho sé pas", shi=""))
+    assert not escoltar.es_bona_per_escoltar(_Fals(2, "no ho sé pas", shi="ur ssinɣ", audio=""))
+    assert not escoltar.es_bona_per_escoltar(_Fals(3, "", shi="ur ssinɣ"))
+
+
+def test_fewer_options_is_better_than_a_useless_one():
+    """Si no hi ha prou material, l'exercici es queda curt en comptes d'omplir-se d'escombraries."""
+    import escoltar
+    bona = _Fals(1, "el gat dorm sota la taula")
+    assert escoltar.opcions_dolentes(bona, [bona]) == []
+
+
+def test_escoltar_i_triar_la_frase_escrita_es_una_eina_de_la_practica():
+    """«Escolta i tria la frase» (#387) no és l'«escolta i tria» de sempre: aquell dona quatre
+    significats en català i entrena a entendre; aquest dona quatre frases en amazic i entrena a
+    lligar el que se sent amb el que està escrit. Per tant demana una frase, com les altres."""
+    import practice_steps
+
+    assert "pick_written" in practice_steps.KINDS
+    needs_drill, que_demana = practice_steps.KINDS["pick_written"]
+    assert needs_drill, "sense frase no hi ha res a sentir ni a triar"
+    assert "escrites" in que_demana, que_demana
+
+    net = practice_steps.validate({"kind": "pick_written", "drill_id": 7})
+    assert net["kind"] == "pick_written" and net["drill_id"] == 7
+
+    try:
+        practice_steps.validate({"kind": "pick_written"})
+    except practice_steps.StepError as e:
+        assert "frase" in str(e)
+    else:
+        raise AssertionError("un pas sense frase s'ha d'explicar, no acceptar")
+
+
+def test_un_pas_per_imitar_no_pot_apuntar_a_una_veu_que_no_es_de_ningu():
+    """Regla del pedagog (#273): per escoltar, totes les veus; per imitar, només una veu amb nom.
+
+    «Digues-ho i compara't amb la veu de debò» només és veritat si la veu és d'algú. Si la
+    referència és un tall anònim —o d'un canal, que sovint parla una altra varietat— li estem
+    dient a algú que imiti una pronúncia que no és la que està aprenent, i no té manera de
+    saber-ho. Ho diu el validador, no la bona voluntat de qui munta la pràctica."""
+    hdr = {"X-User-Token": register("imitar_veu")}
+    nostra = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "aigua", "text_tachelhit": "aman", "author": "Halima",
+        "region": "Aït Mraw (Azilal)",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/halima-aman.mp3"}).json()
+    canal = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "bon dia", "text_tachelhit": "tifawin", "author": "ILoveLanguages (parlant nadiu)",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/canal-tifawin.mp3"}).json()
+    muda = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "la botiga", "text_tachelhit": "thanut"}).json()
+
+    p = client.post("/tests/", headers=hdr, json={
+        "title": "Per imitar", "question_type": "audio", "hint_level": "none", "drill_ids": ""}).json()
+
+    ok = client.put(f"/tests/{p['id']}/steps", headers=hdr, json={"steps": [
+        {"kind": "say_it", "drill_id": nostra["id"]},
+        {"kind": "write_heard", "drill_id": nostra["id"]}]})
+    assert ok.status_code == 200, ok.text
+
+    for mal, diu in ((canal, "canal"), (muda, "gravació")):
+        r = client.put(f"/tests/{p['id']}/steps", headers=hdr, json={"steps": [
+            {"kind": "say_it", "drill_id": mal["id"]}]})
+        assert r.status_code == 400, f"{diu}: {r.text}"
+        assert diu in r.json()["detail"], r.json()["detail"]
+
+    # Per escoltar i entendre, totes són benvingudes: això no es bloqueja.
+    escoltar = client.put(f"/tests/{p['id']}/steps", headers=hdr, json={"steps": [
+        {"kind": "listen_pick", "drill_id": canal["id"]}]})
+    assert escoltar.status_code == 200, escoltar.text
+
+    # I els passos que hi havia no s'han esborrat per un pas refusat.
+    assert [s["kind"] for s in client.get(f"/tests/{p['id']}/steps").json()["steps"]] == ["listen_pick"]
+
+
+def test_les_practiques_que_ja_hi_havia_es_poden_revisar():
+    """El validador ho impedeix d'ara endavant; les pràctiques muntades abans es van fer quan res
+    no ho impedia, i per això es poden comptar en comptes de confiar que no n'hi hagi cap (#273)."""
+    hdr = {"X-User-Token": register("revisa_imitacio")}
+    canal = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "el mercat", "text_tachelhit": "ssuq",
+        "author": "ILoveLanguages (parlant nadiu)",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/canal-ssuq.mp3"}).json()
+    p = client.post("/tests/", headers=hdr, json={
+        "title": "Muntada abans de la regla", "question_type": "audio", "hint_level": "none",
+        "drill_ids": ""}).json()
+
+    # Com es muntaven abans: escrivint el pas directament, sense passar pel validador.
+    from main import SessionLocal
+    from models import PracticeStep
+    with SessionLocal() as db:
+        db.add(PracticeStep(test_id=p["id"], position=0, kind="say_it", drill_id=canal["id"]))
+        db.commit()
+
+    r = client.get("/practice/imitation-audit").json()
+    meu = next((q for q in r["quins"] if q["test_id"] == p["id"]), None)
+    assert meu, r
+    assert meu["kind"] == "say_it" and meu["veu"]["mena"] == "canal"
+    assert r["fallen"] >= 1 and r["passos_per_imitar"] >= r["fallen"]
+
+
+def test_les_altres_maneres_de_dir_ho_arriben_a_la_practica(monkeypatch):
+    """Es veien només allà on es graven (#239). En una pràctica és on importen: qui estudia sent
+    una manera de dir-ho i no sabia que n'hi havia una altra, dita per algú altre i d'un altre
+    poble."""
+    import io as _io
+    import main
+
+    hdr = {"X-User-Token": register("altres_maneres")}
+    d = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "la porta de casa", "text_tachelhit": "tiflut n tgmmi", "author": "Halima",
+        "region": "Aït Mraw (Azilal)",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/tiflut.mp3"}).json()
+
+    # algú altre la grava i escriu com ho diu ell
+    altre = {"X-User-Token": register("altres_maneres_2")}
+    monkeypatch.setattr(main.cloudinary.uploader, "upload",
+                        lambda *a, **k: {"secure_url": "https://res.cloudinary.com/x/video/upload/v1/tawwurt.mp3"})
+    r = client.post(f"/drills/{d['id']}/recordings",
+                    files={"file": ("t.webm", _io.BytesIO(b"abc"), "audio/webm")},
+                    data={"text": "tawwurt n tgmmi", "region": "Taroudant", "variety": "shi"}, headers=altre)
+    assert r.status_code == 200, r.text
+
+    # d'un sol viatge, per a les pantalles que ensenyen frases
+    maneres = client.get(f"/other-ways?ids={d['id']}").json()
+    assert str(d["id"]) in maneres, maneres
+    una = maneres[str(d["id"])][0]
+    assert una["text"] == "tawwurt n tgmmi" and una["region"] == "Taroudant"
+    assert una["audio_url"].endswith("tawwurt.mp3") and una["tif"], una
+
+    # i a la targeta de la sessió de pràctica
+    sessio = client.get(f"/practice/session?ids={d['id']}&with_voice=0").json()
+    assert sessio["cards"][0]["variants"][0]["text"] == "tawwurt n tgmmi"
+
+    # el que s'escriu igual no és «una altra manera»: «aghrum» i «aɣrum» són la mateixa paraula
+    assert client.get("/other-ways?ids=").json() == {}

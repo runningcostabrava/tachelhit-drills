@@ -7,6 +7,7 @@ import {
 } from 'react-icons/fa';
 import { api, type PracticeCollections, type PracticeList, type PracticeStep } from '../api';
 import { getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import { toast } from '../toast';
 import { whyItFailed } from '../utils/errors';
 import MobileDrillCreator from './MobileDrillCreator';
@@ -34,6 +35,7 @@ const TOOLS: { kind: PracticeStep['kind']; label: string; needsDrill: boolean; n
   { kind: 'word_by_word', label: 'paraula per paraula', needsDrill: true, needsVoice: false },
   { kind: 'script_swap', label: 'tifinag o llatí', needsDrill: true, needsVoice: false },
   { kind: 'pick_spelling', label: 'quina és la bona', needsDrill: true, needsVoice: false },
+  { kind: 'pick_written', label: 'escolta i tria la frase', needsDrill: true, needsVoice: true },
   { kind: 'note', label: 'nota que ensenya', needsDrill: false, needsVoice: false },
 ];
 const toolOf = (k: PracticeStep['kind']) => TOOLS.find((t) => t.kind === k);
@@ -56,7 +58,22 @@ const SOURCES: { kind: SourceKind; label: string }[] = [
 
 // A sentence is only usable if somebody has written what it says, in both languages.
 const usable = (d?: Drill) => !!d && !!(d.text_tachelhit || '').trim() && !!(d.text_catalan || '').trim();
-const hasVoice = (d?: Drill) => !!d && !!((d.audio_url || '').trim() || (d.audio_tts_shi_url || '').trim());
+const hasVoice = (d?: Drill) => !!d && !!((d.audio_url || '').trim());
+
+/** Les eines que demanen repetir el que se sent: la gravació hi fa de model (#273). */
+const PER_IMITAR: PracticeStep['kind'][] = ['say_it', 'write_heard'];
+
+/** Si aquesta veu es pot posar com a model per repetir-la: ha de ser d'una persona que
+ *  coneguem. Per escoltar, totes les veus; per imitar, només una veu amb nom.
+ *
+ *  Qui manda és el servidor, que ho refusa en desar; això és per dir-ho ABANS, perquè qui munta
+ *  la pràctica ho entengui en comptes de trobar-se un error. */
+const veuPerImitar = (d?: Drill) => {
+  if (!d || !(d.audio_url || '').trim()) return false;        // la veu de màquina no és un model
+  const qui = ((d.speaker || d.author || '') as string).trim();
+  if (!qui || qui.toLowerCase().startsWith('auto capture')) return false;
+  return !qui.includes('(');                                   // «ILoveLanguages (…)»: un canal
+};
 // Half-made sentences are never OFFERED. One with no voice, or with no words written down, is
 // work waiting to happen (Veus, the editor) -- not something to put in front of a learner. The
 // ones already in a practice still show, with their warning: hiding those would hide the problem.
@@ -93,6 +110,9 @@ export default function PracticeEditor() {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [unsaved, setUnsaved] = useState<string | null>(null);   // why the last save did not land
+  // Throwing it away asks twice, in the button: a browser dialog stops the page and hides what
+  // it is about to take.
+  const [killing, setKilling] = useState<'ask' | 'doing' | null>(null);
   const [view, setView] = useState<'edit' | 'preview' | 'document'>('edit');
   const preview = view === 'preview';
   const [about, setAbout] = useState('');
@@ -149,6 +169,16 @@ export default function PracticeEditor() {
     finally { setSaving(false); }
   }, [id]);
 
+  const throwAway = async () => {
+    if (killing !== 'ask') { setKilling('ask'); window.setTimeout(() => setKilling((k) => (k === 'ask' ? null : k)), 4000); return; }
+    setKilling('doing');
+    try {
+      await api.deletePractice(id);
+      toast.success('Llen\u00e7ada');
+      navigate('/tests');
+    } catch (e) { toast.error(whyItFailed(e, 'No s\u2019ha pogut esborrar')); setKilling(null); }
+  };
+
   useEffect(() => {
     if (firstLoad.current) { firstLoad.current = false; return; }
     if (!dirty) return;
@@ -200,8 +230,9 @@ export default function PracticeEditor() {
   // A sentence that does not exist yet. The same sheet as everywhere else -- write the two texts,
   // let the AI translate one into the other, record it, attach media -- and when it comes back
   // with an id it goes straight into the sequence, so you never lose your place.
+  // El creador es queda obert: desar-ne una no vol dir haver acabat (#569). Qui en grava tres
+  // seguides les troba totes tres al final de la seqüència quan plega.
   const drillWasMade = async (drillId?: number) => {
-    setMakingDrill(false);
     if (!drillId) { toast.success('Desada. Busca-la aquí sota per afegir-la.'); return; }
     const got = await api.drillsByIds([drillId]).catch(() => [] as Drill[]);
     if (!got.length) { toast.error('S’ha creat, però no s’ha pogut llegir'); return; }
@@ -305,15 +336,16 @@ export default function PracticeEditor() {
 
   // ---- what is wrong with this practice ---------------------------------------------
   const problems = useMemo(() => {
-    const noText: number[] = [], noVoice: number[] = [], missing: number[] = [];
+    const noText: number[] = [], noVoice: number[] = [], missing: number[] = [], noModel: number[] = [];
     steps.forEach((s, i) => {
       if (!s.drill_id) return;
       const d = drills[s.drill_id];
       if (!d) { missing.push(i); return; }
       if (!usable(d)) noText.push(i);
       else if (toolOf(s.kind)?.needsVoice && !hasVoice(d)) noVoice.push(i);
+      else if (PER_IMITAR.includes(s.kind) && !veuPerImitar(d)) noModel.push(i);
     });
-    return { noText, noVoice, missing };
+    return { noText, noVoice, missing, noModel };
   }, [steps, drills]);
 
   if (!id) return null;
@@ -334,8 +366,18 @@ export default function PracticeEditor() {
   };
 
   return (
-    <div style={{ padding: '18px 16px 60px', maxWidth: 1180, margin: '0 auto' }}>
-      <button onClick={() => navigate('/tests')} style={back}>← Pràctiques</button>
+    <div style={{ padding: '18px 16px 60px', maxWidth: 1180, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <button onClick={() => navigate('/tests')} style={back}>← Pràctiques</button>
+        <button
+          onClick={throwAway}
+          disabled={killing === 'doing'}
+          title={killing === 'ask' ? 'Prem un altre cop per llençar-la' : 'Llença aquesta pràctica'}
+          style={{ padding: '5px 12px', borderRadius: 'var(--r-pill)', border: `1px solid ${killing === 'ask' ? 'var(--rose, #b3261e)' : 'var(--border)'}`, background: killing === 'ask' ? 'var(--rose-soft, #fdecea)' : 'transparent', color: killing === 'ask' ? 'var(--rose, #b3261e)' : 'var(--text-muted)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        >
+          <FaTrash size={11} /> {killing === 'doing' ? 'Llençant…' : killing === 'ask' ? 'Segur que la vols llençar?' : 'Llença-la'}
+        </button>
+      </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '6px 0 4px' }}>
         <input
@@ -368,13 +410,23 @@ export default function PracticeEditor() {
         </div>
       )}
 
-      {(problems.noText.length > 0 || problems.noVoice.length > 0) && (
+      {(problems.noText.length > 0 || problems.noVoice.length > 0 || problems.noModel.length > 0) && (
         <div style={{ padding: '10px 14px', borderRadius: 'var(--r-lg)', background: 'var(--brand-gradient-soft)', marginBottom: 14, fontSize: 13.5, lineHeight: 1.5 }}>
           {problems.noText.length > 0 && (
             <div><strong>{problems.noText.length} {problems.noText.length === 1 ? 'frase no té text amazic' : 'frases no tenen text amazic'}</strong> (passos {problems.noText.map((i) => i + 1).join(', ')}). Qui aprengui no hi veurà res a llegir.</div>
           )}
           {problems.noVoice.length > 0 && (
             <div>{problems.noVoice.length} {problems.noVoice.length === 1 ? 'demana escoltar una frase sense veu' : 'demanen escoltar frases sense veu'} (passos {problems.noVoice.map((i) => i + 1).join(', ')}). Grava-la, o tria una altra eina.</div>
+          )}
+          {/* Per escoltar, totes les veus; per imitar, només una veu amb nom (#273). El servidor
+              ho refusa en desar: aquí es diu abans, i amb el motiu. */}
+          {problems.noModel.length > 0 && (
+            <div>
+              {problems.noModel.length === 1 ? 'Un pas demana' : `${problems.noModel.length} passos demanen`} repetir
+              una veu que no és d’una persona que coneguem (passos {problems.noModel.map((i) => i + 1).join(', ')}):
+              un canal, un tall d’un vídeo sense nom, o una veu de màquina. Per <strong>escoltar</strong> serveixen
+              totes; per <strong>imitar</strong>, cal una veu amb nom. No es desarà així.
+            </div>
           )}
         </div>
       )}
@@ -438,7 +490,7 @@ export default function PracticeEditor() {
       </div>}
 
       {view === 'document' ? (
-        <article className="practice-document" style={{ maxWidth: 720, margin: '0 auto', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '28px 30px 36px' }}>
+        <article className="practice-document" style={{ maxWidth: 720, margin: '0 auto', width: '100%', boxSizing: 'border-box', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '28px 30px 36px' }}>
           <div className="no-print" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginBottom: 14 }}>
             <button onClick={() => window.print()} style={secondary}><FaPrint size={12} /> Imprimeix o desa en PDF</button>
             <button onClick={download} style={secondary}><FaDownload size={12} /> Baixa’l en text</button>
@@ -573,7 +625,7 @@ export default function PracticeEditor() {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'flex-end', marginTop: 8 }}>
                     {drill && hasVoice(drill) && (
-                      <button onClick={() => new Audio(getMediaUrl(drill.audio_url || drill.audio_tts_shi_url || '')).play().catch(() => {})}
+                      <button onClick={() => new Audio(audioSrc(drill.audio_url || '')).play().catch(() => {})}
                               title="Escolta" style={icon}><FaPlay size={11} /></button>
                     )}
                     {drill && !hasVoice(drill) && (

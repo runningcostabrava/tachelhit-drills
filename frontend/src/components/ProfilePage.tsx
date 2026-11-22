@@ -6,6 +6,7 @@ import { syncManager } from '../services/OfflineSyncManager';
 import { api, type AdminUser, type Me, type MailSettings } from '../api';
 import { toast } from '../toast';
 import { AiSpendAdmin } from './AiQuota';
+import SenseConnexio from './SenseConnexio';
 import { VARIETIES } from '../varieties';
 import { FaCheck, FaLayerGroup, FaRedo, FaFire } from 'react-icons/fa';
 
@@ -348,12 +349,12 @@ export default function ProfilePage() {
         borderBottom: '1px solid var(--border)',
         padding: '18px 24px',
       }}>
-        <div style={{ maxWidth: '560px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '560px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Perfil</h1>
         </div>
       </div>
 
-      <div style={{ maxWidth: '560px', margin: '0 auto', padding: '24px' }}>
+      <div style={{ maxWidth: '560px', margin: '0 auto', width: '100%', boxSizing: 'border-box', padding: '24px' }}>
         {error && (
           <div role="alert" style={{ padding: '12px 16px', background: 'var(--rose-soft)', border: '1px solid var(--rose)', borderRadius: 'var(--r-md)', marginBottom: '16px', color: 'var(--rose)', fontWeight: 600 }}>
             {error}
@@ -400,17 +401,34 @@ export default function ProfilePage() {
             <Handle me={me} onChanged={(u) => setMe((m) => (m ? { ...m, username: u.username, display_name: u.display_name } : m))} />
             <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginBottom: '18px' }}>
               <div style={{ padding: '12px 18px', background: 'var(--brand-gradient-soft)', borderRadius: 'var(--r-lg)', fontWeight: 700, color: 'var(--brand-1)' }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaLayerGroup /> {me.drills_contributed} drills aportats</span>
-                <a href={`/u/${me.username}`} style={{ color: 'var(--brand-1)', fontWeight: 700, textDecoration: 'none' }}>La meva fitxa: tot el que he aportat →</a>
+                {/* L'enllaç va a la seva línia: en línia amb el comptador sortia «1 drills
+                    aportatsLa meva fitxa…», tot junt (#564). */}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaLayerGroup /> {me.drills_contributed} {me.drills_contributed === 1 ? 'drill aportat' : 'drills aportats'}</span>
+                <a href={`/u/${me.username}`} style={{ display: 'block', marginTop: '6px', color: 'var(--brand-1)', fontWeight: 700, textDecoration: 'none' }}>La meva fitxa: tot el que he aportat →</a>
               </div>
               <div style={{ padding: '12px 18px', background: 'var(--emerald-soft)', borderRadius: 'var(--r-lg)', fontWeight: 700, color: 'var(--emerald)' }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaRedo /> {me.cards_learning} targetes en aprenentatge</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaRedo /> {me.cards_learning} {me.cards_learning === 1 ? 'targeta' : 'targetes'} en aprenentatge</span>
               </div>
               {streak && streak.streak_days > 0 && (
                 <div style={{ padding: '12px 18px', background: 'var(--amber-soft)', borderRadius: 'var(--r-lg)', fontWeight: 700, color: 'var(--amber-strong)' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><FaFire /> {streak.streak_days} {streak.streak_days === 1 ? 'dia' : 'dies'} seguits · {streak.reviews_week} repassos aquesta setmana</span>
                 </div>
               )}
+            </div>
+            {/* Que vol dir posar-hi la veu, dit al perfil i no només a la pàgina de gravar:
+                aquí és on algú mira qui és dins d'aquesta biblioteca. */}
+            <div style={{ padding: '12px 14px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface-2)', marginBottom: '18px' }}>
+              <div style={{ fontWeight: 800, fontSize: '15px', marginBottom: '4px' }}>La teva veu</div>
+              <p style={{ fontSize: '13.5px', color: 'var(--text-soft)', lineHeight: 1.6, margin: '0 0 8px' }}>
+                Quan graves una frase, la teva gravació queda amb el teu nom i el teu poble, i
+                qualsevol que l’escolti sap de qui està aprenent. Escriu-la com la dius tu: no cal
+                seguir cap ortografia, i si al teu poble es diu d’una altra manera, aquesta és la
+                bona. Pots gravar la mateixa frase que ja ha dit algú altre — dues maneres de
+                dir-ho no es trepitgen, es guarden totes dues.
+              </p>
+              <a href="/veus" style={{ color: 'var(--brand-1)', fontWeight: 700, fontSize: '13.5px', textDecoration: 'none' }}>
+                Mira què espera una veu →
+              </a>
             </div>
             <div style={{ marginBottom: '18px', paddingTop: '18px', borderTop: '1px solid var(--border)' }}>
               {originFields}
@@ -463,6 +481,10 @@ export default function ProfilePage() {
                   </button>
                 )}
               </div>
+            </div>
+            <div style={{ marginBottom: '18px' }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 18, margin: '0 0 10px' }}>Al telèfon</h2>
+              <SenseConnexio />
             </div>
             {deadCount > 0 && (
               <div style={{ marginBottom: '18px', padding: '12px 14px', background: 'var(--amber-soft)', border: '1px solid var(--amber)', borderRadius: 'var(--r-md)' }}>

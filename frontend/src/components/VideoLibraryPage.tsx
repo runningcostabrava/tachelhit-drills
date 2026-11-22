@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
-import { FaPlay } from 'react-icons/fa';
-import { API_BASE } from '../config';
+import { useNavigate } from 'react-router-dom';
+import { FaPlay, FaCut } from 'react-icons/fa';
 import { getYouTubeVideoId } from '../utils/youtubeUtils';
 import type { Drill } from '../types';
 import VideoLibraryPlayer from './VideoLibraryPlayer';
+import { bibliotecaAlDia } from '../services/biblioteca';
 
 type LibraryVideo = { id: string; url: string; title: string; drills: Drill[] };
 
@@ -33,14 +33,15 @@ export const groupLibraryVideos = (drills: Drill[]): LibraryVideo[] => {
 };
 
 export default function VideoLibraryPage() {
+  const navigate = useNavigate();
   const [drills, setDrills] = useState<Drill[]>([]);
   const [active, setActive] = useState<LibraryVideo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    axios.get(`${API_BASE}/drills/`)
-      .then(res => setDrills(res.data))
+    bibliotecaAlDia()
+      .then(setDrills)
       .catch(err => { console.error('Failed to load drills:', err); setError(true); })
       .finally(() => setLoading(false));
   }, []);
@@ -54,6 +55,14 @@ export default function VideoLibraryPage() {
           Biblioteca de vídeos{videos.length > 0 && <span style={{ marginLeft: 10, fontSize: 14, fontWeight: 600, color: 'var(--text-muted)' }}>{videos.length}</span>}
         </h1>
         <p style={{ margin: '4px 0 0 0', color: 'var(--text-soft)', fontSize: '14px' }}>Els vídeos sencers, amb els drills que n'has capturat com a subtítols.</p>
+        {/* La serie sencera te pantalla propia: 3.621 linies nostres a sota del video (#583). */}
+        <button onClick={() => navigate('/baba-ali')}
+                style={{ marginTop: 10, padding: '8px 14px', borderRadius: 'var(--r-pill)', cursor: 'pointer',
+                         border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)',
+                         fontFamily: 'inherit', fontSize: 14, fontWeight: 600, display: 'inline-flex',
+                         alignItems: 'center', gap: 8 }}>
+          <FaPlay size={11} /> Mira el Baba Ali amb el nostre text
+        </button>
       </div>
 
       <div role="region" aria-labelledby="library-title" style={{ padding: 'clamp(12px, 4vw, 32px)', display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', alignContent: 'start' }}>
@@ -69,11 +78,14 @@ export default function VideoLibraryPage() {
           </div>
         )}
         {videos.map(v => (
-          <button
+          <div
             key={v.id}
+            style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', padding: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)', color: 'var(--text)' }}
+          >
+          <button
             onClick={() => setActive(v)}
             aria-label={`Reprodueix el vídeo sencer: ${v.title}`}
-            style={{ display: 'flex', flexDirection: 'column', textAlign: 'left', padding: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', cursor: 'pointer', boxShadow: 'var(--shadow-sm)', color: 'var(--text)' }}
+            style={{ display: 'block', textAlign: 'left', padding: 0, background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit', fontFamily: 'inherit' }}
           >
             <div style={{ position: 'relative', aspectRatio: '16 / 9', background: 'var(--surface-2)' }}>
               <img src={`https://i.ytimg.com/vi/${v.id}/mqdefault.jpg`} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -88,6 +100,14 @@ export default function VideoLibraryPage() {
               </div>
             </div>
           </button>
+          {/* The other door: not watching it, auditing it. */}
+          <button
+            onClick={() => navigate(`/captura/video?url=${encodeURIComponent(v.url)}`)}
+            style={{ margin: '0 14px 14px', padding: '7px 12px', borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface-2)', color: 'var(--text-soft)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+          >
+            <FaCut size={11} /> Revisa els talls
+          </button>
+          </div>
         ))}
       </div>
 

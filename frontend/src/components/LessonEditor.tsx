@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { FaArrowDown, FaArrowUp, FaClone, FaEye, FaRobot, FaSave, FaTrash } from 'react-icons/fa';
 import { api, type GrammarLesson, type LessonStep } from '../api';
 import { toast } from '../toast';
@@ -29,6 +29,10 @@ const helpOf = (k: Kind) => KINDS.find((x) => x.kind === k)?.help || '';
 export default function LessonEditor() {
   const { slug = '' } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  // `?step=3`: s'hi ve des del llapis d'una targeta de la unitat, i la pantalla obre per allà.
+  // Sense això, qui vol corregir una pregunta ha de buscar-la entre vint passos.
+  const wanted = Number(new URLSearchParams(useLocation().search).get('step'));
+  const mark = Number.isFinite(wanted) && wanted >= 0 ? wanted : null;
   const [intro, setIntro] = useState('');
   const [steps, setSteps] = useState<LessonStep[]>([]);
   const [byHand, setByHand] = useState(false);
@@ -44,9 +48,14 @@ export default function LessonEditor() {
       setSteps((l.steps || []) as LessonStep[]);
       setByHand(!!r.hand_written);
       setLoaded(true);
+      if (mark !== null) {
+        window.setTimeout(() => {
+          document.getElementById(`pas-${mark}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 60);
+      }
       if (l.writing) toast.info?.('S’està escrivint ara mateix: desa quan hagi acabat.');
     }).catch((e: any) => { toast.error(e?.message || 'No s’ha pogut llegir la lliçó'); setLoaded(true); });
-  }, [slug]);
+  }, [slug, mark]);
 
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } };
@@ -116,7 +125,7 @@ export default function LessonEditor() {
   if (!loaded) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Carregant la lliçó…</div>;
 
   return (
-    <div style={{ padding: '18px 16px 60px', maxWidth: 820, margin: '0 auto' }}>
+    <div style={{ padding: '18px 16px 60px', maxWidth: 820, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       <button onClick={() => navigate(`/grammar/${slug}`)} style={back}>← La unitat</button>
       <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, margin: '6px 0 2px' }}>Edita la lliçó</h1>
       <p style={{ color: 'var(--text-soft)', fontSize: 13, margin: '0 0 14px', lineHeight: 1.5 }}>
@@ -146,7 +155,8 @@ export default function LessonEditor() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {steps.map((s, i) => (
-          <div key={i} style={card}>
+          <div key={i} id={`pas-${i}`}
+               style={mark === i ? { ...card, borderColor: 'var(--brand-1)', boxShadow: 'var(--shadow-brand)' } : card}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
               <span style={{ color: 'var(--text-muted)', fontWeight: 800, fontSize: 12, minWidth: 18 }}>{i + 1}</span>
               <strong style={{ fontSize: 13 }}>{KINDS.find((k) => k.kind === s.type)?.label || s.type}</strong>

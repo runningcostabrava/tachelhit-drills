@@ -148,7 +148,7 @@ export default function AutoCapturePanel() {
             {status.job_status && status.status === 'processing' ? ` (${status.job_status})` : ''}
           </div>
           {done && (
-            <button onClick={() => navigate('/')} style={{ marginTop: '10px', padding: '8px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--emerald)', background: 'var(--surface)', color: 'var(--emerald)', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>
+            <button onClick={() => navigate('/drills')} style={{ marginTop: '10px', padding: '8px 16px', borderRadius: 'var(--r-pill)', border: '1px solid var(--emerald)', background: 'var(--surface)', color: 'var(--emerald)', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}>
               Veure els drills
             </button>
           )}
@@ -207,6 +207,14 @@ export default function AutoCapturePanel() {
                     {r.status === 'failed' && (
                       <button onClick={() => retry(r.id)} disabled={busyRow === r.id} style={rowBtn}>
                         {busyRow === r.id ? '…' : 'Torna-ho a provar'}
+                      </button>
+                    )}
+                    {/* quins drills n'han sortit: la cua deia el NOMBRE i no hi havia manera
+                        d'arribar-hi */}
+                    {r.status === 'done' && (
+                      <button onClick={() => navigate(`/captura/video?url=${encodeURIComponent(r.url)}`)}
+                              style={rowBtn} title="Mira els talls que n'han sortit">
+                        Veu-los
                       </button>
                     )}
                     {finished && (

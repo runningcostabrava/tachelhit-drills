@@ -12,7 +12,12 @@ pinned: false
 
 - **Model:** `ayymen/stt_zgh_fastconformer_ctc_small` (NeMo FastConformer CTC trained on
   Common Voice Standard Moroccan Tamazight, CC BY 4.0, 51 MB). Writes **Tifinagh**.
-- **`POST /transcribe`** (`audio_file`) → `{"text", "segments": [{start, end, text}]}`. Segments
+- **`POST /transcribe`** (`audio_file`) → `{"text", "segments": [{start, end, text}], "confidence"}`.
+  `confidence` és el número del model (NeMo CTC): la suma de log-probabilitats del camí que ha
+  triat, feta mitjana per caràcter i tornada a probabilitat amb `exp()`. Va de 0 a 1 i pot ser
+  `null` quan el model no el dona — mai inventat. Serveix per ordenar la cua de confirmació:
+  una frase amb certesa alta també pot ser errònia, i per això continua sent una proposta.
+  Segments
   come from forced alignment of the model's own transcript, split at pauses.
 - **`POST /align`** (`audio_file`, `text`, `split_on_newline`) → `{"text", "segments": [{start,
   end, text, words}], "words"}`. Give it the known text (lyrics, lesson lines, subtitles) and

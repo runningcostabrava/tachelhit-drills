@@ -15,6 +15,9 @@ export interface Drill {
   tag?: string;
   author?: string;
   date_created: string;
+  updated_at?: string | null;
+  /** Whose sentence it is. Empty means the library's, which is the administrators'. */
+  created_by_user_id?: number | null;
   video_start_time?: number;
   video_end_time?: number;
   is_correction_dataset?: boolean;
@@ -29,6 +32,8 @@ export interface Drill {
   grammar?: string;        // grammar course units: comma-separated slugs (see GrammarPage)
   grammar_source?: string; // 'auto' | 'owner'
   text_catalan_suggested?: string;
+  /** Les propostes de màquina amb la seva procedència, en JSON: [{text, model, llengua, de}]. */
+  esborranys?: string | null;
   variety?: string;
   region?: string;
   speaker?: string;

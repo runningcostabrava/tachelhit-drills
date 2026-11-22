@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { FaMicrophone, FaPaperPlane, FaVolumeUp } from 'react-icons/fa';
 import { api, type PetitionItem, type Me } from '../api';
 import { getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import { toast } from '../toast';
+import { whyItFailed } from '../utils/errors';
 import type { Drill } from '../types';
 import RecordAudioModal from './RecordAudioModal';
 
@@ -14,8 +16,10 @@ import RecordAudioModal from './RecordAudioModal';
 // It used to be called «Veus», which named a thing instead of what you do here, and the tabs were
 // named after how the server groups the rows (#200). The route stays /veus so links keep working.
 
-type Kind = 'open' | 'synthetic' | 'aitmraw';
+type Kind = 'open' | 'synthetic' | 'voiceless' | 'untranscribed' | 'aitmraw';
 const TABS: { kind: Kind; label: string; blurb: string }[] = [
+  { kind: 'voiceless', label: 'Ningú no les ha dites', blurb: 'Totes les frases escrites que encara no té cap veu humana, sense triar-ne cap: les que tenen imatge van primer, perquè es graven mirant-la.' },
+  { kind: 'untranscribed', label: 'Veus sense escriure', blurb: 'Gravacions que ningú no ha escrit. És l’altra meitat de la feina: una veu sense text no es pot buscar, ni citar, ni entrar a cap lliçó, i qui la va dir ja va fer la part difícil.' },
   { kind: 'open', label: 'Algú ho ha demanat', blurb: 'Algú vol saber dir això i espera una veu. Si ho saps dir, grava-ho: la teva manera de dir-ho i d’escriure-ho és la bona.' },
   { kind: 'synthetic', label: 'Només hi parla una màquina', blurb: 'Aquestes frases només tenen una veu sintètica, i una llengua no s’aprèn d’una màquina. Les primeres unitats del curs van al davant.' },
   { kind: 'aitmraw', label: 'Dites a Aït Mraw', blurb: 'Frases d’altres llocs que valdria la pena sentir dites a Aït Mraw, com les diuen la Halima i en Driss.' },
@@ -25,6 +29,7 @@ export default function VeusPage() {
   const navigate = useNavigate();
   const [kind, setKind] = useState<Kind>('open');
   const [items, setItems] = useState<PetitionItem[] | null>(null);
+  const [listFailed, setListFailed] = useState(false);
   const [total, setTotal] = useState(0);
   const [me, setMe] = useState<Me | null>(null);
   const [recording, setRecording] = useState<Drill | null>(null);
@@ -35,11 +40,13 @@ export default function VeusPage() {
 
   useEffect(() => { api.me().then(setMe).catch(() => setMe(null)); }, []);
   useEffect(() => {
-    setItems(null);
-    api.petitions(kind).then((r) => { setItems(r.items); setTotal(r.total); }).catch(() => toast.error('No s’ha pogut carregar la llista'));
+    setItems(null); setListFailed(false);
+    api.petitions(kind)
+      .then((r) => { setItems(r.items); setTotal(r.total); })
+      .catch((e) => { setListFailed(true); toast.error(whyItFailed(e, 'No s’ha pogut carregar la llista')); });
   }, [kind, tick]);
 
-  const play = (url?: string | null) => { if (url) new Audio(getMediaUrl(url)).play().catch(() => {}); };
+  const play = (url?: string | null) => { if (url) new Audio(audioSrc(url)).play().catch(() => {}); };
   const ask = async () => {
     if (!me) { navigate('/profile'); return; }
     if (text.trim().length < 2) { toast.error('Escriu què vols saber dir'); return; }
@@ -64,13 +71,26 @@ export default function VeusPage() {
   const tab = TABS.find((t) => t.kind === kind)!;
 
   return (
-    <div style={{ padding: '20px 16px 32px', maxWidth: '900px', margin: '0 auto' }}>
-      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', margin: '0 0 4px' }}>Posa-hi veu</h1>
-      <p style={{ color: 'var(--text-soft)', fontSize: '14px', margin: '0 0 14px', lineHeight: 1.5 }}>
-        Aquí es fan dues coses, i totes dues fan créixer la biblioteca: <strong>demanar</strong> una frase que vols
-        saber dir, i <strong>gravar-ne</strong> una que saps dir. Si en graves, escriu-la com la dius tu —no cal
-        seguir cap ortografia— i digue’ns de quin poble ets: cada veu porta el seu lloc i el nom de qui parla.
+    <div style={{ padding: '20px 16px 32px', maxWidth: '900px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', margin: '0 0 4px' }}>Si us plau, necessitem la teva veu</h1>
+      <p style={{ color: 'var(--text-soft)', fontSize: '14.5px', margin: '0 0 10px', lineHeight: 1.6 }}>
+        Aquesta biblioteca només té el que la gent hi ha posat. Una frase escrita i muda ensenya a
+        llegir-la, no a dir-la, i una veu de màquina no ensenya a parlar amb ningú: per això una
+        frase no està acabada fins que algú la diu.
       </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 10, margin: '0 0 16px' }}>
+        {[
+          ['Grava’n una que sàpigues dir', 'Prem el micròfon de qualsevol frase. Trenta segons i ja està.'],
+          ['Digue-la com la dius tu', 'Amb les teves paraules i la teva manera d’escriure-la: no cal seguir cap ortografia, i si al teu poble es diu d’una altra manera, aquesta és la bona.'],
+          ['Queda amb el teu nom', 'Cada veu porta qui parla i de quin poble és. Qui l’escolti sabrà de qui està aprenent.'],
+          ['Demana el que vols saber dir', 'Si no saps com es diu una cosa, escriu-la en català aquí sota i algú que ho sàpiga la gravarà.'],
+        ].map(([t, w]) => (
+          <div key={t} style={{ padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+            <div style={{ fontWeight: 800, fontSize: 13.5, marginBottom: 2 }}>{t}</div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-soft)', lineHeight: 1.5 }}>{w}</div>
+          </div>
+        ))}
+      </div>
 
       {me?.is_admin && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
@@ -97,7 +117,13 @@ export default function VeusPage() {
       </div>
       <p style={{ fontSize: 13, color: 'var(--text-soft)', margin: '0 0 12px' }}>{tab.blurb}{items ? ` · ${total}` : ''}</p>
 
-      {!items && <div style={{ color: 'var(--text-muted)' }}>Carregant…</div>}
+      {/* Una llista que no s'ha pogut portar no pot semblar una llista buida. */}
+      {!items && listFailed
+        ? <div style={{ color: 'var(--text-soft)', fontSize: 14 }}>
+            No s’ha pogut portar la llista.{' '}
+            <button onClick={() => setTick((t) => t + 1)} style={{ background: 'transparent', border: 'none', padding: 0, color: 'var(--brand-1)', fontWeight: 700, fontSize: 'inherit', cursor: 'pointer', fontFamily: 'inherit' }}>Torna-ho a provar</button>
+          </div>
+        : !items && <div style={{ color: 'var(--text-muted)' }}>Carregant…</div>}
       {items && items.length === 0 && <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Res pendent aquí.</div>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {items?.map((it) => {
@@ -112,7 +138,7 @@ export default function VeusPage() {
                   {it.requested_by ? `Ho demana ${it.requested_by}` : d.region ? d.region : 'sense lloc'}{it.note ? ` · ${it.note}` : ''}{it.units.length ? ` · ${it.units.join(', ')}` : ''}
                 </div>
               </div>
-              {(d.audio_url || d.audio_tts_shi_url) && <button onClick={() => play(d.audio_url || d.audio_tts_shi_url)} aria-label="Escolta" title={d.audio_url ? 'Veu gravada' : 'Veu sintètica'} style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : 'var(--sky)', color: '#fff', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={12} /></button>}
+              {(d.audio_url) && <button onClick={() => play(d.audio_url)} aria-label="Escolta" title="Veu gravada" style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 'var(--r-pill)', border: 'none', background: d.audio_url ? 'var(--brand-1)' : 'var(--sky)', color: '#fff', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaVolumeUp size={12} /></button>}
               <button onClick={() => setRecording(d)} aria-label="Grava-ho tu" title="Grava-ho a la teva manera" style={{ flexShrink: 0, width: 38, height: 38, borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-gradient)', color: '#fff', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><FaMicrophone size={15} /></button>
             </div>
           );

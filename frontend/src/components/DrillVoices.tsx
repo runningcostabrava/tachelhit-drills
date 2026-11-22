@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FaPlay } from 'react-icons/fa';
 import { api, type Recording } from '../api';
-import { getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import { varietyShort, varietyLabel } from '../varieties';
 
 // Learner-facing: the different speakers' takes of a drill, each tagged with
@@ -17,7 +17,7 @@ export default function DrillVoices({ drillId }: { drillId: number }) {
     return () => { live = false; };
   }, [drillId]);
 
-  const play = (url: string) => { const a = new Audio(getMediaUrl(url)); a.play().catch(() => {}); };
+  const play = (url: string) => { const a = new Audio(audioSrc(url)); a.play().catch(() => {}); };
 
   if (recs.length === 0) return null;
 

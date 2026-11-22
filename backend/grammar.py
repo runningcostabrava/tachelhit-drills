@@ -16,6 +16,7 @@ import os
 import re
 import threading
 import time
+import unicodedata
 from typing import Dict, List, Optional
 
 # slug, Catalan title, chapters of the compendium that explain it, hint for the classifier
@@ -46,25 +47,26 @@ UNITS: List[dict] = [
      "hint": "my, your, his/her, our house; kinship possessives (baba, mma, gma-s); 'of' with n"},
     {"slug": "preposicions", "title": "Les preposicions (s, g/ɣ, dar/ɣur, d, i, f, zg)", "chapters": [6], "level": 2,
      "hint": "in, to, at, with, for, from, on, under, before/after, and their pronoun forms (dar-i, fll-as)"},
-    {"slug": "ser-tenir", "title": "«Ser», «estar» i «tenir»: iga, illa, ɣur-i, dar-i", "chapters": [5, 7], "level": 1,
+    {"slug": "ser-tenir", "title": "«Ser», «estar» i «tenir»: ija/iga, illa, ghori/ɣur-i", "chapters": [5, 7], "level": 1,
      "hint": "to be / there is / to have: iga, illa, ɣur-i / dar-i (I have), ur illi, nominal sentences without a verb"},
     {"slug": "aorist-ad", "title": "L'aorist amb ad: futur, voluntat i ordre indirecte", "chapters": [5], "level": 2,
      "hint": "ad + aorist for future, wish or purpose: ad dduɣ (I will go), rad / ad, 'I want to'"},
-    {"slug": "perfectiu", "title": "El perfectiu: accions acabades (passat)", "chapters": [5], "level": 2,
-     "hint": "the perfective (accomplished): I went, she said, we ate; a finished action"},
+    {"slug": "perfectiu", "title": "El perfectiu: accions fetes i estats", "chapters": [5], "level": 2,
+     "hint": "the perfective (accomplished): I went, she said, we ate; a finished action, or a state that already holds, "
+             "so often but not always a past (ija 'is', mani s tdit 'where are you going?')"},
     {"slug": "imperfectiu-habitual", "title": "L'imperfectiu i l'habitual (da / ar + verb)", "chapters": [5], "level": 2,
      "hint": "habitual or ongoing actions with da / ar / la + intensive stem: I usually go, he is eating, every day"},
     {"slug": "imperatiu", "title": "L'imperatiu: ordres i peticions", "chapters": [5], "level": 1,
      "hint": "ONLY a real command or request said to someone, in a sentence: come here!, give me water, sit down, don't go "
              "(ur + aorist / imperfective). A verb given alone as a dictionary entry ('to eat' = šš, 'to go' = ddu) or a "
              "conjugation list is vocabulary, NOT a command: never 'imperatiu'"},
-    {"slug": "negacio", "title": "La negació: ur …, ur … ša / bu", "chapters": [5, 7], "level": 2,
+    {"slug": "negacio", "title": "La negació: ur i les paraules que l'acompanyen", "chapters": [5, 7], "level": 2,
      "hint": "negative sentences: not, never, nothing, nobody, no longer (ur, ur jjun, walu, ur ta)"},
-    {"slug": "preguntes", "title": "Les preguntes: is, ma, mani, manik, mšta, maymi", "chapters": [6, 7], "level": 1,
+    {"slug": "preguntes", "title": "Les preguntes: is, mayd, mani, manimsh, mšta, makh", "chapters": [6, 7], "level": 1,
      "hint": "yes/no questions with is; question words: what, who, where, how, how much, when, why"},
     {"slug": "clitics-objecte", "title": "Els pronoms d'objecte (-t, -tt, -i, -ak, -as) i la seva posició", "chapters": [4], "level": 3,
      "hint": "direct and indirect object clitics attached to the verb or attracted before it: give it to me, he saw her, tell him"},
-    {"slug": "relatiu-participi", "title": "El relatiu i el participi: lli, ay-, verb en -n", "chapters": [4, 7], "level": 3,
+    {"slug": "relatiu-participi", "title": "El relatiu i la forma en -n: nna, ayda, verb en -n", "chapters": [4, 7], "level": 3,
      "hint": "relative clauses and participles: the man who came (argaz lli d yuškan), what, the one that"},
     {"slug": "adjectius-qualitat", "title": "Qualitats: adjectius, verbs d'estat i comparació", "chapters": [3, 5], "level": 2,
      "hint": "big, small, good, beautiful, more than; stative verbs of quality (imqqur, iḥla)"},
@@ -108,11 +110,11 @@ SECTIONS: Dict[str, List[str]] = {
     "negacio": ["7.2", "7.2.1", "7.2.2", "7.2.3", "5.2.3", "5.2.5"],
     "preguntes": ["7.3", "7.3.1", "7.3.2", "4.3.6", "7.5.4"],
     "clitics-objecte": ["4.1.2", "7.1.2", "4.2.2"],
-    "relatiu-participi": ["4.3.5", "5.1.4", "7.5.1", "7.5.2", "7.5.6"],
+    "relatiu-participi": ["4.3.5", "5.1.4", "7.5.1", "7.5.2", "7.5.3", "7.5.6"],
     "adjectius-qualitat": ["3.6", "7.4.1", "5.1.2", "7.7.8"],
     "numerals": ["3.5.1", "3.5.2", "3.5.3"],
     "temps-adverbis": ["6.1", "7.4.2", "7.7.1", "7.7.2"],
-    "subordinades": ["7.6.1", "7.6.3", "7.7.2", "7.7.3", "7.7.4", "7.7.6"],
+    "subordinades": ["7.6.1", "7.6.3", "7.7.2", "7.7.3", "7.7.4", "7.7.5", "7.7.6", "7.7.7", "7.7.9"],
     "derivacio-verbal": ["5.3", "5.3.2", "5.3.3", "5.3.4", "5.3.5"],
     "manlleus": ["3.4.1", "3.4.2", "3.1.1"],
 }
@@ -126,11 +128,22 @@ def parse(s: Optional[str]) -> List[str]:
     return [x.strip() for x in (s or "").split(",") if x.strip() and x.strip() in TITLES]
 
 
+#: Res gravat en càmera d'aquest canal va al curs.
+CANAL_FORA = "tamazight for all"
+
+
+def canal_fora(d) -> bool:
+    return any(CANAL_FORA in (getattr(d, c, "") or "").lower() for c in ("author", "source_channel", "speaker"))
+
+
 def not_excluded(query, DrillModel):
     """Keep drills whose tag doesn't name an excluded language."""
     from sqlalchemy import or_
     for t in EXCLUDED_TAGS:
         query = query.filter(or_(DrillModel.tag.is_(None), ~DrillModel.tag.ilike(f"%{t}%")))
+    # La regió no ho pot dir: 723 files del canal porten «Ait Mraw» sense que res ho provi.
+    for camp in (DrillModel.author, DrillModel.source_channel, DrillModel.speaker):
+        query = query.filter(or_(camp.is_(None), ~camp.ilike(f"%{CANAL_FORA}%")))
     return query
 
 
@@ -315,6 +328,58 @@ PLAIN_WORDS = [
 ]
 
 
+#: Els sons que la llengua escriu amb dues lletres: així «gh» també rep la seva tifinagh.
+PAIRS = {"gh", "kh", "sh", "ch", "gw", "kw", "qw", "tt", "kk", "ll", "dj",
+         # els mateixos sons arrodonits escrits com els escriu el llibre: kʷ, gʷ, qʷ, xʷ, ɣʷ
+         "kʷ", "gʷ", "qʷ", "xʷ", "ɣʷ"}
+
+#: Un so citat al text d'una lliçó, entre cometes: «ɛ», «gh», 'ẓ'.
+#:
+#: L'apòstrof només obre una citació si al davant NO hi ha una lletra. En català l'apòstrof
+#: viu dins les paraules —«ajuda'm», «l'home», «dóna'm»— i si es prenia per una cometa, una
+#: nota com «vol dir 'ajuda'm'» es llegia com si hi hagués citat el so «m» i en sortia
+#: «vol dir 'ajuda'm ⵎ'». La ⵎ no la volia ningú.
+_QUOTED = re.compile(
+    r"[«\"‘“]([^«»\"'’”]{1,3})[»\"’”]"
+    r"|(?<![^\W\d_])['’]([^«»\"'’”]{1,3})['’](?![^\W\d_])"
+)
+
+
+def with_letters(t: str) -> str:
+    """El mateix text amb la tifinagh de cada so citat al costat: «ɛ» → «ɛ ⵄ».
+
+    L'amo: «la tifinagh ha de ser present a tot arreu, també al títol de l'explicació dels sons».
+    Una lliçó que ensenya un so citant-lo en llatí ensenya el so i no ensenya la lletra, i aquesta
+    app ensenya les dues coses.
+
+    Només toca el que és CITAT i curt —un so, no una paraula—, i només si el transliterador en
+    treu una tifinagh diferent del que ja hi ha. Si no, el text es queda tal com és: val més una
+    lliçó sense una lletra que una lliçó amb una lletra inventada.
+    """
+    if not t or "ⵣ" in t:
+        return t
+
+    def one(m):
+        raw = (m.group(1) or m.group(2) or "").strip()
+        # Nom\u00E9s un SO: una lletra sola, o un dels parells que la llengua escriu junts. Dues o
+        # tres lletres qualssevol serien paraules catalanes citades \u2014\u00ABno\u00BB, \u00ABfer\u00BB, \u00ABcas\u00BB\u2014 i els
+        # penjar\u00EDem al costat una tifinagh que no vol dir res.
+        if len(raw) != 1 and raw.lower() not in PAIRS:
+            return m.group(0)
+        if not raw or re.search(r"[\u2D30-\u2D7F]", raw):
+            return m.group(0)
+        try:
+            import transliteration
+            tif = (transliteration.to_forms(raw)["tifinagh"] or "").strip()
+        except Exception:
+            return m.group(0)
+        if not tif or tif == raw:
+            return m.group(0)
+        return m.group(0).replace(raw, f"{raw} {tif}", 1)
+
+    return _QUOTED.sub(one, t)
+
+
 def _plain(t: str) -> str:
     """Say it as a lesson would: no word the learner would have to look up."""
     for pat, rep in PLAIN_WORDS:
@@ -331,7 +396,7 @@ def _clean_prose(s: Optional[str]) -> str:
     t = re.sub(r"\s*\((?:exemples?|ids?)\s*[\d,\s]+(?:i\s*\d+)?\)", "", t, flags=re.I)
     t = re.sub(r"\b(?:en\s+|a\s+)?(?:als?|els?|l')\s*exemples?\s+\d+(?:\s*(?:,|i)\s*\d+)*", "", t, flags=re.I)
     t = re.sub(r"\bexemples?\s+\d+(?:\s*(?:,|i)\s*\d+)*", "", t, flags=re.I)
-    return _plain(re.sub(r"\s+", " ", t).replace(" ,", ",").replace(" .", ".").strip())
+    return with_letters(_plain(re.sub(r"\s+", " ", t).replace(" ,", ",").replace(" .", ".").strip()))
 
 
 def gloss_of(d) -> Optional[List[dict]]:
@@ -370,12 +435,25 @@ def notes_status() -> dict:
     return dict(_notes_state)
 
 
-def notes_for(db, slug: str) -> Dict[int, str]:
+def notes_for(db, slug: str, texts: Optional[Dict[int, tuple]] = None) -> Dict[int, str]:
     """What the library can say about each sentence of ONE unit: why it is there. By drill id, and
-    without the ones whose honest answer was «it shows nothing of this unit»."""
+    without the ones whose honest answer was «it shows nothing of this unit».
+
+    També es queden fora, aquí mateix, les notes ja desades que no passarien avui: les que parlen
+    com un llibre de fonètica i les que citen un tros que no és a la frase. Es filtren en SERVIR
+    i no només en escriure, perquè les que hi ha escrites no es poden refer d'un dia per l'altre
+    i mentrestant la persona que aprèn les llegeix. `texts` són les frases per id, quan qui
+    pregunta les té; sense elles només es comprova el jargó."""
     from models import GrammarNote
     rows = db.query(GrammarNote.drill_id, GrammarNote.body).filter(GrammarNote.slug == slug).all()
-    return {int(i): b for i, b in rows if b and b != NO_NOTE}
+    out: Dict[int, str] = {}
+    for i, b in rows:
+        if not b or b == NO_NOTE:
+            continue
+        shi, ca = (texts or {}).get(int(i)) or ("", "")
+        if note_problem(b, shi, ca) is None:
+            out[int(i)] = b
+    return out
 
 
 def asked_notes(db, slug: str) -> set:
@@ -395,14 +473,105 @@ def _notes_prompt(unit: dict, sheet: str, batch: List[dict]) -> str:
         "frase és el que ensenya el punt i què hi fa. De 25 a 45 paraules, en català planer, com ho "
         "diria un mestre al costat de la frase.\n"
         "- anomena el tros tal com està escrit a la frase, entre cometes;\n"
-        "- no facis servir mots de gramàtic (ni «inacomplert», ni «clític», ni «díctic»…): digues-ho "
-        "a la manera planera;\n"
+        "- no facis servir mots de gramàtic ni de fonetista: res de «clític», «morfema», "
+        "«inacomplert», «díctic», «uvular», «faringal», «al·lòfon», «nucli sil·làbic», "
+        "«tautosil·làbic», «fricativa», «fonema». Digues-ho a la manera planera: «el so que es fa "
+        "al fons de la gola», «la lletra enganxada al final»;\n"
+        "- el tros que citis ha de ser DINS la frase, lletra per lletra. Si no hi és, no el citis;\n"
         "- no citis mai números d'identificació ni diguis «aquesta frase» dues vegades;\n"
         "- si la frase no mostra res d'aquesta unitat, respon exactament «-» i prou. Val més dir-ho "
         "que inventar-s'ho.\n\n"
         f"FRASES\n{lines}\n\n"
         'Respon NOMÉS amb un objecte JSON {"<id>": "<el que mostra, 25-45 paraules>"}.'
     )
+
+
+#: Paraules de gramàtic i de fonetista. La nota que en porta una no s'arriba a desar: val més
+#: una frase sense nota que una frase amb una nota que ningú no entén. (BANNED_TERMS són les
+#: que es demanen al redactor; aquestes són les que es comproven DESPRÉS, perquè demanar-ho no
+#: ha bastat: les lliçons servides parlen de nuclis sil·làbics a una unitat de nivell 1.)
+NOTE_JARGON = (
+    "uvular", "faringal", "faringi", "al·lòfon", "alòfon", "al·lofòn", "tautosil", "nucli sil",
+    "atac sil", "coda sil", "sil·labic", "sil·làbic", "fonològic", "fonologic", "fonema",
+    "fricativa", "oclusiva", "africada", "sonoritat", "ultrabreu", "schwa", "morfema", "lexema",
+    "al·lomorf", "alomorf", "clític", "clitic", "díctic", "dictic", "deíctic", "sintagma",
+    "desinència", "flexiu", "apofonia", "diàtesi", "tema verbal",
+)
+
+#: Un tros citat entre cometes dins la nota: «3wn», «-nnx», «ad».
+_QUOTED_BIT = re.compile(r"«([^»]{1,24})»|'([^']{1,24})'")
+
+#: Tot el que no és lletra: guionets, cometes, punts, espais. Comparar «-nnx» amb «nnx» o
+#: «ajuda'm» amb «ajudam» ha de donar igual.
+_NOT_A_LETTER = re.compile(r"[^\wƀ-ɏʰ-˿]+")
+
+
+def _letters_only(s: Optional[str]) -> str:
+    return _NOT_A_LETTER.sub("", (s or "").lower())
+
+
+def note_problem(note: str, shi: str = "", ca: str = "") -> Optional[str]:
+    """Per què aquesta nota no es pot servir — o None si es pot.
+
+    Una sola cosa, i segura: el jargó. «La 'x' és una consonant uvular… un al·lòfon de la vocal
+    bàsica» és el que la unitat dels sons, de nivell 1, serveix avui. La frase i el seu
+    significat es demanen per si un dia fa falta mirar-hi dins; de moment no s'hi mira, perquè
+    una nota ben feta cita el significat català tant com el tros amazic i no es pot distingir
+    una cita bona d'una d'inventada sense endevinar.
+
+    Les paraules inventades sí que es comproven on van aparèixer de debò: a les taules de formes
+    (`table_words_not_in_library`).
+    """
+    low = (note or "").lower()
+    for w in NOTE_JARGON:
+        if w in low:
+            return f"paraula de gramàtic: «{w}»"
+    return None
+
+
+def table_words_not_in_library(step: dict, examples: List[dict]) -> List[str]:
+    """Les paraules amazigues d'una taula de formes que no surten a cap frase de la unitat.
+
+    La taula «Sons difícils i la seva escriptura» citava `meddn` per a la ḍ (que no en té, de ḍ)
+    i `Tabrat` per a la ṭ: dues paraules que no són enlloc de la unitat ni, de fet, de la
+    biblioteca. Una taula de numerals pot ensenyar el «sis» encara que no el tinguem gravat
+    —és una taula, ha de ser sencera—, però el que no pot fer és citar una paraula que no
+    existeix com si fos un exemple."""
+    pool = set()
+    for e in examples or []:
+        for w in re.findall(r"[^\W\d_]+", (e.get("shi") or "").lower()):
+            pool.add(w)
+    out = []
+    for row in (step.get("rows") or []):
+        for cell in (row if isinstance(row, list) else [row]):
+            text = str(cell or "").strip()
+            words = re.findall(r"[^\W\d_]+", text.lower())
+            if len(words) != 1 or len(words[0]) < 4:
+                continue
+            if _looks_catalan(words[0]):
+                continue
+            if words[0] not in pool:
+                out.append(text)
+    return out
+
+
+#: Les caselles catalanes d'una taula («encara», «vosaltres», «febre»): accent, ce trencada, o
+#: una de les poques paraules planes que hi surten. No cal que sigui perfecte —això és una
+#: comprovació per mirar-s'hi, no una cosa que esborri res— però sí que ha de deixar passar
+#: `meddn`, `Tabrat`, `smmus`, `allig`, `nttat`.
+_CATALAN_PLAIN = {
+    "aquest", "aquesta", "aquells", "aquelles", "nosaltres", "vosaltres", "ells", "elles",
+    "encara", "sempre", "avui", "ahir", "demà", "ara", "aqui", "allà", "massa", "molt", "poc",
+    "gran", "petit", "negre", "blanc", "febre", "mare", "pare", "peixos", "ulls", "casa",
+    "aigua", "home", "dona", "quant", "quants", "quina", "quines", "perque", "perquè", "sobre",
+    "sota", "dins", "amb", "sense", "primer", "segon", "tercer", "cinc", "sis", "set", "vuit",
+    "nou", "deu", "onze", "dotze", "tretze", "catorze", "vint", "trenta", "cent", "mil",
+    "tinc", "tens", "tenim", "teniu", "tenen", "una", "dues", "tres", "quatre",
+}
+
+
+def _looks_catalan(word: str) -> bool:
+    return bool(re.search(r"[àèéíòóúïüç]", word)) or word in _CATALAN_PLAIN
 
 
 def write_notes(unit: dict, sheet: str, batch: List[dict]) -> Dict[int, str]:
@@ -416,7 +585,7 @@ def write_notes(unit: dict, sheet: str, batch: List[dict]) -> Dict[int, str]:
     if not m:
         raise ValueError("notes without JSON")
     got = json.loads(re.sub(r",\s*([}\]])", r"\1", m.group(0)))
-    ids = {e["id"] for e in batch}
+    by_id = {e["id"]: e for e in batch}
     out: Dict[int, str] = {}
     for k, v in (got or {}).items():
         try:
@@ -424,8 +593,19 @@ def write_notes(unit: dict, sheet: str, batch: List[dict]) -> Dict[int, str]:
         except ValueError:
             continue
         body = _clean_prose(str(v or "").strip())
-        if i in ids and body:
-            out[i] = NO_NOTE if body.strip(" .-") == "" else body
+        if i not in by_id or not body:
+            continue
+        if body.strip(" .-") == "":
+            out[i] = NO_NOTE
+            continue
+        why_not = note_problem(body, by_id[i].get("shi") or "", by_id[i].get("ca") or "")
+        if why_not:
+            # es desa com a «no en tenim»: així no es torna a demanar en cada passada i, sobretot,
+            # la frase surt sense nota en comptes de sortir amb una nota que diu una cosa falsa
+            print(f"[NOTES] {unit['slug']} {i}: nota descartada ({why_not})")
+            out[i] = NO_NOTE
+            continue
+        out[i] = body
     return out
 
 
@@ -522,7 +702,7 @@ def example_dict(d) -> dict:
     the word-by-word reading when the library has one, and the sentence in Tifinagh."""
     # Tamazight only. `audio_tts_url` is the CATALAN reading of the meaning: in a lesson it would
     # say the answer out loud in the wrong language, and «escolta i tria el sentit» would be a joke.
-    audio = d.audio_url or getattr(d, "audio_tts_shi_url", None)
+    audio = d.audio_url
     return {"id": d.id, "shi": _clean_text(d.text_tachelhit), "ca": _clean_text(d.text_catalan),
             "image_url": d.image_url, "audio_url": audio, "recorded": bool(d.audio_url),
             "author": (d.author or "").strip() or None, "region": d.region, "origin": origin(d),
@@ -530,7 +710,7 @@ def example_dict(d) -> dict:
             "source_url": getattr(d, "source_url", None), "source_channel": getattr(d, "source_channel", None)}
 
 
-AIT_MRAW = "Aït Mraw (Boutharar, Azilal)"
+AIT_MRAW = "Aït Mraw (Boutharar, Tinghir)"
 
 OUR_SPEAKERS = ("Halima", "Driss")
 
@@ -547,14 +727,63 @@ def our_speaker(d) -> Optional[str]:
     return None
 
 
+#: Noms que hi ha al lloc del parlant i que no són ningú: el procés que va retallar la frase.
+PROCESSOS = ("auto capture", "autocapture")
+
+
+def qui_ho_diu(d) -> Dict:
+    """Qui diu aquesta frase, i si la seva veu es pot posar com a model a imitar (#273, #288).
+
+    La regla, del pedagog i confirmada pel propietari: **per escoltar, totes les veus són
+    benvingudes i omplen forats; per imitar, només una veu amb nom.** «Compara't amb la veu de
+    debò» només és veritat si la veu és d'algú.
+
+    Les quatre coses que es poden trobar al lloc del parlant, i que no es poden confondre:
+
+      `nostra`   la Halima o en Driss, o una gravació del seu poble: la veu del curs.
+      `persona`  algú altre amb nom, que també es pot imitar.
+      `canal`    un canal de vídeo —«ILoveLanguages (parlant nadiu)»—, que no és una persona que
+                 el projecte conegui i que sovint parla una altra varietat.
+      `captura`  «Auto Capture», que és el procés que va retallar el tall, no ningú.
+      `cap`      no hi ha veu.
+    """
+    veu = (getattr(d, "audio_url", "") or "").strip()
+    qui = (getattr(d, "speaker", None) or getattr(d, "author", None) or "").strip()
+    if not veu:
+        return {"qui": qui or None, "mena": "cap", "per_imitar": False}
+    if canal_fora(d):
+        return {"qui": qui or None, "mena": "canal", "per_imitar": False}
+    if our_speaker(d) or "mraw" in (getattr(d, "region", "") or "").lower():
+        return {"qui": qui or None, "mena": "nostra", "per_imitar": True}
+    if not qui or qui.lower() in PROCESSOS:
+        return {"qui": None, "mena": "captura", "per_imitar": False}
+    # Un canal al lloc del parlant: o ve dit amb un parèntesi —«ILoveLanguages (parlant nadiu)»—
+    # o és literalment el nom del canal d'on vam treure el tall.
+    canal = (getattr(d, "source_channel", "") or "").strip()
+    if "(" in qui or (canal and qui.lower() == canal.lower()):
+        return {"qui": qui, "mena": "canal", "per_imitar": False}
+    return {"qui": qui, "mena": "persona", "per_imitar": True}
+
+
+def per_imitar(d) -> bool:
+    """Si aquesta gravació es pot fer servir com a model per repetir-la."""
+    return bool(qui_ho_diu(d)["per_imitar"])
+
+
 def origin(d) -> str:
     """Where a drill's sentence comes from, for the lesson writer and the card."""
     tag = (d.tag or "").lower(); region = (d.region or "").strip()
+    if canal_fora(d):
+        return "Tamazight For All"
     if our_speaker(d) or "mraw" in region.lower():
         return AIT_MRAW
     if "benimellal" in tag or region.lower().startswith("beni mellal"):
         return "Beni Mellal"
-    return region or ("gravació" if d.audio_url else "")
+    # I si no en sabem el poble, no se n'inventa cap. Abans aquí hi deia «gravació», que a la
+    # targeta sortia com «veu de parlant · gravació»: ocupava el lloc de la procedència sense
+    # dir-ne res. Qui ho llegeix ha de poder distingir una frase d'un poble d'una frase que no
+    # sabem d'on és —són dues coses diferents, i la segona és feina pendent, no un lloc.
+    return region
 
 
 def origin_rank(e: dict) -> int:
@@ -590,6 +819,8 @@ def well_formed(shi: str, slug: Optional[str] = None) -> bool:
     t = _clean_text(shi)
     if re.search(r"\w\.\w", t) or "+" in t:
         return False  # «ⵜ.ⵅⵙ.ⵛ», «a.b.c», «Mana Lun ija +tEli»: capture artefacts
+    if "…" in t or "..." in t:
+        return False  # «ɣuri … / dari …» és un motlle, no una frase: no es pot ni dir ni endevinar
     return True
 
 
@@ -685,14 +916,21 @@ def _spread(cands: List[dict], limit: int) -> List[dict]:
             continue
         seen.add(key)
         buckets[origin_rank(e)].append(e)
-    out, turns, k = [], (0, 0, 1, 1, 2), 0
-    while len(out) < limit and any(buckets):
-        b = buckets[turns[k % len(turns)]]
-        k += 1
-        if b:
-            out.append(b.pop(0))
-        elif not any(buckets):
-            break
+    # Primer les que es poden ESCOLTAR, repartides igual entre les tres fonts; i només quan
+    # s'han acabat, les mudes. Repartir-les totes barrejades feia que una font que ja no tenia
+    # veus seguís posant frases mudes mentre una altra encara en tenia de gravades: «numerals»
+    # servia 18 exemples sense veu de 42, i 10 d'aquests sortien de la font que n'havia exhaurit
+    # les gravades. Dins de cada tanda el repartiment és el de sempre.
+    voiced = [[e for e in b if e.get("audio_url")] for b in buckets]
+    silent = [[e for e in b if not e.get("audio_url")] for b in buckets]
+    out: List[dict] = []
+    for pool in (voiced, silent):
+        turns, k = (0, 0, 1, 1, 2), 0
+        while len(out) < limit and any(pool):
+            b = pool[turns[k % len(turns)]]
+            k += 1
+            if b:
+                out.append(b.pop(0))
     return out
 
 
@@ -704,7 +942,7 @@ def _study_prompt(unit: dict, reference: str) -> str:
         f"Study these sections of an Amazigh grammar reference (amazic.cat compendium, in Catalan, centred on the "
         f"Souss Tachelhit with notes on other varieties) for the lesson «{unit['title']}». Write a STUDY SHEET in "
         "Catalan, at most 900 words, that a teacher will use to explain this point with real sentences from the "
-        "Central Atlas (Aït Mraw near Boutharar, Azilal; Beni Mellal):\n"
+        "Central Atlas (Aït Mraw near Boutharar, Tinghir; Beni Mellal):\n"
         "1. RULES: the rules of this point, numbered, one or two sentences each, in plain words.\n"
         "2. FORMS: the forms (prefixes, suffixes, particles, pronouns…) as a compact table in standard Latin "
         "spelling (ɣ, ḥ, ṣ, ṭ, ẓ, ɛ, š), with what each one means.\n"
@@ -777,11 +1015,11 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str, tables: Optiona
     ex = "\n".join(f"- id {e['id']} ({e.get('origin') or 'origen desconegut'}{', gravat' if e.get('recorded') else ''}): «{e['shi']}» — {e['ca']}" for e in sorted(examples, key=simplicity))
     return (
         f"Write the lesson «{unit['title']}» of a course of Central Atlas Tamazight (the speech of Aït Mraw near "
-        "Boutharar, Azilal, and of Beni Mellal) for Catalan-speaking adults who are NOT linguists: a curious "
+        "Boutharar, Tinghir, and of Beni Mellal) for Catalan-speaking adults who are NOT linguists: a curious "
         "traveller, a partner of a Tamazight speaker. Plain, warm Catalan; short sentences; explain every grammatical "
-        "word the first time you use it («el perfectiu, la forma que es fa servir per a accions acabades…»). Never use "
-        "these words: " + ", ".join(BANNED_TERMS) + ". Say «pronom enganxat al verb» instead of clític, «forma de "
-        "passat / acció acabada» instead of acomplert, and so on.\n\n"
+        "word the first time you use it («el perfectiu, la forma de les accions fetes i dels estats…»). Never use "
+        "these words: " + ", ".join(BANNED_TERMS) + ". Say «pronom enganxat al verb» instead of clític, «forma "
+        "d'acció feta o d'estat» instead of acomplert, and so on.\n\n"
         "METHOD. The study sheet below condenses the grammar reference and ends with the steps the point breaks "
         "into: follow them, one explanation each. The sentences below are what OUR speakers "
         "actually say. Your job is to show how the rules of the sheet appear in OUR sentences: every explanation "
@@ -823,8 +1061,10 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str, tables: Optiona
         "bare greeting, a bare noun, a bare number) and each step builds on the previous one, so the longest "
         "sentences come last. Never open a unit with a long sentence.\n")
         + "- 1 or 2 steps of type \"pattern\" (one after the first explanations, one near the end): a title and 3-8 rows of [form, meaning, "
-        "example], the forms in standard Latin spelling (ɣ, ḥ, ṣ, ṭ, ẓ, ɛ, š), the example taken from our sentences "
-        "when one exists."
+        "example], the forms in standard Latin spelling (ɣ, ḥ, ṣ, ṭ, ẓ, ɛ, š). The THIRD cell, the example, must be "
+        "a word COPIED from one of OUR SENTENCES below, letter for letter. If no sentence of this unit shows that "
+        "form, leave the third cell empty — never invent a word to fill it. (A sounds table once cited «meddn» for "
+        "ḍ, a word with no ḍ in it, and «Tabrat» for ṭ: neither is anywhere in the library.)"
         + (" OUR LISTS below are the paradigms our own speakers wrote for this unit: build the table from THEM, "
            "form by form as they are written, and never put in a form that is in neither the lists nor our "
            "sentences." if tables else "")
@@ -836,6 +1076,15 @@ def _lesson_prompt(unit: dict, examples: List[dict], sheet: str, tables: Optiona
         "The sentences are written as their speakers wrote them (spelling varies: 3 for ɛ, gh for ɣ, kh for x, "
         "capitals for emphatics): when your text names a form, give the standard spelling and, if the sentence spells "
         "it differently, say so in a few words.\n"
+        # Dues errades que el curs ha fet de debò, i que un lector les ha vistes (2026-10-23):
+        # la targeta «iga» deia que serveix «per al passat» i anomenava el verb `g` mentre totes
+        # les frases citades el diuen amb j (ija, nja, jan).
+        "TRUTH: a state verb in the perfective means NOW, not the past: «iga» is «he is», «ira» "
+        "«he wants», «illa» «there is». Never call such a form a past tense. And when the "
+        "sentences you quote pronounce or spell the form differently from the name you give it "
+        "(our speakers say ija, nja, jan where the sheet writes iga, nga, gan), say so in the "
+        "same breath, in the same step: a reader who sees a rule about one letter and six "
+        "sentences with another letter cannot follow the lesson.\n"
         "STYLE: Latin script only (never Arabic script, never transliterations in brackets). Never mention example "
         "ids or numbers in the texts: refer to a sentence by quoting a few of its words. Talk to the learner («veuràs», "
         "«fixa't»), never about «the sheet» or «the reference».\n\n"
@@ -993,6 +1242,32 @@ def _words(t: str) -> int:
     return len(re.findall(r"[^\W\d_]+", t or ""))
 
 
+#: On viuen les imatges que hem triat nosaltres: les il·lustracions que fem per a una frase i el
+#: que puja l'amo. La resta són imatges trobades per la xarxa amb llicència lliure.
+OUR_MEDIA = ("res.cloudinary.com",)
+
+
+def our_picture(url: Optional[str]) -> bool:
+    """Si aquesta imatge la vam triar per a AQUESTA frase.
+
+    Una imatge trobada il·lustra com a molt una paraula, i de vegades ni això: a «ɣuri … / dari …»
+    «tinc …» li havia tocat una estàtua daurada d'un casino de Macau. Serveix per acompanyar una
+    frase que ja es llegeix; no serveix per a una pregunta on la imatge és l'enunciat, perquè
+    llavors la pregunta no es pot contestar. L'amo ho va dir així: «aquí no entenc la pregunta,
+    potser la imatge està malament»."""
+    u = (url or "").strip().lower()
+    return bool(u) and any(h in u for h in OUR_MEDIA)
+
+
+def _askable(kind: str, e: dict) -> bool:
+    """Si d'aquesta frase se'n pot fer una pregunta d'aquesta mena."""
+    if kind == "listen":
+        return bool(e.get("audio_url"))
+    if kind == "picture":
+        return our_picture(e.get("image_url"))
+    return True
+
+
 def _with_quizzes(lesson: dict, examples: List[dict]) -> dict:
     """A quick check after every explanation and a short review before the end, three kinds in turn:
     read the meaning and pick the sentence; listen to the voice and pick the meaning; look at the
@@ -1010,9 +1285,8 @@ def _with_quizzes(lesson: dict, examples: List[dict]) -> dict:
         if len(pool) < 4:
             continue
         kind = ("meaning", "listen", "picture")[n_quiz % 3]
-        need = {"listen": "audio_url", "picture": "image_url"}.get(kind)
         fresh = [e for e in s["examples"] if e["id"] not in used] + [e for e in pool if e["id"] not in used]
-        target = next((e for e in fresh if e in pool and (not need or e.get(need))), None)
+        target = next((e for e in fresh if e in pool and _askable(kind, e)), None)
         if target is None:
             kind, target = "meaning", next((e for e in fresh if e in pool), None)
         if target is None:
@@ -1048,10 +1322,9 @@ def _review_quizzes(pool: List[dict], used: set, n_quiz: int, how_many: int) -> 
     out = []
     for _ in range(how_many):
         kind = ("meaning", "listen", "picture")[n_quiz % 3]
-        need = {"listen": "audio_url", "picture": "image_url"}.get(kind)
-        target = next((e for e in pool if e["id"] not in used and (not need or e.get(need))), None)
+        target = next((e for e in pool if e["id"] not in used and _askable(kind, e)), None)
         if target is None:
-            kind, need = "meaning", None
+            kind = "meaning"
             target = next((e for e in pool if e["id"] not in used), None)
         if target is None:
             break
@@ -1104,6 +1377,63 @@ def quoted_ids(lesson: dict) -> set:
     return {i for i in ids if i is not None}
 
 
+def drill_for_row(db, slug: str, step: int, row: int, user, deep: bool = False) -> dict:
+    """La frase de la biblioteca que hi ha darrere una fila d'una taula de formes.
+
+    Una taula de formes és el lloc on la gramàtica es veu d'un cop d'ull —ɣur-i, ɣur-k, ɣur-s—
+    i fins ara era l'únic lloc de la lliçó que no es podia **dir**. L'amo: «crec que aquí
+    s'hauria de poder gravar la veu». Té raó: una forma que no s'ha sentit mai no se sap dir.
+
+    Funciona com les línies del Mètode: la primera vegada la fila es torna una frase de la
+    biblioteca (amb la seva unitat i demanant veu), i d'aleshores ençà s'hi afegeixen veus. La
+    lliçó se'n recorda, i per això el micròfon canvia de color quan ja és nostra.
+    """
+    import json
+
+    from models import Drill as DrillModel, GrammarLesson
+    r = db.query(GrammarLesson).filter(GrammarLesson.id == _row_id(slug, deep)).first()
+    if r is None:
+        raise ValueError("aquesta unitat encara no té lliçó")
+    lesson = json.loads(r.body)
+    steps = lesson.get("steps") or []
+    if not (0 <= step < len(steps)) or steps[step].get("type") != "pattern":
+        raise ValueError("aquí no hi ha cap taula de formes")
+    rows = steps[step].get("rows") or []
+    if not (0 <= row < len(rows)):
+        raise ValueError("aquí no hi ha cap fila")
+
+    ids = steps[step].get("drill_ids") or {}
+    got = ids.get(str(row))
+    if got:
+        d = db.query(DrillModel).filter(DrillModel.id == got).first()
+        if d:
+            return {"drill_id": d.id, "created": False}
+
+    cells = list(rows[row]) + ["", ""]
+    shi, ca = _clean_text(cells[0]), _clean_text(cells[1])
+    if not shi:
+        raise ValueError("aquesta fila no té cap forma per dir")
+
+    d = DrillModel(
+        text_tachelhit=shi, text_catalan=ca or None,
+        # D'on surt, dit a la cara: és una forma d'una taula del curs, no una frase que hagi dit ningú.
+        tag=f"gramatica-{slug}, taula de formes",
+        grammar=slug, grammar_source="owner",
+        voice_wanted=True,
+        voice_wanted_by=(getattr(user, "display_name", None) or getattr(user, "username", None)),
+        created_by_user_id=getattr(user, "id", None),
+    )
+    db.add(d)
+    db.commit()
+    db.refresh(d)
+
+    ids[str(row)] = d.id
+    steps[step]["drill_ids"] = ids
+    r.body = json.dumps(lesson, ensure_ascii=False)
+    db.commit()
+    return {"drill_id": d.id, "created": True}
+
+
 GROWTH = 0.3  # a unit that gained this share of drills (and at least 5) gets its lesson written again
 
 
@@ -1145,6 +1475,11 @@ def _current(row, unit_ids: Optional[set], deep: bool = False) -> Optional[dict]
 
 _writing: set = set()
 _write_lock = threading.Lock()
+
+#: Per què NO s'ha pogut escriure una lliçó, per unitat i nivell. Una escriptura que falla ho ha
+#: de dir: la pàgina deia «s'està escrivint ara mateix» per sempre i no hi havia manera de saber,
+#: des de fora, que el redactor estava sense crèdit.
+_failures: dict = {}
 
 
 def writing() -> List[str]:
@@ -1189,13 +1524,21 @@ def _write_in_background(session_factory, slug: str, grammar_md: str, examples: 
         db = session_factory()
         try:
             lesson = write_lesson(slug, grammar_md, examples, sheet=sheet_for(db, slug, grammar_md),
-                                  tables=tables, notes=notes_for(db, slug), deep=deep)
+                                  tables=tables,
+                                  notes=notes_for(db, slug, {e["id"]: (e.get("shi") or "", e.get("ca") or "") for e in examples}),
+                                  deep=deep)
             if unit_ids is not None:
                 lesson["unit_size"] = len(unit_ids)  # so growth of the unit can be noticed later
             _store_lesson(db, slug, lesson, deep=deep)
             print(f"[GRAMMAR] {'a fons' if deep else 'lesson'} {slug}: written ({len(lesson.get('steps') or [])} steps)")
         except Exception as e:
+            # I que es vegi. Una escriptura que falla deixava la pàgina dient «s'està escrivint
+            # ara mateix» per sempre: amb Gemini sense crèdit, els 22 nivells «a fons» que
+            # falten ho han dit tota la nit sense que res digués per què.
+            _failures[key] = {"when": time.time(), "why": str(e)[:200]}
             print(f"[GRAMMAR] {'a fons' if deep else 'lesson'} {slug}: {e}")
+        else:
+            _failures.pop(key, None)
         finally:
             try:
                 db.close()
@@ -1208,8 +1551,16 @@ def _write_in_background(session_factory, slug: str, grammar_md: str, examples: 
     return True
 
 
-def _placeholder(slug: str, examples: List[dict]) -> dict:
+def _placeholder(slug: str, examples: List[dict], deep: bool = False) -> dict:
     unit = next((u for u in UNITS if u["slug"] == slug), None)
+    failed = _failures.get(_row_id(slug, deep))
+    if failed:
+        return {"intro": "", "writing": False, "failed": failed["why"], "steps": [
+            {"type": "explain", "title": (unit or {}).get("title") or "Unitat",
+             "text": ("Aquesta lliçó no s'ha pogut escriure: " + failed["why"] + "\n\nMentrestant "
+                      "pots escoltar i llegir les frases de la unitat, que són les de sempre."),
+             "examples": examples[:4]},
+            {"type": "end"}]}
     return {"intro": "", "writing": True, "steps": [
         {"type": "explain", "title": (unit or {}).get("title") or "Unitat",
          "text": "S’està escrivint aquesta lliçó ara mateix. Mentrestant pots escoltar i llegir les frases de la "
@@ -1236,12 +1587,203 @@ def _with_notes(lesson, notes: Dict[int, str]):
     return lesson
 
 
-def _with_glosses(lesson, examples: List[dict]):
-    """Put the library's CURRENT word-by-word readings into a kept lesson, matched by drill id, so
-    a gloss that improves reaches the course without the lesson being written again."""
+#: Com escriuen els nostres parlants cada so. La unitat ensenya que la ɛ s'escriu «ɛ», i la
+#: biblioteca l'escriu «3» (vegeu #302): per saber si una frase PORTA el so que s'explica, s'han
+#: de conèixer les dues maneres.
+SOUND_SPELLINGS: Dict[str, tuple] = {
+    "ɣ": ("ɣ", "ġ", "gh"),
+    "x": ("x", "kh"),
+    "ɛ": ("ɛ", "ε", "3"),
+    "ḥ": ("ḥ",),
+    "š": ("š", "c", "sh", "ch"),
+    "ḍ": ("ḍ",),
+    "ṭ": ("ṭ",),
+    "ṣ": ("ṣ",),
+    "ẓ": ("ẓ",),
+    "q": ("q", "Q"),
+    "ž": ("ž",),
+    "kʷ": ("kʷ", "kw"),
+    "gʷ": ("gʷ", "gw"),
+}
+
+
+def step_sounds(title: str) -> set:
+    """Quins sons ensenya aquest pas.
+
+    Dues maneres de dir-ho, i totes dues surten a les lliçons escrites: citat —«El so 'gh' o
+    'ɣ': una 'r' francesa»— i llistat —«Consonants emfàtiques: ṭ, ḍ, ṣ, ẓ». La tifinag que el
+    servidor penja al costat del so («'gh ⵖ'») no compta per a la cerca."""
+    t = re.sub(r"[ⴰ-⵿]+", " ", title or "")
+    found = set()
+    for m in _QUOTED.finditer(t):
+        bit = (m.group(1) or "").strip()
+        for sound, spellings in SOUND_SPELLINGS.items():
+            if bit == sound or bit in spellings:
+                found.add(sound)
+    if not found:
+        # una llista de sons sense cometes: cada lletra sola, entre comes o espais
+        for sound in SOUND_SPELLINGS:
+            if re.search(r"(?<![^\W\d_])" + re.escape(sound) + r"(?![^\W\d_])", t):
+                found.add(sound)
+    return found
+
+
+def has_sound(shi: str, sound: str) -> bool:
+    """Si aquesta frase porta aquest so, escrit com sigui.
+
+    La biblioteca guarda les lletres DESCOMPOSTES —«sġix» és una g i un punt a sobre a part,
+    «3afaš» és una s i un capelló a part— i per això una comparació lletra a lletra amb «ġ» o
+    «š» no les trobava mai. Es compara sempre amb el text ajuntat (NFC)."""
+    low = unicodedata.normalize("NFC", shi or "").lower()
+    return any(unicodedata.normalize("NFC", sp).lower() in low
+               for sp in SOUND_SPELLINGS.get(sound, (sound,)))
+
+
+def with_the_sound_it_teaches(lesson, slug: str):
+    """A la unitat dels sons, un exemple ha de PORTAR el so que el pas explica.
+
+    El pas de la š ensenyava «skrtn» «mireu-les», que no en té cap, de š. Es treuen els que no
+    el porten —però només si al pas n'hi queda algun que sí—, perquè un pas sense cap exemple
+    seria pitjor que un pas amb exemples barrejats, i perquè així una frase escrita d'una manera
+    que encara no sabem llegir no desapareix de la lliçó sense que ningú se n'adoni.
+    """
+    if slug != SOUNDS_UNIT or not isinstance(lesson, dict):
+        return lesson
+    for s in lesson.get("steps") or []:
+        if s.get("type") != "explain" or not s.get("examples"):
+            continue
+        vocals = vocals_del_pas(s.get("title") or "")
+        if vocals:
+            # «Les vocals bàsiques: a, i, u» posava `Zr` i `trt` d'exemple, que no en porten cap
+            # (#365). «Fixa't com apareixen» damunt d'una paraula on no apareixen no ensenya res.
+            porten = [e for e in s["examples"]
+                      if any(porta_vocal(e.get("shi") or "", v) for v in vocals)]
+            if porten:
+                s["examples"] = _una_de_cada_vocal(porten, vocals)
+            continue
+        sounds = step_sounds(s.get("title") or "")
+        if not sounds:
+            continue
+        keep = [e for e in s["examples"]
+                if any(has_sound(e.get("shi") or "", so) for so in sounds)]
+        if keep and len(keep) < len(s["examples"]):
+            s["examples"] = keep
+        # I al davant, les que escriuen el so amb la seva lletra. El pas que ensenya que la ɛ
+        # s'escriu «ɛ» obria amb «shba3», «i3rQ», «A3wni»: totes porten el so, però cap no
+        # l'escriu com la lliçó diu que s'escriu. No se'n treu cap —el text és de qui el va
+        # escriure— però la primera que es llegeix és la que ensenya la lletra.
+        s["examples"] = sorted(s["examples"],
+                               key=lambda e: not written_with_the_letter(e.get("shi") or "", sounds))
+    return lesson
+
+
+#: Les lletres amazigues que no es poden confondre amb cap lletra del català: una «ṭ» soltada
+#: dins d'un títol és sempre la lletra, mentre que una «x» o una «q» podrien ser d'una paraula
+#: catalana i només s'anoten si van citades.
+_LLETRES_SOLES = ("ṭ", "ḍ", "ṣ", "ẓ", "ṛ", "ḥ", "ɣ", "ɛ", "š", "ž")
+
+#: Les vocals que la unitat dels sons ensenya.
+VOCALS = ("a", "i", "u")
+
+
+def _tifinag_de(lletra: str) -> str:
+    """La tifinag d'una lletra sola, o res si el transliterador no en treu cap."""
+    try:
+        import transliteration
+        return (transliteration.to_forms(lletra)["tifinagh"] or "").strip()
+    except Exception:
+        return ""
+
+
+def amb_lletres_als_titols(lesson):
+    """Un títol que anomena una lletra amaziga en llatí l'ha de dir també en tifinag.
+
+    «Consonants emfàtiques: ṭ, ḍ, ṣ, ẓ» citava quatre lletres i no en pintava cap (#366), i el
+    títol és el lloc on més es mira de tota la secció. El text de l'explicació ja passava per
+    `with_letters`; els títols no hi passaven, perquè es netegen amb `_clean_text`.
+
+    S'arregla en servir, com les glosses i la tifinag dels exemples: una lliçó ja escrita no ha
+    d'esperar que algú la reescrigui per dir les lletres que ensenya. Un títol que ja porta
+    tifinag no es toca.
+    """
     if not isinstance(lesson, dict):
         return lesson
-    have = {e["id"]: e["gloss"] for e in examples if e.get("gloss") and e.get("id")}
+    for s in lesson.get("steps") or []:
+        if not isinstance(s, dict):
+            continue
+        t = s.get("title") or ""
+        if not t or re.search(r"[ⴰ-⵿]", t):
+            continue
+        nou = with_letters(t)              # el que va citat: «'sh'» → «'sh ⵛ'»
+        if nou == t:                       # i el que va en llista: «: ṭ, ḍ, ṣ, ẓ»
+            for lletra in _LLETRES_SOLES:
+                tif = _tifinag_de(lletra)
+                if not tif:
+                    continue
+                nou = re.sub(r"(?<![^\W\d_])" + re.escape(lletra) + r"(?![^\W\d_])",
+                             lletra + " " + tif, nou)
+        if nou == t and re.search(r"vocals?", t, re.I):
+            # Les vocals van sense cometes i amb lletres que el català també fa servir («i» hi
+            # és una conjunció), així que només s'anota una llista neta darrere dels dos punts.
+            cap, _, cua = t.rpartition(":")
+            if cap and re.fullmatch(r"\s*[aiu](\s*,\s*[aiu])+\s*", cua):
+                nou = cap + ":" + re.sub(r"[aiu]", lambda m: m.group(0) + " " + _tifinag_de(m.group(0)), cua)
+        if nou != t:
+            s["title"] = nou
+    return lesson
+
+
+def vocals_del_pas(title: str) -> tuple:
+    """Quines vocals ensenya aquest pas, si en ensenya.
+
+    Només es mira si el títol parla de vocals i les llista darrere dels dos punts: en un títol
+    qualsevol, la «a» és una preposició i la «i» una conjunció, i les trobaríem a tot arreu."""
+    t = re.sub(r"[ⴰ-⵿]+", " ", title or "")
+    if not re.search(r"vocals?", t, re.I):
+        return ()
+    cua = t.rpartition(":")[2] if ":" in t else t
+    return tuple(v for v in VOCALS
+                 if re.search(r"(?<![^\W\d_])" + v + r"(?![^\W\d_])", cua, re.I))
+
+
+def porta_vocal(shi: str, vocal: str) -> bool:
+    return vocal in unicodedata.normalize("NFC", shi or "").lower()
+
+
+def _una_de_cada_vocal(examples: List[dict], vocals) -> List[dict]:
+    """Al davant, una paraula per vocal i les curtes primer.
+
+    «Fixa't com apareixen en aquests exemples» demana que s'hi vegin: `imi` (boca) ho ensenya
+    millor que una frase de set paraules on la i es perd."""
+    tria, vistos = [], set()
+    for v in vocals:
+        quines = sorted((e for e in examples
+                         if id(e) not in vistos and porta_vocal(e.get("shi") or "", v)),
+                        key=lambda e: len(e.get("shi") or ""))
+        if quines:
+            tria.append(quines[0])
+            vistos.add(id(quines[0]))
+    return tria + [e for e in examples if id(e) not in vistos]
+
+
+def written_with_the_letter(shi: str, sounds) -> bool:
+    """Si la frase escriu aquests sons amb la seva lletra (ɛ, ɣ, š) i no de la manera ràpida
+    (3, gh, sh). Vegeu #302: només el 8% de la biblioteca fa servir l'alfabet que el curs ensenya."""
+    low = unicodedata.normalize("NFC", shi or "").lower()
+    return any(so in low for so in sounds)
+
+
+def _with_glosses(lesson, examples: List[dict]):
+    """Put the library's CURRENT word-by-word readings AND Tifinagh into a kept lesson, matched by
+    drill id, so una lectura que millora arriba al curs sense reescriure la lliçó.
+
+    La tifinag va amb les glosses i per la mateixa raó. Quan es va arreglar el transliterador
+    (#304) les lliçons ja escrites seguien servint la tifinag del dia que es van escriure: la
+    unitat dels sons continuava ensenyant `sġix → ⵙⴳⵉⵅ`, amb una ⴳ, el dia després d'arreglar-ho.
+    Una conversió que millora no ha d'esperar que algú reescrigui la lliçó."""
+    if not isinstance(lesson, dict):
+        return lesson
+    have = {e["id"]: e for e in examples if e.get("id")}
     if not have:
         return lesson
     for s in lesson.get("steps") or []:
@@ -1251,9 +1793,13 @@ def _with_glosses(lesson, examples: List[dict]):
         if isinstance(s.get("example"), dict):
             shown.append(s["example"])
         for e in shown:
-            g = have.get(e.get("id"))
-            if g:
-                e["gloss"] = g
+            fresh = have.get(e.get("id"))
+            if not fresh:
+                continue
+            if fresh.get("gloss"):
+                e["gloss"] = fresh["gloss"]
+            if fresh.get("tif"):
+                e["tif"] = fresh["tif"]
     return lesson
 
 
@@ -1276,12 +1822,13 @@ def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool
     once, marked so the page can ask again."""
     from models import GrammarLesson
     try:
-        notes = notes_for(db, slug)
+        notes = notes_for(db, slug, {e["id"]: (e.get("shi") or "", e.get("ca") or "") for e in examples})
     except Exception:  # a database that has not met the notes table yet must still serve the course
         notes = {}
 
     def dressed(lesson):
-        return _with_notes(_with_glosses(lesson, examples), notes)
+        return amb_lletres_als_titols(
+            with_the_sound_it_teaches(_with_notes(_with_glosses(lesson, examples), notes), slug))
 
     if deep:
         examples = deep_first(db, slug, examples)
@@ -1292,7 +1839,7 @@ def get_lesson(db, slug: str, grammar_md: str, examples: List[dict], force: bool
     if session_factory is not None:
         _write_in_background(session_factory, slug, grammar_md, examples, unit_ids, tables, deep=deep)
         kept = _stored(row)
-        return dressed({**kept, "stale": True, "writing": True}) if kept else dressed(_placeholder(slug, examples))
+        return dressed({**kept, "stale": True, "writing": True}) if kept else dressed(_placeholder(slug, examples, deep))
     with _explain_lock:  # a script that asked for the lesson itself waits for it
         row = db.query(GrammarLesson).filter(GrammarLesson.id == _row_id(slug, deep)).first()
         lesson = None if force else _current(row, unit_ids, deep=deep)

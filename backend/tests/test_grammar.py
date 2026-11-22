@@ -6,6 +6,20 @@ import main
 from test_api import client
 
 
+def test_unit_titles_promise_nothing_the_audits_disproved():
+    # Recerca del 30-10: a Beni Mellal i Aït Mraw no hi ha ša/bu de reforç, dar-i és una sola fila
+    # negada, «manik» i «maymi» no hi surten, i el perfectiu no és sempre passat.
+    title = dict(grammar.TITLES)
+    assert "(passat)" not in title["perfectiu"]
+    assert "ša" not in title["negacio"] and "bu" not in title["negacio"].split()
+    assert "dar-i" not in title["ser-tenir"] and "ghori" in title["ser-tenir"]
+    assert "manik" not in title["preguntes"] and "maymi" not in title["preguntes"] and "makh" in title["preguntes"]
+    assert "lli" not in title["relatiu-participi"] and "nna" in title["relatiu-participi"]
+    # the classifier still has to recognise a Souss sentence, so the hint keeps what the title drops
+    assert "dar-i" in next(u["hint"] for u in grammar.UNITS if u["slug"] == "ser-tenir")
+    assert "not always a past" in next(u["hint"] for u in grammar.UNITS if u["slug"] == "perfectiu")
+
+
 def test_units_are_ordered_and_endpoint_lists_them():
     r = client.get("/grammar").json()
     assert [u["slug"] for u in r["units"]] == grammar.SLUGS and r["units"][0]["slug"] == grammar.SOUNDS_UNIT and r["units"][1]["slug"] == "formules"
@@ -55,7 +69,20 @@ def test_classification_fills_grammar_and_unit_page_shows_lesson_and_examples(mo
         {"type": "pattern", "title": "Formes", "rows": [["ur", "no", "ur rad dduɣ"]]},
         {"type": "tip", "text": "No oblidis ur."}, {"type": "dialect", "text": "A Beni Mellal s'hi afegeix ša."}]})
     sheet = "1. RULES: ur davant del verb."
-    monkeypatch.setattr(gemini_client, "gemini_generate", lambda sys_, contents, **k: calls.append(contents[0]["text"]) or (sheet if "STUDY SHEET in" in contents[0]["text"] else answer))
+    # Només les crides d'AQUESTA unitat. El canvi de gemini_generate és global, i l'escriptor de
+    # fons que una altra prova hagi engegat per a una altra unitat hi passa igualment: comptar-les
+    # totes feia que «len(calls) == 2» donés 7 segons l'ordre de les proves (#223). El full
+    # d'estudi i la lliçó porten tots dos el títol de la unitat al prompt, i els títols de les 23
+    # unitats són distints i cap no és tros d'un altre: el títol diu de qui és la crida.
+    titol = next(u["title"] for u in grammar.UNITS if u["slug"] == "negacio")
+
+    def demana(sys_, contents, **k):
+        text = contents[0]["text"]
+        if titol in text:
+            calls.append(text)
+        return sheet if "STUDY SHEET in" in text else answer
+
+    monkeypatch.setattr(gemini_client, "gemini_generate", demana)
     # What is being tested is the FIRST open of a unit, so the unit has to have no lesson yet:
     # another test may have written this one already, and then the page quite rightly serves it (#191).
     from models import GrammarLesson
@@ -301,11 +328,21 @@ def test_quizzes_and_excluded_language(monkeypatch):
     q = quizzes[0]
     assert q["kind"] == "meaning" and q["example"]["id"] == 1 and len(q["options"]) == 4 and q["options"][q["answer"]] == "frase 1" and q["question"] == "Com es diu «sentit 1»?"
     assert quizzes[1]["kind"] == "meaning"  # no voice in this pool: the listening check falls back to reading
-    voiced = [{**e, "audio_url": "https://x/a.webm", "image_url": "https://x/i.jpg"} for e in ex]
+    voiced = [{**e, "audio_url": "https://x/a.webm",
+               "image_url": f"https://res.cloudinary.com/du26ppvh0/image/upload/v1/tachelhit/illustrations/ill_{e['id']}.webp"} for e in ex]
     lesson = grammar._with_quizzes({"intro": "", "steps": [{"type": "explain", "title": "u", "text": "t", "examples": [voiced[0]]}] * 6}, voiced)
     kinds = [(s["kind"], s["options"][s["answer"]]) for s in lesson["steps"] if s["type"] == "quiz"]
     assert [k for k, _ in kinds] == ["meaning", "listen", "picture", "meaning", "listen", "picture"]
     assert kinds[1][1].startswith("sentit") and kinds[2][1].startswith("frase")  # listening: pick the meaning; picture: pick the sentence
+    # i una imatge TROBADA per la xarxa no fa cap pregunta: il·lustra com a molt una paraula, i
+    # com a enunciat no es pot contestar («ɣuri … / dari …» amb una estàtua d'un casino de Macau)
+    found = [{**e, "audio_url": "https://x/a.webm", "image_url": "https://thumb.wikimedia.org/x/golden_statue.jpg"} for e in ex]
+    lesson = grammar._with_quizzes({"intro": "", "steps": [{"type": "explain", "title": "u", "text": "t", "examples": [found[0]]}] * 6}, found)
+    assert "picture" not in [s["kind"] for s in lesson["steps"] if s["type"] == "quiz"]
+    assert grammar.our_picture("https://res.cloudinary.com/du26ppvh0/image/upload/v1/x.webp")
+    assert not grammar.our_picture("https://thumb.wikimedia.org/x.jpg") and not grammar.our_picture(None)
+    # i un motlle no és una frase: no es pot ni dir ni endevinar
+    assert not grammar.well_formed("ɣuri … / dari …") and not grammar.well_formed("ɣuri ... / dari ...")
     twin = ex + [{**ex[0], "id": 9, "shi": "una altra frase", "ca": "sentit 2"}]  # same meaning: never a wrong answer
     lesson = grammar._with_quizzes({"intro": "", "steps": [{"type": "explain", "title": "u", "text": "t", "examples": []}, {"type": "explain", "title": "d", "text": "t", "examples": [ex[1]]}]}, twin)
     asked = next(s for s in lesson["steps"] if s["type"] == "quiz" and s["example"]["id"] == 2)
@@ -320,11 +357,15 @@ def test_quizzes_and_excluded_language(monkeypatch):
         def __init__(self, id, shi, ca): self.id, self.text_tachelhit, self.text_catalan, self.image_url, self.audio_url, self.author, self.region, self.tag = id, shi, ca, None, None, None, None, None
     picked = grammar.pick_examples([R(1, "rix, trid, iri, nri", "voler"), R(2, "text", "x"), R(3, "ur ssinɣ", "no ho sé"), R(4, "UR SSINƔ", "no ho sé (bis)")])
     assert [e["id"] for e in picked] == [3]
-    # our speakers from Aït Mraw come first, then the Beni Mellal deck, then the rest
-    h = R(5, "ur ssinx", "no sé"); h.author = "Halima"
-    b = R(6, "ur ssinɣ ša", "no sé pas"); b.tag = "benimellal-anki, private"
+    # our speakers from Aït Mraw come first, then the Beni Mellal deck, then the rest — among
+    # sentences you can equally hear. A voiced sentence comes before a mute one whatever its
+    # source: see test_la_llico_tria_primer_les_frases_que_es_poden_escoltar.
+    h = R(5, "ur ssinx", "no sé"); h.author = "Halima"; h.audio_url = "https://x/h.webm"
+    b = R(6, "ur ssinɣ ša", "no sé pas"); b.tag = "benimellal-anki, private"; b.audio_url = "https://x/b.webm"
     o = R(7, "ur ssin", "no sap"); o.audio_url = "https://x/a.webm"
     assert [e["id"] for e in grammar.pick_examples([o, b, h])] == [5, 6, 7]
+    h.audio_url = None  # i la muda de casa cedeix el torn a les que sonen
+    assert [e["id"] for e in grammar.pick_examples([o, b, h])] == [6, 7, 5]
     assert grammar.pick_examples([h])[0]["origin"] == grammar.AIT_MRAW
     t = R(8, "ur ssinx", "no sé"); t.tag = "frase, Driss"  # the owner tags Driss's recordings by name
     assert grammar.our_speaker(t) == "Driss" and grammar.origin(t) == grammar.AIT_MRAW and grammar.our_speaker(o) is None
@@ -573,3 +614,340 @@ def test_a_lesson_written_by_hand_is_never_overwritten_by_the_machine():
     assert grammar._current(row, unit_ids=None) is None   # out of date again, so it gets rewritten
     json.loads(row.body)
     db.close()
+
+
+def test_una_fila_duna_taula_de_formes_es_pot_gravar():
+    """Una taula de formes és on la gramàtica es veu d'un cop d'ull —ɣur-i, ɣur-k, ɣur-s— i era
+    l'únic lloc de la lliçó que no es podia DIR. L'amo: «crec que aquí s'hauria de poder gravar
+    la veu». La primera vegada, la fila es torna una frase de la biblioteca que demana veu; la
+    segona, s'hi afegeix una veu en comptes de crear-ne una altra."""
+    import json
+
+    import main
+    from models import GrammarLesson
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("taula_gravadora")}
+    db = main.SessionLocal()
+    try:
+        # La base de proves sobreviu entre execucions i una altra prova pot haver deixat aquesta
+        # lliçó escrita: sense esborrar-la primer, la inserció peta amb UNIQUE i la prova falla
+        # segons l'ordre en què s'executi, no pel que comprova.
+        db.query(GrammarLesson).filter(GrammarLesson.id == "ser-tenir").delete()
+        db.commit()
+        db.add(GrammarLesson(id="ser-tenir", version=0, body=json.dumps({
+            "intro": "", "steps": [
+                {"type": "explain", "title": "u", "text": "t", "examples": []},
+                {"type": "pattern", "title": "Formes de «tenir»",
+                 "rows": [["ɣur-i", "tinc", "ɣur-i yan wuccn"], ["ɣur-k", "tens (home)", ""]]},
+            ]}, ensure_ascii=False)))
+        db.commit()
+    finally:
+        db.close()
+
+    r = client.post("/grammar/ser-tenir/row", headers=hdr, json={"step": 1, "row": 0})
+    assert r.status_code == 200, r.text
+    made = r.json()
+    assert made["created"] is True
+    d = made["drill"]
+    assert d["text_tachelhit"] == "ɣur-i" and d["text_catalan"] == "tinc"
+    assert d["voice_wanted"] is True, "neix demanant una veu"
+    assert "taula de formes" in (d.get("tag") or ""), "diu d'on surt"
+    assert "ser-tenir" in (d.get("grammar") or "")
+
+    again = client.post("/grammar/ser-tenir/row", headers=hdr, json={"step": 1, "row": 0}).json()
+    assert again["created"] is False and again["drill_id"] == made["drill_id"], "la segona vegada, una veu més"
+
+    # i la lliçó se'n recorda, perquè el micròfon pugui canviar de color
+    assert client.get("/grammar/ser-tenir/lesson", headers=hdr).json()["lesson"]["steps"][1]["drill_ids"]["0"] == made["drill_id"]
+
+    # el que no és una taula, o una fila que no hi és, no fa res
+    assert client.post("/grammar/ser-tenir/row", headers=hdr, json={"step": 0, "row": 0}).status_code == 400
+    assert client.post("/grammar/ser-tenir/row", headers=hdr, json={"step": 1, "row": 9}).status_code == 400
+
+
+def test_un_so_citat_porta_la_seva_tifinagh():
+    """L'amo: «és important que fem servir la lletra tifinagh… la tifinagh ha de ser present a
+    tot arreu, també al títol de l'explicació dels sons».
+
+    Una lliçó que ensenya un so citant-lo en llatí ensenya el so i no ensenya la lletra. Ara, un
+    so citat entre cometes porta la seva tifinagh al costat, al títol i al text.
+
+    El que NO fa: penjar una tifinagh a una paraula catalana citada. Un so és una lletra sola o
+    un dels parells que la llengua escriu junts; «fer» i «cas» es queden com són."""
+    import grammar
+
+    assert grammar.with_letters('El so «3» o «ɛ»') == 'El so «3 ⵄ» o «ɛ ⵄ»'
+    assert grammar.with_letters('la «gh» sona com la «ɣ»') == 'la «gh ⵖ» sona com la «ɣ ⵖ»'
+    assert grammar.with_letters('Vol dir «fer», no «cas»') == 'Vol dir «fer», no «cas»'
+    assert grammar.with_letters('ja porta ⵣ i «ɛ»') == 'ja porta ⵣ i «ɛ»', "si ja n'hi ha, no s'hi torna"
+    assert grammar.with_letters('') == ''
+
+    # i la lliçó servida la porta, encara que s'hagués escrit abans
+    import json
+
+    import main
+    from models import GrammarLesson
+    db = main.SessionLocal()
+    try:
+        row = db.query(GrammarLesson).filter(GrammarLesson.id == "sons-i-escriptura").first()
+        if row is None:
+            row = GrammarLesson(id="sons-i-escriptura", version=0, body="")
+            db.add(row)
+        row.hand_written = True
+        row.body = json.dumps({"intro": "", "steps": [
+            {"type": "explain", "title": 'El so «ɛ»', "text": 'La «ɛ» és faringi.', "examples": []},
+            {"type": "end"}]}, ensure_ascii=False)
+        db.commit()
+    finally:
+        db.close()
+    step = client.get("/grammar/sons-i-escriptura").json()["lesson"]["steps"][0]
+    assert step["title"] == 'El so «ɛ ⵄ»' and "ⵄ" in step["text"]
+
+
+def test_una_nota_que_parla_com_un_llibre_de_fonetica_no_sarriba_a_servir():
+    """La lliçó dels sons servia «la 'x' és una consonant uvular… un al·lòfon de la vocal
+    bàsica» a una unitat de nivell 1. Una nota així no es desa i, si ja està desada, no se serveix."""
+    import grammar as grammar_course
+    dolenta = ("La paraula «rix» mostra la vocal 'i' i la consonant 'x'. La 'x' és una consonant "
+               "uvular que pot obrir la vocal 'i', un al·lòfon de la vocal bàsica.")
+    assert grammar_course.note_problem(dolenta, "rix") is not None
+    bona = "El tros «rix» acaba en «x», el so raspat del fons de la boca: és el que ensenya aquesta unitat."
+    assert grammar_course.note_problem(bona, "rix") is None
+
+
+def test_una_taula_no_pot_citar_una_paraula_que_no_es_a_la_unitat():
+    """La taula «Sons difícils i la seva escriptura» citava «meddn» per a la ḍ (que no en té, de
+    ḍ) i «Tabrat» per a la ṭ: dues paraules que no surten a cap frase de la unitat."""
+    import grammar as grammar_course
+    taula = {"type": "pattern", "title": "Sons difícils", "rows": [
+        ["ɣ", "com la 'r' francesa", "Zrgh"],
+        ["ḍ", "una 'd' emfàtica", "meddn"],
+        ["ṭ", "una 't' emfàtica", "Tabrat"],
+    ]}
+    exemples = [{"shi": "Zrgh", "ca": "jo he vist"}, {"shi": "rix", "ca": "jo vull"}]
+    assert grammar_course.table_words_not_in_library(taula, exemples) == ["meddn", "Tabrat"]
+    exemples.append({"shi": "meddn", "ca": "la gent"})
+    assert grammar_course.table_words_not_in_library(taula, exemples) == ["Tabrat"]
+
+
+def test_el_compendi_arriba_a_qui_escrigui_la_llico_encara_que_gemini_hagi_caigut(monkeypatch):
+    """Abans el compendi només es carregava «si hi ha Gemini»: amb Gemini sense crèdit, la
+    reserva hauria escrit les lliçons sense la gramàtica d'amazic.cat a la mà."""
+    import main
+    monkeypatch.setattr(main, "gemini_available", lambda: False)
+    monkeypatch.setattr(main, "_load_grammar", lambda: "EL COMPENDI")
+    import deepseek_client
+    monkeypatch.setattr(deepseek_client, "deepseek_available", lambda: True)
+    assert main.writer_available() is True
+    assert main.grammar_reference() == "EL COMPENDI"
+    monkeypatch.setattr(deepseek_client, "deepseek_available", lambda: False)
+    assert main.writer_available() is False
+    assert main.grammar_reference() == ""
+
+
+def test_una_llico_que_no_sha_pogut_escriure_diu_per_que(monkeypatch):
+    """Amb Gemini sense crèdit, els 22 nivells «a fons» que falten han dit «s'està escrivint ara
+    mateix» tota la nit, cada vegada que algú els obria, sense que res digués per què. Una
+    escriptura que falla ho ha de dir."""
+    import grammar as grammar_course
+
+    class _Esclatat(RuntimeError):
+        pass
+
+    def esclata(*a, **k):
+        raise _Esclatat("Gemini API 402: sense crèdit")
+
+    monkeypatch.setattr(grammar_course, "write_lesson", esclata)
+    monkeypatch.setattr(grammar_course, "sheet_for", lambda *a, **k: "")
+    grammar_course._failures.clear()
+
+    import main
+    db = main.SessionLocal()
+    try:
+        started = grammar_course._write_in_background(main.SessionLocal, "imperatiu", "", [], None, deep=True)
+        assert started
+        for _ in range(100):           # el fil escriu de seguida; no s'espera més del que cal
+            if grammar_course._failures:
+                break
+            import time as _t; _t.sleep(0.05)
+        buit = grammar_course._placeholder("imperatiu", [], deep=True)
+        assert buit["writing"] is False
+        assert "402" in buit["failed"] and "402" in buit["steps"][0]["text"]
+        # i el nivell normal de la mateixa unitat segueix dient que s'està escrivint
+        assert grammar_course._placeholder("imperatiu", [], deep=False)["writing"] is True
+    finally:
+        grammar_course._failures.clear()
+        db.close()
+
+
+def test_lapostrof_del_catala_no_es_una_cometa():
+    """En català l'apòstrof viu dins les paraules —«ajuda'm», «l'aigua»— i es prenia per una
+    cometa: una nota que deia «vol dir 'ajuda'm'» sortia «vol dir 'ajuda'm ⵎ'». La ⵎ no la volia
+    ningú, i això ho llegia qui aprèn."""
+    import grammar as grammar_course
+    assert grammar_course.with_letters("«A3wni» vol dir 'ajuda'm'.") == "«A3wni» vol dir 'ajuda'm'."
+    assert grammar_course.with_letters("Diu 'dóna'm' i 'l'aigua'.") == "Diu 'dóna'm' i 'l'aigua'."
+    # i un so citat de debò segueix rebent la seva tifinag
+    assert grammar_course.with_letters("El so 'ɛ' es fa a la gola.") == "El so 'ɛ ⵄ' es fa a la gola."
+    assert grammar_course.with_letters("El so «gh».") == "El so «gh ⵖ»."
+
+
+def test_una_llico_ja_escrita_serveix_la_tifinag_daram_no_la_del_dia_que_es_va_escriure():
+    """Quan es va arreglar el transliterador (#304), les lliçons ja escrites seguien servint la
+    tifinag vella: la unitat dels sons ensenyava «sġix → ⵙⴳⵉⵅ», amb una ⴳ, el dia després
+    d'arreglar-ho. La tifinag es refresca com les glosses, en servir la lliçó."""
+    import grammar as grammar_course
+    guardada = {"intro": "", "steps": [
+        {"type": "explain", "title": "t", "text": "x",
+         "examples": [{"id": 7, "shi": "sġix", "ca": "jo compro", "tif": "ⵙⴳⵉⵅ"}]},
+        {"type": "end"}]}
+    daram = [{"id": 7, "shi": "sġix", "ca": "jo compro", "tif": "ⵙⵖⵉⵅ", "gloss": None}]
+    servida = grammar_course._with_glosses(guardada, daram)
+    assert servida["steps"][0]["examples"][0]["tif"] == "ⵙⵖⵉⵅ"
+
+
+def test_la_llico_tria_primer_les_frases_que_es_poden_escoltar():
+    """«numerals» servia 18 exemples muts de 42, i 10 sortien de la font que ja havia gastat les
+    seves gravades mentre una altra font encara en tenia. El repartiment entre fonts es manté,
+    però es fa primer amb les frases amb veu i només després amb les mudes."""
+    import grammar as grammar_course
+    paraules = ["argaz", "tigmmi", "afus", "imi", "aman", "tafukt", "azru", "agadir",
+                "ayyur", "tayri", "adrar", "akal", "alim", "almu", "tasa", "ul", "tawla", "axlul"]
+
+    def ex(i, origin, amb_veu):
+        return {"id": i, "shi": paraules[i % len(paraules)], "ca": "x", "image_url": None,
+                "audio_url": ("https://exemple/so.mp3" if amb_veu else None), "origin": origin}
+
+    # una font amb 2 gravades i 6 mudes, una altra amb 10 gravades
+    cands = ([ex(i, grammar_course.AIT_MRAW, i < 2) for i in range(8)]
+             + [ex(8 + i, "Beni Mellal", True) for i in range(10)])
+
+    deu = grammar_course._spread(cands, 10)
+    assert all(e["audio_url"] for e in deu), "amb dotze gravades, cap muda a les deu primeres"
+    assert {e["origin"] for e in deu} == {grammar_course.AIT_MRAW, "Beni Mellal"}, "i les dues fonts hi són"
+
+    totes = grammar_course._spread(cands, 18)
+    assert sum(1 for e in totes if not e["audio_url"]) == 6, "les mudes hi entren quan no queda res més"
+    assert all(e["audio_url"] for e in totes[:12]), "i sempre al final"
+
+
+def test_una_frase_gravada_sense_poble_no_sinventa_una_procedencia():
+    """La targeta d'un exemple deia «veu de parlant · gravació»: «gravació» ocupava el lloc de la
+    procedència sense dir-ne res. Una varietat que no sabem és feina pendent, no un lloc."""
+    import grammar as grammar_course
+
+    class R:  # noqa
+        def __init__(self):
+            self.id, self.text_tachelhit, self.text_catalan = 1, "ur ssinɣ", "no ho sé"
+            self.image_url = self.author = self.region = self.tag = None
+            self.audio_url = "https://exemple/so.webm"
+
+    d = R()
+    assert grammar_course.origin(d) == "", "sense poble, cap procedència inventada"
+    d.region = "Aït Mraw (Azilal)"
+    assert grammar_course.origin(d) == grammar_course.AIT_MRAW
+    d.region, d.tag = None, "benimellal-anki"
+    assert grammar_course.origin(d) == "Beni Mellal"
+
+
+def test_el_pas_dun_so_obre_amb_la_frase_que_lescriu_amb_la_seva_lletra():
+    """El pas que ensenya que la š s'escriu «š» obria amb «Shore», «Shora», «tshua»: totes
+    porten el so, cap no l'escriu com la lliçó diu. No se'n treu cap —el text és de qui el va
+    escriure— però la primera que es llegeix és la que ensenya la lletra."""
+    import grammar as grammar_course
+    def ex(shi):
+        return {"id": abs(hash(shi)) % 9999, "shi": shi, "ca": "x", "audio_url": None}
+    lesson = {"intro": "", "steps": [
+        {"type": "explain", "title": "El so 'sh' o 'š'", "text": "t",
+         "examples": [ex("Shore"), ex("tshua"), ex("3afaš"), ex("Sharjm")]},
+        {"type": "end"}]}
+    grammar_course.with_the_sound_it_teaches(lesson, grammar_course.SOUNDS_UNIT)
+    shown = [e["shi"] for e in lesson["steps"][0]["examples"]]
+    assert shown[0] == "3afaš", f"primer la que porta la š de debò, i surt {shown}"
+    assert set(shown) == {"Shore", "tshua", "3afaš", "Sharjm"}, "i no se'n perd cap"
+
+
+def test_el_titol_que_anomena_una_lletra_la_pinta_en_tifinag():
+    """«Consonants emfàtiques: ṭ, ḍ, ṣ, ẓ» citava quatre lletres i no en pintava cap (#366), i
+    el títol és el lloc on més es mira de la secció. S'arregla en servir: una lliçó ja escrita no
+    ha d'esperar que algú la reescrigui."""
+    import grammar as grammar_course
+
+    lesson = {"intro": "", "steps": [
+        {"type": "explain", "title": "Consonants emfàtiques: ṭ, ḍ, ṣ, ẓ", "text": "t", "examples": []},
+        {"type": "explain", "title": "Les vocals bàsiques: a, i, u", "text": "t", "examples": []},
+        {"type": "explain", "title": "El so 'gh ⵖ': una 'r' francesa", "text": "t", "examples": []},
+        {"type": "explain", "title": "Els noms: masculí i femení", "text": "t", "examples": []},
+        {"type": "end"}]}
+    grammar_course.amb_lletres_als_titols(lesson)
+    titols = [s.get("title") for s in lesson["steps"]]
+    assert titols[0] == "Consonants emfàtiques: ṭ ⵟ, ḍ ⴹ, ṣ ⵚ, ẓ ⵥ", titols[0]
+    assert titols[1] == "Les vocals bàsiques: a ⴰ, i ⵉ, u ⵓ", titols[1]
+    assert titols[2] == "El so 'gh ⵖ': una 'r' francesa", "el que ja en porta no es toca"
+    assert titols[3] == "Els noms: masculí i femení", "i un títol sense lletres amazigues tampoc"
+
+
+def test_la_seccio_de_les_vocals_ensenya_paraules_que_en_porten():
+    """«Fixa't com apareixen en aquests exemples» damunt de `Zr` i `trt`, que no porten cap
+    vocal, és el contrari d'ensenyar (#365). Al davant, una paraula per vocal i curta."""
+    import grammar as grammar_course
+
+    def ex(i, shi):
+        return {"id": i, "shi": shi, "ca": "x", "audio_url": None}
+
+    lesson = {"intro": "", "steps": [
+        {"type": "explain", "title": "Les vocals bàsiques: a, i, u", "text": "t",
+         "examples": [ex(1, "Zr"), ex(2, "trt"), ex(3, "bba"), ex(4, "illi"), ex(5, "udm"),
+                      ex(6, "aman n tagant")]},
+        {"type": "end"}]}
+    grammar_course.with_the_sound_it_teaches(lesson, grammar_course.SOUNDS_UNIT)
+    mostra = [e["shi"] for e in lesson["steps"][0]["examples"]]
+    assert "Zr" not in mostra and "trt" not in mostra, f"fora les que no en porten cap: {mostra}"
+    assert mostra[:3] == ["bba", "illi", "udm"], f"una de cada vocal i les curtes primer: {mostra}"
+    assert "aman n tagant" in mostra, "i no se'n perd cap de les que sí que en porten"
+
+
+def test_un_pas_de_vocals_sense_cap_exemple_bo_es_queda_com_esta():
+    """Un pas sense cap exemple seria pitjor que un pas amb exemples barrejats."""
+    import grammar as grammar_course
+
+    lesson = {"intro": "", "steps": [
+        {"type": "explain", "title": "Les vocals bàsiques: a, i, u", "text": "t",
+         "examples": [{"id": 1, "shi": "Zr", "ca": "veure"}]},
+        {"type": "end"}]}
+    grammar_course.with_the_sound_it_teaches(lesson, grammar_course.SOUNDS_UNIT)
+    assert [e["shi"] for e in lesson["steps"][0]["examples"]] == ["Zr"]
+
+
+def test_la_portada_duna_unitat_no_pot_ser_una_foto_trobada():
+    """La unitat dels possessius s'encapçalava amb una diapositiva d'un projecte de la Viquipèdia
+    en jukun: era la foto que havia heretat una frase, no una portada de res (#229). Una foto
+    trobada il·lustra com a molt una paraula —i de vegades ni això—, i no fa de portada."""
+    import main
+
+    class R:  # noqa — una frase, amb el que la portada mira
+        def __init__(self, id, image_url):
+            self.id, self.image_url = id, image_url
+
+    lesson = {"steps": [
+        {"type": "explain", "title": "Els possessius", "examples": [
+            {"id": 1, "shi": "ism inu", "image_url": "https://thumb.wikimedia.org/wikipedia/commons/x/Jukun.jpg"},
+            {"id": 2, "shi": "tarbat ino", "image_url": "https://res.cloudinary.com/du26ppvh0/image/upload/v1/tachelhit/illustrations/ill_2.webp"},
+        ]},
+        {"type": "end"}]}
+
+    db = main.SessionLocal()
+    try:
+        portada = main._grammar_cover(db, "possessius", lesson, [])
+        assert portada and "cloudinary" in portada, f"la nostra, i no la trobada: {portada}"
+
+        # Sense cap de nostra a la lliçó, es mira a les frases de la unitat; i si tampoc, CAP.
+        nomes_de_fora = {"steps": [{"type": "explain", "examples": [lesson["steps"][0]["examples"][0]]}]}
+        assert main._grammar_cover(db, "possessius", nomes_de_fora, [R(9, "https://upload.wikimedia.org/x.jpg")]) is None
+        amb_nostra = main._grammar_cover(db, "possessius", nomes_de_fora,
+                                         [R(9, "https://upload.wikimedia.org/x.jpg"),
+                                          R(10, "https://res.cloudinary.com/du26ppvh0/image/upload/v1/tachelhit/illustrations/ill_10.webp")])
+        assert amb_nostra and "ill_10" in amb_nostra
+    finally:
+        db.close()

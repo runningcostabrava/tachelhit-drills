@@ -9,6 +9,20 @@ TEST_DB = "test_drills.db"
 os.environ["DATABASE_URL"] = f"sqlite:///./{TEST_DB}"
 os.environ.pop("CHECK_SCHEMA", None)
 os.environ.pop("API_KEY", None)
+
+# Les proves no han de desar res a cap dipòsit de debò (#577).
+#
+# No n'hi ha prou de treure-les: el **MoviePy** fa `load_dotenv()` quan s'importa
+# (`moviepy/config.py:14`) i es carrega el `.env` que troba pujant pel disc — que a la màquina
+# d'en Pablo és el del repositori principal, amb les claus de R2 de producció. Com que el
+# MoviePy només s'importa quan alguna prova toca vídeo, a partir d'aquell punt la resta de la
+# bateria corria amb el dipòsit de debò configurat, i les proves que pugen mitjans fallaven
+# segons l'ordre. Costa de veure: per mòduls separats no passa mai.
+#
+# Posant-les a buit en comptes de treure-les, el `load_dotenv` del MoviePy ja no les toca
+# (no sobreescriu el que ja hi ha), i `magatzem` les veu buides i se'n va a Cloudinary.
+for _clau in ("R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"):
+    os.environ[_clau] = ""
 os.environ.setdefault("LEXICON_WARMUP", "0")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if os.path.exists(TEST_DB):

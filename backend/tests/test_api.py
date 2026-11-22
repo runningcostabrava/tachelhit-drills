@@ -980,3 +980,286 @@ def test_drafting_the_missing_words_never_touches_the_speakers_own_text(monkeypa
     kept = client.get(f"/drills/{spoken['id']}").json()
     assert kept["text_tachelhit"] == "aman"
     assert not kept.get("text_tachelhit_suggested"), "qui ja té paraules escrites no es toca"
+
+
+def test_la_biblioteca_diu_si_ja_te_una_frase_que_soni_igual():
+    """Three doors create sentences and none looked whether the library already held this one.
+
+    The comparison is by SOUND, not by spelling, because a text search would never put «aghrum»
+    and «aɣrum» together -- and those are the copies that actually happen. Nothing is forbidden:
+    saying the same sentence another way is what the variants are for. This only lets the person
+    know before writing a second copy of what we have."""
+    from test_api import client
+
+    first = client.post("/drills/", json={
+        "text_catalan": "el pa", "text_tachelhit": "a\u0263rum",
+        "author": "Halima"}).json()
+
+    # the same words in another spelling: no LIKE would find this
+    r = client.get("/drills/similar", params={"text": "aghrum", "field": "tachelhit"}).json()
+    assert first["id"] in [m["id"] for m in r["matches"]], r
+
+    # and in Tifinagh
+    r = client.get("/drills/similar", params={"text": "\u2d30\u2d56\u2d54\u2d53\u2d4e"}).json()
+    assert first["id"] in [m["id"] for m in r["matches"]]
+
+    # what it is not: another sentence
+    r = client.get("/drills/similar", params={"text": "aman d waman"}).json()
+    assert first["id"] not in [m["id"] for m in r["matches"]]
+
+    # the sentence being written does not match itself
+    r = client.get("/drills/similar", params={"text": "a\u0263rum", "exclude_id": first["id"]}).json()
+    assert first["id"] not in [m["id"] for m in r["matches"]]
+
+    # too short to mean anything
+    assert client.get("/drills/similar", params={"text": "a"}).json()["matches"] == []
+
+    # by meaning too, for when only the Catalan is written yet
+    r = client.get("/drills/similar", params={"text": "el pa", "field": "catalan"}).json()
+    assert first["id"] in [m["id"] for m in r["matches"]]
+
+
+def test_canviar_una_etiqueta_no_reescriu_el_text_del_parlant():
+    """The edit sheet used to PUT the whole row, so a new tag carried a stale copy of every other
+    field -- the speaker's own words included -- and quietly reverted anything changed meanwhile.
+    It now sends only what it touched. This is the server half: a partial body must leave the
+    rest exactly as it was."""
+    from test_api import client
+
+    d = client.post("/drills/", json={
+        "text_catalan": "la casa", "text_tachelhit": "tigmmi", "tag": "primer",
+        "text_tachelhit_suggested": "esborrany de la m\u00e0quina"}).json()
+
+    client.put(f"/drills/{d['id']}", json={"tag": "segon"})
+    back = client.get(f"/drills/{d['id']}").json()
+    assert back["tag"] == "segon"
+    assert back["text_tachelhit"] == "tigmmi", "el text del parlant no es toca"
+    assert back["text_catalan"] == "la casa"
+    assert back["text_tachelhit_suggested"] == "esborrany de la m\u00e0quina"
+
+
+def test_qui_pregunta_sap_quin_numero_te():
+    """The screen has to know whose a sentence is to say so before the work rather than after the
+    save; `may_change` compares ids, and /users/me did not give one."""
+    from test_api import client
+
+    me = client.get("/users/me").json()
+    assert isinstance(me.get("id"), int) and me["id"] > 0, me
+
+
+def test_cap_resposta_de_l_api_es_pot_reaprofitar():
+    """Una llista demanada just després d'escriure-hi no pot arribar d'abans d'escriure-hi.
+
+    Va passar de debò: una petició creada correctament a «Posa-hi veu» va aparèixer com a «res
+    pendent aquí», perquè la llista que es va tornar a demanar venia de just abans de crear-la.
+    Cap resposta d'aquesta API portava `Cache-Control`, i sense cap directiva un navegador aplica
+    el seu propi criteri.
+
+    Res del que torna val per a dues persones diferents ni per a dos moments diferents: les
+    llistes depenen de qui pregunta i canvien així que algú escriu."""
+    from test_api import client, register
+
+    for path in ("/health", "/petitions?kind=open", "/drills/?limit=1", "/method/"):
+        r = client.get(path)
+        assert r.headers.get("cache-control") == "no-store", (path, dict(r.headers))
+
+    # i el cas que ho va destapar, de punta a punta: demanar-ho i veure-ho
+    hdr = {"X-User-Token": register("petition_asker")}
+    before = client.get("/petitions?kind=open").json()["total"]
+    made = client.post("/petitions", headers=hdr,
+                       json={"text_catalan": "Em sap molt de greu", "note": None})
+    assert made.status_code == 200, made.text
+    after = client.get("/petitions?kind=open").json()
+    assert after["total"] == before + 1
+    assert made.json()["id"] in [x["drill"]["id"] for x in after["items"]], \
+        "el que acabes de demanar ha de sortir a la llista"
+
+
+def test_la_portada_diu_que_hi_ha_a_casa_sense_baixar_la_biblioteca():
+    """La portada era la graella de drills: sis megues de taula per obrir l'app, i la resta de
+    les parts penjades d'una barra a dalt. Ara `/home` diu el que hi ha darrere de cada porta
+    —capítols escrits, unitats amb lliçó, pràctiques, frases amb veu, frases que n'esperen— i
+    tot són COMPTES: no en surt ni una fila."""
+    r = client.get("/home")
+    assert r.status_code == 200, r.text
+    h = r.json()
+    for part, keys in (("library", ("sentences", "with_voice", "speakers", "varieties", "videos", "wanted")),
+                       ("method", ("chapters", "written")),
+                       ("grammar", ("units", "with_lesson")),
+                       ("practice", ("all", "mine"))):
+        for k in keys:
+            assert isinstance(h[part][k], int), f"{part}.{k} ha de ser un compte"
+    assert h["method"]["chapters"] == 10, "el Mètode té deu capítols"
+    assert h["grammar"]["units"] > 0
+    assert set(h["you"]) == {"signed_in", "name", "is_admin", "recordings"}
+    assert isinstance(h["you"]["recordings"], int)
+
+    # amb una frase gravada, els números es mouen; i qui té nom es veu reconegut
+    hdr = {"X-User-Token": register("qui_mira_la_portada")}
+    before = client.get("/home").json()["library"]
+    client.post("/drills/", headers=hdr, json={
+        "text_catalan": "la clau", "text_tachelhit": "tasarut", "author": "Halima",
+        "variety": "Aït Mraw", "audio_url": "https://res.cloudinary.com/x/video/upload/v1/k.mp3"}).raise_for_status()
+    after = client.get("/home", headers=hdr).json()
+    assert after["library"]["sentences"] == before["sentences"] + 1
+    assert after["library"]["with_voice"] == before["with_voice"] + 1
+    assert after["you"]["signed_in"] is True and after["you"]["name"]
+
+    # i una imatge per porta, de les nostres. Una imatge trobada per la xarxa no hi entra: a la
+    # portada enganyaria igual que enganyava fent-ne una pregunta
+    client.post("/drills/", headers=hdr, json={
+        "text_catalan": "el pa", "text_tachelhit": "aɣrum",
+        "image_url": "https://thumb.wikimedia.org/trobada_per_la_xarxa.jpg"}).raise_for_status()
+    ours = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "la porta", "text_tachelhit": "tiflut",
+        "image_url": "https://res.cloudinary.com/du26ppvh0/image/upload/v1/tachelhit/illustrations/ill_1.webp"}).json()
+    covers = client.get("/home").json()["covers"]
+    assert set(covers) == {"method", "grammar", "practice", "library", "stories", "capture"}
+    assert ours["image_url"] in covers.values(), "la nostra il·lustració sí"
+    assert not any("wikimedia" in (c or "") for c in covers.values()), "la trobada per la xarxa no"
+    shown = [c for c in covers.values() if c]
+    assert len(shown) == len(set(shown)), "cap porta repeteix la imatge d'una altra"
+
+
+def test_els_dibuixos_de_lapp_es_canvien_sense_desplegar_res():
+    """Els dibuixos que expliquen què és cada part viuen a la base de dades: es dibuixen un dia,
+    es miren, i el que no agrada es torna a dibuixar sense tornar a desplegar l'app. Mentre no
+    n'hi ha cap, la portada agafa una imatge de la biblioteca, que és millor que una porta buida."""
+    import main
+    from test_api import client, register
+
+    hdr = {"X-User-Token": register("qui_dibuixa")}
+    db = main.SessionLocal()
+    try:
+        me = client.get("/users/me", headers=hdr).json()
+        db.query(main.UserModel).filter(main.UserModel.id == me["id"]).first().is_admin = True
+        db.commit()
+    finally:
+        db.close()
+
+    drawn = "https://res.cloudinary.com/du26ppvh0/image/upload/v1/tachelhit/app/porta-metode.webp"
+    r = client.put("/artwork/home", headers=hdr, json={"covers": {"method": drawn, "grammar": "  "}})
+    assert r.status_code == 200, r.text
+    assert r.json()["covers"] == {"method": drawn}, "una adreça buida no es desa"
+    assert client.get("/artwork").json()["home"] == {"method": drawn}
+
+    home = client.get("/home").json()["covers"]
+    assert home["method"] == drawn, "el dibuix de la porta mana"
+    assert home["grammar"] != drawn, "i la resta segueix agafant el que hi ha"
+
+    assert client.put("/artwork/no-existeix", headers=hdr, json={"covers": {}}).status_code == 404
+    assert client.put("/artwork/home", json={"covers": {}}).status_code in (401, 403), "només qui administra"
+
+
+def test_cercar_una_frase_en_qualsevol_escriptura():
+    """L'amo: «una cosa primordial a l'aplicació hauria de ser buscar una frase o paraula».
+
+    Es busca per les dues llengües i per qualsevol escriptura: la mateixa frase es troba
+    escrivint «aghrum», «aɣrum» o «ⴰⵖⵔⵓⵎ», perquè el servidor compara també per so. I el que ha
+    entrat per fer proves no hi surt: qui busca busca la llengua d'aquesta biblioteca."""
+    hdr = {"X-User-Token": register("qui_cerca")}
+    mine = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "el pa de casa", "text_tachelhit": "aɣrum n-tgmmi"}).json()
+    client.post("/drills/", headers=hdr, json={
+        "text_catalan": "Bon dia", "text_tachelhit": "Maidin Mhaith", "tag": "Irish"}).raise_for_status()
+
+    def found(q):
+        return [d["id"] for d in client.get(f"/corpus/search?q={q}&limit=50").json()]
+
+    assert mine["id"] in found("aghrum"), "escrit a la manera del telèfon"
+    assert mine["id"] in found("a%C9%A3rum"), "escrit amb ɣ"
+    assert mine["id"] in found("pa de casa"), "i pel seu significat"
+    assert not any(d["text_tachelhit"] == "Maidin Mhaith"
+                   for d in client.get("/corpus/search?q=Maidin&limit=50").json()), "l'irlandès no hi és"
+
+
+def test_la_gamma_grega_i_la_llatina_son_la_mateixa_lletra():
+    """Un auditor amazigòleg va comptar 59 línies del capítol 4 amb una consonant de menys a la
+    tifinagh. La causa: el text estava escrit amb la GAMMA GREGA (γ, U+03B3) i l'EPSILON GREGA
+    (ε, U+03B5), que a la pantalla semblen les llatines (ɣ U+0263, ɛ U+025B) i no ho són. El que
+    el mapa no coneixia, el transliterador ho llençava en silenci: «riγ» sortia ⵔⵉ («ri»),
+    «aγrum» «pa» sortia ⴰⵖ… no: sortia ⴰⵔⵓⵎ, que ja és una altra paraula, i l'imperatiu «sγ»
+    «compra» sortia ⵙ, una sola lletra.
+
+    Ara les gregues —i la ġ de molts reculls— són la mateixa lletra que les llatines, també per
+    a la comparació per so: si no, una secció no pot ni trobar les seves pròpies frases."""
+    import practice
+    import transliteration
+
+    for greek, latin in (("riγ", "riɣ"), ("aγrum", "aɣrum"), ("sγ", "sɣ"),
+                         ("εcrin", "ɛcrin"), ("rubuε", "rubuɛ")):
+        assert transliteration.to_forms(greek)["tifinagh"] == transliteration.to_forms(latin)["tifinagh"], greek
+        assert practice.sound_key(greek) == practice.sound_key(latin), greek
+
+    assert transliteration.to_forms("aγrum")["tifinagh"] == "ⴰⵖⵔⵓⵎ"
+    assert transliteration.to_forms("sγ")["tifinagh"] == "ⵙⵖ"
+    # i la ġ dels reculls (yaġht) tampoc no es perd
+    assert "ⵖ" in transliteration.to_forms("yaġht")["tifinagh"]
+
+
+def test_les_dues_llistes_que_faltaven_a_posa_hi_veu():
+    """L'amo: «falten la llista de totes les frases sense veu, i les frases amb veu però sense
+    transcripció».
+
+    La primera hi era a mitges: «Només hi parla una màquina» és la mateixa llista filtrada pel
+    que el curs pot citar i ordenada per unitats, i per tant amaga frases. La segona no hi era
+    gens, i és l'altra meitat de la feina: una gravació que ningú no ha escrit no es pot buscar,
+    ni citar, ni entrar a cap lliçó — i qui la va dir ja va fer la part difícil."""
+    hdr = {"X-User-Token": register("qui_mira_el_que_falta")}
+    muda = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "la finestra", "text_tachelhit": "tabburt n-usmmiḍ"}).json()
+    client.put(f"/drills/{muda['id']}", headers=hdr, json={"audio_url": None, "audio_tts_shi_url": None})
+    sense_text = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "una cosa que algú va dir",
+        "audio_url": "https://res.cloudinary.com/x/video/upload/v1/veu.webm"}).json()
+
+    muts = client.get("/petitions?kind=voiceless&limit=200").json()
+    assert any(x["drill"]["id"] == muda["id"] for x in muts["items"]), "la muda hi és"
+    assert muts["total"] >= 1
+
+    sense = client.get("/petitions?kind=untranscribed&limit=200").json()
+    assert any(x["drill"]["id"] == sense_text["id"] for x in sense["items"]), "la veu sense escriure hi és"
+    assert all(not (x["drill"].get("text_tachelhit") or "") for x in sense["items"]), "i només n'hi ha d'aquestes"
+
+    assert client.get("/petitions?kind=no-existeix").status_code == 400
+
+    for drill_id in (muda["id"], sense_text["id"]):
+        client.delete(f"/drills/{drill_id}", headers=hdr)
+
+
+def test_la_primera_veu_mana_pero_no_la_de_qui_apren(monkeypatch):
+    """La primera veu d'una frase muda passa a ser la seva veu principal, que és el que l'amo
+    va demanar. Amb una condició que han posat els auditors: la d'algú que APRÈN, no.
+
+    `drill.audio_url` és el que sona al Mètode, el que sona a la pràctica i el que la comparació
+    de pronunciació fa servir de referència per puntuar tothom. Una primera presa d'algú que
+    aprèn es convertiria en l'objectiu que els altres han d'encertar. La gravació hi és igual i
+    s'escolta igual; el que no fa és manar."""
+    import io
+
+    import main
+    # a la CI no hi ha Cloudinary: la pujada es fa de mentida, que no és el que es mesura aquí
+    monkeypatch.setattr(main.cloudinary.uploader, "upload",
+                        lambda *a, **k: {"secure_url": "https://res.cloudinary.com/x/video/upload/v1/tachelhit/recordings/rec_prova.webm"})
+
+    hdr = {"X-User-Token": register("qui_apren_i_grava")}
+    muda = client.post("/drills/", headers=hdr, json={
+        "text_catalan": "la clau", "text_tachelhit": "tasarut"}).json()
+    client.put(f"/drills/{muda['id']}", headers=hdr, json={"audio_url": None, "audio_tts_shi_url": None})
+
+    fitxer = ("veu.webm", io.BytesIO(b"RIFF....WEBM" + b"0" * 2048), "audio/webm")
+    r = client.post(f"/drills/{muda['id']}/recordings", headers=hdr,
+                    files={"file": fitxer}, data={"is_native": "false"})
+    assert r.status_code == 200, r.text
+    after = client.get(f"/drills/{muda['id']}").json()
+    assert not (after.get("audio_url") or ""), "la veu de qui aprèn no passa a ser la principal"
+    preses = client.get(f"/drills/{muda['id']}/recordings").json()
+    assert len(preses) == 1 and preses[0]["is_native"] is False, "però la gravació hi és i s'escolta"
+
+    fitxer2 = ("veu2.webm", io.BytesIO(b"RIFF....WEBM" + b"0" * 2048), "audio/webm")
+    client.post(f"/drills/{muda['id']}/recordings", headers=hdr,
+                files={"file": fitxer2}, data={"is_native": "true"})
+    after = client.get(f"/drills/{muda['id']}").json()
+    assert (after.get("audio_url") or ""), "la d'un parlant sí"
+
+    client.delete(f"/drills/{muda['id']}", headers=hdr)

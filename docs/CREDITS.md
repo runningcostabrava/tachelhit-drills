@@ -13,7 +13,11 @@ citació va aquí sencera, tal com la demanen.
 ## 1. Les veus i les frases
 
 El gruix de la biblioteca són gravacions de parlants que han dit les frases per a aquest projecte
-— Halima i Driss (Aït Mraw), i els reculls de Beni Mellal i Azilal. Cada drill porta qui parla
+— **Halima Akajji** i **Driss Akajji** (Aït Mraw), i els reculls de Beni Mellal i Azilal.
+Sense les seves veus no hi hauria ni curs ni Mètode: la llengua que s'ensenya aquí és la que
+diuen ells.
+
+Cada drill porta qui parla
 (`speaker`, `author`), d'on és (`variety`, `region`) i la llicència que va triar qui va gravar
 (`license`; el reproductor la mostra al costat del so). El text del parlant no es reescriu mai amb
 una màquina: la sortida automàtica va a `*_suggested` i la decideix una persona.
@@ -38,6 +42,54 @@ les seccions numerades per escriure cada unitat. **Els PDF no es committegen**:
 > **Pendent de verificar:** les pàgines públiques d'amazic.cat no porten cap nota de llicència ni
 > de copyright per al compendi. Mentre no ho sapiguem, el tractem com a material de tercers amb
 > tots els drets reservats: se cita, no es redistribueix, i el text extret no surt del repositori.
+
+## 2b. El Mètode
+
+L'àrea **El Mètode** és una adaptació, capítol per capítol, d'un manual publicat:
+
+> **Abdallah El Mountassir**, *Méthode de Tachelhit. Langue amazighe (berbère) du sud du Maroc*,
+> L'Asiathèque — Maison des langues du monde, Collection Langues & Mondes, París, 2009.
+> Edició italiana: *Metodo di tachelhit. Lingua amazigh (berbera) del sud del Marocco*,
+> Università degli Studi di Napoli «L'Orientale», Studi Africanistici — Quaderni di Studi Berberi
+> e Libico-berberi 6, 2017.
+
+El Mètode el **segueix tan a prop com calgui**: explicacions, estructura, diàlegs i lèxic. El
+que es canvia és el que la nostra varietat (Atles central) diu d'una altra manera; la resta es
+queda com és. L'autor n'està assabentat i hi està d'acord (23-10-2026).
+
+### El CD del manual
+
+El manual porta un CD, i el 25-10-2026 el vam trobar sencer en una llista de YouTube: cinc
+pistes, capítols 1 a 6, 39 minuts. És **la veu de l'autor dient el que el llibre ensenya**, que
+és justament el que al Mètode li falta.
+
+> Enregistraments del CD de *Méthode de Tachelhit*, d'**Abdallah El Mountassir**
+> (L'Asiathèque, París, 2009). Reproduïts amb el seu permís.
+
+El propietari del projecte ho està parlant amb l'autor i dóna per fet que el tindrem
+(25-10-2026). **Fins que ho confirmi, el so no entra ni a l'app ni al repositori:** les pistes i
+els seus 646 talls viuen fora, i el que tenim a dins és un índex que diu en quin segon del CD
+cau cada línia dels nostres capítols. El dia que hi hagi el sí, només cal engegar-ho.
+
+I quan hi sigui, el crèdit va **al costat del botó d'escoltar**, no amagat al peu: qui prem per
+sentir una frase ha de veure de qui és la veu.
+
+**El que segueix sent nostre i no ve d'enlloc més:** les veus. Cap frase del Mètode sona si no la
+diu una persona de debò que el projecte conegui, i cap veu sintètica es fa passar per amazic. El
+llibre pot donar el text; qui el diu el posem nosaltres.
+
+**La varietat es diu sempre.** El manual és tachelhit del Souss i nosaltres ensenyem Atles
+central: quan una frase ve del llibre i encara no està adaptada, es diu, i quan en tenim una de
+nostra que diu la mateixa cosa, s'ensenyen de costat.
+
+Cada capítol porta aquesta citació al peu. La decisió és a
+[ADR 0004](adr/0004-el-metode-parteix-del-llibre.md), que substitueix
+l'[ADR 0003](adr/0003-el-metode-pren-el-pla-mai-les-paraules.md) (el que es va decidir abans de
+tenir permís, i que es conserva com a registre).
+
+> **Apuntat per si algun dia fa falta:** el que hi ha és de paraula, i l'edició italiana es va
+> fer «per gentile concessione dell'autore **e di L'Asiathèque**» — també de l'editorial, que té
+> els drets d'edició del llibre de 2009. Un correu que ho deixi per escrit no costa res.
 
 ## 3. El lèxic
 
@@ -85,6 +137,24 @@ clips no sabríem què val res. **Sí que hi ha una condició que vam acceptar e
 intentar esbrinar qui són els parlants («you agree to not determine the identity of speakers in
 the dataset»). Els clips es queden fora del repositori.
 
+### Tutlait v1 (Ma-OpenHub)
+
+**CC BY 4.0.** 21 hores de tamazight parlat per 118 persones, amb l'accent etiquetat: **9.053
+talls de l'Atles**, 3.015 del Souss, i restes del Rif i de Cabília. Cada tall porta
+identificador de parlant i una **traducció a l'àrab estàndard — no una transcripció**: el que es
+va dir en amazic no està escrit enlloc, i això és justament el que el fa útil i el que el limita.
+
+La llicència demana atribució, i aquí queda:
+
+> Chadi, Mohamed-Amine; Ait El Arbi, Ezzahra; Khayoub, Ismail; Fadili, Aymane; Ennhili, Yassine;
+> Bouali, Jadjigua; Inhid, Hanane; Ameksa, Mohammed; Mousannif, Hajar (2026).
+> *Tutlait v1: Tamazight Speech with Arabic Translations*. Hugging Face.
+> https://huggingface.co/datasets/Ma-OpenHub/Tutlait-v1
+
+Cada frase que n'entri a la biblioteca porta `license = CC BY 4.0`, `source_url` a aquesta
+pàgina i, com a parlant, l'identificador del corpus («TutlAit · spk_010»), no un nom nostre: són
+veus que el projecte no coneix i no ho faran veure.
+
 ### Awal Tamazight Dataset (CIEMEN / projecte Awal)
 
 **CC BY 4.0.** Condició que posa el mateix conjunt de dades, textualment:
@@ -116,6 +186,68 @@ documents), el mateix contingut que `collectivat/amazic` a HuggingFace. El proje
 recull veu — el seu article parla de «6,421 translation pairs and 3 hours of speech data» — però
 aquelles gravacions **no són** dins del conjunt publicat. Si algun dia n'entra res a l'app, l'avís
 de dalt ja hi és i s'ha de poder llegir també dins de l'app.
+
+## 5b. Dos vídeos de l'alfabet — PERMÍS DEMANAT, ENCARA NO CONCEDIT
+
+Per al capítol dels sons hem estudiat dos vídeos públics de YouTube. **Cap dels dos no és
+a l'app**: ni el so, ni les imatges, ni cap retall. Són material amb tots els drets reservats
+(llicència estàndard de YouTube), i fins que qui els va fer no digui que sí, aquí només
+hi ha la nota i les còpies de treball, fora del repositori.
+
+| | |
+|---|---|
+| **«Apprends le Tamaziɣt berbère, leçon N°1 — L'alphabet gréco-latin et tifinaɣ avec les illustrations»** | Brahim Mansoub (muntatge: Mohamed Elaamrani) · [youtube.com/watch?v=MZJVoHUGljE](https://www.youtube.com/watch?v=MZJVoHUGljE) · 18-06-2020 · 11 min |
+| Què n'hem tret | El vocabulari il·lustrat: una o dues paraules per lletra amb el seu significat en francès (`aɣrum` pa, `afus` mà, `tasa` fetge, `udem` cara, `adrar` muntanya…). |
+| **«ⵉⵙⴽⴽⵉⵍⵏ ⵏⵜⵎⴰⵣⵉⵖⵜ — Amazigh alphabet»** | canal *Atlas* · [youtube.com/watch?v=ASkEo4Y9IEI](https://www.youtube.com/watch?v=ASkEo4Y9IEI) · 03-03-2018 · 1 min 29 |
+| Què n'hem tret | La veu de les 33 lletres, una per una: 33 talls alineats amb la lletra que es veia a la pantalla en dir-la (`ⴰ` Ya, `ⴱ` Yab, `ⴳⵯ` Yagʷ…). |
+
+**El que falta fer, per ordre:**
+
+1. Escriure a tots dos canals i demanar permís per fer servir, a una app gratuïta per aprendre
+   la llengua, (a) el vocabulari il·lustrat i (b) els 33 talls de veu, amb el seu nom a sota.
+2. Mentre no contestin: el capítol dels sons pot fer servir les **paraules** (una paraula i el
+   seu significat no són seus: són de la llengua) però cap **imatge** i cap **so** d'ells.
+3. Si diuen que sí: pujar els talls amb `license` i `source_url`, i el nom del canal visible al
+   costat del botó de so, com qualsevol altra font.
+4. Si diuen que no, o no contesten: gravar les 33 lletres amb les nostres veus (Halima, Driss)
+   i esborrar les còpies de treball.
+
+## 5c. IRCAM — Tamawalt i el corpus del portal TALAM (#381 — portal TALAM de l'IRCAM)
+
+L'Institut Royal de la Culture Amazighe publica les seves eines de llengua al portal
+[tal.ircam.ma/talam](https://tal.ircam.ma/talam/). Font donada pel propietari el 27-10-2026.
+
+| | |
+|---|---|
+| **Tamawalt n imeẓẓyann** — diccionari il·lustrat per a infants | IRCAM · [tal.ircam.ma/tamawalt](https://tal.ircam.ma/tamawalt/) |
+| Què n'hem tret | **487 paraules i els noms de les 33 lletres del tifinag, cadascuna amb la seva gravació.** Són drills amb l'etiqueta `ircam-tamawalt` / `ircam-tamawalt-alfabet`. El text és el tifinag tal com l'escriu l'IRCAM, amb una lectura en llatí i el significat en català (traduït del francès i l'anglès de l'IRCAM). Cada drill porta `source_url` a la seva fitxa, `speaker` «IRCAM (Tamawalt)» i `variety` `zgh`. |
+| La veu | **No sabem qui parla.** És amazic estàndard, no la varietat de cap veu nostra. Serveix per escoltar; no és una veu de referència per al «digues-ho tu» (#288, #273). |
+| Llicència | La web no en publica cap per a l'àudio. |
+| **Corpus textual en amazic** i **corpus anotat morfosintàcticament** | IRCAM · [corpus.php](https://tal.ircam.ma/talam/corpus.php) · Creative Commons, amb l'obligació de citar l'IRCAM |
+| Què n'hem tret | Res a l'app encara. Fem servir les freqüències del sud (taixelhit, 224.000 mots) per triar què gravar (#381). |
+
+## 5d. Els canals amb transcripció humana que han afinat el transcriptor (16-11-2026)
+
+Tres canals de YouTube han posat, sense saber-ho al principi i amb el seu sí després, la primera
+veritat humana de volum que ha mogut el model acústic (`docs/recerca/zouhir-amazigh.md`,
+`ocr-tifinag-impres.md`). Permisos a [`PERMISOS.md`](PERMISOS.md); aquí, el crèdit:
+
+- **Zouhir Amazigh** (`https://www.youtube.com/@zouhiramazigh138`): 33 vídeos de divulgació en
+  amazic estàndard (ciència, història, salut, «la meva ciutat») amb la pista en tifinag escrita
+  per l'autor i alineada amb anglès, àrab i francès. 1.128 rètols i 68 minuts de veu han
+  entrenat i mesurat l'adaptador `shi` que serveix al Space des del 16-11-2026.
+- **BerberFreeQuranEducation** (`UCmlGmHeQOUL7AhYFmGHu8kw`): 17 vídeos de predicació en taixelhit
+  amb la pista en tifinag (parlants: ⴰⵙⵍⵎⴰⴷ ⵄⴰⵍⵉ ⵀⵉⴷⴰⵢⴰⵜ, ⵢⵓⵛⴰⵄ ⵉⵠⴰⵏⵥ). Els rètols nets també
+  han entrenat l'adaptador.
+- **aslmdtv** (`https://www.youtube.com/@aslmdtv`): el llibre escolar «ⴰⴱⵔⵉⴷ ⵏ ⵓⵎⵓⵔⵙ» (tamazight
+  de l'Atles central, nivells 1-3) llegit en veu alta amb el text a la pantalla. 63 vídeos
+  llegits pel lector de plantilles: 1.034 files i 5.215 paraules de text imprès amb la seva veu.
+  Encara no entrena res: cal alinear-ne els temps.
+- **Tamazight For All** (Naceur Jabouja Ulmer) ja consta més amunt: els seus 226 versos amb
+  subtítol humà són el test de sempre del transcriptor.
+
+El text d'aquests autors és text d'autor: es cataloga i serveix per entrenar i mesurar, no es
+reescriu ni entra a la biblioteca com si fos nostre.
 
 ## 6. Eines i serveis
 

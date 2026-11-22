@@ -30,7 +30,12 @@ STYLE = (
 
 
 def illustration_available() -> bool:
-    return gemini_available()
+    """Si hi ha algú que pugui dibuixar: Gemini, o un Space públic de FLUX amb el nostre token.
+
+    El dia que el compte de Gemini es va quedar sense crèdit, l'app va deixar de poder dibuixar
+    res. Tenir-ne dos vol dir que una cosa que no depèn de nosaltres no atura la feina."""
+    import flux_space
+    return gemini_available() or flux_space.available()
 
 
 def illustration_prompt(text: str, hint: str | None = None) -> str:
@@ -82,17 +87,35 @@ def shrink(png: bytes, side: int = 800) -> bytes:
 
 
 def generate_illustration(text: str, hint: str | None = None, timeout: int = 120) -> bytes:
-    """WebP bytes for the sentence (see shrink). Raises RuntimeError when Gemini returns no
-    image (safety block, quota) so callers can fall back to another source."""
-    payload = {
-        "contents": [{"role": "user", "parts": [{"text": illustration_prompt(text, hint or describe_scene(text))}]}],
-        "generationConfig": {"responseModalities": ["IMAGE"]},
-    }
-    data = _generate_content(payload, timeout, model=IMAGE_MODEL)
-    for cand in data.get("candidates") or []:
-        for part in cand.get("content", {}).get("parts", []):
-            inline = part.get("inlineData") or part.get("inline_data")
-            if inline and inline.get("data"):
-                return shrink(base64.b64decode(inline["data"]))
-    finish = ((data.get("candidates") or [{}])[0]).get("finishReason", "?")
-    raise RuntimeError(f"Gemini returned no image (finishReason={finish})")
+    """WebP bytes for the sentence (see shrink).
+
+    Gemini first —it reads the Catalan sentence itself and draws the scene— and, if it cannot
+    (no credit, a safety block, no key), a public FLUX Space with our Hugging Face token. Raises
+    RuntimeError only when NOBODY could draw, so callers can fall back to another source.
+    """
+    import flux_space
+    scene = hint or describe_scene(text)
+    errors = []
+    if gemini_available():
+        payload = {
+            "contents": [{"role": "user", "parts": [{"text": illustration_prompt(text, scene)}]}],
+            "generationConfig": {"responseModalities": ["IMAGE"]},
+        }
+        try:
+            data = _generate_content(payload, timeout, model=IMAGE_MODEL)
+            for cand in data.get("candidates") or []:
+                for part in cand.get("content", {}).get("parts", []):
+                    inline = part.get("inlineData") or part.get("inline_data")
+                    if inline and inline.get("data"):
+                        return shrink(base64.b64decode(inline["data"]))
+            finish = ((data.get("candidates") or [{}])[0]).get("finishReason", "?")
+            errors.append(f"Gemini returned no image (finishReason={finish})")
+        except Exception as e:
+            errors.append(f"Gemini: {type(e).__name__}: {str(e)[:160]}")
+    if flux_space.available():
+        try:
+            # Sense escena, el dibuix l'ha de treure de la frase mateixa: li donem el text tal qual.
+            return shrink(flux_space.draw(illustration_prompt(text, scene)))
+        except Exception as e:
+            errors.append(str(e)[:200])
+    raise RuntimeError("; ".join(errors) or "no hi ha cap manera de dibuixar")

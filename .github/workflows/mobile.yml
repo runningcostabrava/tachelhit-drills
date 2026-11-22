@@ -35,16 +35,30 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run build
       - run: npx cap sync android
-      # Same debug signature on every build, so the APK updates in place on a phone
-      # instead of failing with INSTALL_FAILED_UPDATE_INCOMPATIBLE (each runner would
-      # otherwise mint its own debug key). The secret is the owner's ~/.android/debug.keystore.
+      # La mateixa signatura a tots els builds, perquè l'APK s'actualitzi al telèfon en comptes
+      # de demanar desinstal·lar-lo —i desinstal·lar esborra les dades locals, el testimoni
+      # d'usuari inclòs (#338). Es desa AL COSTAT DEL PROJECTE i no a la carpeta de l'usuari:
+      # allà qui decidia quin fitxer feia servir era el plugin, i dos builds de dos dies van
+      # sortir amb dues claus diferents. El fitxer el llegeix app/build.gradle pel seu nom.
       - name: Restore the shared debug keystore
-        if: ${{ env.KS != '' }}
         env:
           KS: ${{ secrets.ANDROID_DEBUG_KEYSTORE_B64 }}
-        run: mkdir -p ~/.android && echo "$KS" | base64 -d > ~/.android/debug.keystore
+        run: |
+          if [ -z "$KS" ]; then
+            echo "::warning::Sense ANDROID_DEBUG_KEYSTORE_B64 aquest APK va signat amb una clau nova i no pot actualitzar cap instal·lacio anterior (#338)."
+            exit 0
+          fi
+          printf '%s' "$KS" | base64 -d > android/app/debug.keystore
+          ls -l android/app/debug.keystore
       - run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
         working-directory: frontend/android
+      # Que cada build digui amb quina clau va signat. L'empremta no és cap secret, i és l'única
+      # manera de veure que dos builds no quadren sense haver-ho de descobrir en un telèfon.
+      - name: Say which key signed it
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | tail -1)
+          "$APKSIGNER" verify --print-certs android/app/build/outputs/apk/debug/app-debug.apk \
+            | grep -iE "certificate DN|SHA-256 digest"
       - uses: actions/upload-artifact@v4
         with:
           name: tachelhit-drills-android-debug

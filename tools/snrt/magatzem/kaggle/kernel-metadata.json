@@ -1,0 +1,13 @@
+{
+  "id": "josepabloucr/retall-sencer-contra-retallat",
+  "title": "retall sencer contra retallat",
+  "code_file": "retall-sencer-contra-retallat.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": ["josepabloucr/snrt-retall"],
+  "competition_sources": [],
+  "kernel_sources": []
+}

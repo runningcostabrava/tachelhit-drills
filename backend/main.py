@@ -1,19 +1,21 @@
 # INFO: Project: Tachelhit Drills. Feature: ASR, Correction, Translation, Video Processing. Status: Active.
 import asyncio
 import threading
+import time
 import os
 import sys
 import glob
 import subprocess
 import json
+from functools import lru_cache
 import traceback
 import tempfile
+from pathlib import Path
 import shutil
-import yt_dlp
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from urllib.parse import quote
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Body, Form, BackgroundTasks, Request, Response
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Body, Form, BackgroundTasks, Request, Response, Query
 from fastapi.encoders import jsonable_encoder
 from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -29,9 +31,19 @@ from tts_text import tts_text, VOICE_VERSION
 import topics as topics_catalog
 import grammar as grammar_course
 import practice_steps
+import method as method_mod
+import baba_ali  # la serie Baba Ali: quin video es cada episodi
 import practice as practice_mod
 import stories as stories_mod
+import analisi
+import glossa
+import tram
+import escoltar
+import night_asr
+import exercicis
+import revisa
 import word_audio
+import alfabet
 import transliteration
 from gemini_client import gemini_generate, gemini_available, gemini_agent, BudgetExceeded
 import gemini_client
@@ -39,6 +51,7 @@ import ai_budget
 import dialect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, false as sa_false, func as sa_func
 from sqlalchemy.orm import sessionmaker, Session
@@ -46,7 +59,27 @@ import requests
 from dotenv import load_dotenv
 import cloudinary
 import cloudinary.uploader
-from gradio_client import Client, handle_file
+
+# El que NO es carrega en arrencar.
+#
+# El servei gratuït s'adorm als 15 minuts, de manera que cada visita desperta un servidor nou i
+# qui obre l'app paga l'arrencada sencera. Importar-ho tot d'entrada costava 18 segons, i 13
+# eren llibreries que la immensa majoria de peticions no toquen mai: moviepy i yt-dlp (vídeo),
+# el client d'OpenAI (correcció) i el de Gradio (els Spaces de Hugging Face).
+#
+# Aquesta funció manté el nom i difereix el mòdul: les crides no canvien, i el mòdul de debò
+# s'importa la primera vegada que algú el fa servir. La primera petició de vídeo paga els seus
+# segons; la resta, cap.
+def _lazy(module: str, name: str):
+    def call(*args, **kwargs):
+        import importlib
+        return getattr(importlib.import_module(module), name)(*args, **kwargs)
+    call.__name__ = name
+    return call
+
+
+Client = _lazy("gradio_client", "Client")
+handle_file = _lazy("gradio_client", "handle_file")
 
 from deep_translator import GoogleTranslator
 
@@ -71,10 +104,15 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
 
-from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel, LessonProposal as LessonProposalModel, AppSetting as AppSettingModel, CaptureRequest as CaptureRequestModel, DrillTombstone as DrillTombstoneModel, UserSession as UserSessionModel, GeminiUsage as GeminiUsageModel  # ← Alias for ORM models
+from models import Base, Drill as DrillModel, Test as TestModel, TestAttempt as TestAttemptModel, YouTubeShort as YouTubeShortModel, VideoProcessingJob as VideoProcessingJobModel, VideoSegment as VideoSegmentModel, GlossaryItem as GlossaryItemModel, DrillReview as DrillReviewModel, User as UserModel, ReviewLog as ReviewLogModel, Recording as RecordingModel, LessonProposal as LessonProposalModel, AppSetting as AppSettingModel, CaptureRequest as CaptureRequestModel, DrillTombstone as DrillTombstoneModel, UserSession as UserSessionModel, GeminiUsage as GeminiUsageModel, DrillAiText as DrillAiTextModel, SnrtEpisode as SnrtEpisodeModel, SnrtCue as SnrtCueModel  # ← Alias for ORM models
 from schemas import DrillCreate, DrillUpdate, Drill, TestCreate, TestUpdate, Test, TestAttemptCreate, TestAttempt, YouTubeShortCreate, YouTubeShort, VideoProcessingJobCreate, VideoProcessingJob, VideoSegmentCreate, VideoSegment, TranscribeRequest, TranscribeResponse, TranslateRequest, TranslateResponse, DrillPairInfo, GlossaryItem, GlossaryItemCreate, SrtImportRequest, SrtImportResponse, SrtSegment, BulkVideoUrlUpdateRequest, BulkVideoUrlUpdateResponse, iso_z  # ← Pydantic schemas
-from correction_service import get_correction_service
 from srt_parser import parse_srt_content, create_youtube_url_with_timestamp
+import magatzem  # l'únic lloc que sap on viuen els fitxers (#577)
+
+#: On és aquest servidor, per a les adreces que han de sortir senceres. És una variable
+#: d'entorn perquè en local i a les proves no és el mateix lloc.
+API_BASE = os.getenv("API_BASE", "https://tachelhit-drills-api.onrender.com").rstrip("/")
+
 
 def normalize_media_url(url: str) -> str:
     """
@@ -91,6 +129,7 @@ def normalize_media_url(url: str) -> str:
 
     # 2. Remove API_BASE prefix if present (with or without protocol)
     prefixes_to_remove = [
+        API_BASE,  # el d'ara, que en local i a les proves no és el de Render
         "https://tachelhit-drills-api.onrender.com",
         "http://tachelhit-drills-api.onrender.com",
         "tachelhit-drills-api.onrender.com",
@@ -108,6 +147,13 @@ def normalize_media_url(url: str) -> str:
     # 4. Ensure protocol for double slash
     if url.startswith("//"):
         url = "https:" + url
+
+    # 5. Les adreces de R2 es desen com a `/mitjans/...` (veg. magatzem.py), i a fora han de
+    #    sortir senceres: el frontend es serveix d'un altre domini i una adreça relativa hi
+    #    cauria a sobre, no pas aquí. El pas 2 ja ha tret el prefix si hi era, o sigui que
+    #    tornar-lo a posar aquí no el duplica.
+    if url.startswith("/mitjans/"):
+        return API_BASE + url
 
     # Return as is (could be relative path, absolute URL, etc.)
     return url
@@ -143,6 +189,155 @@ LANGUAGE_CODE_MAP = {
     "es": "Spanish",
     "spa": "Spanish",
 }
+
+#: Les llengues que NO son amazigues. L'Space de traduccio esta afinat per a amazic-catala i
+#: fora d'aqui no s'hi pot confiar.
+NO_AMAZIGUES = {"Modern Standard Arabic", "English", "French", "Spanish"}
+
+#: Els noms amb que l'Space coneix l'amazic. El 16-11-2026 (docs/recerca/models-de-text.md, peo
+#: mt-hf-github, 60 frases contra el catala del parlant) es va mesurar que el mateix NLLB afinat
+#: de l'Space tradueix millor l'amazic si (1) se li diu que la font es «Standard Moroccan
+#: Tamazight» (tzm_Tfng, la fitxa amb que es va afinar) i no «Tachelhit…» (taq_Tfng), i (2) se li
+#: demana ANGLES i un model de text passa l'angles al catala: chrF 0,521 contra 0,424 del cami
+#: directe tal com estava. Des del llati, la fitxa tzm_Latn no existeix i es queda taq_Latn.
+AMAZIGUES = {"Tachelhit/Central Atlas Tamazight", "Tachelhit/Central Atlas Tamazight (Latin)",
+             "Standard Moroccan Tamazight"}
+
+
+#: L'Space propi, que des del 16-11-2026 serveix el NLLB afinat amb les parelles del projecte.
+SPACE_AFINAT = "josepabloucr/Finetuned-Quantized-NLLB"
+
+
+def _space_es_l_afinat() -> bool:
+    return SPACE_AFINAT in (HUGGINGFACE_TRANSLATION_SPACE_URL or "")
+
+
+def _font_amaziga_per_l_space(src_lang: str) -> str:
+    return src_lang if src_lang.endswith("(Latin)") else "Standard Moroccan Tamazight"
+
+
+def _angles_a_catala(text: str) -> str:
+    """L'ultim tram del pont: angles (sortit del NLLB) → catala, amb DeepSeek o, si no hi es,
+    Qwen. Torna "" si cap dels dos contesta: qui crida ha de poder caure al catala directe."""
+    sistema = ("Ets un traductor d'angles a catala. El text angles es la traduccio automatica d'una "
+               "frase amaziga (taixelhit o tamazight de l'Atles central) i pot ser una mica tosc. Torna "
+               "NOMES la traduccio al catala, en una sola linia, natural i correcta, sense cometes ni "
+               "comentaris. Deixa els noms propis tal com son. No afegeixis res que no hi sigui.")
+    for nom in ("deepseek_client", "qwen_client"):
+        try:
+            client = __import__(nom)
+            if not getattr(client, nom.split("_")[0] + "_available")():
+                continue
+            r = getattr(client, nom.split("_")[0] + "_generate")(sistema, [{"role": "user", "text": text}],
+                                                                  max_output_tokens=300, temperature=0.2)
+            linies = [x.strip() for x in (r or "").splitlines() if x.strip()]
+            if linies:
+                return linies[0]
+        except Exception as e:
+            print(f"[TRANSLATE] {nom} no ha pogut passar l'angles al catala ({type(e).__name__})")
+    return ""
+
+
+def _esborrany_amb_gemini(text: str) -> str:
+    """El Gemini traduint amazic directament: el millor esborrany que tenim (16-11-2026, 60 frases:
+    gemini-2.5-flash sense raonar 0,571, gemini-3.8-flash 0,60, contra 0,52 del pont i 0,47 del Qwen).
+    Torna "" si no hi ha Gemini o no contesta: qui crida ha de poder caure al pont."""
+    import gemini_client
+    if not gemini_client.gemini_available():
+        return ""
+    sistema = ("Ets un traductor d'amazic (taixelhit i tamazight de l'Atles central, en tifinag o en lletres "
+               "llatines) al catala. Torna NOMES la traduccio al catala, en una sola linia, sense cometes ni "
+               "comentaris. Si una paraula no la saps, tradueix el que puguis i no inventis.")
+    try:
+        r = gemini_client.gemini_generate(sistema, [{"role": "user", "text": f"Frase: {text}\n\nTraduccio al catala:"}],
+                                          max_output_tokens=300, temperature=0)
+    except Exception as e:
+        print(f"[TRANSLATE] el Gemini no ha donat l'esborrany ({type(e).__name__}); vaig al pont")
+        return ""
+    linies = [x.strip() for x in (r or "").splitlines() if x.strip()]
+    return linies[0] if linies else ""
+
+
+def _amazic_a_catala(text: str, src_lang: str) -> str:
+    """Amazic → catala: el Gemini primer; si no hi es, el pont de l'angles; si el pont falla, catala
+    directe de l'Space (que amb la font tzm_Tfng ja va una mica millor que abans)."""
+    ca = _esborrany_amb_gemini(text)
+    if ca:
+        return ca
+    font = _font_amaziga_per_l_space(src_lang)
+    if _space_es_l_afinat():
+        # El 16-11-2026 el nostre Space serveix el NLLB afinat amb les parelles propies (H-MT1): en
+        # catala directe fa 0,57 sobre les 60 frases, i el pont per l'angles no hi afegeix res (0,55,
+        # n.s.) i costa una crida de DeepSeek. Amb el model base (l'Space de Tamazight-NLP) es al reves.
+        try:
+            ca = translate_with_hf(text, font, "Catalan")
+            if ca and ca.strip() and ca.strip() != text.strip():
+                return ca
+        except Exception as e:
+            print(f"[TRANSLATE] l'Space afinat no ha donat catala ({type(e).__name__}); vaig al pont")
+    try:
+        en = translate_with_hf(text, font, "English")
+    except Exception as e:
+        print(f"[TRANSLATE] l'Space no ha donat l'angles ({type(e).__name__}); vaig al catala directe")
+        en = ""
+    if en and en.strip() and en.strip() != text.strip():
+        ca = _angles_a_catala(en)
+        if ca:
+            return ca
+        print("[TRANSLATE] cap model ha passat l'angles al catala; vaig al catala directe")
+    return translate_with_hf(text, font, "Catalan")
+
+
+def _tradueix_amb_deepseek(text: str, src_lang: str, tgt_lang: str) -> str:
+    """Una traduccio d'un model general, per a les llengues que l'Space no sap.
+
+    Torna "" si no es pot: qui crida ha de poder caure a l'Space.
+    """
+    import deepseek_client
+    if not deepseek_client.deepseek_available():
+        return ""
+    sistema = (f"Ets un traductor de {src_lang} a {tgt_lang}. Et donen una linia de dialeg "
+               f"d'una serie marroquina. Torna NOMES la traduccio, en una sola linia, sense "
+               f"cometes ni comentaris. Parla natural. Deixa els noms propis tal com son i "
+               f"tradueix el titol «القائد» per «caid».")
+    r = deepseek_client.deepseek_generate(sistema, [{"role": "user", "text": text}],
+                                          max_output_tokens=400, temperature=0.2)
+    linies = [x.strip() for x in (r or "").splitlines() if x.strip()]
+    return linies[0] if linies else ""
+
+
+def tradueix(text: str, src_lang: str, tgt_lang: str) -> str:
+    """La traduccio, amb el traductor que toqui a cada llengua.
+
+    L'Space (`translate_with_hf`) es un NLLB **afinat per a amazic-catala**, i es el que ha de
+    fer tota la feina d'amazic: per aixo hi es. Pero fora d'aquell parell no s'hi pot confiar,
+    i aixo no es una opinio. Les mateixes linies de l'arab del Baba Ali, el 13-11-2026:
+
+        سترافقني إلى بيت القائد
+          l'Space   : «Ens acompañaras a la casa del capita.»   (amb ñ i tot)
+          el DeepSeek: «M'acompanyaras a casa del caid»
+        يا تاجر بلقاسم
+          l'Space   : «Comerci de la muntanya»
+          el DeepSeek: «Oh, comerciant Belkacem»
+
+    I el segon casa paraula per paraula amb el que ja hi ha a la biblioteca als 3.621 drills
+    del Baba Ali, que es com es va saber qui els havia traduit.
+
+    Quan la llengua no es amaziga i hi ha DeepSeek, doncs, s'hi va. Si no contesta, es cau a
+    l'Space: val mes una traduccio fluixa que cap.
+    """
+    if {src_lang, tgt_lang} & NO_AMAZIGUES:
+        try:
+            diu = _tradueix_amb_deepseek(text, src_lang, tgt_lang)
+            if diu:
+                return diu
+            print("[TRANSLATE] el DeepSeek no ha contestat; vaig a l'Space")
+        except Exception as e:
+            print(f"[TRANSLATE] el DeepSeek ha fallat ({type(e).__name__}); vaig a l'Space")
+    if src_lang in AMAZIGUES and tgt_lang == "Catalan":
+        return _amazic_a_catala(text, src_lang)
+    return translate_with_hf(text, src_lang, tgt_lang)
+
 
 def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tachelhit/Central Atlas Tamazight") -> str:
     """
@@ -246,7 +441,21 @@ def translate_with_hf(text: str, src_lang: str = "Catalan", tgt_lang: str = "Tac
 # Config
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///drills.db")
+def adreca_de_la_base(url: str) -> str:
+    """L'adreça de la base, amb el nom del dialecte que SQLAlchemy entén.
+
+    El tauler de Render ensenya l'adreça com a `postgres://`, que és el nom antic. SQLAlchemy 2
+    ja no el coneix i contesta «Can't load plugin: sqlalchemy.dialects:postgres». Qui la copia
+    d'allà —que és el camí normal— es troba un mur que no diu què fer; en Pablo s'hi va trobar
+    el 13-11-2026 executant la reescriptura de les adreces a R2.
+
+    Es corregeix aquí i no a cada guió perquè tots passen per aquest fitxer.
+    """
+    vell = "postgres://"
+    return "postgresql://" + url[len(vell):] if url.startswith(vell) else url
+
+
+DATABASE_URL = adreca_de_la_base(os.getenv("DATABASE_URL", "sqlite:///drills.db"))
 # Usar el nuevo Space tachelhit-video-generator
 HUGGINGFACE_SPACE_URL = os.getenv("HUGGINGFACE_SPACE_URL")
 HUGGINGFACE_IMAGE_SPACE_URL = os.getenv("HUGGINGFACE_IMAGE_SPACE_URL", HUGGINGFACE_SPACE_URL)
@@ -278,17 +487,12 @@ def generate_catalan_tts(text: str, drill_id: int) -> str:
         filename = f"tts_{drill_id}_{timestamp}.mp3"
 
         # Check if Cloudinary is configured
-        use_cloudinary = bool(os.getenv("CLOUDINARY_CLOUD_NAME"))
+        use_cloudinary = magatzem.disponible()  # R2 o Cloudinary: ho decideix el magatzem
 
         if use_cloudinary:
             # Upload to Cloudinary
-            result = cloudinary.uploader.upload(
-                temp_path,
-                folder="tachelhit/tts",
-                public_id=f"tts_{drill_id}_{timestamp}",
-                resource_type="video"  # Cloudinary treats audio as video
-            )
-            url = result['secure_url']
+            url = magatzem.puja(temp_path, "tachelhit/tts",
+                                f"tts_{drill_id}_{timestamp}", "so")
         else:
             # Save locally
             dir_path = os.path.join(MEDIA_ROOT, "tts")
@@ -348,7 +552,17 @@ def hf_predict(space_id: str, *args, api_name: str = "/predict", token: str = No
                 raise
         except Exception as e:
             last_err = e
-            _hf_clients.pop(space_id, None)  # a stale client after a cold restart: rebuild next time
+            #: Un client llençat sense tancar es queda amb el seu fil viu, i per això no es pot
+            #: alliberar MAI: mesurat el 20-11-2026, sis clients construïts i deixats anar són sis
+            #: fils i +5 MB que no tornen; amb `close()`, la memòria queda plana i els fils no
+            #: creixen. El servidor de producció es moria per això cada ~70 minuts (512 MB), perquè
+            #: cada crida fallida en construeix fins a tres i les crides fallaven totes.
+            vell = _hf_clients.pop(space_id, None)  # a stale client after a cold restart: rebuild next time
+            if vell is not None:
+                try:
+                    vell.close()
+                except Exception:
+                    pass  # si ja és mort, que no tapi l'error de debò
             print(f"[HF] {space_id} attempt {attempt}/{retries} failed: {e}")
             if attempt < retries:
                 _time.sleep(min(20, 5 * attempt))  # give the Space time to finish booting
@@ -376,16 +590,11 @@ def generate_tachelhit_tts_hf(text: str, drill_id: int) -> str:
         timestamp = int(datetime.utcnow().timestamp())
         filename = f"tachelhit_tts_{VOICE_VERSION}_{drill_id}_{timestamp}.wav"
         
-        use_cloudinary = bool(os.getenv("CLOUDINARY_CLOUD_NAME"))
+        use_cloudinary = magatzem.disponible()  # R2 o Cloudinary: ho decideix el magatzem
         
         if use_cloudinary:
-            result = cloudinary.uploader.upload(
-                result_path,
-                folder="tachelhit/tts",
-                public_id=f"tachelhit_tts_{VOICE_VERSION}_{drill_id}_{timestamp}",
-                resource_type="video"
-            )
-            url = result['secure_url']
+            url = magatzem.puja(result_path, "tachelhit/tts",
+                                f"tachelhit_tts_{VOICE_VERSION}_{drill_id}_{timestamp}", "so")
         else:
             dir_path = os.path.join(MEDIA_ROOT, "tts")
             os.makedirs(dir_path, exist_ok=True)
@@ -415,6 +624,12 @@ SessionLocal = sessionmaker(bind=engine)
 # interactive features (see ai_budget.py). Attached to the client so no call escapes it.
 ai_meter = ai_budget.Meter(SessionLocal, GeminiUsageModel)
 gemini_client.set_meter(ai_meter)
+# El mateix comptador per al segon proveïdor: el que gasta el copilot amb DeepSeek ha de sortir
+# a la mateixa factura i sota el mateix sostre.
+import deepseek_client as _deepseek_client
+_deepseek_client.set_meter(ai_meter)
+import qwen_client as _qwen_client
+_qwen_client.set_meter(ai_meter)   # el segon auditor (Model Studio) també passa pel comptador
 
 # ---------------------------------------------------------------------------
 # Auto-capture guard (P5.2): ASR on English or music sometimes yields English
@@ -1198,6 +1413,40 @@ def _dialect_examples(db, variety: Optional[str], n: int = 20) -> List[str]:
     return out
 
 
+#: Quan Gemini no contesta, deixar de preguntar-li una estona.
+#:
+#: L'amo, l'1-11-2026: «we don't have gemini». I es veia a les dades: de les més de mil
+#: cinc-centes lectures escrites aquella nit, **cap** portava la forma que deixa Gemini
+#: («llatí · ⵜⵉⴼⵉⵏⴰⵖ»); totes eren tifinag pur, que és el que escriu el model de fora. O sigui
+#: que no va contestar ni una vegada i cada crida va pagar l'espera abans de passar al següent.
+#:
+#: `gemini_available()` només diu si hi ha la clau CONFIGURADA, no si el proveïdor respon: amb
+#: el compte sense crèdit, la clau hi és i la resposta no ve mai. Això ho mira pel resultat, que
+#: és l'únic que no es pot discutir: tres vegades seguides sense treure'n res i es deixa de
+#: preguntar un quart d'hora. Si torna a contestar, es torna a comptar des de zero tot sol.
+_GEMINI_ASR_BUIDES = 0
+_GEMINI_ASR_FINS = 0.0
+_GEMINI_ASR_PROVES = 3
+_GEMINI_ASR_PAUSA = 15 * 60
+
+
+def _gemini_asr_val_la_pena() -> bool:
+    return time.time() >= _GEMINI_ASR_FINS
+
+
+def _gemini_asr_resultat(ha_contestat: bool) -> None:
+    global _GEMINI_ASR_BUIDES, _GEMINI_ASR_FINS
+    if ha_contestat:
+        _GEMINI_ASR_BUIDES = 0
+        _GEMINI_ASR_FINS = 0.0
+        return
+    _GEMINI_ASR_BUIDES += 1
+    if _GEMINI_ASR_BUIDES >= _GEMINI_ASR_PROVES:
+        _GEMINI_ASR_FINS = time.time() + _GEMINI_ASR_PAUSA
+        _GEMINI_ASR_BUIDES = 0
+        print(f"[ASR] Gemini no contesta; no li pregunto durant {_GEMINI_ASR_PAUSA // 60} minuts")
+
+
 def _transcribe_short_clip_with_gemini(audio_url: str, variety: Optional[str] = None, meaning: Optional[str] = None,
                                        speaker_text: Optional[str] = None, examples: Optional[List[str]] = None) -> Optional[Dict[str, str]]:
     """Word/short-phrase ASR with Gemini (bake-off winner for isolated words,
@@ -1367,6 +1616,37 @@ def detect_text_mode(frames: List[Tuple[float, str]]) -> str:
     except Exception as e:
         print(f"[TEXTMODE] detection failed: {e}")
     return "none"
+
+
+def _space_mms_text(audio_url: str) -> str:
+    """El que el NOSTRE model sent a una gravació: MMS-1b-all amb l'adaptador shi afinat.
+
+    L'Space en porta dos lectors i fins ara el servidor només feia servir l'altre. Mesurat l'1-11
+    sobre catorze gravacions nostres d'Aït Mraw i Beni Mellal, comparant per clau fonèmica contra
+    el text que va escriure una persona: **el nostre llegeix a CER 0,279 i el NeMo a 0,448**. En
+    alguna encerta del tot on l'altre treu una cosa doblada (`ihla ġuri udġar`, drill 484).
+
+    L'ordre, doncs, va per com de bé llegeix cadascun: Gemini primer (0,19 a la prova del 17-10),
+    aquest després, i el NeMo com a xarxa de seguretat. Triga uns cinc segons en comptes d'un i
+    mig, i els val.
+
+    Torna '' si no pot: el model es carrega en segon pla a l'Space i respon 503 mentre no hi és.
+    """
+    try:
+        space = resolve_hf_space_host(os.getenv("HUGGINGFACE_ASR_SPACE_URL", ASR_SPACE_DEFAULT))
+        cru = requests.get(audio_url, timeout=120).content
+        hf_token = os.getenv("HUGGINGFACE_API_KEY")
+        headers = {"Authorization": f"Bearer {hf_token}"} if hf_token else {}
+        r = requests.post(space + "/transcribe_mms",
+                          files={"audio_file": ("clip.bin", cru, "application/octet-stream")},
+                          headers=headers, timeout=300)
+        if r.status_code != 200:
+            print(f"[ASR] el nostre model no pot ara ({r.status_code})")
+            return ""
+        return ((r.json() or {}).get("text") or "").strip()
+    except Exception as e:
+        print(f"[ASR] el nostre model ha fallat: {e}")
+        return ""
 
 
 def _space_transcribe_text(media_path: str) -> str:
@@ -1723,6 +2003,23 @@ API_KEY = (os.getenv("API_KEY") or "").strip()
 PROTECTED_METHODS = {"POST", "PUT", "DELETE", "PATCH"}
 
 @app.middleware("http")
+async def never_serve_yesterday(request, call_next):
+    """Cap resposta d'aquesta API es pot reaprofitar.
+
+    Res del que torna val per a dues persones diferents ni per a dos moments diferents: les
+    llistes depenen de qui pregunta i canvien així que algú escriu. Sense cap directiva, un
+    navegador aplica el seu propi criteri i pot servir una resposta desada fa un instant — i
+    això va passar: una petició creada correctament va aparèixer com a «res pendent aquí»,
+    perquè la llista que es va tornar a demanar venia de just abans de crear-la.
+
+    Els fitxers de debò (imatges, àudio, vídeo) no passen per aquí: són a Cloudinary.
+    """
+    response = await call_next(request)
+    response.headers.setdefault("Cache-Control", "no-store")
+    return response
+
+
+@app.middleware("http")
 async def require_api_key(request, call_next):
     if API_KEY and request.method in PROTECTED_METHODS:
         provided = request.headers.get("x-api-key", "")
@@ -1902,7 +2199,7 @@ async def translate_text_endpoint(request: TranslateRequest):
     tgt_code = LANGUAGE_CODE_MAP.get(request.target_lang, request.target_lang)
     print(f"[TRANSLATE ENDPOINT] Mapped codes: src_code='{src_code}', tgt_code='{tgt_code}'")
     try:
-        translation = await asyncio.to_thread(translate_with_hf, request.text, src_code, tgt_code)
+        translation = await asyncio.to_thread(tradueix, request.text, src_code, tgt_code)
         print(f"[TRANSLATE ENDPOINT] Result translation: '{translation}'")
         return TranslateResponse(translated_text=translation)
     except Exception as e:
@@ -2187,11 +2484,141 @@ def _page_bounds(limit: Optional[int], offset: Optional[int]):
     lim = DEFAULT_PAGE_LIMIT if limit is None else limit
     return max(0, offset or 0), max(1, min(lim, MAX_PAGE_LIMIT))
 
+#: Quantes files es demanen per volta quan es serveix el cataleg sencer (#566). Amb 200 files
+#: cada volta son uns 240 kB de JSON i el que la sessio arrossega es buida en acabar-la.
+LOT_DRILLS = 200
+
+
+def _filtra_drills(db: Session, tag: Optional[str], author: Optional[str],
+                   search: Optional[str], des_de):
+    """La consulta de `/drills/`, en un lloc.
+
+    Hi es perque el cataleg sencer es serveix a raigs (`_drills_a_raigs`) i aquella volta no pot
+    fer servir la sessio de la peticio: des del FastAPI 0.106, una dependencia amb `yield` es
+    tanca ABANS que el cos d'un `StreamingResponse` s'escrigui, o sigui que el generador necessita
+    la seva propia sessio i, per tant, tornar a muntar la consulta. Que la munti el mateix codi
+    es tota la gracia: si un dia s'hi afegeix un filtre, no se'n pot oblidar la meitat.
+
+    `des_de` ja ve convertit a datetime: el 400 d'un `since` escrit malament s'ha de donar abans
+    de comencar a escriure la resposta, no a mig raig.
+    """
+    query = db.query(DrillModel)
+
+    if tag:
+        # Simple substring match for tags (since they can be comma-separated)
+        query = query.filter(DrillModel.tag.ilike(f"%{tag}%"))
+
+    if author:
+        query = query.filter(DrillModel.author.ilike(f"%{author}%"))
+
+    if search and search.strip():
+        # Finding a sentence to put in a practice must not mean downloading the library:
+        # the search happens here, over both texts and the tag (issue #199).
+        from sqlalchemy import or_ as _or_search
+        needle = f"%{search.strip()}%"
+        query = query.filter(_or_search(DrillModel.text_catalan.ilike(needle),
+                                        DrillModel.text_tachelhit.ilike(needle),
+                                        DrillModel.tag.ilike(needle)))
+
+    if des_de is not None:
+        query = query.filter(
+            sa_func.coalesce(DrillModel.updated_at, DrillModel.date_created) >= des_de
+        )
+
+    return query
+
+
+def _un_drill(drill) -> Drill:
+    """Una fila com la dona l'API, i si no es pot validar, el rescat de sempre.
+
+    El rescat es d'abans: hi va haver files amb URL de mitjans que el validador no acceptava, i
+    perdre tota la pantalla per una fila es pitjor que ensenyar-la amb menys camps.
+    """
+    try:
+        return Drill.model_validate(drill)
+    except Exception as e:
+        print(f"[API] WARNING: Drill {drill.id} failed validation: {e}")
+        return Drill(**{
+            'id': drill.id,
+            'date_created': drill.date_created,
+            'tag': drill.tag,
+            'text_catalan': drill.text_catalan,
+            'text_tachelhit': drill.text_tachelhit,
+            'text_arabic': drill.text_arabic,
+            'audio_url': normalize_media_url(drill.audio_url) if drill.audio_url else None,
+            'audio_tts_url': normalize_media_url(drill.audio_tts_url) if drill.audio_tts_url else None,
+            'video_url': normalize_media_url(drill.video_url) if drill.video_url else None,
+            'image_url': normalize_media_url(drill.image_url) if drill.image_url else None,
+        })
+
+
+def _drills_a_raigs(tag: Optional[str], author: Optional[str], search: Optional[str],
+                    des_de) -> StreamingResponse:
+    """Tot el cataleg, sense tenir-lo mai sencer a la memoria (#566).
+
+    El 2-11-2026 produccio tornava 502 a TOT -`/health`, `/version`, una sola frase-: no anava
+    lenta, s'estava reiniciant. Quan va tornar, `/drills/` va servir **14,1 MB** de 12.195 frases
+    en una sola resposta, en una instancia de 512 MB. Catorze megues no son el problema; el
+    problema es que per fer-les calia tenir-ho tot dues vegades: els 12.195 objectes de
+    SQLAlchemy i el JSON sencer, fet a sobre. I cada cop que algu obria la pantalla de Frases,
+    hi tornava.
+
+    Aixo serveix la mateixa resposta, byte a byte, pero de 200 files en 200: cada volta es
+    serialitza i s'escriu, i despres es buida el que la sessio arrossega. La memoria es queda
+    plana en comptes de cre'ixer amb la biblioteca, que es l'altra meitat del problema: cada
+    lectura de maquina i cada traduccio que s'hi desa fan la resposta mes gran tota sola.
+
+    Qui demana `limit`/`offset` -el davant ho fa des del #489, de 500 en 500- no passa per aqui.
+    Aixo es per als clients d'abans, l'APK installat i qualsevol altre que demani el cataleg
+    sencer: val mes servir-los a poc a poc que no tombar el servidor per a tothom. I es serveix
+    SENCER a posta: retallar-ho a les primeres 500 i no dir res seria ensenyar mitja biblioteca
+    fent com si fos tota.
+    """
+    db = SessionLocal()
+    try:
+        total = _filtra_drills(db, tag, author, search, des_de).order_by(None).count()
+    except Exception:
+        db.close()
+        raise
+
+    def raigs():
+        # La sessio es tanca aqui, no al `finally` de fora: el cos s'escriu DESPRES que
+        # l'endpoint hagi tornat.
+        try:
+            yield "["
+            fetes = 0
+            primer = True
+            while True:
+                lot = (_filtra_drills(db, tag, author, search, des_de)
+                       .order_by(DrillModel.date_created.desc())
+                       .offset(fetes).limit(LOT_DRILLS).all())
+                if not lot:
+                    break
+                for d in lot:
+                    yield ("" if primer else ",") + _un_drill(d).model_dump_json(exclude_none=True)
+                    primer = False
+                fetes += len(lot)
+                # Sense aixo la sessio es queda totes les files que ha vist i la memoria torna a
+                # cre'ixer fila a fila, que es justament el que veniem a evitar.
+                db.expunge_all()
+                if len(lot) < LOT_DRILLS:
+                    break
+            yield "]"
+            print(f"[API] GET /drills/ (tag={tag}, author={author}, sencer) ha servit {fetes} frases "
+                  f"de {LOT_DRILLS} en {LOT_DRILLS}")
+        finally:
+            db.close()
+
+    return StreamingResponse(raigs(), media_type="application/json",
+                             headers={"X-Total-Count": str(total)})
+
+
 def _paginate(query, response: Response, limit: Optional[int], offset: Optional[int]):
     """Apply limit/offset to a query and set X-Total-Count (count BEFORE paging).
 
     Backwards compatibility: when neither limit nor offset is given, every row
-    is returned (the current web frontend loads all ~600 drills in one call).
+    is returned. `/drills/` ja no hi passa per aquest cami -- el cataleg sencer el
+    serveix `_drills_a_raigs` (#566) --, pero els altres llistats si, i son petits.
     When either is given, limit defaults to 100 and is capped at 500."""
     response.headers["X-Total-Count"] = str(query.order_by(None).count())
     bounds = _page_bounds(limit, offset)
@@ -2387,32 +2814,22 @@ def get_drills(response: Response, tag: Optional[str] = None, author: Optional[s
       instant; pair with GET /drills/tombstones?since= for deletions (P4.3).
     - `limit`/`offset` paginate (P4.2): limit defaults to 100 and is capped at
       500 **only when at least one of them is sent**. With neither, ALL rows
-      are returned, as the current frontend expects. `X-Total-Count` always
-      carries the unpaginated count.
+      are returned, as clients from before #489 expect -- but a raigs, de 200 en
+      200, sense tenir mai tot el cataleg a la memoria (#566). `X-Total-Count`
+      always carries the unpaginated count.
     """
     try:
-        query = db.query(DrillModel)
+        # El `since` es converteix aqui, abans de res: un 400 s'ha de poder donar amb la
+        # resposta encara sense comencar.
+        des_de = _parse_since(since) if since else None
 
-        if tag:
-            # Simple substring match for tags (since they can be comma-separated)
-            query = query.filter(DrillModel.tag.ilike(f"%{tag}%"))
+        # El cataleg sencer no es construeix de cop: es serveix a raigs, que es el que impedia
+        # que Render s'aixequés (#566). Els altres camins -per numeros, o paginat- son petits i
+        # es queden com eren.
+        if ids is None and _page_bounds(limit, offset) is None:
+            return _drills_a_raigs(tag, author, search, des_de)
 
-        if author:
-            query = query.filter(DrillModel.author.ilike(f"%{author}%"))
-
-        if search and search.strip():
-            # Finding a sentence to put in a practice must not mean downloading the library:
-            # the search happens here, over both texts and the tag (issue #199).
-            from sqlalchemy import or_ as _or_search
-            needle = f"%{search.strip()}%"
-            query = query.filter(_or_search(DrillModel.text_catalan.ilike(needle),
-                                            DrillModel.text_tachelhit.ilike(needle),
-                                            DrillModel.tag.ilike(needle)))
-
-        if since:
-            query = query.filter(
-                sa_func.coalesce(DrillModel.updated_at, DrillModel.date_created) >= _parse_since(since)
-            )
+        query = _filtra_drills(db, tag, author, search, des_de)
 
         if ids is not None:
             wanted = _parse_ids(ids)
@@ -2428,33 +2845,7 @@ def get_drills(response: Response, tag: Optional[str] = None, author: Optional[s
             drills = _paginate(query.order_by(DrillModel.date_created.desc()), response, limit, offset)
         print(f"[API] GET /drills/ (tag={tag}, author={author}, ids={ids}, since={since}, "
               f"limit={limit}, offset={offset}) returning {len(drills)} drills")
-        # Intentar serializar cada drill para detectar errores de validación Pydantic
-        serialized_drills = []
-        for drill in drills:
-            try:
-                # Usar el modelo Pydantic Drill para validar
-                drill_schema = Drill.from_orm(drill)
-                serialized_drills.append(drill_schema)
-            except Exception as e:
-                print(f"[API] WARNING: Drill {drill.id} failed validation: {e}")
-                # Si falla, intentar normalizar las URLs manualmente antes de serializar
-                # Crear un diccionario con los campos, aplicando normalize_media_url a las URLs
-                drill_dict = {
-                    'id': drill.id,
-                    'date_created': drill.date_created,
-                    'tag': drill.tag,
-                    'text_catalan': drill.text_catalan,
-                    'text_tachelhit': drill.text_tachelhit,
-                    'text_arabic': drill.text_arabic,
-                    'audio_url': normalize_media_url(drill.audio_url) if drill.audio_url else None,
-                    'audio_tts_url': normalize_media_url(drill.audio_tts_url) if drill.audio_tts_url else None,
-                    'video_url': normalize_media_url(drill.video_url) if drill.video_url else None,
-                    'image_url': normalize_media_url(drill.image_url) if drill.image_url else None,
-                }
-                # Crear el objeto Pydantic con el diccionario corregido
-                drill_schema = Drill(**drill_dict)
-                serialized_drills.append(drill_schema)
-        return serialized_drills
+        return [_un_drill(drill) for drill in drills]
     except HTTPException:
         raise
     except Exception as e:
@@ -2462,6 +2853,48 @@ def get_drills(response: Response, tag: Optional[str] = None, author: Optional[s
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+@app.get("/drills/similar")
+def similar_drills(text: str, field: str = "tachelhit", exclude_id: Optional[int] = None,
+                   limit: int = 5, db: Session = Depends(get_db)):
+    """Sentences the library may already hold that say this.
+
+    Declared before `/drills/{drill_id}` on purpose: that route would otherwise swallow the word
+    «similar» and try to read it as a number.
+
+    Matched by SOUND, not by spelling (`practice.sound_key`, the same key the practice screen
+    compares with), so «aghrum», «aɣrum» and «ⴰⵖⵔⵓⵎ» land together -- which a text search never
+    would. Nothing is forbidden by this: saying the same sentence another way is what the variants
+    are for. It is here so the person can choose before writing a second copy of what we have.
+    """
+    said = (text or "").strip()
+    if len(said) < 3:
+        return {"query": said, "field": field, "matches": []}
+    col = DrillModel.text_catalan if field == "catalan" else DrillModel.text_tachelhit
+
+    def key(t: str) -> str:
+        return " ".join(practice_mod.sound_key(w) for w in practice_mod.words_of(t or ""))
+
+    want = key(said)
+    if not want:
+        return {"query": said, "field": field, "matches": []}
+    # Two columns of every sentence, not whole rows: the comparison is by sound, so no SQL filter
+    # can narrow it first -- a LIKE on «aghrum» never reaches «aɣrum». Reading (id, text) for the
+    # library is a few hundred kilobytes; reading the rows themselves would not be.
+    q = db.query(DrillModel.id, col).filter(col != None, col != "")        # noqa: E711
+    if exclude_id:
+        q = q.filter(DrillModel.id != exclude_id)
+    hits = [i for i, other in q.order_by(DrillModel.id.desc()).all() if key(other) == want]
+    hits = hits[:max(1, min(limit, 20))]
+    if not hits:
+        return {"query": said, "field": field, "matches": []}
+    rows = {d.id: d for d in db.query(DrillModel).filter(DrillModel.id.in_(hits)).all()}
+    return {"query": said, "field": field, "matches": [
+        {"id": d.id, "text_tachelhit": d.text_tachelhit, "text_catalan": d.text_catalan,
+         "author": d.author, "variety": d.variety,
+         "has_voice": bool(d.audio_url), "image_url": d.image_url}
+        for d in (rows[i] for i in hits if i in rows)]}
+
 
 @app.get("/drills/{drill_id}", response_model=Drill)
 def get_drill(drill_id: int, db: Session = Depends(get_db)):
@@ -2487,9 +2920,12 @@ def create_drill(drill: DrillCreate = None, db: Session = Depends(get_db),
     # used to create blank rows (P1.9). Checked before the try/except below,
     # which turns any exception into a 500.
     drill_data = drill.model_dump(exclude_unset=True) if drill is not None else {}
+    # Qui captura amb el micròfon ja té la gravació a la mà i la puja tot seguit: la fila neix
+    # buida perquè el fitxer hi pugui arribar (#450). No és cap columna.
+    capturant = bool(drill_data.pop("capturing", False))
     _content_keys = ("text_catalan", "text_tachelhit", "text_arabic", "text_tachelhit_latin",
                      "audio_url", "video_url", "image_url")
-    if not any(str(drill_data.get(k) or "").strip() for k in _content_keys):
+    if not capturant and not any(str(drill_data.get(k) or "").strip() for k in _content_keys):
         raise HTTPException(status_code=422, detail="Cal almenys un text (català, tachelhit o àrab) o un fitxer.")
     try:
         db_drill = DrillModel(**drill_data)
@@ -2546,6 +2982,10 @@ def update_drill(drill_id: int, update_data: DrillUpdate, db: Session = Depends(
     owner_or_admin(drill, user)
 
     update_dict = update_data.model_dump(exclude_unset=True)
+    # Una càrrega massiva (#539): el text es desa i els efectes —traducció a l'àrab, veu
+    # catalana— no s'engeguen. Només per a qui administra: des de l'app, cada canvi d'una
+    # persona segueix portant la seva traducció i la seva veu.
+    quiet = bool(update_dict.pop("quiet", False)) and bool(getattr(user, "is_admin", False))
 
     # Subjects set by hand win over the automatic catalogue and are never re-classified
     if "topics" in update_dict and "topics_source" not in update_dict:
@@ -2590,7 +3030,7 @@ def update_drill(drill_id: int, update_data: DrillUpdate, db: Session = Depends(
             update_dict["tag"] = None
 
     # Check if text_catalan is being updated and is not empty
-    text_catalan_updated = "text_catalan" in update_dict and update_dict["text_catalan"]
+    text_catalan_updated = "text_catalan" in update_dict and update_dict["text_catalan"] and not quiet
     previous_text_catalan = drill.text_catalan
 
     for key, value in update_dict.items():
@@ -2826,12 +3266,9 @@ async def generate_image(
 
         # PUJADA A CLOUDINARY (Això faltava o estava mal tancat al teu fitxer)
         if image_bytes:
-            result = cloudinary.uploader.upload(
-                image_bytes,
-                folder="tachelhit/images",
-                public_id=f"img_{drill_id}_{int(datetime.utcnow().timestamp())}"
-            )
-            drill.image_url = normalize_media_url(result['secure_url'])
+            drill.image_url = normalize_media_url(magatzem.puja(
+                image_bytes, "tachelhit/images",
+                f"img_{drill_id}_{int(datetime.utcnow().timestamp())}", "imatge"))
             db.commit()
             return {"image_url": drill.image_url, "photographer": photographer_info}
 
@@ -2910,11 +3347,9 @@ def _run_image_fill(only_depictable: bool = True):
                     result_path = _image_api_predict(client, prompt)
                     with open(result_path, "rb") as f:
                         image_bytes = f.read()
-                up = cloudinary.uploader.upload(
-                    image_bytes, folder="tachelhit/images",
-                    public_id=f"img_{d.id}_{int(datetime.utcnow().timestamp())}",
-                )
-                d.image_url = normalize_media_url(up["secure_url"])
+                d.image_url = normalize_media_url(magatzem.puja(
+                    image_bytes, "tachelhit/images",
+                    f"img_{d.id}_{int(datetime.utcnow().timestamp())}", "imatge"))
                 db.commit()
                 _image_fill_job["done"] += 1
             except Exception as e:
@@ -3099,6 +3534,24 @@ def health_spaces():
     return out
 
 
+@app.get("/serveis")
+def serveis(prova: bool = True):
+    """Quina màquina fa cada feina, i si ara mateix contesta (#295).
+
+    L'estratègia viu a `docs/SERVEIS_IA.md`; això la serveix perquè es pugui llegir des de
+    l'app. El 24-10-2026 tres proveïdors es van quedar sense servei el mateix dia, i qui feia
+    servir l'app només veia que «no anava»: una feina sense ningú que la pugui fer ho ha de dir.
+
+    `prova=0` no truca a cap Space: la taula igualment, i els Spaces com a desconeguts.
+    """
+    import serveis as serveis_mod
+    estat_spaces = health_spaces() if prova else {}
+    return serveis_mod.quina_feina_fa_qui(
+        spaces=estat_spaces,
+        gemini_ok=bool(gemini_available() and ai_meter.budget_ok()),
+        gemini_clau=bool(gemini_available()))
+
+
 @app.post("/health/spaces/wake")
 def wake_spaces(only: Optional[str] = None):
     """Fire-and-forget warm-up pings so sleeping Spaces start booting. Pass
@@ -3137,7 +3590,8 @@ async def test_upload_endpoint(drill_id: int, media_type: str):
     }
 
 @app.post("/upload-media/{drill_id}/{media_type}")
-async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(...), db: Session = Depends(get_db),
+                       user: Optional[UserModel] = Depends(get_current_user)):
     print(f"[UPLOAD] Received POST upload request for drill {drill_id}, media_type {media_type}")
     print(f"[UPLOAD] Request method: POST")
     print(f"[UPLOAD] File name: {file.filename}")
@@ -3152,6 +3606,8 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
     drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found")
+    # The audio is a speaker's voice: same rule as PUT /drills/{id} (#486).
+    owner_or_admin(drill, user)
 
     try:
         # Read file content
@@ -3162,7 +3618,7 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
             raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
         # Check if Cloudinary is configured
-        use_cloudinary = bool(os.getenv("CLOUDINARY_CLOUD_NAME"))
+        use_cloudinary = magatzem.disponible()  # R2 o Cloudinary: ho decideix el magatzem
 
         # Determinar l'extensió del fitxer
         if file.filename and "." in file.filename:
@@ -3193,23 +3649,19 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
             # Upload to Cloudinary
             print(f"[UPLOAD] Uploading {media_type} to Cloudinary for drill {drill_id}")
 
-            # Determine resource type
-            resource_type = "video" if media_type in ["audio", "video"] else "image"
+            mena = {"audio": "so", "video": "video", "image": "imatge"}[media_type]
 
-            # Per a àudio, utilitzar resource_type "video" a Cloudinary (també funciona per àudio)
-            if media_type == "audio":
-                resource_type = "video"
-
-            # Upload to Cloudinary — blocking HTTP, so off the event loop (P4.5)
-            result = await run_in_threadpool(
-                cloudinary.uploader.upload,
+            # Pujada — HTTP que bloqueja, o sigui fora del bucle d'esdeveniments (P4.5)
+            url = await run_in_threadpool(
+                magatzem.puja,
                 content,
-                folder=f"tachelhit/{media_type}",
-                public_id=f"{media_type}_{drill_id}_{int(datetime.utcnow().timestamp())}",
-                resource_type=resource_type
+                f"tachelhit/{media_type}",
+                f"{media_type}_{drill_id}_{int(datetime.utcnow().timestamp())}",
+                mena,
+                #: aquí l'extensió ja s'ha tret del nom del fitxer i s'ha validat a dalt;
+                #: passant-la, R2 no l'ha d'endevinar dels bytes.
+                ext,
             )
-
-            url = result['secure_url']
             url = normalize_media_url(url)
             print(f"[UPLOAD] Cloudinary URL: {url}")
         else:
@@ -3246,6 +3698,17 @@ async def upload_media(drill_id: int, media_type: str, file: UploadFile = File(.
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
 # ===================== TEST CRUD =====================
+def _with_step_count(db: Session, tests):
+    """Stamp each practice with how many steps it holds, for the response model.
+
+    One grouped query for the lot. A practice that never got steps falls back to the length of
+    its old flat list, so an unconverted one still reports what it has."""
+    rows = tests if isinstance(tests, list) else [tests]
+    sizes = practice_mod.practice_sizes(db, rows)
+    for t in rows:
+        t.step_count = sizes.get(t.id, 0)
+    return tests
+
 @app.get("/tests/", response_model=list[Test])
 def get_tests(response: Response, since: Optional[str] = None, mine: bool = False,
               limit: Optional[int] = None, offset: Optional[int] = None,
@@ -3266,14 +3729,15 @@ def get_tests(response: Response, since: Optional[str] = None, mine: bool = Fals
         query = query.filter(
             sa_func.coalesce(TestModel.updated_at, TestModel.date_created) >= _parse_since(since)
         )
-    return _paginate(query.order_by(TestModel.date_created.desc()), response, limit, offset)
+    return _with_step_count(db, _paginate(query.order_by(TestModel.date_created.desc()),
+                                         response, limit, offset))
 
 @app.get("/tests/{test_id}", response_model=Test)
 def get_test(test_id: int, db: Session = Depends(get_db)):
     test = db.query(TestModel).filter(TestModel.id == test_id).first()
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
-    return test
+    return _with_step_count(db, test)
 
 @app.post("/tests/", response_model=Test)
 def create_test(test: TestCreate, db: Session = Depends(get_db),
@@ -3304,7 +3768,7 @@ def create_test(test: TestCreate, db: Session = Depends(get_db),
             practice_steps.replace_steps(db, db_test.id, steps)
     except Exception as e:
         print(f"[PRACTICE] steps for test {db_test.id}: {e}")
-    return db_test
+    return _with_step_count(db, db_test)
 
 @app.put("/tests/{test_id}", response_model=Test)
 def update_test(test_id: int, update_data: TestUpdate, db: Session = Depends(get_db),
@@ -3324,7 +3788,7 @@ def update_test(test_id: int, update_data: TestUpdate, db: Session = Depends(get
     test.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(test)
-    return test
+    return _with_step_count(db, test)
 
 @app.delete("/tests/{test_id}")
 def delete_test(test_id: int, db: Session = Depends(get_db),
@@ -3334,6 +3798,12 @@ def delete_test(test_id: int, db: Session = Depends(get_db),
     if not test:
         raise HTTPException(status_code=404, detail="Test not found")
     owner_or_admin(test, user, "pràctica")
+    # Els passos s'esborren aquí i no es deixen al `ON DELETE CASCADE` de la clau forana:
+    # Postgres el fa, però SQLite no aplica les claus foranes si no s'ha activat
+    # `PRAGMA foreign_keys=ON`, i no l'activem enlloc. En local i a les proves, doncs, els
+    # passos sobrevivien a la seva pràctica — i com que SQLite reutilitza l'id més alt que
+    # s'acaba d'esborrar, la pràctica següent naixia amb els passos de l'anterior.
+    practice_steps.forget(db, test_id)
     db.delete(test)
     db.commit()
     return {"detail": "Deleted"}
@@ -3499,13 +3969,9 @@ def background_video_vault(job_type: str, item_id: int, payload_data: list, job_
 
         # Step B: Upload the LOCAL file to Cloudinary
         print(f"[WORKER] ☁️ Uploading local file to Cloudinary: {local_video_path}")
-        upload_result = cloudinary.uploader.upload(
-            local_video_path,
-            folder=f"tachelhit/{job_type}s",
-            resource_type="video",
-            public_id=f"{job_type}_{item_id}_{int(datetime.utcnow().timestamp())}"
-        )
-        cloudinary_url = upload_result['secure_url']
+        cloudinary_url = magatzem.puja(
+            local_video_path, f"tachelhit/{job_type}s",
+            f"{job_type}_{item_id}_{int(datetime.utcnow().timestamp())}", "video")
         cloudinary_url = normalize_media_url(cloudinary_url)
 
         # Step C: Update Database
@@ -3628,7 +4094,7 @@ def delete_short(short_id: int, db: Session = Depends(get_db)):
         if short.video_path and short.video_path.startswith("http"):
             public_id = extract_cloudinary_public_id(short.video_path)
             if public_id:
-                cloudinary.uploader.destroy(public_id, resource_type="video")
+                magatzem.esborra(public_id, "video")
                 print(f"[API] Deleted Cloudinary asset: {public_id}")
         elif short.video_path:
             video_path = f"media/{short.video_path.replace('/media/', '')}"
@@ -3647,7 +4113,27 @@ def delete_short(short_id: int, db: Session = Depends(get_db)):
 # wrote fake res.cloudinary.com/demo/... URLs into real drills) were removed.
 # The real pipeline lives under /video-analysis/*.
 
-from video_utils import get_video_metadata, get_video_segments, process_and_upload_segment, remote_process_and_upload_segment, get_yt_dlp_cookie_file, download_video_to_dir, process_and_upload_audio_segment, is_audio_file
+# Les eines de vídeo, carregades la PRIMERA VEGADA QUE ES FAN SERVIR i no en arrencar.
+#
+# `video_utils` arrossega moviepy i yt-dlp, i `correction_service` arrossega el client d'OpenAI.
+# Importar-ho tot d'entrada costava 13 dels 18 segons que trigava `import main`, i aquests
+# segons els paga qui obre l'app: el servei gratuït s'adorm als 15 minuts, i cada visita en
+# desperta un de nou. La immensa majoria de peticions —el Mètode, la gramàtica, les frases— no
+# toquen cap vídeo ni cap correcció, i ara no en paguen l'arrencada.
+#
+# Els noms es mantenen perquè les 19 crides no canvien: el que es crida és una funció que
+# importa el mòdul de debò el primer cop i després li passa la pilota. La primera petició de
+# vídeo paga els 8 segons; la resta, cap.
+video_key = _lazy("video_utils", "video_key")
+get_video_metadata = _lazy("video_utils", "get_video_metadata")
+get_video_segments = _lazy("video_utils", "get_video_segments")
+process_and_upload_segment = _lazy("video_utils", "process_and_upload_segment")
+remote_process_and_upload_segment = _lazy("video_utils", "remote_process_and_upload_segment")
+get_yt_dlp_cookie_file = _lazy("video_utils", "get_yt_dlp_cookie_file")
+download_video_to_dir = _lazy("video_utils", "download_video_to_dir")
+process_and_upload_audio_segment = _lazy("video_utils", "process_and_upload_audio_segment")
+is_audio_file = _lazy("video_utils", "is_audio_file")
+get_correction_service = _lazy("correction_service", "get_correction_service")
 
 # All video uploads live under one parent dir so that (a) stale files from the
 # two-step upload -> create-drills flow can be purged by age instead of leaking
@@ -4653,6 +5139,67 @@ async def auto_drills_from_upload(
 _capture_agent_seen: Dict[str, Any] = {"at": None, "version": None}
 
 
+# Declared before `/capture/{request_id}`: FastAPI tries routes in the order they are
+# written, so with this below it the word «video» was read as a request id and answered
+# 422. The same trap `/drills/similar` has to dodge.
+@app.get("/capture/video")
+def capture_video(url: str, db: Session = Depends(get_db)):
+    """What a video gave us: its cuts in time order, and where it was left untouched.
+
+    The capture screen could show what the machine was ABOUT to create and then never again.
+    Once the drills existed there was no way back to the video they came from, even though every
+    one of them carries `source_url`, `video_start_time` and `video_end_time`.
+
+    The gaps are the point. A forty-second hole in the middle of a video means something was
+    skipped; two cuts that overlap mean one of them is carrying the other's words -- which is
+    exactly the fault that made drill 6854 say one thing and sound like another.
+    """
+    # Pel vídeo, no per la cadena: els talls d'un mateix vídeo porten cadascun el seu segon
+    # dins del `source_url` (`&t=509`, `&t=521`…), i comparar-la sencera no en trobava cap.
+    want = video_key(url)
+    rows = [d for d in db.query(DrillModel)
+            .filter(DrillModel.source_url != None, DrillModel.source_url != "")   # noqa: E711
+            .order_by(sa_func.coalesce(DrillModel.video_start_time, 0).asc(),
+                      DrillModel.id.asc()).all()
+            if video_key(d.source_url) == want]
+    if not rows:
+        raise HTTPException(status_code=404, detail="D'aquest vídeo no en tenim cap frase")
+
+    cuts = []
+    for d in rows:
+        cuts.append({
+            "id": d.id, "start": d.video_start_time, "end": d.video_end_time,
+            "text_tachelhit": d.text_tachelhit, "text_catalan": d.text_catalan,
+            "text_tachelhit_suggested": d.text_tachelhit_suggested,
+            "audio_url": d.audio_url, "video_url": d.video_url, "image_url": d.image_url,
+            "verified": bool(d.verified), "variety": d.variety, "author": d.author,
+            "tag": d.tag, "topics": d.topics,
+        })
+
+    # the holes and the overlaps, between one cut and the next
+    timed = [c for c in cuts if c["start"] is not None and c["end"] is not None]
+    holes, overlaps = [], []
+    for a, b in zip(timed, timed[1:]):
+        between = b["start"] - a["end"]
+        if between >= 3.0:
+            holes.append({"from": a["end"], "to": b["start"], "after": a["id"], "before": b["id"]})
+        elif between < -0.25:
+            overlaps.append({"by": round(-between, 2), "a": a["id"], "b": b["id"]})
+
+    first = rows[0]
+    return {
+        "source_url": url,
+        "title": first.source_title, "channel": first.source_channel,
+        "playlist": first.source_playlist, "license": first.license,
+        "cuts": cuts,
+        "covered_from": timed[0]["start"] if timed else None,
+        "covered_to": max((c["end"] for c in timed), default=None),
+        "holes": holes, "overlaps": overlaps,
+        "with_voice": sum(1 for c in cuts if c["audio_url"]),
+        "verified": sum(1 for c in cuts if c["verified"]),
+    }
+
+
 @app.get("/capture/agent")
 def capture_agent_status():
     at = _capture_agent_seen.get("at")
@@ -4684,12 +5231,49 @@ def capture_request(
     return {"request_id": req.id, "status": "pending"}
 
 
+# Un reclam que no torna. L'agent es queda la petició mentre la baixa i la puja; quan ha pujat
+# diu «processing» o «done». Si no diu mai res —ha petat, s'ha quedat sense xarxa, la màquina
+# s'ha adormit— la fila es quedava a «claimed» per sempre: la cua ensenyava «en curs»
+# indefinidament i l'agent no la tornava a agafar mai, perquè ja no era pending.
+#
+# Mitja hora és molt generós per a baixar i pujar, fins i tot un vídeo llarg amb mala connexió.
+STALE_CLAIM = timedelta(minutes=30)
+GIVE_UP_AFTER = 3          # una URL que l'agent no pot pair no pot girar per sempre
+
+
+def _requeue_abandoned_claims(db: Session) -> int:
+    """Torna a la cua els reclams que ningú no ha contestat, i es rendeix al tercer.
+
+    Es crida des d'on ja es passa —la consulta de l'agent i la de la pantalla— perquè el forat
+    no demana cap tasca de fons: demana que algú se'n recordi."""
+    cutoff = datetime.utcnow() - STALE_CLAIM
+    stale = (db.query(CaptureRequestModel)
+             .filter(CaptureRequestModel.status == "claimed",
+                     CaptureRequestModel.claimed_at != None,          # noqa: E711
+                     CaptureRequestModel.claimed_at < cutoff).all())
+    for req in stale:
+        tries = (req.attempts or 0) + 1
+        req.attempts = tries
+        if tries >= GIVE_UP_AFTER:
+            req.status = "failed"
+            req.error = (f"L'agent se la va endur {tries} vegades i no va tornar a dir res. "
+                         "Mira que l'agent estigui engegat, i que aquest enllaç es pugui baixar.")
+        else:
+            req.status = "pending"
+            req.claimed_at = None
+    if stale:
+        db.commit()
+        print(f"[CAPTURE] {len(stale)} reclams abandonats tornats a la cua")
+    return len(stale)
+
+
 @app.get("/capture/pending")
 def capture_pending(request: Request, db: Session = Depends(get_db)):
     """The local agent polls this: returns and CLAIMS the oldest pending
     request, or {request: null} when the queue is empty."""
     _capture_agent_seen["at"] = datetime.utcnow()
     _capture_agent_seen["version"] = request.headers.get("X-Agent-Version")
+    _requeue_abandoned_claims(db)
     req = (db.query(CaptureRequestModel)
            .filter(CaptureRequestModel.status == "pending")
            .order_by(CaptureRequestModel.created_at.asc()).first())
@@ -4697,6 +5281,7 @@ def capture_pending(request: Request, db: Session = Depends(get_db)):
         return {"request": None}
     req.status = "claimed"
     req.claimed_at = datetime.utcnow()
+    req.attempts = (req.attempts or 0)
     db.commit()
     db.refresh(req)
     return {"request": {
@@ -4815,8 +5400,13 @@ def capture_forget(request_id: int, db: Session = Depends(get_db),
 @app.get("/capture/queue")
 def capture_queue(limit: int = 40, db: Session = Depends(get_db)):
     """The last `limit` capture requests, newest first, with state, drill count and error:
-    what the agent is doing, for the Captura tab. Read-only (unlike /capture/pending, which
-    claims a request and is for the agent only)."""
+    what the agent is doing, for the Captura tab.
+
+    It also returns abandoned claims to the queue before answering. That is not housekeeping
+    out of place: when the agent dies holding a request, NOBODY polls /capture/pending any more,
+    so the only thing that can notice is the screen somebody opens to ask why it is stuck.
+    """
+    _requeue_abandoned_claims(db)
     rows = (db.query(CaptureRequestModel).order_by(CaptureRequestModel.created_at.desc())
             .limit(max(1, min(limit, 200))).all())
     out = []
@@ -5702,6 +6292,7 @@ def get_me(user: Optional[UserModel] = Depends(get_current_user), db: Session = 
     drills_contributed = db.query(DrillModel).filter(DrillModel.created_by_user_id == user.id).count()
     cards_learning = db.query(DrillReviewModel).filter(DrillReviewModel.user_id == user.id).count()
     return {
+        "id": user.id,            # so the app can tell whose a sentence is, as may_change does
         "username": user.username,
         "display_name": user.display_name,
         "email": user.email,
@@ -5754,6 +6345,12 @@ def update_me(
             "variety": user.variety, "region": user.region, "tz": user.tz or DEFAULT_TZ}
 
 
+#: De quina mena és una altra manera de dir la mateixa frase (#332). Un sinònim no és una
+#: variant dialectal, i per a qui aprèn no volen dir el mateix: la primera li diu com sona la
+#: paraula que està estudiant, la segona li ensenya una paraula nova.
+MENES_DE_VARIANT = ("so", "paraula")
+
+
 @app.post("/drills/{drill_id}/recordings")
 async def add_recording(
     drill_id: int,
@@ -5762,6 +6359,9 @@ async def add_recording(
     region: Optional[str] = Form(None),
     text: Optional[str] = Form(None),
     is_native: Optional[bool] = Form(None),
+    substitueix: Optional[bool] = Form(None),
+    sons_diferents: Optional[bool] = Form(None),
+    mena: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     user: Optional[UserModel] = Depends(get_current_user),
 ):
@@ -5769,22 +6369,63 @@ async def add_recording(
     variety/region (defaulting to their declared profile), so the same drill can
     hold recordings from different people/varieties. `text` is the sentence as this
     speaker says it: kept only when it differs from the drill's own words, so the drill
-    shows the sentence in every dialect that recorded it."""
+    shows the sentence in every dialect that recorded it.
+
+    Dues coses més, del #332:
+
+    · `substitueix` — **«sóc jo altra vegada»**. Si la mateixa persona torna a gravar la mateixa
+      frase (la primera va sortir malament, o ara té un micròfon millor), la seva presa es canvia
+      en comptes d'acumular-ne dues de la mateixa veu que ningú no sap quina val. Només la seva:
+      la d'un altre no es toca mai, i sense `substitueix` es fa com sempre.
+    · `sons_diferents` — **les mateixes paraules, però no sona igual**. Es marca la presa perquè
+      algú ho miri, en comptes que la fitxa digui que es diu d'una manera i la veu en digui una
+      altra sense que consti enlloc.
+    """
     drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found")
     own_words = (text or "").strip()
     if own_words and own_words == (drill.text_tachelhit or "").strip():
         own_words = ""
+    if mena and mena not in MENES_DE_VARIANT:
+        raise HTTPException(status_code=400, detail="«%s» no és cap mena de variant" % mena)
+    mena = mena if own_words else None
     if variety and variety not in _VARIETY_CODES:
         raise HTTPException(status_code=400, detail="Varietat desconeguda")
     content = await file.read()
-    up = await run_in_threadpool(
-        cloudinary.uploader.upload,
-        content, resource_type="auto", folder="tachelhit/recordings",
-        public_id=f"rec_{drill_id}_{int(datetime.utcnow().timestamp())}",
-    )
-    url = normalize_media_url(up["secure_url"])
+    url = normalize_media_url(await run_in_threadpool(
+        magatzem.puja, content, "tachelhit/recordings",
+        f"rec_{drill_id}_{int(datetime.utcnow().timestamp())}", "auto"))
+    # Les preses que aquesta persona ja té d'aquesta frase. Serveixen per a dues coses: per
+    # substituir-ne una (si ho demana) i per dir-li quantes en té.
+    meves = (db.query(RecordingModel)
+             .filter(RecordingModel.drill_id == drill_id, RecordingModel.user_id == user.id)
+             .order_by(RecordingModel.id.desc()).all()) if user else []
+    if substitueix and meves:
+        rec = meves[0]
+        vella = rec.audio_url
+        rec.audio_url = url
+        rec.variety = (variety or (user.variety if user else None) or rec.variety)
+        rec.region = ((region or "").strip() or (user.region if user else None) or rec.region)
+        rec.speaker = ((user.display_name or user.username) if user else rec.speaker)
+        rec.is_native = (is_native if is_native is not None else (user.is_native if user else rec.is_native))
+        rec.text = own_words or None
+        rec.sounds_differ = bool(sons_diferents) or None
+        rec.variant_kind = mena
+        rec.date_created = datetime.utcnow()
+        # Si la veu principal de la frase era justament aquella presa, ha d'apuntar a la nova:
+        # si no, el Mètode i la pràctica seguirien sonant amb la que s'acaba de substituir.
+        if (drill.audio_url or "").strip() == (vella or "").strip():
+            drill.audio_url = url
+        db.commit()
+        db.refresh(rec)
+        return {"id": rec.id, "audio_url": rec.audio_url, "variety": rec.variety,
+                "region": rec.region, "speaker": rec.speaker, "text": rec.text,
+                "sounds_differ": rec.sounds_differ,
+                "date_created": rec.date_created.isoformat(),
+                "variant_id": None,
+                "es_principal": (drill.audio_url or "").strip() == (url or "").strip(),
+                "substituida": True, "meves": len(meves)}
     rec = RecordingModel(
         drill_id=drill_id,
         user_id=user.id if user else None,
@@ -5795,15 +6436,30 @@ async def add_recording(
         # whose voice this is matters: a learner's take must never pass for a model pronunciation
         is_native=(is_native if is_native is not None else (user.is_native if user else None)),
         text=own_words or None,
+        sounds_differ=bool(sons_diferents) or None,
+        variant_kind=mena,
     )
     db.add(rec)
-    # promote to the drill's primary audio if it has none yet
-    if not (drill.audio_url or "").strip():
+    # La primera veu d'una frase muda passa a ser la seva veu principal — amb UNA condició que
+    # ens han posat els auditors i que val la pena: la d'algú que APRÈN, no.
+    #
+    # No és un judici sobre ningú: `drill.audio_url` és el que sona al Mètode, el que sona a la
+    # pràctica i el que `compare_words` fa servir de REFERÈNCIA per puntuar la pronunciació de
+    # tothom. Una primera presa d'algú que aprèn es convertiria en l'objectiu que els altres han
+    # d'encertar. La gravació hi és igual, i s'escolta igual; el que no fa és manar.
+    learner = rec.is_native is False
+    if not (drill.audio_url or "").strip() and not learner:
         drill.audio_url = url
     # a petition (Catalan only) gets its Tamazight from the first speaker who answers it, in their
-    # own spelling; their variety and town travel with it
+    # own spelling; their variety and town travel with it.
+    #
+    # Mai, però, a una línia del manual: si s'hi copiés, hauríem reescrit el text d'El Mountassir
+    # amb una forma de l'Atles mentre el peu segueix dient «Basat en El Mountassir». Aquelles
+    # línies reben VEU —que és el que els falta— i frases nostres al costat, però el text no se'ls
+    # toca des d'una gravació (ADR 0004).
+    from_book = "del llibre" in (drill.tag or "")
     variant = None
-    if not (drill.text_tachelhit or "").strip() and (text or "").strip():
+    if not (drill.text_tachelhit or "").strip() and (text or "").strip() and not from_book:
         drill.text_tachelhit = (text or "").strip()
         drill.variety = drill.variety or rec.variety
         drill.region = drill.region or rec.region
@@ -5817,6 +6473,7 @@ async def add_recording(
             variant = DrillModel(text_tachelhit=own_words, text_catalan=drill.text_catalan, text_arabic=drill.text_arabic,
                                  audio_url=url, image_url=drill.image_url, image_credit=drill.image_credit,
                                  tag=", ".join(x for x in [(drill.tag or "").strip(), "variant"] if x), variant_of=drill.id,
+                                 variant_kind=mena,
                                  variety=rec.variety, region=rec.region, speaker=rec.speaker, created_by_user_id=user.id if user else None,
                                  grammar=drill.grammar, grammar_source=drill.grammar_source, topics=drill.topics, topics_source=drill.topics_source,
                                  license=drill.license, verified=False)
@@ -5829,14 +6486,22 @@ async def add_recording(
         db.refresh(variant)
     return {"id": rec.id, "audio_url": rec.audio_url, "variety": rec.variety,
             "region": rec.region, "speaker": rec.speaker, "text": rec.text,
+            "sounds_differ": rec.sounds_differ,
             "date_created": rec.date_created.isoformat(),
-            "variant_id": variant.id if variant is not None else None}
+            "variant_id": variant.id if variant is not None else None,
+            # Si aquesta presa és la veu de la targeta (#556). Qui grava vol saber què hi ha
+            # entès la màquina, i la lectura només té on desar-se quan la veu és la principal:
+            # `text_tachelhit_suggested` és un sol camp i parla de `drill.audio_url`. Ho diu el
+            # servidor perquè el davant no hagi de tornar a endevinar la regla d'aquí dalt.
+            "es_principal": (drill.audio_url or "").strip() == (url or "").strip(),
+            "substituida": False, "meves": len(meves) + 1}
 
 
 @app.post("/drills/{drill_id}/variant", response_model=Drill)
 def add_variant(drill_id: int, text_tachelhit: str = Body(..., embed=True),
                 note: Optional[str] = Body(None, embed=True),
                 variety: Optional[str] = Body(None, embed=True), region: Optional[str] = Body(None, embed=True),
+                mena: Optional[str] = Body(None, embed=True),
                 user: UserModel = Depends(require_user), db: Session = Depends(get_db)):
     """Say it your way. The sentence is copied as a second version linked to the first: the Catalan
     meaning is the original's — that is what makes them the same sentence — and the Tamazight is
@@ -5850,28 +6515,40 @@ def add_variant(drill_id: int, text_tachelhit: str = Body(..., embed=True),
         raise HTTPException(status_code=400, detail="Escriu com ho dius tu")
     if said.lower() == (original.text_tachelhit or "").strip().lower():
         raise HTTPException(status_code=409, detail="Això és igual que el que ja hi ha")
+    if mena and mena not in MENES_DE_VARIANT:
+        raise HTTPException(status_code=400, detail="«%s» no és cap mena de variant" % mena)
     root = original.variant_of or original.id   # variants of a variant still hang on the first one
     variant = DrillModel(
         text_catalan=original.text_catalan, text_tachelhit=said, text_arabic=original.text_arabic,
         image_url=original.image_url, variant_of=root, created_by_user_id=user.id,
         variety=(variety or user.variety), region=((region or "").strip() or user.region),
-        author=(user.display_name or user.username), notes=(note or None),
+        author=(user.display_name or user.username), variant_note=(note or None),
         tag=", ".join(x for x in [(original.tag or "").strip(), "variant"] if x) or "variant",
-        grammar=original.grammar, topics=original.topics,
+        grammar=original.grammar, topics=original.topics, variant_kind=mena,
     )
     db.add(variant); db.commit(); db.refresh(variant)
     return variant
 
 
 @app.get("/drills/{drill_id}/recordings")
-def list_recordings(drill_id: int, db: Session = Depends(get_db)):
-    """All takes of a drill, oldest first, each with its speaker/variety."""
+def list_recordings(drill_id: int, db: Session = Depends(get_db),
+                    user: Optional[UserModel] = Depends(get_current_user)):
+    """All takes of a drill, oldest first, each with its speaker/variety.
+
+    Cada presa diu també si és **teva** (`mine`), que és el que la pantalla necessita per no
+    oferir-te la paperera damunt de la veu d'un altre. Qui l'ha gravada no es diu mai: només si
+    ets tu. El nom que es veu és el que la persona va voler posar-hi (`speaker`).
+    """
     recs = (db.query(RecordingModel)
             .filter(RecordingModel.drill_id == drill_id)
             .order_by(RecordingModel.date_created.asc()).all())
     return [{"id": r.id, "audio_url": normalize_media_url(r.audio_url),
              "variety": r.variety, "region": r.region, "speaker": r.speaker, "text": r.text,
              "is_native": r.is_native,   # a native speaker's voice, a learner's, or not said
+             # Les mateixes paraules dites d'una altra manera: ho va dir qui va gravar, i queda
+             # perquè algú ho miri (#332).
+             "sounds_differ": r.sounds_differ, "variant_kind": r.variant_kind,
+             "mine": bool(user and r.user_id and user.id == r.user_id),
              "license": r.license, "date_created": r.date_created.isoformat()} for r in recs]
 
 
@@ -5899,12 +6576,67 @@ def update_recording(recording_id: int, text: Optional[str] = Body(None, embed=T
     return {"id": r.id, "text": r.text, "variety": r.variety, "region": r.region}
 
 
+@app.post("/recordings/{recording_id}/principal")
+def make_recording_primary(recording_id: int, db: Session = Depends(get_db),
+                           user: Optional[UserModel] = Depends(get_current_user)):
+    """Quina de les preses és la veu de la targeta (#332).
+
+    `drill.audio_url` no és una presa més: és el que sona al Mètode, a la pràctica i el que la
+    puntuació de pronunciació fa servir de REFERÈNCIA. Fins ara era «la primera que va entrar» i
+    prou, de manera que amb tres preses no hi havia cap manera de dir quina mana.
+
+    Dues regles, i la segona no és negociable:
+
+    · la pot posar **qui la va gravar**, o qui administra: és la seva veu;
+    · **una presa d'algú que aprèn no passa davant d'una de nadiu.** No és un judici sobre ningú:
+      és que aquella veu es converteix en l'objectiu que els altres han d'encertar (#288).
+    """
+    r = db.query(RecordingModel).filter(RecordingModel.id == recording_id).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="Aquesta gravació no existeix")
+    if r.user_id and not (user and (user.id == r.user_id or user.is_admin)):
+        raise HTTPException(status_code=403,
+                            detail="Només qui va gravar la veu (o un administrador) pot dir que sigui la principal")
+    drill = db.query(DrillModel).filter(DrillModel.id == r.drill_id).first()
+    if not drill:
+        raise HTTPException(status_code=404, detail="Drill not found")
+    if r.is_native is False:
+        hi_ha_nadiu = db.query(RecordingModel).filter(
+            RecordingModel.drill_id == r.drill_id, RecordingModel.is_native.is_(True)).first()
+        if hi_ha_nadiu is not None:
+            raise HTTPException(
+                status_code=409,
+                detail="Aquesta frase ja la diu algú que la parla de tota la vida: la seva veu és "
+                       "la que mana. La teva gravació hi és igual i s'escolta igual.")
+    drill.audio_url = r.audio_url
+    db.commit()
+    return {"drill_id": drill.id, "audio_url": drill.audio_url, "recording_id": r.id}
+
+
 @app.delete("/recordings/{recording_id}")
 def delete_recording(recording_id: int, db: Session = Depends(get_db),
                      user: Optional[UserModel] = Depends(get_current_user)):
+    """Esborrar una presa: només qui la va gravar, o un administrador.
+
+    Fins ara aquí no hi havia cap comprovació: amb el número d'una gravació, qualsevol —ni calia
+    estar registrat— podia esborrar la veu de qualsevol altre. El seu germà `PATCH`, que només
+    canvia el text i el poble, sí que la tenia: el gest que destrueix s'havia quedat sense el
+    guàrdia que tenia el gest inofensiu.
+
+    En aquesta biblioteca una gravació és la cosa que més costa d'aconseguir —algú ha hagut de
+    dir la frase— i no es torna a fer sola.
+
+    Una presa sense amo (les velles, d'abans que es desés qui gravava) només la pot esborrar un
+    administrador. Ningú no pot demostrar que és seva, de manera que ningú no se l'ha de poder
+    endur.
+    """
     r = db.query(RecordingModel).filter(RecordingModel.id == recording_id).first()
     if not r:
         raise HTTPException(status_code=404, detail="Recording not found")
+    seva = bool(user and r.user_id and user.id == r.user_id)
+    if not (seva or (user and user.is_admin)):
+        raise HTTPException(status_code=403,
+                            detail="Només qui va gravar la veu (o un administrador) la pot esborrar")
     db.delete(r)
     db.commit()
     return {"deleted": recording_id}
@@ -5927,6 +6659,33 @@ def verify_drill(drill_id: int, verified: bool = Body(True, embed=True),
     drill.verified_by_user_id = user.id if verified else None
     db.commit()
     return {"drill_id": drill_id, "verified": drill.verified, "verified_by": user.username if verified else None}
+
+@app.get("/mitjans/{clau:path}")
+def serveix_mitja(clau: str):
+    """Desvia cap al fitxer de R2, amb una adreça signada que dura una hora.
+
+    Per què no es desa l'adreça signada a la base de dades: perquè caduca, i les adreces de
+    la base de dades hi viuen per sempre. I per què no es fa el bust públic: perquè així els
+    fitxers no queden penjats a una adreça permanent que qualsevol pugui repartir.
+
+    **El que això NO fa:** demanar qui ets. Qui tingui aquesta adreça rep el fitxer. Treu els
+    mitjans de Google i de l'enllaç de fora, no els tanca per usuari; per a això caldria que
+    el reproductor enviés el testimoni, i és una altra passa (#577).
+
+    Els bytes van de R2 al navegador sense passar per aquí: això només contesta un desviament.
+    """
+    if not magatzem.a_r2():
+        raise HTTPException(status_code=404, detail="Aquest servidor no serveix de R2")
+    if ".." in clau:
+        raise HTTPException(status_code=400, detail="Ruta no vàlida")
+    try:
+        adreca = magatzem.adreca_signada(clau)
+    except Exception as e:
+        print(f"[MITJANS] no he pogut signar {clau}: {type(e).__name__}: {e}")
+        raise HTTPException(status_code=502, detail="El dipòsit no respon")
+    #: 307 i no 301: l'adreça caduca i no s'ha de guardar a la memòria del navegador
+    return RedirectResponse(adreca, status_code=307)
+
 
 @app.get("/version")
 def get_version():
@@ -5971,11 +6730,32 @@ def _load_grammar() -> str:
             _GRAMMAR_TEXT = ""
     return _GRAMMAR_TEXT
 
+
+def writer_available() -> bool:
+    """Is there anybody at all who can write a lesson — Gemini, o DeepSeek quan Gemini cau?
+
+    Abans aquesta pregunta era «hi ha Gemini?», i amb Gemini sense crèdit el curs es quedava
+    sense redactor. Pitjor encara: el compendi d'amazic.cat només es carregava si hi havia
+    Gemini, de manera que la reserva hauria escrit les lliçons **sense la gramàtica a la mà**.
+    """
+    if gemini_available():
+        return True
+    try:
+        from deepseek_client import deepseek_available
+        return deepseek_available()
+    except Exception:
+        return False
+
+
+def grammar_reference() -> str:
+    """El compendi per a qui escrigui la lliçó. Buit només si no hi ha ningú per escriure-la."""
+    return _load_grammar() if writer_available() else ""
+
 AI_SYSTEM_ROLE = """Ets l'assistent lingüístic de "Tamazight Drills", una aplicació per aprendre la llengua amaziga taixelhit (tachelhit/tashelhit) fent servir el català com a llengua de referència, amb l'àrab i els alfabets tifinag i llatí.
 
 El teu paper:
 - Ajudes qui aprèn a entendre la gramàtica, la pronunciació i l'ús del taixelhit i l'amazic en general.
-- Et bases SEMPRE en el "Compendi de Gramàtica Amaziga" que tens a continuació com a font principal. Cita la secció (p. ex. "§5. Morfosintaxi verbal") quan sigui rellevant.
+- Et bases SEMPRE en el "Compendi de Gramàtica Amaziga" com a font principal. A continuació en tens EL TROS que parla del que s'ha preguntat, no el llibre sencer: cita la secció (p. ex. "§5. Morfosintaxi verbal") quan sigui rellevant. Si el tros que tens no cobreix la pregunta, digues que el compendi pot parlar-ne en una altra secció; no et pensis que el llibre no en parla perquè aquí no hi surti.
 - Si la pregunta va sobre un drill concret de l'usuari, fes servir el seu contingut (català, taixelhit en tifinag i llatí, àrab) per explicar-lo.
 - Si el compendi no cobreix una cosa, digues-ho clarament i aporta el teu millor coneixement lingüístic, marcant-ho com a complement.
 - Quan el context d'un drill porta línies marcades [Oulhaj] (diccionari anglès–taixelhit de Lahcen Oulhaj) o [IRCAM] (taules de conjugació de l'IRCAM), són dades de referència: per a una paraula amb la mateixa grafia tenen prioritat sobre el que recordis, i les cites amb aquesta marca. Les línies marcades «coincidència aproximada de grafia» només són pistes (el diccionari és del taixelhit del Sus; en Atles Central la mateixa grafia pot ser una altra paraula): descarta-les quan no quadrin amb el significat català.
@@ -5983,7 +6763,7 @@ El teu paper:
 
 PRINCIPI DE VARIETAT (molt important): qui aprèn documenta una varietat regional concreta (sovint tamazight de l'Atles central, zona Azilal–Kalaat Mgouna), que NO és idèntica al taixelhit del Sus ni al tamazight estàndard de l'IRCAM. Quan la forma ATTESTADA (recollida per l'usuari d'un parlant real) difereixi de l'estàndard o del compendi, la forma attestada és la correcta per a aquella varietat: explica la diferència, no la "corregeixis" cap a l'estàndard. Tracta les formes recollides per l'usuari com a dades de camp valuoses.
 
-=== COMPENDI DE GRAMÀTICA AMAZIGA (font: amazic.cat) ===
+=== COMPENDI DE GRAMÀTICA AMAZIGA (font: amazic.cat) — el tros que fa al cas ===
 """
 
 def _attested_forms_context(db, limit: int = 40) -> str:
@@ -6009,9 +6789,26 @@ def _attested_forms_context(db, limit: int = 40) -> str:
     return ("\n\n=== FORMES ATTESTADES RECOLLIDES PER L'USUARI (dades de camp, prioritàries) ===\n"
             + "\n".join(lines))
 
-def _build_system_instruction(db) -> str:
-    """Role + grammar compendium + the learner's attested corpus."""
-    return AI_SYSTEM_ROLE + _load_grammar() + _attested_forms_context(db)
+def _build_system_instruction(db, question: str = "") -> str:
+    """El paper, el tros de compendi que fa al cas, i les formes recollides.
+
+    Abans hi anava **el compendi sencer**: 549.650 caràcters, uns 137.000 tokens, a cada
+    pregunta i es preguntés el que es preguntés. Mesurat a `/ai/usage`, una pregunta al copilot
+    costava 0,065 € i 228.900 tokens d'entrada —seixanta vegades una crida del `pipeline`— i,
+    pitjor encara, portava dos-cents mil tokens de llibre i cap frase de la biblioteca: quan li
+    preguntaven una paraula, el que tenia a mà era el llibre, i contestava amb el llibre o se la
+    inventava (#374).
+
+    Ara es va a buscar el tros que parla del que s'ha preguntat (`compendi.per`). Sense pregunta
+    —una traducció, una revisió— va només l'índex dels capítols: val més dir de què parla el
+    llibre que endevinar quin tros calia.
+    """
+    import compendi
+    llibre = _load_grammar()
+    if not llibre:
+        return AI_SYSTEM_ROLE + _attested_forms_context(db)
+    tros = compendi.per(question, llibre)[0] if (question or "").strip() else compendi.index(llibre)
+    return AI_SYSTEM_ROLE + tros + _attested_forms_context(db)
 
 def _drill_context(drill) -> str:
     if not drill:
@@ -6141,11 +6938,34 @@ def petitions(kind: str = "open", limit: int = 40, offset: int = 0, topic: Optio
         items.sort(key=lambda x: (x["level"], not x["drill"].image_url, -x["drill"].id))
         return {"items": items[max(0, offset):max(0, offset) + max(1, min(limit, 200))], "total": len(items),
                 "without_any_voice": sum(1 for x in items if not x["drill"].audio_tts_shi_url)}
+    if kind == "voiceless":
+        # TOTES les que ningú no ha dit mai, sense triar-ne cap: l'amo va trobar a faltar
+        # justament la llista sencera. «synthetic» és aquesta mateixa llista, però filtrada pel
+        # que el curs pot citar i ordenada per unitats; aquesta no amaga res.
+        rows = base.filter(DrillModel.text_tachelhit.isnot(None), DrillModel.text_tachelhit != "",
+                           (DrillModel.audio_url.is_(None)) | (DrillModel.audio_url == "")).order_by(
+                               DrillModel.image_url.isnot(None).desc(), DrillModel.id.desc()).all()
+        if topic:
+            rows = [d for d in rows if topic in topics_catalog.parse(d.topics)]
+        if unit:
+            rows = [d for d in rows if unit in grammar_course.parse(d.grammar)]
+        items = [_petition_row(d, units_level) for d in rows]
+        return {"items": items[max(0, offset):max(0, offset) + max(1, min(limit, 200))], "total": len(items)}
+    if kind == "untranscribed":
+        # Veus que ningú no ha escrit. És l'altra meitat de la feina i no es veia enlloc: una
+        # gravació sense text no es pot buscar, ni citar, ni entrar a cap lliçó — i qui la va
+        # dir ja ha fet la part difícil.
+        rows = base.filter(DrillModel.audio_url.isnot(None), DrillModel.audio_url != "",
+                           (DrillModel.text_tachelhit.is_(None)) | (DrillModel.text_tachelhit == "")).order_by(
+                               DrillModel.id.desc()).all()
+        items = [_petition_row(d, units_level) for d in rows]
+        return {"items": items[max(0, offset):max(0, offset) + max(1, min(limit, 200))], "total": len(items)}
     if kind == "aitmraw":
         w = grammar_wishlist(per_unit=6, db=db)["units"]
         items = [{"drill": d, "units": [u["slug"]], "level": u["level"], "requested_by": None, "note": f"Unitat «{u['title']}»: {u['aitmraw_voiced']} veus d'Aït Mraw"} for u in w for d in u["wanted"]]
         return {"items": items[:max(1, min(limit, 200))], "total": len(items)}
-    raise HTTPException(status_code=400, detail="kind must be open, synthetic or aitmraw")
+    raise HTTPException(status_code=400,
+                        detail="kind must be open, synthetic, voiceless, untranscribed or aitmraw")
 
 
 @app.post("/petitions")
@@ -6172,13 +6992,34 @@ def lesson_proposals(slug: str, db: Session = Depends(get_db), user: Optional[Us
              "status": p.status, "created_at": p.created_at.isoformat()} for p in q.order_by(LessonProposalModel.id.desc()).all()]
 
 
+#: Una proposta per a un capítol del Mètode porta el capítol al davant: «metode:la-botiga».
+#:
+#: És la mateixa cua de propostes que la del curs de gramàtica, i ha de ser-ho: qui llegeix veu
+#: una explicació i hi vol dir alguna cosa, tant li fa de quina part de l'app sigui. El que
+#: canvia és on s'escriu quan s'accepta, i això ho decideix aquest prefix.
+METHOD_PROPOSAL = "metode:"
+
+
+def _proposal_target(slug: str) -> str:
+    """De quina part de l'app és aquesta proposta: «grammar» o «method». 404 si no existeix."""
+    if slug.startswith(METHOD_PROPOSAL):
+        if not method_mod.chapter(slug[len(METHOD_PROPOSAL):]):
+            raise HTTPException(status_code=404, detail="Aquest capítol no existeix")
+        return "method"
+    if slug not in grammar_course.TITLES:
+        raise HTTPException(status_code=404, detail="Unit not found")
+    return "grammar"
+
+
 @app.post("/grammar/{slug}/proposals")
 def propose_lesson_change(slug: str, step: int = Body(..., embed=True), text: str = Body(..., embed=True), kind: str = Body("text", embed=True),
                           db: Session = Depends(get_db), user: UserModel = Depends(require_user)):
     """A learner or speaker proposes a change to a card (step index; -1 = the intro): a new text,
-    or a note. Kept for an admin to accept or reject."""
-    if slug not in grammar_course.TITLES:
-        raise HTTPException(status_code=404, detail="Unit not found")
+    or a note. Kept for an admin to accept or reject.
+
+    The slug is a grammar unit, or a Method chapter written «metode:la-botiga» — same queue, and
+    the step is then the section's place in the chapter."""
+    _proposal_target(slug)
     t = (text or "").strip()
     if len(t) < 3:
         raise HTTPException(status_code=400, detail="Escriu la proposta")
@@ -6195,7 +7036,20 @@ def decide_lesson_proposal(proposal_id: int, accept: bool = Body(..., embed=True
     p = db.query(LessonProposalModel).filter(LessonProposalModel.id == proposal_id).first()
     if not p:
         raise HTTPException(status_code=404, detail="Proposal not found")
-    if accept and p.kind == "text":
+    if accept and p.kind == "text" and p.slug.startswith(METHOD_PROPOSAL):
+        chapter = p.slug[len(METHOD_PROPOSAL):]
+        body = method_mod.content_of(db, chapter)
+        if not body:
+            raise HTTPException(status_code=409, detail="Aquest capítol encara no té text")
+        sections = body.get("sections") or []
+        if p.step == -1:
+            body["intro"] = p.text
+        elif 0 <= p.step < len(sections):
+            sections[p.step]["text"] = p.text
+        else:
+            raise HTTPException(status_code=409, detail="Aquesta secció ja no hi és")
+        method_mod.store_content(db, chapter, body, who=f"proposta de {p.display_name or 'algú'}")
+    elif accept and p.kind == "text":
         row = db.query(GrammarLesson).filter(GrammarLesson.id == p.slug).first()
         if not row:
             raise HTTPException(status_code=409, detail="The lesson is not written yet")
@@ -6236,7 +7090,38 @@ def read_story(slug: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Aquesta hist\u00f2ria no existeix")
     ids = story.pop("drill_ids")
     rows = {d.id: d for d in db.query(DrillModel).filter(DrillModel.id.in_(ids)).all()}
-    return {**story, "drills": [Drill.model_validate(rows[i], from_attributes=True) for i in ids if i in rows]}
+    return {**story,
+            "drills": [Drill.model_validate(rows[i], from_attributes=True) for i in ids if i in rows],
+            "word_times": _story_word_times(db, ids),
+            "analisi": analisi.per_a(db, ids)}
+
+
+def _story_word_times(db: Session, ids: List[int]) -> Dict[str, List[dict]]:
+    """Quan es diu cada paraula de cada l\u00ednia, en segons.
+
+    Perqu\u00e8 la pantalla pugui seguir la veu i encendre la paraula en el moment que sona (#340), no
+    n'hi ha prou de saber quan comen\u00e7a la l\u00ednia: cal saber quan comen\u00e7a i acaba cada paraula
+    dins seu. Aix\u00f2 ja ho tenim, i no de calcular-ho ara: l'alineament for\u00e7at ho va desar
+    (`word_audio`), que \u00e9s el mateix que deixa sentir una paraula sola al paraula per paraula.
+
+    Es tornen **nom\u00e9s les l\u00ednies que en tenen de deb\u00f2**. Una l\u00ednia sense alineament no hi surt, i
+    la pantalla l'encendr\u00e0 sencera. El que no es fa mai \u00e9s repartir la l\u00ednia pel rellotge, com
+    si les paraules duressin totes igual: es va provar al #330 i reparteix malament, i una
+    paraula encesa al moment equivocat ensenya a sentir el que no \u00e9s.
+    """
+    if not ids:
+        return {}
+    from models import WordAudio
+    # Sense filtrar per `source`: una fila lligada a aquest `drill_id` ja vol dir «dins la
+    # gravació d'aquesta línia», vingui del pas d'alineament de casa o del corpus obert.
+    files = (db.query(WordAudio)
+             .filter(WordAudio.drill_id.in_(ids))
+             .order_by(WordAudio.drill_id, WordAudio.start_ms).all())
+    fora: Dict[str, List[dict]] = {}
+    for w in files:
+        fora.setdefault(str(w.drill_id), []).append(
+            {"w": w.word, "start": round(w.start_ms / 1000, 3), "end": round(w.end_ms / 1000, 3)})
+    return fora
 
 
 # ===================== UNA PARAULA, DITA ====================
@@ -6252,6 +7137,144 @@ def word_audio_clips(word: str, limit: int = 6, db: Session = Depends(get_db)):
     return {"word": word, "count": len(clips), "clips": clips}
 
 
+@app.post("/stories/{slug}/analisi")
+def write_story_analysis(slug: str, limit: int = 12, redo: bool = False,
+                         _admin: UserModel = Depends(require_admin),
+                         db: Session = Depends(get_db)):
+    """Desmuntar les oracions d'una història: què hi passa i quina unitat ho explica (#341).
+
+    Només sobre les línies que algú ha escrit de debò. Una línia sense text amazic no es pot
+    analitzar —no hi ha res a desmuntar— i demanar-ho igualment faría que la màquina se la
+    inventés primer i l'analitzés després, que és la pitjor de les dues coses que podríem fer.
+    """
+    story = stories_mod.one(db, slug)
+    if not story:
+        raise HTTPException(status_code=404, detail="Aquesta història no existeix")
+    frases = analisi.frases_de(db, story["drill_ids"], refer=redo)[:max(1, min(limit, 60))]
+    if not frases:
+        return {"demanades": 0, "desades": 0, "missatge": "no queda cap línia escrita per analitzar"}
+    quines = analisi.escriu(frases)
+    return {"demanades": len(frases), "desades": analisi.desa(db, quines),
+            "llencades": len(frases) - len(quines)}
+
+
+@app.post("/stories/{slug}/glosses")
+def write_story_glosses(slug: str, limit: int = 15, redo: bool = False,
+                        _admin: UserModel = Depends(require_admin),
+                        db: Session = Depends(get_db)):
+    """El paraula per paraula de les línies d'una història (#361).
+
+    Sense això la meitat catalana de la pantalla que segueix la veu es queda apagada: el so
+    encén l'amazic, i el català l'encén la glossa. De les 80 línies escrites de les històries
+    només 13 en tenien, i el pas que les escrivia vivia fora del repositori.
+
+    La paraula que es desa és la de la frase, no la que escriu el model: és la clau que fan
+    servir el so d'una paraula, el tros de la frase catalana i la cerca.
+    """
+    story = stories_mod.one(db, slug)
+    if not story:
+        raise HTTPException(status_code=404, detail="Aquesta història no existeix")
+    frases = glossa.frases_de(db, story["drill_ids"], refer=redo)[:max(1, min(limit, 45))]
+    if not frases:
+        return {"demanades": 0, "desades": 0, "missatge": "no queda cap línia per glossar"}
+    quines = glossa.escriu(frases)
+    mots = sum(len(g) for g in quines.values())
+    certs = sum(1 for g in quines.values() for x in g if x["ca"] != glossa.NO_HO_SABEM)
+    return {"demanades": len(frases), "desades": glossa.desa(db, quines),
+            "paraules": mots, "amb_significat": certs}
+
+
+@app.post("/stories/{slug}/trams")
+def write_story_spans(slug: str, limit: int = 10, redo: bool = False,
+                      _admin: UserModel = Depends(require_admin),
+                      db: Session = Depends(get_db)):
+    """El tros de la frase catalana que respon a cada paraula amaziga (#356).
+
+    La glossa diu què vol dir la paraula, i ho diu amb la forma de diccionari: «confien». La frase
+    diu «confiança». La pantalla que segueix la veu encenia el català casant la glossa amb les
+    paraules de la frase, i per això només n'encenia el 41%. Això escriu l'altre camp —el tros
+    exacte de la frase— i no toca mai el que la glossa ensenya.
+    """
+    story = stories_mod.one(db, slug)
+    if not story:
+        raise HTTPException(status_code=404, detail="Aquesta història no existeix")
+    frases = tram.frases_de(db, story["drill_ids"], refer=redo)[:max(1, min(limit, 40))]
+    if not frases:
+        return {"demanades": 0, "desades": 0, "missatge": "no queda cap línia amb paraula per paraula per marcar"}
+    quines = tram.escriu(frases)
+    mots = sum(len(f["glosses"]) for f in frases)
+    amb = sum(tram.compte(g)[1] for g in quines.values())
+    return {"demanades": len(frases), "desades": tram.desa(db, quines),
+            "paraules": mots, "amb_tros": amb}
+
+
+@app.get("/listen/session")
+def listen_session(limit: int = 10, seed: Optional[int] = None, db: Session = Depends(get_db)):
+    """Sona un tall i tria què vol dir, entre quatre (#333).
+
+    Funciona **sense transcripció**: només calen veu i significat. Les 644 línies que tenen veu i
+    cap paraula amaziga escrita (#320) no serveixen per llegir i serveixen exactament per a això.
+    """
+    return {"items": escoltar.sessio(db, limit=limit, llavor=seed)}
+
+
+@app.get("/listen/counts")
+def listen_counts(db: Session = Depends(get_db)):
+    """Quant material hi ha per a l'exercici d'escoltar."""
+    return escoltar.comptes(db)
+
+
+@app.get("/words/have-audio")
+def words_have_audio(words: str, db: Session = Depends(get_db)):
+    """Quines d'aquestes paraules es poden sentir, en un sol viatge (#271).
+
+    `words` és la llista separada per comes. Serveix perquè el paraula per paraula sàpiga, abans
+    que ningú premi res, quins altaveus tenen alguna cosa a dir.
+    """
+    llista = [w.strip() for w in (words or "").split(",") if w.strip()][:80]
+    return {"words": word_audio.which_have_audio(db, llista)}
+
+
+@app.get("/alfabet")
+def alphabet(db: Session = Depends(get_db)):
+    """L'abecedari: què és el tifinag, i cada lletra amb com sona i on es pot sentir (#368).
+
+    Cada lletra porta les paraules de la biblioteca que la duen, amb el tall de la gravació on
+    es diu —cap fitxer de so nou: un drill i dos temps— i qui la diu. La lletra que no sona
+    enlloc hi surt igual, amb `sona: false`: de les 338 paraules soles gravades, cap no porta ḍ,
+    ḥ, ɛ, ṛ, ɣ, ṣ, ṭ ni ẓ (#302), i amagar-ho seria amagar la feina que falta.
+    """
+    return alfabet.abecedari(db)
+
+
+@app.get("/alfabet/parelles")
+def alphabet_pairs(per_so: int = 4, db: Session = Depends(get_db)):
+    """Parelles de paraules que es distingeixen per una sola lletra, totes dues amb veu.
+
+    Buscades a la biblioteca i no escrites a mà: una parella inventada ensenyaria a sentir una
+    diferència entre dues paraules que ningú no ha dit mai.
+    """
+    return {"parelles": alfabet.parelles(db, per_so=per_so)}
+
+
+@app.get("/alfabet/{lletra}")
+def alphabet_letter(lletra: str, limit: int = 8, db: Session = Depends(get_db)):
+    """Una lletra sola: com sona i totes les paraules nostres que la porten.
+
+    S'hi arriba tant pel tifinag (`ⵖ`) com pel llatí (`ɣ`, i també «gh», que és com l'escriu
+    mitja biblioteca): qui busca una lletra no ha d'endevinar quina de les dues escriptures
+    espera el servidor.
+    """
+    busca = (lletra or "").strip()
+    quina = next((l for l in alfabet.LLETRES
+                  if busca in (l["tif"], l["lat"]) or busca in (l.get("altres") or [])), None)
+    if quina is None:
+        raise HTTPException(status_code=404, detail="Aquesta lletra no és de l'abecedari")
+    so = alfabet.so_de(quina)
+    mostres = alfabet.exemples(db, so, limit=max(1, min(limit, 40)))
+    return {**quina, "sona": bool(mostres), "exemples": mostres}
+
+
 @app.get("/words/align/status")
 def word_align_status():
     """How the alignment pass is going."""
@@ -6263,6 +7286,37 @@ def word_align_status():
                 "recordings": db.query(WordAudio.drill_id).distinct().count()}
     finally:
         db.close()
+
+
+@app.get("/asr/night/status")
+def night_asr_status():
+    """Com va la tanda de transcripcions, i quantes gravacions esperen."""
+    from models import Drill as D
+    db = SessionLocal()
+    try:
+        esperen = db.query(D).filter(
+            D.audio_url.isnot(None), D.audio_url != "",
+            (D.text_tachelhit.is_(None)) | (D.text_tachelhit == "")).count()
+        proposades = db.query(D).filter(
+            D.text_tachelhit_suggested.isnot(None), D.text_tachelhit_suggested != "",
+            (D.text_tachelhit.is_(None)) | (D.text_tachelhit == "")).count()
+        return {**night_asr.state(), "waiting": esperen, "proposed": proposades}
+    finally:
+        db.close()
+
+
+@app.post("/asr/night/run")
+def night_asr_run(limit: int = 50, redo: bool = False, _admin: UserModel = Depends(require_admin)):
+    """Proposa el text de les gravacions que ningú no ha escrit.
+
+    En un fil, com l'alineador i pel mateix motiu: el Space és una sola CPU i triga un minut per
+    gravació. És pensat perquè ho cridi un rellotge de nit, no una persona esperant.
+
+    El que surt no és el text del parlant: va a `text_tachelhit_suggested` amb la certesa al
+    costat, i `text_tachelhit` es queda buit fins que algú ho confirma.
+    """
+    night_asr.run(SessionLocal, limit=limit, redo=redo)
+    return {"started": True, **night_asr.state()}
 
 
 @app.post("/words/align/run")
@@ -6306,6 +7360,434 @@ def credits():
     return {"markdown": _CREDITS_FALLBACK, "source": "fallback"}
 
 
+@app.get("/method/")
+def method_index(db: Session = Depends(get_db),
+                 user: Optional[UserModel] = Depends(get_current_user)):
+    """Els deu capítols del Mètode, i quant en tenim recollit de cadascun.
+
+    La barra de cada capítol NO és el progrés de qui aprèn: és quantes frases nostres fan el que
+    el capítol demana. Un capítol curt vol dir que d'allò encara no n'hem gravat, i és l'argument
+    per anar-hi. Vegeu ADR 0003: del manual se'n pren el pla, mai el text.
+    """
+    mark = _index_mark(db)
+    done = _INDEX_CACHE.get("method")
+    if done and done[0] == mark:
+        return done[1]
+    drawn = artwork(db, "method")
+    # Les candidates són les MATEIXES per als deu capítols: es demanen una vegada i es passen.
+    # Abans cada capítol repetia la consulta sobre tota la biblioteca, i amb 12.000 frases això
+    # eren disset segons a cada obertura del Mètode (31-10-2026).
+    totes = method_mod.candidates(db)
+    out = []
+    for c in method_mod.index():
+        rows = method_mod.sentences_for(db, c["slug"], totes)
+        out.append({**c,
+                    # el dibuix del capítol: diu de què va abans de llegir-ne una paraula
+                    "cover": drawn.get(c["slug"]),
+                    **method_mod.readiness(c, rows),
+                    "written": method_mod.content_of(db, c["slug"]) is not None,
+                    "sentences": len(rows),
+                    "with_voice": sum(1 for d in rows if d.audio_url),
+                    "varieties": sorted({(d.variety or "").strip() for d in rows if (d.variety or "").strip()})})
+    fora = {"chapters": out, "source": method_mod.SOURCE}
+    _INDEX_CACHE["method"] = (mark, fora)
+    return fora
+
+
+def _another_way(said: Optional[str], written: Optional[str]) -> bool:
+    """Si això que algú ha dit és de debò una altra manera de dir-ho, i no la mateixa escrita
+    igual (o escrita amb gh en comptes de ɣ, que és la mateixa paraula)."""
+    import practice as practice_mod
+    key = lambda t: " ".join(practice_mod.sound_key(w) for w in practice_mod.words_of(t or ""))
+    return bool((said or "").strip()) and key(said) != key(written)
+
+
+# La ruta no penja de `/drills/` a posta: `/drills/{drill_id}` es declara abans i es menjaria
+# «other-ways» com si fos un número.
+@app.get("/other-ways")
+def drills_other_ways(ids: str = "", db: Session = Depends(get_db)):
+    """Les altres maneres de dir aquestes frases, en un sol viatge (#239).
+
+    Es veien només allà on es graven. Qualsevol pantalla que ensenyi una frase ha de poder dir
+    que n'hi ha una altra manera, amb qui la diu i de quin poble és: en una pràctica, en un
+    diàleg del Mètode o en un exemple de gramàtica. Una altra manera no és una correcció de la
+    primera; són dues maneres.
+    """
+    quins = [int(x) for x in (ids or "").split(",") if x.strip().isdigit()][:60]
+    if not quins:
+        return {}
+    said = other_ways(db)
+    fora: Dict[str, List[dict]] = {}
+    for d in db.query(DrillModel).filter(DrillModel.id.in_(quins)).all():
+        altres = [v for v in said.get(d.id, []) if _another_way(v["text"], d.text_tachelhit)]
+        if altres:
+            fora[str(d.id)] = altres
+    return fora
+
+
+def other_ways(db) -> Dict[int, List[dict]]:
+    """Les altres maneres de dir una frase: les gravacions que porten el text de qui les diu.
+
+    L'amo: «si jo gravo i canvio el text, el sistema hauria de mostrar també l'altra versió de la
+    mateixa frase amb la seva gravació, i hauria de mostrar l'autor i la zona».
+
+    Això ja existia a mitges: la gravadora pregunta «com ho dius tu?» i el que s'hi escriu es
+    desa amb la gravació (`recordings.text`), però no es veia enlloc fora del reproductor. Una
+    frase dita d'una altra manera no és una correcció de l'altra: són dues maneres, i totes dues
+    porten el nom de qui la diu i el seu poble. La del llibre no mana sobre la del poble.
+
+    Només surten les gravacions que PORTEN text propi: una gravació sense text és la mateixa
+    frase amb una altra veu, i això ja ho diu el reproductor.
+    """
+    out: Dict[int, List[dict]] = {}
+    rows = (db.query(RecordingModel)
+            .filter(RecordingModel.text.isnot(None), RecordingModel.text != "")
+            .order_by(RecordingModel.date_created.asc()).all())
+    for r in rows:
+        out.setdefault(r.drill_id, []).append({
+            "id": r.id, "text": (r.text or "").strip(),
+            "tif": grammar_course.tifinagh((r.text or "").strip()),
+            "audio_url": normalize_media_url(r.audio_url),
+            "speaker": r.speaker, "variety": r.variety, "region": r.region,
+            "is_native": r.is_native, "kind": r.variant_kind,
+        })
+    return out
+
+
+def _amb_les_altres_maneres(body, said, db):
+    """A cada línia del capítol que ja és una frase nostra, com la diuen els altres (#239).
+
+    És on això importa més: el text d'un diàleg ve del manual i és del Souss, i qui el llegeix
+    ha de poder veure que al seu poble es diu d'una altra manera —amb qui ho diu i d'on és— en
+    comptes de pensar que el llibre mana sobre la gent.
+    """
+    if not body:
+        return body
+    from models import Drill as DrillModel
+    quins = {l.get("drill_id") for kind in method_mod.LINE_KINDS
+             for l in method_mod._lines_of(body, kind) if isinstance(l.get("drill_id"), int)}
+    if not quins:
+        return body
+    textos = {d.id: d.text_tachelhit for d in db.query(DrillModel).filter(DrillModel.id.in_(quins)).all()}
+    for kind in method_mod.LINE_KINDS:
+        for line in method_mod._lines_of(body, kind):
+            did = line.get("drill_id")
+            altres = [v for v in said.get(did, []) if _another_way(v["text"], textos.get(did))]
+            if altres:
+                line["variants"] = altres
+    return body
+
+
+#: El capítol servit l'últim cop, i amb quina biblioteca es va fer.
+#:
+#: Servir un capítol vol dir llegir les mil sis-centes frases que hi poden anar i puntuar-les
+#: secció per secció: deu segons. I no canvia entre una visita i la següent si no ha canviat ni
+#: el text del capítol ni la biblioteca, així que es guarda fet i es torna a fer quan alguna de
+#: les dues coses es mou. No hi ha res de qui mira: el capítol és el mateix per a tothom.
+_CHAPTER_CACHE: Dict[str, tuple] = {}
+
+#: L'índex del Mètode, que no en tenia i es recalculava sencer a cada obertura de la pantalla.
+_INDEX_CACHE: Dict[str, tuple] = {}
+
+
+def _index_mark(db) -> tuple:
+    """La marca de l'índex: com la d'un capítol, però de TOTS.
+
+    L'índex depèn de la biblioteca i de quan es va escriure qualsevol capítol, no només un. Si
+    aquestes dues coses no s'han mogut, el que hi havia servit segueix valent.
+    """
+    from sqlalchemy import func
+
+    from models import MethodChapter
+    n, last = db.query(func.count(DrillModel.id), func.max(DrillModel.updated_at)).one()
+    # El capítol va per `slug`: aquesta taula no té `id`.
+    cn, clast = db.query(func.count(MethodChapter.slug), func.max(MethodChapter.updated_at)).one()
+    art = db.query(AppSettingModel.updated_at).filter(AppSettingModel.key == "artwork_method").first()
+    pn, plast = db.query(func.count(TestModel.id), func.max(TestModel.updated_at)).one()
+    return (n, str(last), cn, str(clast), str(art[0]) if art else None, pn, str(plast))
+
+
+def _library_mark(db, slug: str) -> tuple:
+    """La marca del moment: quantes frases hi ha, l'última que s'ha tocat, i quan es va escriure
+    el capítol. Si les tres són iguals, el capítol servit també ho és."""
+    from sqlalchemy import func
+
+    from models import MethodChapter
+    n, last = db.query(func.count(DrillModel.id), func.max(DrillModel.updated_at)).one()
+    row = db.query(MethodChapter.updated_at).filter(MethodChapter.slug == slug).first()
+    # i el dibuix del capítol, que també és part del que es veu: sense això, canviar-lo no es
+    # notava fins que es movia una frase (ho va ensenyar una prova que va fallar sola)
+    art = db.query(AppSettingModel.updated_at).filter(AppSettingModel.key == "artwork_method").first()
+    # i les pràctiques: la sortida del capítol apareix quan se'n crea una, no quan
+    # es toca una frase
+    pn, plast = db.query(func.count(TestModel.id), func.max(TestModel.updated_at)).one()
+    return (n, str(last), str(row[0]) if row else None, str(art[0]) if art else None,
+            pn, str(plast))
+
+
+@app.get("/library/voiced")
+def library_voiced(form: List[str] = Query(default=[]), db: Session = Depends(get_db)):
+    """Per a cada text amazic, la frase gravada de la biblioteca que diu exactament això (#504).
+
+    Una pantalla que mostra amazic escrit sense veu pregunta aquí primer: si algú ja ho ha
+    gravat, ho ha de poder sentir. Màxim 50 textos per crida."""
+    return method_mod.voiced_for(db, form[:50])
+
+
+@app.get("/method/cd/{pista}/{inici}/{fi}")
+def method_cd_tall(pista: str, inici: str, fi: str):
+    """Un tros del CD del manual, servit des del disc d'aquesta màquina.
+
+    Des del #495 (ADR 0007) els talls que ha sentit una persona són a Cloudinary i l'índex hi
+    apunta directament: aquesta ruta queda per provar talls nous en local abans de pujar-los, des
+    de la carpeta que `CD_METODE_DIR` assenyala. A producció la variable no hi és i no serveix res.
+
+    Només talla el que l'índex diu. Els segons venen de la URL, i si no es troben tal qual dins
+    de `data/cd_metode.json` no es talla res: així això no es pot fer servir per llegir cap
+    altre fitxer de la màquina ni per trossejar el CD a plaer.
+    """
+    carpeta = os.getenv("CD_METODE_DIR")
+    if not carpeta:
+        raise HTTPException(status_code=404, detail="Aquest servidor no té el CD")
+    try:
+        a, b = float(inici), float(fi)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Segons que no ho són")
+    index = method_mod._cd_index()
+    vol = any(d.get("pista") == pista
+              and abs(float(d.get("start", -1)) - a) < 0.01
+              and abs(float(d.get("end", -1)) - b) < 0.01
+              for cap in index.values() for d in cap.values())
+    if not vol:
+        raise HTTPException(status_code=404, detail="Aquest tros no és a l'índex")
+    font = Path(carpeta) / f"{pista}.wav"
+    if not font.exists():
+        raise HTTPException(status_code=404, detail="La pista no és en aquesta màquina")
+    fora = Path(tempfile.gettempdir()) / "cd_metode"
+    fora.mkdir(exist_ok=True)
+    tall = fora / f"{pista}_{a:.2f}_{b:.2f}.mp3"
+    if not tall.exists():
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-ss", f"{a:.3f}",
+                        "-to", f"{b:.3f}", "-i", str(font), "-codec:a", "libmp3lame",
+                        "-b:a", "96k", str(tall)], capture_output=True)
+    if not tall.exists():
+        raise HTTPException(status_code=500, detail="No s'ha pogut tallar")
+    return FileResponse(tall, media_type="audio/mpeg")
+
+
+@app.get("/method/{slug}")
+def method_chapter(slug: str, db: Session = Depends(get_db),
+                   user: Optional[UserModel] = Depends(get_current_user)):
+    """Un capítol: què en sabràs fer, les frases nostres que ho fan, i el que ens falta."""
+    c = method_mod.chapter(slug)
+    if not c:
+        raise HTTPException(status_code=404, detail="Aquest capítol no existeix")
+    mark = _library_mark(db, slug)
+    done = _CHAPTER_CACHE.get(slug)
+    if done and done[0] == mark:
+        return done[1]
+    rows = method_mod.sentences_for(db, c["slug"])
+    titles = {u["slug"]: u["title"] for u in grammar_course.UNITS}
+    labels = {t["slug"]: t["label"] for t in topics_catalog.TOPICS}
+    said = other_ways(db)
+
+    def card(d):
+        return {"id": d.id, "text_tachelhit": d.text_tachelhit,
+                "text_tachelhit_latin": d.text_tachelhit_latin,
+                "text_catalan": d.text_catalan, "audio_url": d.audio_url,
+                "image_url": d.image_url, "speaker": d.speaker or d.author,
+                "variety": d.variety, "region": d.region,
+                "grammar": d.grammar, "topics": d.topics,
+                # D'on surt: una línia del manual gravada no és una atestació de l'Atles, i a la
+                # pantalla s'han de poder distingir (ho va dir un auditor dialectòleg veient
+                # «is trit aman?» sota «Dit per les nostres veus», sense parlant ni poble).
+                "tag": d.tag,
+                "from_book": "del llibre" in (d.tag or ""),
+                # Qui ho diu, i si aquesta veu es pot posar com a model: una veu d'un canal no
+                # pot passar per una de nostra (#288). Es diu ABANS de prémer.
+                "veu": grammar_course.qui_ho_diu(d),
+                # paraula per paraula, igual que al curs de gramàtica: una frase que s'ensenya
+                # i no es pot desmuntar és una frase que només es pot repetir
+                "gloss": grammar_course.gloss_of(d),
+                "tif": grammar_course.tifinagh(d.text_tachelhit or ""),
+                # i les altres maneres de dir-ho, cadascuna amb qui la diu i d'on és
+                "variants": [v for v in said.get(d.id, []) if _another_way(v["text"], d.text_tachelhit)]}
+
+    # per unitat de gramàtica, que és com es llegeix un capítol: una cosa després de l'altra
+    sections = []
+    used = set()
+    for g in c["grammar"]:
+        here = [d for d in rows if g in grammar_course.parse(d.grammar)]
+        used.update(d.id for d in here)
+        sections.append({"slug": g, "title": titles.get(g, g),
+                         "sentences": [card(d) for d in here[:8]], "total": len(here),
+                         "with_voice": sum(1 for d in here if d.audio_url)})
+    rest = [d for d in rows if d.id not in used]
+
+    out = {
+        "n": c["n"], "slug": c["slug"], "name": c["name"], "title": c["title"],
+        "about": c["about"], "functions": c["functions"], "roles": c["roles"],
+        "cover": artwork(db, "method").get(c["slug"]),
+        # El text del capítol, amb les NOSTRES frases repartides per dins.
+        #
+        # No és el llibre traduït i, a part, un munt de frases nostres al final: cada secció
+        # ensenya el que explica i tot seguit com ho diu la gent que coneixem, amb la seva veu i
+        # la seva imatge. El llibre hi posa el recorregut; la biblioteca, les persones.
+        "content": _amb_les_altres_maneres(method_mod.content_with_ours(db, c["slug"], rows, card), said, db),
+        "topics": [{"slug": t, "label": labels.get(t, t)} for t in c["topics"]],
+        "sections": sections,
+        "also": [card(d) for d in rest[:12]],
+        "sentences": len(rows),
+        "with_voice": sum(1 for d in rows if d.audio_url),
+        **method_mod.readiness(c, rows),
+        "missing": method_mod.what_is_missing(c, rows),
+        "source": method_mod.SOURCE,
+        # La sortida del capítol: la pràctica que en comprova les funcions. Fins ara un capítol
+        # s'acabava i no tornava mai; una pràctica, en canvi, puntua cada frase i el repàs
+        # espaiat les fa tornar soles.
+        "practice_test": next(({"id": t.id, "title": t.title, "steps": len(practice_steps.steps_of(db, t.id))}
+                          for t in db.query(TestModel).filter(
+                              TestModel.title.ilike(f"%Capítol {c['n']} ·%")).all()), None),
+    }
+    # El capítol dels sons diu que la mateixa lletra s'escriu de dues maneres (#364). És el
+    # capítol on algú aprèn quina lletra fa quin so, i és on topa amb «rix» i «riɣ» per primera
+    # vegada. Ve del repositori i no del text del capítol: és un fet comptat, i ha de dir sempre
+    # el mateix encara que algú reescrigui el capítol.
+    if c["slug"] == "sons":
+        import ortografia
+        out["ortografia"] = ortografia.nota()
+    _CHAPTER_CACHE[slug] = (mark, out)
+    return out
+
+
+@app.post("/method/{slug}/line")
+def method_line_drill(slug: str,
+                      kind: str = Body(..., embed=True),
+                      index: int = Body(..., embed=True),
+                      section: Optional[str] = Body(None, embed=True),
+                      db: Session = Depends(get_db),
+                      user: UserModel = Depends(require_user)):
+    """La frase nostra que hi ha darrere una línia d'un capítol, creant-la el primer cop.
+
+    El Mètode no estarà acabat fins que les seves línies es puguin escoltar, i una línia del
+    manual no és encara una frase de la biblioteca: és text dins del capítol. Perquè algú la pugui
+    gravar, ha de ser un drill.
+
+    Això no és paperassa: **gravar una línia del llibre la converteix en una frase nostra**, i
+    aquell és el camí pel qual un capítol adaptat del Souss es torna una recollida de l'Atles.
+    Qualsevol que tingui nom pot fer-ho; el que no pot fer qualsevol és canviar el TEXT del
+    capítol, que segueix sent de qui administra.
+    """
+    if kind not in method_mod.LINE_KINDS:
+        raise HTTPException(status_code=400, detail=f"kind ha de ser un de {method_mod.LINE_KINDS}")
+    if not method_mod.chapter(slug):
+        raise HTTPException(status_code=404, detail="Aquest capítol no existeix")
+    try:
+        out = method_mod.drill_for_line(db, slug, kind, section, int(index), user)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    d = db.query(DrillModel).filter(DrillModel.id == out["drill_id"]).first()
+    return {**out, "drill": Drill.model_validate(d, from_attributes=True)}
+
+
+@app.post("/method/{slug}/drills")
+def method_chapter_drills(slug: str,
+                          db: Session = Depends(get_db),
+                          user: UserModel = Depends(require_admin)):
+    """Totes les línies d'un capítol convertides en frases de la biblioteca, d'una passada.
+
+    Fins ara una línia del manual només es tornava frase quan algú la volia gravar, de manera
+    que el que encara no havia demanat ningú no existia enlloc i no es podia ni comptar ni
+    demanar. Això fa l'altra meitat: deixa-les totes creades i amb `voice_wanted`, perquè el que
+    falta es vegi i es pugui gravar.
+
+    No duplica res: si la biblioteca ja diu exactament el mateix —tingui veu o no—, la línia
+    s'hi lliga. I cada frase nova neix dient d'on ve: el manual d'El Mountassir, taixelhit del
+    Souss, amb el permís d'adaptació de l'autor.
+    """
+    if not method_mod.chapter(slug):
+        raise HTTPException(status_code=404, detail="Aquest capítol no existeix")
+    try:
+        return method_mod.drills_for_chapter(db, slug, user)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.put("/method/{slug}/content")
+def put_method_content(slug: str, body: dict = Body(...),
+                       db: Session = Depends(get_db),
+                       user: UserModel = Depends(require_admin)):
+    """Desa el text d'un capítol: l'explicació, el diàleg i el vocabulari.
+
+    Viu a la base de dades i no al repositori (vegeu `models.MethodChapter`), i per això es
+    corregeix des d'aquí: qui administra pot arreglar una frase sense desplegar res.
+
+    Una secció pot portar `formula: true`: vol dir que el que s'hi ensenya **es diu sencer** —les
+    salutacions, els comiats, les fórmules de cortesia—, i llavors el paraula per paraula hi va
+    tancat i amb un altre nom, «Què hi ha a dins» (#289). És una marca per secció i no global,
+    perquè a la secció del «com estàs?» i als pronoms desmuntar és justament el que cal.
+    """
+    try:
+        saved = method_mod.store_content(db, slug, body, who=(user.display_name or user.username))
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return {"slug": slug, "ok": True, "sections": len(saved.get("sections") or [])}
+
+
+@app.get("/baba-ali/")
+def baba_ali_index(db: Session = Depends(get_db)):
+    """Els episodis del Baba Ali que tenim, i de quins en sabem el vídeo del canal.
+
+    Els que no han casat hi surten igualment, amb `video` buit: val més dir «d'aquest no
+    sabem quin vídeo és» que amagar-lo o ensenyar-ne un que no sigui.
+    """
+    eps = baba_ali.episodis(db)
+    return {"episodis": eps,
+            "amb_video": sum(1 for e in eps if e["video"]),
+            "linies": sum(e["linies"] for e in eps),
+            "mesura": baba_ali.com_s_ha_mesurat(),
+            "font": baba_ali.FONT}
+
+
+@app.get("/baba-ali/{episodi}")
+def baba_ali_episodi(episodi: str, db: Session = Depends(get_db)):
+    """Un episodi per mirar: el vídeo, el desplaçament mesurat i les línies en ordre.
+
+    El segon del vídeo és `t + desplacament`: les nostres marques les va escriure qui va fer
+    els talls i cada pujada comença amb dos minuts de resum. Vegeu `baba_ali.py`.
+    """
+    fora = baba_ali.linies(db, episodi, normalitza=normalize_media_url)
+    if not fora:
+        raise HTTPException(status_code=404, detail="D'aquest episodi no en tenim cap línia")
+    return fora
+
+
+@app.get("/practice/imitation-audit")
+def practice_imitation_audit(db: Session = Depends(get_db)):
+    """Quines pràctiques ja desades demanen imitar una veu que no és de ningú (#273).
+
+    La regla ara la fa complir el validador, però les pràctiques que ja existien es van muntar
+    abans que res ho impedís: això diu quines fallen i per què, en comptes de confiar que no n'hi
+    hagi cap. Només llegeix.
+    """
+    from models import PracticeStep
+    files = (db.query(PracticeStep, TestModel, DrillModel)
+             .join(TestModel, TestModel.id == PracticeStep.test_id)
+             .outerjoin(DrillModel, DrillModel.id == PracticeStep.drill_id)
+             .filter(PracticeStep.kind.in_(list(practice_steps.PER_IMITAR)))
+             .order_by(PracticeStep.test_id.asc(), PracticeStep.position.asc()).all())
+    fallen = []
+    for pas, test, drill in files:
+        veu = grammar_course.qui_ho_diu(drill) if drill is not None else {
+            "qui": None, "mena": "cap", "per_imitar": False}
+        if veu["per_imitar"]:
+            continue
+        fallen.append({"test_id": pas.test_id, "title": test.title, "position": pas.position,
+                       "kind": pas.kind, "drill_id": pas.drill_id,
+                       "veu": veu, "text_tachelhit": getattr(drill, "text_tachelhit", None)})
+    return {"passos_per_imitar": len(files), "fallen": len(fallen), "quins": fallen}
+
+
 @app.get("/practice/collections")
 def practice_collections(db: Session = Depends(get_db),
                          user: Optional[UserModel] = Depends(get_current_user)):
@@ -6325,7 +7807,16 @@ def practice_session(day: Optional[str] = None, speaker: Optional[str] = None, t
     only = [int(x) for x in ids.split(",") if x.strip().isdigit()] if ids else None
     rows = practice_mod.session_rows(db, day=day, speaker=speaker, topic=topic, unit=unit, test_id=test_id, ids=only,
                                      video=video, person=person, tag=tag, with_voice=with_voice, limit=limit, offset=offset)
-    return {"drills": [Drill.model_validate(d, from_attributes=True) for d in rows], "cards": [practice_mod.card(d) for d in rows]}
+    # Les altres maneres de dir cada frase, aquí també (#239). Es veien on es graven i enlloc
+    # més, i en una pràctica és justament on importa: qui estudia sent una manera de dir-ho i no
+    # sap que n'hi ha una altra, dita per algú altre, d'un altre poble.
+    said = other_ways(db)
+    targetes = []
+    for d in rows:
+        t = practice_mod.card(d)
+        t["variants"] = [v for v in said.get(d.id, []) if _another_way(v["text"], d.text_tachelhit)]
+        targetes.append(t)
+    return {"drills": [Drill.model_validate(d, from_attributes=True) for d in rows], "cards": targetes}
 
 
 @app.get("/grammar")
@@ -6341,11 +7832,11 @@ def _write_missing_notes() -> None:
     are written first because a page can wait for a note but not for a lesson."""
     import time
     time.sleep(240)  # the lessons go first, then this works through the library quietly
-    if not gemini_available():
-        print("[NOTES] skipped: no Gemini key")
+    if not writer_available():
+        print("[NOTES] skipped: no AI writer configured")
         return
     try:
-        grammar_course.fill_notes(SessionLocal, _grammar_unit_rows, _load_grammar())
+        grammar_course.fill_notes(SessionLocal, _grammar_unit_rows, grammar_reference())
     except Exception as e:
         print(f"[NOTES] stopped: {e}")
 
@@ -6355,8 +7846,8 @@ def _write_missing_lessons() -> None:
     time: Gemini is slow and the free database has few connections."""
     import time
     time.sleep(20)  # let the server answer its first requests first
-    if not gemini_available():
-        print("[GRAMMAR] self-write skipped: no Gemini key")
+    if not writer_available():
+        print("[GRAMMAR] self-write skipped: no AI writer configured")
         return
     written = 0
     for unit in grammar_course.UNITS:
@@ -6380,7 +7871,9 @@ def _write_missing_lessons() -> None:
                 lesson = grammar_course.write_lesson(slug, _load_grammar(), examples,
                                                      sheet=grammar_course.sheet_for(db, slug, _load_grammar()),
                                                      tables=grammar_course.paradigms(rows),
-                                                     notes=grammar_course.notes_for(db, slug))
+                                                     notes=grammar_course.notes_for(
+                                                         db, slug,
+                                                         {e["id"]: (e.get("shi") or "", e.get("ca") or "") for e in examples}))
                 lesson["unit_size"] = len({d.id for d in rows})
                 grammar_course._store_lesson(db, slug, lesson)
                 written += 1
@@ -6400,6 +7893,33 @@ def _grammar_unit_rows(db, slug: str, limit: int = 1500):
     return [d for d in rows if slug in grammar_course.parse(d.grammar)]
 
 
+def _grammar_cover(db, slug: str, lesson: dict, rows) -> Optional[str]:
+    """La portada d'una unitat, decidida aquí i no endevinada a la pantalla (#229).
+
+    Era «la imatge de la primera frase que en tingui», i per això la unitat dels possessius
+    s'encapçalava amb una diapositiva d'un projecte de la Viquipèdia en jukun: era la foto que
+    havia heretat una frase, no una portada de res.
+
+    L'ordre ara és: el dibuix que hàgim fet per a la unitat; si no n'hi ha, la primera imatge
+    NOSTRA de les frases que la lliçó cita; i si tampoc, cap. **Una foto trobada no fa de
+    portada**: il·lustra com a molt una paraula, i de vegades ni això.
+    """
+    dibuix = (artwork(db, "grammar") or {}).get(slug)
+    if (dibuix or "").strip():
+        return dibuix
+    for step in (lesson.get("steps") or []):
+        quines = list(step.get("examples") or [])
+        if isinstance(step.get("example"), dict):
+            quines.append(step["example"])
+        for e in quines:
+            if grammar_course.our_picture(e.get("image_url")):
+                return e["image_url"]
+    for d in rows:
+        if grammar_course.our_picture(getattr(d, "image_url", None)):
+            return d.image_url
+    return None
+
+
 def _grammar_unit_payload(db, slug: str, limit: int, force: bool, deep: bool = False):
     unit = next((u for u in grammar_course.UNITS if u["slug"] == slug), None)
     if unit is None:
@@ -6408,16 +7928,49 @@ def _grammar_unit_payload(db, slug: str, limit: int, force: bool, deep: bool = F
     examples = grammar_course.pick_examples(rows, slug=slug)
     practice = grammar_course.practice_rows(rows, slug=slug)  # the test: sentences (and words, in the units about words)
     try:
-        lesson = grammar_course.get_lesson(db, slug, _load_grammar() if gemini_available() else "", examples, force=force,
+        lesson = grammar_course.get_lesson(db, slug, grammar_reference(), examples, force=force,
                                            unit_ids={d.id for d in rows}, session_factory=SessionLocal,
                                            tables=grammar_course.paradigms(rows), deep=deep)
     except Exception as e:
         print(f"[GRAMMAR] lesson {slug}: {e}")
         lesson = {"intro": "", "steps": [{"type": "explain", "title": unit["title"], "text": "La lliçó encara no s’ha pogut escriure. Mira els exemples de la biblioteca mentrestant.", "examples": examples[:3]}, {"type": "end"}], "error": str(e)[:160]}
+    # La tifinagh de cada so citat, al títol i al text. S'hi posa en SERVIR la lliçó i no en
+    # escriure-la, perquè les que ja hi ha escrites també l'han de portar: no es poden reescriure
+    # —el compte de Gemini és sense crèdit— i l'amo ho va demanar per a tot arreu.
+    for step in (lesson.get("steps") or []):
+        for field in ("title", "text", "question"):
+            if isinstance(step.get(field), str):
+                step[field] = grammar_course.with_letters(step[field])
+    if isinstance(lesson.get("intro"), str):
+        lesson["intro"] = grammar_course.with_letters(lesson["intro"])
+
+    # Les altres maneres de dir cada frase citada. La lliçó es va escriure un dia i es desa tal
+    # com va quedar; això s'hi afegeix en SERVIR-LA, perquè una veu gravada avui s'ha de veure
+    # avui i no quan es torni a escriure la lliçó.
+    said = other_ways(db)
+    if said:
+        for step in (lesson.get("steps") or []):
+            for e in (step.get("examples") or []):
+                e["variants"] = [v for v in said.get(e.get("id"), []) if _another_way(v["text"], e.get("shi"))]
+            if step.get("example"):
+                step["example"]["variants"] = [v for v in said.get(step["example"].get("id"), [])
+                                               if _another_way(v["text"], step["example"].get("shi"))]
     total = len(rows)  # the rows are already every drill of the unit (the query's limit is far above any unit)
-    return {**{k: unit[k] for k in ("slug", "title", "level")}, "lesson": lesson, "total": total,
+    fora = {**{k: unit[k] for k in ("slug", "title", "level")}, "lesson": lesson, "total": total,
             "practice": [d.id for d in practice],
+            "cover": _grammar_cover(db, slug, lesson, rows),
+            # «Fes-ho tu»: exercicis que pregunten LA PEÇA de la unitat, fets amb les seves
+            # frases (#428). Si la unitat no en té prou per fer-ne un d'honest, la llista surt
+            # buida i la pantalla no ensenya res: val més cap exercici que un de dolent.
+            "exercicis": exercicis.fes(slug, rows),
             "drills": [Drill.model_validate(d, from_attributes=True) for d in rows[:max(1, min(limit, 300))]]}
+    # La unitat dels sons diu que la mateixa lletra s'escriu de dues maneres (#364). Va aquí i no
+    # dins la lliçó perquè la lliçó l'escriu un model i això és un fet comptat: ha de dir sempre
+    # el mateix i no pot dependre que un dia el model se'n descuidi.
+    if slug == grammar_course.SOUNDS_UNIT:
+        import ortografia
+        fora["ortografia"] = ortografia.nota()
+    return fora
 
 
 def _lesson_quotes(db, slug: str) -> set:
@@ -6467,7 +8020,7 @@ def grammar_lesson(slug: str, db: Session = Depends(get_db)):
     """Just the unit's lesson: what a page asks for again while a new one is being written."""
     rows = _grammar_unit_rows(db, slug)
     examples = grammar_course.pick_examples(rows, slug=slug)
-    lesson = grammar_course.get_lesson(db, slug, _load_grammar() if gemini_available() else "", examples,
+    lesson = grammar_course.get_lesson(db, slug, grammar_reference(), examples,
                                        unit_ids={d.id for d in rows}, session_factory=SessionLocal,
                                        tables=grammar_course.paradigms(rows))
     from models import GrammarLesson
@@ -6512,6 +8065,27 @@ def put_grammar_lesson(slug: str, lesson: Dict[str, Any] = Body(..., embed=True)
     row.updated_at = datetime.utcnow()
     db.commit()
     return {"slug": slug, "hand_written": True, "steps": len(steps)}
+
+
+@app.post("/grammar/{slug}/row")
+def grammar_row_drill(slug: str,
+                      step: int = Body(..., embed=True),
+                      row: int = Body(..., embed=True),
+                      deep: bool = Body(False, embed=True),
+                      db: Session = Depends(get_db),
+                      user: UserModel = Depends(require_user)):
+    """La frase de la biblioteca darrere una fila d'una taula de formes, creant-la el primer cop.
+
+    Una taula de formes és on la gramàtica es veu d'un cop d'ull, i era l'únic lloc de la lliçó
+    que no es podia dir. Gravar-ne una fila la converteix en una frase nostra, igual que al
+    Mètode: qualsevol que tingui nom pot fer-ho.
+    """
+    try:
+        out = grammar_course.drill_for_row(db, slug, int(step), int(row), user, deep=deep)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    d = db.query(DrillModel).filter(DrillModel.id == out["drill_id"]).first()
+    return {**out, "drill": Drill.model_validate(d, from_attributes=True)}
 
 
 @app.post("/grammar/{slug}/lesson/release")
@@ -6628,8 +8202,19 @@ def ai_usage(request: Request, user: Optional[UserModel] = Depends(get_current_u
 
 @app.get("/ai/status")
 def ai_status():
-    """Whether the AI agent is configured (and within budget), and the grammar corpus size."""
-    return {"available": gemini_available() and ai_meter.budget_ok(), "configured": gemini_available(),
+    """Whether the AI agent is configured (and within budget), and the grammar corpus size.
+
+    `copilot` diu quin proveïdor fa anar les eines i si hi és: sense això, canviar de proveïdor
+    era una cosa que només se sabia llegint els registres del servidor.
+    """
+    import gemini_client as _gc
+    import deepseek_client as _ds
+    qui = _gc.agent_provider()
+    return {"available": (gemini_available() or _ds.deepseek_available()) and ai_meter.budget_ok(),
+            "configured": gemini_available() or _ds.deepseek_available(),
+            "copilot": qui,
+            "copilot_llest": _ds.deepseek_available() if qui == "deepseek" else gemini_available(),
+            "gemini": gemini_available(), "deepseek": _ds.deepseek_available(),
             "budget_ok": ai_meter.budget_ok(), "budget_eur": ai_budget.monthly_budget_eur(),
             "grammar_chars": len(_load_grammar())}
 
@@ -6651,7 +8236,7 @@ def ai_ask(
     if not (question or "").strip():
         raise HTTPException(status_code=400, detail="Empty question")
 
-    system_instruction = _build_system_instruction(db)
+    system_instruction = _build_system_instruction(db, question)
 
     contents = []
     for turn in (history or [])[-8:]:  # keep the last few turns for context
@@ -6673,21 +8258,59 @@ def ai_ask(
         print(f"[AI] ask failed: {e}")
         raise HTTPException(status_code=502, detail=f"AI assistant error: {str(e)[:200]}")
 
+def _ai_empremta(drill) -> str:
+    """El que el text desat ha llegit: si canvia, el text ja no val."""
+    camps = (drill.text_tachelhit, drill.text_catalan, drill.text_tachelhit_suggested, drill.text_tachelhit_latin)
+    return hashlib.sha256("|".join(c or "" for c in camps).encode("utf-8")).hexdigest()
+
+
+def _ai_desat(db: Session, drill_id: int, kind: str) -> Optional[str]:
+    """L'anàlisi d'una frase no canvia si no canvia la frase (#458)."""
+    fila = db.get(DrillAiTextModel, (drill_id, kind))
+    drill = db.get(DrillModel, drill_id) if fila else None
+    return fila.body if drill and fila.empremta == _ai_empremta(drill) else None
+
+
+def _ai_desa(db: Session, drill, kind: str, body: str) -> None:
+    fila = db.get(DrillAiTextModel, (drill.id, kind)) or DrillAiTextModel(drill_id=drill.id, kind=kind)
+    fila.body, fila.empremta, fila.updated_at = body, _ai_empremta(drill), datetime.utcnow()
+    db.add(fila)
+    try:
+        db.commit()
+    except Exception as e:  # ja està pagat i la persona ha de rebre'l: només es tornarà a calcular
+        db.rollback()
+        print(f"[AI] no s'ha pogut desar {kind} de {drill.id}: {e}")
+
+
+def _ai_gate_si_no_desat(feature: str):
+    """Llegir el que ja està desat no costa res: ni el pressupost ni la clau no ho poden aturar."""
+    gate = _ai_gate(feature)
+    async def dep(request: Request, drill_id: int, db: Session = Depends(get_db),
+                  user: Optional[UserModel] = Depends(get_current_user)) -> Dict[str, Any]:
+        if await run_in_threadpool(_ai_desat, db, drill_id, feature) is not None:
+            return {}
+        return await gate(request, user)
+    return dep
+
+
 @app.post("/ai/analyze-drill/{drill_id}")
-def ai_analyze_drill(drill_id: int, db: Session = Depends(get_db), _gate: Dict[str, Any] = Depends(_ai_gate("analyze"))):
+def ai_analyze_drill(drill_id: int, db: Session = Depends(get_db), _gate: Dict[str, Any] = Depends(_ai_gate_si_no_desat("analyze"))):
     """
     Morphological/grammatical analysis of the ATTESTED Tachelhit form the user
     collected in this drill — grounded in the grammar and the learner's own
     corpus. This is documentation, not correction: it explains the form as it
     is, and notes how it differs from the standard.
     """
-    if not gemini_available():
-        raise HTTPException(status_code=503, detail="AI assistant not configured (GEMINI_API_KEY missing)")
     drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found")
     if not (drill.text_tachelhit or "").strip():
         raise HTTPException(status_code=400, detail="Aquest drill no té text en taixelhit per analitzar")
+    desat = _ai_desat(db, drill_id, "analyze")
+    if desat is not None:
+        return {"drill_id": drill_id, "analysis": desat}
+    if not gemini_available():
+        raise HTTPException(status_code=503, detail="AI assistant not configured (GEMINI_API_KEY missing)")
 
     prompt = (
         _drill_context(drill) + "\n\n"
@@ -6704,6 +8327,7 @@ def ai_analyze_drill(drill_id: int, db: Session = Depends(get_db), _gate: Dict[s
     try:
         analysis = gemini_generate(_build_system_instruction(db),
                                    [{"role": "user", "text": prompt}], max_output_tokens=1400)
+        _ai_desa(db, drill, "analyze", analysis)
         return {"drill_id": drill_id, "analysis": analysis}
     except BudgetExceeded as e:
         raise HTTPException(status_code=429, detail=str(e))
@@ -6743,15 +8367,13 @@ def _related_drills(drill, db, limit: int = 8) -> list:
 
 
 @app.post("/ai/explain/{drill_id}")
-def ai_explain_drill(drill_id: int, db: Session = Depends(get_db), _gate: Dict[str, Any] = Depends(_ai_gate("explain"))):
+def ai_explain_drill(drill_id: int, db: Session = Depends(get_db), _gate: Dict[str, Any] = Depends(_ai_gate_si_no_desat("explain"))):
     """
     Learner's explanation of a drill: the Tachelhit phrase word by word, which Catalan
     word each one answers to, what is not said literally — plus the other drills in the
     corpus that use the same words. Works on the speaker's text or, failing that, on the
     machine draft (said so to the learner).
     """
-    if not gemini_available():
-        raise HTTPException(status_code=503, detail="AI assistant not configured (GEMINI_API_KEY missing)")
     drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
     if not drill:
         raise HTTPException(status_code=404, detail="Drill not found")
@@ -6763,6 +8385,11 @@ def ai_explain_drill(drill_id: int, db: Session = Depends(get_db), _gate: Dict[s
         raise HTTPException(status_code=400, detail="Aquest drill encara no té cap lectura en taixelhit per explicar")
     if not text and draft and draft_status(getattr(drill, "draft_check", None), drill.text_tachelhit_suggested) == "no":
         raise HTTPException(status_code=400, detail="La lectura automàtica d'aquest drill no quadra amb el significat: cal la transcripció d'un parlant abans d'explicar-la")
+    desat = _ai_desat(db, drill_id, "explain")
+    if desat is not None:
+        return {"drill_id": drill_id, "explanation": desat, "draft": not text, "related": _related_drills(drill, db)}
+    if not gemini_available():
+        raise HTTPException(status_code=503, detail="AI assistant not configured (GEMINI_API_KEY missing)")
     source_note = ("" if text else
                    "ATENCIÓ: no hi ha text confirmat pel parlant; la lectura és un ESBORRANY automàtic "
                    f"(«{draft}»). Explica'l igualment però digues-ho a l'aprenent en una línia. Per a CADA paraula digues si és una "
@@ -6788,6 +8415,7 @@ def ai_explain_drill(drill_id: int, db: Session = Depends(get_db), _gate: Dict[s
     except Exception as e:
         print(f"[AI] explain failed: {e}")
         raise HTTPException(status_code=502, detail=f"AI assistant error: {str(e)[:200]}")
+    _ai_desa(db, drill, "explain", explanation)
     return {"drill_id": drill_id, "explanation": explanation, "draft": not text,
             "related": _related_drills(drill, db)}
 
@@ -6860,11 +8488,20 @@ AGENT_TOOLS = [
     },
     {
         "name": "search_drills",
-        "description": "Cerca drills al corpus per text (qualsevol llengua) o etiqueta. Retorna coincidències.",
+        "description": (
+            "Mira què hi ha a la biblioteca. És el PRIMER lloc on s'ha de mirar quan algú pregunta "
+            "com es diu una cosa: el que no hi és, no ho tenim. Sense cap filtre torna les frases "
+            "més NOVES. Es pot filtrar per text (en qualsevol llengua), per etiqueta, per qui ho "
+            "diu, per varietat, i demanar només les que encara no tenen veu."),
         "parameters": {"type": "object", "properties": {
-            "query": {"type": "string"},
+            "query": {"type": "string", "description": "text lliure, en qualsevol de les llengües"},
+            "tag": {"type": "string"},
+            "author": {"type": "string", "description": "qui ho diu"},
+            "variety": {"type": "string"},
+            "without_voice": {"type": "boolean", "description": "només les que encara no les diu ningú"},
+            "newest": {"type": "boolean", "description": "les últimes que han entrat (és el que fa per defecte)"},
             "limit": {"type": "integer"},
-        }, "required": ["query"]},
+        }},
     },
     {
         "name": "what_can_a_practice_be_about",
@@ -6928,7 +8565,8 @@ AGENT_TOOLS = [
                         "eina (kind) i, si l'eina demana una frase, el seu drill_id. Eines: listen_pick "
                         "(escolta i tria), write_heard (escolta i escriu), say_it (digues-ho i compara't), "
                         "look_say (mira la imatge i digues-ho), fill_gap (omple el buit), word_by_word, "
-                        "script_swap (tifinag o llatí), pick_spelling, i note (una explicació, sense "
+                        "script_swap (tifinag o llatí), pick_spelling, pick_written (escolta i tria "
+                        "quina de les quatre frases escrites és), i note (una explicació, sense "
                         "frase: posa-li heading i text). Comença amb una nota que digui què s'hi aprèn, "
                         "i no repeteixis sempre la mateixa eina."),
         "parameters": {"type": "object", "properties": {
@@ -6944,7 +8582,10 @@ AGENT_TOOLS = [
     },
     {
         "name": "speak_tachelhit",
-        "description": "Sintetitza veu en taixelhit d'un text perquè l'usuari el pugui escoltar. Retorna una URL d'àudio.",
+        "description": (
+            "Fa sonar un text amazic que JA ÉS a la biblioteca. Si algú l'ha gravat, torna la seva "
+            "veu; si no, la de màquina. Una paraula que no és a la biblioteca no es pot fer sonar "
+            "ni oferir: no la diu ningú."),
         "parameters": {"type": "object", "properties": {
             "text": {"type": "string"},
         }, "required": ["text"]},
@@ -6981,14 +8622,33 @@ def _agent_executor(db, user=None):
             from sqlalchemy import or_
             q = (args.get("query") or "").strip()
             lim = min(int(args.get("limit") or 10), 25)
-            like = f"%{q}%"
-            rows = (db.query(DrillModel).filter(or_(
-                DrillModel.text_tachelhit.ilike(like), DrillModel.text_tachelhit_latin.ilike(like),
-                DrillModel.text_catalan.ilike(like), DrillModel.text_arabic.ilike(like),
-                DrillModel.tag.ilike(like))).limit(lim).all())
-            return {"count": len(rows), "drills": [
+            rows = db.query(DrillModel)
+            if q:
+                like = f"%{q}%"
+                rows = rows.filter(or_(
+                    DrillModel.text_tachelhit.ilike(like), DrillModel.text_tachelhit_latin.ilike(like),
+                    DrillModel.text_catalan.ilike(like), DrillModel.text_arabic.ilike(like),
+                    DrillModel.tag.ilike(like)))
+            if (args.get("tag") or "").strip():
+                rows = rows.filter(DrillModel.tag.ilike("%%%s%%" % args["tag"].strip()))
+            if (args.get("author") or "").strip():
+                a = f"%{args['author'].strip()}%"
+                rows = rows.filter(or_(DrillModel.author.ilike(a), DrillModel.speaker.ilike(a)))
+            if (args.get("variety") or "").strip():
+                rows = rows.filter(DrillModel.variety == args["variety"].strip())
+            if args.get("without_voice"):
+                rows = rows.filter((DrillModel.audio_url.is_(None)) | (DrillModel.audio_url == ""))
+            # Les més noves primer: «ensenya'm els últims drills» és la pregunta que no es podia
+            # contestar, i l'API sempre ho ha sabut fer (#374).
+            found = rows.order_by(DrillModel.id.desc()).limit(lim).all()
+            return {"count": len(found), "drills": [
                 {"id": r.id, "catalan": r.text_catalan, "tachelhit": r.text_tachelhit,
-                 "latin": r.text_tachelhit_latin} for r in rows]}
+                 "latin": r.text_tachelhit_latin, "tif": grammar_course.tifinagh(r.text_tachelhit or ""),
+                 "image_url": r.image_url, "audio_url": r.audio_url,
+                 "speaker": r.speaker or r.author, "region": r.region, "variety": r.variety}
+                for r in found],
+                # Una resposta és una resposta: que no hi sigui, també.
+                "diu": ("la biblioteca no en té cap" if not found else None)}
         if name == "what_can_a_practice_be_about":
             c = practice_mod.collections(db)
             return {k: c.get(k, [])[:40] for k in ("units", "topics", "people", "tags", "days")}
@@ -7049,10 +8709,9 @@ def _agent_executor(db, user=None):
                 return {"error": "ara mateix no es poden dibuixar imatges"}
             try:
                 blob = generate_illustration(d.text_catalan or args.get("hint") or "", args.get("hint"))
-                up = cloudinary.uploader.upload(
-                    blob, folder="tachelhit/images",
-                    public_id=f"img_{d.id}_{int(datetime.utcnow().timestamp())}")
-                d.image_url = normalize_media_url(up["secure_url"])
+                d.image_url = normalize_media_url(magatzem.puja(
+                    blob, "tachelhit/images",
+                    f"img_{d.id}_{int(datetime.utcnow().timestamp())}", "imatge"))
                 d.updated_at = datetime.utcnow()
                 db.commit()
                 return {"drill_id": d.id, "image_url": d.image_url}
@@ -7082,9 +8741,45 @@ def _agent_executor(db, user=None):
             text = (args.get("text") or "").strip()
             if not text:
                 return {"error": "text buit"}
+            # Res de fer sonar el que ningú no ha dit mai (#374, #288).
+            #
+            # El copilot s'havia inventat «iɣḍdn» per «enfadat» —una arrel que no surt enlloc del
+            # nostre corpus— i tot seguit s'oferia a sintetitzar-la. Una veu damunt d'una paraula
+            # inventada és el pitjor que pot fer aquesta app: sona com si algú ho digués.
+            from sqlalchemy import or_
+            esta = db.query(DrillModel).filter(or_(
+                DrillModel.text_tachelhit.ilike(text),
+                DrillModel.text_tachelhit_latin.ilike(text),
+                DrillModel.text_tachelhit.ilike("%%%s%%" % text))).first()
+            if esta is None:
+                # i, si no casa lletra a lletra, pel SO: «aghrum» i «aɣrum» són la mateixa
+                # paraula. Primer per la clau desada (`text_key`, que està indexada); les frases
+                # velles no en tenen, i per a aquelles es calcula, però llegint només dues
+                # columnes en comptes d'aixecar cinc mil objectes sencers.
+                clau = transliteration.phonemic_key(text)
+                if clau:
+                    esta = db.query(DrillModel).filter(DrillModel.text_key == clau).first()
+                if esta is None and clau:
+                    files = (db.query(DrillModel.id, DrillModel.text_tachelhit)
+                             .filter(DrillModel.text_tachelhit.isnot(None),
+                                     DrillModel.text_tachelhit != "",
+                                     DrillModel.text_key.is_(None)).limit(4000).all())
+                    for did, diu in files:
+                        if transliteration.phonemic_key(diu or "") == clau:
+                            esta = db.query(DrillModel).filter(DrillModel.id == did).first()
+                            break
+            if esta is None:
+                return {"error": "«%s» no és a la biblioteca. No ho diu ningú, i una veu de màquina "
+                                 "damunt d'una paraula que no tenim sonaria com si algú l'hagués "
+                                 "dita. Digues que no ho tenim." % text[:60]}
+            if (esta.audio_url or "").strip():
+                return {"audio_url": normalize_media_url(esta.audio_url),
+                        "text": esta.text_tachelhit, "drill_id": esta.id,
+                        "veu": "d'una persona", "speaker": esta.speaker or esta.author}
             try:
-                url = generate_tachelhit_tts_hf(text, 0)
-                return {"audio_url": normalize_media_url(url), "text": text}
+                url = generate_tachelhit_tts_hf(esta.text_tachelhit or text, 0)
+                return {"audio_url": normalize_media_url(url), "text": esta.text_tachelhit or text,
+                        "drill_id": esta.id, "veu": "de màquina"}
             except Exception as e:
                 return {"error": f"TTS ha fallat: {str(e)[:120]}"}
         return {"error": f"eina desconeguda: {name}"}
@@ -7110,12 +8805,24 @@ def ai_agent(
     if not (message or "").strip():
         raise HTTPException(status_code=400, detail="Empty message")
 
-    system = _build_system_instruction(db) + (
+    system = _build_system_instruction(db, message) + (
         "\n\nEts un COPILOT que pot ACTUAR a l'aplicació amb les eines disponibles: "
         "crear i modificar drills, cercar-los i sintetitzar veu en taixelhit. "
         "Fes servir les eines quan l'usuari demani una acció (crea, edita, tradueix i desa, "
         "cerca/filtra, fes exemples per escoltar). Per a traduir i desar, actualitza el drill. "
-        "Per a exemples parlats, crida speak_tachelhit. Confirma breument què has fet."
+        "Confirma breument què has fet."
+        "\n\nQuatre regles que no es negocien (#374):"
+        "\n1. LA BIBLIOTECA PRIMER. Davant de «com es diu X», el primer que fas és buscar-ho a "
+        "la biblioteca. Si no hi és, DIGUES que no ho tenim: «això no ho tenim gravat» és una "
+        "resposta bona. Si tot i així contestes del que recordes, digues que ve de tu i no de "
+        "la biblioteca."
+        "\n2. ENSENYA FRASES, NO NÚMEROS. Quan en trobis, escriu-les: l'amazic, què vol dir i "
+        "qui ho diu. L'aplicació ja ensenya la targeta amb la imatge i la veu al costat de la "
+        "teva resposta. No diguis mai «el drill amb ID 4141»."
+        "\n3. NO OFEREIXIS VEU DE MÀQUINA per a una paraula que no és a la biblioteca. Si no hi "
+        "és, el que es pot oferir és demanar-la a qui la parla, no fabricar-la."
+        "\n4. NO DIGUIS MAI EL NOM DE LES TEVES EINES ni de les seves funcions. «No sé veure les "
+        "més noves» és una resposta; dir el nom d'una funció és ensenyar les canonades."
     )
     if test_id:
         system += (
@@ -7230,7 +8937,9 @@ def corpus_search(
     """Search the corpus across all text fields; filter by variety/region/tag.
     Paginate with limit/offset."""
     from sqlalchemy import or_
-    query = db.query(DrillModel)
+    # Les etiquetes excloses (proves, irlandès) no surten a la cerca: qui busca una frase busca
+    # la llengua d'aquesta biblioteca, no el que hi ha entrat per fer proves.
+    query = grammar_course.not_excluded(db.query(DrillModel), DrillModel)
     if q:
         like = f"%{q}%"
         from transliteration import phonemic_key as _pk
@@ -7326,6 +9035,154 @@ def corpus_flywheel(verified_only: bool = False, format: str = "json", db: Sessi
         )
     return {"count": len(pairs), "pairs": pairs}
 
+#: Els dibuixos de l'app: els que expliquen què és cada part, no els d'una frase.
+#:
+#: Viuen a la base de dades i no al codi perquè es puguin canviar sense desplegar res — es
+#: dibuixen un dia, es miren, i el que no agrada es torna a dibuixar. Cada joc és un diccionari
+#: {nom: adreça}: «home» per a les portes de la portada, «method» per als capítols del Mètode.
+ARTWORK = ("home", "method")
+
+
+def artwork(db, which: str) -> Dict[str, str]:
+    """Els dibuixos d'un joc, o un diccionari buit si encara no n'hi ha cap."""
+    row = db.query(AppSettingModel).filter(AppSettingModel.key == f"artwork_{which}").first()
+    if not row or not (row.value or "").strip():
+        return {}
+    try:
+        got = json.loads(row.value)
+    except Exception:
+        return {}
+    return {str(k): v for k, v in got.items() if isinstance(v, str) and v.strip()} if isinstance(got, dict) else {}
+
+
+@app.get("/artwork")
+def get_artwork(db: Session = Depends(get_db)):
+    """Els dibuixos de l'app, per joc. Qualsevol els pot llegir: són el que es veu a la pantalla."""
+    return {w: artwork(db, w) for w in ARTWORK}
+
+
+@app.put("/artwork/{which}")
+def put_artwork(which: str, covers: Dict[str, Optional[str]] = Body(..., embed=True),
+                db: Session = Depends(get_db), _admin: UserModel = Depends(require_admin)):
+    """Desa els dibuixos d'un joc. Una adreça buida treu el dibuix i torna al que hi havia."""
+    if which not in ARTWORK:
+        raise HTTPException(status_code=404, detail=f"«{which}» no és cap joc de dibuixos")
+    keep = {str(k): v.strip() for k, v in covers.items() if isinstance(v, str) and v.strip()}
+    row = db.query(AppSettingModel).filter(AppSettingModel.key == f"artwork_{which}").first()
+    if row is None:
+        row = AppSettingModel(key=f"artwork_{which}")
+        db.add(row)
+    row.value = json.dumps(keep, ensure_ascii=False)
+    db.commit()
+    return {"which": which, "covers": keep}
+
+
+@app.get("/home")
+def home(db: Session = Depends(get_db),
+         user: Optional[UserModel] = Depends(get_current_user)):
+    """El que hi ha a casa: les portes de l'app i quant hi ha darrere de cadascuna.
+
+    La portada era la graella de drills, i per això l'app semblava una taula amb coses penjades
+    al voltant. Això són els NOMBRES que fan que la portada digui alguna cosa: quantes frases hi
+    ha i quantes es poden escoltar, quants capítols del Mètode estan escrits, quantes unitats
+    tenen lliçó, quantes pràctiques hi ha i quantes són teves, i quantes frases esperen una veu.
+
+    Tot són comptes: no en surt cap fila. La graella de drills pesa sis megues i no pot ser el
+    que es carrega en obrir l'app.
+    """
+    from sqlalchemy import func
+
+    from models import GrammarLesson, MethodChapter
+    mine = grammar_course.not_excluded(db.query(DrillModel), DrillModel)
+    voiced = mine.filter(DrillModel.audio_url.isnot(None), DrillModel.audio_url != "")
+    lessons = db.query(func.count(GrammarLesson.id)).filter(
+        ~GrammarLesson.id.like("sheet:%"), ~GrammarLesson.id.like("deep:%")).scalar() or 0
+
+    # Una imatge per porta, de les NOSTRES: les il·lustracions que fem per a una frase, que són
+    # les que ja es veuen a tot arreu de l'app. Mai una imatge trobada per la xarxa (vegeu
+    # `grammar.our_picture`): a la portada enganyaria igual que enganyava en una pregunta.
+    # Les il·lustracions que dibuixem per a una frase primer, i els fotogrames de vídeo després:
+    # un dibuix fet per a aquella frase diu alguna cosa, i un fotograma qualsevol no. Van en dues
+    # consultes perquè, en una de sola, els últims vuitanta drills són tot fotogrames.
+    def pictures(only_drawn: bool):
+        q = db.query(DrillModel.image_url, DrillModel.grammar, DrillModel.tag, DrillModel.source_url) \
+              .filter(DrillModel.image_url.isnot(None), DrillModel.image_url != "")
+        q = q.filter(DrillModel.image_url.ilike("%/illustrations/%") if only_drawn
+                     else ~DrillModel.image_url.ilike("%/illustrations/%"))
+        return [r for r in q.order_by(DrillModel.id.desc()).limit(40).all()
+                if grammar_course.our_picture(r[0])]
+
+    pool = pictures(True) + pictures(False)
+    taken: set = set()
+    from_video: set = set()
+
+    def cover(*wants) -> Optional[str]:
+        """La primera imatge que compleix el que la porta demana, i si no, la següent lliure.
+
+        Dues portes no ensenyen mai dos fotogrames del MATEIX vídeo: serien la mateixa cara dues
+        vegades i la portada semblaria trencada.
+        """
+        for want in (*wants, lambda r: True):
+            for r in pool:
+                if r[0] in taken or (r[3] and r[3] in from_video) or not want(r):
+                    continue
+                taken.add(r[0])
+                if r[3]:
+                    from_video.add(r[3])
+                return r[0]
+        return None
+
+    # Si hi ha dibuixos fets per a les portes (`/artwork`), manen: són els que expliquen què és
+    # cada part. Mentre no n'hi hagi, s'agafa una imatge de la biblioteca, que és millor que res.
+    drawn = artwork(db, "home")
+
+    def pick(door, *wants):
+        return drawn.get(door) or cover(*wants)
+
+    covers = {
+        "method": pick("method", lambda r: "metode" in (r[2] or "").lower()),
+        "grammar": pick("grammar", lambda r: bool(r[1])),
+        "practice": pick("practice", lambda r: bool(r[1])),
+        "library": pick("library"),
+        "stories": pick("stories", lambda r: bool(r[3])),
+        "capture": pick("capture", lambda r: bool(r[3])),
+    }
+    tests = db.query(func.count(TestModel.id)).scalar() or 0
+    return {
+        "library": {
+            "sentences": mine.count(),
+            "with_voice": voiced.count(),
+            "speakers": db.query(func.count(func.distinct(DrillModel.author))).filter(
+                DrillModel.author.isnot(None), DrillModel.author != "",
+                DrillModel.audio_url.isnot(None), DrillModel.audio_url != "").scalar() or 0,
+            "varieties": db.query(func.count(func.distinct(DrillModel.variety))).filter(
+                DrillModel.variety.isnot(None), DrillModel.variety != "").scalar() or 0,
+            "videos": db.query(func.count(func.distinct(DrillModel.source_url))).filter(
+                DrillModel.source_url.isnot(None), DrillModel.source_url != "").scalar() or 0,
+            # el que espera una veu: és la feina que hi ha, dita en un número
+            "wanted": mine.filter(DrillModel.voice_wanted.is_(True),
+                                  (DrillModel.audio_url.is_(None)) | (DrillModel.audio_url == "")).count(),
+        },
+        "covers": covers,
+        "method": {"chapters": len(method_mod.CHAPTERS),
+                   "written": db.query(func.count(MethodChapter.slug)).scalar() or 0},
+        "grammar": {"units": len(grammar_course.UNITS), "with_lesson": lessons},
+        # Els sons: quantes lletres de l'abecedari ja es poden sentir amb una paraula nostra
+        # (#368). Només el compte: la porta de la portada no es porta tot l'abecedari.
+        "sounds": alfabet.comptes(db),
+        "practice": {"all": tests,
+                     "mine": (db.query(func.count(TestModel.id)).filter(
+                         TestModel.created_by_user_id == user.id).scalar() or 0) if user else 0},
+        "you": {
+            "signed_in": bool(user),
+            "name": (user.display_name or user.username) if user else None,
+            "is_admin": bool(user and user.is_admin),
+            "recordings": (db.query(func.count(RecordingModel.id)).filter(
+                RecordingModel.user_id == user.id).scalar() or 0) if user else 0,
+        },
+    }
+
+
 @app.get("/corpus/stats")
 def corpus_stats(db: Session = Depends(get_db)):
     """Corpus health overview: sizes, media coverage, varieties, regions."""
@@ -7369,7 +9226,9 @@ def corpus_sources(db: Session = Depends(get_db)):
     rows = db.query(DrillModel).filter(DrillModel.source_url != None, DrillModel.source_url != '').all()
     videos: Dict[str, Dict[str, Any]] = {}
     for d in rows:
-        v = videos.setdefault(d.source_url, {
+        # agrupat pel VÍDEO: la mateixa captura escriu una URL diferent per tall (hi posa el
+        # segon on comença), i agrupar per la cadena comptava un vídeo per cada tall
+        v = videos.setdefault(video_key(d.source_url), {
             "source_url": d.source_url, "title": None, "channel": None, "playlist": None, "license": None,
             "drills": 0, "with_video": 0, "with_audio": 0, "verified": 0, "varieties": set(), "tags": set(),
             "from_s": None, "to_s": None, "ids": []})
@@ -7509,6 +9368,72 @@ def verify_queue_reason(d) -> Optional[tuple]:
     if max(reading_similarity(o, stored) for o in opts) < 0.6:
         return "differs", opts
     return "confirm", opts  # the listeners agree with the stored text: one tap to verify
+
+
+# ---------------------------------------------------------------- les piles de revisió (#454)
+#
+# Per què això i no la graella. Fins ara, per revisar, calia obrir `/drills`, prémer una
+# etiqueta i llegir una llista de 4.800 files decidint què fer amb cadascuna. Això no es fa:
+# una pila de cinc-centes frases «per revisar» no la mira ningú, i les que més mal fan es
+# queden allà any rere any.
+#
+# Aquí se serveix **una pregunta cada vegada**, amb les opcions que la resolen i res més.
+
+
+@app.get("/revisa")
+def revisa_piles(db: Session = Depends(get_db), _admin: UserModel = Depends(require_admin)):
+    """Les piles i quantes en queden. El compte de l'etiqueta ÉS la barra de progrés."""
+    comptes = revisa.comptes(db)
+    return {"piles": [{"id": k, **{x: y for x, y in v.items() if x != "opcions"},
+                       "opcions": v["opcions"], "queden": comptes.get(k, 0)}
+                      for k, v in revisa.PILES.items()]}
+
+
+@app.get("/revisa/{pila}")
+def revisa_seguent(pila: str, saltats: Optional[str] = None, db: Session = Depends(get_db),
+                   _admin: UserModel = Depends(require_admin)):
+    """La frase següent d'aquesta pila, amb la seva companya quan la pregunta és un parell."""
+    if pila not in revisa.PILES:
+        raise HTTPException(status_code=404, detail="Pila desconeguda")
+    fora = [int(x) for x in (saltats or "").split(",") if x.strip().isdigit()]
+    d = revisa.seguent(db, pila, fora)
+    if not d:
+        return {"pila": pila, "queden": revisa.comptes(db).get(pila, 0), "drill": None}
+    altre = revisa.companya(db, d, pila)
+    return {
+        "pila": pila, "queden": revisa.comptes(db).get(pila, 0),
+        "titol": revisa.PILES[pila]["titol"], "pregunta": revisa.PILES[pila]["pregunta"],
+        "opcions": revisa.PILES[pila]["opcions"],
+        "drill": Drill.model_validate(d, from_attributes=True),
+        "companya": Drill.model_validate(altre, from_attributes=True) if altre else None,
+        # Els esborranys amb la seva procedència: qui decideix ha de veure quants models ho han
+        # llegit i si coincideixen, no només un text sense pare.
+        "esborranys": revisa.esborranys_de(d),
+    }
+
+
+@app.post("/revisa/{pila}")
+def revisa_decideix(pila: str, drill_id: int = Body(..., embed=True),
+                    opcio: str = Body(..., embed=True),
+                    tria: Optional[int] = Body(None, embed=True),
+                    esborrany: Optional[str] = Body(None, embed=True),
+                    db: Session = Depends(get_db), _admin: UserModel = Depends(require_admin)):
+    """El que ha dit una persona. El servidor l'aplica i treu la frase de la pila.
+
+    No decideix res sol: totes les operacions que fa —corregir, esborrar, enllaçar com a
+    variant— són les que ja existien, posades darrere d'un botó."""
+    if pila not in revisa.PILES:
+        raise HTTPException(status_code=404, detail="Pila desconeguda")
+    d = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+    if not d:
+        raise HTTPException(status_code=404, detail="Drill not found")
+    altre = revisa.companya(db, d, pila)
+    try:
+        fet = revisa.decideix(db, pila, d, altre, opcio, tria, esborrany)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    db.commit()
+    return {**fet, "queden": revisa.comptes(db).get(pila, 0)}
 
 
 @app.get("/corpus/verify-queue")
@@ -7782,7 +9707,16 @@ def create_test_from_weakest(
     db.add(test)
     db.commit()
     db.refresh(test)
-    return {"test_id": test.id, "title": test.title, "drill_count": len(drill_ids)}
+    # Una practica ES una seqüencia de passos (ADR 0002). Sense aixo naixia amb la llista plana
+    # i cap pas, i el taller l'ensenyava buida a qui l'acabava de demanar.
+    from models import PracticeStep as PracticeStepModel
+    passos = practice_steps.passos_automatics(db, drill_ids)
+    for i, s in enumerate(passos):
+        db.add(PracticeStepModel(test_id=test.id, position=i, kind=s["kind"],
+                                 drill_id=s["drill_id"], payload=None))
+    db.commit()
+    return {"test_id": test.id, "title": test.title, "drill_count": len(drill_ids),
+            "step_count": len(passos)}
 
 @app.get("/reviews/streak")
 def review_streak(db: Session = Depends(get_db),
@@ -8252,6 +10186,95 @@ def list_available_pairs(db: Session = Depends(get_db)):
         ) for drill in drills
     ]
 
+# El nom amb que signa cada lector. Son els que la biblioteca ja porta escrits -3.129 lectures
+# amb l'adaptador ric, 3.554 amb l'afinat vell, 206 amb el NeMo-, i es diuen igual A POSTA: la
+# pantalla de revisio compta ACORDS entre models, i dos noms per al mateix lector serien dos
+# testimonis alla on nomes n'hi ha un. Si l'Space canvia d'adaptador, aquestes constants canvien
+# amb ell (ADR 0009: al Space hi va l'adaptador de tot el corpus).
+LECTOR_GEMINI = "Gemini"
+LECTOR_NOSTRE = "MMS adaptador ric (shi_ric)"
+LECTOR_NEMO = "NeMo stt_zgh_fastconformer"
+
+
+def _desa_lectura_de_maquina(db: Session, drill_id: Optional[int], text: str, lector: str,
+                             cru: Optional[str] = None) -> Optional[str]:
+    """Desa als esborranys el que una maquina acaba de llegir d'una gravacio (#575).
+
+    Fins ara `/transcribe/` no deixava cap rastre: ni qui havia llegit, ni que havia dit, ni
+    quan. Mesurat el 9-11-2026 sobre les 12.202 frases, nomes 12 es podien relacionar amb una
+    lectura desada, i cap no portava l'empremta de qui l'havia escrita. Per aixo la pregunta del
+    #557 -quantes frases de produccio han rebut text de maquina al camp del parlant- no es podia
+    contestar: no es que la resposta fos zero, es que no hi havia on mirar.
+
+    Tres fronteres:
+
+    - **No toca cap camp de persona.** `text_tachelhit`, `text_tachelhit_latin` i `text_catalan`
+      no es llegeixen ni s'escriuen aqui (ADR 0003). Ni `text_tachelhit_suggested`: qui decideix
+      quina de les lectures ocupa la proposta es el davant, i aixo no canvia.
+    - **Un JSON que no s'enten no s'esborra.** Si el camp porta una cosa que no sabem llegir, es
+      deixa estar i es diu al registre. Perdre esborranys d'altri per fer lloc al nostre seria
+      pitjor que no desar res.
+    - **No fa caure la resposta.** Qui acaba de gravar ha de rebre la seva lectura encara que el
+      desat falli; per aixo el `rollback` i el `None`.
+
+    Una relectura del mateix lector SUBSTITUEIX la seva entrada -l'ultim que ha dit es el que
+    diu-, i no n'afegeix una segona: si no, un boto premut tres vegades semblaria tres
+    testimonis, i l'acord entre models es justament el que fa que valgui la pena mirar-ne una.
+
+    Torna el camp tal com ha quedat, per tornar-lo a qui ha cridat.
+    """
+    net = (text or "").strip()
+    if not drill_id or not net:
+        return None
+    try:
+        drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+        if drill is None:
+            return None
+        llista = []
+        anterior = (drill.esborranys or "").strip()
+        if anterior:
+            try:
+                llista = json.loads(anterior)
+            except Exception:
+                print(f"[LECTURA] els esborranys del drill {drill_id} no es poden llegir; "
+                      f"no hi escric i els deixo com estan")
+                return None
+            if not isinstance(llista, list):
+                print(f"[LECTURA] els esborranys del drill {drill_id} no son una llista; "
+                      f"no hi escric i els deixo com estan")
+                return None
+        nova = {"text": net, "model": lector, "acord": None,
+                # Quan. Es una clau nova: `revisa.esborranys_de` nomes mira text/model/acord/font,
+                # o sigui que aixo queda escrit sense canviar cap pantalla.
+                "quan": iso_z(datetime.now(timezone.utc))}
+        # El que la maquina ha SENTIT, quan no es el mateix que proposa. El que torna el NeMo
+        # passa pel glossari i despres per l'aparellament amb el corpus: pot acabar essent una
+        # frase NOSTRA que s'hi assembla, i aixo es una altra afirmacio. Totes dues queden
+        # escrites, perque qui decideix ha de poder veure si la proposta surt de la gravacio o
+        # de la semblanca amb una frase que ja teniem.
+        if cru and cru.strip() and cru.strip() != net:
+            nova["cru"] = cru.strip()
+        mateix = [i for i, e in enumerate(llista)
+                  if isinstance(e, dict) and (e.get("model") or "").strip() == lector]
+        if mateix:
+            llista[mateix[0]] = nova
+            for i in reversed(mateix[1:]):
+                llista.pop(i)
+        else:
+            llista.append(nova)
+        drill.esborranys = json.dumps(llista, ensure_ascii=False)
+        db.commit()
+        return drill.esborranys
+    except Exception as e:
+        print(f"[LECTURA] no s'ha pogut desar la lectura del drill {drill_id}: "
+              f"{type(e).__name__}: {e}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return None
+
+
 @app.post("/transcribe/", response_model=TranscribeResponse)
 async def transcribe_audio(
     request: TranscribeRequest,
@@ -8260,7 +10283,13 @@ async def transcribe_audio(
     """
     Calls external Hugging Face ASR Space to process audio.
     """
-    audio_url = request.audio_url
+    #: Les adreces que aquest servidor DÓNA són `/mitjans/...` (la clau de R2, veg. magatzem.py),
+    #: i aquí tornaven tal com són: el lector les rebia com a ruta i es queixava que no tenen
+    #: esquema («Invalid URL '/mitjans/...': No scheme supplied»). Cada frase amb una adreça així
+    #: fallava sempre, i la repesca de lectures de l'app hi torna mentre en quedi cap: el 20-11-2026
+    #: eren 201 gravacions reintentades de vuit en vuit cada deu minuts, per sempre. `normalize_media_url`
+    #: és el que ja fa servir tota la resta del programa per treure-les a fora senceres.
+    audio_url = normalize_media_url(request.audio_url or "") or request.audio_url
 
     # If audio_url is not provided but we have a cloudinary_path, use it
     if not audio_url and request.cloudinary_path:
@@ -8310,7 +10339,15 @@ async def transcribe_audio(
             gold = (drill.text_tachelhit or "").strip()
             speaker_text = gold if gold and gold.lower() != "text" else None
             examples = _dialect_examples(db, variety)
-    short = await asyncio.to_thread(_transcribe_short_clip_with_gemini, audio_url, variety, meaning, speaker_text, examples)
+    # No se li pregunta si fa estona que no contesta: cada intent costa cinc segons i el que ve
+    # darrere —el nostre model— llegeix millor que el de fora de totes maneres.
+    short = None
+    if _gemini_asr_val_la_pena():
+        short = await asyncio.to_thread(_transcribe_short_clip_with_gemini, audio_url, variety, meaning, speaker_text, examples)
+        _gemini_asr_resultat(short is not None)
+    # Es compta pel resultat, no per l'excusa. Una gravació llarga també torna `None` i això fa
+    # avançar el comptador sense que Gemini en tingui cap culpa; no passa res, perquè la pausa és
+    # curta, es desfà sola a la primera resposta i el que ve darrere llegeix millor que el de fora.
     if short is not None:
         # Both scripts: the Latin reading (comparable letter by letter with what the speaker typed)
         # and its Tifinagh, «latin · ⵜⵉⴼⵉⵏⴰⵖ».
@@ -8318,7 +10355,19 @@ async def transcribe_audio(
         if len(re.sub(r"[^\w]", "", latin or tif)) < 3:
             raise HTTPException(status_code=502, detail="No s'ha entès res de la gravació")
         reading = f"{latin} · {tif}" if latin and tif and latin != tif else (latin or tif)
-        return TranscribeResponse(rough_transcription=latin, corrected_transcription=reading, similarity_score=0.0)
+        return TranscribeResponse(rough_transcription=latin, corrected_transcription=reading, similarity_score=0.0,
+                                  esborranys=_desa_lectura_de_maquina(db, request.drill_id, reading,
+                                                                      LECTOR_GEMINI, cru=latin))
+
+    # El segon de la fila: el NOSTRE model. Abans el servidor saltava d'aquí al NeMo, que és d'un
+    # tercer i llegeix pitjor (0,448 contra 0,279, mesurat l'1-11 sobre gravacions nostres), i que
+    # per això fa totes les lectures de les frases noves quan Gemini no contesta.
+    nostre = await asyncio.to_thread(_space_mms_text, audio_url)
+    if len(re.sub(r"[^\w]", "", nostre)) >= 3:
+        return TranscribeResponse(rough_transcription=nostre, corrected_transcription=nostre,
+                                  similarity_score=0.0,
+                                  esborranys=_desa_lectura_de_maquina(db, request.drill_id, nostre,
+                                                                      LECTOR_NOSTRE))
 
     # Call HF Space
     asr_space_url = os.getenv("HUGGINGFACE_ASR_SPACE_URL", ASR_SPACE_DEFAULT)
@@ -8352,30 +10401,46 @@ async def transcribe_audio(
             except Exception as corr_err:
                 print(f"[CORRECTION] Failed, returning rough transcription: {corr_err}")
                 corrected, score = fixed, 0.0
-
-        return TranscribeResponse(
-            rough_transcription=rough,
-            corrected_transcription=corrected,
-            similarity_score=score
-        )
     except Exception as e:
         print(f"[ASR_SPACE ERROR] {type(e).__name__}: {str(e)}")
         # Try a fallback if handle_file fails
+        client = None
         try:
             client = Client(asr_space_url)
-            rough = await asyncio.to_thread(
-                client.predict,
-                audio_url,
-                api_name="/predict"
-            )
-            return TranscribeResponse(
-                rough_transcription=rough,
-                corrected_transcription=rough,
-                similarity_score=1.0
-            )
+            rough = await asyncio.to_thread(client.predict, audio_url, api_name="/predict")
+            corrected, score = rough, 1.0
         except Exception as fallback_e:
             print(f"[ASR_SPACE FALLBACK ERROR] {type(fallback_e).__name__}: {str(fallback_e)}")
             raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+        finally:
+            #: aquest client es construeix a cada fallada, i sense tancar-lo es queda amb el seu
+            #: fil viu per sempre (veg. la nota de `hf_predict`)
+            if client is not None:
+                try:
+                    client.close()
+                except Exception:
+                    pass
+
+    # Una lectura buida no és una lectura (#556).
+    #
+    # Fins ara, quan el NeMo tornava una cadena buida —l'Space acabat d'aixecar, un clip que no
+    # s'entén—, això contestava **200 amb la lectura buida**: una fallada disfressada d'encert.
+    # El davant feia `if (!text) return;` i es quedava sense dir res, i qui acabava de gravar no
+    # sabia si tenia lectura, si arribaria, o si no vindria mai. Ara es diu.
+    #
+    # El llindar és el mateix que el de Gemini tres passes més amunt: menys de tres lletres no és
+    # ningú parlant.
+    if len(re.sub(r"[^\w]", "", corrected if isinstance(corrected, str) else "")) < 3:
+        raise HTTPException(status_code=502,
+                            detail="Cap dels lectors no ha entès la gravació")
+
+    return TranscribeResponse(
+        rough_transcription=rough,
+        corrected_transcription=corrected,
+        similarity_score=score,
+        esborranys=_desa_lectura_de_maquina(db, request.drill_id, corrected, LECTOR_NEMO,
+                                            cru=rough if isinstance(rough, str) else None),
+    )
 
 class ASRService:
     def transcribe(self, audio_url: str) -> str:
@@ -8560,6 +10625,57 @@ async def retranscribe_drill(drill_id: int, variety: Optional[str] = Body(None, 
     return {"id": drill.id, "variety": v, **out}
 
 
+@app.post("/drills/{drill_id}/recut")
+def recut_drill_from_source(drill_id: int,
+                            start_time: float = Body(..., embed=True),
+                            end_time: float = Body(..., embed=True),
+                            db: Session = Depends(get_db),
+                            user: Optional[UserModel] = Depends(get_current_user)):
+    """Cut this sentence's clip again from the ORIGINAL video.
+
+    `trim-audio` and `trim-video` cut the clip we already hold, so a cut the machine made too
+    short can never be made longer by them: what was left out is not in the file. This goes back
+    to `source_url` and cuts again, which is the only way to recover it.
+
+    The sentence's TEXT is not touched. Moving the cut and changing the words are two different
+    decisions and they are taken one at a time.
+
+    A picture that was DRAWN for this sentence is not replaced by a frame grab: illustrations live
+    under `tachelhit/images` and frames under `tachelhit/image_segments`, so one that did not come
+    from cutting the video was made on purpose and stays.
+    """
+    drill = db.query(DrillModel).filter(DrillModel.id == drill_id).first()
+    if not drill:
+        raise HTTPException(status_code=404, detail="Drill not found")
+    owner_or_admin(drill, user)
+    if not (drill.source_url or "").strip():
+        raise HTTPException(status_code=400, detail="Aquesta frase no ve de cap vídeo: no hi ha d'on tornar a tallar.")
+    if start_time < 0 or end_time <= start_time:
+        raise HTTPException(status_code=400, detail="El tram no té sentit: el final ha d'anar després de l'inici.")
+    if end_time - start_time > 120:
+        raise HTTPException(status_code=400, detail="Dos minuts és massa per a una frase. Escurça el tram.")
+    if not os.getenv("HUGGINGFACE_SPACE_URL"):
+        raise HTTPException(status_code=503, detail="Ara mateix no es pot tallar: el servei de vídeo no està configurat.")
+
+    try:
+        res = remote_process_and_upload_segment(drill.source_url, start_time, end_time, drill.id)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"No s'ha pogut tallar: {str(e)[:160]}")
+
+    drill.video_url = normalize_media_url(res["video_url"])
+    was_a_frame = "image_segments" in (drill.image_url or "")
+    if res.get("image_url") and (not drill.image_url or was_a_frame):
+        drill.image_url = normalize_media_url(res["image_url"])
+    drill.video_start_time = start_time
+    drill.video_end_time = end_time
+    drill.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(drill)
+    return {"id": drill.id, "video_url": drill.video_url, "image_url": drill.image_url,
+            "video_start_time": drill.video_start_time, "video_end_time": drill.video_end_time,
+            "kept_drawing": bool(drill.image_url) and not was_a_frame}
+
+
 @app.post("/drills/{drill_id}/trim-audio")
 def trim_drill_audio(
     drill_id: int,
@@ -8600,14 +10716,9 @@ def trim_drill_audio(
                 trimmed.write_audiofile(tmp_out_path, logger=None)
 
         # Upload to Cloudinary
-        result = cloudinary.uploader.upload(
-            tmp_out_path,
-            folder="tachelhit/audio",
-            public_id=f"audio_trimmed_{drill_id}_{int(datetime.utcnow().timestamp())}",
-            resource_type="video"
-        )
-
-        url = normalize_media_url(result['secure_url'])
+        url = normalize_media_url(magatzem.puja(
+            tmp_out_path, "tachelhit/audio",
+            f"audio_trimmed_{drill_id}_{int(datetime.utcnow().timestamp())}", "so"))
         drill.audio_url = url
         db.commit()
 
@@ -8669,14 +10780,9 @@ def trim_drill_video(
                 trimmed.write_videofile(tmp_out_path, codec="libx264", audio_codec="aac", logger=None)
 
         # Upload to Cloudinary
-        result = cloudinary.uploader.upload(
-            tmp_out_path,
-            folder="tachelhit/video",
-            public_id=f"video_trimmed_{drill_id}_{int(datetime.utcnow().timestamp())}",
-            resource_type="video"
-        )
-
-        url = normalize_media_url(result['secure_url'])
+        url = normalize_media_url(magatzem.puja(
+            tmp_out_path, "tachelhit/video",
+            f"video_trimmed_{drill_id}_{int(datetime.utcnow().timestamp())}", "video"))
         drill.video_url = url
         db.commit()
 
@@ -8860,6 +10966,111 @@ def bulk_update_video_url(request: BulkVideoUrlUpdateRequest, db: Session = Depe
         print(f"[BULK VIDEO URL] Error: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Bulk video URL update failed: {str(e)}")
+
+
+# ---- Visor PRIVAT de Tamazight TV (SNRT): només administradors (docs/adr/0012) -----------------------
+# Material de recerca amb permís de la SNRT: recerca sí, republicar no. Per això TOTES les rutes demanen un administrador,
+# no surt a cap exportació ni al corpus, i el vídeo no es guarda ni es serveix (s'encasta de YouTube o es carrega a la pàgina).
+def _snrt_viewer_emails() -> set:
+    return {e.strip().lower() for e in (os.getenv("SNRT_VIEWER_EMAILS") or "").split(",") if e.strip()}
+
+
+def require_snrt_viewer(user: UserModel = Depends(require_user)) -> UserModel:
+    """Administrador, o un correu de la llista SNRT_VIEWER_EMAILS (la gent de la SNRT): veuen NOMÉS el visor, no la resta d'admin."""
+    if user.is_admin or (user.email and user.email.lower() in _snrt_viewer_emails()):
+        return user
+    raise HTTPException(status_code=403, detail="Només per a administradors i convidats de la SNRT")
+
+
+#: Per què aquestes dues rutes ja no demanen qui ets (decisió d'en Pablo, 20-11-2026, ADR 0013):
+#: el vídeo no el serveix ningú —surt del disc de qui mira— i la porta d'administrador no
+#: protegia el vídeo, només el text. Qui vulgui mirar un episodi necessita tenir-ne el fitxer, i
+#: això ja és la tria. El que SEGUEIX tancat és `/video` (dóna un enllaç signat al vídeo que
+#: tenim allotjat) i `importa` (escriu). Li he dit que això fa públic el text de la SNRT i que el
+#: permís que tenim apuntat és de recerca; ho ha decidit igualment i hi consta.
+@lru_cache(maxsize=1)
+def snrt_fora() -> set:
+    """Els episodis que el visor no serveix: tarifit, que es una altra llengua.
+
+    No s'esborra res de la base de dades. Amagar dades esborrant-les es pitjor que no
+    servir-les: el dia que es vulgui un corpus de tarifit, hi sera. La llista viu a
+    `backend/data/varietats_snrt.json` amb la varietat i d'on surt la classificacio, perque es
+    pugui corregir sense tocar codi.
+    """
+    cami = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data",
+                        "varietats_snrt.json")
+    try:
+        with open(cami, encoding="utf-8") as f:
+            return set(json.load(f).get("no_es_serveixen") or [])
+    except Exception as e:
+        print(f"[SNRT] no puc llegir varietats_snrt.json: {e}")
+        return set()
+
+
+@app.get("/snrt-privat/")
+def snrt_privat_index(db: Session = Depends(get_db)):
+    fora = snrt_fora()
+    eps = [e for e in db.query(SnrtEpisodeModel).order_by(SnrtEpisodeModel.titol).all()
+           if e.slug not in fora]
+    out = []
+    for e in eps:
+        n = db.query(SnrtCueModel).filter(SnrtCueModel.episodi_id == e.id).count()
+        nc = db.query(SnrtCueModel).filter(SnrtCueModel.episodi_id == e.id, SnrtCueModel.catala.isnot(None), SnrtCueModel.catala != "").count()
+        out.append({"slug": e.slug, "titol": e.titol, "durada": e.durada, "linies": n, "amb_catala": nc,
+                    "video_youtube": e.video_youtube, "url_pagina": e.url_pagina})
+    return {"episodis": out}
+
+
+@app.get("/snrt-privat/{slug}")
+def snrt_privat_episodi(slug: str, db: Session = Depends(get_db)):
+    if slug in snrt_fora():
+        raise HTTPException(status_code=404, detail="Episodi desconegut")
+    e = db.query(SnrtEpisodeModel).filter(SnrtEpisodeModel.slug == slug).first()
+    if not e:
+        raise HTTPException(status_code=404, detail="Episodi desconegut")
+    cues = db.query(SnrtCueModel).filter(SnrtCueModel.episodi_id == e.id).order_by(SnrtCueModel.k).all()
+    return {"slug": e.slug, "titol": e.titol, "durada": e.durada, "url_pagina": e.url_pagina, "video_youtube": e.video_youtube,
+            "avis": "Text llegit per màquina de la imatge i traduït per màquina: sense revisar. Material de la SNRT, només per a recerca.",
+            "linies": [{"k": c.k, "t_ini": c.t_ini, "t_fi": c.t_fi, "tifinag": c.tifinag, "arab": c.arab,
+                        "catala": c.catala, "catala_estat": c.catala_estat, "sentit": c.sentit} for c in cues]}
+
+
+@app.get("/snrt-privat/{slug}/video")
+def snrt_privat_video(slug: str, _admin: UserModel = Depends(require_snrt_viewer), db: Session = Depends(get_db)):
+    """Adreça signada (4 h) del vídeo, que viu al servidor d'Alibaba (visor-video) i no passa mai per aquesta app.
+    Sense SNRT_VIDEO_BASE i SNRT_VIDEO_SECRET (o sense vídeo allà) torna `url: null` i el visor demana el fitxer a qui el mira."""
+    import hashlib, hmac, time as _t
+    if slug in snrt_fora():
+        raise HTTPException(status_code=404, detail="Episodi desconegut")
+    if not db.query(SnrtEpisodeModel).filter(SnrtEpisodeModel.slug == slug).first():
+        raise HTTPException(status_code=404, detail="Episodi desconegut")
+    base, secret = (os.getenv("SNRT_VIDEO_BASE") or "").rstrip("/"), os.getenv("SNRT_VIDEO_SECRET") or ""
+    if not base or not secret:
+        return {"url": None}
+    exp = int(_t.time()) + 4 * 3600
+    sig = hmac.new(secret.encode(), f"{slug}.{exp}".encode(), hashlib.sha256).hexdigest()
+    return {"url": f"{base}/v/{slug}?exp={exp}&sig={sig}", "caduca": exp}
+
+
+@app.post("/snrt-privat/{slug}/importa")
+def snrt_privat_importa(slug: str, dades: Dict[str, Any] = Body(...), _admin: UserModel = Depends(require_admin),
+                        db: Session = Depends(get_db)):
+    """Substitueix tot l'episodi (idempotent). `dades` = {titol, url_pagina?, video_youtube?, durada?, linies:[{k,t_ini,t_fi,tifinag,arab,catala,catala_estat}]}."""
+    linies = dades.get("linies") or []
+    if not dades.get("titol") or not isinstance(linies, list) or not linies:
+        raise HTTPException(status_code=400, detail="Cal `titol` i `linies`")
+    e = db.query(SnrtEpisodeModel).filter(SnrtEpisodeModel.slug == slug).first()
+    if not e:
+        e = SnrtEpisodeModel(slug=slug, titol=dades["titol"]); db.add(e); db.flush()
+    e.titol = dades["titol"]; e.url_pagina = dades.get("url_pagina"); e.video_youtube = dades.get("video_youtube"); e.durada = dades.get("durada")
+    db.query(SnrtCueModel).filter(SnrtCueModel.episodi_id == e.id).delete()
+    for n, l in enumerate(linies):
+        db.add(SnrtCueModel(episodi_id=e.id, k=int(l.get("k", n)), t_ini=float(l["t_ini"]), t_fi=float(l["t_fi"]), tifinag=l.get("tifinag"),
+                            arab=l.get("arab"), catala=l.get("catala"), catala_estat=l.get("catala_estat"),
+                            sentit=l.get("sentit")))
+    db.commit()
+    return {"slug": slug, "linies": len(linies)}
+
 
 if __name__ == "__main__":
     import uvicorn

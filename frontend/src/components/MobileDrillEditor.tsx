@@ -7,7 +7,6 @@ import {
   FaMicrophone,
   FaKeyboard,
   FaFolderOpen,
-  FaVolumeUp,
   FaFileAlt,
   FaMicroscope,
   FaClipboardCheck,
@@ -31,6 +30,8 @@ import { fileNameFor, kindOf, type MediaKind } from '../utils/media';
 import { syncManager, type Drill } from '../services/OfflineSyncManager';
 import { api } from '../api';
 import { toast } from '../toast';
+import { whyItFailed } from '../utils/errors';
+import { onVaLaLectura, queDirDeLaLectura } from '../services/lecturaDeMaquina';
 import AiAssistant from './AiAssistant';
 
 interface MobileDrillEditorProps {
@@ -42,6 +43,32 @@ interface MobileDrillEditorProps {
 
 export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate }: MobileDrillEditorProps) {
   const [localDrill, setLocalDrill] = useState<Drill>({ ...drill });
+  // The last version the SERVER gave us. What we send is the difference against this, so that
+  // changing a tag cannot rewrite the speaker's text with whatever was on screen when it opened.
+  const serverCopy = useRef<Drill>({ ...drill });
+  // A save that did not land: the work and the reason, kept until it does.
+  const [unsaved, setUnsaved] = useState<string | null>(null);
+  // A sentence belongs to whoever made it, and the library's own to whoever administers it
+  // (`owner_or_admin` on the server). Knowing it here means saying so BEFORE the work, and
+  // offering the thing that is actually open to you: saying it your way, as a variant.
+  const [me, setMe] = useState<{ id: number; is_admin: boolean } | null>(null);
+  const [myVersion, setMyVersion] = useState<string | null>(null);
+  const [sendingVariant, setSendingVariant] = useState(false);
+  useEffect(() => { api.me().then((m) => setMe(m ? { id: m.id, is_admin: !!m.is_admin } : null)).catch(() => {}); }, []);
+  const mayChange = !me ? false : me.is_admin || (!!drill.created_by_user_id && drill.created_by_user_id === me.id);
+
+  const sendVariant = async () => {
+    const said = (myVersion || '').trim();
+    if (!said) return;
+    setSendingVariant(true);
+    try {
+      await api.addVariant(drill.id, said);
+      setMyVersion(null);
+      toast.success('Desada com una altra manera de dir-ho. Gr\u00e0cies!');
+      onUpdate();
+    } catch (e) { toast.error(whyItFailed(e, 'No s\u2019ha pogut desar')); }
+    finally { setSendingVariant(false); }
+  };
   const [isRecording, setIsRecording] = useState(false);
   const [aiLoadingKey, setAiLoadingKey] = useState<string | null>(null);
   const [showAi, setShowAi] = useState(false);
@@ -72,6 +99,8 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
 
   useEffect(() => {
     setLocalDrill({ ...drill });
+    serverCopy.current = { ...drill };
+    setUnsaved(null);
   }, [drill]);
 
   useEffect(() => {
@@ -90,26 +119,48 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
     return out;
   };
 
+  /** What this edit actually changes, against the last version the server gave us. */
+  const whatChanged = (next: Drill): Partial<Drill> => {
+    const base = serverCopy.current || ({} as Drill);
+    const out: Record<string, unknown> = {};
+    (Object.keys(next) as (keyof Drill)[]).forEach((k) => {
+      if (k === 'id' || k === 'date_created' || k === 'updated_at') return;
+      const a = (next as any)[k], b = (base as any)[k];
+      if ((a ?? null) !== (b ?? null)) out[k as string] = a;
+    });
+    return out as Partial<Drill>;
+  };
+
   const triggerSave = async (updatedDrill: Drill) => {
+    const clean = stripLocalUrls(updatedDrill);
+    // Only what you touched. The whole row used to go up, so a new tag carried a stale copy of
+    // every other field with it — including the speaker's own words.
+    const patch = whatChanged(clean);
+    if (Object.keys(patch).length === 0) { toast.info('No hi ha res de nou per desar'); return; }
     try {
       const status = await Network.getStatus();
-      updatedDrill = stripLocalUrls(updatedDrill);
-      if (status.connected && !updatedDrill.is_local) {
-        await axios.put(`${API_BASE}/drills/${updatedDrill.id}`, updatedDrill);
+      if (status.connected && !clean.is_local) {
+        const res = await axios.put(`${API_BASE}/drills/${clean.id}`, patch);
+        serverCopy.current = { ...(res.data as Drill) };
+        setUnsaved(null);
         onUpdate();
         toast.success('Desat');
       } else {
         await syncManager.queueAction({
-          type: updatedDrill.is_local ? 'CREATE' : 'UPDATE',
-          drillId: updatedDrill.id,
-          payload: updatedDrill
+          type: clean.is_local ? 'CREATE' : 'UPDATE',
+          drillId: clean.id,
+          payload: clean
         });
+        setUnsaved(null);
         onUpdate();
         toast.info('Desat sense connexió — es sincronitzarà');
       }
     } catch (err) {
-      addLog('Save queued offline');
-      toast.error('No s\'ha pogut desar');
+      // It is NOT queued: saying so in the log while losing the work is how this hid itself.
+      const why = whyItFailed(err, 'No s\u2019ha pogut desar');
+      addLog(`Save failed: ${why}`);
+      setUnsaved(why);
+      toast.error(why);
     }
   };
 
@@ -219,7 +270,7 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
       const result = await VoiceRecorder.startRecording();
       if (result.value) setIsRecording(true);
     } catch (err: any) {
-      toast.error(`Micròfon: ${err?.message || 'no disponible'}`);
+      toast.error(whyItFailed(err, `Micròfon: ${err?.message || 'no disponible'}`));
     }
   };
 
@@ -311,9 +362,18 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
             const safeText = (res.data.corrected_transcription || '').trim();
             if (!safeText) return toast.error('La transcripció ha retornat un text buit.');
 
-            const updated = { ...localDrill, text_tachelhit: safeText };
+            // El text del parlant no es toca mai: si ja n'hi ha, la lectura va a suggeriment i
+            // ell es queda on és (#557, ADR 0003). La regla és compartida amb la graella.
+            //
+            // I els esborranys es prenen dels que ha tornat la lectura: aquí es desa el drill
+            // SENCER, i la còpia que té aquesta pantalla és d'abans que el servidor hi escrivís
+            // qui ha llegit i què ha dit (#575) —desar-la l'esborraria.
+            const esb = (res.data?.esborranys || '').trim();
+            const updated = { ...localDrill, ...onVaLaLectura(localDrill.text_tachelhit, safeText),
+                              ...(esb ? { esborranys: esb } : {}) };
             setLocalDrill(updated);
             triggerSave(updated);
+            toast.success(queDirDeLaLectura(localDrill.text_tachelhit, safeText));
             addLog('Transcription success');
         } catch (err: any) {
             const msg = err.response?.data?.detail || err.message;
@@ -322,29 +382,6 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
             setAiLoadingKey(null);
         }
     };
-
-  const handleTachelhitTTS = async () => {
-    const text = localDrill.text_tachelhit;
-    if (!text) return toast.error('El camp de tachelhit és buit.');
-
-    const status = await Network.getStatus();
-    if (!status.connected) return toast.error('El TTS requereix connexió a internet.');
-
-    setAiLoadingKey('tts-shi');
-    addLog('Generating Tachelhit TTS...');
-    try {
-        const res = await axios.post(`${API_BASE}/tts/tachelhit`, { text, drill_id: localDrill.id });
-        if (res.data.url) {
-            addLog('TTS ready, playing...');
-            new Audio(getMediaUrl(res.data.url)).play();
-        }
-    } catch (err: any) {
-        const msg = err.response?.data?.detail || err.message;
-        toast.error(`El TTS ha fallat: ${msg}`);
-    } finally {
-        setAiLoadingKey(null);
-    }
-  };
 
   const handleTranslateAction = async (source: 'ca' | 'shi', target: 'ca' | 'shi') => {
     const status = await Network.getStatus();
@@ -476,6 +513,39 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
             </div>
 
       <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px', paddingBottom: 'calc(120px + env(safe-area-inset-bottom, 0px))' }}>
+
+        {/* A failed save used to vanish with its toast, leaving the work alone in the text box. */}
+        {unsaved && (
+          <div role="alert" style={{ padding: '12px 14px', borderRadius: 'var(--r-lg)', border: '1px solid var(--rose)', background: 'var(--rose-soft)', fontSize: '13.5px', lineHeight: 1.5, color: 'var(--text)' }}>
+            <strong>No s\u2019ha desat.</strong> {unsaved}
+            <div style={{ marginTop: 8 }}>
+              <button onClick={() => triggerSave(localDrill)} style={{ padding: '6px 14px', borderRadius: 'var(--r-pill)', border: '1px solid var(--rose)', background: 'var(--surface)', color: 'var(--rose)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit' }}>Torna-ho a provar</button>
+            </div>
+          </div>
+        )}
+
+        {/* Not yours to change: say it here, and offer what IS open. */}
+        {me && !mayChange && (
+          <div style={{ padding: '12px 14px', borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface-2)', fontSize: '13.5px', lineHeight: 1.5 }}>
+            <strong>Aquesta frase no \u00e9s teva.</strong>{' '}
+            {drill.created_by_user_id ? '\u00c9s d\u2019alg\u00fa altre, i els seus mots s\u00f3n seus.' : '\u00c9s de la biblioteca: demana-ho a qui l\u2019administra.'}{' '}
+            Si tu ho dius d\u2019una altra manera, apunta-la: queda lligada a aquesta, amb el mateix catal\u00e0.
+            <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+              <input
+                value={myVersion || ''}
+                onChange={(e) => setMyVersion(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') sendVariant(); }}
+                placeholder="Com ho dius tu"
+                aria-label="Com ho dius tu"
+                style={{ flex: 1, minWidth: 180, padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', fontSize: '15px', background: 'var(--surface)', color: 'var(--text)', fontFamily: 'inherit' }}
+              />
+              <button onClick={sendVariant} disabled={sendingVariant || !(myVersion || '').trim()} style={{ padding: '10px 16px', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--brand-1)', color: '#fff', fontWeight: 700, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit', opacity: sendingVariant || !(myVersion || '').trim() ? 0.5 : 1 }}>
+                {sendingVariant ? 'Desant\u2026' : 'Apunta-la'}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div style={{ background: 'var(--surface)', padding: '16px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
               <button onClick={capturePhoto} aria-label="Fes una foto" style={{ height: '56px', background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} title="Càmera"><FaCamera size={22} /></button>
@@ -637,7 +707,6 @@ export default function MobileDrillEditor({ drill, onClose, onUpdate, onNavigate
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', background: 'var(--surface)', padding: '16px', borderRadius: 'var(--r-xl)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border)' }}>
           <button onClick={() => handleTranslateAction('ca', 'shi')} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: 'var(--brand-gradient-soft)', color: 'var(--brand-1)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}><FaLanguage size={18} /> {aiLoadingKey === 'trans-text_tachelhit' ? '…' : 'CA➔SH'}</button>
           <button onClick={() => handleTranslateAction('shi', 'ca')} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}><FaLanguage size={18} /> {aiLoadingKey === 'trans-text_catalan' ? '…' : 'SH➔CA'}</button>
-          <button onClick={handleTachelhitTTS} disabled={aiLoadingKey !== null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', padding: '10px 4px', fontSize: '10px', fontWeight: 700, background: 'var(--amber-soft)', color: 'var(--amber-strong)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', cursor: 'pointer' }}><FaVolumeUp size={18} /> {aiLoadingKey === 'tts-shi' ? '…' : 'TTS'}</button>
           <button
                 onClick={() => {
                     const hasAudio = localDrill.audio_url;

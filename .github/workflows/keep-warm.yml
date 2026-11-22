@@ -1,19 +1,33 @@
 name: Keep services warm
 
-# Free HuggingFace Spaces and the Render free instance spin down when idle,
-# which makes the first request after inactivity slow (or time out). This
-# pings them every ~12 minutes so they stay awake and the AI tools respond
-# fast on the first click. Runs on GitHub's free Actions (repo is public).
+# El servei gratuït de Render s'adorm als 15 minuts sense visites, i els Spaces de Hugging Face
+# igual. Qui obre l'app després en desperta un de nou i es menja l'arrencada sencera.
+#
+# AIXÒ NO HO ARREGLA DEL TOT, I VAL MÉS DIR-HO AQUÍ. El cron demana una visita cada 12 minuts,
+# però GitHub escanya les programacions dels repositoris públics: mesurat sobre les execucions
+# reals, surt una cada dues hores i mitja o quatre (21:36 → 00:03 → 04:30 → 09:03). Entre una i
+# l'altra el servidor s'adorm igualment. A més, GitHub DESACTIVA els crons d'un repositori sense
+# activitat —ja ens va passar: del 5 de setembre al 23 d'octubre no se'n va executar cap.
+#
+# Per això cada execució no fa una visita sinó una tanda: pica cada 5 minuts durant 50, que és
+# el que una sola execució pot cobrir sense ocupar un runner hores. Amb el cron horari, cobrim
+# molta més estona que abans amb el mateix cost.
+#
+# LA MANERA FIABLE DE DEBÒ és un servei de ping extern (UptimeRobot, cron-job.org: gratuïts, un
+# minut de configuració) apuntant a https://tachelhit-drills-api.onrender.com/health cada 5
+# minuts, o deixar el pla gratuït de Render. Això demana un compte de l'amo i no es pot fer des
+# d'aquí.
 on:
   schedule:
-    - cron: '*/12 * * * *'
+    - cron: '7 * * * *'
   workflow_dispatch: {}
 
 jobs:
   ping:
     runs-on: ubuntu-latest
+    timeout-minutes: 55
     steps:
-      - name: Ping backend and HF Spaces
+      - name: Ping backend and HF Spaces for the next 50 minutes
         env:
           # Optional: add an HF_TOKEN repo secret so gated Spaces get an
           # authenticated 200 (otherwise anonymous pings still reset the
@@ -31,9 +45,14 @@ jobs:
             "https://josepabloucr-tachelhit-video-generator.hf.space"
             "https://josepabloucr-creadordrillplayvideo.hf.space"
           )
-          for u in "${urls[@]}"; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 "${auth[@]}" "$u" || echo "timeout")
-            echo "$u -> $code"
+          # 11 tandes cada 5 minuts = 50 minuts coberts per execució.
+          for round in $(seq 1 11); do
+            echo "--- tanda $round ($(date -u +%H:%M:%S) UTC)"
+            for u in "${urls[@]}"; do
+              code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 90 "${auth[@]}" "$u" || echo "timeout")
+              echo "$u -> $code"
+            done
+            if [ "$round" -lt 11 ]; then sleep 300; fi
           done
           # Always succeed — a cold/booting service is fine, the ping did its job
           exit 0

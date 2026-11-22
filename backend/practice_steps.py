@@ -12,6 +12,7 @@ to a speaker.
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Dict, List, Optional
 
 # Speaking stayed; MARKING it went, on 2026-10-22. Our transcriber gets a CER of 0.78 on our own
@@ -34,6 +35,11 @@ KINDS: Dict[str, tuple] = {
     "word_by_word": (True,  "lliga cada paraula amb el que vol dir"),
     "script_swap":  (True,  "llegeix-ho en l'altra escriptura"),
     "pick_spelling": (True, "tria quina de les dues maneres de dir-ho és la d'aquest parlant"),
+    # Escoltar i triar entre quatre frases ESCRITES en amazic, no entre quatre significats en
+    # català: entrena a lligar el que se sent amb el que està escrit, que és el pas que falta per
+    # poder llegir el que ja s'entén d'orella (#387). La resposta bona és sempre `text_tachelhit`
+    # —escrit per algú—: la lectura de màquina viu a `text_tachelhit_suggested` i no hi entra.
+    "pick_written": (True, "escolta i tria quina de les quatre frases escrites és"),
     "note":         (False, "llegeix: una explicació, un títol, una imatge"),
 }
 
@@ -42,6 +48,11 @@ KINDS: Dict[str, tuple] = {
 FROM_LEGACY = {"text_input": "write_heard", "audio": "listen_pick", "video": "listen_pick",
                "combined": "listen_pick"}
 DEFAULT_KIND = "listen_pick"
+
+#: Les eines que demanen repetir el que se sent: la gravació hi fa de model, i per tant ha de ser
+#: d'una persona amb nom (#273). Les d'escoltar i entendre no hi són: per escoltar, totes les
+#: veus són benvingudes.
+PER_IMITAR = ("say_it", "write_heard")
 
 
 class StepError(ValueError):
@@ -88,14 +99,108 @@ def steps_of(db, test_id: int) -> List[dict]:
 def replace_steps(db, test_id: int, steps: List[dict]) -> List[dict]:
     """Rewrite a practice's steps from the order the editor sends. Everything is validated BEFORE
     anything is deleted: a practice is never left half-written because step nine was wrong."""
-    from models import PracticeStep
+    from models import Drill as DrillModel, PracticeStep
     cleaned = [validate(s) for s in (steps or [])]
+    # A step towards a sentence that no longer exists cannot be written: `drill_id` is a foreign
+    # key and Postgres enforces it. Caught here it is a sentence in words the editor can show;
+    # caught by the database it is a 500 after the old steps have already been deleted.
+    wanted = {s["drill_id"] for s in cleaned if s["drill_id"]}
+    if wanted:
+        alive = {d[0] for d in db.query(DrillModel.id).filter(DrillModel.id.in_(wanted)).all()}
+        gone = sorted(wanted - alive)
+        if gone:
+            raise StepError("aquests passos apunten a frases que ja no existeixen: "
+                            + ", ".join(str(g) for g in gone[:8]))
+    # Per escoltar, totes les veus; per imitar, només una veu amb nom (#273).
+    #
+    # «Digues-ho i compara't amb la veu de debò» només és veritat si la veu és d'algú: si la
+    # referència és un tall anònim —o d'un canal, que sovint parla una altra varietat— li estem
+    # dient a algú que imiti una pronúncia que no és la que està aprenent, i no té manera de
+    # saber-ho. Ho diu el validador i no la bona voluntat de qui munta la pràctica.
+    imiten = [s for s in cleaned if s["kind"] in PER_IMITAR and s["drill_id"]]
+    if imiten:
+        import grammar as grammar_course
+        quins = {d.id: d for d in db.query(DrillModel).filter(
+            DrillModel.id.in_([s["drill_id"] for s in imiten])).all()}
+        for s in imiten:
+            d = quins.get(s["drill_id"])
+            if d is None:
+                continue
+            veu = grammar_course.qui_ho_diu(d)
+            if not veu["per_imitar"]:
+                raise StepError(
+                    f"«{s['kind']}» demana repetir el que se sent, i la frase {s['drill_id']} "
+                    + {"cap": "no té cap gravació",
+                       "canal": f"té una veu d'un canal ({veu['qui']}), no d'una persona que coneguem",
+                       "captura": "té una veu retallada d'un vídeo i no sabem de qui és",
+                       }.get(veu["mena"], "no té una veu que es pugui posar com a model")
+                    + ". Per escoltar i entendre serveix; per imitar, cal una veu amb nom.")
     db.query(PracticeStep).filter(PracticeStep.test_id == test_id).delete(synchronize_session=False)
     for i, s in enumerate(cleaned):
         db.add(PracticeStep(test_id=test_id, position=i, kind=s["kind"],
                             drill_id=s["drill_id"], payload=s["payload"]))
+    toca_la_data(db, test_id)
     db.commit()
     return steps_of(db, test_id)
+
+
+def toca_la_data(db, test_id: int) -> None:
+    """Moure `tests.updated_at` quan es mouen els passos.
+
+    Des de l'ADR 0002 una practica ES la seva seqüencia de passos, pero `replace_steps` nomes
+    escrivia a `practice_steps` i la data de la practica es quedava on era. `GET /tests/?since=`
+    mira aquesta data: qui tenia l'app oberta fora de linia no s'assabentava que la practica
+    havia canviat i seguia fent la versio vella. La data ha de dir l'ultima vegada que la
+    practica va canviar, i canviar-ne els passos es canviar-la.
+    """
+    from models import Test as TestModel
+    t = db.query(TestModel).filter(TestModel.id == test_id).first()
+    if t is not None:
+        t.updated_at = datetime.utcnow()
+
+
+def forget(db, test_id: int) -> int:
+    """Els passos d'una pràctica que se'n va. Torna quants n'hi havia.
+
+    Això no es deixa al `ON DELETE CASCADE` de la clau forana. Postgres el fa; SQLite no aplica
+    les claus foranes si no s'ha activat `PRAGMA foreign_keys=ON`, i no l'activem enlloc. En
+    local i a les proves, doncs, els passos sobrevivien a la seva pràctica —i com que SQLite
+    reutilitza l'id que s'acaba d'alliberar, la pràctica següent naixia amb els passos de
+    l'anterior, que és com es va trobar (una prova que demanava zero passos i en veia dos).
+    """
+    from models import PracticeStep
+    n = db.query(PracticeStep).filter(PracticeStep.test_id == test_id).delete(
+        synchronize_session=False)
+    return n
+
+
+def passos_automatics(db, drill_ids: List[int]) -> List[dict]:
+    """Els passos d'una practica que munta la maquina, amb l'eina triada frase per frase.
+
+    «Escolta i escriu» demana repetir el que se sent, i per tant nomes val si la gravacio es
+    d'una persona amb nom (#273): si la veu es d'un canal, o retallada d'un video, li estariem
+    dient a algu que imiti una pronuncia que potser no es la que apren, i no te manera de
+    saber-ho. Per a aquestes, «escolta i tria», que per a escoltar admet qualsevol veu.
+
+    Les frases que ja no existeixen no hi entren: `practice_steps.drill_id` es una clau forana.
+    """
+    from models import Drill as DrillModel
+    import grammar as grammar_course
+    if not drill_ids:
+        return []
+    quins = {d.id: d for d in db.query(DrillModel).filter(DrillModel.id.in_(drill_ids)).all()}
+    fora = []
+    for i in drill_ids:
+        d = quins.get(i)
+        if d is None:
+            continue
+        try:
+            per_imitar = grammar_course.qui_ho_diu(d)["per_imitar"]
+        except Exception:                       # noqa: BLE001 -- una frase rara no tomba la practica
+            per_imitar = False
+        fora.append({"kind": "write_heard" if per_imitar else "listen_pick",
+                     "drill_id": i, "payload": None})
+    return fora
 
 
 def from_legacy(test) -> List[dict]:
@@ -107,27 +212,48 @@ def from_legacy(test) -> List[dict]:
 
 def convert_missing(session_factory, limit: int = 500) -> dict:
     """Give steps to the practices that have none. Safe to run again: a practice that already has
-    steps is left alone, so this can live on startup without doubling anything."""
-    from models import PracticeStep, Test as TestModel
+    steps is left alone, so this can live on startup without doubling anything.
+
+    Two things this has to survive, and did not:
+
+    A sentence on the old flat list may be **gone**. `drill_ids` is just a list of numbers, and
+    numbers stop meaning anything as a library grows: nine of the first two hundred on practice
+    28 pointed at drills deleted since. `practice_steps.drill_id` is a foreign key, which
+    Postgres enforces, so a step towards one of those cannot be written at all.
+
+    And a failure must not spread. This used to commit ONCE, after every practice: one
+    impossible row at the end took the whole batch with it, the caller logged «conversion
+    skipped», and NO practice was ever converted — which is why a practice with 511 sentences
+    opened empty. Now each one is saved on its own and the one that fails says its name.
+    """
+    from models import Drill as DrillModel, PracticeStep, Test as TestModel
     db = session_factory()
-    done, made = 0, 0
+    done, made, failed = 0, 0, []
     try:
         with_steps = {r[0] for r in db.query(PracticeStep.test_id).distinct().all()}
+        alive = {d[0] for d in db.query(DrillModel.id).all()}
         for test in db.query(TestModel).order_by(TestModel.id.asc()).limit(limit).all():
             if test.id in with_steps:
                 continue
-            steps = from_legacy(test)
+            steps = [s for s in from_legacy(test) if s["drill_id"] in alive]
             if not steps:
                 continue
-            for i, s in enumerate(steps):
-                db.add(PracticeStep(test_id=test.id, position=i, kind=s["kind"],
-                                    drill_id=s["drill_id"], payload=None))
+            try:
+                for i, s in enumerate(steps):
+                    db.add(PracticeStep(test_id=test.id, position=i, kind=s["kind"],
+                                        drill_id=s["drill_id"], payload=None))
+                db.commit()
+            except Exception as e:                    # noqa: BLE001 — one bad practice, not all
+                db.rollback()
+                failed.append((test.id, str(e)[:120]))
+                continue
             done += 1
             made += len(steps)
-        db.commit()
         if done:
             print(f"[PRACTICE] {done} practices converted to steps ({made} steps)")
-        return {"practices": done, "steps": made}
+        for tid, why in failed:
+            print(f"[PRACTICE] practice {tid} could not be converted: {why}")
+        return {"practices": done, "steps": made, "failed": [t for t, _ in failed]}
     finally:
         db.close()
 

@@ -3,12 +3,15 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FaLightbulb, FaMicrophone, FaPlay, FaStop, FaTimes } from 'react-icons/fa';
 import { api, type PracticeCard, type PracticeMode } from '../api';
 import { getMediaUrl } from '../config';
+import AmbSo from './AmbSo';
+import { audioSrc } from '../services/audioLocal';
 import { toast } from '../toast';
 import type { Drill } from '../types';
 import { preferredRecorderMime } from '../utils/media';
 import { saveDone } from './PracticePage';
 import StepSession from './StepSession';
 import WordGloss from './WordGloss';
+import SentenceVariants from './SentenceVariants';
 
 // One practice session: up to 10 sentences said by our speakers.
 //
@@ -38,7 +41,7 @@ function Waveform({ src, label, color, autoHeight = 54 }: { src: string | Blob |
   const [failed, setFailed] = useState(false);
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const url = useMemo(() => (src instanceof Blob ? URL.createObjectURL(src) : src ? getMediaUrl(src) : ''), [src]);
+  const url = useMemo(() => (src instanceof Blob ? URL.createObjectURL(src) : src ? audioSrc(src) : ''), [src]);
   useEffect(() => () => { if (src instanceof Blob && url) URL.revokeObjectURL(url); }, [src, url]);
   useEffect(() => {
     let cancelled = false;
@@ -75,7 +78,7 @@ function Waveform({ src, label, color, autoHeight = 54 }: { src: string | Blob |
   };
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <button onClick={toggle} disabled={!url} aria-label={`Escolta: ${label}`} style={{ flexShrink: 0, width: 38, height: 38, borderRadius: '50%', border: 'none', background: url ? color : 'var(--surface-2)', color: '#fff', cursor: url ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{playing ? <FaStop size={12} /> : <FaPlay size={12} />}</button>
+      <AmbSo url={src instanceof Blob ? null : src}><button onClick={toggle} disabled={!url} aria-label={`Escolta: ${label}`} style={{ flexShrink: 0, width: 38, height: 38, borderRadius: '50%', border: 'none', background: url ? color : 'var(--surface-2)', color: '#fff', cursor: url ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{playing ? <FaStop size={12} /> : <FaPlay size={12} />}</button></AmbSo>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 2 }}>{label}</div>
         {bars ? <canvas ref={canvasRef} style={{ width: '100%', height: autoHeight, display: 'block' }} /> : <div style={{ height: autoHeight, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--text-muted)' }}>{!url ? 'sense veu' : failed ? 'no s’ha pogut dibuixar; prem per escoltar' : 'dibuixant…'}</div>}
@@ -92,7 +95,46 @@ function Highlighted({ text, marks }: { text: string; marks: string[] }) {
   return <>{text.split(re).map((part, i) => (ms.includes(part) ? <mark key={i} style={{ background: 'var(--brand-gradient-soft)', color: 'inherit', borderRadius: 6, padding: '0 3px' }}>{part}</mark> : <span key={i}>{part}</span>))}</>;
 }
 
+// Una pràctica feta a mà és una SEQÜÈNCIA i es juga amb l'eina de cada pas (`StepSession`); una
+// col·lecció —un dia, un tema, una unitat— és una pila de frases i es juga escoltant.
+//
+// Qui ho decideix és aquest component, i no toca res més. Abans ho decidia el de sota a l'hora
+// de pintar, i els seus hooks ja havien corregut: carregava frases, muntava el seu reproductor i,
+// en mode automàtic, acabava escrivint un resultat que ningú no havia fet. Dues veus sonant
+// alhora i un resultat fals (#218). Un `return` no es salta els hooks: el que s'ha de saltar és
+// el component sencer.
 export default function PracticeSession() {
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const testId = Number(params.get('test_id')) || 0;
+  const [asSteps, setAsSteps] = useState<boolean | null>(testId ? null : false);
+
+  useEffect(() => {
+    if (!testId) return;        // sense pràctica, l'estat inicial ja diu que no són passos
+    let viu = true;
+    api.practiceSteps(testId)
+      .then((r) => { if (viu) setAsSteps(r.steps.some((s) => s.kind !== 'note' || s.payload?.text)); })
+      .catch(() => { if (viu) setAsSteps(false); });
+    return () => { viu = false; };
+  }, [testId]);
+
+  const title = useMemo(() => {
+    if (params.get('daily')) return 'Sessió d’avui';
+    if (params.get('day')) return `${params.get('speaker')} · ${params.get('day')}`;
+    if (params.get('topic')) return `Tema: ${params.get('topic')}`;
+    if (params.get('unit')) return `Unitat: ${params.get('unit')}`;
+    return 'Pràctica';
+  }, [params]);
+
+  if (asSteps === null) {
+    return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Preparant la pràctica…</div>;
+  }
+  if (asSteps) return <StepSession testId={testId} title={title} onExit={() => navigate('/tests')} />;
+  return <SessioDEscoltar />;
+}
+
+/** La pila de frases: escoltar-les, repetir-les i dir si ja te'n surts. */
+function SessioDEscoltar() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const [drills, setDrills] = useState<Drill[]>([]);
@@ -132,7 +174,7 @@ export default function PracticeSession() {
       try {
         if (params.get('daily')) {
           const due = await api.reviewsDue(10);
-          const ids = due.filter((d) => d.text_tachelhit && (d.audio_url || d.audio_tts_shi_url)).map((d) => d.id);
+          const ids = due.filter((d) => d.text_tachelhit && d.audio_url).map((d) => d.id);
           if (!ids.length) { setLoadError('Avui no tens cap frase pendent. Tria un dia, un tema o una unitat.'); return; }
           const s = await api.practiceSession(`ids=${ids.join(',')}`);
           setDrills(s.drills); setCards(s.cards);
@@ -149,26 +191,21 @@ export default function PracticeSession() {
     load();
   }, [params]);
 
-  // A hand-made practice is a SEQUENCE: every step has its own tool, and it is played with that
-  // tool (StepSession). This listening session stays for the collections — a day, a subject, a
-  // grammar unit — which are a pile of sentences and nothing more (#199).
-  const testId = Number(params.get('test_id')) || 0;
-  const [asSteps, setAsSteps] = useState<boolean | null>(testId ? null : false);
-  useEffect(() => {
-    if (!testId) return;
-    api.practiceSteps(testId)
-      .then((r) => setAsSteps(r.steps.some((s) => s.kind !== 'note' || s.payload?.text)))
-      .catch(() => setAsSteps(false));
-  }, [testId]);
-
   const drill = drills[i]; const card = cards[i];
-  const voice = drill ? (drill.audio_url || drill.audio_tts_shi_url || '') : '';
-  const speakerLabel = card ? (card.origin && card.origin !== card.speaker ? `${card.speaker} · ${card.origin}` : card.speaker) : '';
+  // Aquí escoltar és la feina, i per això la veu de màquina pot sonar quan ningú no ha gravat la
+  // frase. El que no pot fer és passar per una persona: el nom del parlant surt igualment de la
+  // targeta, i comparar la teva pronúncia amb una síntesi mentre la pantalla et posa el nom d'algú
+  // al costat és ensenyar-te a imitar una màquina sense dir-t'ho.
+  const voice = drill ? (drill.audio_url || '') : '';
+  const bySynth = !!voice && !drill?.audio_url;
+  const speakerLabel = bySynth
+    ? 'una veu de màquina · encara ningú no l’ha gravada'
+    : card ? (card.origin && card.origin !== card.speaker ? `${card.speaker} · ${card.origin}` : card.speaker) : '';
 
   const play = useCallback((rate = 1) => {
     if (!voice) return;
     if (audioRef.current) { audioRef.current.pause(); }
-    const a = new Audio(getMediaUrl(voice)); a.playbackRate = rate; audioRef.current = a; a.play().catch(() => {});
+    const a = new Audio(audioSrc(voice)); a.playbackRate = rate; audioRef.current = a; a.play().catch(() => {});
   }, [voice]);
   useEffect(() => { if (drill && mode !== 'auto') play(1); }, [drill?.id]);  // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -204,7 +241,7 @@ export default function PracticeSession() {
     const playOnce = (url: string, rate = 1) => new Promise<void>((resolve) => {
       if (!url) { resolve(); return; }
       if (audioRef.current) audioRef.current.pause();
-      const a = new Audio(getMediaUrl(url)); a.playbackRate = rate; audioRef.current = a;
+      const a = new Audio(audioSrc(url)); a.playbackRate = rate; audioRef.current = a;
       a.onended = () => resolve(); a.onerror = () => resolve();
       a.play().catch(() => resolve());
     });
@@ -248,17 +285,14 @@ export default function PracticeSession() {
     </div>
   );
 
-  if (asSteps === null) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Preparant la pràctica…</div>;
-  if (asSteps) return <StepSession testId={testId} title={title} onExit={() => navigate('/tests')} />;
-
-  if (loadError) return <div style={{ padding: '40px 16px', maxWidth: 520, margin: '0 auto', textAlign: 'center' }}><p style={{ color: 'var(--text-soft)' }}>{loadError}</p><button onClick={exit} style={btn('ghost')}>Torna a Pràctica</button></div>;
+  if (loadError) return <div style={{ padding: '40px 16px', maxWidth: 520, margin: '0 auto', width: '100%', boxSizing: 'border-box', textAlign: 'center' }}><p style={{ color: 'var(--text-soft)' }}>{loadError}</p><button onClick={exit} style={btn('ghost')}>Torna a Pràctica</button></div>;
   if (!drill) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-soft)' }}>Preparant la sessió…</div>;
 
   if (finished) {
     const knew = drills.filter((d) => answers[d.id] === 'yes');
     const again = drills.filter((d) => answers[d.id] === 'no');
     return (
-      <div style={{ padding: '20px 16px 32px', maxWidth: 520, margin: '0 auto' }}>
+      <div style={{ padding: '20px 16px 32px', maxWidth: 520, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
         {bar}
         <div style={{ textAlign: 'center', margin: '12px 0 20px' }}>
           <div style={{ width: 110, height: 110, borderRadius: '50%', border: `10px solid ${knew.length >= drills.length * 0.7 ? 'var(--emerald)' : 'var(--saffron)'}`, boxSizing: 'border-box', display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}><span style={{ fontSize: 30, fontWeight: 800, lineHeight: 1 }}>{knew.length}</span><span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-soft)' }}>de {drills.length}</span></div>
@@ -281,11 +315,18 @@ export default function PracticeSession() {
 
   const tip = card?.tips[0];
   return (
-    <div style={{ padding: '20px 16px 32px', maxWidth: 520, margin: '0 auto', minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ padding: '20px 16px 32px', maxWidth: 520, margin: '0 auto', width: '100%', boxSizing: 'border-box', minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
       {bar}
       {modeBar}
       <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--brand-1)' }}>{mode === 'auto' ? 'Reproducció automàtica' : 'Escolta i digues-ho'}</div>
-      <h2 style={{ margin: '2px 0 14px', fontSize: 19, lineHeight: 1.25 }}>{mode === 'auto' ? 'Escolta; passa sola a la següent' : `Escolta ${card?.speaker === 'Halima' ? 'la Halima' : card?.speaker === 'Driss' ? 'en Driss' : 'la veu'} i prova de dir-ho igual`}</h2>
+      {/* «Prova de dir-ho igual» NO es demana d'una síntesi: copiar-la és aprendre una pronúncia
+          que no és de ningú. Amb veu de màquina, la frase es pot escoltar per entendre-la, i el
+          que falta es diu en comptes d'invitar a imitar-la. */}
+      <h2 style={{ margin: '2px 0 14px', fontSize: 19, lineHeight: 1.25 }}>
+        {mode === 'auto' ? 'Escolta; passa sola a la següent'
+          : bySynth ? 'Escolta-la per entendre-la: aquesta encara no la diu ningú'
+            : `Escolta ${card?.speaker === 'Halima' ? 'la Halima' : card?.speaker === 'Driss' ? 'en Driss' : 'la veu'} i prova de dir-ho igual`}
+      </h2>
 
       <div style={{ padding: 14, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {drill.image_url && <div style={{ position: 'relative', width: '100%', aspectRatio: '16 / 9', borderRadius: 'var(--r-md)', overflow: 'hidden', background: 'var(--surface-2)' }}><img src={getMediaUrl(drill.image_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(ev) => { (ev.currentTarget as HTMLImageElement).style.display = 'none'; }} /><span style={{ position: 'absolute', left: 10, bottom: 10, fontSize: 12, fontWeight: 700, background: 'rgba(255,255,255,0.92)', color: 'var(--text)', padding: '4px 10px', borderRadius: 'var(--r-pill)' }}>{speakerLabel}</span></div>}
@@ -295,20 +336,24 @@ export default function PracticeSession() {
         </p>
         <p style={{ margin: 0, fontSize: 15, color: 'var(--text-soft)' }}>{drill.text_catalan}</p>
         <WordGloss drill={drill} size="sm" />
+        {/* I com ho diu qui ho diu d'una altra manera (#239): es veia només allà on es grava, i
+            aquí és on s'està aprenent la frase. */}
+        <SentenceVariants variants={card?.variants} size="sm" />
         {drill.source_url && <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>Font: {drill.source_channel || 'vídeo original'}{drill.source_title ? ` · «${drill.source_title}»` : ''} · <a href={drill.source_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand-1)', fontWeight: 700 }}>vídeo original ↗</a></p>}
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => play(1)} disabled={!voice} style={{ ...btn('primary'), flex: 1, height: 44, fontSize: 14 }}><FaPlay size={12} /> Escolta</button>
-          <button onClick={() => play(0.7)} disabled={!voice} style={{ ...btn('ghost'), flex: 1, height: 44, fontSize: 14 }}>A poc a poc</button>
+          <AmbSo url={voice} dins><button onClick={() => play(1)} disabled={!voice} style={{ ...btn('primary'), flex: 1, height: 44, fontSize: 14 }}><FaPlay size={12} /> Escolta</button></AmbSo>
+          <AmbSo url={voice} dins><button onClick={() => play(0.7)} disabled={!voice} style={{ ...btn('ghost'), flex: 1, height: 44, fontSize: 14 }}>A poc a poc</button></AmbSo>
         </div>
       </div>
 
       {myTake && (
         <div style={{ marginTop: 12, padding: 12, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Waveform src={voice || null} label={card?.speaker || 'la veu'} color="var(--brand-1)" />
+          <Waveform src={voice || null} label={bySynth ? 'veu de màquina' : (card?.speaker || 'la veu')} color="var(--brand-1)" />
           <Waveform src={myTake} label="tu" color="var(--saffron-dark, #B7791F)" />
           <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.45 }}>
-            Escolta’ls un darrere l’altre i compara el ritme i on cau la força. Ningú no et posa nota:
-            la teva gravació no surt d’aquesta pantalla i es perd quan passis de frase.
+            {bySynth
+              ? 'Aquesta frase no l’ha gravada ningú: el que sents és una síntesi, i no serveix per copiar-ne la pronúncia. Demana-la a les nostres veus des de la seva targeta.'
+              : 'Escolta’ls un darrere l’altre i compara el ritme i on cau la força. Ningú no et posa nota: la teva gravació no surt d’aquesta pantalla i es perd quan passis de frase.'}
           </div>
         </div>
       )}
@@ -328,6 +373,12 @@ export default function PracticeSession() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginTop: 20 }}>
+          {bySynth && (
+            <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.5, maxWidth: 360 }}>
+              Pots gravar-te per sentir-te, però no te la comparis: la veu que sona és una síntesi.
+              Demana-la a les nostres veus des de la seva targeta i tindràs amb què comparar-te.
+            </p>
+          )}
           <button
             onPointerDown={(e) => { e.preventDefault(); startRecording(); }} onPointerUp={stopRecording}
             onPointerLeave={stopRecording} onPointerCancel={stopRecording}

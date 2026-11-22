@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { api, type RelatedDrill } from '../api';
 import { API_BASE, getMediaUrl } from '../config';
+import { audioSrc } from '../services/audioLocal';
 import AiQuota from './AiQuota';
 import DrillVoices from './DrillVoices';
 import type { Drill } from '../types';
@@ -27,35 +28,55 @@ export default function AiAssistant({ drillId, drillLabel, autoAction, onClose }
   // the learner comes back to the explanation with «Torna» without leaving what they were doing
   const [visiting, setVisiting] = useState<Drill | null>(null);
   const [visitBusy, setVisitBusy] = useState(false);
-  const playUrl = (url?: string | null) => { if (url) new Audio(getMediaUrl(url)).play().catch(() => {}); };
+  const playUrl = (url?: string | null) => { if (url) new Audio(audioSrc(url)).play().catch(() => {}); };
   const visit = async (id: number) => {
     setVisitBusy(true);
     try { setVisiting(await api.drill(id)); } catch { /* the row stays */ } finally { setVisitBusy(false); }
   };
   const scrollRef = useRef<HTMLDivElement>(null);
-  const didAuto = useRef(false);
+  /** De quina frase és l'explicació que hi ha ara («explain:4223»), per saber quan cal refer-la. */
+  const didAuto = useRef<string | null>(null);
+  /** Quina petició mana: una resposta que arribi tard no pot escriure sobre una de més nova. */
+  const torn = useRef(0);
   const [quotaKey, setQuotaKey] = useState(0);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, busy]);
 
-  // Auto-run analysis/review when opened from a drill button
+  /**
+   * L'explicació de la frase que has premut, i no la de l'anterior (#369).
+   *
+   * `didAuto` es marcava una vegada i no es tornava a posar a zero. Amb el panell obert, prémer
+   * «Explica'm» en una altra frase canviava la capçalera —«Sobre: jo vull/volia»— i deixava el
+   * cos amb l'anàlisi de la frase d'abans. Això és pitjor que una pantalla buida: no sembla un
+   * error, sembla una resposta, i el que es llegeix és l'anàlisi gramatical d'un verb que no és
+   * el que has premut.
+   *
+   * Dues coses: la marca ara diu DE QUINA frase és l'explicació que hi ha, i es buida el que hi
+   * havia abans de demanar la nova. I un número de torn, perquè una resposta que arribi tard
+   * no s'escrigui per sobre d'una de més nova: canviar de frase dues vegades de pressa deixava
+   * la resposta de la primera.
+   */
   useEffect(() => {
-    if (autoAction && drillId && !didAuto.current) {
-      didAuto.current = true;
-      const isReview = autoAction === 'review';
-      const isExplain = autoAction === 'explain';
-      setMessages([{ role: 'user', text: isExplain ? '💡 Explica\'m la frase paraula per paraula' : isReview ? '🔎 Revisa aquest drill' : '🔍 Analitza la forma amazic d\'aquest drill' }]);
-      setBusy(true);
-      const call = isExplain
-        ? api.aiExplainDrill(drillId).then(r => { setRelated(r.related || []); return (r.draft ? '✍️ Lectura automàtica, encara no confirmada pel parlant.\n\n' : '') + r.explanation; })
-        : isReview ? api.aiReviewDrill(drillId).then(r => r.review) : api.aiAnalyzeDrill(drillId).then(r => r.analysis);
-      call
-        .then(text => setMessages(m => [...m, { role: 'model', text }]))
-        .catch(e => setMessages(m => [...m, { role: 'model', text: `⚠️ ${e.message || 'Error'}` }]))
-        .finally(() => { setBusy(false); setQuotaKey(k => k + 1); });
-    }
+    if (!autoAction || !drillId) return;
+    const clau = `${autoAction}:${drillId}`;
+    if (didAuto.current === clau) return;
+    didAuto.current = clau;
+    const meu = ++torn.current;
+    const isReview = autoAction === 'review';
+    const isExplain = autoAction === 'explain';
+    setRelated([]);
+    setVisiting(null);
+    setMessages([{ role: 'user', text: isExplain ? '💡 Explica\'m la frase paraula per paraula' : isReview ? '🔎 Revisa aquest drill' : '🔍 Analitza la forma amazic d\'aquest drill' }]);
+    setBusy(true);
+    const call = isExplain
+      ? api.aiExplainDrill(drillId).then(r => { if (torn.current === meu) setRelated(r.related || []); return (r.draft ? '✍️ Lectura automàtica, encara no confirmada pel parlant.\n\n' : '') + r.explanation; })
+      : isReview ? api.aiReviewDrill(drillId).then(r => r.review) : api.aiAnalyzeDrill(drillId).then(r => r.analysis);
+    call
+      .then(text => { if (torn.current === meu) setMessages(m => [...m, { role: 'model', text }]); })
+      .catch(e => { if (torn.current === meu) setMessages(m => [...m, { role: 'model', text: `⚠️ ${e.message || 'Error'}` }]); })
+      .finally(() => { if (torn.current === meu) { setBusy(false); setQuotaKey(k => k + 1); } });
   }, [autoAction, drillId]);
 
   const suggestions = drillId
@@ -169,7 +190,7 @@ export default function AiAssistant({ drillId, drillLabel, autoAction, onClose }
               <div style={{ fontWeight: 800, fontSize: '13px', color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>Altres drills amb les mateixes paraules</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {related.map(r => {
-                  const voice = r.audio_url || r.audio_tts_shi_url;
+                  const voice = r.audio_url;
                   return (
                     <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text)', fontSize: '13px', lineHeight: 1.4, padding: '8px 10px', borderRadius: 'var(--r-md)', background: 'var(--surface-2)' }}>
                       <button onClick={() => playUrl(voice)} disabled={!voice} aria-label="Escolta" title={r.audio_url ? 'Veu gravada' : r.audio_tts_shi_url ? 'Veu sintètica' : 'Sense veu'} style={{ flexShrink: 0, width: 34, height: 34, borderRadius: 'var(--r-pill)', border: 'none', background: r.audio_url ? 'var(--brand-1)' : r.audio_tts_shi_url ? 'var(--sky)' : 'var(--surface)', color: voice ? '#fff' : 'var(--text-muted)', cursor: voice ? 'pointer' : 'default', fontSize: '13px' }}>▶</button>
@@ -195,7 +216,7 @@ export default function AiAssistant({ drillId, drillLabel, autoAction, onClose }
               <div style={{ fontSize: '20px', fontWeight: 800, lineHeight: 1.3 }}>{visiting.text_tachelhit || visiting.text_tachelhit_latin || visiting.text_tachelhit_suggested}</div>
               <div style={{ fontSize: '14px', color: 'var(--text-soft)' }}>{visiting.text_catalan}{visiting.region ? <span style={{ color: 'var(--text-muted)' }}> · {visiting.region}</span> : null}</div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={() => playUrl(visiting.audio_url || visiting.audio_tts_shi_url)} disabled={!(visiting.audio_url || visiting.audio_tts_shi_url)} style={{ flex: 1, height: 40, borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-1)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>▶ Escolta</button>
+                <button onClick={() => playUrl(visiting.audio_url)} disabled={!visiting.audio_url} style={{ flex: 1, height: 40, borderRadius: 'var(--r-pill)', border: 'none', background: 'var(--brand-1)', color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>▶ Escolta</button>
                 <button onClick={() => playUrl(visiting.audio_tts_url)} disabled={!visiting.audio_tts_url} style={{ flex: 1, height: 40, borderRadius: 'var(--r-pill)', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Català</button>
               </div>
               <DrillVoices drillId={visiting.id} />

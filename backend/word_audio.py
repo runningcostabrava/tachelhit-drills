@@ -179,3 +179,26 @@ def run(session_factory, limit: int = 200, redo: bool = False) -> None:
             _state["running"] = False
 
     threading.Thread(target=work, daemon=True).start()
+
+
+def which_have_audio(db, words: List[str]) -> Dict[str, bool]:
+    """De totes aquestes paraules, quines es poden sentir — en un sol viatge.
+
+    Fins ara això no es podia saber sense prémer: el paraula per paraula demanava el tall **en
+    prémer**, i si no n'hi havia cap ho deia quan ja havies premut. El pedagog ho va comptar al
+    capítol 4 del Mètode: de vuit paraules centrals només dues tenien tall, i **vuit pressions i
+    dos sons és el que desensenya a prémer** (#271).
+
+    És la mateixa regla del #270: l'estat s'ha de saber **abans** de prémer, no descobrir-lo
+    prement. I «ningú no l'ha dita mai» no es pot confondre amb «ara no es carrega».
+    """
+    from models import WordAudio
+    claus = {}
+    for w in words or []:
+        k = key_of(w)
+        if k:
+            claus.setdefault(k, []).append(w)
+    if not claus:
+        return {}
+    tenen = {r[0] for r in db.query(WordAudio.key).filter(WordAudio.key.in_(list(claus))).distinct().all()}
+    return {w: (k in tenen) for k, ws in claus.items() for w in ws}

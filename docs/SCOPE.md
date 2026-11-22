@@ -3,6 +3,8 @@
 Aprovat el 22-10-2026. Qualsevol issue o PR que surti d'aquí ha de poder-se llegir contra aquest
 document: si no hi cau a dins, primer es canvia l'abast.
 
+Això és **què** volem fer. **On som i què ve ara** és a [`EL_PLA.md`](EL_PLA.md).
+
 ## Què és
 
 Una biblioteca viva d'amazic de l'Atles central (i tachelhit) per a catalanoparlants: frases dites
@@ -16,7 +18,8 @@ No és un diccionari, ni un traductor automàtic, ni un curs genèric d'«amazic
 | | |
 |---|---|
 | qui aprèn | adult catalanoparlant, no lingüista: un viatger encuriosit, la parella d'algú que el parla |
-| qui el parla | Halima i Driss (Aït Mraw, Boutharar, Azilal), els reculls de Beni Mellal i d'Azilal, i qualsevol parlant que hi vulgui posar la veu |
+| qui no parla català | qui ve a córrer a l'Atles i només llegeix anglès: té **una** pàgina en anglès, `/start`, amb les primeres paraules i el context (ADR 0005); la resta de l'app continua en català |
+| qui el parla | Halima i Driss (Aït Mraw, uns 10 km al nord de Boutharar, a Tinghir, a prop del riu que baixa de Kalaat M'Gouna), els reculls de Beni Mellal i d'Azilal, i qualsevol parlant que hi vulgui posar la veu |
 | qui administra | manté la biblioteca, decideix què hi entra i corregeix el que cal |
 
 ## Què ha de fer
@@ -45,9 +48,25 @@ No és un diccionari, ni un traductor automàtic, ni un curs genèric d'«amazic
   fins que algú la hi posi a mà. `POST /drills/{id}/retranscribe` ho refusa.
 - **Una veu diu qui és.** Una gravació de qui aprèn hi té lloc, però queda marcada: no pot passar
   per model de pronúncia.
-- **Material exclòs**: res gravat en càmera de «Tamazight For All»; els drills de Beni Mellal van
-  etiquetats «private»; cap drill etiquetat irlandès entra al curs.
+- **Material exclòs**: res gravat en càmera de «Tamazight For All»; cap drill etiquetat irlandès
+  entra al curs.
+- **El recull de Beni Mellal s'ensenya, però no es publica.** Va etiquetat «private», i això vol
+  dir que **no es redistribueix** — no surt en cap exportació ni corpus. Sí que es pot fer servir
+  com a exemple dins de l'app: l'amo en té permís (decisió de 23-10-2026). Són dos terços de la
+  biblioteca, i la regla d'abans es llegia com si fossin material exclòs del curs, que no ho són.
+- **Les nostres veus van davant.** Quan hi ha més d'una frase que serveix, s'ensenya primer la
+  que diu la Halima o en Driss: porten una persona que el projecte coneix, amb el seu poble i la
+  seva varietat. Són 69 frases de 3.390, i sense aquesta regla no es veurien mai.
 - **El curs cita només** la nostra biblioteca i el compendi d'amazic.cat.
+- **El Mètode és el manual d'El Mountassir, enriquit amb els nostres drills i les nostres
+  explicacions**: el llibre es tradueix i es fa servir, i hi afegim la frase nostra al costat de
+  cada exemple, el que la nostra varietat diu d'una altra manera, i les nostres veus. El manual
+  és del Souss i nosaltres ensenyem Atles central, i una forma correcta allà pot ser falsa aquí:
+  es mira frase per frase. **I es dona crèdit sempre**, a cada capítol
+  ([ADR 0004](adr/0004-el-metode-parteix-del-llibre.md), que substitueix
+  l'[ADR 0003](adr/0003-el-metode-pren-el-pla-mai-les-paraules.md)).
+- **La veu és sempre nostra.** El llibre pot donar el text; qui el diu és sempre una persona que
+  el projecte coneix. Cap veu sintètica es fa passar per amazic.
 - **Això no es ven mai.** L'app no tindrà ús comercial (decisió de l'amo, 22-10-2026). No és una
   conseqüència de les llicències: és el projecte. De retruc, el material CC BY-NC —el lèxic
   d'IRCAM— hi pot ser; vegeu [CREDITS.md](CREDITS.md).

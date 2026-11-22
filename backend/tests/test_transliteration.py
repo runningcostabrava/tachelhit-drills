@@ -89,3 +89,61 @@ def test_multiword_keeps_spaces_and_normalizes():
     assert " " in f["tifinagh"]
     # key drops schwa and collapses the geminate ll -> l
     assert f["key"] == "azul flawn"
+
+
+def test_th_is_two_letters_not_a_digraph():
+    """«th» és t + h, i a la nostra llengua és freqüentíssim.
+
+    El prefix de 3a persona femenina és «t-» i hi ha arrels que comencen per h-: «thnna» («va
+    bé»), «thlla», «thanut» («la botiga»). Mentre «th» va ser un dígraf, el mapa se'n menjava la
+    h a les tres cares alhora —tifinagh, clau de cerca i `clean_latin`, que és la que el mòdul
+    promet com a citable— i produïa «tnna», que no és cap paraula.
+
+    Comptat al corpus: 75 aparicions de «th» i cap no és el dígraf cabilenc.
+    """
+    f = to_forms("thnna")
+    assert f["clean_latin"] == "thnna"
+    assert f["tifinagh"] == "ⵜⵀⵏⵏⴰ"
+    assert f["key"] == "thna", "la clau col·lapsa la geminada, però no es menja la h"
+
+    assert to_forms("thanut")["tifinagh"] == "ⵜⵀⴰⵏⵓⵜ"
+    assert to_forms("thlla")["clean_latin"] == "thlla"
+    # i la h que no va darrere d'una t ja anava bé: que segueixi igual
+    assert to_forms("ihnna")["clean_latin"] == "ihnna"
+
+
+def test_the_other_digraphs_stay():
+    """Els que sí que són com la gent escriu: gh 936 aparicions, sh 569, ch 174, kh 141, ou 21."""
+    assert to_forms("aghrum")["clean_latin"] == "aɣrum"
+    assert to_forms("akhir")["clean_latin"] == "axir"
+    assert to_forms("ashku")["clean_latin"] == "ašku"
+    assert to_forms("achku")["clean_latin"] == "ašku"
+    assert to_forms("souq")["clean_latin"] == "suq"
+
+
+def test_una_lletra_descomposta_dona_la_mateixa_tifinag_que_una_dajuntada():
+    """La biblioteca guarda 283 frases amb les lletres descompostes: «sġix» amb la g i el punt a
+    sobre a part, «3afaš» amb la s i el capelló a part. Sense ajuntar-les, el transliterador no
+    veia ni la ġ ni la š i servia una ALTRA lletra: «sġix» sortia ⵙⴳⵉⵅ (una g) i «3afaš»,
+    ⵄⴰⴼⴰⵙ (una s). Qui aprenia llegia una tifinag equivocada."""
+    import unicodedata
+    import transliteration
+    for word, tifinagh in (("sġix", "ⵙⵖⵉⵅ"), ("3afaš", "ⵄⴰⴼⴰⵛ"), ("awraɣ", "ⴰⵡⵔⴰⵖ")):
+        trencada = unicodedata.normalize("NFD", word)
+        sencera = unicodedata.normalize("NFC", word)
+        assert transliteration.to_forms(sencera)["tifinagh"] == tifinagh
+        assert transliteration.to_forms(trencada)["tifinagh"] == tifinagh, f"«{word}» descomposta"
+
+
+def test_la_mateixa_paraula_escrita_de_dues_maneres_te_una_sola_clau():
+    """I per això una frase gravada es troba: si la clau depengués de com estigui ajuntat el
+    text, la mateixa paraula tindria dues claus i el capítol no trobaria mai la seva veu."""
+    import unicodedata
+    import practice
+    for word in ("3afaš", "sġix", "aḍar", "tiṭṭ"):
+        assert (practice.sound_key(unicodedata.normalize("NFD", word))
+                == practice.sound_key(unicodedata.normalize("NFC", word))), word
+
+
+def test_la_h_ratllada_del_model_no_es_perd():
+    assert to_forms("taḫam")["tifinagh"] == "ⵜⴰⵅⴰⵎ"

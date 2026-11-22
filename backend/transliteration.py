@@ -18,19 +18,41 @@ genuinely underdetermined (schwa, gemination, labialization, spirantization),
 so the generated forms are SUGGESTIONS a human confirms — not gold.
 """
 
+import unicodedata
+
 # Demotic/academic spelling -> internal phoneme symbol (clean Berber-Latin).
 # Longest keys are matched first, so digraphs beat single letters.
 _DEMOTIC = {
     # labialized (explicit)
     "gw": "gʷ", "kw": "kʷ", "qw": "qʷ",
+    # La ʷ VOLADA (U+02B7), que és com l'escriuen els manuals —i el capítol 1 del Mètode:
+    # «kʷ, gʷ, ɣʷ, xʷ, qʷ». Sense això la lliçó dels sons ensenyava el so i no la lletra.
+    "gʷ": "gʷ", "kʷ": "kʷ", "qʷ": "qʷ", "ʷ": "ʷ",
     # digraphs (demotic + some spirantized conventions)
     "gh": "ɣ", "kh": "x", "ch": "š", "sh": "š", "ou": "u",
-    "dj": "j", "th": "t", "dh": "ḍ",
+    "dj": "j", "dh": "ḍ",
+    # «th» NO hi és, i té història. Hi era com a dígraf (la t espirantitzada que els cabilencs
+    # escriuen «th»), i a la nostra llengua es menjava una seqüència freqüentíssima: el prefix
+    # de 3a persona femenina «t-» davant d'arrels que comencen per h-. «thnna» («va bé») sortia
+    # «tnna», «thlla» sortia «tlla», i «thanut» («la botiga») sortia «tanut» — a la pantalla, a
+    # la tifinagh I a `clean_latin`, que és la forma que el mòdul promet com a citable.
+    #
+    # Comptat al corpus sencer (3.401 frases): «th» hi surt 75 vegades i NI UNA no és el dígraf
+    # —thanut (13), thla (6), thnna (3), thdar, buthanut…—, mentre que gh (936), sh (569), ch
+    # (174), kh (141) i ou (21) sí que són com la gent escriu. Per això cau aquest i es queden
+    # els altres. Ho va trobar un auditor llegint una frase nostra que el capítol justificava
+    # dient «diu tna», que no és cap paraula.
     # Arabic chat-alphabet numerals
     "3": "ɛ", "7": "ḥ", "9": "q", "5": "x", "8": "ɣ",
     # academic Berber-Latin pass-through
-    "ḥ": "ḥ", "ɛ": "ɛ", "ɣ": "ɣ", "ḍ": "ḍ", "ṭ": "ṭ", "ṣ": "ṣ",
+    "ḥ": "ḥ", "ɛ": "ɛ", "ɣ": "ɣ", "ḫ": "x", "ḍ": "ḍ", "ṭ": "ṭ", "ṣ": "ṣ",
     "ṛ": "ṛ", "ẓ": "ẓ", "š": "š", "ž": "j", "ʒ": "j", "č": "š",
+    # Les lletres GREGUES que tothom escriu en comptes de les llatines, i la ġ de molts
+    # reculls. Semblen iguals a la pantalla i no ho són (γ U+03B3 ≠ ɣ U+0263), i el que el mapa
+    # no coneixia, el transliterador el llençava en silenci: «riγ» sortia ⵔⵉ («ri») i «aγrum»
+    # «pa» sortia ⴰⵔⵓⵎ, que ja és una altra paraula. Ho va trobar un auditor comptant 59 línies
+    # del capítol 4 amb una consonant de menys.
+    "γ": "ɣ", "ε": "ɛ", "ġ": "ɣ", "ε̣": "ɛ", "Γ": "ɣ", "Ε": "ɛ", "Ġ": "ɣ",
     # single letters (Berber-Latin conventions: c=š, e=schwa, o->u, no p/v)
     "a": "a", "b": "b", "c": "š", "d": "d", "e": "ə", "f": "f",
     "g": "g", "h": "h", "i": "i", "j": "j", "k": "k", "l": "l",
@@ -46,12 +68,13 @@ _TIFINAGH = {
     "l": "ⵍ", "m": "ⵎ", "n": "ⵏ", "u": "ⵓ", "r": "ⵔ", "ṛ": "ⵕ",
     "ɣ": "ⵖ", "s": "ⵙ", "ṣ": "ⵚ", "š": "ⵛ", "t": "ⵜ", "ṭ": "ⵟ",
     "w": "ⵡ", "y": "ⵢ", "z": "ⵣ", "ẓ": "ⵥ",
+    "ʷ": "ⵯ",   # la marca de labialització, que acompanya la lletra de davant
 }
 
 # phoneme -> clean academic Latin. Schwa is 'e'; labialization is written with
 # an ASCII 'w' (gw/kw/qw) rather than the superscript ʷ, so clean_latin re-parses
 # losslessly back to the same phonemes/key (the input map knows gw/kw/qw).
-_CLEAN = {"ə": "e", "gʷ": "gw", "kʷ": "kw", "qʷ": "qw"}
+_CLEAN = {"ə": "e", "gʷ": "gw", "kʷ": "kw", "qʷ": "qw", "ʷ": "w"}
 
 # Accept Tifinagh as input too, so the phonemic key is script-INDEPENDENT
 # (ASR may emit either script; the gold field is often Tifinagh). Longest-match
@@ -84,7 +107,11 @@ def to_forms(raw: str) -> dict:
     Returns {input, clean_latin, tifinagh, key}. Idempotent-ish: feeding
     clean_latin back in reproduces the same tifinagh/key.
     """
-    raw = raw or ""
+    # Les lletres AJUNTADES abans de res. La biblioteca en guarda 283 de descompostes —«sġix»
+    # amb la g i el punt a sobre a part, «3afaš» amb la s i el capelló a part— i llavors el
+    # parser no veia ni la ġ ni la š: «sġix» sortia ⵙⴳⵉⵅ (una g) i «3afaš», ⵄⴰⴼⴰⵙ (una s). És a
+    # dir, la tifinag que llegia qui aprèn deia una altra lletra.
+    raw = unicodedata.normalize("NFC", raw or "")
     toks = _tokenize(raw.lower())
     clean, tif, key = [], [], []
     prev = None
@@ -112,6 +139,18 @@ def to_forms(raw: str) -> dict:
         "tifinagh": "".join(tif).strip(),
         "key": key_str,
     }
+
+
+def phonemes(raw: str) -> list:
+    """Els fonemes d'una paraula, en ordre, tal com els llegeix aquest mòdul.
+
+    `key` ja els dona ajuntats i sense repetits; això els dona un per un i sencers, que és el que
+    cal per saber si una paraula PORTA una lletra i en quina posició (l'abecedari del #368: la ɣ
+    no sona igual al començament que al final). El que no és una lletra —espais, comes, xifres—
+    no hi surt.
+    """
+    return [v for kind, v in _tokenize(unicodedata.normalize("NFC", raw or "").lower())
+            if kind == "phon" and v != "ʷ"]
 
 
 def phonemic_key(raw: str) -> str:
