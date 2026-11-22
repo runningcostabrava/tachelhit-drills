@@ -49,6 +49,7 @@ primera porta un avís que hi apunta. Mira l'índex abans de citar cap número.
 - **§43** El primer guany de debò amb el material del SNRT: 0,2634 → 0,3470 (21-11)
 - **§44** La taula norma↔parla tenia 26 entrades que són tarifit (21-11)
 - **§45** Retallar amb l'alineació forçada: −0,21 de CER, el guany més gran fins ara (22-11)
+- **§46** L'energia no pot substituir l'alineació, i el perquè confirma la §45 (22-11)
 
 ---
 
@@ -2512,3 +2513,34 @@ reentrenant**, no només transcrivint: aquí s'ha mesurat la inferència, no l'e
 
 **Els guions:** `retalla.py` (aplica el retall sense esborrar els originals),
 `prova_retall.py` (aquesta mesura), `alinea_pc.py` (els talls que la fàbrica fa al PC).
+
+---
+
+## 46. L'energia no pot substituir l'alineació, i el perquè confirma la §45 (22-11)
+
+L'alineació forçada triga ~25 h per als 20.547 talls perquè fa servir **MMS-1b-all** (4 GB) i
+Viterbi sobre les probabilitats del CTC. La temptació és òbvia: per treure silenci del davant
+i del darrere, no n'hi hauria prou amb **l'energia del senyal**, que es calcula en minuts?
+
+**Comprovat sense gastar res.** Hi havia 6.354 talls amb la frontera de l'alineació ja
+calculada. S'ha calculat la frontera per energia dels mateixos (finestra de 20 ms, llindar
+relatiu al terra de cada tall) i s'han comparat 400:
+
+| | mediana de l'error | dins de 0,2 s |
+|---|---|---|
+| inici | **−0,61 s** | 13 % |
+| final | **+0,77 s** | 4 % |
+| **les dues alhora** | — | **0 %** |
+
+**No serveix.** Però el més interessant és **el signe**: l'energia diu sistemàticament que la
+veu **comença abans** i **acaba després** del que diu l'alineació.
+
+Això **confirma la §45 per un camí independent**. Si el que hi ha al davant i al darrere fos
+silenci, l'energia i l'alineació coincidirien. Que l'energia hi trobi senyal vol dir que
+**n'hi ha** — i que l'alineació, que sap quin text busca, el descarta perquè **no és la
+frase**. El soroll no és soroll: és **una altra persona parlant**.
+
+Per tant el model de 4 GB **no és un luxe**: és l'única cosa que distingeix «hi ha veu» de
+«hi ha LA veu». No hi ha drecera.
+
+**El guió:** `prova_energia.py`.
