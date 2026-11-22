@@ -124,3 +124,33 @@ def retalla_marges(im, marge=6):
     if len(cols) < 4:
         return im
     return im.crop((max(0, cols.min() - marge), 0, min(im.width, cols.max() + marge), im.height))
+
+
+def linies_y(im, minim_alt=10):
+    """La y de dalt de cada linia de talla_linies (mateix tall, mateix ordre)."""
+    a = np.array(im.convert("L"))
+    v = vores_per_fila(a)
+    if v.max() <= 0:
+        return []
+    marca = v >= max(3.0, v.max() * 0.22)
+    ys, dins, inici = [], False, 0
+    for k, m in enumerate(list(marca) + [False]):
+        if m and not dins:
+            dins, inici = True, k
+        elif not m and dins:
+            dins = False
+            if k - inici >= minim_alt:
+                ys.append(max(0, inici - 4))
+    return ys
+
+
+def marge_esquerre(im, marge=6):
+    """Quants px treu retalla_marges per l'esquerra."""
+    a = np.array(im.convert("L"))
+    d = np.abs(np.diff(a.astype(np.int16), axis=0)).mean(axis=0)
+    if d.max() <= 0:
+        return 0
+    cols = np.where(d >= max(2.0, d.max() * 0.14))[0]
+    if len(cols) < 4:
+        return 0
+    return max(0, cols.min() - marge)
