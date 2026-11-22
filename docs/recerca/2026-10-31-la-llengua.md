@@ -3,6 +3,14 @@
 31-10-2026. Issue #530. Resum de la recerca del 30-10 sobre les 12.055 files de la biblioteca i de
 tres auditories independents: un dialectòleg, un expert en gramàtica amaziga i un pedagog.
 
+> **Això es va corregir a `AUDITORIA-2026-11-21.md`, troballa 7:** era fals **el dia que es va
+> escriure**. El commit que va crear aquest document, `5eed55d`, també canvia `backend/grammar.py`
+> (+19/−9): cinc títols d'unitat del curs i el text que guia el redactor, que són justament les
+> conclusions de la §4 («el perfectiu no és passat» → «accions fetes i estats») i de la §9. El
+> document mateix ho diu a la línia 183. El que **sí** que és cert és que la **resta** no s'ha
+> aplicat: des del 31-10 no s'ha tocat cap fitxer de curs. El que hi ha aquí sota és el que es va
+> creure.
+
 Cap d'aquestes conclusions no s'ha aplicat a producció. Les lliçons continuen com estaven.
 
 ## Com s'ha de llegir

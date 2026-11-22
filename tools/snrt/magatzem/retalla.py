@@ -1,0 +1,87 @@
+"""Aplica l'alineacio forcada als talls: fora el silenci del davant i del darrere.
+
+**Per que.** L'alineacio de l'ECS sobre 4.788 talls diu que **el 51 % del so no es la frase**:
+0,79 s de silenci al davant (al 84 % dels talls) i 0,97 s al darrere (al 95 %). Mesurat sobre
+250 talls amb MMS-1b-all + shi, el mateix model i la mateixa referencia, nomes canviant si el
+wav es sencer o retallat, el CER baixa (vegeu `prova_retall/`).
+
+**El marge.** La frontera que torna l'alineador no es exacta -- es el primer i l'ultim
+fotograma de 20 ms amb veu -- i tallar-hi arran es menja el principi d'una oclusiva. Per aixo
+s'hi deixen 0,15 s a banda i banda.
+
+**Que NO fa.** No esborra l'original. Escriu els retallats en una carpeta nova, perque si la
+mesura surt malament es pugui tornar enrere sense haver perdut res.
+
+    python retalla.py <carpeta_talls> <carpeta_desti> [--marge 0.15]
+"""
+import argparse
+import io
+import json
+import sys
+from pathlib import Path
+
+ALI = Path(r"E:/tamazight/_magatzem/alineacio_ecs.jsonl")
+
+
+def llegeix_alineacio(p=ALI):
+    d, mal = {}, 0
+    for l in io.open(p, encoding="utf-8"):
+        if not l.strip():
+            continue
+        try:
+            x = json.loads(l)
+        except Exception:
+            mal += 1          # l'ECS pot estar escrivint-hi: l'ultima linia queda a mitges
+            continue
+        if x.get("veu_ini") is not None and x.get("veu_fi") is not None:
+            d[x["so"]] = x
+    return d, mal
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("origen")
+    ap.add_argument("desti")
+    ap.add_argument("--marge", type=float, default=0.15)
+    ap.add_argument("--alineacio", default=str(ALI))
+    ap.add_argument("--min-veu", type=float, default=0.3,
+                    help="per sota d'aixo el tall es descarta: no hi ha frase")
+    a = ap.parse_args()
+
+    import soundfile as sf
+
+    ali, mal = llegeix_alineacio(Path(a.alineacio))
+    print(f"{len(ali)} talls amb alineació ({mal} línies a mitges, saltades)")
+
+    org, des = Path(a.origen), Path(a.desti)
+    des.mkdir(parents=True, exist_ok=True)
+    wavs = sorted(org.glob("*.wav"))
+    fet = sense = curt = 0
+    guanyat = 0.0
+    for w in wavs:
+        x = ali.get(w.name)
+        if not x:
+            sense += 1
+            continue
+        s, sr = sf.read(str(w))
+        if s.ndim > 1:
+            s = s.mean(axis=1)
+        i0 = max(0, int((x["veu_ini"] - a.marge) * sr))
+        i1 = min(len(s), int((x["veu_fi"] + a.marge) * sr))
+        if (i1 - i0) < sr * a.min_veu:
+            curt += 1
+            continue
+        guanyat += (len(s) - (i1 - i0)) / sr
+        sf.write(str(des / w.name), s[i0:i1], sr)
+        fet += 1
+        if fet % 500 == 0:
+            print(f"   {fet} retallats…", flush=True)
+
+    print(f"\n   {fet} retallats · {sense} sense alineació · {curt} massa curts")
+    print(f"   silenci tret: {guanyat/60:.0f} min")
+    if fet:
+        print(f"   de mitjana {guanyat/fet:.2f} s per tall")
+
+
+if __name__ == "__main__":
+    sys.exit(main())

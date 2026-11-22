@@ -4,8 +4,9 @@
 A la sèrie d'«Illy» i a l'entrevista el tifinag va a dalt i l'àrab a sota, però en una sèrie històrica de Tamazight TV l'ordre és invertit. L'etapa 02 ho
 resolia amb constants (comu.TIFINAG_720 / ARAB_720). Aquí es miren uns quants fotogrames del vídeo:
 
-1. Es troben les files de text a la part baixa del fotograma: un píxel és de lletra si és blanc i és entre dues vores fosques (la mateixa prova que el segmentador
-   de tifinag); les files amb tinta es converteixen en trams, i es queden els dos trams amb més tinta, de mida de subtítol i centrats.
+1. Es troben les files de text a la FRANJA CENTRAL de la part baixa del fotograma (els subtítols són centrats; el logotip del canal, que és un bloc de tifinag i
+   àrab apilats, és al cantó dret i ha de quedar fora — vegeu `trams_de_text`): un píxel és de lletra si és blanc i és entre dues vores fosques (la mateixa prova
+   que el segmentador de tifinag); les files amb tinta es converteixen en trams, i es queden els dos trams amb més tinta, de mida de subtítol i centrats.
 2. Cada tram es puntua com a tifinag amb dues proves independents: (a) la tinta que cau en components AMPLES (> 1,4 × l'alçada del tram): l'àrab cursiu
    s'enganxa en paraules llargues, el tifinag són glifs aïllats de cos uniforme (≤ 1,2 × el cos); (b) la confiança del lector de plantilles de tifinag
    sobre el tram (un tram d'àrab dona glifs poc o gens encaixats).
@@ -29,6 +30,7 @@ import lector_tifinag as LT  # noqa: E402
 import tifinag_segmenta as SEG  # noqa: E402
 
 AMPLE_RELATIU = 1.4        # un component més ample que això × l'alçada del tram és una paraula enganxada (àrab)
+ZONA_SUBTITOL = 0.70       # franja central de l'ample on es busca el text (vegeu `trams_de_text`): a 1080p, x 288–1632
 MARGE_FOTOGRAMA = 0.15     # diferència mínima entre les puntuacions dels dos trams perquè el fotograma voti
 MIN_FOTOGRAMES = 4         # fotogrames informatius mínims per decidir
 MAJORIA = 0.7              # fracció mínima de vots per al mateix ordre
@@ -51,9 +53,19 @@ def _a_1080(rgb):
 
 def trams_de_text(rgb1080, y_ini=0):
     """Els trams de files amb text de subtítol d'un fotograma (o d'un retall) a escala 1080p.
-    Torna [(y0, y1, tinta, mascara_del_tram)] amb y relatives a rgb1080, els dos de més tinta que hi caben a ordre de dalt a baix."""
+    Torna [(y0, y1, tinta, mascara_del_tram)] amb y relatives a rgb1080, els dos de més tinta que hi caben a ordre de dalt a baix.
+
+    Només es mira la franja central de l'ample (ZONA_SUBTITOL). El logotip del canal és al cantó dret i és justament un bloc de tifinag i àrab apilats, a la
+    mateixa alçada que els subtítols: sense aquesta franja les seves files s'enganxen als trams del subtítol i la seva tinta embruta les dues proves que
+    puntuen el tram. El tall surt d'una mesura, no d'un número rodó: sobre 3 capítols (120 fotogrames, 116 trams) el bloc centrat del subtítol no passa mai
+    de x 1595 (0,831 de l'ample) i el bloc del logotip comença sempre a x 1682 (0,876); 0,70 posa la vora a x 1632, al mig d'aquest buit. La prova de
+    centrat de més avall segueix amb la tolerància de sempre: la màscara no es retalla, només es buida fora de la franja, i les x són les del fotograma."""
     mask, _, _ = SEG.mascara_lletra(rgb1080)
     w = mask.shape[1]
+    fora = int(round((1 - ZONA_SUBTITOL) / 2 * w))
+    mask = mask.copy()
+    mask[:, :fora] = False
+    mask[:, w - fora:] = False
     prof = mask.sum(axis=1)
     actives = prof >= 4
     trams, ini = [], None

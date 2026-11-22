@@ -128,6 +128,10 @@ def regla_interna(stats, proves=PROVES):
         s = stats.get(p)
         if s is None:
             absents.append(p)
+        elif s.get("unitats", 10 ** 9) < 3:
+            #: amb menys de tres unitats independents l'interval no vol dir res (una sola
+            #: unitat en dona un d'amplada zero, que diria «millora» per construcció)
+            absents.append(p)
         elif s["ic_lo"] > 0:
             empitjora.append(p)
         elif s["ic_hi"] < 0:
