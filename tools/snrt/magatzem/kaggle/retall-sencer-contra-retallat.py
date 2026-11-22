@@ -142,8 +142,20 @@ for cara in ("sencer", "retallat"):
     h = sum(len(x[0]) for v in material[cara].values() for x in v) / SR / 3600
     print(f"   {cara}: {d} · {h:.2f} h", flush=True)
 
-#: La comprovació que fa que l'experiment signifiqui alguna cosa: les dues cares han de tenir
-#: EXACTAMENT les mateixes files. Si no, no es compara el retall, es compara un altre corpus.
+#: El filtre de durada de `llegeix()` (mínim 0,25 s, màxim SEGONS_MAXIM) s'aplica a cada cara
+#: per separat, i un tall de 14,2 s sencer en fa 13,8 retallat: la cara retallada se'l queda i
+#: la sencera no. Provat en local el 22-11, les dues cares es diferenciaven en una fila.
+#:
+#: Per tant es QUEDEN NOMÉS els talls que han passat el filtre a les DUES cares. Si no,
+#: l'experiment no compararia el retall: compararia dos corpus que no són el mateix.
+for p in ("train", "dev", "test"):
+    comuns = {x[2]["so"] for x in material["sencer"][p]} & {x[2]["so"] for x in material["retallat"][p]}
+    fora = sum(len(material[c][p]) for c in ("sencer", "retallat")) - 2 * len(comuns)
+    for c in ("sencer", "retallat"):
+        material[c][p] = [x for x in material[c][p] if x[2]["so"] in comuns]
+    if fora:
+        print(f"   {p}: {fora} talls fora, que no passaven el filtre a totes dues cares")
+
 for p in ("train", "dev", "test"):
     a = [x[2]["so"] for x in material["sencer"][p]]
     b = [x[2]["so"] for x in material["retallat"][p]]
