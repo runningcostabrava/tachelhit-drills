@@ -20,7 +20,10 @@ import json
 import sys
 from pathlib import Path
 
-ALI = Path(r"E:/tamazight/_magatzem/alineacio_ecs.jsonl")
+#: v2 = amb el text transliterat. El fitxer sense sufix es deia igual i portava fronteres
+#: fetes alineant NOMES els separadors de paraula (vegeu la §48 del quadern): es diu ara
+#: *_NOMES_SEPARADORS.jsonl i no es pot agafar sense voler.
+ALI = Path(r"E:/tamazight/_magatzem/alineacio_ecs_v2.jsonl")
 
 
 def llegeix_alineacio(p=ALI):
