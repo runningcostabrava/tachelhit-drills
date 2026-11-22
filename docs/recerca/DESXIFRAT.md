@@ -45,9 +45,10 @@ primera porta un avís que hi apunta. Mira l'índex abans de citar cap número.
 - **§39** El gir cap a l'àrab (21-11, d'en Pablo)
 - **§40** L'ECS tenia una fàbrica millor, i jo duplicava (21-11)
 - **§41** L'alineació forçada: −0,0789, i feia tres dies que hi era (21-11)
-- **§44** La taula norma↔parla tenia 26 entrades que són tarifit (21-11)
-- **§43** El primer guany de debò amb el material del SNRT: 0,2634 → 0,3470 (21-11)
 - **§42** El corpus tenia tarifit, i el dev n'era el 100 % (21-11)
+- **§43** El primer guany de debò amb el material del SNRT: 0,2634 → 0,3470 (21-11)
+- **§44** La taula norma↔parla tenia 26 entrades que són tarifit (21-11)
+- **§45** Retallar amb l'alineació forçada: −0,21 de CER, el guany més gran fins ara (22-11)
 
 ---
 
@@ -2461,3 +2462,51 @@ Taula neta a : **149 correspondències**.
 tenia el dev 100 % tarifit. Vaig arreglar el corpus i **no vaig mirar què més s'havia construït
 amb el mateix material**. Una contaminació trobada en un lloc s'ha de buscar a tots els que
 beuen de la mateixa font.
+
+---
+
+## 45. Retallar amb l'alineació forçada: −0,21 de CER, el guany més gran fins ara (22-11)
+
+**El diagnòstic.** L'alineació forçada de 4.788 talls nostres (MMS-1b-all, Viterbi sobre les
+probabilitats de CTC) diu que **el 51 % del so no és la frase**:
+
+| | |
+|---|---|
+| silenci al davant | mediana **0,79 s** · més de 0,3 s al **84 %** dels talls |
+| silenci al darrere | mediana **0,97 s** · més de 0,3 s al **95 %** |
+| del so total, és la frase | **49 %** |
+
+**La prova.** 174 talls del capítol `agnkrfivlpeuwz`, el mateix model (MMS-1b-all + `shi`,
+sense adaptador), la mateixa referència (el tifinag del subtítol transliterat). L'**única**
+cosa que canvia és si el wav va sencer o retallat a `[veu_ini − 0,15 s, veu_fi + 0,15 s]`:
+
+| talls | sencer | retallat | diferència |
+|---|---|---|---|
+| 25 | 0,8838 | 0,7958 | −0,088 |
+| 50 | 0,9909 | 0,8445 | −0,146 |
+| 100 | 1,0401 | 0,8490 | −0,191 |
+| 150 | 1,0439 | 0,8462 | −0,198 |
+| **174** | **1,0645** | **0,8506** | **−0,214** |
+
+I la distància **creix** amb la mostra, cosa que descarta que sigui soroll de mostreig.
+
+**Per què el CER del so sencer passa d'1,0.** Un CER superior a 1 vol dir que la sortida és
+més llarga que la referència: **l'ASR transcriu més del que diu la frase**. El «silenci» no
+és silenci — és altra gent parlant, i el model la sent. Retallant, deixa de sentir-la.
+
+**Per situar-ho.** El guany més gran que havíem mesurat en tot el projecte era **−0,0789**
+(el diagnòstic del 18-11 sobre talls antics) i el lèxic al feix donava **−0,07**. Això és
+**dues vegades i mitja més**, i no demana collir ni un capítol nou: és el material que ja
+tenim, ben tallat.
+
+**Quant se'n va.** Provat sobre 250 talls reals: 245 retallats, **1,65 s de mitjana per
+tall**, 7 minuts de 250. Escalat als 17.379 talls, són unes **8 hores de so** que ara mateix
+entren a l'entrenament sense ser la frase.
+
+**El que falta.** L'alineació només cobreix 9 capítols de 33 a l'ECS (unes 30 h més) i cap
+dels 20 que la fàbrica del PC ha fet avui (2.106 talls). Fins que no hi siguin tots, el
+retall no es pot aplicar a tot el corpus, i **el guany real s'ha de tornar a mesurar
+reentrenant**, no només transcrivint: aquí s'ha mesurat la inferència, no l'entrenament.
+
+**Els guions:** `retalla.py` (aplica el retall sense esborrar els originals),
+`prova_retall.py` (aquesta mesura), `alinea_pc.py` (els talls que la fàbrica fa al PC).
