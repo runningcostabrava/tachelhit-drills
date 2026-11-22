@@ -50,6 +50,7 @@ primera porta un avís que hi apunta. Mira l'índex abans de citar cap número.
 - **§44** La taula norma↔parla tenia 26 entrades que són tarifit (21-11)
 - **§45** Retallar amb l'alineació forçada: −0,21 de CER, el guany més gran fins ara (22-11)
 - **§46** L'energia no pot substituir l'alineació, i el perquè confirma la §45 (22-11)
+- **§47** Tres dreceres per no esperar les 26 h d'alineació, i cap no val (22-11)
 
 ---
 
@@ -2544,3 +2545,34 @@ Per tant el model de 4 GB **no és un luxe**: és l'única cosa que distingeix �
 «hi ha LA veu». No hi ha drecera.
 
 **El guió:** `prova_energia.py`.
+
+---
+
+## 47. Tres dreceres per no esperar les 26 h d'alineació, i cap no val (22-11)
+
+L'alineació de 20.547 talls amb MMS-1b-all triga ~26 h a l'ECS. Val **−0,2235 de CER** (§45),
+així que l'espera té sentit — però abans de pagar-la s'han provat tres dreceres. Totes tres es
+comproven igual: hi ha 6.354 talls amb la frontera del model gran ja calculada, i es mira si
+el mètode barat hi cau a prop.
+
+| drecera | les dues fronteres dins de 0,2 s | velocitat |
+|---|---|---|
+| **energia del senyal** (§46) | **0 %** | instantània |
+| **`torchaudio.pipelines.MMS_FA`** (300 M, fet per alinear) | **5 %** | 1,43 s/tall |
+| **MMS-1b quantitzat a int8** | **100 %** (i dins de 0,05 s) | 3,20 s contra 3,64 |
+
+**L'energia i MMS_FA fallen igual i pel mateix motiu.** Les dues posen l'inici **abans** i el
+final **després** (−0,37 s i +0,54 s amb MMS_FA; −0,61 i +0,77 amb l'energia). Les dues troben
+senyal als extrems perquè **n'hi ha**: una altra persona parlant. Només el model gran amb
+l'adaptador `shi`, que coneix la llengua, sap que aquell senyal **no és LA frase**.
+
+Que el biaix sigui el mateix en dos mètodes independents és la tercera confirmació de la §45.
+
+**La quantització sí que és segura: no mou ni una frontera.** Però el guany és **1,14x**, no
+el 2-3x que es podia esperar: el càlcul de wav2vec2 no és tot capes lineals. Sobre 26 h,
+estalviaria unes 3 h — no val la complexitat d'afegir-la al camí que ja corre.
+
+**Conclusió:** no hi ha drecera. Les 26 h es paguen, i es paguen soles: la màquina no costa
+res i ningú no ha d'estar-hi a sobre.
+
+**Els guions:** `prova_energia.py`, `prova_mms_fa.py`, `prova_int8.py`.
