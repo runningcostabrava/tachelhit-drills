@@ -2476,7 +2476,7 @@ probabilitats de CTC) diu que **el 51 % del so no és la frase**:
 | silenci al darrere | mediana **0,97 s** · més de 0,3 s al **95 %** |
 | del so total, és la frase | **49 %** |
 
-**La prova.** 174 talls del capítol `agnkrfivlpeuwz`, el mateix model (MMS-1b-all + `shi`,
+**La prova.** 245 talls del capítol `agnkrfivlpeuwz`, el mateix model (MMS-1b-all + `shi`,
 sense adaptador), la mateixa referència (el tifinag del subtítol transliterat). L'**única**
 cosa que canvia és si el wav va sencer o retallat a `[veu_ini − 0,15 s, veu_fi + 0,15 s]`:
 
@@ -2486,9 +2486,11 @@ cosa que canvia és si el wav va sencer o retallat a `[veu_ini − 0,15 s, veu_f
 | 50 | 0,9909 | 0,8445 | −0,146 |
 | 100 | 1,0401 | 0,8490 | −0,191 |
 | 150 | 1,0439 | 0,8462 | −0,198 |
-| **174** | **1,0645** | **0,8506** | **−0,214** |
+| 174 | 1,0645 | 0,8506 | −0,214 |
+| **245 (final)** | **1,0818** | **0,8583** | **−0,2235 (−20,7 %)** |
 
 I la distància **creix** amb la mostra, cosa que descarta que sigui soroll de mostreig.
+**Millora en 188 dels 245 talls (77 %)**: no és que uns pocs talls arrosseguin la mitjana.
 
 **Per què el CER del so sencer passa d'1,0.** Un CER superior a 1 vol dir que la sortida és
 més llarga que la referència: **l'ASR transcriu més del que diu la frase**. El «silenci» no
