@@ -28,8 +28,9 @@ la mateixa frase, aquest **encara no serveix**. 7,4 h són molt poques — i, so
 d'aquelles hores no és la frase (§3, pas 1).
 
 **La notícia incòmoda és la primera fila.** El que de debò tradueix avui no és cap model
-nostre: és una lectura a mà de l'àrab. Els models valen per allò que no es pot fer a mà —215
-capítols— i encara no hi arriben.
+nostre: és una lectura a mà de l'àrab. Els models valen per allò que no es pot fer a mà, i
+encara no hi arriben. Quant és «allò que no es pot fer a mà» és molt menys del que deia aquest
+document fins al 22-11: vegeu el §2.
 
 **La idea que ordena tot això** és d'en Pablo (21-11): *la traducció al català és important,
 però molt més la traducció a l'àrab, perquè si el model tradueix bé del tifinag a l'àrab,
@@ -48,7 +49,44 @@ per a cadascuna de les tres vies. Per tant el que limita les tres alhora és qua
 s'acaben, no quin model s'entrena.
 
 Estat: **27 capítols collits, ~17,9 h**, dels quals **8 són del Rif** i no entren enlloc
-(tarifit és una altra llengua). El catàleg en té **215**.
+(tarifit és una altra llengua).
+
+### Quants capítols hi ha de debò (mesurat el 22-11)
+
+El catàleg en té 215 i aquest document deia «215» com si tots es poguessin collir. **No és
+així, ni de lluny.** La fàbrica necessita **subtítols cremats** amb dues línies, i la majoria
+dels programes no en porten. Mesurat amb **24 fotogrames de cada programa**, comptant en
+quants hi ha dues línies a la franja de baix:
+
+| programa | capítols | fotogrames amb 2 línies | |
+|---|---|---|---|
+| tadfi-n-tskla | 31 | 18/24 (75 %) | la referència: 30 acabats |
+| tasghunt-n-tiss-tamt | 25 | 9/24 (38 %) | **sí** |
+| idjis-n-tmurt-inu | 5 | 8/24 (33 %) | **sí** |
+| nkkni-didk | 6 | 7/24 (29 %) | sí, però **403 en baixar-los**, des de l'ECS i des del PC |
+| tikliwin | 22 | 4/24 (17 %) | **tots 22 cauen** amb `OrdreIndecis`: no n'hi ha prou |
+| imnadn | 7 | 3/24 (12 %) | dubtós, sense provar |
+| tasghunt-n-lbarlaman | 21 | 2/24 (8 %) | dubtós, sense provar |
+| tadamsa-ngh | 9 | 1/24 (4 %) | dubtós, sense provar |
+| tifawin-khf-tmazight | 40 | **0/24** | **no en té** — i 30 capítols hi van caure |
+| izuran-0 | 26 | **0/24** | **no en té** |
+| tissuta-n-imal | 23 | — | no s'ha pogut ni resoldre l'adreça |
+
+**El que queda per collir de debò són ~61 capítols** (tadfi 1 + tasghunt 25 + idjis 5, més el
+que donin els 30 dubtosos), no 188. Amb les ~339 parelles per capítol mesurades, són unes
+**10.000 parelles**, no les 68.000 que es van projectar el 21-11 multiplicant 215 pel
+rendiment de l'únic programa que funcionava.
+
+**Dos paranys que ho amagaven**, tots dos trobats el 22-11:
+
+1. Els 30 capítols de `tifawin` fallaven amb **`OrdreIndecis: no puc saber quina línia és
+   tifinag i quina àrab`**, i el missatge enganyava: no és que no se sàpiga quina és quina,
+   és que **no n'hi ha cap**. Convindria que l'etapa 02 distingís els dos casos.
+2. El bucle del PC baixava **només 720p**, i a 720p el tifinag es llegeix malament: confiança
+   mediana 0,78-0,91 i 5-13 glifs dubtosos, contra **0,96 i 1** d'un capítol a 1080p. Per les
+   portes de qualitat hi passava **l'1-28 %** en comptes del **66 %**. Sis capítols collits
+   nets no van aportar **res** al corpus. Esmenat: ara baixa els dos — 720p per al so, 1080p
+   per al tifinag.
 
 ---
 
