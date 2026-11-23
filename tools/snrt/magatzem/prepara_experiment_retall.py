@@ -33,7 +33,14 @@ import io
 import json
 import random
 import shutil
+import sys
 from pathlib import Path
+
+#: la mateixa regla que fa servir l'alineador per decidir si un tall te prou text. Ha de ser la
+#: mateixa i no una copia: amb la regla simple «3 caracters de text», 51 talls de 19.547 (0,26 %)
+#: canvien de banda, i el llindar d'aqui es del 2 %.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from transliteracio_tifinag import prou_text  # noqa: E402
 
 MAG = Path(r"E:/tamazight/_magatzem")
 ARREL = Path(r"E:/tamazight/talls_ecs")
@@ -75,6 +82,31 @@ def text_dels_talls():
     return t
 
 
+def alineables(capitol):
+    """Quants talls d'un capitol pot alinear l'alineador.
+
+    **Per que no es el nombre de wav.** L'alineador salta per disseny els talls amb menys de 3
+    caracters de text, i 12 dels 33 capitols en tenen mes del 2 %: comptant sobre tots els wav,
+    aquests capitols no arribarien mai al 98 % ni acabant del tot, i l'experiment es muntaria
+    amb una part del corpus sense dir per que. I hi ha wav que no tenen cap linia de subtitol:
+    `asywmmpqztvnotx` te 840 wav, 571 alineables i 571 alineats -- acabat del tot, i la regla
+    vella en demanava 823.
+    """
+    talls, sub = ARREL / capitol / "talls", ARREL / capitol / "subtitols.jsonl"
+    if not (talls.is_dir() and sub.exists()):
+        return 0
+    n = 0
+    for l in io.open(sub, encoding="utf-8"):
+        if not l.strip():
+            continue
+        x = json.loads(l)
+        if not x.get("tall") or not (talls / Path(x["tall"]).name).exists():
+            continue
+        if prou_text(x.get("tifinag") or ""):
+            n += 1
+    return n
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--alineacio", default=str(ALI),
@@ -98,7 +130,7 @@ def main():
         per_cap.setdefault(x["capitol"], []).append(nom)
     sencers = []
     for c, noms in per_cap.items():
-        tot = len(list((ARREL / c / "talls").glob("*.wav"))) if (ARREL / c / "talls").is_dir() else 0
+        tot = alineables(c)
         if tot and len(noms) >= tot * 0.98:
             sencers.append(c)
     print(f"   {len(per_cap)} capítols tocats · {len(sencers)} alineats del tot")
