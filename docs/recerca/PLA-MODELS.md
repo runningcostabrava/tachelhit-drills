@@ -56,17 +56,28 @@ Dues coses que expliquen la taula:
 * **Números a batre:** Whisper sense afinar 0,1003 · la via del text sense afinar 0,2614 (tots
   dos sobre la SNRT). Si `test_snrt` passa de 0,26, la via directa guanya la cadena.
 
-### Pas 2 — Afegir el corpus d'EMINES a D
+### Pas 2 — Afegir el corpus d'EMINES a D  ✅ comprovat i preparat (23-11, DESXIFRAT §52)
 
-* `huggingface.co/datasets/EMINES/Tamazight-Speech-to-Arabic-Text` (~15,5 h, taixelhit).
-* **Abans d'ajuntar-lo, passar-li `quin_arab_es_el_del_tutlait.py`** (canviant-hi el fitxer):
-  la seva fitxa diu «transcripcions en àrab» i pot ser transliteració. Si la proporció de
-  frases amb paraula funcional àrab queda a prop del 79 % del control, és traducció i entra a
-  D. Si queda molt per sota, és amazic en lletres àrabs: **no entra a D** (ensenyaria a
-  transliterar) i s'apunta com a material possible per a C.
-* Mirar-ne la llicència i apuntar-la a `docs/CREDITS.md` abans de fer-lo servir.
-* Afegir-lo com a tercera font a `corpus_veu_arab_combinat.py` amb les mateixes tres
-  vigilàncies (grup, fuita per text, test separat) i tornar a fer el pas 1.
+* `huggingface.co/datasets/EMINES/Tamazight-Speech-to-Arabic-Text`: 20.344 talls, 15,5 h, 60
+  vídeos, **Apache 2.0** (apuntat a `docs/CREDITS.md`).
+* **És traducció:** 77,8 % de frases amb paraula funcional àrab (control SNRT 79 %). Entra a D.
+* **Va tot a l'entrenament, res a dev ni a test**, perquè:
+  * la seva partició train/test comparteix els 60 vídeos (no és un test net);
+  * els vídeos 37/38, 39/40 i 41/42 són el mateix vídeo dues vegades (es treuen 38, 40, 42);
+  * el parlant `spk_010` del TutlAit en comparteix el 32 % de frases (642 de 4 paraules o més):
+    és el mateix material de sèrie. `spk_010` és a train, així que no hi ha fuita als tests;
+  * qualsevol frase el text normalitzat de la qual surti a dev o a un test nostre es treu (178).
+* Manifest: `corpus_emines_veu_ar.py` → `train_emines.jsonl`, **19.213 files, 14,6 h** (md5
+  ab56418e…). Text i metadades llegits sense baixar l'àudio: `emines_text.py`.
+* **3a tirada** = 2a tirada + EMINES (train ~38.200 files, ~40,7 h). Quadern
+  `kaggle/veu-ar-afina-emines.py`; l'àudio es baixa de Hugging Face dins de Kaggle (44,1 kHz
+  estèreo → 16 kHz mono), no es puja. Conjunt de Kaggle `josepabloucr/emines-veu-ar` (només el
+  manifest). Es llança quan acabi la 2a: Kaggle no deixa més de 2 sessions GPU per lots.
+* Es compara amb la 2a sobre els mateixos tests congelats i les mateixes 200 frases.
+* **La 2a tirada (Baba Ali) ja és feta (§53):** test_snrt 0,1652, test_tutlait 0,1942, pràcticament
+  igual que la 1a. El dev encara pujava a la 3a època, així que **si la 3a tampoc toca sostre, la
+  4a tirada ha de provar més èpoques (5-6) abans que més fonts**.
+* La 3a tirada es va llançar el 23-11 des de l'editor (Run All, persistència «Files only»).
 
 ### Pas 2b — Les sèries de la SNRT, com a traducció humana per a D
 
@@ -145,7 +156,7 @@ de collir-ne 70 hores.
 
 * No s'entrena C amb els subtítols de la SNRT com si fossin transcripcions: no ho són.
 * El que el pot millorar és text confirmat per parlants (pas 4) i, si el pas 2 diu que
-  EMINES és transliteració, aquell corpus.
+  EMINES fos transliteració, aquell corpus (no ho és: §52).
 * C deixa de ser al camí crític de la traducció de veu si D funciona.
 
 ### Pas 8 — La millora contínua amb tota la SNRT (quan els passos 1-2b hagin donat número)

@@ -155,6 +155,14 @@ Cada frase que n'entri a la biblioteca porta `license = CC BY 4.0`, `source_url`
 pàgina i, com a parlant, l'identificador del corpus («TutlAit · spk_010»), no un nom nostre: són
 veus que el projecte no coneix i no ho faran veure.
 
+### EMINES — Tamazight-Arabic Speech Recognition Dataset
+
+**Apache 2.0.** https://huggingface.co/datasets/EMINES/Tamazight-Speech-to-Arabic-Text, còpia de
+l'organització EMINES de https://huggingface.co/datasets/SoufianeDahimi/Tamazight-ASR-Dataset-v2.
+20.344 talls (~15,5 h) de tachelhit amb la **traducció** àrab (DESXIFRAT §52), tallats de 60
+vídeos. Només entra a l'entrenament del model veu → àrab (via 3); no entra a la biblioteca ni al
+catàleg públic. La llicència demana conservar l'avís: aquest paràgraf el conserva.
+
 ### Awal Tamazight Dataset (CIEMEN / projecte Awal)
 
 **CC BY 4.0.** Condició que posa el mateix conjunt de dades, textualment:
