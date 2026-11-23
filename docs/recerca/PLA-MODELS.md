@@ -21,6 +21,10 @@ Dues coses que expliquen la taula:
   llegit, sobre gent que parla dialecte. Per això la SNRT és mal material per a C (l'ASR contra
   ells dona CER > 1) i bon material per a B i D, que només demanen **significat**.
 * **El TutlAit no té text amazic**, només so i àrab. Serveix per a D i no per a B ni C.
+* **El TutlAit és traducció humana sencera**: a cada voluntari se li mostrava una frase àrab i
+  la deia en el seu amazic (fitxa del conjunt). Per això `test_tutlait` ja és un jutge humà per
+  a D. El seu camp `verified` (1.567 files) és una altra cosa: una tanda revisada d'**un sol
+  parlant**, tota tzm i tota d'entrenament; no serveix de test.
 
 ## 2. Les regles de mesura (cadascuna ens ha costat un dia)
 
@@ -75,14 +79,20 @@ Dues coses que expliquen la taula:
   de la §49 perquè el test no canvia de durada. Si la diferència és menor que la que hi ha
   entre dues èpoques seguides, el retall no val la pena i es tanca.
 
-### Pas 4 — Un jutge humà (és d'en Pablo, no de la màquina)
+### Pas 4 — Un jutge humà on encara no n'hi ha (és d'en Pablo, no de la màquina)
 
-* 200 frases del `test_snrt` i del `test_tutlait` escoltades per un parlant (Halima, Driss):
-  la traducció del model, és bona, mig bona o dolenta?
-* Tots els números d'ara es mesuren contra subtítols o contra traduccions de màquina. Sense
-  això no se sap si un chrF de 0,35 vol dir «s'entén» o «no s'entén».
-* Mateix forat: al catàleg hi ha 5.404 exercicis esperant confirmació i **1** de verificat.
-  Els 245 marcats «la màquina hi està d'acord» són mitja hora de feina d'un parlant.
+* Per a D sobre veu llegida **ja n'hi ha un**: `test_tutlait` es mesura contra traduccions
+  humanes (vegeu el punt 1).
+* El que falta: **la parla de la tele** (`test_snrt` es mesura contra subtítols, que no són el
+  que es diu) i **la sortida en català** del pas 5 (el català del TutlAit al catàleg el van fer
+  auditors de màquina). Per a això: 200 frases escoltades per un parlant (Halima, Driss), i la
+  traducció del model, és bona, mig bona o dolenta?
+* Sense això no se sap si un chrF de 0,35 vol dir «s'entén» o «no s'entén».
+* Al catàleg, `verified` vol dir que **un parlant nostre** ho ha confirmat d'oïda a l'app: n'hi
+  ha 1 de 12.402, i 5.404 esperant. No mesura la qualitat del catàleg (el material del TutlAit
+  hi és humà encara que no porti la marca; la importació ho desa a `verified_corpus`), sinó si
+  el bucle de confirmació funciona. Els 245 marcats «la màquina hi està d'acord» són mitja hora
+  de feina d'un parlant.
 
 ### Pas 5 — La cadena sencera: veu → català
 
