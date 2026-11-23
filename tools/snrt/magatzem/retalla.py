@@ -5,6 +5,19 @@
 250 talls amb MMS-1b-all + shi, el mateix model i la mateixa referencia, nomes canviant si el
 wav es sencer o retallat, el CER baixa (vegeu `prova_retall/`).
 
+⚠️ **Cap dels dos numeros del paragraf de dalt mesura el que diu** (quadern, §48 i §49), i es
+deixen escrits per no fer com si no s'haguessin cregut. El 51 % el va donar una alineacio que
+no va rebre mai la frase: el vocabulari de l'adaptador `shi` es llati i el text anava en
+tifinag, aixi que alineava nomes els separadors de paraula. I el CER que baixa no prova que la
+frontera sigui bona: amb el CER de partida per sobre d'1 la distancia esta dominada per
+insercions i escurcar el so en treu, encerti o no -- menjar-se 0,3 s de veu real de cada banda
+guanya tres vegades mes (-0,1913) que retallar be (-0,0741).
+
+El que fa aquest guio -- treure el que l'alineador diu que no es la frase, amb marge -- segueix
+sent el que cal fer, i ara amb fronteres que si que han vist la frase. El que no se sap es
+**quant val**, i no ho pot dir cap CER d'inferencia: ho ha de dir l'experiment d'entrenament
+amb un test de durada fixa (`kaggle/retall-sencer-contra-retallat.py`).
+
 **El marge.** La frontera que torna l'alineador no es exacta -- es el primer i l'ultim
 fotograma de 20 ms amb veu -- i tallar-hi arran es menja el principi d'una oclusiva. Per aixo
 s'hi deixen 0,15 s a banda i banda.

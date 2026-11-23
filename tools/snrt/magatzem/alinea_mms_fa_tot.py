@@ -69,9 +69,12 @@ def main():
     #: que els capitols siguin de mides molt diferents
     feina = [x for i, x in enumerate(feina) if i % de == jo]
 
+    #: els fets es llegeixen de TOTS els fitxers de flux, no nomes del propi. El 23-11 tres
+    #: fluxos van desar 2.317 talls i el sistema els va matar per memoria; amb un sol flux
+    #: (`--part 0/1`) aquella feina no s'ha de repetir, encara que la desessin altres fitxers.
     fets = set()
-    if desti.exists():
-        for l in io.open(desti, encoding="utf-8"):
+    for p in sorted(desti.parent.glob("alineacio_mms_fa_tot_*de*.jsonl")):
+        for l in io.open(p, encoding="utf-8"):
             try:
                 fets.add(json.loads(l)["so"])
             except Exception:
