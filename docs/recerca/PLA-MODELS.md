@@ -68,6 +68,38 @@ Dues coses que expliquen la taula:
 * Afegir-lo com a tercera font a `corpus_veu_arab_combinat.py` amb les mateixes tres
   vigilàncies (grup, fuita per text, test separat) i tornar a fer el pas 1.
 
+### Pas 2b — Les sèries de la SNRT, com a traducció humana per a D
+
+**La idea (d'en Pablo, 23-11):** el subtítol àrab d'una sèrie el fa un subtitulador professional
+a partir del diàleg. És traducció humana, igual que l'àrab del TutlAit. Per a D (que només
+demana significat) es pot tractar com a material confirmat. **Per a C no** (no és transcripció),
+**ni com a `verified` a l'app** (allà vol dir que un parlant nostre ho ha confirmat), **ni al
+catàleg públic** (el permís de la SNRT és per a recerca i models).
+
+**Primer, el que ja tenim: Baba Ali.** 3.621 parelles so ↔ àrab, Souss (shi, la varietat que
+més ens falta a D), ja al catàleg amb la forma del TutlAit (`text_tachelhit` buit, `text_arabic`
+del subtítol, regió «Souss (sèrie Baba Ali, SNRT)»). Afegir-lo com a tercera font a
+`corpus_veu_arab_combinat.py` i fer una segona tirada de D canviant **només** això: la diferència
+amb la primera diu quant aporta el material de sèrie. Així es jutja la idea amb un número abans
+de collir-ne 70 hores.
+
+**Després, el gros: 954 capítols de sèrie, 284 h** (catàleg a `tamazight-tv.md`, mai collits).
+
+* Per a D no cal el tifinag, que és el que obliga a 1080p i el que fa caure capítols a la porta
+  de qualitat. Cal: baixar a 720p, llegir **només la línia àrab** amb el lector propi
+  (`tools/snrt/fabrica/lector_arab.py`, CER 0,007, local i gratis) i tallar el so per l'hora.
+* La fàbrica no ho sap fer: l'etapa 02 exigeix tifinag i cau amb `OrdreIndecis` quan no n'hi
+  ha. Cal un mode «àrab sol» a 02 (i a 05, que les portes no demanin tifinag).
+* **Pilot abans d'encuar res:** Illy capítol 1 (`q8rMnmWpMkI`). Comptar rèpliques, mirar 20
+  lectures de l'àrab a ull, i mesurar el desfasament entre l'hora del subtítol i la veu (a les
+  entrevistes era > 0,5 s al 62 % dels talls, §41; en una sèrie pot ser diferent).
+* **La partició és per sèrie, no per capítol:** els mateixos actors surten a tots els capítols
+  d'una sèrie, i partir per capítol posaria la mateixa veu a l'entrenament i al test.
+* **La varietat va per sèrie** (Illy és de l'Atles; Baba Ali, del Souss): etiquetar-la, com al
+  TutlAit, perquè la barreja es pugui triar.
+* Avisos: el subtítol condensa (és més curt que el que es diu), hi ha música i diàlegs que
+  es trepitgen. Per a D és acceptable; per això el test de sèries ha d'anar separat dels altres.
+
 ### Pas 3 — El retall, com a variant de D i no com a projecte
 
 * L'alineació (`alinea_mms_fa_tot.py`) deixa les fronteres a

@@ -2879,8 +2879,17 @@ del 21-11 a les 12:19). El 23-11 vaig repetir el número del comentari a en Pabl
 disc. No sé d'on surt la diferència; el que val és el que hi ha al disc.
 
 **El que queda fora i hi pot entrar:** el corpus d'EMINES (`Tamazight-Speech-to-Arabic-Text`,
-~15,5 h de taixelhit), que no tenim baixat, i les 67 h de programes de la SNRT amb subtítol
-només en àrab, que per a aquesta via serveixen i per a l'orella no.
+~15,5 h de taixelhit), que no tenim baixat; **Baba Ali**, 3.621 parelles so ↔ àrab del Souss que
+ja són al catàleg amb la mateixa forma que el TutlAit (sense text amazic, amb l'àrab del
+subtítol); i les **sèries de Tamazight TV**: 954 capítols, 284 h al canal de YouTube
+(`tamazight-tv.md`), catalogades el 17-11 i mai collides. Per a aquesta via no cal el tifinag
+—que és el que obliga a baixar a 1080p—, només la línia àrab, l'hora i el so. A partir d'un sol
+capítol mesurat (Illy 1: 306 rèpliques en 30 min) poden ser unes 70-80 h de parla subtitulada;
+és una estimació d'un capítol, no una mesura.
+
+> Esmena del mateix dia: aquí deia «67 h de programes de la SNRT amb subtítol només en àrab».
+> Era un número copiat del comentari de `corpus_veu_arab.py` que no he sabut trobar d'on surt;
+> el que hi ha documentat és el catàleg de sèries de dalt.
 
 **I el canvi d'ordre que això porta.** La via 3 no ha corregut mai, ni una vegada, mentre tres
 dies anaven a afinar on es retalla cada tall. No cal esperar l'alineació per llançar-la: amb els
