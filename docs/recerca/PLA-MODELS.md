@@ -186,6 +186,24 @@ dona 30 h de GPU per setmana: una tirada setmanal hi cap.
 **El que no és automàtic:** els permisos, el jutge humà i mirar a ull quan la porta d'una sèrie
 nova s'encén.
 
+**Decisions d'en Pablo (23-11), que manen sobre el que hi ha al damunt:**
+
+* **Un model nou que guanya als tests fixos substitueix l'anterior sol**, sense esperar el seu
+  sí. Per això la condició 2 és la que ho aguanta tot: marge més gran que la diferència entre
+  dues èpoques, i als **dos** tests. Com arriba a l'app: el Space carrega el model d'un
+  repositori de models de Hugging Face, i el bucle hi puja una revisió nova; el Space no es
+  toca a mà. (Avui el Space es desplega pujant fitxers des del web; això s'ha de canviar abans.)
+  Cada substitució deixa a `docs/recerca/` una línia amb la data, els dos números d'abans i
+  els de després, perquè es pugui tornar enrere.
+* **A `E:` es guarda el vídeo de 720p.** El de 1080p pesa massa: es fa servir per llegir el
+  tifinag i s'esborra; si un capítol només existeix a 1080p, es baixa a 720p abans de desar-lo.
+* **Cada capítol de sèrie també es tradueix al català** i es pot mirar al **visor privat** de
+  l'app (només administradors, ADR 0013), amb el tifinag, l'àrab i el català. **Ús privat
+  d'en Pablo**: res d'això va a la biblioteca pública. La traducció surt de l'àrab amb l'etapa
+  04 de la fàbrica (dos auditors, només l'acord) o amb el traductor local si no hi ha quota.
+* **Jutge humà: encara ningú.** Mentrestant els números són contra els subtítols de la SNRT i
+  contra el TutlAit (traducció humana). Cal dir-ho cada vegada que es dona un número de la tele.
+
 ## 4. El que NO s'ha de fer
 
 * No comparar CER de so retallat contra so sencer.

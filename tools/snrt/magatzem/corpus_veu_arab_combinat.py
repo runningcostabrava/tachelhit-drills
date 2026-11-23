@@ -28,9 +28,11 @@ l'alineacio acabi i l'experiment del retall digui si retallar val, es canvia la 
 """
 import io
 import json
-import re
-import unicodedata
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from normalitza_arab import norma  # noqa: E402
 
 MAG = Path(r"E:/tamazight/_magatzem")
 SNRT = MAG / "veu_ar"
@@ -38,17 +40,6 @@ TUT = Path(r"E:/tamazight/_paquets/tutlait")
 FORA = MAG / "veu_ar_combinat"
 
 DUR_MIN, DUR_MAX = 1.0, 20.0     #: les mateixes portes que el corpus de la SNRT
-
-
-def norma(t):
-    """L'arab reduit al que el fa «la mateixa frase»: sense vocals, tatweel ni puntuacio."""
-    t = unicodedata.normalize("NFKC", t or "")
-    t = "".join(c for c in t if not unicodedata.combining(c)).replace("\u0640", "")
-    t = re.sub("[\u0623\u0625\u0622\u0671]", "\u0627", t)      # totes les alef, una
-    t = t.replace("\u0649", "\u064a").replace("\u0629", "\u0647")
-    t = re.sub(r"[^\u0600-\u06ff\s]", " ", t)
-    t = re.sub(r"[\u060c\u061b\u061f\u06d4]", " ", t)
-    return " ".join(t.split())
 
 
 def llegeix(p):

@@ -17,8 +17,8 @@ import sys
 from pathlib import Path
 
 MAG = Path(r"E:/tamazight/_magatzem")
-sys.path.insert(0, str(MAG))
-from corpus_veu_arab_combinat import norma  # noqa: E402  (la mateixa normalitzacio, no una copia)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from normalitza_arab import norma  # noqa: E402  (la mateixa normalitzacio, no una copia)
 
 V1 = MAG / "veu_ar_combinat"
 BABA = MAG / "baba_veu_ar" / "train.jsonl"
