@@ -79,8 +79,9 @@ def alineables(capitol):
     **Per que no es el nombre de wav.** L'alineador salta per disseny els talls amb menys de 3
     caracters de text, i 12 dels 33 capitols en tenen mes del 2 %: comptant sobre tots els wav,
     aquests capitols no arribarien mai al 98 % ni acabant del tot, i l'experiment es muntaria
-    amb 21 capitols sense dir per que. `asywmmpqztvno` esta alineat al 100 % dels seus
-    alineables i al 82 % dels seus wav.
+    amb una part del corpus sense dir per que. I hi ha wav que no tenen cap linia de subtitol:
+    `asywmmpqztvnotx` te 840 wav, 571 alineables i 571 alineats -- acabat del tot, i la regla
+    vella en demanava 823.
     """
     talls, sub = ARREL / capitol / "talls", ARREL / capitol / "subtitols.jsonl"
     if not (talls.is_dir() and sub.exists()):
