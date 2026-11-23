@@ -53,6 +53,7 @@ primera porta un avís que hi apunta. Mira l'índex abans de citar cap número.
 - **§46** L'energia no pot substituir l'alineació, i el perquè confirma la §45 (22-11) — *mesura invàlida, §48*
 - **§47** Tres dreceres per no esperar les 26 h d'alineació, i cap no val (22-11) — *mesura invàlida, §48*
 - **§48** L'alineació no alineava la frase: alineava els espais entre paraules (23-11)
+- **§50** Del so, el que no és la frase és el 17-20 %, no el 51 % (23-11)
 
 ---
 
@@ -2666,6 +2667,11 @@ l'alineació de tot el corpus passa de ~36 h a ~8 h.
 fronteres trencades, i amb les bones la veu que es queda creix de 2,06 a 2,95 s), i si el soroll
 dels extrems és una altra persona parlant o simplement so.
 
+> ⚠️ La primera d'aquestes dues preguntes té resposta: **17-20 %** amb el marge de 0,15 s, i les
+> dues fonts de fronteres bones hi coincideixen sobre els mateixos talls (**§50**). La segona
+> segueix oberta. I la mesura que aquesta secció demanava —MMS_FA contra les fronteres noves
+> sobre els **mateixos** talls— també és a la §50: **59 % a ≤0,2 s, desacord median de 0,040 s**.
+
 ### Arreglat
 
 * `rica()` davant del vocabulari als quatre alineadors (l'ECS i els tres del PC);
@@ -2735,3 +2741,60 @@ insercions hi és molt més petit — però no s'ha comprovat, i no es pot citar
 **Els guions:** `prova_retall/mesura.py` (ara el marge i el fitxer d'alineació es passen per la
 línia d'ordres, que és el que ha permès fer aquesta prova), `prova_retall/prova_el_jutge.py` (el
 escombrat de marges amb una sola càrrega del model).
+
+---
+
+## 50. Del so, el que no és la frase és el 17-20 %, no el 51 % (23-11)
+
+La §48 va retirar el número que sostenia tota la feina del retall —«el 51 % del so no és la
+frase», amb 0,79 s al davant i 0,97 s al darrere— perquè el va donar una alineació que no va
+rebre mai la frase, i va deixar la pregunta oberta. Avui té resposta, i no necessita ni model ni
+CER: **són aritmètica sobre les fronteres**, i ara n'hi ha de dues fonts independents corrents
+alhora.
+
+**Com es mesura.** De cada tall, `[0, veu_ini]` és el cap, `[veu_fi, durada]` és la cua, i el que
+es llença de debò és això menys el marge de 0,15 s que fa servir `retalla.py`. Es dona arran de
+la frontera i amb marge, perquè el segon és el número que importa i el primer és el que es pot
+comparar amb el 51 % retirat.
+
+**Les dues fonts no miren els mateixos talls** —l'ECS va per ordre de capítol i el MMS_FA
+reparteix per índex— així que els seus números globals no són comparables entre ells. Sobre la
+intersecció sí:
+
+| | talls | fora de la frase | cap | cua |
+|---|---|---|---|---|
+| MMS_FA (300 M, PC) | 2.587 | 21,8 % arran · **16,5 %** amb marge | 0,32 s | 0,28 s |
+| MMS-1b-all (4 GB, ECS) | 5.072 | 31,1 % arran · **25,7 %** amb marge | 0,40 s | 0,41 s |
+| *els mateixos talls* | 2.594 | **16,5 %** vs **19,9 %** | 0,17 vs 0,27 s | 0,13 vs 0,21 s |
+
+**La resposta: entre el 17 i el 20 % del so no és la frase**, no el 51 %. El silenci del davant
+és de 0,2-0,3 s i el del darrere igual, no de 0,79 i 0,97 s. L'alineació trencada s'inventava
+mig segon a cada extrem, i no per atzar: alineant només els separadors de paraula, la primera i
+l'última àncora cauen cap endins.
+
+Quadra amb la §49 pel seu compte: allà, amb fronteres bones i marge +0,15, **quedava el 82 %** del
+so —és a dir, se n'anava el 18 %—, i amb marge −0,30 quedava el 62 %. Dues mesures fetes per
+camins diferents (una comptant segons, l'altra transcrivint) diuen el mateix.
+
+**I de passada, la mesura que la §48 demanava.** Allà el MMS_FA quedava rehabilitat per un
+*indici* —dues medianes de mostres diferents que coincidien a 0,05 s— i deia explícitament que
+la mesura calia fer-la sobre els **mateixos** talls. Feta: sobre els 2.594 talls comuns, les dues
+fronteres cauen a **≤0,2 s en el 59 %** dels talls, amb un **desacord median de 0,040 s** a
+l'inici i 0,040 s al final. Quaranta mil·lisegons són **dos fotogrames** de l'alineador. El model
+de 300 M i el de 4 GB diuen pràcticament el mateix, i el de 300 M ho diu en 2,2 s per tall en una
+màquina ocupada contra 5,9 s del gran en una dedicada.
+
+Això no vol dir que el gran no calgui: el 41 % restant de talls on no coincideixen a 0,2 s pot
+ser on hi ha la diferència. Però per muntar l'experiment del retall, les fronteres del MMS_FA
+són prou bones i arriben 14 h abans.
+
+**El que segueix obert**, i és l'altra meitat de la pregunta de la §48: si aquest 17-20 % és
+**una altra persona parlant** o simplement so i silenci. Això decideix si el retall és una neteja
+o només un estalvi de còmput, i no ho pot dir cap frontera: cal transcriure el tros que es llença
+i comparar-lo amb un control de dins de la frase
+(`prova_retall/que_hi_ha_al_tros_que_es_llenca.py`, escrit i encara sense córrer: el primer
+intent el va matar el sistema per manca de memòria, per haver-lo apilat sobre tres alineadors).
+
+**El guió:** `tools/snrt/magatzem/quant_del_so_no_es_la_frase.py`. No carrega cap model i triga
+un segon; es pot tornar a passar cada vegada que creixin els fitxers d'alineació, i els números
+d'aquesta secció es refaran amb el corpus sencer.
