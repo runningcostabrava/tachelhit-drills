@@ -2788,12 +2788,43 @@ Això no vol dir que el gran no calgui: el 41 % restant de talls on no coincidei
 ser on hi ha la diferència. Però per muntar l'experiment del retall, les fronteres del MMS_FA
 són prou bones i arriben 14 h abans.
 
-**El que segueix obert**, i és l'altra meitat de la pregunta de la §48: si aquest 17-20 % és
-**una altra persona parlant** o simplement so i silenci. Això decideix si el retall és una neteja
-o només un estalvi de còmput, i no ho pot dir cap frontera: cal transcriure el tros que es llença
-i comparar-lo amb un control de dins de la frase
+### El tros que es llença no és silenci
+
+L'altra meitat de la pregunta de la §48 era si aquest 17-20 % és **una altra persona parlant** o
+simplement so i silenci. La part de «silenci» ja es pot contestar sense model, amb energia, i la
+resposta és **no**.
+
+De cada tall es mesura el nivell (RMS en dB) del cap `[0, veu_ini − 0,15]`, de la cua
+`[veu_fi + 0,15, final]` i d'un **control de dins de la frase de la mateixa durada**. El que
+decideix és la distància al control, no el nivell absolut: un estudi i un carrer no tenen el
+mateix terra.
+
+| tros | talls | durada mediana | nivell | sota el control |
+|---|---|---|---|---|
+| control (dins la frase) | 191 | 0,69 s | −20,8 dB | — |
+| cap (es llença) | 113 | 0,53 s | −24,8 dB | **3,7 dB** |
+| cua (es llença) | 132 | 0,69 s | −25,4 dB | **4,8 dB** |
+
+Mediana de tots els trossos llençats: **4,6 dB per sota del control**. Només l'**11 %** cau 20 dB
+o més per sota, que és el que es diria silenci; el **58 %** és a menys de 6 dB del nivell de la
+frase.
+
+**Queda descartada una de les tres respostes possibles.** El retall no és «només un estalvi de
+còmput sobre silenci»: el que es llença sona, i sona gairebé tant com la frase.
+
+**El que això NO prova, i cal dir-ho.** Aquests clips són televisió: una banda sonora de fons,
+música i ambient hi corren **tot el clip**, frase inclosa. Que hi hagi so fora de la frase no vol
+dir que hi hagi una altra **veu**; l'energia no distingeix una persona parlant de música, d'un
+aplaudiment o del fregadís d'un micròfon. Per això segueix fent falta transcriure el tros
 (`prova_retall/que_hi_ha_al_tros_que_es_llenca.py`, escrit i encara sense córrer: el primer
 intent el va matar el sistema per manca de memòria, per haver-lo apilat sobre tres alineadors).
+
+I hi ha una lectura incòmoda que aquesta mesura obre: si just a fora de la frontera hi ha so a
+nivell de veu, una frontera que falli per poc fa que el retall es mengi **paraules del parlant**.
+El desacord median entre les dues fonts és de 0,040 s, que no fa mal, però el 41 % de talls on
+discrepen més de 0,2 s sí que en pot fer. El marge de 0,15 s existeix justament per això.
+
+**El guió:** `tools/snrt/magatzem/hi_ha_so_al_tros_que_es_llenca.py`. Cap model, un segon.
 
 **El guió:** `tools/snrt/magatzem/quant_del_so_no_es_la_frase.py`. No carrega cap model i triga
 un segon; es pot tornar a passar cada vegada que creixin els fitxers d'alineació, i els números
