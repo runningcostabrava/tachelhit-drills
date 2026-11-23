@@ -54,6 +54,7 @@ primera porta un avís que hi apunta. Mira l'índex abans de citar cap número.
 - **§47** Tres dreceres per no esperar les 26 h d'alineació, i cap no val (22-11) — *mesura invàlida, §48*
 - **§48** L'alineació no alineava la frase: alineava els espais entre paraules (23-11)
 - **§50** Del so, el que no és la frase és el 17-20 %, no el 51 % (23-11)
+- **§51** La via 3 amb tot el material: el TutlAit és àrab de debò, i l'entrenament passa de 7,4 a 21,4 h (23-11)
 
 ---
 
@@ -2829,3 +2830,72 @@ discrepen més de 0,2 s sí que en pot fer. El marge de 0,15 s existeix justamen
 **El guió:** `tools/snrt/magatzem/quant_del_so_no_es_la_frase.py`. No carrega cap model i triga
 un segon; es pot tornar a passar cada vegada que creixin els fitxers d'alineació, i els números
 d'aquesta secció es refaran amb el corpus sencer.
+
+---
+
+## 51. La via 3 amb tot el material: el TutlAit és àrab de debò (23-11, d'en Pablo)
+
+La pregunta la va fer en Pablo: si l'objectiu és traduir veu amaziga, per què la via 3 (veu →
+àrab escrit, §39) s'entrena només amb la SNRT, quan hi ha corpus públics que són exactament
+aquesta tasca? No hi havia cap bona raó. La via 3 es va muntar com un experiment sobre la SNRT i
+va quedar així.
+
+**El dubte que calia treure abans.** El TutlAit es va recollir de dues maneres: gent llegint en
+amazic una frase àrab (parella de traducció) i gent escrivint amb lletres àrabs el que sentia
+(transliteració). La segona mena ensenyaria al model el vici que li volem treure —el Whisper
+sense afinar ja escriu `أزول` per «azul»—. Es distingeix sense model: una frase àrab de debò
+porta paraules funcionals àrabs (article, preposicions, demostratius) que l'amazic no té.
+
+| | frases | amb paraula funcional | amb article |
+|---|---|---|---|
+| TutlAit | 13.262 | **80 %** | **63 %** |
+| SNRT (control: àrab escrit per persones) | 3.815 | 79 % | 61 % |
+
+Indistingibles: **és traducció.**
+
+**El corpus combinat** (`corpus_veu_arab_combinat.py`; només manifests, no copia so):
+
+| | files | hores | SNRT | TutlAit |
+|---|---|---|---|---|
+| train | 15.427 | **21,4** | 6.069 | 9.358 |
+| dev | 1.972 | 2,2 | 1.355 | 617 |
+| test_snrt | 2.091 | 2,8 | 2.091 | — |
+| test_tutlait | 547 | 0,8 | — | 547 |
+
+Entrenament per varietat: tzm 10,3 h · shi 3,8 h · SNRT sense etiqueta 7,4 h.
+
+Tres coses vigilades, perquè totes tres ja ens havien mossegat:
+
+* **cap parlant del TutlAit és a dos costats** de la seva partició (47 / 23 / 35): comprovat, zero;
+* **la fuita per text**: al TutlAit molta gent llegeix les mateixes frases. S'han tret de
+  l'entrenament **1.395 files** (1.300 del TutlAit, 95 de la SNRT) amb un àrab que, normalitzat,
+  surt en algun dev o test. Sense això el test del TutlAit hauria mesurat memòria;
+* **els tests no es barregen**: `test_snrt` segueix comparable amb la via del text i
+  `test_tutlait` amb l'article del TutlAit.
+
+**Un número que no era el que es deia.** El comentari del quadern de Kaggle diu que la part de
+la SNRT té 10.684 talls d'entrenament i 12,7 h. Al disc n'hi ha **6.164 i 7,4 h** (manifests
+del 21-11 a les 12:19). El 23-11 vaig repetir el número del comentari a en Pablo sense mirar el
+disc. No sé d'on surt la diferència; el que val és el que hi ha al disc.
+
+**El que queda fora i hi pot entrar:** el corpus d'EMINES (`Tamazight-Speech-to-Arabic-Text`,
+~15,5 h de taixelhit), que no tenim baixat; **Baba Ali**, 3.621 parelles so ↔ àrab del Souss que
+ja són al catàleg amb la mateixa forma que el TutlAit (sense text amazic, amb l'àrab del
+subtítol); i les **sèries de Tamazight TV**: 954 capítols, 284 h al canal de YouTube
+(`tamazight-tv.md`), catalogades el 17-11 i mai collides. Per a aquesta via no cal el tifinag
+—que és el que obliga a baixar a 1080p—, només la línia àrab, l'hora i el so. A partir d'un sol
+capítol mesurat (Illy 1: 306 rèpliques en 30 min) poden ser unes 70-80 h de parla subtitulada;
+és una estimació d'un capítol, no una mesura.
+
+> Esmena del mateix dia: aquí deia «67 h de programes de la SNRT amb subtítol només en àrab».
+> Era un número copiat del comentari de `corpus_veu_arab.py` que no he sabut trobar d'on surt;
+> el que hi ha documentat és el catàleg de sèries de dalt.
+
+**I el canvi d'ordre que això porta.** La via 3 no ha corregut mai, ni una vegada, mentre tres
+dies anaven a afinar on es retalla cada tall. No cal esperar l'alineació per llançar-la: amb els
+talls sencers ja dona el primer número d'extrem a extrem del projecte, i el retall passa a ser
+una variant que es jutja amb aquest mateix número —que és de durada fixa i per tant no té el
+biaix de la §49.
+
+**Els guions:** `tools/snrt/magatzem/quin_arab_es_el_del_tutlait.py` i
+`tools/snrt/magatzem/corpus_veu_arab_combinat.py`.
