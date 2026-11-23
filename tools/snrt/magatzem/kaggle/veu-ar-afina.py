@@ -212,7 +212,28 @@ for k, v in tests.items():
 json.dump(resultat, io.open(f"{FORA}/resultat.json", "w", encoding="utf-8"),
           ensure_ascii=False)
 
+#: el «despres» sobre les MATEIXES 200 frases que el «abans». La primera tirada (23-11) va
+#: comparar l'abans de 200 frases amb el despres del test sencer, que no son les mateixes.
+#: `puntua` conserva l'ordre, aixi que les 200 primeres traduccions son les d'aquelles frases.
+for k, v in tests.items():
+    f = resultat["tests"][k]["files"][:200]
+    resultat["tests"][k]["chrf_200"] = sum(chrf(x["model"].strip(), x["ar"]) for x in f) / len(f)
+json.dump(resultat, io.open(f"{FORA}/resultat.json", "w", encoding="utf-8"),
+          ensure_ascii=False)
+
+#: tot el que importa, tambe a la consola: si la sessio no desa els fitxers, aixo queda
+print("\n== per epoca (dev 200+200) ==")
+for e in historia:
+    print(f"   epoca {e['epoca']}: {e['dev_chrf']:.4f}")
+for k in tests:
+    print(f"\n== 10 traduccions de {k} ==")
+    for x in resultat["tests"][k]["files"][:10]:
+        print(f"   ref:   {x['ar']}\n   model: {x['model'].strip()}\n")
+
 print("\n== resum ==")
 for k in tests:
-    print(f"   {k}: abans {abans[k]:.4f} (200 files) -> ara {resultat['tests'][k]['chrf']:.4f}")
+    t = resultat["tests"][k]
+    print(f"   {k}: les mateixes 200 frases, abans {abans[k]:.4f} -> ara {t['chrf_200']:.4f}"
+          f" · test sencer ara {t['chrf']:.4f}")
 print("   referencies: Whisper sense afinar 0,1003 · la via del text sense afinar 0,2614")
+print("   1a tirada (SNRT + TutlAit, 23-11), test sencer: test_snrt 0,1656 · test_tutlait 0,1892")
