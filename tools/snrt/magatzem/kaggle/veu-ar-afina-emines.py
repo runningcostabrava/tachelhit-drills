@@ -202,7 +202,7 @@ def plega(lot):
     return {"input_features": feats, "labels": lab}
 
 
-def puntua(files, nom, lot=16):
+def puntua(files, nom, lot=16, **extra):
     model.eval()
     hip = []
     with torch.no_grad():
@@ -210,7 +210,7 @@ def puntua(files, nom, lot=16):
             b = files[i:i + lot]
             f = proc.feature_extractor([so(x["so"]) for x in b], sampling_rate=16000,
                                        return_tensors="pt").input_features.cuda().half()
-            g = model.half().generate(f, max_new_tokens=180, num_beams=4)
+            g = model.half().generate(f, max_new_tokens=180, num_beams=4, **extra)
             hip += proc.batch_decode(g, skip_special_tokens=True)
             model.float()
     cs = [chrf(h.strip(), x["ar"]) for h, x in zip(hip, files)]
@@ -274,6 +274,16 @@ json.dump(resultat, io.open(f"{FORA}/resultat.json", "w", encoding="utf-8"),
           ensure_ascii=False)
 
 #: tot el que importa, tambe a la consola: si la sessio no desa els fitxers, aixo queda
+#: MESURA SECUNDARIA (no substitueix la principal, que queda com a la 2a tirada): la 2a tirada
+#: va deixar bucles com «أمامي أمامي أمامي ...» fins a 180 fitxes. Prohibir repetir trigrames en
+#: descodificar es barat; aqui es mesura quant hi guanya, sobre els mateixos tests sencers.
+resultat["sense_bucles"] = {}
+for k, v in tests.items():
+    m, h = puntua(v, k.upper() + " sense bucles", no_repeat_ngram_size=3)
+    resultat["sense_bucles"][k] = {"chrf": m, "model": h}
+json.dump(resultat, io.open(f"{FORA}/resultat.json", "w", encoding="utf-8"),
+          ensure_ascii=False)
+
 print("\n== per epoca (dev 200+200) ==")
 for e in historia:
     print(f"   epoca {e['epoca']}: {e['dev_chrf']:.4f}")
@@ -289,4 +299,7 @@ for k in tests:
           f" · test sencer ara {t['chrf']:.4f}")
 print("   referencies: Whisper sense afinar 0,1003 · la via del text sense afinar 0,2614")
 print("   1a tirada (SNRT + TutlAit, 23-11), test sencer: test_snrt 0,1656 · test_tutlait 0,1892")
+print("   2a tirada (+ Baba Ali, 23-11), test sencer: test_snrt 0,1652 · test_tutlait 0,1942")
+for k in tests:
+    print(f"   {k} sense bucles: {resultat['sense_bucles'][k]['chrf']:.4f}")
 

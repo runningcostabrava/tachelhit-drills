@@ -74,6 +74,10 @@ Dues coses que expliquen la taula:
   estèreo → 16 kHz mono), no es puja. Conjunt de Kaggle `josepabloucr/emines-veu-ar` (només el
   manifest). Es llança quan acabi la 2a: Kaggle no deixa més de 2 sessions GPU per lots.
 * Es compara amb la 2a sobre els mateixos tests congelats i les mateixes 200 frases.
+* **La 2a tirada (Baba Ali) ja és feta (§53):** test_snrt 0,1652, test_tutlait 0,1942, pràcticament
+  igual que la 1a. El dev encara pujava a la 3a època, així que **si la 3a tampoc toca sostre, la
+  4a tirada ha de provar més èpoques (5-6) abans que més fonts**.
+* La 3a tirada es va llançar el 23-11 des de l'editor (Run All, persistència «Files only»).
 
 ### Pas 2b — Les sèries de la SNRT, com a traducció humana per a D
 

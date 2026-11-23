@@ -2940,3 +2940,40 @@ material nou**: unes 750 frases ja hi eren amb una altra veu (o la mateixa).
 **Pendent:** la 3a tirada, quan Kaggle alliberi una sessió de GPU per lots, comparada amb la 2a
 sobre els mateixos tests.
 
+## 53. La 2a tirada: Baba Ali no mou els tests, i el model encara no havia acabat d'aprendre (23-11)
+
+**Què es va fer:** el mateix quadern que la 1a tirada (Whisper small, 3 èpoques, mateix dev i
+mateixos tests congelats) amb Baba Ali afegit a l'entrenament: 18.998 files, 26,1 h, contra les
+15.427 files i 21,4 h de la 1a. Sortida desada a `E:/tamazight/_magatzem/tirades/veu_ar_2/`.
+
+| | abans (200) | després (les mateixes 200) | test sencer 2a | test sencer 1a |
+|---|---|---|---|---|
+| test_snrt | 0,1126 | 0,1836 | **0,1652** | 0,1656 |
+| test_tutlait | 0,1191 | 0,1923 | **0,1942** | 0,1892 |
+
+Dev (200 SNRT + 200 TutlAit) per època: 0,1080 → **0,1450 → 0,1745 → 0,1837**.
+
+**El que diu:**
+
+* **Baba Ali no canvia res que es pugui mesurar** (−0,0004 i +0,005). Són 4,7 h d'una sola sèrie
+  amb 3.571 frases: massa poc i massa d'un sol lloc per moure un test de 2.091 frases d'altres
+  programes. No fa mal i s'hi queda.
+* **El dev encara pujava a la 3a època** (+0,009 de la 2a a la 3a). El model no ha tocat sostre:
+  amb aquest material, **més passades hi guanyarien** abans que més dades d'una sola sèrie. La
+  3a tirada (EMINES) dobla les passos per època sense canviar el nombre d'èpoques, i ho dirà.
+* **Tots dos tests continuen lluny de 0,26**, la via del text sense afinar. La via directa encara no
+  guanya la cadena.
+
+**20 traduccions llegides a ull** (llavor 1114, 10 de cada test):
+
+* **Ara escriu àrab de debò, no transliteració.** Les frases curtes i fetes surten bé: «هيا بنا» →
+  «هيا لنذهب»; «ها هي العمارة…» → «ها هو العمارة، لكنه…». Agafa els noms (أنير, فاطمة, القاضي عبو)
+  i paraules soltes (الطيب, الأدب الأمازيغية, طلبات الباحث).
+* **El sentit de les frases llargues gairebé mai.** «الطقس اليوم معتدل…» surt com una frase àrab
+  correcta que no hi té res a veure.
+* **Bucles**: 2 de 20 acaben repetint una paraula fins a 180 fitxes («تسيارة تسيارة…», «أمامي أمامي…»).
+  Penalitzen el chrF i no tenen res a veure amb l'oïda del model. La 3a tirada mesura també, com a
+  número **secundari**, el mateix test descodificant sense repetir trigrames (`no_repeat_ngram_size=3`).
+* **Les referències de la SNRT porten errors de lectura** («نجربة» per «تجربة», «الآدب»): part del
+  sostre de test_snrt és soroll de la referència, no del model.
+
