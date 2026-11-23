@@ -13,7 +13,8 @@
 # La recepta és la de `h4b-afina-shi-net`: MMS-1b-all amb l'adaptador `shi`, només els
 # adaptadors es mouen, objectiu ric, gradient no reentrant.
 #
-# **Les dues cares comparteixen el test, i el test va SENCER a totes dues.** El que es compara
+# **Les dues cares comparteixen el test I el dev, i tots dos van SENCERS a totes dues.** El
+# que es compara
 # és quin entrenament dona el millor model, no quin test és més fàcil. Un test retallat
 # afavoriria la cara retallada i el número no voldria dir res.
 #
@@ -164,7 +165,15 @@ print("   les dues cares tenen les mateixes files: es compara NOMÉS el retall")
 
 #: El test va SENCER a totes dues cares. Si es retallés, la cara retallada hi jugaria a casa.
 TEST = material["sencer"]["test"]
+#: I el dev també, pel mateix motiu i per un de més: `load_best_model_at_end` tria el punt de
+#: control amb el CER del dev. Amb un CER de partida per sobre d'1, el CER baixa només per
+#: escurçar el so (DESXIFRAT §49: retallar 0,3 s endins de veu real guanya -0,19), així que amb
+#: un dev per cara la cara retallada triaria el seu model amb un jutge més fàcil i després les
+#: dues es mesuren amb el test sencer. El senyal amb què es tria ha de ser el mateix amb què es
+#: jutja. Les files són idèntiques a les dues cares: l'únic que canvia és si el wav va sencer.
+DEV = material["sencer"]["dev"]
 print(f"   test (sencer per a totes dues): {len(TEST)} talls", flush=True)
+print(f"   dev  (sencer per a totes dues): {len(DEV)} talls", flush=True)
 print(f"   carregat en {time.time()-t0:.0f} s")
 
 # ---------------------------------------------------------------------------------- el model
@@ -255,7 +264,7 @@ def entrena(cara):
         metric_for_best_model="cer", greater_is_better=False, seed=LLAVOR,
         gradient_checkpointing=True, report_to=[])
     ent = Trainer(model=m, args=args, train_dataset=Talls(material[cara]["train"]),
-                  eval_dataset=Talls(material[cara]["dev"]), data_collator=ajunta,
+                  eval_dataset=Talls(DEV), data_collator=ajunta,
                   compute_metrics=mesura, processing_class=proc.feature_extractor)
     ent.train()
     return avalua(m, f"{cara} (entrenat)")

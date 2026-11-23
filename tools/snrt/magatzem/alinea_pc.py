@@ -59,10 +59,39 @@ BUIT = proc.tokenizer.pad_token_id
 SEP = vocab.get(proc.tokenizer.word_delimiter_token, vocab.get("|"))
 
 
+#: El vocabulari `shi` del MMS es LLATI. El nostre text es tifinag, i sense transliterar no hi
+#: entra cap lletra: nomes els espais. El 23-11 aixo va fer que 9.295 talls s'alineessin contra
+#: una sequencia de separadors de paraula -- no contra la frase, i tallant veu de debo. Les
+#: taules son les de `tools/lm/kaggle/alineacio_forcada_snrt.py`, que ja ho feia be.
+TIF_RIC = {"\u2d30": "a", "\u2d31": "b", "\u2d33": "g", "\u2d37": "d", "\u2d39": "\u1e0d",
+           "\u2d3b": "e", "\u2d3c": "f", "\u2d3d": "k", "\u2d40": "h", "\u2d43": "\u1e25",
+           "\u2d44": "\u03b5", "\u2d45": "\u1e2b", "\u2d47": "q", "\u2d49": "i", "\u2d4a": "j",
+           "\u2d4d": "l", "\u2d4e": "m", "\u2d4f": "n", "\u2d53": "u", "\u2d54": "r",
+           "\u2d55": "r", "\u2d56": "\u0121", "\u2d59": "s", "\u2d5a": "\u1e63",
+           "\u2d5b": "\u0161", "\u2d5c": "t", "\u2d5f": "\u1e6d", "\u2d61": "w",
+           "\u2d62": "y", "\u2d63": "z", "\u2d65": "\u1e93", "\u2d6f": "w"}
+LLATI_RIC = {"\u0263": "\u0121", "\u03b3": "\u0121", "\u025b": "\u03b5", "\u1e5b": "r",
+             "c": "\u0161", "x": "\u1e2b", "\u03c7": "\u1e2b", "\u017e": "j", "\u01e7": "j",
+             "\u02b7": "w", "v": "f", "p": "b", "o": "u"}
+NOMES_RIC = re.compile(r"[^a-z\u0121\u03b5\u1e25\u1e0d\u1e6d\u1e63\u1e93\u1e2b\u0161 ]+")
+
+
+def rica(t):
+    t = unicodedata.normalize("NFC", (t or "")).strip().lower()
+    t = "".join(TIF_RIC.get(c, c) for c in t)
+    t = "".join(LLATI_RIC.get(c, c) for c in t)
+    return re.sub(r" +", " ", NOMES_RIC.sub("", t)).strip()
+
+
 def a_ids(t):
-    t = unicodedata.normalize("NFC", (t or "").lower())
-    t = re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", t, flags=re.UNICODE)).strip()
-    return [SEP if c == " " else vocab[c] for c in t if c == " " or c in vocab]
+    return [SEP if c == " " else vocab[c] for c in rica(t) if c == " " or c in vocab]
+
+
+#: Que no torni a passar en silenci: "azul tamazi\u0121t" en tifinag ha de donar 13 simbols i 12
+#: que no siguin el separador. Si no, para aqui i no gastis 22 h alineant buits.
+_p = a_ids("\u2d30\u2d63\u2d53\u2d4d \u2d5c\u2d30\u2d4e\u2d30\u2d63\u2d49\u2d56\u2d5c")
+assert len(_p) >= 12 and sum(1 for i in _p if i != SEP) >= 10, (
+    f"el tifinag no arriba al vocabulari: {_p}")
 
 
 def alinea(logp, ids):

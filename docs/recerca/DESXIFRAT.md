@@ -48,9 +48,11 @@ primera porta un avís que hi apunta. Mira l'índex abans de citar cap número.
 - **§42** El corpus tenia tarifit, i el dev n'era el 100 % (21-11)
 - **§43** El primer guany de debò amb el material del SNRT: 0,2634 → 0,3470 (21-11)
 - **§44** La taula norma↔parla tenia 26 entrades que són tarifit (21-11)
-- **§45** Retallar amb l'alineació forçada: −0,21 de CER, el guany més gran fins ara (22-11)
-- **§46** L'energia no pot substituir l'alineació, i el perquè confirma la §45 (22-11)
-- **§47** Tres dreceres per no esperar les 26 h d'alineació, i cap no val (22-11)
+- **§45** Retallar amb l'alineació forçada: −0,21 de CER, el guany més gran fins ara (22-11) — *el número no val: §48 i §49*
+- **§49** El CER d'inferència premia escurçar el so, no encertar la frontera (23-11)
+- **§46** L'energia no pot substituir l'alineació, i el perquè confirma la §45 (22-11) — *mesura invàlida, §48*
+- **§47** Tres dreceres per no esperar les 26 h d'alineació, i cap no val (22-11) — *mesura invàlida, §48*
+- **§48** L'alineació no alineava la frase: alineava els espais entre paraules (23-11)
 
 ---
 
@@ -2469,6 +2471,11 @@ beuen de la mateixa font.
 
 ## 45. Retallar amb l'alineació forçada: −0,21 de CER, el guany més gran fins ara (22-11)
 
+> ⚠️ **El número no mesura el que diu.** Les fronteres d'aquesta secció venen d'un alineador
+> que no rebia la frase, només els espais entre paraules (**§48**), i el CER d'inferència
+> premia escurçar el so, no encertar la frontera (**§49**): retallant endins encara surt
+> millor. El guany real del retall està sense mesurar.
+
 **El diagnòstic.** L'alineació forçada de 4.788 talls nostres (MMS-1b-all, Viterbi sobre les
 probabilitats de CTC) diu que **el 51 % del so no és la frase**:
 
@@ -2519,6 +2526,9 @@ reentrenant**, no només transcrivint: aquí s'ha mesurat la inferència, no l'e
 
 ## 46. L'energia no pot substituir l'alineació, i el perquè confirma la §45 (22-11)
 
+> ⚠️ **Mesura invàlida.** L'energia es compara aquí amb fronteres que estaven mal: el «0 %»
+> no és un error de l'energia. **Corregit a la §48.**
+
 L'alineació forçada triga ~25 h per als 20.547 talls perquè fa servir **MMS-1b-all** (4 GB) i
 Viterbi sobre les probabilitats del CTC. La temptació és òbvia: per treure silenci del davant
 i del darrere, no n'hi hauria prou amb **l'energia del senyal**, que es calcula en minuts?
@@ -2550,6 +2560,9 @@ Per tant el model de 4 GB **no és un luxe**: és l'única cosa que distingeix �
 
 ## 47. Tres dreceres per no esperar les 26 h d'alineació, i cap no val (22-11)
 
+> ⚠️ **Mesura invàlida, i probablement al revés.** El `MMS_FA` coincideix amb l'alineació
+> bona a 0,05 s; aquí es compara amb la trencada. **Corregit a la §48.**
+
 L'alineació de 20.547 talls amb MMS-1b-all triga ~26 h a l'ECS. Val **−0,2235 de CER** (§45),
 així que l'espera té sentit — però abans de pagar-la s'han provat tres dreceres. Totes tres es
 comproven igual: hi ha 6.354 talls amb la frontera del model gran ja calculada, i es mira si
@@ -2576,3 +2589,149 @@ estalviaria unes 3 h — no val la complexitat d'afegir-la al camí que ja corre
 res i ningú no ha d'estar-hi a sobre.
 
 **Els guions:** `prova_energia.py`, `prova_mms_fa.py`, `prova_int8.py`.
+
+---
+
+## 48. L'alineació no alineava la frase: alineava els espais entre paraules (23-11)
+
+Les §45, §46 i §47 d'ahir pengen totes d'un fitxer de fronteres que és **mala mesura**. No pel
+mètode: per una línia de codi.
+
+**El que passava.** `ecs_alinea.py` donava el tifinag del subtítol directament al vocabulari del
+MMS amb la llengua `shi`. Aquell vocabulari és **llatí**:
+
+```
+vocab de 39 · 1abdefghijklmnqrstuwyz|âÿġšεḍḥḫṣṭẓ‐
+tifinag al vocab: 0
+```
+
+`a_ids` llençava tot el que no hi fos. Del tifinag no hi entra **cap lletra**, i del que quedava
+només passaven els **espais**. Mesurat sobre 400 línies de `agnkrfivlpeuwz`, els símbols que
+l'alineador rebia de debò:
+
+```
+{'|': 2123, '1': 1}
+ⴰⵣⵓⵍ ⵉⵎⴰⵏⵏⴰⵢ ⴷ ⵜⵎⴰⵏⵏⴰⵢⵉⵏ ⵏ ⵜⴱⴰⴷⵓⵜ ⵜⴰⵎⴰⵣⵉⵖⵜ  ->  ['|', '|', '|', '|', '|', '|']
+```
+
+Sis símbols per una frase de 44 caràcters, i tots sis el **separador de paraula**. El Viterbi
+corria sobre una seqüència de buits. Els 9.295 talls alineats no estaven alineats contra la
+frase: estaven alineats contra **els espais que hi ha entre les paraules**.
+
+**Com es va trobar.** No pel resultat, que semblava bo. Buscant per què sis capítols es
+quedaven al 97-99 % i no pujaven: els talls que faltaven donaven «cap id», i mirant per què vaig
+veure el vocabulari.
+
+**El transliterador ja el teníem.** `rica()`, a `tools/lm/kaggle/alineacio_forcada_snrt.py`, fa
+exactament la conversió que calia. Amb ell, les mateixes 400 línies passen de **2.150 símbols a
+12.169**, i no queda cap caràcter fora del vocabulari.
+
+**Què canvia a les fronteres.** Els 26 talls que hi ha als dos fitxers, comparats un per un:
+
+| | |
+|---|---|
+| inici | **0,38 s abans** (mediana) |
+| final | **0,59 s després** |
+| veu que es queda | 2,06 s → **2,95 s** |
+| talls amb una frontera que es mou més de 0,2 s | **26 de 26** |
+
+Cap frontera no es queda igual, i el signe és sempre el mateix: **el retall que vaig mesurar
+estava tallant veu de debò**.
+
+### Què queda en peu de les §45-47 i què no
+
+**Queda en peu:** el **−0,2235 de CER** sobre 245 talls. És una mesura de sortida, amb el mateix
+model i la mateixa referència, i canviant només si el wav va sencer o retallat. Retallar millora,
+i millora molt. Això no cau.
+
+**Cau l'explicació.** La §45 deia que el guany venia de treure *una altra persona parlant*, i que
+només el model gran «que coneix la llengua» sap que allò no és LA frase. **No pot ser**: el model
+no va veure mai la frase. El que funcionava era un detector de buits entre paraules sobre les
+emissions del CTC — una mena de VAD barata, no alineació forçada.
+
+**Cau la mesura de les dreceres**, i aquesta és la pitjor. Les §46 i §47 jutgen l'energia i
+`torchaudio MMS_FA` comparant-les amb aquestes fronteres, que ara sabem que estaven mal. El «0 %»
+de l'energia i el «5 %» del MMS_FA són acords amb una referència falsa, no errors dels mètodes.
+
+I hi ha un indici fort que el **MMS_FA tenia raó**. La §47 el descartava perquè posa l'inici
+−0,37 s i el final +0,54 s. L'alineació bona, respecte de la trencada, posa l'inici **−0,38 s** i
+el final **+0,59 s**. Diferència: **0,01 s i 0,05 s**. El MMS_FA —300 M, 1,43 s per tall contra 7—
+coincidia amb l'alineació bona, i jo el comparava amb la dolenta i el llençava.
+
+Això és un indici, no una mesura: surt de comparar medianes de dues mostres diferents. **La mesura
+s'ha de fer** enfrontant MMS_FA amb les fronteres noves sobre els mateixos talls. Si es confirma,
+l'alineació de tot el corpus passa de ~36 h a ~8 h.
+
+**El que no sabem i abans crèiem que sí:** quant del so no és la frase (el «51 %» surt de les
+fronteres trencades, i amb les bones la veu que es queda creix de 2,06 a 2,95 s), i si el soroll
+dels extrems és una altra persona parlant o simplement so.
+
+### Arreglat
+
+* `rica()` davant del vocabulari als quatre alineadors (l'ECS i els tres del PC);
+* **una comprovació que peta a l'arrencada** si el text no arriba al vocabulari — amb «azul
+  tamaziġt» en tifinag, que ha de donar 13 símbols i 12 que no siguin el separador. Això és el
+  que faltava: l'error va córrer 22 h sense dir res, perquè escrivia fronteres perfectament
+  plausibles;
+* els quatre fitxers vells **no s'esborren**: es diuen `*_NOMES_SEPARADORS.jsonl`, perquè
+  `retalla.py` no els pugui fer servir sense adonar-se'n i perquè la comparació es pugui refer;
+* l'alineació torna a córrer des de zero: 19.422 talls.
+
+**La lliçó, que no és nova.** Un resultat que surt bo no prova que el camí sigui el que et
+penses. El −0,2235 era prou gran per no fer-me mirar què rebia el model, i no el vaig mirar fins
+que una altra cosa —sis capítols encallats al 97 %— em va obligar. Aquí la mesura del resultat era bona i **la mesura del
+mecanisme no existia**.
+
+---
+
+## 49. El CER d'inferència premia escurçar el so, no encertar la frontera (23-11)
+
+La §48 va deixar una pregunta oberta: amb les fronteres bones el guany del retall baixa de
+**−0,2235** a **−0,0741**. Per què les fronteres **dolentes** donaven un número millor?
+
+**La sospita.** El CER del so sencer és **1,05**. Per sobre d'1 vol dir que l'ASR transcriu *més*
+del que diu la frase: la distància està dominada per **insercions**. I aleshores qualsevol cosa
+que escurci el so en treu, encerti la frontera o no.
+
+**La prova.** El mateix model, la mateixa referència i les **mateixes fronteres bones**, canviant
+només el marge. Un marge negatiu retalla **endins**, cap a veu que sabem que hi és:
+
+| condició | so que queda | CER sencer | CER retallat | diferència | millora |
+|---|---|---|---|---|---|
+| fronteres trencades, +0,15 (§45) | 59 % | 1,0818 | 0,8583 | **−0,2235** | 77 % |
+| fronteres bones, **−0,30** | 62 % | 1,0551 | 0,8638 | **−0,1913** | **80 %** |
+| fronteres bones, +0,15 | 82 % | 1,0479 | 0,9738 | **−0,0741** | 57 % |
+
+**Menjar-se 0,3 s de veu de cada banda millora el CER quasi tres vegades més que retallar bé**, i
+millora el 80 % dels talls en lloc del 57 %. L'ordre de la taula segueix el **so que es llença**,
+no l'encert de la frontera.
+
+Hi ha més senyal en el mateix sentit. Sobre els 91 talls de la condició bona, la correlació entre
+*quina fracció del so es treu* i *quant baixa el CER* és **r = −0,41**; el terç que es retalla
+menys (5 % del so) baixa **−0,034** i el terç que es retalla més (35 %) baixa **−0,143**.
+
+**Conclusió: el CER d'inferència no és un jutge vàlid per al retall.** No mesura si hem trobat la
+frase; mesura quant de so hem tret. El «guany més gran del projecte» d'ahir era el premi per
+haver llençat el 41 % del so, i si el criteri fos aquest, el màxim s'obtindria retallant-ho tot.
+
+### Què se'n salva, i què s'ha de fer
+
+El retall **pot** ser bo: no ho sabem. El que sabem és que **aquesta mesura no ho pot dir**.
+
+L'única pregunta que té resposta és la que l'experiment ja escrit fa: **entrenar** dues vegades,
+amb talls sencers i amb talls retallats, i mesurar sobre un **test sempre sencer i el mateix als
+dos costats**. Aquí l'escurçament no pot fer trampa, perquè el que es compara és què ha après el
+model, no quant de so li has donat a transcriure.
+
+Això ja era al guió `tools/snrt/magatzem/kaggle/retall-sencer-contra-retallat.py` — el test hi va
+sencer per disseny. El que ha canviat avui és que ha deixat de ser *la confirmació* d'un resultat
+i ha passat a ser **l'únic lloc d'on pot sortir el resultat**.
+
+**Cautela que queda oberta:** qualsevol comparació anterior feta transcrivint so retallat contra
+so sencer té el mateix biaix, inclòs el diagnòstic del 18-11 (0,7370 → 0,6581) que era el guany
+de referència del projecte. Allà el CER de partida era **0,74**, per sota d'1, i el biaix per
+insercions hi és molt més petit — però no s'ha comprovat, i no es pot citar com si s'hagués fet.
+
+**Els guions:** `prova_retall/mesura.py` (ara el marge i el fitxer d'alineació es passen per la
+línia d'ordres, que és el que ha permès fer aquesta prova), `prova_retall/prova_el_jutge.py` (el
+escombrat de marges amb una sola càrrega del model).

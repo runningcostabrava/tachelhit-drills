@@ -28,15 +28,21 @@ from pathlib import Path
 
 MAG = Path(r"E:/tamazight/_magatzem")
 ARREL = Path(r"E:/tamazight/talls_ecs")
-ALI = MAG / "alineacio_tot.jsonl"
+#: per defecte, el MMS_FA de tot el corpus local. El fitxer del model gran serveix igual i es
+#: passa amb `--alineacio`; el que NO val es cap `*_NOMES_SEPARADORS.jsonl`, que son les
+#: fronteres que alineaven els espais entre paraules (quadern, §48).
+ALI = MAG / "alineacio_mms_fa_tot.jsonl"
 FORA = MAG / "experiment_retall"
 MARGE = 0.15
 LLAVOR = 1114
 
 
-def alineacio():
+def alineacio(cami=None):
+    cami = Path(cami or ALI)
+    assert "NOMES_SEPARADORS" not in cami.name, (
+        f"{cami.name} porta fronteres que alineaven els espais entre paraules, no la frase")
     d = {}
-    for l in io.open(ALI, encoding="utf-8"):
+    for l in io.open(cami, encoding="utf-8"):
         if not l.strip():
             continue
         try:
@@ -62,15 +68,18 @@ def text_dels_talls():
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--alineacio", default=str(ALI),
+                    help="el fitxer de fronteres: MMS_FA o el del model gran")
+    ap.add_argument("--marge", type=float, default=MARGE,
+                    help="s de coixi a banda i banda de la frontera")
     ap.add_argument("--min-capitols", type=int, default=6,
                     help="per sota d'això no hi ha prou capítols per partir-los bé")
-    ap.add_argument("--marge", type=float, default=MARGE)
     a = ap.parse_args()
 
     import numpy as np
     import soundfile as sf
 
-    ali = alineacio()
+    ali = alineacio(a.alineacio)
     text = text_dels_talls()
     print(f"{len(ali)} talls alineats · {len(text)} amb text")
 
