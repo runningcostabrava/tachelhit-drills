@@ -148,6 +148,44 @@ de collir-ne 70 hores.
   EMINES és transliteració, aquell corpus.
 * C deixa de ser al camí crític de la traducció de veu si D funciona.
 
+### Pas 8 — La millora contínua amb tota la SNRT (quan els passos 1-2b hagin donat número)
+
+**El bucle:** vídeos nous de la SNRT (YouTube, replay de forja) → baixar → llegir l'àrab (i el
+tifinag si hi ha 1080p) → tallar ajustant el subtítol a la veu → portes → corpus partit per
+sèrie → reentrenar D i B cada setmana a Kaggle → mesurar sobre els **tests fixos** → si guanya,
+substituir el model. La SNRT penja capítols cada setmana: el material creix sol.
+
+**Abans de collir, el que s'ha de mesurar** (al pilot d'Illy 1):
+
+* **L'àrab a 720p amb el lector propi no s'ha mesurat mai** (CER 0,0074 és a 1080p; el codi ho
+  avisa). El 720p real no és el simulat: amb el tifinag, el simulat donava 0,0073 i el real
+  5/18. Mesurar les mateixes línies a 720p i a 1080p contra la veritat a mà.
+* **Baixar 1080p sempre que n'hi hagi**: el tifinag dona parelles per a B (ara 4.562) i permet
+  tallar amb l'alineació forçada.
+* **Com es talla:** amb tifinag, MMS_FA sobre el tifinag (§50: 0,040 s de desacord amb el model
+  gran); només amb àrab, un detector de veu (Silero VAD) que ajusti la finestra del subtítol.
+  Comparar subtítol, MMS_FA i VAD contra 50 talls marcats a mà.
+* **Quines sèries porten subtítol de principi a fi**: 24 fotogrames per sèrie, com es va fer amb
+  els programes (`docs/EL_PLA.md`). Dels programes només 2 de 11 en portaven prou.
+
+**Les quatre condicions perquè el bucle no es faci malbé sol:**
+
+1. **Els tests no es toquen mai.** Les sèries noves només entren a l'entrenament.
+2. **Un model nou només substitueix l'anterior si guanya als tests fixos** per més que la
+   diferència entre dues èpoques seguides.
+3. **Mai s'entrena amb la sortida dels nostres models**: només amb els subtítols de la SNRT. El
+   29-10 el volant OCR ↔ ASR es va enverinar així (memòria `auditoria-asr-2026-10-29`).
+4. **Una porta per sèrie nova** (confiança del lector + lectura de control del Qwen sobre una
+   mostra, dins la quota gratuïta) i el jutge humà del pas 4 de tant en tant. El lector només
+   s'ha mesurat en dos programes.
+
+**Límits pràctics:** a `E:` hi queden 247 GB (95 % ple): esborrar el vídeo un cop extret el so
+i llegides les franges. YouTube només baixa des del PC; el replay, també des de l'ECS. Kaggle
+dona 30 h de GPU per setmana: una tirada setmanal hi cap.
+
+**El que no és automàtic:** els permisos, el jutge humà i mirar a ull quan la porta d'una sèrie
+nova s'encén.
+
 ## 4. El que NO s'ha de fer
 
 * No comparar CER de so retallat contra so sencer.
