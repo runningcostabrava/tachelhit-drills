@@ -2899,3 +2899,44 @@ biaix de la §49.
 
 **Els guions:** `tools/snrt/magatzem/quin_arab_es_el_del_tutlait.py` i
 `tools/snrt/magatzem/corpus_veu_arab_combinat.py`.
+
+## 52. EMINES és traducció, però no és un test: la meitat del que sembla nou ja ho teníem (23-11)
+
+**La pregunta:** el pas 2 del pla volia afegir EMINES (20.344 talls, 15,5 h) al model veu → àrab.
+Abans calia saber dues coses: si és traducció o transliteració, i si s'encavalca amb el nostre.
+
+**Traducció.** 77,8 % de frases amb paraula funcional àrab i 50,3 % amb article, contra el 79 %
+i 61 % del control de la SNRT. És àrab de debò, amb frases més curtes (diàleg de sèrie).
+
+**L'encavalcament**, llegint només el text i les metadades de Hugging Face (`emines_text.py`, cap
+àudio baixat) i comparant per text normalitzat (`norma()`):
+
+| font nostra | files | idèntiques a EMINES | de 4 paraules o més |
+|---|---|---|---|
+| TutlAit · spk_010 | 2.355 | **755 (32,1 %)** | **642** |
+| Baba Ali | 3.571 | 166 (4,6 %) | 31 |
+| TutlAit · spk_006 | 3.432 | 47 (1,4 %) | 6 |
+| SNRT | 9.515 | 56 (0,6 %) | 3 |
+| la resta del TutlAit | | ~0 | 0 |
+
+Fora de `spk_010`, les coincidències són fórmules («إنا لله وإنا إليه راجعون», «بسم الله…»).
+**`spk_010` és el mateix material**: frases de 4 paraules o més que coincideixen al 27 %, repartides
+per tots els 60 vídeos, no pot ser casualitat. El TutlAit les va agafar de la mateixa sèrie o
+d'EMINES mateix.
+
+**I dins d'EMINES:** els vídeos 37/38 (93 %), 39/40 (100 %) i 41/42 (90 %) són el mateix vídeo dues
+vegades, i la seva partició train/test reparteix tots 60 vídeos entre les dues. **El test d'EMINES
+no és un test.** Qui publiqui un número sobre aquell test mesura frases que el model ja ha vist.
+
+**El que se'n fa:** EMINES va **tot a l'entrenament** (`corpus_emines_veu_ar.py`): es treuen els
+vídeos 38, 40 i 42 (938 files), els talls de menys de 0,5 s (15) i tota frase el text de la qual
+surti a dev o a un test nostre (178). Queden **19.213 files, 14,6 h**. `spk_010` ja era a train,
+així que l'encavalcament no toca els tests congelats; vol dir només que **les 14,6 h no són totes
+material nou**: unes 750 frases ja hi eren amb una altra veu (o la mateixa).
+
+**Llicència:** Apache 2.0, apuntada a CREDITS. L'àudio és WAV a 44,1 kHz estèreo; el quadern de la
+3a tirada (`veu-ar-afina-emines.py`) el baixa de Hugging Face dins de Kaggle i el passa a 16 kHz.
+
+**Pendent:** la 3a tirada, quan Kaggle alliberi una sessió de GPU per lots, comparada amb la 2a
+sobre els mateixos tests.
+
