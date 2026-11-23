@@ -7,6 +7,16 @@ alinear**, entrenat sobre 1.100 llengues, de ~300 M.
 Si dona les mateixes fronteres, la feina passa de 26 h a potser 9, i el retall -- que val
 -0,2235 de CER (DESXIFRAT §45) -- es te avui.
 
+⚠️ **La resposta d'aquest guio era SI, i el 22-11 la vam llegir com un no** (quadern, §48). Les
+fronteres del model gran amb que es comparava venien d'una alineacio que no va rebre mai la
+frase -- vocabulari llati, text en tifinag, alineava els separadors -- mentre que aquest guio si
+que transliterava. Per aixo no coincidien: el desacord no era seu. Refet contra les fronteres
+bones, el MMS_FA en dona el **62 %** dins de 0,2 s, amb mediana d'error -0,016 s a l'inici i
++0,036 s al final, sense biaix. El biaix que se li va retreure (-0,37/+0,54) era el de les
+fronteres trencades contra les bones (-0,38/+0,59), fins a 0,05 s: li haviem penjat l'error de
+la referencia. Es el que ara alinea tot el corpus (`alinea_mms_fa_tot.py`). El -0,2235 que es
+dona aqui com a premi tampoc no mesura el que diu (§49).
+
 **Com es comprova sense creure-se'l:** hi ha 6.500 talls amb la frontera del model gran ja
 calculada. Es calcula la del petit sobre els mateixos i es comparen. El 22-11 el metode per
 energia va fallar aixi (error medias de 0,6-0,8 s, §46); aquest te molt millor pronostic

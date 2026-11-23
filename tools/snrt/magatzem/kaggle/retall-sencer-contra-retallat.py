@@ -5,6 +5,16 @@
 # (DESXIFRAT §45). Mesurat sobre 245 talls amb un model JA ENTRENAT, retallar baixa el CER de
 # 1,0818 a 0,8583 — **−0,2235**, i millora en 188 dels 245 (77 %).
 #
+# ⚠️ **Cap dels dos números del paràgraf de dalt mesura el que diu** (DESXIFRAT §48 i §49), i
+# això fa aquest quadern més necessari, no menys. El 51 % venia d'una alineació que no va rebre
+# mai la frase: el vocabulari de l'adaptador `shi` és llatí i el text anava en tifinag, així que
+# alineava només els separadors de paraula. I el −0,2235 el va donar una comparació que canviava
+# la **durada** de l'entrada: amb el CER de partida per sobre d'1 la distància està dominada per
+# insercions, i escurçar el so en treu encerti o no la frontera — menjar-se 0,3 s de veu real de
+# cada banda guanya −0,1913, tres vegades més que retallar bé (−0,0741). Per això el test, i el
+# dev, van SENCERS i iguals als dos costats: és l'única manera que el número signifiqui alguna
+# cosa. El guany real del retall està sense mesurar, i és el que ha de sortir d'aquí.
+#
 # El que això NO diu és si **entrenar** amb talls retallats dona un model millor. És molt
 # probable (si mig clip és una altra persona parlant, el model aprèn a casar so equivocat amb
 # text) però no està provat, i aquest projecte ja ha tingut prou hipòtesis raonables que eren

@@ -6,6 +6,15 @@ model millor. Es molt probable -- si el 51 % de cada clip es una altra persona p
 model aprèn a casar so equivocat amb text -- pero no esta provat, i aquest projecte ja ha
 tingut prou hipotesis raonables que eren falses.
 
+⚠️ **Dels dos numeros del paragraf de dalt, cap no mesura el que diu** (quadern, §48 i §49), i
+aixo fa aquest experiment mes necessari, no menys. El 51 % venia d'una alineacio que no va rebre
+mai la frase (vocabulari llati, text en tifinag: alineava els separadors), aixi que no se sap si
+el que es llenca es una altra persona parlant o silenci. I el -0,2235 el va donar una
+comparacio que canviava la durada de l'entrada: amb el CER de partida per sobre d'1, escurcar el
+so baixa el CER encerti o no la frontera -- menjar-se 0,3 s de veu real guanya tres vegades mes.
+Aixi que **aquest es l'unic jutge que queda**: dos entrenaments i un test de durada fixa, el
+mateix sencer als dos costats. El guany real del retall esta sense mesurar.
+
 **Com es prova net.** Dos corpus **identics en tot** menys en una cosa: els mateixos capitols,
 les mateixes files, la mateixa particio, el mateix text. L'unic que canvia es si el wav va
 sencer o retallat a `[veu_ini - 0,15 s, veu_fi + 0,15 s]`. Dos entrenaments, el mateix test.
