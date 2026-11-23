@@ -53,6 +53,7 @@ primera porta un avís que hi apunta. Mira l'índex abans de citar cap número.
 - **§46** L'energia no pot substituir l'alineació, i el perquè confirma la §45 (22-11) — *mesura invàlida, §48*
 - **§47** Tres dreceres per no esperar les 26 h d'alineació, i cap no val (22-11) — *mesura invàlida, §48*
 - **§48** L'alineació no alineava la frase: alineava els espais entre paraules (23-11)
+- **§50** Del so, el que no és la frase és el 17-20 %, no el 51 % (23-11)
 
 ---
 
@@ -2666,6 +2667,11 @@ l'alineació de tot el corpus passa de ~36 h a ~8 h.
 fronteres trencades, i amb les bones la veu que es queda creix de 2,06 a 2,95 s), i si el soroll
 dels extrems és una altra persona parlant o simplement so.
 
+> ⚠️ La primera d'aquestes dues preguntes té resposta: **17-20 %** amb el marge de 0,15 s, i les
+> dues fonts de fronteres bones hi coincideixen sobre els mateixos talls (**§50**). La segona
+> segueix oberta. I la mesura que aquesta secció demanava —MMS_FA contra les fronteres noves
+> sobre els **mateixos** talls— també és a la §50: **59 % a ≤0,2 s, desacord median de 0,040 s**.
+
 ### Arreglat
 
 * `rica()` davant del vocabulari als quatre alineadors (l'ECS i els tres del PC);
@@ -2735,3 +2741,91 @@ insercions hi és molt més petit — però no s'ha comprovat, i no es pot citar
 **Els guions:** `prova_retall/mesura.py` (ara el marge i el fitxer d'alineació es passen per la
 línia d'ordres, que és el que ha permès fer aquesta prova), `prova_retall/prova_el_jutge.py` (el
 escombrat de marges amb una sola càrrega del model).
+
+---
+
+## 50. Del so, el que no és la frase és el 17-20 %, no el 51 % (23-11)
+
+La §48 va retirar el número que sostenia tota la feina del retall —«el 51 % del so no és la
+frase», amb 0,79 s al davant i 0,97 s al darrere— perquè el va donar una alineació que no va
+rebre mai la frase, i va deixar la pregunta oberta. Avui té resposta, i no necessita ni model ni
+CER: **són aritmètica sobre les fronteres**, i ara n'hi ha de dues fonts independents corrents
+alhora.
+
+**Com es mesura.** De cada tall, `[0, veu_ini]` és el cap, `[veu_fi, durada]` és la cua, i el que
+es llença de debò és això menys el marge de 0,15 s que fa servir `retalla.py`. Es dona arran de
+la frontera i amb marge, perquè el segon és el número que importa i el primer és el que es pot
+comparar amb el 51 % retirat.
+
+**Les dues fonts no miren els mateixos talls** —l'ECS va per ordre de capítol i el MMS_FA
+reparteix per índex— així que els seus números globals no són comparables entre ells. Sobre la
+intersecció sí:
+
+| | talls | fora de la frase | cap | cua |
+|---|---|---|---|---|
+| MMS_FA (300 M, PC) | 2.587 | 21,8 % arran · **16,5 %** amb marge | 0,32 s | 0,28 s |
+| MMS-1b-all (4 GB, ECS) | 5.072 | 31,1 % arran · **25,7 %** amb marge | 0,40 s | 0,41 s |
+| *els mateixos talls* | 2.594 | **16,5 %** vs **19,9 %** | 0,17 vs 0,27 s | 0,13 vs 0,21 s |
+
+**La resposta: entre el 17 i el 20 % del so no és la frase**, no el 51 %. El silenci del davant
+és de 0,2-0,3 s i el del darrere igual, no de 0,79 i 0,97 s. L'alineació trencada s'inventava
+mig segon a cada extrem, i no per atzar: alineant només els separadors de paraula, la primera i
+l'última àncora cauen cap endins.
+
+Quadra amb la §49 pel seu compte: allà, amb fronteres bones i marge +0,15, **quedava el 82 %** del
+so —és a dir, se n'anava el 18 %—, i amb marge −0,30 quedava el 62 %. Dues mesures fetes per
+camins diferents (una comptant segons, l'altra transcrivint) diuen el mateix.
+
+**I de passada, la mesura que la §48 demanava.** Allà el MMS_FA quedava rehabilitat per un
+*indici* —dues medianes de mostres diferents que coincidien a 0,05 s— i deia explícitament que
+la mesura calia fer-la sobre els **mateixos** talls. Feta: sobre els 2.594 talls comuns, les dues
+fronteres cauen a **≤0,2 s en el 59 %** dels talls, amb un **desacord median de 0,040 s** a
+l'inici i 0,040 s al final. Quaranta mil·lisegons són **dos fotogrames** de l'alineador. El model
+de 300 M i el de 4 GB diuen pràcticament el mateix, i el de 300 M ho diu en 2,2 s per tall en una
+màquina ocupada contra 5,9 s del gran en una dedicada.
+
+Això no vol dir que el gran no calgui: el 41 % restant de talls on no coincideixen a 0,2 s pot
+ser on hi ha la diferència. Però per muntar l'experiment del retall, les fronteres del MMS_FA
+són prou bones i arriben 14 h abans.
+
+### El tros que es llença no és silenci
+
+L'altra meitat de la pregunta de la §48 era si aquest 17-20 % és **una altra persona parlant** o
+simplement so i silenci. La part de «silenci» ja es pot contestar sense model, amb energia, i la
+resposta és **no**.
+
+De cada tall es mesura el nivell (RMS en dB) del cap `[0, veu_ini − 0,15]`, de la cua
+`[veu_fi + 0,15, final]` i d'un **control de dins de la frase de la mateixa durada**. El que
+decideix és la distància al control, no el nivell absolut: un estudi i un carrer no tenen el
+mateix terra.
+
+| tros | talls | durada mediana | nivell | sota el control |
+|---|---|---|---|---|
+| control (dins la frase) | 191 | 0,69 s | −20,8 dB | — |
+| cap (es llença) | 113 | 0,53 s | −24,8 dB | **3,7 dB** |
+| cua (es llença) | 132 | 0,69 s | −25,4 dB | **4,8 dB** |
+
+Mediana de tots els trossos llençats: **4,6 dB per sota del control**. Només l'**11 %** cau 20 dB
+o més per sota, que és el que es diria silenci; el **58 %** és a menys de 6 dB del nivell de la
+frase.
+
+**Queda descartada una de les tres respostes possibles.** El retall no és «només un estalvi de
+còmput sobre silenci»: el que es llença sona, i sona gairebé tant com la frase.
+
+**El que això NO prova, i cal dir-ho.** Aquests clips són televisió: una banda sonora de fons,
+música i ambient hi corren **tot el clip**, frase inclosa. Que hi hagi so fora de la frase no vol
+dir que hi hagi una altra **veu**; l'energia no distingeix una persona parlant de música, d'un
+aplaudiment o del fregadís d'un micròfon. Per això segueix fent falta transcriure el tros
+(`prova_retall/que_hi_ha_al_tros_que_es_llenca.py`, escrit i encara sense córrer: el primer
+intent el va matar el sistema per manca de memòria, per haver-lo apilat sobre tres alineadors).
+
+I hi ha una lectura incòmoda que aquesta mesura obre: si just a fora de la frontera hi ha so a
+nivell de veu, una frontera que falli per poc fa que el retall es mengi **paraules del parlant**.
+El desacord median entre les dues fonts és de 0,040 s, que no fa mal, però el 41 % de talls on
+discrepen més de 0,2 s sí que en pot fer. El marge de 0,15 s existeix justament per això.
+
+**El guió:** `tools/snrt/magatzem/hi_ha_so_al_tros_que_es_llenca.py`. Cap model, un segon.
+
+**El guió:** `tools/snrt/magatzem/quant_del_so_no_es_la_frase.py`. No carrega cap model i triga
+un segon; es pot tornar a passar cada vegada que creixin els fitxers d'alineació, i els números
+d'aquesta secció es refaran amb el corpus sencer.
