@@ -4,6 +4,13 @@ L'alineacio forcada (MMS-1b-all, Viterbi sobre les probabilitats de CTC) triga ~
 20.547 talls. Si un metode d'energia troba les mateixes fronteres, el mateix retall es fa en
 minuts -- i el guany mesurat (-0,2235 de CER) es tindria avui en comptes de dema.
 
+⚠️ **Aquest metode es va descartar contra una referencia trencada** (quadern, §48). Les
+fronteres del model gran amb que es va comparar venien d'una alineacio que no va rebre mai la
+frase -- vocabulari llati, text en tifinag -- i per aixo l'energia hi queia lluny (0 % dins de
+0,2 s). Refet contra les fronteres bones, l'energia encerta el **26 %**. Segueix sent poc per
+fer-hi el retall, pero el 0 % no era seu. I el -0,2235 que es dona aqui com a premi tampoc no
+mesura el que diu (§49): no prova que la frontera sigui bona, nomes que el so es mes curt.
+
 **Com es comprova sense gastar res:** hi ha 6.369 talls amb la frontera de l'alineacio ja
 calculada. Es calcula la frontera per energia dels mateixos talls i es comparen. Si cauen
 aprop, el metode barat val; si no, no.

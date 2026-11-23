@@ -5,6 +5,14 @@ frase** -- 0,79 s de silenci al davant (al 84 % dels talls) i 0,97 s al darrere 
 Si aixo fa mal de debo, retallar ha de baixar el CER. Fins ara nomes ho sabiem d'un
 diagnostic del 18-11 sobre talls **antics** (0,7370 -> 0,6581).
 
+⚠️ **El 51 % no mesura el que diu, i el que mesura aquest guio tampoc** (quadern, §48 i §49).
+L'alineacio que va donar aquell 51 % no va rebre mai la frase -- vocabulari llati, text en
+tifinag: alineava els separadors de paraula. I la comparacio de sota canvia la **durada** de
+l'entrada: amb el CER de partida per sobre d'1 la distancia esta dominada per insercions, i
+escurcar el so les treu encerti o no la frontera. Amb fronteres bones, aquest mateix guio dona
+-0,0741 amb marge +0,15 i **-0,1913 amb marge -0,30**, que es menjar-se veu real. L'ordre
+segueix el so que es llenca, no l'encert, aixi que el numero que surt d'aqui no decideix res.
+
 **Com es mesura.** Els mateixos 250 talls, el mateix model (MMS-1b-all + adaptador shi +
 `adaptador_shi_zouhir_b`), la mateixa referencia. L'unica cosa que canvia es si el wav es
 sencer o retallat a `[veu_ini, veu_fi]` amb un marge.
