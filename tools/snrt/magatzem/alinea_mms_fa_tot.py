@@ -20,8 +20,8 @@ van barrejar a mig buffer el 23-11 i van deixar una linia trencada.
 import argparse
 import io
 import json
+import sys
 import time
-import unicodedata
 from pathlib import Path
 
 import numpy as np
@@ -30,31 +30,13 @@ import torch
 import torchaudio
 from torchaudio.pipelines import MMS_FA
 
+#: la transliteracio i la regla de «prou text» viuen al costat, en un modul sense dependencies
+#: pesades, perque el muntador de l'experiment les ha de fer servir per saber quants talls d'un
+#: capitol son alineables -- i amb una copia a cada fitxer les dues regles se separen.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from transliteracio_tifinag import MINIM, roman  # noqa: E402,F401
+
 ARREL = Path(r"E:/tamazight/talls_ecs")
-
-TIFI = {"\u2d30": "a", "\u2d31": "b", "\u2d33": "g", "\u2d37": "d", "\u2d39": "d", "\u2d3b": "e",
-        "\u2d3c": "f", "\u2d3d": "k", "\u2d40": "h", "\u2d43": "h", "\u2d44": "a", "\u2d45": "x",
-        "\u2d47": "q", "\u2d49": "i", "\u2d4a": "j", "\u2d4d": "l", "\u2d4e": "m", "\u2d4f": "n",
-        "\u2d53": "u", "\u2d54": "r", "\u2d55": "r", "\u2d56": "g", "\u2d59": "s", "\u2d5a": "s",
-        "\u2d5b": "c", "\u2d5c": "t", "\u2d5f": "t", "\u2d61": "w", "\u2d62": "y", "\u2d63": "z",
-        "\u2d65": "z", "\u2d6f": "w", "\u2d52": "p", "\u2d36": "g", "\u2d4c": "j"}
-
-
-def roman(t):
-    fora = []
-    for c in t or "":
-        if c in TIFI:
-            fora.append(TIFI[c])
-        elif c.isspace():
-            fora.append(" ")
-        elif c.isascii() and c.isalpha():
-            fora.append(c.lower())
-        else:
-            d = unicodedata.normalize("NFD", c)
-            b = "".join(x for x in d if not unicodedata.combining(x))
-            if b.isascii() and b.isalpha():
-                fora.append(b.lower())
-    return " ".join("".join(fora).split())
 
 
 def main():
@@ -81,7 +63,7 @@ def main():
                 continue
             w = talls / Path(x["tall"]).name
             t = roman(x.get("tifinag") or "")
-            if w.exists() and len(t) >= 3:
+            if w.exists() and len(t) >= MINIM:
                 feina.append((w, t, cap.name))
     #: el repartiment es per index, no per capitol: aixi els tres fluxos acaben alhora encara
     #: que els capitols siguin de mides molt diferents
