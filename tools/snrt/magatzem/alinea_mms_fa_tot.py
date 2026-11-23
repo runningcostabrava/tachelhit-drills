@@ -20,6 +20,7 @@ van barrejar a mig buffer el 23-11 i van deixar una linia trencada.
 import argparse
 import io
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -42,10 +43,36 @@ ARREL = Path(r"E:/tamazight/talls_ecs")
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--part", default="0/1", help="quin flux de quants: 0/3, 1/3, 2/3")
-    ap.add_argument("--fils", type=int, default=4)
+    #: 2 fils per defecte, no 4 ni 6: el PC el comparteixen diverses sessions, i aquesta feina
+    #: no te pressa (quadern, pla dels models, pas 3)
+    ap.add_argument("--fils", type=int, default=2)
+    ap.add_argument("--memoria-minima", type=float, default=3.0,
+                    help="GB lliures al sistema per sota dels quals s'espera en comptes de seguir")
     a = ap.parse_args()
     jo, de = (int(x) for x in a.part.split("/"))
     torch.set_num_threads(a.fils)
+
+    #: cedir la maquina. El 23-11 el sistema va matar aquesta feina dues vegades per falta de
+    #: memoria (la maquina la comparteixen altres sessions); ara baixa de prioritat i, quan la
+    #: memoria lliure del sistema baixa del llindar, s'espera fins que es recupera.
+    import gc
+    import psutil
+    jo_mateix = psutil.Process()
+    try:
+        jo_mateix.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS if os.name == "nt" else 10)
+    except Exception:
+        pass
+
+    def espera_memoria():
+        lliure = psutil.virtual_memory().available / 2 ** 30
+        if lliure >= a.memoria_minima:
+            return
+        print(f"   memoria lliure {lliure:.1f} GB < {a.memoria_minima} GB: espero", flush=True)
+        gc.collect()
+        while psutil.virtual_memory().available / 2 ** 30 < a.memoria_minima:
+            time.sleep(30)
+        print(f"   memoria recuperada ({psutil.virtual_memory().available / 2**30:.1f} GB): "
+              "continuo", flush=True)
 
     desti = Path(f"E:/tamazight/_magatzem/alineacio_mms_fa_tot_{jo}de{de}.jsonl")
 
@@ -88,6 +115,7 @@ def main():
     t0, n, fallats = time.time(), 0, 0
     with io.open(desti, "a", encoding="utf-8", newline="\n") as f:
         for w, t, cap in feina:
+            espera_memoria()
             try:
                 xs, sr = sf.read(str(w), dtype="float32")
                 if xs.ndim > 1:
@@ -113,7 +141,8 @@ def main():
             if n and n % 200 == 0:
                 v = n / (time.time() - t0)
                 print(f"   {n}/{len(feina)} · {v:.2f} talls/s · queden "
-                      f"{(len(feina)-n)/v/3600:.1f} h", flush=True)
+                      f"{(len(feina)-n)/v/3600:.1f} h · fa servir "
+                      f"{jo_mateix.memory_info().rss / 2**30:.2f} GB", flush=True)
 
     print(f"\nflux {jo}/{de}: {n} alineats · {fallats} fallats · "
           f"{(time.time()-t0)/60:.0f} min")
