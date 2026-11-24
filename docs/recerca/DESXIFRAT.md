@@ -2977,3 +2977,52 @@ Dev (200 SNRT + 200 TutlAit) per època: 0,1080 → **0,1450 → 0,1745 → 0,18
 * **Les referències de la SNRT porten errors de lectura** («نجربة» per «تجربة», «الآدب»): part del
   sostre de test_snrt és soroll de la referència, no del model.
 
+## 54. La 3a tirada: EMINES sí que mou els tests, i el model encara puja (24-11)
+
+**Què es va fer:** el quadern de la 2a tirada amb EMINES afegit només a l'entrenament (§52):
+38.211 files, unes 40,7 h. Whisper small, 3 èpoques, mateix dev i mateixos tests congelats. Va
+córrer a l'editor de Kaggle (sessió interactiva, persistència «Files only»), en unes 6 h. Com a mesura
+**secundària** es tornen a puntuar els tests sencers descodificant amb `no_repeat_ngram_size=3`.
+
+| | abans (200) | després (les mateixes 200) | test sencer 3a | 2a | 1a | 3a sense bucles |
+|---|---|---|---|---|---|---|
+| test_snrt | 0,1126 | 0,2026 | **0,1815** | 0,1652 | 0,1656 | 0,1986 |
+| test_tutlait | 0,1191 | 0,2175 | **0,2199** | 0,1942 | 0,1892 | 0,2348 |
+
+Frases amb chrF ≥ 0,5: test_snrt 44/2.091 (46 sense bucles), test_tutlait 27/547 (30).
+
+Dev (200 SNRT + 200 TutlAit) per època: **0,1673 → 0,1954 → 0,2075**. A la 2a tirada era
+0,1450 → 0,1745 → 0,1837.
+
+**El que diu:**
+
+* **EMINES sí que hi guanya, a tots dos tests:** +0,016 a test_snrt i +0,026 a test_tutlait. Baba
+  Ali no havia mogut res (§53). EMINES són 14,6 h de 60 vídeos de temes i veus diferents, i no una
+  sola sèrie.
+* **Cal llegir test_tutlait amb prudència.** El spk_010 del TutlAit i EMINES comparteixen frases
+  (§52). spk_010 és a train i no al test, i les frases d'EMINES que eren a dev o test es van treure
+  pel text normalitzat. Tot i així, és la mateixa casa.
+* **El dev encara puja a la 3a època** (+0,012). El model no ha tocat sostre. La 4a tirada continua
+  des d'aquest punt de control amb 3 èpoques més (`tools/snrt/magatzem/kaggle/veu-ar-afina-continua.py`).
+* **Prohibir repetir trigrames val +0,017 i +0,015.** És una mesura secundària, i la principal
+  queda com abans. A la 2a tirada, plegar els bucles després (`tools/snrt/magatzem/bucles_a_posteriori.py`)
+  hi guanyava +0,010 i +0,006, i 942 de 2.091 frases de test_snrt tenien alguna repetició.
+  Per servir el model, `no_repeat_ngram_size=3` és un guany gratuït.
+* **Encara lluny de 0,26**, la via del text sense afinar.
+
+**20 traduccions llegides a ull** (llavor 1114, 10 de cada test):
+
+* **TutlAit, frases curtes i fetes: bé o gairebé.** «يتوجّب عليك الذهاب» → «يجب عليك أن تذهب إلى هناك»;
+  «و ما ماذا ستفعل» → «ماذا ستفعلين؟»; «انت لم تذهب الى السوق لترى ثمن الماشية» → «…لكي تذهب للسوق
+  لترى من أين أصبحت البهائم». Agafa el tema (el mercat, el bestiar) i en part l'estructura.
+* **Els noms i el tema, sí; el sentit de la frase llarga, encara no.** «القاضي عبو حمو و أمه يموتون» →
+  «قاضي عبو ، أمي و أمي…». Les frases llargues del TutlAit surten com a àrab que no hi té res a veure.
+* **SNRT, gairebé tot fora.** De 10, només «سنبدأ بك أولا، السيد الطيب» → «سنعرفه بأنه صديقه الطيب» s'hi
+  acosta. En 2 de 10 encara surten paraules amazigues transliterades («تيزي تيزي», «توسيمت»).
+* **Bucles en 3 de 20** («ويجب أن يتجمع لها أول مرة» ×3, «الناس الذين يحضرون» ×2).
+
+**On és el model:** a `/kaggle/working/millor` del quadern `veu-ar-afina-emines` (persistència
+«Files only»). Una sessió interactiva no deixa sortida de kernel, i `kaggle kernels output` torna
+buit. Per això la 4a tirada s'enganxa en aquell mateix quadern, i el primer que fa és copiar el model
+de la 3a a `model_3a/`.
+
