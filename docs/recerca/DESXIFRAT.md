@@ -3003,7 +3003,7 @@ Dev (200 SNRT + 200 TutlAit) per època: **0,1673 → 0,1954 → 0,2075**. A la 
   (§52). spk_010 és a train i no al test, i les frases d'EMINES que eren a dev o test es van treure
   pel text normalitzat. Tot i així, és la mateixa casa.
 * **El dev encara puja a la 3a època** (+0,012). El model no ha tocat sostre. La 4a tirada continua
-  des d'aquest punt de control amb 3 èpoques més (`tools/snrt/magatzem/kaggle/veu-ar-afina-continua.py`).
+  des d'aquest punt de control amb 2 èpoques més (les que caben en la quota) (`tools/snrt/magatzem/kaggle/veu-ar-afina-continua.py`).
 * **Prohibir repetir trigrames val +0,017 i +0,015.** És una mesura secundària, i la principal
   queda com abans. A la 2a tirada, plegar els bucles després (`tools/snrt/magatzem/bucles_a_posteriori.py`)
   hi guanyava +0,010 i +0,006, i 942 de 2.091 frases de test_snrt tenien alguna repetició.
