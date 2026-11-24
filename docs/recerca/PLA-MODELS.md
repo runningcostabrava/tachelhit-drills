@@ -78,6 +78,15 @@ Dues coses que expliquen la taula:
   igual que la 1a. El dev encara pujava a la 3a època, així que **si la 3a tampoc toca sostre, la
   4a tirada ha de provar més èpoques (5-6) abans que més fonts**.
 * La 3a tirada es va llançar el 23-11 des de l'editor (Run All, persistència «Files only»).
+* **La 3a tirada (EMINES) ja és feta (§54):** test_snrt **0,1815**, test_tutlait **0,2199**, i
+  0,1986 / 0,2348 descodificant sense repetir trigrames. El dev encara pujava a la 3a època (0,2075).
+* **4a tirada:** continua des del punt de control de la 3a, amb **2 èpoques** més i escalfament de
+  50 passos (`kaggle/veu-ar-afina-continua.py`). S'enganxa al quadern `veu-ar-afina-emines`, on hi
+  ha el model. Són 2 èpoques i no 3 perquè després de la 3a queden 5,7 h de quota, i 2 èpoques més
+  els dos tests en fan unes 4,5. Llançada el 24-11 a l'editor.
+* **La 4a tirada ja és feta (§55):** test_snrt **0,1846**, test_tutlait **0,2387** (0,2011 / 0,2471
+  sense bucles). Dev 0,2075 → 0,2101: a prop del sostre. **El pas següent no és més èpoques:** cal
+  més so de la SNRT o d'altres programes, o provar Whisper medium.
 
 ### Pas 2b — Les sèries de la SNRT, com a traducció humana per a D
 
