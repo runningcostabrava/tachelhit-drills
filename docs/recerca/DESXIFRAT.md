@@ -3129,3 +3129,40 @@ Diferència meva contra el NLLB: +0,072 [+0,020, +0,129].
 Fitxers: `E:/tamazight/_magatzem/tirades/cadena/` (`cadena_text.json`, `cec_claude_40.json` amb
 les quatre traduccions de cada línia).
 
+## 57. Gemini 2.5 Pro tradueix el tifinag millor que el NLLB; els lèxics hi ajuden poc (24-11)
+
+**Què es va fer:** 200 línies noves del test net de text (`zgh_ar/test.jsonl`, llavor 2026, de 3
+paraules o més, sense les 40 de §56). Tifinag → àrab amb tres sistemes, sobre les mateixes línies i
+amb el mateix chrF. Gemini en lots de 20 línies, temperatura 0,2 i pensament de 2.048 fitxes
+(`tools/snrt/magatzem/gemini_amb_lexic.py`).
+
+| sistema | chrF | ≥ 0,5 |
+|---|---|---|
+| NLLB-ca (punt de partida) | 0,2767 | 16/200 |
+| Gemini 2.5 Pro | 0,3490 | 42/200 |
+| **Gemini 2.5 Pro + lèxics** | **0,3566** | **44/200** |
+
+| diferència | mitjana [interval 95 %] |
+|---|---|
+| Gemini Pro − NLLB | **+0,072** [+0,053, +0,093] |
+| Gemini Pro + lèxics − NLLB | **+0,080** [+0,060, +0,102] |
+| amb lèxics − sense | +0,008 [−0,008, +0,022] |
+
+Els lèxics són els de `backend/lexicon.grounding_lines`, els que ja fa servir el tutor: Oulhaj,
+IRCAM-DGLAI, conjugacions IRCAM i Wikimawal, fins a 12 entrades per línia.
+
+**El que diu:**
+
+* **Gemini 2.5 Pro guanya el NLLB amb claredat.** La millora de §56 aguanta amb cinc vegades més
+  línies, i les frases bones passen de 16 a 42.
+* **Els lèxics no mouen el número de manera mesurable** (l'interval creua el zero). A ull, però,
+  arreglen paraules concretes: «بالتوابل» → «**بالنعناع**», «التأثير» → «**الضغط**», i el nom
+  «أيت إعزة». Ajuden on la paraula és rara i el diccionari la té, i són una gota dins del total.
+* **Encara no és publicable.** «سأحدي للأساتذة الكرام مقطوعة» surt «لأحيي أساتذتنا», amb el sentit
+  general bé i la meitat de la frase perduda. Serveix com a proposta perquè una persona la corregeixi.
+* **Per al producte:** per traduir text, el primer de la fila ha de ser Gemini 2.5 Pro amb els
+  lèxics. No costen res, no fan mal i arreglen noms i paraules rares. El NLLB queda com a recanvi.
+  Per a la veu, el model directe ja iguala la cadena (§56).
+
+Fitxer: `E:/tamazight/_magatzem/tirades/cadena/gemini_amb_lexic.json`.
+

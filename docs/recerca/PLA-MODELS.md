@@ -91,6 +91,9 @@ Dues coses que expliquen la taula:
   el NLLB sense afinar. **El model directe la iguala o la guanya.** La baula feble és l'ASR (CER
   0,67 amb el so de la tele). Per traduir text, Gemini 2.5 Pro (0,443) passa el NLLB (0,333) en
   una prova a cegues de 40 línies.
+* **Amb 200 línies (§57):** Gemini 2.5 Pro fa 0,349 i, amb els lèxics dins la petició, 0,357. El
+  NLLB en fa 0,277, i els dos queden +0,07-0,08 per sobre amb interval sencer. **El traductor de text
+  de l'app ha de ser Gemini 2.5 Pro amb els lèxics**, amb el NLLB com a recanvi.
 
 ### Pas 2b — Les sèries de la SNRT, com a traducció humana per a D
 
