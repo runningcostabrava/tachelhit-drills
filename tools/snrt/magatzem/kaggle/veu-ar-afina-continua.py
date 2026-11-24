@@ -5,7 +5,7 @@
 # significat, aixi que es pot anar de l'un a l'altre directament.
 #
 # QUARTA TIRADA: el mateix material que la tercera, pero NO comenca de Whisper small: continua
-# des del millor punt de control de la tercera amb 3 epoques mes. La 3a va correr a l'editor i no
+# des del millor punt de control de la tercera amb 2 epoques mes. La 3a va correr a l'editor i no
 # deixa sortida de kernel: el model es a /kaggle/working/millor del quadern veu-ar-afina-emines
 # (persistencia «Files only»), aixi que aquest codi s'enganxa en aquell mateix quadern. Abans de
 # res el copia a /kaggle/working/model_3a, perque la 4a desara el seu millor a millor/ i si
@@ -42,7 +42,7 @@
 MODEL = "openai/whisper-small"
 LLENGUA, TASCA = "ar", "transcribe"
 RITME = 1e-5
-EPOQUES = 3
+EPOQUES = 2
 LOT = 8
 ACUMULA = 2
 FORA = "/kaggle/working"

@@ -80,10 +80,10 @@ Dues coses que expliquen la taula:
 * La 3a tirada es va llançar el 23-11 des de l'editor (Run All, persistència «Files only»).
 * **La 3a tirada (EMINES) ja és feta (§54):** test_snrt **0,1815**, test_tutlait **0,2199**, i
   0,1986 / 0,2348 descodificant sense repetir trigrames. El dev encara pujava a la 3a època (0,2075).
-* **4a tirada:** continua des del punt de control de la 3a, amb 3 èpoques més i escalfament de 50
-  passos (`kaggle/veu-ar-afina-continua.py`). S'enganxa al quadern `veu-ar-afina-emines`, on hi
-  ha el model. Necessita unes 6 h de GPU, i després de la 3a en queden 5,7 de la setmana: s'ha de
-  llançar quan es renovi la quota. Tria GPU T4 x1 o P100.
+* **4a tirada:** continua des del punt de control de la 3a, amb **2 èpoques** més i escalfament de
+  50 passos (`kaggle/veu-ar-afina-continua.py`). S'enganxa al quadern `veu-ar-afina-emines`, on hi
+  ha el model. Són 2 èpoques i no 3 perquè després de la 3a queden 5,7 h de quota, i 2 èpoques més
+  els dos tests en fan unes 4,5. Llançada el 24-11 a l'editor.
 
 ### Pas 2b — Les sèries de la SNRT, com a traducció humana per a D
 
