@@ -3026,3 +3026,36 @@ Dev (200 SNRT + 200 TutlAit) per època: **0,1673 → 0,1954 → 0,2075**. A la 
 buit. Per això la 4a tirada s'enganxa en aquell mateix quadern, i el primer que fa és copiar el model
 de la 3a a `model_3a/`.
 
+## 55. La 4a tirada: dues èpoques més mouen el TutlAit, no el dev (24-11)
+
+**Què es va fer:** es va continuar des del millor punt de control de la 3a (§54), amb el mateix
+material, 2 èpoques més i escalfament de 50 passos. Va córrer al mateix quadern de l'editor, on
+també hi ha el model de la 3a (`model_3a/`). Durada: 4 h 38 min.
+
+| | 3a, les mateixes 200 | 4a, les mateixes 200 | test sencer 3a | **test sencer 4a** | 4a sense bucles |
+|---|---|---|---|---|---|
+| test_snrt | 0,2030 | 0,2067 | 0,1815 | **0,1846** | 0,2011 |
+| test_tutlait | 0,2175 | 0,2430 | 0,2199 | **0,2387** | 0,2471 |
+
+Frases amb chrF ≥ 0,5: test_snrt 41/2.091 (abans 44) i test_tutlait 37/547 (abans 27).
+
+Dev per època: el punt de partida, tornat a puntuar, dona 0,2075. Després **0,2056 → 0,2101**.
+
+**El que diu:**
+
+* **El dev gairebé no es mou** (+0,003 en dues èpoques). Amb aquest material i Whisper small, el
+  model és a prop del sostre. Més passades amb les mateixes dades ja no valen la GPU.
+* **Tot i així, test_tutlait puja +0,019**, i les frases bones passen de 27 a 37. test_snrt amb prou
+  feines es mou (+0,003). El que encara aprèn és el registre del TutlAit, que és curt i quotidià,
+  i el més semblant a EMINES. La notícia de la SNRT, no.
+* **La 4a és el millor model fins ara**, i el sense bucles (0,2011 / 0,2471) és el que s'hauria
+  de servir. Continua per sota de 0,26, la via del text sense afinar.
+* **El pas següent no és més èpoques.** Les opcions són més so de la SNRT o d'altres programes
+  (el SNRT de test és on falla), o un model més gran (Whisper medium).
+
+**A ull** (llavor 1114, test_snrt): gairebé les mateixes sortides que la 3a, una mica més
+netes («سنأخذها لكي نسميها الطيب»). Un bucle llarg nou: «أمازيغ أمازيغ…».
+
+**On és el model:** `/kaggle/working/millor` del quadern `veu-ar-afina-emines`, al costat de
+`model_3a/`.
+

@@ -84,6 +84,9 @@ Dues coses que expliquen la taula:
   50 passos (`kaggle/veu-ar-afina-continua.py`). S'enganxa al quadern `veu-ar-afina-emines`, on hi
   ha el model. Són 2 èpoques i no 3 perquè després de la 3a queden 5,7 h de quota, i 2 èpoques més
   els dos tests en fan unes 4,5. Llançada el 24-11 a l'editor.
+* **La 4a tirada ja és feta (§55):** test_snrt **0,1846**, test_tutlait **0,2387** (0,2011 / 0,2471
+  sense bucles). Dev 0,2075 → 0,2101: a prop del sostre. **El pas següent no és més èpoques:** cal
+  més so de la SNRT o d'altres programes, o provar Whisper medium.
 
 ### Pas 2b — Les sèries de la SNRT, com a traducció humana per a D
 
