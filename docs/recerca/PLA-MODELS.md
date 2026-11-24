@@ -87,6 +87,10 @@ Dues coses que expliquen la taula:
 * **La 4a tirada ja és feta (§55):** test_snrt **0,1846**, test_tutlait **0,2387** (0,2011 / 0,2471
   sense bucles). Dev 0,2075 → 0,2101: a prop del sostre. **El pas següent no és més èpoques:** cal
   més so de la SNRT o d'altres programes, o provar Whisper medium.
+* **La cadena real des del so ja és mesurada (§56):** test_snrt 0,1828, test_tutlait 0,2112, amb
+  el NLLB sense afinar. **El model directe la iguala o la guanya.** La baula feble és l'ASR (CER
+  0,67 amb el so de la tele). Per traduir text, Gemini 2.5 Pro (0,443) passa el NLLB (0,333) en
+  una prova a cegues de 40 línies.
 
 ### Pas 2b — Les sèries de la SNRT, com a traducció humana per a D
 

@@ -2427,7 +2427,7 @@ Què en surt, de debò:
 La primera és bona; la segona es desfà; la tercera encerta l'estructura i falla la paraula
 («artistes» per «militants»). **Serveix per entendre de què es parla, no per publicar.**
 
-Per comparar, el mateix dia: **jo traduint l'àrab a mà fa chrF 0,746**. La distància entre
+Per comparar, el mateix dia: **jo traduint l'àrab a mà fa chrF 0,746**. *(Rectificat el 24-11, §56: aquell 0,746 és **àrab → català**, contra una traducció confirmada, no tifinag → àrab. No són comparables. Traduint tifinag → àrab a cegues sobre 40 línies del test net, faig 0,406 i el NLLB 0,333.)* La distància entre
 0,347 i 0,746 és la notícia: el que de debò tradueix avui no és cap model nostre. El model val
 per allò que jo no puc fer -- 215 capítols-- i encara no tradueix prou bé.
 
@@ -3058,4 +3058,74 @@ netes («سنأخذها لكي نسميها الطيب»). Un bucle llarg nou: �
 
 **On és el model:** `/kaggle/working/millor` del quadern `veu-ar-afina-emines`, al costat de
 `model_3a/`.
+
+## 56. La cadena real des del so, i qui tradueix de debò el tifinag (24-11)
+
+**Què faltava:** el 0,2614 / 0,2634 que fèiem servir com a «via del text» tradueix el subtítol
+**escrit**: és la cadena amb una transcripció perfecta. La cadena des del so (so → ASR → tifinag →
+NLLB → àrab) no s'havia mesurat mai.
+
+**Com s'ha mesurat:** sobre les mateixes files que el model directe i amb el mateix chrF
+(`chrf(hip, ref)`, beta 2, el dels quaderns de la via 3).
+- **ASR:** MMS-1b-all amb l'adaptador `shi` del Space (`adaptador_shi_zouhir_b.pt`), en llatí
+  (`kaggle/veu-ar-cadena-asr.py`).
+- **Del llatí al tifinag:** `backend/transliteration.to_forms`.
+- **Traductor:** el NLLB de Tamazight-NLP sense afinar (`kaggle/veu-ar-cadena-tradueix.py`). El NLLB
+  afinat a 0,3470 (§43) no es pot recuperar: la sortida del kernel `zgh-ar-afina` ja no té el model.
+  Amb el NLLB-ca local (`cadena_tradueix.py text`), el text de la pantalla dona 0,2772, pràcticament
+  el mateix.
+
+| test_snrt (2.091) | chrF |
+|---|---|
+| text de la pantalla → NLLB (sostre de la cadena) | 0,2778 |
+| **so → ASR → NLLB** | **0,1828** |
+| so → àrab directe (4a tirada, §55) | 0,1846 · sense bucles **0,2011** |
+
+| test_tutlait (547) | chrF |
+|---|---|
+| **so → ASR → NLLB** | **0,2112** |
+| so → àrab directe (4a tirada) | 0,2387 · sense bucles **0,2471** |
+
+L'ASR, contra el tifinag de la pantalla: **CER mitjà 0,673, mediana 0,571** (2.005 files amb text).
+El so de la tele s'equivoca en més de la meitat de les lletres.
+
+**El que diu:**
+
+* **El model directe ja iguala o guanya la cadena real.** Al SNRT empaten (0,185 i 0,183), i
+  descodificant sense bucles el directe guanya per +0,018. Al TutlAit guanya per +0,03.
+* **L'ASR es menja gairebé tot el marge del text.** De 0,278 amb el text perfecte a 0,183 des
+  del so. La baula feble de la cadena és l'orella, no el traductor.
+* **Una reserva:** la cadena fa servir un traductor sense afinar. Un NLLB afinat hi afegia
+  +0,08 sobre text (§43). Des del so en guanyaria menys, però podria tornar a passar el directe
+  al SNRT. Cal refer el NLLB afinat i desar-lo fora de Kaggle abans de tancar-ho.
+
+### Qui tradueix el tifinag a l'àrab: una prova a cegues amb 40 línies
+
+40 línies del test net de text (`zgh_ar/test.jsonl`, llavor 1114, de 3 paraules o més), traduïdes
+sense veure l'àrab de referència. Totes contra la mateixa referència, amb el mateix chrF:
+
+| qui tradueix | chrF | ≥ 0,5 |
+|---|---|---|
+| NLLB-ca, punt de partida | 0,333 | 5/40 |
+| Gemini 2.5 Flash | 0,384 | 10/40 |
+| **jo (Claude), a cegues** | **0,406** | 8/40 |
+| **Gemini 2.5 Pro** | **0,443** | 13/40 |
+
+Diferència meva contra el NLLB: +0,072 [+0,020, +0,129].
+
+* **Els models grans tradueixen millor el tifinag que el NLLB**, però no gaire: 0,41-0,44, no 0,75.
+  El 0,746 de §36 era àrab → català, una parella amb moltíssimes dades.
+* **El sostre és baix per a tothom per la referència.** L'àrab de la SNRT surt de l'OCR, amb
+  errors («نجدبة», «التدجمة», «جننبا»), i és una traducció lliure: una traducció correcta i
+  paraulejada diferent puntua 0,4-0,6. Per sota de 0,3, en canvi, el sentit falla. El NLLB
+  confon paraules senceres (مرآة → «سائحة»).
+* **Per què el NLLB, amb tants diccionaris, no arriba més amunt:** els diccionaris són paraules, i
+  un traductor aprèn de frases aparellades. N'hi ha unes 4.500 del SNRT. Un model gran porta molt
+  d'àrab i una mica d'amazic de casa, i encerta pel context i pels manlleus («ssusyuluji»).
+* **Conseqüència per al producte:** per traduir text, avui el millor que tenim a l'abast és
+  **Gemini 2.5 Pro**, i l'app ja hi té clau. El NLLB propi queda com a recanvi sense cost i sense
+  connexió. Falta provar-ho amb els diccionaris dins la petició, sobre més línies.
+
+Fitxers: `E:/tamazight/_magatzem/tirades/cadena/` (`cadena_text.json`, `cec_claude_40.json` amb
+les quatre traduccions de cada línia).
 
