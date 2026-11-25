@@ -3166,3 +3166,47 @@ IRCAM-DGLAI, conjugacions IRCAM i Wikimawal, fins a 12 entrades per línia.
 
 Fitxer: `E:/tamazight/_magatzem/tirades/cadena/gemini_amb_lexic.json`.
 
+
+## 58. Triangulació: l'acord de l'ASR amb la pantalla assenyala els triplets dolents, no els bons (25-11)
+
+**La pregunta (#763):** quan l'ASR, que només sent el so, escriu el mateix que el tifinag cremat a
+la pantalla, que ningú no li ha dictat, el triplet so–amazic–àrab és més coherent? Si sí, l'acord
+seria un filtre per fabricar dades d'entrenament sense parlant.
+
+**Què es va fer:** ASR (mms-1b-all + `adaptador_shi_zouhir_b`) sobre els 2.091 talls de
+`test_snrt`, a Kaggle en fp16. Contra els 605 talls fets a casa en fp32, el CER coincideix en 595 i
+difereix 0,08 punts de mitjana: la precisió no hi compta. Per tall: CER entre la sortida
+transliterada al tifinag i el tifinag de la pantalla. **Coherència** = chrF de la traducció NLLB del
+tifinag de pantalla (§56) contra el subtítol àrab del mateix fotograma. **Control barrejat** = la
+mateixa traducció contra l'àrab d'un altre tall. 1.966 talls amb tifinag de 4 lletres o més i ASR
+no buit (`tools/snrt/magatzem/triangulacio.py`).
+
+| CER ASR↔pantalla | talls | coherència [IC 95 %] | barrejat |
+|---|---|---|---|
+| < 0,10 | 46 | 0,320 [0,271, 0,374] | 0,105 |
+| 0,10–0,20 | 165 | 0,322 [0,295, 0,351] | 0,123 |
+| 0,20–0,35 | 293 | 0,320 [0,301, 0,339] | 0,122 |
+| 0,35–0,50 | 320 | 0,298 [0,281, 0,318] | 0,129 |
+| 0,50–0,75 | 511 | 0,299 [0,287, 0,313] | 0,121 |
+| ≥ 0,75 | 631 | **0,263** [0,251, 0,275] | 0,117 |
+
+Spearman(CER, coherència) = **−0,139** [−0,183, −0,092]. Per tercils de llargada, l'acord alt
+(CER < 0,2) contra la resta: curtes **+0,073** [+0,027, +0,124], mitjanes −0,003 [−0,042, +0,039],
+llargues +0,030 [−0,007, +0,064].
+
+**El que diu:**
+
+* **El senyal existeix però és feble i va per un sol costat.** Fins a CER 0,35 la coherència és
+  plana (0,32); el que cau és el terç de talls on l'ASR no s'assembla gens a la pantalla (0,263). Hi
+  ha tall equivocat, so que no és la frase o un ASR perdut, i l'àrab d'aquell tall també encaixa pitjor.
+* **No hi ha una «franja d'or».** Els 211 talls amb CER < 0,2 (10,7 %) no són més coherents que els
+  de 0,2–0,35. Part de la raó és la regla de mesura: el NLLB arriba a 0,32 com a màxim, i per sobre
+  d'aquí no pot distingir una línia bona d'una de perfecta. Amb Gemini Pro (§57) potser sí.
+* **Per tant serveix com a filtre negatiu, no positiu:** treure del train el terç amb CER ≥ 0,75, no
+  quedar-se només amb l'acord perfecte, que llençaria el 90 % de les dades.
+* **Encara no està provat que millori cap model.** El pas següent és mesurable: ASR sobre el train
+  del SNRT (6.164 talls), entrenar la via 3 sense el terç pitjor contra sense un terç a l'atzar de la
+  mateixa mida, i jutjar-ho sobre els tests congelats.
+
+Fitxers: `E:/tamazight/_magatzem/tirades/triangulacio/` (`cer_kaggle_test.txt`, `coh_test.json`,
+`triangulacio_test.json`).
