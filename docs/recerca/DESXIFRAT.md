@@ -3237,3 +3237,32 @@ Coincideixen en 790 de les 2.023 files. Falta la GPU: la quota de Kaggle d'aques
 zero amb aquesta tirada. Cada entrenament de la via 3 són hores, així que les dues tirades queden per
 a la quota nova. Fitxers: `E:/tamazight/_magatzem/tirades/triangulacio/` (`cer_kaggle_traindev.txt`,
 `filtre/filtrat/`, `filtre/atzar/`).
+
+### 58c. Entrenat: el filtre empata amb l'atzar (25-11)
+
+**Què es va fer:** la via 3 (`triangulacio-afina.py`, la recepta de la 1a tirada) dues vegades a Kaggle,
+alhora, canviant només el train de la §58b. Comparat amb `triangulacio_compara.py`: bootstrap aparellat
+per blocs de 20 talls seguits (2.000 voltes, llavor 1114), perquè test_snrt només té 4 capítols.
+
+| | filtrat | atzar | diferència [IC 95 %] | train sencer (1a tirada) |
+|---|---|---|---|---|
+| millor dev | 0,1691 | 0,1693 | | |
+| test_snrt | 0,1576 | 0,1563 | +0,0013 [−0,0020, +0,0048] | 0,1656 |
+| · talls de test amb CER < 0,75 | 0,1629 | 0,1610 | +0,0019 [−0,0018, +0,0057] | |
+| · talls de test amb CER ≥ 0,75 | 0,1584 | 0,1576 | +0,0008 [−0,0050, +0,0072] | |
+| test_tutlait | 0,1841 | 0,1878 | −0,0038 [−0,0099, +0,0023] | 0,1892 |
+
+Dev per època: filtrat 0,1447 → 0,1578 → 0,1691 · atzar 0,1446 → 0,1621 → 0,1693.
+
+**El que diu:**
+
+* **Empat.** Cap interval exclou el zero, ni tan sols als talls de test on la referència és bona.
+  Treure les 2.023 files on l'ASR i la pantalla més discrepen val el mateix que treure'n 2.023 a l'atzar.
+* **Treure files costa, triï-les qui les triï:** totes dues variants queden per sota del train sencer
+  (−0,008 a test_snrt, −0,001/−0,005 a test_tutlait). Les files «dolentes» encara ensenyen.
+* **Per què:** el CER mesura si el so casa amb el **tifinag**, però la diana de la via 3 és l'**àrab**.
+  Un CER alt sobretot vol dir que l'ASR s'equivoca (a la §58 la coherència només baixava de 0,32 a
+  0,263), no que el so i l'àrab no vagin junts. El filtre neteja una cosa que aquest entrenament no fa servir.
+
+**Decisió:** el filtre per acord ASR↔pantalla no s'aplica als trains de la via 3. Es tanca la
+triangulació (#763). Fitxers: `E:/tamazight/_magatzem/tirades/triangulacio/entrena/`.
