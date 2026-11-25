@@ -3210,3 +3210,30 @@ llargues +0,030 [−0,007, +0,064].
 
 Fitxers: `E:/tamazight/_magatzem/tirades/triangulacio/` (`cer_kaggle_test.txt`, `coh_test.json`,
 `triangulacio_test.json`).
+
+### 58b. L'ASR del train i del dev, i els dos trains preparats (25-11)
+
+L'ASR ha passat pels 7.519 talls de train i dev a Kaggle (800 s, T4). El CER contra la pantalla
+n'ha sortit com un caràcter per tall (`'a'+min(int(cer·20),19)`, `x` = sense comparació), copiat
+de la consola en nou trossos i comprovat amb la suma de cada tros i la total (830.524).
+
+| part | talls | sense comparació | CER ≥ 0,75 | CER < 0,2 |
+|---|---|---|---|---|
+| train | 6.164 | 269 | 2.830 (48,0 %) | 266 |
+| dev | 1.355 | 10 | 548 (40,7 %) | 99 |
+
+El train és pitjor que el test (32 % amb CER ≥ 0,75 al test). Hi ha més so mal tallat on hi ha més dades.
+
+`tools/snrt/magatzem/triangulacio_filtre.py` fa dos trains de la via 3, tots dos sobre
+`veu_ar_combinat` (15.427 files) i amb dev i tests intactes:
+
+* **filtrat:** treu les 2.023 files de la SNRT (un terç de 6.069) amb el CER més alt: tot el tram
+  ≥ 0,95 i una part de 0,85–0,95.
+* **atzar:** treu 2.023 files de la SNRT triades a l'atzar (llavor 1114), **amb la mateixa durada
+  una per una**. El primer control, sense aparellar, treia 0,6 h menys de so, i la durada sola ja
+  mou el resultat (vegeu «el CER premia escurçar el so»). Ara tots dos trains fan 13.404 files i 18,3 h.
+
+Coincideixen en 790 de les 2.023 files. Falta la GPU: la quota de Kaggle d'aquesta setmana ha quedat a
+zero amb aquesta tirada. Cada entrenament de la via 3 són hores, així que les dues tirades queden per
+a la quota nova. Fitxers: `E:/tamazight/_magatzem/tirades/triangulacio/` (`cer_kaggle_traindev.txt`,
+`filtre/filtrat/`, `filtre/atzar/`).
