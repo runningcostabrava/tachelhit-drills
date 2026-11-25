@@ -1,0 +1,226 @@
+# TRIANGULACIO (#763), pas 3: la via 3 (veu -> arab) entrenada amb el train FILTRAT per l'acord
+# ASR <-> pantalla, i amb el seu CONTROL d'atzar (DESXIFRAT §58b). Es la recepta de la 1a tirada
+# (veu-ar-afina.py: Whisper small, 3 epoques, mateix dev i mateixos tests congelats), canviant
+# nomes el train, perque es pugui comparar amb el train sencer (1a tirada: test_snrt 0,1656 ·
+# test_tutlait 0,1892).
+#
+#   filtrat  13.404 files · 18,3 h   treu les 2.023 files SNRT on l'ASR menys s'assembla al tifinag
+#   atzar    13.404 files · 18,3 h   treu 2.023 files SNRT a l'atzar, aparellades per durada
+#
+# Conjunts de Kaggle: josepabloucr/triangulacio-filtre (els manifests de les dues variants, amb
+# prefix `filtrat_` / `atzar_`), josepabloucr/snrt-veu-ar i josepabloucr/tutlait-veu-ar (el so).
+# Es llancen dos quaderns iguals que nomes canvien VARIANT.
+VARIANT = "filtrat"
+
+MODEL = "openai/whisper-small"
+LLENGUA, TASCA = "ar", "transcribe"
+RITME = 1e-5
+EPOQUES = 3
+LOT = 8
+ACUMULA = 2
+FORA = "/kaggle/working"
+
+import os, subprocess, sys
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-U",
+                "transformers>=4.44,<5", "accelerate", "soundfile", "librosa", "evaluate"],
+               check=False)
+
+import io, json
+import numpy as np
+import soundfile as sf
+import torch
+
+#: on es cada cosa. Es busca pel NOM del fitxer, no pel cami: Kaggle ha canviat on munta els
+#: conjunts (/kaggle/input/<conjunt> -> /kaggle/input/datasets/<usuari>/<conjunt>) i un cami
+#: escrit a ma es trenca cada vegada. `test_tutlait.jsonl` nomes es al conjunt combinat, que
+#: el conjunt vell de la SNRT tambe porta un train.jsonl i s'hi confondria.
+DADES, ON = None, {}
+for arrel, _, fitxers in os.walk("/kaggle/input"):
+    if f"{VARIANT}_test_tutlait.jsonl" in fitxers:
+        DADES = arrel
+    for f in fitxers:
+        if f.endswith((".wav", ".flac")):
+            ON[f] = os.path.join(arrel, f)
+assert DADES, "no trobo els manifests: falta el conjunt josepabloucr/triangulacio-filtre"
+print(f"VARIANT {VARIANT} · manifests a {DADES} · {len(ON)} fitxers de so trobats", flush=True)
+
+from transformers import (WhisperForConditionalGeneration, WhisperProcessor,
+                          Seq2SeqTrainer, Seq2SeqTrainingArguments)
+
+print("torch", torch.__version__, "cuda", torch.cuda.is_available(), flush=True)
+
+
+def llegeix(nom):
+    files = [json.loads(l) for l in io.open(f"{DADES}/{VARIANT}_{nom}.jsonl", encoding="utf-8")
+             if l.strip()]
+    hi_son = [x for x in files if x["so"] in ON]
+    #: si falta so, es diu i es para: entrenar amb mig corpus sense saber-ho es pitjor que
+    #: no entrenar (un conjunt de dades que no s'ha adjuntat faria exactament aixo)
+    falten = len(files) - len(hi_son)
+    print(f"   {nom}: {len(files)} files · sense so {falten}", flush=True)
+    assert falten <= len(files) * 0.01, (
+        f"{nom}: falten {falten} fitxers de so -- comprova que els tres conjunts son adjunts")
+    return hi_son
+
+
+train, dev = llegeix("train"), llegeix("dev")
+tests = {"test_snrt": llegeix("test_snrt"), "test_tutlait": llegeix("test_tutlait")}
+
+proc = WhisperProcessor.from_pretrained(MODEL, language=LLENGUA, task=TASCA)
+model = WhisperForConditionalGeneration.from_pretrained(MODEL).cuda()
+
+
+def prepara(m):
+    m.generation_config.language = LLENGUA
+    m.generation_config.task = TASCA
+    m.generation_config.forced_decoder_ids = None
+
+
+prepara(model)
+
+
+def chrf(hip, ref, n=6, beta=2.0):
+    from collections import Counter
+
+    def grams(t, k):
+        t = " ".join(t.split())
+        return [t[i:i + k] for i in range(max(0, len(t) - k + 1))]
+    ps, rs = [], []
+    for k in range(1, n + 1):
+        h, r = grams(hip, k), grams(ref, k)
+        if not h or not r:
+            continue
+        ch, cr = Counter(h), Counter(r)
+        com = sum((ch & cr).values())
+        ps.append(com / len(h))
+        rs.append(com / len(r))
+    if not ps:
+        return 0.0
+    p, r = sum(ps) / len(ps), sum(rs) / len(rs)
+    if p + r == 0:
+        return 0.0
+    b2 = beta * beta
+    return (1 + b2) * p * r / (b2 * p + r)
+
+
+def so(nom):
+    d, sr = sf.read(ON[nom], dtype="float32")
+    if getattr(d, "ndim", 1) > 1:
+        d = d.mean(axis=1)
+    if sr != 16000:
+        n = int(len(d) * 16000 / sr)
+        d = np.interp(np.linspace(0, len(d) - 1, n), np.arange(len(d)), d).astype("float32")
+    return d
+
+
+class Joc(torch.utils.data.Dataset):
+    def __init__(self, files):
+        self.f = files
+
+    def __len__(self):
+        return len(self.f)
+
+    def __getitem__(self, i):
+        x = self.f[i]
+        e = proc.feature_extractor(so(x["so"]), sampling_rate=16000).input_features[0]
+        lab = proc.tokenizer(x["ar"], max_length=180, truncation=True).input_ids
+        return {"input_features": e, "labels": lab}
+
+
+def plega(lot):
+    feats = torch.tensor(np.stack([x["input_features"] for x in lot]))
+    etiq = proc.tokenizer.pad([{"input_ids": x["labels"]} for x in lot], return_tensors="pt")
+    lab = etiq["input_ids"].masked_fill(etiq.attention_mask.ne(1), -100)
+    if (lab[:, 0] == proc.tokenizer.convert_tokens_to_ids("<|startoftranscript|>")).all():
+        lab = lab[:, 1:]
+    return {"input_features": feats, "labels": lab}
+
+
+def puntua(files, nom, lot=16):
+    model.eval()
+    hip = []
+    with torch.no_grad():
+        for i in range(0, len(files), lot):
+            b = files[i:i + lot]
+            f = proc.feature_extractor([so(x["so"]) for x in b], sampling_rate=16000,
+                                       return_tensors="pt").input_features.cuda().half()
+            g = model.half().generate(f, max_new_tokens=180, num_beams=4)
+            hip += proc.batch_decode(g, skip_special_tokens=True)
+            model.float()
+    cs = [chrf(h.strip(), x["ar"]) for h, x in zip(hip, files)]
+    m = sum(cs) / len(cs)
+    print(f"   {nom}: chrF {m:.4f} · >=0,5 {sum(1 for c in cs if c >= .5)}/{len(cs)}", flush=True)
+    model.train()
+    return m, hip
+
+
+#: el dev que tria el punt de control: 200 files de cada font, perque cap de les dues mani
+dev_tria = ([x for x in dev if x["font"] == "snrt"][:200]
+            + [x for x in dev if x["font"] == "tutlait"][:200])
+
+print("\n== abans d'entrenar ==", flush=True)
+abans = {k: puntua(v[:200], f"{k} (200)")[0] for k, v in tests.items()}
+millor, _ = puntua(dev_tria, "dev (200+200)")
+
+args = Seq2SeqTrainingArguments(
+    output_dir=f"{FORA}/ck", per_device_train_batch_size=LOT,
+    gradient_accumulation_steps=ACUMULA, learning_rate=RITME, num_train_epochs=1,
+    warmup_steps=200, logging_steps=50, save_strategy="no", fp16=True, report_to=[],
+    remove_unused_columns=False, dataloader_num_workers=2)
+
+historia = []
+for ep in range(1, EPOQUES + 1):
+    tr = Seq2SeqTrainer(model=model, args=args, train_dataset=Joc(train), data_collator=plega)
+    tr.train()
+    print(f"\n== època {ep} ==", flush=True)
+    m, _ = puntua(dev_tria, "dev (200+200)")
+    historia.append({"epoca": ep, "dev_chrf": m})
+    if m > millor:
+        millor = m
+        model.save_pretrained(f"{FORA}/millor", safe_serialization=True)
+        proc.save_pretrained(f"{FORA}/millor")
+        print(f"   -> desat (millor dev: {m:.4f})", flush=True)
+
+if not os.path.exists(f"{FORA}/millor"):
+    model.save_pretrained(f"{FORA}/millor", safe_serialization=True)
+    proc.save_pretrained(f"{FORA}/millor")
+model = WhisperForConditionalGeneration.from_pretrained(f"{FORA}/millor").cuda()
+prepara(model)
+
+print("\n== els tests, sencers, amb el millor punt de control ==", flush=True)
+resultat = {"variant": VARIANT, "files_train": len(train), "dev": historia, "millor_dev": millor, "abans_200": abans, "tests": {}}
+for k, v in tests.items():
+    m, h = puntua(v, k.upper())
+    resultat["tests"][k] = {
+        "chrf": m,
+        "files": [{"so": x["so"], "ar": x["ar"], "model": y, "grup": x["grup"],
+                   "varietat": x.get("varietat")} for x, y in zip(v, h)]}
+json.dump(resultat, io.open(f"{FORA}/resultat_{VARIANT}.json", "w", encoding="utf-8"),
+          ensure_ascii=False)
+
+#: el «despres» sobre les MATEIXES 200 frases que el «abans». La primera tirada (23-11) va
+#: comparar l'abans de 200 frases amb el despres del test sencer, que no son les mateixes.
+#: `puntua` conserva l'ordre, aixi que les 200 primeres traduccions son les d'aquelles frases.
+for k, v in tests.items():
+    f = resultat["tests"][k]["files"][:200]
+    resultat["tests"][k]["chrf_200"] = sum(chrf(x["model"].strip(), x["ar"]) for x in f) / len(f)
+json.dump(resultat, io.open(f"{FORA}/resultat_{VARIANT}.json", "w", encoding="utf-8"),
+          ensure_ascii=False)
+
+#: tot el que importa, tambe a la consola: si la sessio no desa els fitxers, aixo queda
+print("\n== per epoca (dev 200+200) ==")
+for e in historia:
+    print(f"   epoca {e['epoca']}: {e['dev_chrf']:.4f}")
+for k in tests:
+    print(f"\n== 10 traduccions de {k} ==")
+    for x in resultat["tests"][k]["files"][:10]:
+        print(f"   ref:   {x['ar']}\n   model: {x['model'].strip()}\n")
+
+print(f"\n== resum · {VARIANT} ==")
+for k in tests:
+    t = resultat["tests"][k]
+    print(f"   {k}: les mateixes 200 frases, abans {abans[k]:.4f} -> ara {t['chrf_200']:.4f}"
+          f" · test sencer ara {t['chrf']:.4f}")
+print("   referencies: Whisper sense afinar 0,1003 · la via del text sense afinar 0,2614")
+print("   1a tirada (SNRT + TutlAit, 23-11), test sencer: test_snrt 0,1656 · test_tutlait 0,1892")
