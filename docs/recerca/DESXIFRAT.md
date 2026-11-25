@@ -3166,3 +3166,74 @@ IRCAM-DGLAI, conjugacions IRCAM i Wikimawal, fins a 12 entrades per línia.
 
 Fitxer: `E:/tamazight/_magatzem/tirades/cadena/gemini_amb_lexic.json`.
 
+
+## 58. Triangulació: l'acord de l'ASR amb la pantalla assenyala els triplets dolents, no els bons (25-11)
+
+**La pregunta (#763):** quan l'ASR, que només sent el so, escriu el mateix que el tifinag cremat a
+la pantalla, que ningú no li ha dictat, el triplet so–amazic–àrab és més coherent? Si sí, l'acord
+seria un filtre per fabricar dades d'entrenament sense parlant.
+
+**Què es va fer:** ASR (mms-1b-all + `adaptador_shi_zouhir_b`) sobre els 2.091 talls de
+`test_snrt`, a Kaggle en fp16. Contra els 605 talls fets a casa en fp32, el CER coincideix en 595 i
+difereix 0,08 punts de mitjana: la precisió no hi compta. Per tall: CER entre la sortida
+transliterada al tifinag i el tifinag de la pantalla. **Coherència** = chrF de la traducció NLLB del
+tifinag de pantalla (§56) contra el subtítol àrab del mateix fotograma. **Control barrejat** = la
+mateixa traducció contra l'àrab d'un altre tall. 1.966 talls amb tifinag de 4 lletres o més i ASR
+no buit (`tools/snrt/magatzem/triangulacio.py`).
+
+| CER ASR↔pantalla | talls | coherència [IC 95 %] | barrejat |
+|---|---|---|---|
+| < 0,10 | 46 | 0,320 [0,271, 0,374] | 0,105 |
+| 0,10–0,20 | 165 | 0,322 [0,295, 0,351] | 0,123 |
+| 0,20–0,35 | 293 | 0,320 [0,301, 0,339] | 0,122 |
+| 0,35–0,50 | 320 | 0,298 [0,281, 0,318] | 0,129 |
+| 0,50–0,75 | 511 | 0,299 [0,287, 0,313] | 0,121 |
+| ≥ 0,75 | 631 | **0,263** [0,251, 0,275] | 0,117 |
+
+Spearman(CER, coherència) = **−0,139** [−0,183, −0,092]. Per tercils de llargada, l'acord alt
+(CER < 0,2) contra la resta: curtes **+0,073** [+0,027, +0,124], mitjanes −0,003 [−0,042, +0,039],
+llargues +0,030 [−0,007, +0,064].
+
+**El que diu:**
+
+* **El senyal existeix però és feble i va per un sol costat.** Fins a CER 0,35 la coherència és
+  plana (0,32); el que cau és el terç de talls on l'ASR no s'assembla gens a la pantalla (0,263). Hi
+  ha tall equivocat, so que no és la frase o un ASR perdut, i l'àrab d'aquell tall també encaixa pitjor.
+* **No hi ha una «franja d'or».** Els 211 talls amb CER < 0,2 (10,7 %) no són més coherents que els
+  de 0,2–0,35. Part de la raó és la regla de mesura: el NLLB arriba a 0,32 com a màxim, i per sobre
+  d'aquí no pot distingir una línia bona d'una de perfecta. Amb Gemini Pro (§57) potser sí.
+* **Per tant serveix com a filtre negatiu, no positiu:** treure del train el terç amb CER ≥ 0,75, no
+  quedar-se només amb l'acord perfecte, que llençaria el 90 % de les dades.
+* **Encara no està provat que millori cap model.** El pas següent és mesurable: ASR sobre el train
+  del SNRT (6.164 talls), entrenar la via 3 sense el terç pitjor contra sense un terç a l'atzar de la
+  mateixa mida, i jutjar-ho sobre els tests congelats.
+
+Fitxers: `E:/tamazight/_magatzem/tirades/triangulacio/` (`cer_kaggle_test.txt`, `coh_test.json`,
+`triangulacio_test.json`).
+
+### 58b. L'ASR del train i del dev, i els dos trains preparats (25-11)
+
+L'ASR ha passat pels 7.519 talls de train i dev a Kaggle (800 s, T4). El CER contra la pantalla
+n'ha sortit com un caràcter per tall (`'a'+min(int(cer·20),19)`, `x` = sense comparació), copiat
+de la consola en nou trossos i comprovat amb la suma de cada tros i la total (830.524).
+
+| part | talls | sense comparació | CER ≥ 0,75 | CER < 0,2 |
+|---|---|---|---|---|
+| train | 6.164 | 269 | 2.830 (48,0 %) | 266 |
+| dev | 1.355 | 10 | 548 (40,7 %) | 99 |
+
+El train és pitjor que el test (32 % amb CER ≥ 0,75 al test). Hi ha més so mal tallat on hi ha més dades.
+
+`tools/snrt/magatzem/triangulacio_filtre.py` fa dos trains de la via 3, tots dos sobre
+`veu_ar_combinat` (15.427 files) i amb dev i tests intactes:
+
+* **filtrat:** treu les 2.023 files de la SNRT (un terç de 6.069) amb el CER més alt: tot el tram
+  ≥ 0,95 i una part de 0,85–0,95.
+* **atzar:** treu 2.023 files de la SNRT triades a l'atzar (llavor 1114), **amb la mateixa durada
+  una per una**. El primer control, sense aparellar, treia 0,6 h menys de so, i la durada sola ja
+  mou el resultat (vegeu «el CER premia escurçar el so»). Ara tots dos trains fan 13.404 files i 18,3 h.
+
+Coincideixen en 790 de les 2.023 files. Falta la GPU: la quota de Kaggle d'aquesta setmana ha quedat a
+zero amb aquesta tirada. Cada entrenament de la via 3 són hores, així que les dues tirades queden per
+a la quota nova. Fitxers: `E:/tamazight/_magatzem/tirades/triangulacio/` (`cer_kaggle_traindev.txt`,
+`filtre/filtrat/`, `filtre/atzar/`).
